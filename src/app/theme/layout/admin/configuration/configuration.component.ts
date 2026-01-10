@@ -7,3 +7,4 @@ import { Component } from '@angular/core';
   styleUrls: ['./configuration.component.scss']
 })
 export class ConfigurationComponent {}
+

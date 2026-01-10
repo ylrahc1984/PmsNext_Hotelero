@@ -4,10 +4,11 @@ import { NavigationEnd, Router, RouterModule } from '@angular/router';
 
 // project import
 import { SpinnerComponent } from './theme/shared/components/spinner/spinner.component';
+import { ToastContainerComponent } from './core/components/toast-container.component';
 
 @Component({
   selector: 'app-root',
-  imports: [SpinnerComponent, RouterModule],
+  imports: [SpinnerComponent, RouterModule, ToastContainerComponent],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
 })
