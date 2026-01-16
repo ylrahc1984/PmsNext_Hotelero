@@ -1,12 +1,11 @@
-// angular import
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
-
-// project import
+import Swal from 'sweetalert2';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
-import { ListasPreciosService, ListaPrecio } from './listas-precios.service';
+import { ListaPrecioService } from './lista-precio.service';
+import { ListaPrecioUI } from './lista-precio.models';
 
 @Component({
   selector: 'app-listas-precios',
@@ -15,76 +14,148 @@ import { ListasPreciosService, ListaPrecio } from './listas-precios.service';
   styleUrls: ['./listas-precios.component.scss']
 })
 export class ListasPreciosComponent implements OnInit {
-  private listasPreciosService = inject(ListasPreciosService);
+  private listasPreciosService = inject(ListaPrecioService);
   private router = inject(Router);
-  
-  listasPrecios = this.listasPreciosService.getListasPrecios();
 
-  // Filtros
-  filterNombre = signal('');
-  filterEstado = signal('');
-  filterMoneda = signal('');
-  filterVigenciaDesde = signal('');
-  filterVigenciaHasta = signal('');
+  listasPrecios: ListaPrecioUI[] = [];
+  filteredListas: ListaPrecioUI[] = [];
+  isLoading = false;
 
-  // Computed filtered list
-  filteredListas = computed(() => {
-    return this.listasPrecios().filter(lp => {
-      const matchesNombre = !this.filterNombre() ||
-        lp.nombre.toLowerCase().includes(this.filterNombre().toLowerCase()) ||
-        (lp.descripcion && lp.descripcion.toLowerCase().includes(this.filterNombre().toLowerCase()));
-
-      const matchesEstado = !this.filterEstado() ||
-        (this.filterEstado() === 'activa' && lp.activa) ||
-        (this.filterEstado() === 'inactiva' && !lp.activa);
-
-      const matchesMoneda = !this.filterMoneda() || lp.moneda === this.filterMoneda();
-
-      const matchesVigencia = (!this.filterVigenciaDesde() || lp.vigenciaDesde >= new Date(this.filterVigenciaDesde())) &&
-                             (!this.filterVigenciaHasta() || lp.vigenciaHasta <= new Date(this.filterVigenciaHasta()));
-
-      return matchesNombre && matchesEstado && matchesMoneda && matchesVigencia;
-    });
-  });
+  filterDescripcion = '';
+  filterVigente = '';
+  currentPage = 1;
+  pageSize = 10;
+  totalPages = 1;
+  totalRegistros = 0;
+  pageSizeOptions = [5, 10, 20, 50];
 
   ngOnInit() {
-    // No need to load data, signal is reactive
+    this.loadListas();
   }
 
-  // loadListasPrecios() {
-  //   this.listasPrecios.set(this.listasPreciosService.getListasPrecios()());
-  // }
+  loadListas() {
+    this.isLoading = true;
+    const filtro = this.filterDescripcion.trim() || undefined;
+    this.listasPreciosService
+      .getListas({ descripcion: filtro, pageNumber: this.currentPage, pageSize: this.pageSize })
+      .subscribe({
+        next: (result) => {
+          this.listasPrecios = result.data ?? [];
+          this.totalRegistros = result.totalRegistros ?? this.listasPrecios.length;
+          this.currentPage = result.paginaActual ?? this.currentPage;
+          this.pageSize = result.pageSize ?? this.pageSize;
+          this.totalPages = result.totalPages ?? 1;
+        this.applyLocalFilters();
+        this.isLoading = false;
+        },
+        error: (error) => {
+          console.error('Error al cargar listas de precios:', error);
+          Swal.fire({
+            title: 'Error',
+            text: 'No se pudieron cargar las listas de precios.',
+            icon: 'error'
+          });
+          this.isLoading = false;
+        }
+      });
+  }
 
-  openForm(listaPrecio?: ListaPrecio) {
-    if (listaPrecio) {
-      this.router.navigate(['/catalogos/listas-precios', listaPrecio.id, 'editar']);
+  applyLocalFilters() {
+    if (!this.filterVigente) {
+      this.filteredListas = [...this.listasPrecios];
+      return;
+    }
+    this.filteredListas = this.listasPrecios.filter((item) => item.vigente === this.filterVigente);
+  }
+
+  onBuscar() {
+    this.currentPage = 1;
+    this.loadListas();
+  }
+
+  onLimpiar() {
+    this.filterDescripcion = '';
+    this.filterVigente = '';
+    this.currentPage = 1;
+    this.loadListas();
+  }
+
+  onPageSizeChange() {
+    this.currentPage = 1;
+    this.loadListas();
+  }
+
+  goToPageRelative(delta: number) {
+    const nextPage = this.currentPage + delta;
+    if (nextPage < 1 || nextPage > this.totalPages) {
+      return;
+    }
+    this.currentPage = nextPage;
+    this.loadListas();
+  }
+
+  openForm(codigo?: string) {
+    if (codigo) {
+      this.router.navigate(['/catalogos/listas-precios', codigo, 'editar']);
     } else {
       this.router.navigate(['/catalogos/listas-precios/nuevo']);
     }
   }
 
-  // closeForm() {
-  //   this.showForm = false;
-  //   this.editingLista = null;
-  // }
-
-  // onFormSave() {
-  //   this.closeForm();
-  // }
-
-  toggleActive(id: number) {
-    this.listasPreciosService.toggleActive(id);
+  verDetalle(codigo: string) {
+    this.router.navigate(['/catalogos/listas-precios', codigo, 'detalle']);
   }
 
-  getEstadoBadge(activa: boolean) {
-    return activa ? 'badge-success' : 'badge-danger';
+  eliminar(codigo: string) {
+    Swal.fire({
+      title: 'Eliminar lista de precios',
+      text: `Desea eliminar la lista ${codigo}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Si, eliminar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (!result.isConfirmed) {
+        return;
+      }
+      this.isLoading = true;
+      this.listasPreciosService.eliminarLista(codigo).subscribe({
+        next: () => {
+          Swal.fire({
+            title: 'Eliminado',
+            text: 'Lista eliminada correctamente.',
+            icon: 'success'
+          });
+          this.loadListas();
+        },
+        error: (error) => {
+          console.error('Error al eliminar lista de precios:', error);
+          Swal.fire({
+            title: 'Error',
+            text: 'No se pudo eliminar la lista de precios.',
+            icon: 'error'
+          });
+          this.isLoading = false;
+        }
+      });
+    });
   }
 
-  getEstadoText(activa: boolean) {
-    return activa ? 'Activa' : 'Inactiva';
+  getVigenteBadge(vigente: string) {
+    return vigente === 'S' ? 'bg-success' : 'bg-secondary';
   }
 
-  formatDate(date: Date) {
-    return date.toLocaleDateString('es-ES');
+  getVigenteText(vigente: string) {
+    return vigente === 'S' ? 'Vigente' : 'No vigente';
+  }
+
+  formatVigencia(fechaDesde: string, fechaHasta: string) {
+    if (!fechaDesde && !fechaHasta) {
+      return '-';
+    }
+    if (fechaDesde && fechaHasta) {
+      return `${fechaDesde} - ${fechaHasta}`;
+    }
+    return fechaDesde || fechaHasta;
   }
 }

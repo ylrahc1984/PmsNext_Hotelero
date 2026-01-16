@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+﻿import { NgModule } from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
 
 // project import
@@ -198,6 +198,19 @@ const routes: Routes = [
         loadComponent: () => import('./demo/catalogos/agencias-comisionistas/agencias-comisionistas.component').then((c) => c.AgenciasComisionistasComponent)
       },
       {
+        path: 'clientes/nuevo',
+        loadComponent: () => import('./demo/catalogos/agencias-comisionistas/cliente-form.component').then((c) => c.ClienteFormComponent)
+      },
+      {
+        path: 'clientes/:codigo/editar',
+        loadComponent: () => import('./demo/catalogos/agencias-comisionistas/cliente-form.component').then((c) => c.ClienteFormComponent)
+      },
+      {
+        path: 'clientes/:codigo/detalle',
+        loadComponent: () => import('./demo/catalogos/agencias-comisionistas/cliente-form.component').then((c) => c.ClienteFormComponent),
+        data: { readOnly: true }
+      },
+      {
         path: 'suplidores',
         loadComponent: () => import('./demo/catalogos/suplidores/suplidores.component').then((c) => c.SuplidoresComponent)
       }
@@ -221,26 +234,60 @@ const routes: Routes = [
     pathMatch: 'full'
   },
   {
-    path: 'usuarios-perfiles',
-    component: AdminComponent,
     canActivate: [AuthGuard],
     canActivateChild: [AuthGuard],
+    path: 'usuarios',
+    component: AdminComponent,
     children: [
       {
         path: '',
-        loadComponent: () => import('./demo/administracion/usuarios-perfiles/usuarios-perfiles.component').then((c) => c.UsuariosPerfilesComponent)
+        loadComponent: () => import('./demo/administracion/usuarios-list/usuarios-list.component').then((c) => c.UsuariosListComponent)
+      },
+      {
+        path: 'nuevo',
+        loadComponent: () => import('./demo/administracion/usuario-form/usuario-form.component').then((c) => c.UsuarioFormComponent)
+      },
+      {
+        path: ':usuario/editar',
+        loadComponent: () => import('./demo/administracion/usuario-form/usuario-form.component').then((c) => c.UsuarioFormComponent)
+      },
+      {
+        path: ':usuario/propiedades',
+        loadComponent: () =>
+          import('./demo/administracion/usuarios/usuario-propiedades/usuario-propiedades.component').then((c) => c.UsuarioPropiedadesComponent)
       }
     ]
   },
   {
     canActivate: [AuthGuard],
     canActivateChild: [AuthGuard],
+    path: 'usuarios-perfiles',
+    redirectTo: 'usuarios',
+    pathMatch: 'full'
+  },
+  {
+    canActivate: [AuthGuard],
+    canActivateChild: [AuthGuard],
     path: 'usuario-detalle',
+    redirectTo: 'usuarios/nuevo',
+    pathMatch: 'full'
+  },
+  {
+    canActivate: [AuthGuard],
+    canActivateChild: [AuthGuard],
+    path: 'usuario-detalle/:usuario',
+    redirectTo: 'usuarios/:usuario/editar',
+    pathMatch: 'full'
+  },
+  {
+    canActivate: [AuthGuard],
+    canActivateChild: [AuthGuard],
+    path: 'usuario-cambiar-clave',
     component: AdminComponent,
     children: [
       {
-        path: '',
-        loadComponent: () => import('./demo/administracion/usuario-detalle/usuario-detalle').then((c) => c.UsuarioDetalleComponent)
+        path: ':usuario',
+        loadComponent: () => import('./demo/administracion/usuarios/usuario-cambiar-clave/usuario-cambiar-clave.component').then((c) => c.UsuarioCambiarClaveComponent)
       }
     ]
   },
@@ -252,7 +299,7 @@ const routes: Routes = [
     children: [
       {
         path: '',
-        loadComponent: () => import('./demo/administracion/formas-pago/formas-pago.component').then((c) => c.FormasPagoComponent)
+        loadComponent: () => import('./demo/administracion/forma-pago/formas-pago/formas-pago.component').then((c) => c.FormasPagoComponent)
       }
     ]
   },
@@ -264,7 +311,11 @@ const routes: Routes = [
     children: [
       {
         path: '',
-        loadComponent: () => import('./demo/administracion/forma-pago-detalle/forma-pago-detalle').then((c) => c.FormaPagoDetalleComponent)
+        loadComponent: () => import('./demo/administracion/forma-pago/forma-pago-detalle/forma-pago-detalle').then((c) => c.FormaPagoDetalleComponent)
+     },
+     {
+       path: ':codigo',
+       loadComponent: () => import('./demo/administracion/forma-pago/forma-pago-detalle/forma-pago-detalle').then((c) => c.FormaPagoDetalleComponent)
      }
     ]
   },
@@ -314,7 +365,109 @@ const routes: Routes = [
   {
     path: 'administracion',
     component: AdminComponent,
+    canActivate: [AuthGuard],
+    canActivateChild: [AuthGuard],
     children: [
+      {
+        path: 'configuracion',
+        loadComponent: () => import('./demo/administracion/configuracion-sistema/configuracion-sistema.component').then((c) => c.ConfiguracionSistemaComponent)
+      },
+      {
+        path: 'configuracion/impuestos/nuevo',
+        loadComponent: () => import('./demo/administracion/impuesto/impuesto-detalle/impuesto-detalle.component').then((c) => c.ImpuestoDetalleComponent)
+      },
+      {
+        path: 'configuracion/impuestos/editar/:codigo',
+        loadComponent: () => import('./demo/administracion/impuesto/impuesto-detalle/impuesto-detalle.component').then((c) => c.ImpuestoDetalleComponent)
+      },
+      {
+        path: 'configuracion/impuestos',
+        loadComponent: () => import('./demo/administracion/impuesto/impuesto/impuesto.component').then((c) => c.ImpuestoComponent)
+      },
+      {
+        path: 'configuracion/departamentos/nuevo',
+        loadComponent: () => import('./demo/administracion/departamento/departamento-detalle/departamento-detalle.component').then((c) => c.DepartamentoDetalleComponent)
+      },
+      {
+        path: 'configuracion/departamentos/editar/:idDepartamento',
+        loadComponent: () => import('./demo/administracion/departamento/departamento-detalle/departamento-detalle.component').then((c) => c.DepartamentoDetalleComponent)
+      },
+      {
+        path: 'configuracion/departamentos',
+        loadComponent: () => import('./demo/administracion/departamento/departamento/departamento.component').then((c) => c.DepartamentoComponent)
+      },
+      {
+        path: 'configuracion/centrocosto/nuevo',
+        loadComponent: () => import('./demo/administracion/centro-costo/centro-costo-detalle/centro-costo-detalle.component').then((c) => c.CentroCostoDetalleComponent)
+      },
+      {
+        path: 'configuracion/centrocosto/editar/:codGrupo',
+        loadComponent: () => import('./demo/administracion/centro-costo/centro-costo-detalle/centro-costo-detalle.component').then((c) => c.CentroCostoDetalleComponent)
+      },
+      {
+        path: 'configuracion/centrocosto',
+        loadComponent: () => import('./demo/administracion/centro-costo/centro-costo/centro-costo.component').then((c) => c.CentroCostoComponent)
+      },      {
+        path: 'configuracion/contadores/nuevo',
+        loadComponent: () => import('./demo/administracion/contadores/contador-detalle/contador-detalle.component').then((c) => c.ContadorDetalleComponent)
+      },
+      {
+        path: 'configuracion/contadores/editar/:codigo',
+        loadComponent: () => import('./demo/administracion/contadores/contador-detalle/contador-detalle.component').then((c) => c.ContadorDetalleComponent)
+      },
+      {
+        path: 'configuracion/contadores',
+        loadComponent: () => import('./demo/administracion/contadores/contador/contador.component').then((c) => c.ContadorComponent)
+      },
+      {
+        path: 'configuracion/documento/nuevo',
+        loadComponent: () =>
+          import('./demo/administracion/documento/documento-form.component').then((c) => c.DocumentoFormComponent)
+      },
+      {
+        path: 'configuracion/documento/editar/:codigo',
+        loadComponent: () =>
+          import('./demo/administracion/documento/documento-form.component').then((c) => c.DocumentoFormComponent)
+      },
+      {
+        path: 'configuracion/documento',
+        loadComponent: () =>
+          import('./demo/administracion/documento/documento.component').then((c) => c.DocumentoComponent)
+      },
+      {
+        path: 'configuracion/tipo-cliente/nuevo',
+        loadComponent: () =>
+          import('./demo/administracion/tipo-cliente/tipo-cliente-form.component').then((c) => c.TipoClienteFormComponent)
+      },
+      {
+        path: 'configuracion/tipo-cliente/editar/:codTipo',
+        loadComponent: () =>
+          import('./demo/administracion/tipo-cliente/tipo-cliente-form.component').then((c) => c.TipoClienteFormComponent)
+      },
+      {
+        path: 'configuracion/tipo-cliente',
+        loadComponent: () =>
+          import('./demo/administracion/tipo-cliente/tipo-cliente.component').then((c) => c.TipoClienteComponent)
+      },
+      {
+        path: 'configuracion/unidad-medida/nuevo',
+        loadComponent: () =>
+          import('./demo/administracion/unidad-medida/unidad-medida-form.component').then((c) => c.UnidadMedidaFormComponent)
+      },
+      {
+        path: 'configuracion/unidad-medida/editar/:codUMed',
+        loadComponent: () =>
+          import('./demo/administracion/unidad-medida/unidad-medida-form.component').then((c) => c.UnidadMedidaFormComponent)
+      },
+      {
+        path: 'configuracion/unidad-medida',
+        loadComponent: () =>
+          import('./demo/administracion/unidad-medida/unidad-medida.component').then((c) => c.UnidadMedidaComponent)
+      },
+      {
+        path: 'configuracion/parametros',
+        loadComponent: () => import('./demo/administracion/configuracion-sistema/configuracion-sistema.component').then((c) => c.ConfiguracionSistemaComponent)
+      },
       {
         path: 'tipo-cambio',
         loadComponent: () => import('./demo/administracion/tipo-cambio/tipo-cambio.component').then((c) => c.TipoCambioComponent)
@@ -350,3 +503,7 @@ const routes: Routes = [
   exports: [RouterModule]
 })
 export class AppRoutingModule {}
+
+
+
+

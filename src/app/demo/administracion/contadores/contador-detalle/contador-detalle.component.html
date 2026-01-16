@@ -1,0 +1,90 @@
+﻿<div class="container-fluid">
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h4 class="mb-1">
+            <i class="feather icon-hash me-2"></i>
+            {{ isEditing ? 'Editar Contador' : 'Nuevo Contador' }}
+          </h4>
+          <p class="text-muted mb-0">Completa los datos del contador</p>
+        </div>
+        <button type="button" class="btn btn-secondary" (click)="goBack()">
+          <i class="feather icon-arrow-left me-1"></i>
+          Volver
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <form [formGroup]="form" (ngSubmit)="onSubmit()">
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <label class="form-label">Codigo <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" formControlName="codigo" [class.is-invalid]="form.get('codigo')?.invalid && (form.get('codigo')?.touched || form.get('codigo')?.dirty)" placeholder="Ej: FACT">
+                <div class="invalid-feedback">El codigo es requerido.</div>
+              </div>
+              <div class="col-md-8">
+                <label class="form-label">Descripcion <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" formControlName="descripcion" [class.is-invalid]="form.get('descripcion')?.invalid && (form.get('descripcion')?.touched || form.get('descripcion')?.dirty)" placeholder="Descripcion del contador">
+                <div class="invalid-feedback">La descripcion es requerida.</div>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-3">
+                <label class="form-label">Serie</label>
+                <input type="number" class="form-control" formControlName="serie" min="0">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Numero</label>
+                <input type="number" class="form-control" formControlName="contador" min="0">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Largo <span class="text-danger">*</span></label>
+                <input type="number" class="form-control" formControlName="largo" min="1" [class.is-invalid]="form.get('largo')?.invalid && (form.get('largo')?.touched || form.get('largo')?.dirty)">
+                <div class="invalid-feedback">El largo debe ser mayor o igual a 1.</div>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Auto <span class="text-danger">*</span></label>
+                <select class="form-select" formControlName="auto" [class.is-invalid]="form.get('auto')?.invalid && (form.get('auto')?.touched || form.get('auto')?.dirty)">
+                  <option *ngFor="let option of boolOptions" [value]="option.value">{{ option.label }}</option>
+                </select>
+                <div class="invalid-feedback">Seleccione un valor valido.</div>
+              </div>
+            </div>
+
+            <div class="row mb-4">
+              <div class="col-md-3">
+                <label class="form-label">frmCod <span class="text-danger">*</span></label>
+                <select class="form-select" formControlName="frmCod" [class.is-invalid]="form.get('frmCod')?.invalid && (form.get('frmCod')?.touched || form.get('frmCod')?.dirty)">
+                  <option *ngFor="let option of boolOptions" [value]="option.value">{{ option.label }}</option>
+                </select>
+                <div class="invalid-feedback">Seleccione un valor valido.</div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-12">
+                <div class="d-flex justify-content-end gap-2">
+                  <button type="button" class="btn btn-secondary" (click)="goBack()">
+                    <i class="feather icon-x me-1"></i>
+                    Cancelar
+                  </button>
+                  <button type="submit" class="btn btn-primary" [disabled]="form.invalid">
+                    <i class="feather icon-save me-1"></i>
+                    {{ isEditing ? 'Actualizar' : 'Crear' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

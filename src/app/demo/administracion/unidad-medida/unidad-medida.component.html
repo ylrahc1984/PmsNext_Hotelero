@@ -1,0 +1,120 @@
+<div class="container-fluid">
+  <div class="row mb-3">
+    <div class="col-12">
+      <ul class="breadcrumb mb-0">
+        <li class="breadcrumb-item">
+          <a routerLink="/dashboard"><i class="feather icon-home"></i></a>
+        </li>
+        <li class="breadcrumb-item">
+          <a>Administracion</a>
+        </li>
+        <li class="breadcrumb-item">
+          <a routerLink="/administracion/configuracion">Configuracion del Sistema</a>
+        </li>
+        <li class="breadcrumb-item">
+          <a>Unidades de Medida</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h4 class="mb-1">
+            <i class="feather icon-sliders me-2"></i>
+            Unidades de Medida
+          </h4>
+          <p class="text-muted mb-0">Administra unidades de medida fisicas para productos y servicios</p>
+        </div>
+        <button class="btn btn-primary" (click)="createNew()" [disabled]="isLoading">
+          <i class="feather icon-plus me-1"></i>
+          Nueva Unidad de Medida
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <div class="row g-3 align-items-center">
+            <div class="col-md-6">
+              <div class="input-group">
+                <span class="input-group-text">
+                  <i class="feather icon-search"></i>
+                </span>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="Buscar por codigo o descripcion..."
+                  [(ngModel)]="searchTerm"
+                  (input)="onSearchChange()"
+                  [disabled]="isLoading"
+                >
+              </div>
+            </div>
+            <div class="col-md-6 text-md-end">
+              <span class="text-muted">{{ filteredUnidades.length }} unidad{{ filteredUnidades.length !== 1 ? 'es' : '' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead class="table-light">
+                <tr>
+                  <th>Codigo U. Med</th>
+                  <th>Descripcion</th>
+                  <th>Operador</th>
+                  <th class="text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let unidad of filteredUnidades">
+                  <td>
+                    <span class="badge bg-light text-dark">{{ unidad.CAC04_UnmMed }}</span>
+                  </td>
+                  <td>{{ unidad.CAC04_Descripcion }}</td>
+                  <td>{{ unidad.CAC04_Operador }}</td>
+                  <td class="text-center">
+                    <div class="btn-group" role="group">
+                      <button class="btn btn-sm btn-outline-primary" (click)="editUnidad(unidad)" [disabled]="isLoading" title="Editar">
+                        <i class="feather icon-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-outline-danger" (click)="deleteUnidad(unidad)" [disabled]="isLoading" title="Eliminar">
+                        <i class="feather icon-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr *ngIf="!isLoading && filteredUnidades.length === 0">
+                  <td colspan="4" class="text-center py-4">
+                    <i class="feather icon-inbox display-4 text-muted"></i>
+                    <p class="text-muted mt-2">No se encontraron unidades de medida</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div *ngIf="isLoading" class="alert alert-light border mt-3">
+            <small class="text-muted">
+              <i class="feather icon-loader me-1"></i>
+              Cargando unidades de medida...
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,98 +1,73 @@
 <div class="clientes-wrapper">
   <div class="page-header">
     <div>
-      <h4 class="title">Agencias / Comisionistas</h4>
-      <p class="subtitle">Administra agencias, comisionistas y clientes corporativos.</p>
+      <h4 class="title">Clientes / Agencias</h4>
+      <p class="subtitle">Administra clientes, agencias y comisionistas.</p>
     </div>
     <div>
-      <button class="btn btn-primary" (click)="openForm()">
-        <i class="feather icon-plus"></i> Nuevo Registro
+      <button class="btn btn-primary" (click)="openForm()" [disabled]="isLoading">
+        <i class="feather icon-plus"></i> Nuevo Cliente/Agencia
       </button>
     </div>
   </div>
 
   <div class="filters-card">
     <div class="row">
-      <div class="col-lg-3 col-md-6 mb-3">
-        <label class="small-label">Código</label>
-        <input class="form-control" [ngModel]="filterCodigo()" (ngModelChange)="filterCodigo.set($event)" placeholder="Buscar por código">
-      </div>
-      <div class="col-lg-3 col-md-6 mb-3">
-        <label class="small-label">Nombre / Razón Social</label>
-        <input class="form-control" [ngModel]="filterNombre()" (ngModelChange)="filterNombre.set($event)" placeholder="Buscar por nombre">
-      </div>
-      <div class="col-lg-3 col-md-6 mb-3">
-        <label class="small-label">Identificación</label>
-        <input class="form-control" [ngModel]="filterIdentificacion()" (ngModelChange)="filterIdentificacion.set($event)" placeholder="RUC / Cédula">
+      <div class="col-lg-6 col-md-6 mb-3">
+        <label class="small-label">Nombre</label>
+        <input class="form-control" [(ngModel)]="filterNombre" placeholder="Buscar por nombre">
       </div>
       <div class="col-lg-3 col-md-6 mb-3">
         <label class="small-label">Tipo de Cliente</label>
-        <select class="form-control" [ngModel]="filterTipo()" (ngModelChange)="filterTipo.set($event)">
-          <option value="Todos">Todos</option>
-          <option value="Agencia">Agencia</option>
-          <option value="Comisionista">Comisionista</option>
-          <option value="Corporativo">Corporativo</option>
-        </select>
-      </div>
-    </div>
-    <div class="row">
-      <div class="col-lg-3 col-md-6 mb-3">
-        <label class="small-label">Provincia</label>
-        <select class="form-control" [ngModel]="filterProvincia()" (ngModelChange)="filterProvincia.set($event)">
-          <option value="">Todas</option>
-          <option *ngFor="let p of provincias()" [value]="p">{{ p }}</option>
-        </select>
-      </div>
-      <div class="col-lg-3 col-md-6 mb-3">
-        <label class="small-label">Cantón</label>
-        <select class="form-control" [ngModel]="filterCanton()" (ngModelChange)="filterCanton.set($event)">
+        <select class="form-control" [(ngModel)]="filterTipo" (change)="applyLocalFilters()">
           <option value="">Todos</option>
-          <option *ngFor="let c of cantones()" [value]="c">{{ c }}</option>
+          <option value="AGE">Agencia</option>
+          <option value="CLI">Cliente final</option>
         </select>
+      </div>
+      <div class="col-lg-3 col-md-12 mb-3 d-flex align-items-end justify-content-end">
+        <button class="btn btn-outline-secondary me-2" (click)="onLimpiar()" [disabled]="isLoading">Limpiar</button>
+        <button class="btn btn-primary" (click)="onBuscar()" [disabled]="isLoading">Buscar</button>
       </div>
     </div>
   </div>
 
   <div class="table-card">
     <div class="table-header">
-      <h6 class="m-0"><i class="feather icon-users"></i> Listado de clientes</h6>
-      <span class="count-chip">{{ clientesFiltrados().length }} registros</span>
+      <h6 class="m-0"><i class="feather icon-users"></i> Listado</h6>
+      <span class="count-chip">{{ totalRegistros }} registros</span>
     </div>
-    <div class="table-responsive" *ngIf="clientesFiltrados().length; else noData">
+    <div class="table-responsive" *ngIf="filteredClientes.length; else noData">
       <table class="table table-hover mb-0">
         <thead>
           <tr>
-            <th>Código</th>
-            <th>Nombre / Razón Social</th>
-            <th>Tipo</th>
-            <th>Identificación</th>
+            <th>Codigo</th>
+            <th>Nombre</th>
             <th>Contacto</th>
+            <th>Telefono</th>
             <th>Email</th>
-            <th>Teléfono</th>
-            <th>Estado</th>
-            <th>Acciones</th>
+            <th>Tipo</th>
+            <th class="text-center">Acciones</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let cliente of clientesFiltrados()">
+          <tr *ngFor="let cliente of filteredClientes">
             <td>{{ cliente.codigo }}</td>
             <td>{{ cliente.nombre }}</td>
-            <td><span class="badge badge-info">{{ cliente.tipoCliente || 'N/D' }}</span></td>
-            <td>{{ cliente.identificacion }}</td>
             <td>{{ cliente.contacto || 'N/D' }}</td>
-            <td>{{ cliente.email || 'N/D' }}</td>
             <td>{{ cliente.telefono1 || 'N/D' }}</td>
-            <td><span class="badge {{ getActivoBadge(cliente.activo) }}">{{ cliente.activo ? 'Activo' : 'Inactivo' }}</span></td>
-            <td>
+            <td>{{ cliente.email || 'N/D' }}</td>
+            <td><span class="badge bg-light text-dark">{{ getTipoLabel(cliente.tipoCli) }}</span></td>
+            <td class="text-center">
               <div class="action-buttons">
-                <button class="btn btn-sm btn-outline-secondary" (click)="openForm(cliente, true)" title="Ver">
+                <button class="btn btn-sm btn-outline-secondary" (click)="verDetalle(cliente)" title="Ver">
                   <i class="feather icon-eye"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-primary ml-1" (click)="openForm(cliente)" title="Editar">
+                <button class="btn btn-sm btn-outline-primary ms-1" (click)="editar(cliente)" title="Editar">
                   <i class="feather icon-edit"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-warning ml-1" (click)="toggleActive(cliente.codigo)" title="Activar/Desactivar">
-                  <i class="feather icon-power"></i>
+                <button class="btn btn-sm btn-outline-danger ms-1" (click)="eliminar(cliente)" title="Eliminar">
+                  <i class="feather icon-trash"></i>
                 </button>
               </div>
             </td>
@@ -103,32 +78,26 @@
     <ng-template #noData>
       <div class="empty-state text-center p-4">
         <i class="feather icon-file-text empty-icon"></i>
-        <p class="mb-2">No hay clientes que coincidan con los filtros.</p>
+        <p class="mb-2">No hay clientes para mostrar.</p>
         <button class="btn btn-primary" (click)="openForm()"><i class="feather icon-plus"></i> Crear registro</button>
       </div>
     </ng-template>
-  </div>
-</div>
 
-<!-- Modal -->
-<div class="modal fade" [ngClass]="{'show': showForm, 'd-block': showForm}" *ngIf="showForm" tabindex="-1" role="dialog">
-  <div class="modal-dialog modal-lg" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">{{ readOnly ? 'Detalle de Cliente' : (editingCliente ? 'Editar Cliente' : 'Nuevo Cliente') }}</h5>
-        <button type="button" class="close" (click)="closeForm()" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
+    <div class="row mt-3 align-items-center" *ngIf="totalPages > 0">
+      <div class="col-md-4 text-muted">
+        Pagina {{ currentPage }} de {{ totalPages }} ({{ totalRegistros }} registros)
       </div>
-      <div class="modal-body">
-        <app-cliente-form
-          [cliente]="editingCliente"
-          [readOnly]="readOnly"
-          (save)="onSave($event)"
-          (cancel)="closeForm()">
-        </app-cliente-form>
+      <div class="col-md-4 text-center">
+        <select class="form-select form-select-sm d-inline-block w-auto" [(ngModel)]="pageSize" (change)="onPageSizeChange()" [disabled]="isLoading">
+          <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }} por pagina</option>
+        </select>
+      </div>
+      <div class="col-md-4 text-end">
+        <div class="btn-group" role="group">
+          <button class="btn btn-outline-secondary btn-sm" [disabled]="currentPage === 1 || isLoading" (click)="goToPageRelative(-1)">Prev</button>
+          <button class="btn btn-outline-secondary btn-sm" [disabled]="currentPage === totalPages || isLoading" (click)="goToPageRelative(1)">Next</button>
+        </div>
       </div>
     </div>
   </div>
 </div>
-<div class="modal-backdrop fade show" *ngIf="showForm"></div>

@@ -1,0 +1,63 @@
+<div class="section-card">
+  <div class="section-header">Actividad Comercial MH</div>
+
+  <form [formGroup]="form" class="row g-3 align-items-end">
+    <div class="col-md-3">
+      <label class="form-label">Codigo AMH</label>
+      <input type="text" class="form-control" formControlName="codigoAMH" [disabled]="!cedula || isLoading">
+    </div>
+    <div class="col-md-5">
+      <label class="form-label">Descripcion</label>
+      <input type="text" class="form-control" formControlName="descripcion" [disabled]="!cedula || isLoading">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Principal</label>
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" formControlName="principal" [disabled]="!cedula || isLoading">
+      </div>
+    </div>
+    <div class="col-md-2 text-end">
+      <button type="button" class="btn btn-primary" (click)="addActividad()" [disabled]="!cedula || isLoading">
+        <i class="feather icon-plus"></i> Agregar
+      </button>
+    </div>
+  </form>
+
+  <div class="table-responsive mt-3" *ngIf="actividades.length; else emptyState">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Codigo AMH</th>
+          <th>Descripcion</th>
+          <th class="text-center">Principal</th>
+          <th class="text-center">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let actividad of actividades">
+          <td>{{ actividad.MPV32_CodigoAMH }}</td>
+          <td>{{ actividad.MPV32_NombreActividad }}</td>
+          <td class="text-center">
+            <input
+              type="radio"
+              name="principalActividad"
+              [checked]="actividad.MPV32_Principal === 1"
+              (change)="togglePrincipal(actividad)"
+              [disabled]="isLoading">
+          </td>
+          <td class="text-center">
+            <button class="btn btn-sm btn-outline-danger" (click)="deleteActividad(actividad)" [disabled]="isLoading">
+              <i class="feather icon-trash"></i>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <ng-template #emptyState>
+    <div class="alert alert-light border mt-3 mb-0">
+      <small class="text-muted">No hay actividades comerciales registradas para esta cedula.</small>
+    </div>
+  </ng-template>
+</div>

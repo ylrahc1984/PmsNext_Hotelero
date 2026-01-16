@@ -1,151 +1,164 @@
-<form #clienteForm="ngForm" (ngSubmit)="submit(clienteForm)" class="cliente-form">
-  <div class="section-title">Información General</div>
-  <div class="row">
-    <div class="col-md-4">
-      <div class="form-group">
-        <label>Código <span class="text-danger">*</span></label>
-        <input type="text" class="form-control" name="codigo" [(ngModel)]="formData.codigo" required [readonly]="readOnly">
-      </div>
+<div class="page-header mb-3">
+  <ul class="breadcrumb mb-2">
+    <li class="breadcrumb-item">
+      <a routerLink="/dashboard"><i class="feather icon-home"></i></a>
+    </li>
+    <li class="breadcrumb-item">
+      <a>Catalogos</a>
+    </li>
+    <li class="breadcrumb-item">
+      <a routerLink="/catalogos/clientes">Clientes</a>
+    </li>
+    <li class="breadcrumb-item">
+      <a>{{ readOnly ? 'Detalle' : (isEditing ? 'Editar' : 'Nuevo') }}</a>
+    </li>
+  </ul>
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h4 class="title mb-1">{{ readOnly ? 'Detalle de Cliente' : (isEditing ? 'Editar Cliente' : 'Nuevo Cliente') }}</h4>
+      <p class="subtitle mb-0">Complete la informacion para guardar el registro.</p>
     </div>
-    <div class="col-md-5">
-      <div class="form-group">
-        <label>Nombre / Razón Social <span class="text-danger">*</span></label>
-        <input type="text" class="form-control" name="nombre" [(ngModel)]="formData.nombre" required [readonly]="readOnly">
-      </div>
+    <div>
+      <button type="button" class="btn btn-outline-secondary" (click)="cancelForm()">Volver</button>
     </div>
-    <div class="col-md-3">
-      <div class="form-group">
-        <label>Identificación / RUC <span class="text-danger">*</span></label>
-        <input type="text" class="form-control" name="identificacion" [(ngModel)]="formData.identificacion" required [readonly]="readOnly">
+  </div>
+</div>
+
+<form [formGroup]="form" (ngSubmit)="submit()" class="cliente-form">
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="section-card">
+        <div class="section-header">Informacion General</div>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Tipo Identificacion</label>
+            <select class="form-control" formControlName="tCliente">
+              <option value="">Seleccionar</option>
+              <option *ngFor="let tipo of tipoIdentificacionOptions" [value]="tipo.value">{{ tipo.label }}</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Cedula</label>
+            <input type="text" class="form-control" formControlName="ruc">
+          </div>
+          <div class="col-md-5">
+            <label class="form-label">Nombre <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" formControlName="nombreCli">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Tipo de Cliente</label>
+            <select class="form-control" formControlName="tipoCli">
+              <option *ngFor="let tipo of tipoClienteOptions" [value]="tipo.value">{{ tipo.label }}</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Contacto</label>
+            <input type="text" class="form-control" formControlName="contacto">
+          </div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-header">Ubicacion</div>
+        <div class="row g-3">
+          <div class="col-md-2">
+            <label class="form-label">Provincia Id</label>
+            <select class="form-control" formControlName="idProvincia">
+              <option value="">Seleccionar</option>
+              <option *ngFor="let provincia of provinciaOptions" [value]="provincia.value">{{ provincia.label }}</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Canton Id</label>
+            <select class="form-control" formControlName="idCanton" [disabled]="!form.get('idProvincia')?.value || isLoadingCantones">
+              <option value="">Seleccionar</option>
+              <option *ngFor="let canton of cantonOptions" [value]="canton.value">{{ canton.label }}</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Distrito Id</label>
+            <select class="form-control" formControlName="idDistrito" [disabled]="!form.get('idProvincia')?.value || !form.get('idCanton')?.value || isLoadingDistritos">
+              <option value="">Seleccionar</option>
+              <option *ngFor="let distrito of distritoOptions" [value]="distrito.value">{{ distrito.label }}</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Pais</label>
+            <input type="text" class="form-control" formControlName="pais">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Direccion</label>
+            <input type="text" class="form-control" formControlName="direccion">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Zona</label>
+            <select class="form-control" formControlName="zona">
+              <option value="">Seleccionar</option>
+              <option *ngFor="let zona of zonaOptions" [value]="zona.value">{{ zona.label }}</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-header">Comunicacion</div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-control" formControlName="email">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Telefono 1</label>
+            <input type="tel" class="form-control" formControlName="telefono1">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Telefono 2</label>
+            <input type="tel" class="form-control" formControlName="telefono2">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Fax</label>
+            <input type="text" class="form-control" formControlName="fax">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Enviar Correo</label>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="enviarCorreo" formControlName="enviarCorreo">
+              <label class="form-check-label" for="enviarCorreo">
+                {{ form.get('enviarCorreo')?.value ? 'Si' : 'No' }}
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <actividad-comercial
+        [cedula]="form.get('ruc')?.value"
+        (principalChange)="setActividadPrincipal($event)">
+      </actividad-comercial>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="section-card">
+        <div class="section-header">Informacion Comercial</div>
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">Monto de Credito</label>
+            <input type="number" class="form-control" formControlName="mtoCredito" min="0" step="0.01">
+          </div>
+        </div>
+      </div>
+
+      <div class="section-card section-note">
+        <div class="section-header">Recomendacion</div>
+        <p class="text-muted mb-0">
+          Verifique los datos de contacto y el tipo de cliente antes de guardar.
+        </p>
       </div>
     </div>
   </div>
 
-  <div class="row">
-    <div class="col-md-4">
-      <div class="form-group">
-        <label>Tipo de Cliente</label>
-        <select class="form-control" name="tipoCliente" [(ngModel)]="formData.tipoCliente" [disabled]="readOnly">
-          <option *ngFor="let tipo of tipoClienteOptions" [value]="tipo">{{ tipo }}</option>
-        </select>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="form-group">
-        <label>Contacto Principal</label>
-        <input type="text" class="form-control" name="contacto" [(ngModel)]="formData.contacto" [readonly]="readOnly">
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="form-group">
-        <label>Tipo Interno de Cliente</label>
-        <input type="text" class="form-control" name="tipoInterno" [(ngModel)]="formData.tipoInterno" placeholder="VIP, Mayorista, etc." [readonly]="readOnly">
-      </div>
-    </div>
-  </div>
-
-  <div class="section-title">Ubicación</div>
-  <div class="row">
-    <div class="col-md-6">
-      <div class="form-group">
-        <label>Dirección</label>
-        <input type="text" class="form-control" name="direccion" [(ngModel)]="formData.direccion" [readonly]="readOnly">
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="form-group">
-        <label>Provincia</label>
-        <input type="text" class="form-control" name="provincia" [(ngModel)]="formData.provincia" [readonly]="readOnly">
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="form-group">
-        <label>Cantón</label>
-        <input type="text" class="form-control" name="canton" [(ngModel)]="formData.canton" [readonly]="readOnly">
-      </div>
-    </div>
-  </div>
-  <div class="row">
-    <div class="col-md-3">
-      <div class="form-group">
-        <label>Distrito</label>
-        <input type="text" class="form-control" name="distrito" [(ngModel)]="formData.distrito" [readonly]="readOnly">
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="form-group">
-        <label>País</label>
-        <input type="text" class="form-control" name="pais" [(ngModel)]="formData.pais" [readonly]="readOnly">
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="form-group">
-        <label>Zona</label>
-        <input type="text" class="form-control" name="zona" [(ngModel)]="formData.zona" [readonly]="readOnly">
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="form-group form-check mt-4">
-        <input class="form-check-input" type="checkbox" id="activo" name="activo" [(ngModel)]="formData.activo" [disabled]="readOnly">
-        <label class="form-check-label" for="activo">Activo</label>
-      </div>
-    </div>
-  </div>
-
-  <div class="section-title">Comunicación</div>
-  <div class="row">
-    <div class="col-md-6">
-      <div class="form-group">
-        <label>Email</label>
-        <input type="email" class="form-control" name="email" [(ngModel)]="formData.email" email [readonly]="readOnly">
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="form-group">
-        <label>Teléfono 1</label>
-        <input type="tel" class="form-control" name="telefono1" [(ngModel)]="formData.telefono1" pattern="\\d*" [readonly]="readOnly">
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="form-group">
-        <label>Teléfono 2</label>
-        <input type="tel" class="form-control" name="telefono2" [(ngModel)]="formData.telefono2" pattern="\\d*" [readonly]="readOnly">
-      </div>
-    </div>
-  </div>
-  <div class="row">
-    <div class="col-md-3">
-      <div class="form-group">
-        <label>Fax</label>
-        <input type="text" class="form-control" name="fax" [(ngModel)]="formData.fax" [readonly]="readOnly">
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="form-group form-check mt-4">
-        <input class="form-check-input" type="checkbox" id="banderaCorreo" name="banderaCorreo" [(ngModel)]="formData.banderaCorreo" [disabled]="readOnly">
-        <label class="form-check-label" for="banderaCorreo">Enviar correos automáticos</label>
-      </div>
-    </div>
-  </div>
-
-  <div class="section-title">Información Comercial</div>
-  <div class="row">
-    <div class="col-md-4">
-      <div class="form-group">
-        <label>Monto de Crédito</label>
-        <input type="number" class="form-control" name="montoCredito" [(ngModel)]="formData.montoCredito" min="0" step="0.01" [readonly]="readOnly">
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="form-group">
-        <label>Operador</label>
-        <input type="text" class="form-control" name="operador" [(ngModel)]="formData.operador" readonly>
-      </div>
-    </div>
-  </div>
-
-  <div class="d-flex justify-content-end mt-3">
-    <button type="button" class="btn btn-light mr-2" (click)="cancelForm()">{{ readOnly ? 'Cerrar' : 'Cancelar' }}</button>
-    <button *ngIf="!readOnly" type="submit" class="btn btn-primary" [disabled]="!clienteForm.form.valid">Guardar</button>
+  <div class="form-actions d-flex justify-content-end mt-3">
+    <button type="button" class="btn btn-light me-2" (click)="cancelForm()">{{ readOnly ? 'Cerrar' : 'Cancelar' }}</button>
+    <button *ngIf="!readOnly" type="submit" class="btn btn-primary" [disabled]="form.invalid || isLoading">Guardar</button>
   </div>
 </form>

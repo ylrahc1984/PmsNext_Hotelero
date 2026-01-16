@@ -1,0 +1,277 @@
+<div class="container-fluid">
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h4 class="mb-1">
+            <i class="feather icon-settings me-2"></i>
+            Propiedades del Usuario
+          </h4>
+          <p class="text-muted mb-0">Usuario: {{ usuario }}</p>
+        </div>
+        <button type="button" class="btn btn-secondary" (click)="goBack()">
+          <i class="feather icon-arrow-left me-1"></i>
+          Volver
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <ul class="nav nav-tabs mb-3">
+            <li class="nav-item">
+              <button class="nav-link" [class.active]="activeTab === 'info'" (click)="selectTab('info')">
+                Informacion de Usuario
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" [class.active]="activeTab === 'modulos'" (click)="selectTab('modulos')">
+                Acceso a Modulos
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" [class.active]="activeTab === 'privilegios'" (click)="selectTab('privilegios')">
+                Privilegios x Modulos
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" [class.active]="activeTab === 'puntosventa'" (click)="selectTab('puntosventa')">
+                Acceso a Punto de Venta
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" [class.active]="activeTab === 'descuentos'" (click)="selectTab('descuentos')">
+                Config. Varios
+              </button>
+            </li>
+          </ul>
+
+          <div [ngSwitch]="activeTab">
+            <div *ngSwitchCase="'info'">
+              <form [formGroup]="infoForm" (ngSubmit)="guardarInfo()">
+                <div class="row mb-3">
+                  <div class="col-md-6">
+                    <label class="form-label">Nombre</label>
+                    <input type="text" class="form-control" formControlName="nombre">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Departamento</label>
+                    <select class="form-select" formControlName="departamento">
+                      <option value="">Seleccionar</option>
+                      <option *ngFor="let dep of departamentos" [value]="dep.idDepartamento">{{ dep.departamento }}</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="row mb-3">
+                  <div class="col-md-6">
+                    <label class="form-label">Telefono</label>
+                    <input type="text" class="form-control" formControlName="telefono">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Correo</label>
+                    <input type="email" class="form-control" formControlName="correo">
+                  </div>
+                </div>
+                <div class="d-flex justify-content-end gap-2">
+                  <button class="btn btn-primary" type="submit" [disabled]="infoForm.invalid || isLoadingInfo">
+                    <i class="feather icon-save me-1"></i>
+                    Guardar cambios
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <div *ngSwitchCase="'modulos'">
+              <div *ngIf="isLoadingModulos" class="alert alert-light border">
+                <small class="text-muted">
+                  <i class="feather icon-loader me-1"></i>
+                  Cargando modulos...
+                </small>
+              </div>
+              <div *ngIf="!isLoadingModulos">
+                <div class="table-responsive">
+                  <table class="table table-hover">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Modulo</th>
+                        <th>Descripcion</th>
+                        <th class="text-center">Asignado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let modulo of modulos">
+                        <td>{{ modulo.codigo }}</td>
+                        <td>{{ modulo.descripcion }}</td>
+                        <td class="text-center">
+                          <input type="checkbox" class="form-check-input" [(ngModel)]="modulo.asignado">
+                        </td>
+                      </tr>
+                      <tr *ngIf="modulos.length === 0">
+                        <td colspan="3" class="text-center text-muted py-4">No hay modulos disponibles.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="d-flex justify-content-end">
+                  <button class="btn btn-primary" type="button" (click)="guardarModulos()" [disabled]="isSavingModulos">
+                    <i class="feather icon-save me-1"></i>
+                    Guardar cambios
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div *ngSwitchCase="'privilegios'">
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label class="form-label">Modulo</label>
+                  <select class="form-select" [(ngModel)]="moduloSeleccionado" (change)="onModuloPrivilegiosChange()">
+                    <option value="">Seleccionar</option>
+                    <option *ngFor="let modulo of modulos" [value]="modulo.codigo">{{ modulo.descripcion }}</option>
+                  </select>
+                </div>
+              </div>
+              <div *ngIf="isLoadingPrivilegios" class="alert alert-light border">
+                <small class="text-muted">
+                  <i class="feather icon-loader me-1"></i>
+                  Cargando privilegios...
+                </small>
+              </div>
+              <div class="table-responsive" *ngIf="!isLoadingPrivilegios && moduloSeleccionado">
+                <table class="table table-hover">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Privilegio</th>
+                      <th class="text-center">Asignado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let privilegio of privilegiosCatalogo">
+                      <td>{{ privilegio.descripcion }}</td>
+                      <td class="text-center">
+                        <input
+                          type="checkbox"
+                          class="form-check-input"
+                          [checked]="privilegiosAsignados.has(privilegio.id)"
+                          (change)="togglePrivilegio(privilegio, $any($event.target).checked)"
+                        >
+                      </td>
+                    </tr>
+                    <tr *ngIf="privilegiosCatalogo.length === 0">
+                      <td colspan="2" class="text-center text-muted py-4">No hay privilegios para este modulo.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div *ngIf="!moduloSeleccionado" class="text-muted">
+                Seleccione un modulo para gestionar privilegios.
+              </div>
+            </div>
+
+            <div *ngSwitchCase="'puntosventa'">
+              <form [formGroup]="puntoVentaForm" class="row g-3 align-items-end mb-3" (ngSubmit)="agregarPuntoVenta()">
+                <div class="col-md-6">
+                  <label class="form-label">Punto de Venta</label>
+                  <select class="form-select" formControlName="puntoVenta">
+                    <option value="">Seleccionar</option>
+                    <option *ngFor="let pv of puntosVentaCatalogo" [value]="pv.codigo">
+                      {{ pv.descripcion }}
+                    </option>
+                  </select>
+                </div>
+                <div class="col-md-3">
+                  <button class="btn btn-primary" type="submit" [disabled]="puntoVentaForm.invalid">
+                    <i class="feather icon-plus me-1"></i>
+                    Agregar
+                  </button>
+                </div>
+              </form>
+              <div *ngIf="isLoadingPuntosVenta" class="alert alert-light border">
+                <small class="text-muted">
+                  <i class="feather icon-loader me-1"></i>
+                  Cargando puntos de venta...
+                </small>
+              </div>
+              <div class="table-responsive" *ngIf="!isLoadingPuntosVenta">
+                <table class="table table-hover">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Codigo</th>
+                      <th>Descripcion</th>
+                      <th class="text-center">Accion</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let pv of puntosVentaUsuario">
+                      <td>{{ pv.codigo }}</td>
+                      <td>{{ pv.descripcion }}</td>
+                      <td class="text-center">
+                        <button class="btn btn-sm btn-outline-danger" (click)="quitarPuntoVenta(pv)">
+                          <i class="feather icon-trash"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr *ngIf="puntosVentaUsuario.length === 0">
+                      <td colspan="3" class="text-center text-muted py-4">No hay puntos de venta asignados.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div *ngSwitchCase="'descuentos'">
+              <div *ngIf="isLoadingDescuentos" class="alert alert-light border">
+                <small class="text-muted">
+                  <i class="feather icon-loader me-1"></i>
+                  Cargando descuentos...
+                </small>
+              </div>
+              <div class="table-responsive" *ngIf="!isLoadingDescuentos">
+                <table class="table table-hover">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Punto de Venta</th>
+                      <th>Nivel de descuento</th>
+                      <th class="text-center">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let row of descuentosRows">
+                      <td>{{ row.descripcion }}</td>
+                      <td>
+                        <select class="form-select" [(ngModel)]="row.nivelId">
+                          <option [ngValue]="null">Seleccionar</option>
+                          <option *ngFor="let nivel of nivelesDescuento" [ngValue]="nivel.id">
+                            {{ nivel.descripcion }} ({{ nivel.porcentaje }}%)
+                          </option>
+                        </select>
+                      </td>
+                      <td class="text-center">
+                        <button class="btn btn-sm btn-outline-primary me-2" (click)="guardarDescuento(row)">
+                          <i class="feather icon-save"></i>
+                        </button>
+                        <button
+                          class="btn btn-sm btn-outline-danger"
+                          [disabled]="!row.id"
+                          (click)="eliminarDescuento(row)"
+                        >
+                          <i class="feather icon-trash"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr *ngIf="descuentosRows.length === 0">
+                      <td colspan="3" class="text-center text-muted py-4">No hay puntos de venta asignados.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

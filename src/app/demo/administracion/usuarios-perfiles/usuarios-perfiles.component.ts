@@ -1,245 +1,182 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-  status: 'active' | 'inactive';
-  lastAccess: Date;
-  notes?: string;
-  password?: string;
-}
+import Swal from 'sweetalert2';
+import { DepartamentoService } from 'src/app/demo/administracion/departamento/departamento.service';
+import { DepartamentoUI } from 'src/app/demo/administracion/departamento/departamento.models';
+import { UsuarioService } from '../usuarios/usuario.service';
+import { UsuarioResponse, UsuarioUI } from '../usuarios/usuario.models';
 
 @Component({
   selector: 'app-usuarios-perfiles',
+  standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './usuarios-perfiles.component.html',
   styleUrls: ['./usuarios-perfiles.component.scss']
 })
 export class UsuariosPerfilesComponent implements OnInit {
-  @ViewChild('userModal') userModal!: ElementRef;
+  usuarios: UsuarioUI[] = [];
+  departamentos: DepartamentoUI[] = [];
+  isLoading = false;
 
-  // Propiedades para filtros
-  searchTerm: string = '';
-  roleFilterValue: string = '';
-  statusFilterValue: string = '';
+  searchNombre = '';
+  departamentoFilter: number | null = null;
 
-  constructor(private router: Router) {}
+  currentPage = 1;
+  pageSize = 10;
+  totalPages = 1;
+  totalRegistros = 0;
+  pageSizeOptions = [5, 10, 20, 50];
 
-  // Datos de usuarios
-  users: User[] = [
-    {
-      id: 1,
-      name: 'Juan Pérez',
-      email: 'juan.perez@empresa.com',
-      role: 'admin',
-      status: 'active',
-      lastAccess: new Date('2025-12-25T10:30:00'),
-      notes: 'Administrador principal del sistema'
-    },
-    {
-      id: 2,
-      name: 'María García',
-      email: 'maria.garcia@empresa.com',
-      role: 'staff',
-      status: 'active',
-      lastAccess: new Date('2025-12-25T09:15:00'),
-      notes: 'Encargada de operaciones'
-    },
-    {
-      id: 3,
-      name: 'Carlos Rodríguez',
-      email: 'carlos.rodriguez@empresa.com',
-      role: 'contabilidad',
-      status: 'active',
-      lastAccess: new Date('2025-12-24T16:45:00'),
-      notes: 'Contador senior'
-    },
-    {
-      id: 4,
-      name: 'Ana López',
-      email: 'ana.lopez@empresa.com',
-      role: 'suplidor',
-      status: 'inactive',
-      lastAccess: new Date('2025-12-20T14:20:00'),
-      notes: 'Proveedor de servicios turísticos'
-    },
-    {
-      id: 5,
-      name: 'Pedro Martínez',
-      email: 'pedro.martinez@empresa.com',
-      role: 'staff',
-      status: 'active',
-      lastAccess: new Date('2025-12-25T11:00:00'),
-      notes: 'Asistente de operaciones'
-    }
-  ];
+  constructor(
+    private router: Router,
+    private usuarioService: UsuarioService,
+    private departamentoService: DepartamentoService
+  ) {}
 
-  filteredUsers: User[] = [];
-  currentUser: User = this.getEmptyUser();
-  password: string = '';
-  confirmPassword: string = '';
-  isEditing: boolean = false;
-
-  // Paginación
-  currentPage: number = 1;
-  itemsPerPage: number = 5;
-  totalPages: number = 1;
-  get totalUsers(): number {
-    return this.filteredUsers.length;
+  ngOnInit(): void {
+    this.loadDepartamentos();
+    this.loadUsuarios();
   }
 
-  getPaginatedUsers(): User[] {
-    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
-    const endIndex = startIndex + this.itemsPerPage;
-    return this.filteredUsers.slice(startIndex, endIndex);
+  loadDepartamentos(): void {
+    this.isLoading = true;
+    this.departamentoService.getAll().subscribe({
+      next: (data) => {
+        this.departamentos = data ?? [];
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error al cargar departamentos:', error);
+        Swal.fire({
+          title: 'Error',
+          text: 'No se pudo cargar el catalogo de departamentos.',
+          icon: 'error'
+        });
+        this.isLoading = false;
+      }
+    });
   }
 
-  trackByFn(index: number, item: User): number {
-    return item.id;
+  loadUsuarios(): void {
+    this.isLoading = true;
+    const nombre = this.searchNombre.trim();
+    const departamentoId = this.departamentoFilter;
+
+    const request$ = nombre
+      ? this.usuarioService.getByNombreUsuario(nombre, this.currentPage, this.pageSize)
+      : departamentoId !== null
+        ? this.usuarioService.getByDepartamento(departamentoId, this.currentPage, this.pageSize)
+        : this.usuarioService.getAll(this.currentPage, this.pageSize);
+
+    request$.subscribe({
+      next: (result) => {
+        this.usuarios = result.data ?? [];
+        this.totalRegistros = result.totalRegistros ?? this.usuarios.length;
+        this.totalPages = result.totalPages ?? 1;
+        this.currentPage = result.paginaActual ?? this.currentPage;
+        this.pageSize = result.pageSize ?? this.pageSize;
+        if (this.currentPage > this.totalPages) {
+          this.currentPage = this.totalPages;
+          this.loadUsuarios();
+          return;
+        }
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error al cargar usuarios:', error);
+        Swal.fire({
+          title: 'Error',
+          text: 'No se pudieron cargar los usuarios. Verifique la API.',
+          icon: 'error'
+        });
+        this.isLoading = false;
+      }
+    });
   }
 
-  ngOnInit() {
-    this.applyFilters();
-  }
-
-  onSearchChange(): void {
-    this.applyFilters();
-  }
-
-  onFilterChange(): void {
-    this.applyFilters();
-  }
-
-  getEmptyUser(): User {
-    return {
-      id: 0,
-      name: '',
-      email: '',
-      role: '',
-      status: 'active',
-      lastAccess: new Date(),
-      notes: ''
-    };
-  }
-
-  getInitials(name: string): string {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
-  }
-
-  getRoleLabel(role: string): string {
-    const roles: { [key: string]: string } = {
-      'admin': 'Administrador',
-      'staff': 'Staff',
-      'contabilidad': 'Contabilidad',
-      'suplidor': 'Suplidor'
-    };
-    return roles[role] || role;
-  }
-
-  getRoleBadgeClass(role: string): string {
-    const classes: { [key: string]: string } = {
-      'admin': 'bg-danger',
-      'staff': 'bg-primary',
-      'contabilidad': 'bg-success',
-      'suplidor': 'bg-warning'
-    };
-    return classes[role] || 'bg-secondary';
-  }
-
-  createNewUser() {
+  createNewUser(): void {
     this.router.navigate(['/usuario-detalle']);
   }
 
-  editUser(user: User) {
-    this.router.navigate(['/usuario-detalle'], { queryParams: { id: user.id, edit: true } });
+  editUser(user: UsuarioUI): void {
+    this.router.navigate(['/usuario-detalle', user.usuario]);
   }
 
-  saveUser() {
-    if (this.isEditing) {
-      const index = this.users.findIndex(u => u.id === this.currentUser.id);
-      if (index !== -1) {
-        this.users[index] = { ...this.currentUser };
+  changePassword(user: UsuarioUI): void {
+    this.router.navigate(['/usuario-cambiar-clave', user.usuario]);
+  }
+
+  deleteUser(user: UsuarioUI): void {
+    Swal.fire({
+      title: 'Eliminar usuario',
+      text: `Estas seguro de eliminar el usuario "${user.nombreUsu}"?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Si, eliminar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (!result.isConfirmed) {
+        return;
       }
-    } else {
-      this.currentUser.id = Math.max(...this.users.map(u => u.id)) + 1;
-      this.currentUser.password = this.password; // Asignar contraseña para nuevos usuarios
-      this.users.push({ ...this.currentUser });
-    }
 
-    this.applyFilters();
-    this.closeModal();
-    this.password = '';
-    this.confirmPassword = '';
+      this.isLoading = true;
+      this.usuarioService.delete(user.usuario).subscribe({
+        next: (response: UsuarioResponse) => {
+          const message = response?.respuesta || 'Usuario eliminado correctamente.';
+          Swal.fire({
+            title: 'Eliminado',
+            text: message,
+            icon: 'success'
+          });
+          this.loadUsuarios();
+        },
+        error: (error) => {
+          console.error('Error al eliminar usuario:', error);
+          const errorMsg = error?.error?.respuesta || 'Error al eliminar el usuario.';
+          Swal.fire({
+            title: 'Error',
+            text: errorMsg,
+            icon: 'error'
+          });
+          this.isLoading = false;
+        }
+      });
+    });
   }
 
-  resetPassword(user: User) {
-    // Aquí iría la lógica para resetear contraseña
-    alert(`Se ha enviado un email de reseteo de contraseña a ${user.email}`);
+  getDepartamentoLabel(id: number): string {
+    const dep = this.departamentos.find((item) => item.idDepartamento === id);
+    return dep ? dep.departamento : String(id ?? '');
   }
 
-  toggleUserStatus(user: User) {
-    user.status = user.status === 'active' ? 'inactive' : 'active';
-    this.applyFilters();
-  }
-
-  closeModal() {
-    const modal = new (window as any).bootstrap.Modal(this.userModal.nativeElement);
-    modal.hide();
-  }
-
-  applyFilters() {
-    let filtered = [...this.users];
-
-    // Filtro de búsqueda
-    if (this.searchTerm) {
-      const searchTerm = this.searchTerm.toLowerCase();
-      filtered = filtered.filter(user =>
-        user.name.toLowerCase().includes(searchTerm) ||
-        user.email.toLowerCase().includes(searchTerm) ||
-        user.role.toLowerCase().includes(searchTerm)
-      );
-    }
-
-    // Filtro de rol
-    if (this.roleFilterValue) {
-      filtered = filtered.filter(user => user.role === this.roleFilterValue);
-    }
-
-    // Filtro de estado
-    if (this.statusFilterValue) {
-      filtered = filtered.filter(user => user.status === this.statusFilterValue);
-    }
-
-    this.filteredUsers = filtered;
-    const total = filtered.length;
-    this.totalPages = Math.max(1, Math.ceil(total / this.itemsPerPage));
+  applySearch(): void {
     this.currentPage = 1;
+    this.loadUsuarios();
   }
 
-  getPages(): number[] {
-    const pages: number[] = [];
-    const startPage = Math.max(1, this.currentPage - 2);
-    const endPage = Math.min(this.totalPages, this.currentPage + 2);
+  clearSearch(): void {
+    this.searchNombre = '';
+    this.departamentoFilter = null;
+    this.applySearch();
+  }
 
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(i);
+  onPageSizeChange(): void {
+    this.currentPage = 1;
+    this.loadUsuarios();
+  }
+
+  goToPageRelative(offset: number): void {
+    const next = this.currentPage + offset;
+    if (next < 1 || next > this.totalPages) {
+      return;
     }
-
-    return pages;
+    this.currentPage = next;
+    this.loadUsuarios();
   }
 
-  changePage(page: number) {
-    if (page >= 1 && page <= this.totalPages) {
-      this.currentPage = page;
-    }
-  }
-
-  get Math() {
-    return Math;
+  trackByUsuario(index: number, item: UsuarioUI): string {
+    return item.usuario;
   }
 }

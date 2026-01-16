@@ -1,0 +1,28 @@
+/* Match cliente-form section styles for visual consistency. */
+:host ::ng-deep .section-card {
+  background: #ffffff;
+  border: 1px solid #e6e8ed;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+}
+
+:host ::ng-deep .section-header {
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #5b6472;
+  margin-bottom: 0.75rem;
+}
+
+:host ::ng-deep input,
+:host ::ng-deep select,
+:host ::ng-deep textarea {
+  font-size: 0.9rem;
+  padding: 0.55rem 0.75rem;
+}
+
+:host ::ng-deep .form-check {
+  margin-top: 0.4rem;
+}

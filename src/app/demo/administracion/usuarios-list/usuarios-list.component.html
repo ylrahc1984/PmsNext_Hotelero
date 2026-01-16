@@ -1,0 +1,146 @@
+<div class="container-fluid">
+  <div class="row mb-3">
+    <div class="col-12">
+      <ul class="breadcrumb mb-0">
+        <li class="breadcrumb-item">
+          <a routerLink="/dashboard"><i class="feather icon-home"></i></a>
+        </li>
+        <li class="breadcrumb-item">
+          <a>Administracion</a>
+        </li>
+        <li class="breadcrumb-item">
+          <a routerLink="/administracion/configuracion">Configuracion del Sistema</a>
+        </li>
+        <li class="breadcrumb-item">
+          <a>Usuarios</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h4 class="mb-1">
+            <i class="feather icon-users me-2"></i>
+            Gestion de Usuarios
+          </h4>
+          <p class="text-muted mb-0">Administra los usuarios del sistema</p>
+        </div>
+        <button type="button" class="btn btn-primary" (click)="createNewUser()">
+          <i class="feather icon-plus me-1"></i>
+          Nuevo Usuario
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <div class="row g-3 mb-3">
+            <div class="col-md-4">
+              <label class="form-label">Buscar por usuario</label>
+              <input
+                type="text"
+                class="form-control"
+                [(ngModel)]="searchUsuario"
+                placeholder="Ej: CHARLY"
+              >
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Departamento</label>
+              <select class="form-select" [(ngModel)]="departamentoFilter">
+                <option [ngValue]="null">Todos</option>
+                <option *ngFor="let dep of departamentos" [ngValue]="dep.idDepartamento">
+                  {{ dep.departamento }}
+                </option>
+              </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end gap-2">
+              <button class="btn btn-primary" (click)="applySearch()">
+                <i class="feather icon-search me-1"></i>
+                Buscar
+              </button>
+              <button class="btn btn-outline-secondary" (click)="clearSearch()">
+                Limpiar
+              </button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead class="table-light">
+                <tr>
+                  <th>Usuario</th>
+                  <th>Nombre</th>
+                  <th>Departamento</th>
+                  <th>Telefono</th>
+                  <th>Correo</th>
+                  <th class="text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let user of usuarios; trackBy: trackByUsuario">
+                  <td>
+                    <span class="badge bg-light text-dark">{{ user.usuario }}</span>
+                  </td>
+                  <td>{{ user.nombreUsu }}</td>
+                  <td>{{ getDepartamentoLabel(user.departamento) }}</td>
+                  <td>{{ user.telefono || '-' }}</td>
+                  <td>{{ user.correo || '-' }}</td>
+                  <td class="text-center">
+                    <div class="btn-group" role="group">
+                      <button class="btn btn-sm btn-outline-primary" (click)="editUser(user)" title="Editar">
+                        <i class="feather icon-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-outline-warning" (click)="goToProperties(user)" title="Propiedades">
+                        <i class="feather icon-settings"></i>
+                      </button>
+                      <button class="btn btn-sm btn-outline-danger" (click)="deleteUser(user)" title="Eliminar">
+                        <i class="feather icon-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr *ngIf="!isLoading && usuarios.length === 0">
+                  <td colspan="6" class="text-center py-4">
+                    <i class="feather icon-inbox display-4 text-muted"></i>
+                    <p class="text-muted mt-2">No se encontraron usuarios</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div *ngIf="isLoading" class="alert alert-light border mt-3">
+            <small class="text-muted">
+              <i class="feather icon-loader me-1"></i>
+              Cargando usuarios...
+            </small>
+          </div>
+
+          <div class="row mt-3 align-items-center" *ngIf="totalPages > 0">
+            <div class="col-md-4 text-muted">
+              Pagina {{ currentPage }} de {{ totalPages }} ({{ totalRegistros }} registros)
+            </div>
+            <div class="col-md-4 text-center">
+              <select class="form-select form-select-sm d-inline-block w-auto" [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+                <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }} por pagina</option>
+              </select>
+            </div>
+            <div class="col-md-4 text-end">
+              <div class="btn-group" role="group">
+                <button class="btn btn-outline-secondary btn-sm" [disabled]="currentPage === 1" (click)="goToPageRelative(-1)">Prev</button>
+                <button class="btn btn-outline-secondary btn-sm" [disabled]="currentPage === totalPages" (click)="goToPageRelative(1)">Next</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+

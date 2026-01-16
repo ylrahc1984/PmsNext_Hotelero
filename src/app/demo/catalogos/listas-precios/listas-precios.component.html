@@ -1,70 +1,123 @@
 <div class="row">
   <div class="col-12">
     <app-card cardTitle="Listas de Precios">
-      <div class="row mb-3">
+      <div class="row mb-3 align-items-end">
+        <div class="col-md-6">
+          <label class="form-label">Descripcion</label>
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="filterDescripcion"
+            placeholder="Buscar por descripcion"
+          >
+        </div>
         <div class="col-md-3">
-          <input type="text" class="form-control" [(ngModel)]="filterNombre" (input)="filteredListas()" placeholder="Buscar por nombre o descripción">
-        </div>
-        <div class="col-md-2">
-          <select class="form-control" [(ngModel)]="filterEstado" (change)="filteredListas()">
-            <option value="">Todos los estados</option>
-            <option value="activa">Activa</option>
-            <option value="inactiva">Inactiva</option>
+          <label class="form-label">Vigente</label>
+          <select class="form-control" [(ngModel)]="filterVigente" (change)="applyLocalFilters()">
+            <option value="">Todos</option>
+            <option value="S">Vigente</option>
+            <option value="N">No vigente</option>
           </select>
         </div>
-        <div class="col-md-2">
-          <select class="form-control" [(ngModel)]="filterMoneda" (change)="filteredListas()">
-            <option value="">Todas las monedas</option>
-            <option value="CRC">CRC</option>
-            <option value="USD">USD</option>
-            <option value="EUR">EUR</option>
-          </select>
-        </div>
-        <div class="col-md-2">
-          <input type="date" class="form-control" [(ngModel)]="filterVigenciaDesde" (change)="filteredListas()" placeholder="Desde">
-        </div>
-        <div class="col-md-2">
-          <input type="date" class="form-control" [(ngModel)]="filterVigenciaHasta" (change)="filteredListas()" placeholder="Hasta">
-        </div>
-        <div class="col-md-1">
-          <button class="btn btn-primary" (click)="openForm()">
-            <i class="feather icon-plus"></i>
+        <div class="col-md-3 text-end">
+          <button class="btn btn-outline-secondary me-2" (click)="onLimpiar()" [disabled]="isLoading">
+            Limpiar
+          </button>
+          <button class="btn btn-primary me-2" (click)="onBuscar()" [disabled]="isLoading">
+            Buscar
+          </button>
+          <button class="btn btn-success" (click)="openForm()" [disabled]="isLoading">
+            <i class="feather icon-plus me-1"></i>
+            Crear
           </button>
         </div>
       </div>
+
       <div class="table-responsive">
-        <table class="table table-striped">
-          <thead>
+        <table class="table table-hover">
+          <thead class="table-light">
             <tr>
-              <th>Nombre</th>
+              <th>Codigo Lista</th>
+              <th>Descripcion</th>
               <th>Moneda</th>
+              <th>Simbolo</th>
+              <th>Vigente</th>
               <th>Vigencia</th>
-              <th>Estado</th>
-              <th>Última Actualización</th>
-              <th>Acciones</th>
+              <th class="text-center">Acciones</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let lista of filteredListas()">
-              <td>{{ lista.nombre }}</td>
+            <tr *ngFor="let lista of filteredListas">
+              <td><span class="badge bg-light text-dark">{{ lista.codigo }}</span></td>
+              <td>{{ lista.descripcion }}</td>
               <td>{{ lista.moneda }}</td>
-              <td>{{ formatDate(lista.vigenciaDesde) }} - {{ formatDate(lista.vigenciaHasta) }}</td>
-              <td><span class="badge {{ getEstadoBadge(lista.activa) }}">{{ getEstadoText(lista.activa) }}</span></td>
-              <td>{{ formatDate(lista.updatedAt) }}</td>
+              <td>{{ lista.simbolo || '-' }}</td>
               <td>
-                <button class="btn btn-sm btn-outline-info" [routerLink]="['/catalogos/listas-precios', lista.id, 'detalle']" title="Ver Detalle">
+                <span class="badge" [ngClass]="getVigenteBadge(lista.vigente)">
+                  {{ getVigenteText(lista.vigente) }}
+                </span>
+              </td>
+              <td>{{ formatVigencia(lista.fechaDesde, lista.fechaHasta) }}</td>
+              <td class="text-center">
+                <button class="btn btn-sm btn-outline-info" (click)="verDetalle(lista.codigo)" title="Ver detalle">
                   <i class="feather icon-eye"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-warning ml-1" (click)="openForm(lista)" title="Editar">
+                <button class="btn btn-sm btn-outline-primary ms-1" (click)="openForm(lista.codigo)" title="Editar">
                   <i class="feather icon-edit"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-success ml-1" (click)="toggleActive(lista.id)" [title]="lista.activa ? 'Desactivar' : 'Activar'">
-                  <i class="feather" [ngClass]="lista.activa ? 'icon-pause' : 'icon-play'"></i>
+                <button class="btn btn-sm btn-outline-danger ms-1" (click)="eliminar(lista.codigo)" title="Eliminar">
+                  <i class="feather icon-trash"></i>
                 </button>
+              </td>
+            </tr>
+            <tr *ngIf="!isLoading && filteredListas.length === 0">
+              <td colspan="7" class="text-center py-4 text-muted">
+                No se encontraron listas de precios.
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div class="row mt-3 align-items-center" *ngIf="totalPages > 0">
+        <div class="col-md-4 text-muted">
+          Pagina {{ currentPage }} de {{ totalPages }} ({{ totalRegistros }} registros)
+        </div>
+        <div class="col-md-4 text-center">
+          <select
+            class="form-select form-select-sm d-inline-block w-auto"
+            [(ngModel)]="pageSize"
+            (change)="onPageSizeChange()"
+            [disabled]="isLoading"
+          >
+            <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }} por pagina</option>
+          </select>
+        </div>
+        <div class="col-md-4 text-end">
+          <div class="btn-group" role="group">
+            <button
+              class="btn btn-outline-secondary btn-sm"
+              [disabled]="currentPage === 1 || isLoading"
+              (click)="goToPageRelative(-1)"
+            >
+              Prev
+            </button>
+            <button
+              class="btn btn-outline-secondary btn-sm"
+              [disabled]="currentPage === totalPages || isLoading"
+              (click)="goToPageRelative(1)"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="isLoading" class="alert alert-light border mt-3">
+        <small class="text-muted">
+          <i class="feather icon-loader me-1"></i>
+          Cargando listas de precios...
+        </small>
       </div>
     </app-card>
   </div>

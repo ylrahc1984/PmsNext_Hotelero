@@ -99,43 +99,11 @@ export const NavigationItems: NavigationItem[] = [
         icon: 'feather icon-settings',
         children: [
           {
-            id: 'usuarios-perfiles',
-            title: 'Usuarios y Perfiles',
+            id: 'configuracion-sistema',
+            title: 'Configuración del Sistema',
             type: 'item',
-            url: '/usuarios-perfiles',
-            icon: 'feather icon-users',
-            classes: 'nav-item'
-          },
-          {
-            id: 'formas-pago',
-            title: 'Formas de Pago',
-            type: 'item',
-            url: '/formas-pago',
-            icon: 'feather icon-credit-card',
-            classes: 'nav-item'
-          },
-          {
-            id: 'correlativos',
-            title: 'Correlativos',
-            type: 'item',
-            url: '/correlativos',
-            icon: 'feather icon-hash',
-            classes: 'nav-item'
-          },
-          {
-            id: 'monedas',
-            title: 'Monedas',
-            type: 'item',
-            url: '/monedas',
-            icon: 'feather icon-credit-card',
-            classes: 'nav-item'
-          },
-          {
-            id: 'tipo-cambio',
-            title: 'Tipo de Cambio',
-            type: 'item',
-            url: '/administracion/tipo-cambio',
-            icon: 'feather icon-repeat',
+            url: '/administracion/configuracion',
+            icon: 'feather icon-sliders',
             classes: 'nav-item'
           }
         ]

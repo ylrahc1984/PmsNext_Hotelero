@@ -1,76 +1,106 @@
 <div class="row">
   <div class="col-12">
     <app-card cardTitle="{{ isEditing ? 'Editar Lista de Precios' : 'Nueva Lista de Precios' }}">
-      <form>
-        <div class="form-group">
-          <label>Nombre <span class="text-danger">*</span></label>
-          <input type="text" class="form-control" [(ngModel)]="formData.nombre" name="nombre" required
-                 [class.is-invalid]="formData.nombre === '' && formData.nombre !== undefined">
-          <div class="invalid-feedback" *ngIf="formData.nombre === ''">El nombre es requerido.</div>
-        </div>
-
-        <div class="form-group">
-          <label>Descripción</label>
-          <textarea class="form-control" [(ngModel)]="formData.descripcion" name="descripcion" rows="3"
-                    placeholder="Descripción opcional de la lista de precios"></textarea>
+      <form [formGroup]="form" (ngSubmit)="guardar()">
+        <div class="row">
+          <div class="col-md-4">
+            <div class="form-group">
+              <label>Codigo <span class="text-danger">*</span></label>
+              <input
+                type="text"
+                class="form-control"
+                formControlName="codLstPrecio"
+                (input)="onCodigoInput()"
+                [class.is-invalid]="form.get('codLstPrecio')?.touched && form.get('codLstPrecio')?.invalid"
+                [readonly]="isEditing"
+              >
+              <div class="invalid-feedback">El codigo es requerido.</div>
+            </div>
+          </div>
+          <div class="col-md-8">
+            <div class="form-group">
+              <label>Descripcion <span class="text-danger">*</span></label>
+              <input
+                type="text"
+                class="form-control"
+                formControlName="desLstPrecio"
+                [class.is-invalid]="form.get('desLstPrecio')?.touched && form.get('desLstPrecio')?.invalid"
+              >
+              <div class="invalid-feedback">La descripcion es requerida.</div>
+            </div>
+          </div>
         </div>
 
         <div class="row">
-          <div class="col-md-6">
+          <div class="col-md-4">
             <div class="form-group">
               <label>Moneda <span class="text-danger">*</span></label>
-              <select class="form-control" [(ngModel)]="formData.moneda" name="moneda" required
-                      [class.is-invalid]="!formData.moneda">
+              <select
+                class="form-control"
+                formControlName="moneda"
+                (change)="onMonedaChange()"
+                [class.is-invalid]="form.get('moneda')?.touched && form.get('moneda')?.invalid"
+              >
                 <option value="">Seleccione una moneda</option>
-                <option value="CRC">CRC - Colón Costarricense</option>
-                <option value="USD">USD - Dólar Estadounidense</option>
-                <option value="EUR">EUR - Euro</option>
+                <option *ngFor="let moneda of monedas" [value]="moneda.codMoneda">
+                  {{ moneda.codMoneda }} - {{ moneda.moneda }}
+                </option>
               </select>
-              <div class="invalid-feedback" *ngIf="!formData.moneda">La moneda es requerida.</div>
+              <div class="invalid-feedback">La moneda es requerida.</div>
             </div>
           </div>
           <div class="col-md-3">
             <div class="form-group">
-              <label>Vigencia Desde <span class="text-danger">*</span></label>
-              <input type="date" class="form-control" [(ngModel)]="formData.vigenciaDesde" name="vigenciaDesde" required
-                     [class.is-invalid]="!formData.vigenciaDesde">
-              <div class="invalid-feedback" *ngIf="!formData.vigenciaDesde">La fecha de vigencia desde es requerida.</div>
+              <label>Simbolo</label>
+              <input type="text" class="form-control" formControlName="simbolo">
             </div>
           </div>
-          <div class="col-md-3">
+          <div class="col-md-5">
             <div class="form-group">
-              <label>Vigencia Hasta <span class="text-danger">*</span></label>
-              <input type="date" class="form-control" [(ngModel)]="formData.vigenciaHasta" name="vigenciaHasta" required
-                     [class.is-invalid]="!formData.vigenciaHasta || hasDateRangeError()">
-              <div class="invalid-feedback" *ngIf="!formData.vigenciaHasta">La fecha de vigencia hasta es requerida.</div>
-              <div class="invalid-feedback" *ngIf="hasDateRangeError()">
-                La fecha hasta no puede ser menor que la fecha desde.
+              <label>Vigente</label>
+              <div class="form-check form-switch">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  [checked]="isVigente"
+                  (change)="onVigenciaToggle($event.target.checked)"
+                  id="vigenteSwitch"
+                >
+                <label class="form-check-label" for="vigenteSwitch">
+                  {{ isVigente ? 'Vigente' : 'No vigente' }}
+                </label>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="form-group">
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" [(ngModel)]="formData.activa" name="activa" id="activaCheck">
-            <label class="form-check-label" for="activaCheck">
-              Lista Activa
-            </label>
+        <div class="row">
+          <div class="col-md-3">
+            <div class="form-group">
+              <label>Fecha Desde</label>
+              <input type="date" class="form-control" formControlName="fechaDesde">
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="form-group">
+              <label>Fecha Hasta</label>
+              <input type="date" class="form-control" formControlName="fechaHasta">
+            </div>
           </div>
         </div>
 
         <div class="form-group">
           <label>Observaciones</label>
-          <textarea class="form-control" [(ngModel)]="formData.observaciones" name="observaciones" rows="2"
-                    placeholder="Observaciones opcionales"></textarea>
+          <textarea class="form-control" formControlName="observaciones" rows="3"></textarea>
         </div>
 
-        <div class="form-group text-right">
-          <button type="button" class="btn btn-secondary mr-2" (click)="cancel()">
-            <i class="feather icon-x"></i> Cancelar
+        <div class="d-flex justify-content-end gap-2">
+          <button type="button" class="btn btn-secondary" (click)="cancelar()" [disabled]="isLoading">
+            Cancelar
           </button>
-          <button type="button" class="btn btn-primary" (click)="save()" [disabled]="!validateForm()">
-            <i class="feather icon-save"></i> Guardar
+          <button type="submit" class="btn btn-primary" [disabled]="form.invalid || isLoading">
+            <i class="feather icon-save me-1"></i>
+            Guardar
           </button>
         </div>
       </form>

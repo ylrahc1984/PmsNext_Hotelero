@@ -1,16 +1,13 @@
-<div class="container-fluid">
-  <!-- Header -->
+﻿<div class="container-fluid">
   <div class="row mb-4">
     <div class="col-12">
       <div class="d-flex justify-content-between align-items-center">
         <div>
           <h4 class="mb-1">
-            <i class="feather icon-user-plus me-2"></i>
+            <i class="feather icon-user me-2"></i>
             {{ isEditing ? 'Editar Usuario' : 'Nuevo Usuario' }}
           </h4>
-          <p class="text-muted mb-0">
-            Completa la información del usuario y su perfil de acceso
-          </p>
+          <p class="text-muted mb-0">Completa la informacion del usuario</p>
         </div>
         <button type="button" class="btn btn-secondary" (click)="goBack()">
           <i class="feather icon-arrow-left me-1"></i>
@@ -24,291 +21,74 @@
     <div class="col-12">
       <div class="card">
         <div class="card-body">
-          <form (ngSubmit)="onSubmit()" #userForm="ngForm">
-            <!-- Información Personal -->
-            <div class="row mb-4">
-              <div class="col-12">
-                <h6 class="text-primary mb-3">
-                  <i class="feather icon-user me-2"></i>
-                  Información Personal
-                </h6>
-              </div>
-            </div>
+          <div *ngIf="!isCatalogLoaded" class="alert alert-light border">
+            <small class="text-muted">
+              <i class="feather icon-loader me-1"></i>
+              Cargando catalogo...
+            </small>
+          </div>
 
+          <form *ngIf="isCatalogLoaded" [formGroup]="form" (ngSubmit)="onSubmit()">
             <div class="row mb-3">
-              <div class="col-md-6">
+              <div class="col-md-4">
+                <label class="form-label">Usuario <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" formControlName="usuario" [class.is-invalid]="isFieldInvalid('usuario')" placeholder="Usuario">
+                <div class="invalid-feedback">El usuario es requerido.</div>
+              </div>
+              <div class="col-md-8">
                 <label class="form-label">Nombre <span class="text-danger">*</span></label>
-                <input type="text"
-                       class="form-control"
-                       [(ngModel)]="user.firstName"
-                       name="firstName"
-                       required
-                       placeholder="Ingrese el nombre">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Apellido <span class="text-danger">*</span></label>
-                <input type="text"
-                       class="form-control"
-                       [(ngModel)]="user.lastName"
-                       name="lastName"
-                       required
-                       placeholder="Ingrese el apellido">
+                <input type="text" class="form-control" formControlName="nombreUsu" [class.is-invalid]="isFieldInvalid('nombreUsu')" placeholder="Nombre completo">
+                <div class="invalid-feedback">El nombre es requerido.</div>
               </div>
             </div>
 
             <div class="row mb-3">
-              <div class="col-md-6">
-                <label class="form-label">Email <span class="text-danger">*</span></label>
-                <input type="email"
-                       class="form-control"
-                       [(ngModel)]="user.email"
-                       name="email"
-                       required
-                       placeholder="usuario@empresa.com">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Teléfono</label>
-                <input type="tel"
-                       class="form-control"
-                       [(ngModel)]="user.phone"
-                       name="phone"
-                       placeholder="(809) 123-4567">
-              </div>
-            </div>
-
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <label class="form-label">Fecha de Nacimiento</label>
-                <input type="date"
-                       class="form-control"
-                       [(ngModel)]="user.birthDate"
-                       name="birthDate">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Tipo de Documento</label>
-                <select class="form-select"
-                        [(ngModel)]="user.documentType"
-                        name="documentType">
-                  <option *ngFor="let docType of documentTypes" [value]="docType.value">
-                    {{ docType.label }}
-                  </option>
+              <div class="col-md-4">
+                <label class="form-label">Departamento <span class="text-danger">*</span></label>
+                <select class="form-select" formControlName="departamento" [class.is-invalid]="isFieldInvalid('departamento')">
+                  <option value="">Seleccionar</option>
+                  <option *ngFor="let dep of departamentos" [value]="dep.idDepartamento">{{ dep.departamento }}</option>
                 </select>
+                <div class="invalid-feedback">Seleccione un departamento.</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Telefono</label>
+                <input type="text" class="form-control" formControlName="telefono" placeholder="Telefono">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Correo</label>
+                <input type="email" class="form-control" formControlName="correo" [class.is-invalid]="isFieldInvalid('correo')" placeholder="correo@empresa.com">
+                <div class="invalid-feedback">Correo no valido.</div>
               </div>
             </div>
 
             <div class="row mb-4">
               <div class="col-md-6">
-                <label class="form-label">Número de Documento <span class="text-danger">*</span></label>
-                <input type="text"
-                       class="form-control"
-                       [(ngModel)]="user.documentNumber"
-                       name="documentNumber"
-                       required
-                       placeholder="Ingrese el número de documento">
-              </div>
-            </div>
-
-            <!-- Dirección -->
-            <div class="row mb-4">
-              <div class="col-12">
-                <h6 class="text-primary mb-3">
-                  <i class="feather icon-map-pin me-2"></i>
-                  Dirección
-                </h6>
-              </div>
-            </div>
-
-            <div class="row mb-3">
-              <div class="col-12">
-                <label class="form-label">Dirección</label>
-                <input type="text"
-                       class="form-control"
-                       [(ngModel)]="user.address"
-                       name="address"
-                       placeholder="Calle, número, sector">
-              </div>
-            </div>
-
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <label class="form-label">Ciudad</label>
-                <input type="text"
-                       class="form-control"
-                       [(ngModel)]="user.city"
-                       name="city"
-                       placeholder="Ciudad">
+                <div class="p-3 border rounded bg-light">
+                  <label class="form-label d-block mb-2">Punto de Venta</label>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input"
+                           type="checkbox"
+                           formControlName="pntVenta"
+                           id="pntVentaSwitch">
+                    <label class="form-check-label" for="pntVentaSwitch">
+                      {{ form.get('pntVenta')?.value ? 'Habilitado' : 'Deshabilitado' }}
+                    </label>
+                  </div>
+                  <small class="text-muted d-block mt-2">Controla si el usuario opera con Punto de Venta (1/0).</small>
+                </div>
               </div>
               <div class="col-md-6">
-                <label class="form-label">País</label>
-                <select class="form-select"
-                        [(ngModel)]="user.country"
-                        name="country">
-                  <option *ngFor="let country of countries" [value]="country">
-                    {{ country }}
-                  </option>
-                </select>
-              </div>
-            </div>
-
-            <!-- Información Laboral -->
-            <div class="row mb-4">
-              <div class="col-12">
-                <h6 class="text-primary mb-3">
-                  <i class="feather icon-briefcase me-2"></i>
-                  Información Laboral
-                </h6>
-              </div>
-            </div>
-
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <label class="form-label">Rol <span class="text-danger">*</span></label>
-                <select class="form-select"
-                        [(ngModel)]="user.role"
-                        name="role"
-                        required>
-                  <option *ngFor="let role of roles" [value]="role.value">
-                    {{ role.label }}
-                  </option>
-                </select>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Estado</label>
-                <select class="form-select"
-                        [(ngModel)]="user.status"
-                        name="status">
-                  <option value="active">Activo</option>
-                  <option value="inactive">Inactivo</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <label class="form-label">Departamento</label>
-                <select class="form-select"
-                        [(ngModel)]="user.department"
-                        name="department">
-                  <option value="">Seleccionar departamento</option>
-                  <option *ngFor="let dept of departments" [value]="dept">
-                    {{ dept }}
-                  </option>
-                </select>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Cargo</label>
-                <input type="text"
-                       class="form-control"
-                       [(ngModel)]="user.position"
-                       name="position"
-                       placeholder="Cargo o posición">
-              </div>
-            </div>
-
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <label class="form-label">Fecha de Contratación</label>
-                <input type="date"
-                       class="form-control"
-                       [(ngModel)]="user.hireDate"
-                       name="hireDate">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Salario (opcional)</label>
-                <input type="number"
-                       class="form-control"
-                       [(ngModel)]="user.salary"
-                       name="salary"
-                       placeholder="0.00">
-              </div>
-            </div>
-
-            <!-- Contacto de Emergencia -->
-            <div class="row mb-4">
-              <div class="col-12">
-                <h6 class="text-primary mb-3">
-                  <i class="feather icon-phone me-2"></i>
-                  Contacto de Emergencia
-                </h6>
-              </div>
-            </div>
-
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <label class="form-label">Nombre del Contacto</label>
-                <input type="text"
-                       class="form-control"
-                       [(ngModel)]="user.emergencyContact"
-                       name="emergencyContact"
-                       placeholder="Nombre completo">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Teléfono de Emergencia</label>
-                <input type="tel"
-                       class="form-control"
-                       [(ngModel)]="user.emergencyPhone"
-                       name="emergencyPhone"
-                       placeholder="(809) 123-4567">
-              </div>
-            </div>
-
-            <!-- Seguridad -->
-            <div class="row mb-4" *ngIf="!isEditing">
-              <div class="col-12">
-                <h6 class="text-primary mb-3">
-                  <i class="feather icon-lock me-2"></i>
-                  Seguridad
-                </h6>
-              </div>
-            </div>
-
-            <div class="row mb-3" *ngIf="!isEditing">
-              <div class="col-md-6">
-                <label class="form-label">Contraseña <span class="text-danger">*</span></label>
-                <input type="password"
-                       class="form-control"
-                       [(ngModel)]="user.password"
-                       name="password"
-                       required
-                       placeholder="Contraseña segura">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Confirmar Contraseña <span class="text-danger">*</span></label>
-                <input type="password"
-                       class="form-control"
-                       [(ngModel)]="user.confirmPassword"
-                       name="confirmPassword"
-                       required
-                       placeholder="Repita la contraseña"
-                       [class.is-invalid]="user.password && user.confirmPassword && user.password !== user.confirmPassword">
-                <div class="invalid-feedback">
-                  Las contraseñas no coinciden
+                <div class="p-3 border rounded bg-light">
+                  <label class="form-label">Clave Punto de Venta</label>
+                  <input type="text"
+                         class="form-control"
+                         formControlName="passPntVenta"
+                         placeholder="Clave punto de venta">
                 </div>
               </div>
             </div>
 
-            <!-- Notas -->
-            <div class="row mb-4">
-              <div class="col-12">
-                <h6 class="text-primary mb-3">
-                  <i class="feather icon-file-text me-2"></i>
-                  Notas Adicionales
-                </h6>
-              </div>
-            </div>
-
-            <div class="row mb-4">
-              <div class="col-12">
-                <label class="form-label">Observaciones</label>
-                <textarea class="form-control"
-                          rows="3"
-                          [(ngModel)]="user.notes"
-                          name="notes"
-                          placeholder="Información adicional sobre el usuario..."></textarea>
-              </div>
-            </div>
-
-            <!-- Botones -->
             <div class="row">
               <div class="col-12">
                 <div class="d-flex justify-content-end gap-2">
@@ -316,11 +96,9 @@
                     <i class="feather icon-x me-1"></i>
                     Cancelar
                   </button>
-                  <button type="submit"
-                          class="btn btn-primary"
-                          [disabled]="!userForm.form.valid">
+                  <button type="submit" class="btn btn-primary" [disabled]="form.invalid">
                     <i class="feather icon-save me-1"></i>
-                    {{ isEditing ? 'Actualizar Usuario' : 'Crear Usuario' }}
+                    {{ isEditing ? 'Actualizar' : 'Crear' }}
                   </button>
                 </div>
               </div>

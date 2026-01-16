@@ -1,0 +1,93 @@
+<!-- Encabezado de la página -->
+<div class="page-header">
+  <div class="page-block">
+    <div class="row align-items-center">
+      <div class="col-md-12">
+        <div class="page-header-title">
+          <h5 class="m-b-10">Configuración del Sistema</h5>
+        </div>
+        </div>
+    </div>
+  </div>
+</div>
+
+<!-- Contenido principal -->
+<div class="row">
+  <div class="col-sm-12">
+    <app-card>
+      <!-- Encabezado descriptivo -->
+      <div class="config-header mb-4">
+        <h4 class="mb-2">
+          <i class="feather icon-settings f-28 mr-2"></i>
+          Panel de Configuración
+        </h4>
+        <p class="text-muted mb-0">
+          Panel de administración y parámetros del sistema. 
+          Seleccione una opción para gestionar la configuración correspondiente.
+        </p>
+        <div class="mt-2">
+          <span class="badge badge-light-primary">
+            <i class="feather icon-grid"></i> 
+            {{ getTotalConfigOptions() }} opciones disponibles
+          </span>
+        </div>
+      </div>
+
+      <hr class="mb-4">
+
+      <!-- Grupos de configuración -->
+      @for (group of configGroups; track group.title) {
+        <div class="config-group mb-5">
+          <!-- Título del grupo -->
+          <div class="group-title mb-3">
+            <h5 class="text-uppercase">
+              <i class="feather icon-folder f-18 mr-2"></i>
+              {{ group.title }}
+            </h5>
+            <div class="group-divider"></div>
+          </div>
+
+          <!-- Grid de tarjetas -->
+          <div class="row config-cards-grid">
+            @for (card of group.cards; track card.id) {
+              <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-4">
+                <div class="config-card" (click)="navigateTo(card.route)">
+                  <div class="card-body">
+                    <!-- Ícono -->
+                    <div class="config-icon-wrapper mb-3">
+                      <i class="feather {{ card.icon }} {{ card.iconColor }}"></i>
+                    </div>
+                    
+                    <!-- Contenido -->
+                    <div class="config-content">
+                      <h6 class="card-title mb-2">{{ card.title }}</h6>
+                      <p class="card-text text-muted">{{ card.description }}</p>
+                    </div>
+
+                    <!-- Indicador de navegación -->
+                    <div class="config-arrow">
+                      <i class="feather icon-arrow-right"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Mensaje informativo al final -->
+      <div class="alert alert-light border-0 mt-4">
+        <div class="d-flex align-items-center">
+          <i class="feather icon-info f-20 mr-3 text-primary"></i>
+          <div>
+            <strong>Nota:</strong> Algunas opciones están en desarrollo y serán habilitadas próximamente.
+            Para cualquier configuración adicional, contacte al administrador del sistema.
+          </div>
+        </div>
+      </div>
+
+    </app-card>
+  </div>
+</div>
+

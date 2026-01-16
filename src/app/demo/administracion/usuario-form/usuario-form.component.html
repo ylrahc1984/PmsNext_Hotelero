@@ -1,0 +1,115 @@
+<div class="container-fluid">
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h4 class="mb-1">
+            <i class="feather icon-user me-2"></i>
+            {{ isEditing ? 'Editar Usuario' : 'Nuevo Usuario' }}
+          </h4>
+          <p class="text-muted mb-0">Completa la informacion del usuario</p>
+        </div>
+        <button type="button" class="btn btn-secondary" (click)="goBack()">
+          <i class="feather icon-arrow-left me-1"></i>
+          Volver
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <div *ngIf="!isCatalogLoaded" class="alert alert-light border">
+            <small class="text-muted">
+              <i class="feather icon-loader me-1"></i>
+              Cargando catalogo...
+            </small>
+          </div>
+
+          <form *ngIf="isCatalogLoaded" [formGroup]="form" (ngSubmit)="onSubmit()">
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <label class="form-label">Usuario <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" formControlName="usuario" [class.is-invalid]="isFieldInvalid('usuario')" placeholder="Usuario">
+                <div class="invalid-feedback">El usuario es requerido.</div>
+              </div>
+              <div class="col-md-8">
+                <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" formControlName="nombre" [class.is-invalid]="isFieldInvalid('nombre')" placeholder="Nombre completo">
+                <div class="invalid-feedback">El nombre es requerido.</div>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <label class="form-label">Departamento <span class="text-danger">*</span></label>
+                <select class="form-select" formControlName="departamento" [class.is-invalid]="isFieldInvalid('departamento')">
+                  <option value="">Seleccionar</option>
+                  <option *ngFor="let dep of departamentos" [value]="dep.idDepartamento">{{ dep.departamento }}</option>
+                </select>
+                <div class="invalid-feedback">Seleccione un departamento.</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Telefono</label>
+                <input type="text" class="form-control" formControlName="telefono" placeholder="Telefono">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Correo</label>
+                <input type="email" class="form-control" formControlName="correo" [class.is-invalid]="isFieldInvalid('correo')" placeholder="correo@empresa.com">
+                <div class="invalid-feedback">Correo no valido.</div>
+              </div>
+            </div>
+
+            <div class="row mb-4">
+              <div class="col-md-6">
+                <div class="p-3 border rounded bg-light">
+                  <label class="form-label d-block mb-2">Punto de Venta</label>
+                  <div class="form-check form-switch">
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      formControlName="puntoVentaHabilitado"
+                      id="pntVentaSwitch"
+                    >
+                    <label class="form-check-label" for="pntVentaSwitch">
+                      {{ form.get('puntoVentaHabilitado')?.value ? 'Habilitado' : 'Deshabilitado' }}
+                    </label>
+                  </div>
+                  <small class="text-muted d-block mt-2">Controla si el usuario opera con Punto de Venta (1/0).</small>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="p-3 border rounded bg-light">
+                  <label class="form-label">Clave Punto de Venta</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    formControlName="clavePuntoVenta"
+                    placeholder="Clave punto de venta"
+                  >
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-12">
+                <div class="d-flex justify-content-end gap-2">
+                  <button type="button" class="btn btn-secondary" (click)="goBack()">
+                    <i class="feather icon-x me-1"></i>
+                    Cancelar
+                  </button>
+                  <button type="submit" class="btn btn-primary" [disabled]="form.invalid">
+                    <i class="feather icon-save me-1"></i>
+                    {{ isEditing ? 'Actualizar' : 'Crear' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

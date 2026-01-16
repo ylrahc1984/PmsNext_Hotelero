@@ -1,136 +1,319 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, inject, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, NgForm } from '@angular/forms';
-import { Router } from '@angular/router';
-import { Moneda, CurrencyFormat } from './moneda.model';
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { HttpClientModule } from '@angular/common/http';
+import { RouterLink } from '@angular/router';
+import { AuthService } from 'src/app/core/services/auth.service';
+import { MonedaService, MonedaUI } from './moneda.service';
+import { SharedModule } from 'src/app/theme/shared/shared.module';
+import { ToastService } from 'src/app/core/services/toast.service';
+import Swal from 'sweetalert2';
+import { S } from '@angular/cdk/scrolling-module.d-C_w4tIrZ';
 
 declare var bootstrap: any;
 
 @Component({
   selector: 'app-monedas',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, ReactiveFormsModule, HttpClientModule, SharedModule, RouterLink],
   templateUrl: './monedas.component.html',
   styleUrls: ['./monedas.component.scss']
 })
 export class MonedasComponent implements OnInit {
-  monedas: Moneda[] = [];
-  filteredMonedas: Moneda[] = [];
+  // Services
+  private monedaService = inject(MonedaService);
+  private authService = inject(AuthService);
+  private toastService = inject(ToastService);
+  private fb = inject(FormBuilder);
+  
+  // Data
+  monedas: MonedaUI[] = [];
+  filteredMonedas: MonedaUI[] = [];
+  currentMoneda: MonedaUI | null = null;
+  monedaForm!: FormGroup;
+
+  // UI State
   searchTerm: string = '';
   statusFilter: string = '';
   currentPage: number = 1;
   itemsPerPage: number = 10;
   isEditing: boolean = false;
-  currentMoneda: Moneda | null = null;
+  isLoading: boolean = false;
+  
 
   @ViewChild('monedaModal') monedaModal!: ElementRef;
-  @ViewChild('monedaForm') monedaForm!: NgForm;
-
-  // Opciones de decimales
-  decimalOptions: { value: number; label: string }[] = [
-    { value: 0, label: 'Sin decimales (ej: ¥100)' },
-    { value: 2, label: '2 decimales (ej: $100.00)' },
-    { value: 3, label: '3 decimales (ej: $100.000)' },
-    { value: 4, label: '4 decimales (ej: $100.0000)' }
-  ];
-
-  constructor(private router: Router) {}
 
   ngOnInit(): void {
+    this.initializeForm();
     this.loadMonedas();
   }
 
+  /**
+   * Inicializa el formulario reactivo
+   */
+  private initializeForm(): void {
+    this.monedaForm = this.fb.group({
+      codMoneda: ['', [Validators.required]],
+      moneda: ['', [Validators.required]],
+      simbolo: ['', [Validators.required]],
+      activo: [1, [Validators.required]],
+      primario: [0, [Validators.required]],
+      secundario: [0, [Validators.required]],
+      orden: [0, [Validators.required, Validators.min(0)]]
+    });
+  }
+ 
+  /**
+   * Carga todas las monedas desde la API
+   */
   loadMonedas(): void {
-    // Datos de ejemplo - en producción vendrían de un servicio
-    this.monedas = [
-      {
-        id: '1',
-        code: 'DOP',
-        name: 'Peso Dominicano',
-        symbol: 'RD$',
-        decimalPlaces: 2,
-        isActive: true,
-        isBaseCurrency: true,
-        createdAt: new Date('2024-01-01'),
-        updatedAt: new Date('2024-12-25')
+    this.isLoading = true;
+    this.monedaService.getAll().subscribe({
+      next: (data: MonedaUI[]) => {
+        this.monedas = data;
+        this.applyFilters();
+        this.isLoading = false;
       },
-      {
-        id: '2',
-        code: 'USD',
-        name: 'Dólar Estadounidense',
-        symbol: '$',
-        decimalPlaces: 2,
-        isActive: true,
-        isBaseCurrency: false,
-        createdAt: new Date('2024-01-01'),
-        updatedAt: new Date('2024-12-20')
-      },
-      {
-        id: '3',
-        code: 'EUR',
-        name: 'Euro',
-        symbol: '€',
-        decimalPlaces: 2,
-        isActive: true,
-        isBaseCurrency: false,
-        createdAt: new Date('2024-01-15'),
-        updatedAt: new Date('2024-12-15')
-      },
-      {
-        id: '4',
-        code: 'JPY',
-        name: 'Yen Japonés',
-        symbol: '¥',
-        decimalPlaces: 0,
-        isActive: false,
-        isBaseCurrency: false,
-        createdAt: new Date('2024-02-01'),
-        updatedAt: new Date('2024-11-30')
-      },
-      {
-        id: '5',
-        code: 'GBP',
-        name: 'Libra Esterlina',
-        symbol: '£',
-        decimalPlaces: 2,
-        isActive: true,
-        isBaseCurrency: false,
-        createdAt: new Date('2024-02-15'),
-        updatedAt: new Date('2024-12-10')
+      error: (error) => {
+        console.error('Error al cargar monedas:', error);
+        this.toastService.addToast({
+          title: 'Error',
+          message: 'No se pudieron cargar las monedas. Verifique la conexión a la API.',
+          type: 'error'
+        });
+        this.isLoading = false;
       }
-    ];
-    this.applyFilters();
+    });
   }
 
+  /**
+   * Aplica filtros de búsqueda y estado
+   */
   applyFilters(): void {
     this.filteredMonedas = this.monedas.filter(moneda => {
-      const matchesSearch = !this.searchTerm ||
-        moneda.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        moneda.code.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        moneda.symbol.toLowerCase().includes(this.searchTerm.toLowerCase());
+      const matchesSearch =
+        !this.searchTerm ||
+        moneda.moneda.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+        moneda.codMoneda.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+        moneda.simbolo.toLowerCase().includes(this.searchTerm.toLowerCase());
 
-      const matchesStatus = !this.statusFilter ||
-        (this.statusFilter === 'active' && moneda.isActive) ||
-        (this.statusFilter === 'inactive' && !moneda.isActive);
+      const matchesStatus =
+        !this.statusFilter ||
+        (this.statusFilter === 'active' && moneda.activo === 1) ||
+        (this.statusFilter === 'inactive' && moneda.activo === 0);
 
       return matchesSearch && matchesStatus;
     });
     this.currentPage = 1;
   }
 
+  /**
+   * Maneja cambios en la búsqueda
+   */
   onSearchChange(): void {
     this.applyFilters();
   }
 
+  /**
+   * Maneja cambios en el filtro de estado
+   */
   onFilterChange(): void {
     this.applyFilters();
   }
 
-  getPaginatedMonedas(): Moneda[] {
+  /**
+   * Obtiene las monedas paginadas
+   */
+  getPaginatedMonedas(): MonedaUI[] {
     const startIndex = (this.currentPage - 1) * this.itemsPerPage;
     const endIndex = startIndex + this.itemsPerPage;
     return this.filteredMonedas.slice(startIndex, endIndex);
   }
+
+  /**
+   * Abre el modal para crear una nueva moneda
+   */
+  createNewMoneda(): void {
+    this.currentMoneda = {
+      codMoneda: '',
+      moneda: '',
+      simbolo: '',
+      activo: 1,
+      primario: 0,
+      secundario: 0,
+      orden: this.monedas.length + 1
+    };
+    this.isEditing = false;
+    this.monedaForm.reset({
+      codMoneda: '',
+      moneda: '',
+      simbolo: '',
+      activo: 1,
+      primario: 0,
+      secundario: 0,
+      orden: this.monedas.length + 1
+    });
+    this.openModal();
+  }
+
+  /**
+   * Abre el modal para editar una moneda
+   */
+  editMoneda(moneda: MonedaUI): void {
+
+    Swal.fire({
+      title: 'Editar Moneda',
+      text: `¿Desea editar la moneda "${moneda.moneda}"?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Si, editar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.currentMoneda = { ...moneda };
+        this.isEditing = true;
+        this.monedaForm.patchValue({
+          codMoneda: moneda.codMoneda,
+          moneda: moneda.moneda,
+          simbolo: moneda.simbolo,
+          activo: moneda.activo,
+          primario: moneda.primario,
+          secundario: moneda.secundario,
+          orden: moneda.orden
+        });
+        this.openModal();
+      }
+    });
+  }
+
+  /**
+   * Guarda la moneda (crea o actualiza)
+   */
+  saveMoneda(): void {
+    if (!this.monedaForm.valid) {
+      this.toastService.addToast({
+        title: 'Validación',
+        message: 'Por favor, complete todos los campos requeridos.',
+        type: 'warning'
+      });
+      return;
+    }
+
+    const formValue = this.monedaForm.value;
+    const monedaToSave: MonedaUI = {
+      codMoneda: formValue.codMoneda,
+      moneda: formValue.moneda,
+      simbolo: formValue.simbolo,
+      activo: parseInt(formValue.activo),
+      primario: parseInt(formValue.primario),
+      secundario: parseInt(formValue.secundario),
+      orden: parseInt(formValue.orden)
+    };
+
+    this.isLoading = true;
+
+    const operador = this.authService.getCurrentUser()?.usuario;
+
+    const operation = this.isEditing
+      ? this.monedaService.update(monedaToSave, operador)
+      : this.monedaService.create(monedaToSave, operador);
+
+    operation.subscribe({
+      next: (response) => {
+        const message = this.isEditing
+          ? 'Moneda actualizada exitosamente'
+          : 'Moneda creada exitosamente';
+
+        this.toastService.addToast({
+          title: 'Éxito',
+          message: message,
+          type: 'success'
+        });
+
+        this.closeModal();
+        this.loadMonedas();
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error al guardar moneda:', error);
+        const errorMsg = error.error?.respuesta || 'Error al guardar la moneda';
+        this.toastService.addToast({
+          title: 'Error',
+          message: errorMsg,
+          type: 'error'
+        });
+        this.isLoading = false;
+      }
+    });
+  }
+
+  /**
+   * Elimina una moneda
+   */
+  deleteMoneda(moneda: MonedaUI): void {
+    
+    Swal.fire({
+      title: 'Eliminar Moneda',
+      text: `¿Está seguro de que desea eliminar la moneda "${moneda.moneda}"? Esta acción no se puede deshacer.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Si, eliminar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+            this.isLoading = true;
+
+            this.monedaService.delete(moneda.codMoneda).subscribe({
+              next: (response) => {
+                this.toastService.addToast({
+                  title: 'Éxito',
+                  message: 'Moneda eliminada exitosamente',
+                  type: 'success'
+                });
+                this.loadMonedas();
+                this.isLoading = false;
+              },
+              error: (error) => {
+                console.error('Error al eliminar moneda:', error);
+                const errorMsg = error.error?.respuesta || 'Error al eliminar la moneda';
+                this.toastService.addToast({
+                  title: 'Error',
+                  message: errorMsg,
+                  type: 'error'
+                });
+                this.isLoading = false;
+              }
+            });
+      }
+    });
+ 
+  }
+
+  /**
+   * Abre el modal
+   */
+  private openModal(): void {
+    if (this.monedaModal) {
+      const modal = new bootstrap.Modal(this.monedaModal.nativeElement);
+      modal.show();
+    }
+  }
+
+  /**
+   * Cierra el modal
+   */
+  private closeModal(): void {
+    if (this.monedaModal) {
+      const modal = bootstrap.Modal.getInstance(this.monedaModal.nativeElement);
+      if (modal) {
+        modal.hide();
+      }
+    }
+    this.currentMoneda = null;
+    this.isEditing = false;
+  }
+
+  // ==================== Propiedades Calculadas ====================
 
   get totalPages(): number {
     return Math.ceil(this.filteredMonedas.length / this.itemsPerPage);
@@ -144,124 +327,14 @@ export class MonedasComponent implements OnInit {
     return this.monedaForm ? this.monedaForm.valid : false;
   }
 
+  // ==================== Métodos de Paginación ====================
+
   goToPage(page: number): void {
     if (page >= 1 && page <= this.totalPages) {
       this.currentPage = page;
     }
   }
 
-  getDecimalLabel(decimalPlaces: number): string {
-    const option = this.decimalOptions.find(d => d.value === decimalPlaces);
-    return option ? option.label : `${decimalPlaces} decimales`;
-  }
-
-  generatePreview(moneda: Moneda): string {
-    const amount = 1234.56;
-    return new Intl.NumberFormat('es-DO', {
-      style: 'currency',
-      currency: moneda.code,
-      minimumFractionDigits: moneda.decimalPlaces,
-      maximumFractionDigits: moneda.decimalPlaces
-    }).format(amount).replace(moneda.code, moneda.symbol);
-  }
-
-  createNewMoneda(): void {
-    this.currentMoneda = {
-      id: '',
-      code: '',
-      name: '',
-      symbol: '',
-      decimalPlaces: 2,
-      isActive: true,
-      isBaseCurrency: false,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    this.isEditing = false;
-    this.openModal();
-  }
-
-  editMoneda(moneda: Moneda): void {
-    this.currentMoneda = { ...moneda };
-    this.isEditing = true;
-    this.openModal();
-  }
-
-  deleteMoneda(moneda: Moneda): void {
-    if (confirm(`¿Está seguro de que desea eliminar la moneda "${moneda.name}"?`)) {
-      this.monedas = this.monedas.filter(m => m.id !== moneda.id);
-      this.applyFilters();
-    }
-  }
-
-  saveMoneda(): void {
-    if (!this.currentMoneda || !this.isFormValid) return;
-
-    const monedaToSave = {
-      ...this.currentMoneda,
-      updatedAt: new Date()
-    };
-
-    if (this.isEditing) {
-      // Actualizar moneda existente
-      const index = this.monedas.findIndex(m => m.id === this.currentMoneda!.id);
-      if (index !== -1) {
-        this.monedas[index] = monedaToSave;
-      }
-    } else {
-      // Crear nueva moneda
-      monedaToSave.id = Date.now().toString();
-      monedaToSave.createdAt = new Date();
-      this.monedas.push(monedaToSave);
-    }
-
-    this.applyFilters();
-    this.closeModal();
-  }
-
-  toggleStatus(moneda: Moneda): void {
-    const newStatus = !moneda.isActive;
-    const action = newStatus ? 'activar' : 'desactivar';
-
-    if (confirm(`¿Está seguro de que desea ${action} la moneda "${moneda.name}"?`)) {
-      moneda.isActive = newStatus;
-      moneda.updatedAt = new Date();
-      this.applyFilters();
-    }
-  }
-
-  setAsBaseCurrency(moneda: Moneda): void {
-    if (moneda.isBaseCurrency) return;
-
-    if (confirm(`¿Está seguro de que desea establecer "${moneda.name}" como la moneda base? Esto cambiará la configuración actual.`)) {
-      // Desactivar la moneda base actual
-      this.monedas.forEach(m => m.isBaseCurrency = false);
-      // Establecer la nueva moneda base
-      moneda.isBaseCurrency = true;
-      moneda.updatedAt = new Date();
-      this.applyFilters();
-    }
-  }
-
-  private openModal(): void {
-    if (this.monedaModal) {
-      const modal = new bootstrap.Modal(this.monedaModal.nativeElement);
-      modal.show();
-    }
-  }
-
-  private closeModal(): void {
-    if (this.monedaModal) {
-      const modal = bootstrap.Modal.getInstance(this.monedaModal.nativeElement);
-      if (modal) {
-        modal.hide();
-      }
-    }
-    this.currentMoneda = null;
-    this.isEditing = false;
-  }
-
-  // Métodos de navegación
   goToPageRelative(offset: number): void {
     this.goToPage(this.currentPage + offset);
   }
@@ -294,7 +367,21 @@ export class MonedasComponent implements OnInit {
     return rangeWithDots;
   }
 
-  trackByFn(index: number, item: Moneda): string {
-    return item.id;
+  // ==================== Helpers ====================
+
+  getActivoLabel(valor: number): string {
+    return valor === 1 ? 'Sí' : 'No';
+  }
+
+  getPrimarioLabel(valor: number): string {
+    return valor === 1 ? 'Sí' : 'No';
+  }
+
+  getSecundarioLabel(valor: number): string {
+    return valor === 1 ? 'Sí' : 'No';
+  }
+
+  trackByFn(index: number, item: MonedaUI): string {
+    return item.codMoneda;
   }
 }

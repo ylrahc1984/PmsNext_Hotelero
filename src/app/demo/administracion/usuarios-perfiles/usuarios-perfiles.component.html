@@ -1,14 +1,13 @@
-<div class="container-fluid">
-  <!-- Header -->
+﻿<div class="container-fluid">
   <div class="row mb-4">
     <div class="col-12">
       <div class="d-flex justify-content-between align-items-center">
         <div>
           <h4 class="mb-1">
             <i class="feather icon-users me-2"></i>
-            Gestión de Usuarios y Perfiles
+            Gestion de Usuarios
           </h4>
-          <p class="text-muted mb-0">Administra los usuarios del sistema y sus perfiles de acceso</p>
+          <p class="text-muted mb-0">Administra los usuarios del sistema</p>
         </div>
         <button type="button" class="btn btn-primary" (click)="createNewUser()">
           <i class="feather icon-plus me-1"></i>
@@ -18,304 +17,108 @@
     </div>
   </div>
 
-  <!-- Filtros y búsqueda -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card">
-        <div class="card-body">
-          <div class="row g-3">
-            <div class="col-md-4">
-              <div class="input-group">
-                <span class="input-group-text">
-                  <i class="feather icon-search"></i>
-                </span>
-                <input type="text"
-                       class="form-control"
-                       placeholder="Buscar por nombre, email o rol..."
-                       [(ngModel)]="searchTerm"
-                       (input)="onSearchChange()">
-              </div>
-            </div>
-            <div class="col-md-3">
-              <select class="form-select"
-                      [(ngModel)]="roleFilterValue"
-                      (change)="onFilterChange()">
-                <option value="">Todos los roles</option>
-                <option value="admin">Administrador</option>
-                <option value="staff">Staff</option>
-                <option value="contabilidad">Contabilidad</option>
-                <option value="suplidor">Suplidor</option>
-              </select>
-            </div>
-            <div class="col-md-3">
-              <select class="form-select"
-                      [(ngModel)]="statusFilterValue"
-                      (change)="onFilterChange()">
-                <option value="">Todos los estados</option>
-                <option value="active">Activos</option>
-                <option value="inactive">Inactivos</option>
-              </select>
-            </div>
-            <div class="col-md-2">
-              <div class="d-flex align-items-center">
-                <small class="text-muted">
-                  {{ totalUsers }} usuario{{ totalUsers !== 1 ? 's' : '' }}
-                </small>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Tabla de usuarios -->
   <div class="row">
     <div class="col-12">
       <div class="card">
-        <div class="card-body p-0">
+        <div class="card-body">
+          <div class="row g-3 mb-3">
+            <div class="col-md-4">
+              <label class="form-label">Buscar por usuario</label>
+              <input type="text"
+                     class="form-control"
+                     [(ngModel)]="searchNombre"
+                     placeholder="Ej: CHARLY">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Departamento</label>
+              <select class="form-select" [(ngModel)]="departamentoFilter">
+                <option [ngValue]="null">Todos</option>
+                <option *ngFor="let dep of departamentos" [ngValue]="dep.idDepartamento">
+                  {{ dep.departamento }}
+                </option>
+              </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end gap-2">
+              <button class="btn btn-primary" (click)="applySearch()">
+                <i class="feather icon-search me-1"></i>
+                Buscar
+              </button>
+              <button class="btn btn-outline-secondary" (click)="clearSearch()">
+                Limpiar
+              </button>
+            </div>
+          </div>
+
           <div class="table-responsive">
-          <table class="table table-striped table-hover">
-            <thead class="table-dark">
-              <tr>
-                <th>Nombre</th>
-                <th>Email</th>
-                <th>Rol/Perfil</th>
-                <th>Estado</th>
-                <th>Último Acceso</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let user of getPaginatedUsers(); trackBy: trackByFn">
-                <td>
-                  <div class="d-flex align-items-center">
-                    <div class="avatar avatar-sm me-2">
-                      <span class="avatar-title rounded-circle bg-primary">
-                        {{ getInitials(user.name) }}
-                      </span>
+            <table class="table table-hover">
+              <thead class="table-light">
+                <tr>
+                  <th>Usuario</th>
+                  <th>Nombre</th>
+                  <th>Departamento</th>
+                  <th>Telefono</th>
+                  <th>Correo</th>
+                  <th class="text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let user of usuarios; trackBy: trackByUsuario">
+                  <td>
+                    <span class="badge bg-light text-dark">{{ user.usuario }}</span>
+                  </td>
+                  <td>{{ user.nombreUsu }}</td>
+                  <td>{{ getDepartamentoLabel(user.departamento) }}</td>
+                  <td>{{ user.telefono || '-' }}</td>
+                  <td>{{ user.correo || '-' }}</td>
+                  <td class="text-center">
+                    <div class="btn-group" role="group">
+                      <button class="btn btn-sm btn-outline-primary" (click)="editUser(user)" title="Editar">
+                        <i class="feather icon-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-outline-warning" (click)="changePassword(user)" title="Cambiar Clave">
+                        <i class="feather icon-key"></i>
+                      </button>
+                      <button class="btn btn-sm btn-outline-danger" (click)="deleteUser(user)" title="Eliminar">
+                        <i class="feather icon-trash"></i>
+                      </button>
                     </div>
-                    {{ user.name }}
-                  </div>
-                </td>
-                <td>{{ user.email }}</td>
-                <td>
-                  <span class="badge"
-                        [ngClass]="getRoleBadgeClass(user.role)">
-                    {{ getRoleLabel(user.role) }}
-                  </span>
-                </td>
-                <td>
-                  <span class="badge"
-                        [ngClass]="user.status === 'active' ? 'bg-success' : 'bg-danger'">
-                    {{ user.status === 'active' ? 'Activo' : 'Inactivo' }}
-                  </span>
-                </td>
-                <td>{{ user.lastAccess | date:'dd/MM/yyyy HH:mm' }}</td>
-                <td>
-                  <div class="btn-group" role="group">
-                    <button class="btn btn-sm btn-outline-primary"
-                            (click)="editUser(user)"
-                            title="Editar">
-                      <i class="feather icon-edit"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-warning"
-                            (click)="resetPassword(user)"
-                            title="Resetear Contraseña">
-                      <i class="feather icon-key"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-danger"
-                            (click)="toggleUserStatus(user)"
-                            title="Cambiar Estado">
-                      <i class="feather" [ngClass]="user.status === 'active' ? 'icon-user-x' : 'icon-user-check'"></i>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                  </td>
+                </tr>
+                <tr *ngIf="!isLoading && usuarios.length === 0">
+                  <td colspan="6" class="text-center py-4">
+                    <i class="feather icon-inbox display-4 text-muted"></i>
+                    <p class="text-muted mt-2">No se encontraron usuarios</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
-        <!-- Paginación -->
+          <div *ngIf="isLoading" class="alert alert-light border mt-3">
+            <small class="text-muted">
+              <i class="feather icon-loader me-1"></i>
+              Cargando usuarios...
+            </small>
+          </div>
+
+          <div class="row mt-3 align-items-center" *ngIf="totalPages > 0">
+            <div class="col-md-4 text-muted">
+              Pagina {{ currentPage }} de {{ totalPages }} ({{ totalRegistros }} registros)
+            </div>
+            <div class="col-md-4 text-center">
+              <select class="form-select form-select-sm d-inline-block w-auto" [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+                <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }} por pagina</option>
+              </select>
+            </div>
+            <div class="col-md-4 text-end">
+              <div class="btn-group" role="group">
+                <button class="btn btn-outline-secondary btn-sm" [disabled]="currentPage === 1" (click)="goToPageRelative(-1)">Prev</button>
+                <button class="btn btn-outline-secondary btn-sm" [disabled]="currentPage === totalPages" (click)="goToPageRelative(1)">Next</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
-
-  <!-- Paginación -->
-  <div class="row mt-3" *ngIf="totalPages > 1">
-    <div class="col-12">
-      <nav aria-label="Paginación de usuarios">
-        <ul class="pagination justify-content-center">
-          <li class="page-item" [ngClass]="{ 'disabled': currentPage === 1 }">
-            <a class="page-link" href="#" (click)="changePage(1); $event.preventDefault()">
-              <i class="feather icon-chevrons-left"></i>
-            </a>
-          </li>
-          <li class="page-item" [ngClass]="{ 'disabled': currentPage === 1 }">
-            <a class="page-link" href="#" (click)="changePage(currentPage - 1); $event.preventDefault()">
-              <i class="feather icon-chevron-left"></i>
-            </a>
-          </li>
-          <li *ngFor="let page of getPages()"
-              class="page-item"
-              [ngClass]="{ 'active': page === currentPage }">
-            <a class="page-link" href="#" (click)="changePage(page); $event.preventDefault()">
-              {{ page }}
-            </a>
-          </li>
-          <li class="page-item" [ngClass]="{ 'disabled': currentPage === totalPages }">
-            <a class="page-link" href="#" (click)="changePage(currentPage + 1); $event.preventDefault()">
-              <i class="feather icon-chevron-right"></i>
-            </a>
-          </li>
-          <li class="page-item" [ngClass]="{ 'disabled': currentPage === totalPages }">
-            <a class="page-link" href="#" (click)="changePage(totalPages); $event.preventDefault()">
-              <i class="feather icon-chevrons-right"></i>
-            </a>
-          </li>
-        </ul>
-      </nav>
-    </div>
-  </div>
-</div>
-
-<!-- Modal para crear/editar usuario -->
-<div class="modal fade" id="userModal" tabindex="-1" #userModal>
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">
-          <i class="feather icon-user me-2"></i>
-          {{ isEditing ? 'Editar Usuario' : 'Nuevo Usuario' }}
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <form #userForm="ngForm" (ngSubmit)="saveUser()">
-        <div class="modal-body">
-          <div class="row">
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label class="form-label">Nombre Completo *</label>
-                <input type="text"
-                       class="form-control"
-                       [(ngModel)]="currentUser.name"
-                       name="name"
-                       required
-                       #name="ngModel">
-                <div class="invalid-feedback" *ngIf="name.invalid && name.touched">
-                  El nombre es requerido
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label class="form-label">Email *</label>
-                <input type="email"
-                       class="form-control"
-                       [(ngModel)]="currentUser.email"
-                       name="email"
-                       required
-                       email
-                       #emailInput="ngModel">
-                <div class="invalid-feedback" *ngIf="emailInput.invalid && emailInput.touched">
-                  Ingrese un email válido
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="row">
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label class="form-label">Rol/Perfil *</label>
-                <select class="form-select"
-                        [(ngModel)]="currentUser.role"
-                        name="role"
-                        required
-                        #role="ngModel">
-                  <option value="">Seleccionar rol</option>
-                  <option value="admin">Administrador</option>
-                  <option value="staff">Staff / Operaciones</option>
-                  <option value="contabilidad">Contabilidad</option>
-                  <option value="suplidor">Suplidor</option>
-                </select>
-                <div class="invalid-feedback" *ngIf="role.invalid && role.touched">
-                  Seleccione un rol
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label class="form-label">Estado</label>
-                <div class="form-check form-switch">
-                  <input class="form-check-input"
-                         type="checkbox"
-                         [(ngModel)]="currentUser.status"
-                         name="status"
-                         [value]="currentUser.status === 'active'"
-                         (change)="currentUser.status = $event.target.checked ? 'active' : 'inactive'">
-                  <label class="form-check-label">
-                    {{ currentUser.status === 'active' ? 'Activo' : 'Inactivo' }}
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="row" *ngIf="!isEditing">
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label class="form-label">Contraseña *</label>
-                <input type="password"
-                       class="form-control"
-                       [(ngModel)]="currentUser.password"
-                       name="password"
-                       required
-                       minlength="6"
-                       #password="ngModel">
-                <div class="invalid-feedback" *ngIf="password.invalid && password.touched">
-                  La contraseña debe tener al menos 6 caracteres
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label class="form-label">Confirmar Contraseña *</label>
-                <input type="password"
-                       class="form-control"
-                       [(ngModel)]="confirmPassword"
-                       name="confirmPassword"
-                       required
-                       [class.is-invalid]="password !== confirmPassword && confirmPassword">
-                <div class="invalid-feedback">
-                  Las contraseñas no coinciden
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">Notas/Comentarios</label>
-            <textarea class="form-control"
-                      [(ngModel)]="currentUser.notes"
-                      name="notes"
-                      rows="3"
-                      placeholder="Comentarios adicionales sobre el usuario..."></textarea>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-            Cancelar
-          </button>
-          <button type="submit"
-                  class="btn btn-primary"
-                  [disabled]="!currentUser.name || !currentUser.email || (!isEditing && !password) || (password !== confirmPassword && !isEditing)">
-            <i class="feather icon-save me-1"></i>
-            {{ isEditing ? 'Actualizar' : 'Crear' }} Usuario
-          </button>
-        </div>
-      </form>
     </div>
   </div>
 </div>

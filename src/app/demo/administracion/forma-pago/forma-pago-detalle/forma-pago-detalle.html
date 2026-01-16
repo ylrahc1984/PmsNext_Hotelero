@@ -1,0 +1,117 @@
+<div class="container-fluid">
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h4 class="mb-1">
+            <i class="feather icon-credit-card me-2"></i>
+            {{ isEditing ? 'Editar Forma de Pago' : 'Nueva Forma de Pago' }}
+          </h4>
+          <p class="text-muted mb-0">Completa los datos requeridos de la forma de pago</p>
+        </div>
+        <button type="button" class="btn btn-secondary" (click)="goBack()">
+          <i class="feather icon-arrow-left me-1"></i>
+          Volver
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <form [formGroup]="form" (ngSubmit)="onSubmit()">
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <label class="form-label">Codigo <span class="text-danger">*</span></label>
+                <input
+                  type="text"
+                  class="form-control"
+                  formControlName="codigo"
+                  [class.is-invalid]="isFieldInvalid('codigo')"
+                  placeholder="Ej: FP01"
+                  maxlength="20">
+                <div class="invalid-feedback">El codigo es requerido.</div>
+              </div>
+              <div class="col-md-8">
+                <label class="form-label">Descripcion <span class="text-danger">*</span></label>
+                <input
+                  type="text"
+                  class="form-control"
+                  formControlName="descripcion"
+                  [class.is-invalid]="isFieldInvalid('descripcion')"
+                  placeholder="Descripcion de la forma de pago">
+                <div class="invalid-feedback">La descripcion es requerida.</div>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <label class="form-label">Tipo Frm <span class="text-danger">*</span></label>
+                <select
+                  class="form-select"
+                  formControlName="tipoFrm"
+                  [class.is-invalid]="isFieldInvalid('tipoFrm')">
+                  <option value="">Seleccionar</option>
+                  <option *ngFor="let option of tipoFrmOptions" [value]="option.value">
+                    {{ option.label }}
+                  </option>
+                </select>
+                <div class="invalid-feedback">Seleccione un tipo valido.</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Tipo Pago <span class="text-danger">*</span></label>
+                <select
+                  class="form-select"
+                  formControlName="tipoPago"
+                  [class.is-invalid]="isFieldInvalid('tipoPago')">
+                  <option value="">Seleccionar</option>
+                  <option *ngFor="let option of tipoPagoOptions" [value]="option.value">
+                    {{ option.label }}
+                  </option>
+                </select>
+                <div class="invalid-feedback">Seleccione un tipo valido.</div>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Dias <span class="text-danger" *ngIf="form.get('tipoPago')?.value === 'CR'">*</span></label>
+                <input
+                  type="number"
+                  class="form-control"
+                  formControlName="nDias"
+                  [class.is-invalid]="isFieldInvalid('nDias')"
+                  min="0">
+                <div class="invalid-feedback">Para credito debe ser mayor a 0.</div>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Orden <span class="text-danger">*</span></label>
+                <input
+                  type="number"
+                  class="form-control"
+                  formControlName="orden"
+                  [class.is-invalid]="isFieldInvalid('orden')"
+                  min="0">
+                <div class="invalid-feedback">El orden debe ser mayor o igual a 0.</div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-12">
+                <div class="d-flex justify-content-end gap-2">
+                  <button type="button" class="btn btn-secondary" (click)="goBack()">
+                    <i class="feather icon-x me-1"></i>
+                    Cancelar
+                  </button>
+                  <button type="submit" class="btn btn-primary" [disabled]="form.invalid">
+                    <i class="feather icon-save me-1"></i>
+                    {{ isEditing ? 'Actualizar' : 'Crear' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
