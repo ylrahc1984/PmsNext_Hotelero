@@ -4,10 +4,11 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { CentroCostoApi, CentroCostoListResponse, CentroCostoPayload, CentroCostoResponse, CentroCostoUI } from './centro-costo.models';
+import { environment } from 'src/environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class CentroCostoService {
-  private apiUrl = 'http://localhost:5000/api/centrocosto';
+  private apiUrl = `${environment.apiUrl}/centrocosto`;
   private readonly procesoInsert = 1;
   private readonly procesoUpdate = 2;
 

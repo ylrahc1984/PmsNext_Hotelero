@@ -99,6 +99,11 @@ $shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
   flex: 1;
 }
 
+.selector-group.compact {
+  min-width: 320px;
+  max-width: 520px;
+}
+
 .service-selector-card,
 .rules-table-container {
   margin-top: 1rem;

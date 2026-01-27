@@ -1,4 +1,4 @@
-<div class="row justify-content-center">
+﻿<div class="row justify-content-center">
   <div class="col-lg-12 col-md-12">
     <app-card [customHeader]="true">
       <div class="app-card-header">
@@ -14,96 +14,171 @@
       </div>
       <div class="row">
         <div class="col-12">
-          <form class="servicio-form">
+          <form class="servicio-form" #servicioForm="ngForm" (ngSubmit)="saveServicio(servicioForm)">
             <div class="form-section">
               <h6 class="section-title">
                 <i class="feather icon-info"></i>
-                Información General
+                Informacion General de Actividad
               </h6>
               <div class="row">
-                <div class="col-md-8">
+                <div class="col-md-6">
                   <div class="form-group">
                     <label class="form-label">
                       <i class="feather icon-tag"></i>
-                      Nombre del Servicio *
+                      Nombre de la Actividad *
                     </label>
-                    <input type="text" class="form-control form-control-lg" [(ngModel)]="servicio.nombre" name="nombre" required
-                           placeholder="Ingrese el nombre del servicio">
-                    <small class="form-text text-muted">Nombre descriptivo del servicio</small>
+                    <input type="text" class="form-control form-control-lg" [(ngModel)]="formData.nomReceta" name="nomReceta" required
+                           placeholder="Nombre de la actividad">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="form-label">
+                      <i class="feather icon-edit-2"></i>
+                      Nombre Corto
+                    </label>
+                    <input type="text" class="form-control form-control-lg" [(ngModel)]="formData.nomCorto" name="nomCorto"
+                           placeholder="Nombre corto">
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label class="form-label">
+                      <i class="feather icon-layers"></i>
+                      Categoria *
+                    </label>
+                    <select class="form-control form-control-lg" [(ngModel)]="formData.codCateg" name="codCateg" required>
+                      <option value="">Seleccionar</option>
+                      <option *ngFor="let categoria of categoriaOptions" [value]="categoria.codigo">
+                        {{ categoria.nombre }}
+                      </option>
+                    </select>
                   </div>
                 </div>
                 <div class="col-md-4">
                   <div class="form-group">
                     <label class="form-label">
-                      <i class="feather icon-list"></i>
-                      Tipo de Servicio *
+                      <i class="feather icon-grid"></i>
+                      Grupo *
                     </label>
-                    <select class="form-control form-control-lg" [(ngModel)]="servicio.tipo" name="tipo" required>
-                      <option value="transporte">🚗 Transporte</option>
-                      <option value="tour">🏔️ Tour</option>
-                      <option value="alojamiento">🏨 Alojamiento</option>
-                      <option value="otro">📋 Otro</option>
+                    <select class="form-control form-control-lg" [(ngModel)]="formData.codGrupo" name="codGrupo" required>
+                      <option value="">Seleccionar</option>
+                      <option *ngFor="let grupo of grupoOptions" [value]="grupo.codigo">
+                        {{ grupo.nombre }}
+                      </option>
                     </select>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label class="form-label">
+                      <i class="feather icon-shuffle"></i>
+                      Unidad de Medida *
+                    </label>
+                    <select class="form-control form-control-lg" [(ngModel)]="formData.uMedida" name="uMedida" required>
+                      <option *ngFor="let unidad of unidadOptions" [value]="unidad.codigo">
+                        {{ unidad.codigo }} - {{ unidad.descripcion }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="form-label">
+                      <i class="feather icon-hash"></i>
+                      CABYS
+                    </label>
+                    <input type="text" class="form-control form-control-lg" [(ngModel)]="formData.cabys" name="cabys"
+                           placeholder="Codigo CABYS">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="form-label">
+                      <i class="feather icon-image"></i>
+                      Imagen (URL)
+                    </label>
+                    <input type="url" class="form-control form-control-lg" [(ngModel)]="formData.urlImagen" name="urlImagen"
+                           placeholder="https://">
                   </div>
                 </div>
               </div>
               <div class="form-group">
                 <label class="form-label">
                   <i class="feather icon-file-text"></i>
-                  Descripción
+                  Descripcion
                 </label>
-                <textarea class="form-control" [(ngModel)]="servicio.descripcion" name="descripcion" rows="4"
+                <textarea class="form-control" [(ngModel)]="formData.descripcion" name="descripcion" rows="4"
                           placeholder="Describa detalladamente el servicio..."></textarea>
-                <small class="form-text text-muted">Proporcione una descripción completa del servicio</small>
               </div>
             </div>
 
             <div class="form-section">
               <h6 class="section-title">
                 <i class="feather icon-dollar-sign"></i>
-                Información de Precios
+                Informacion Operativa y Costos
               </h6>
               <div class="row">
-                <div class="col-md-6">
+                <div class="col-md-4">
                   <div class="form-group">
                     <label class="form-label">
-                      <i class="feather icon-dollar-sign"></i>
-                      Precio Base
+                      <i class="feather icon-users"></i>
+                      Cupos *
                     </label>
-                    <div class="input-group">
-                      <div class="input-group-prepend">
-                        <span class="input-group-text">₡</span>
-                      </div>
-                      <input type="number" class="form-control form-control-lg" [(ngModel)]="servicio.precio" name="precio"
-                             placeholder="0" min="0" step="0.01">
-                    </div>
-                    <small class="form-text text-muted">Precio base en colones costarricenses</small>
+                    <input type="number" class="form-control form-control-lg" [(ngModel)]="formData.numPorciones" name="numPorciones"
+                           min="1" step="1" required>
                   </div>
                 </div>
-                <div class="col-md-6">
+              </div>
+              <div class="row">
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label class="form-label">Costo Total Estimado</label>
+                    <input type="number" class="form-control form-control-lg" [(ngModel)]="formData.ctoTotal" name="ctoTotal"
+                           min="0" step="0.01" readonly>
+                  </div>
+                </div>
+                <div class="col-md-4">
                   <div class="form-group">
                     <label class="form-label">
-                      <i class="feather icon-toggle-right"></i>
-                      Estado del Servicio
+                      <i class="feather icon-eye"></i>
+                      Visible
                     </label>
                     <div class="custom-control custom-switch">
-                      <input type="checkbox" class="custom-control-input" [(ngModel)]="servicio.activo" name="activo" id="activoSwitch">
-                      <label class="custom-control-label" for="activoSwitch">
-                        {{ servicio.activo ? 'Servicio Activo' : 'Servicio Inactivo' }}
+                      <input type="checkbox" class="custom-control-input" id="visibleSwitch"
+                             [checked]="formData.visible === 1" (change)="onVisibleToggle($event.target.checked)">
+                      <label class="custom-control-label" for="visibleSwitch">
+                        {{ formData.visible === 1 ? 'Si' : 'No' }}
                       </label>
                     </div>
-                    <small class="form-text text-muted">
-                      {{ servicio.activo ? 'El servicio estará disponible para reservas' : 'El servicio no estará disponible' }}
-                    </small>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label class="form-label">
+                      <i class="feather icon-layers"></i>
+                      Compuesto
+                    </label>
+                    <div class="custom-control custom-switch">
+                      <input type="checkbox" class="custom-control-input" id="compuestoSwitch"
+                             [checked]="formData.compuesto === 'S'" (change)="onCompuestoToggle($event.target.checked)">
+                      <label class="custom-control-label" for="compuestoSwitch">
+                        {{ formData.compuesto === 'S' ? 'Si' : 'No' }}
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
             <div class="form-actions">
-              <button type="button" class="btn btn-success btn-lg mr-3" (click)="saveServicio()">
+              <button type="submit" class="btn btn-success btn-lg mr-3" [disabled]="!servicioForm.form.valid || isLoading">
                 <i class="feather icon-save"></i>
-                {{ isEdit ? 'Actualizar Servicio' : 'Crear Servicio' }}
+                {{ isEditing ? 'Actualizar Servicio' : 'Crear Servicio' }}
               </button>
               <button type="button" class="btn btn-outline-secondary btn-lg" (click)="cancel()">
                 <i class="feather icon-x"></i>

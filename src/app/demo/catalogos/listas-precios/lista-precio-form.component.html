@@ -13,6 +13,7 @@
                 (input)="onCodigoInput()"
                 [class.is-invalid]="form.get('codLstPrecio')?.touched && form.get('codLstPrecio')?.invalid"
                 [readonly]="isEditing"
+                maxlength="5"
               >
               <div class="invalid-feedback">El codigo es requerido.</div>
             </div>

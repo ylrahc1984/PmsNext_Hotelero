@@ -4,12 +4,13 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { ListaPrecioDto, ListaPrecioPost, ListaPrecioUI } from './lista-precio.models';
+import { environment } from 'src/environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ListaPrecioService {
-  private apiUrl = 'http://localhost:5000/api/listaprecio';
+  private apiUrl = `${environment.apiUrl}/listaprecio`;
 
   constructor(private http: HttpClient, private auth: AuthService) {}
 

@@ -4,10 +4,11 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { FormaPago, FormaPagoApi, FormaPagoPayload, FormaPagoResponse } from './forma-pago.models';
+import { environment } from 'src/environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class FormaPagoService {
-  private apiUrl = 'http://localhost:5000/api/formapago';
+  private apiUrl = `${environment.apiUrl}/formapago`;
 
   constructor(private http: HttpClient, private auth: AuthService) {}
 

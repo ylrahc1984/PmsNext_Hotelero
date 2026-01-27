@@ -3,10 +3,11 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { TipoClienteDto, TipoClientePost, TipoClienteResponse } from './tipo-cliente.models';
+import { environment } from 'src/environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class TipoClienteService {
-  private apiUrl = 'http://localhost:5000/api/tipocliente';
+  private apiUrl = `${environment.apiUrl}/tipocliente`;
 
   constructor(private http: HttpClient, private auth: AuthService) {}
 

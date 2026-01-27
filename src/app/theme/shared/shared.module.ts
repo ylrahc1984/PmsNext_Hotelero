@@ -5,6 +5,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 // project import
 import { CardComponent } from './components/card/card.component';
+import { DecisionModalComponent } from './components/decision-modal/decision-modal.component';
 
 // bootstrap import
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
@@ -15,7 +16,7 @@ import { NgScrollbarModule } from 'ngx-scrollbar';
 
 @NgModule({
   declarations: [],
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, CardComponent, NgbModule, NgScrollbarModule, NgbCollapseModule],
-  exports: [CommonModule, FormsModule, ReactiveFormsModule, CardComponent, NgbModule, NgScrollbarModule, NgbCollapseModule]
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, CardComponent, DecisionModalComponent, NgbModule, NgScrollbarModule, NgbCollapseModule],
+  exports: [CommonModule, FormsModule, ReactiveFormsModule, CardComponent, DecisionModalComponent, NgbModule, NgScrollbarModule, NgbCollapseModule]
 })
 export class SharedModule {}

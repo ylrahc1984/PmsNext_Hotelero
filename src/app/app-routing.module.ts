@@ -6,6 +6,7 @@ import { AdminComponent } from './theme/layout/admin/admin.component';
 import { GuestComponent } from './theme/layout/guest/guest.component';
 import { AuthGuard } from './core/guards/auth.guard';
 import { LoginGuard } from './core/guards/login.guard';
+import { CanDeactivateReservaCreateGuard } from './core/guards/can-deactivate-reserva-create.guard';
 
 const routes: Routes = [
   {
@@ -71,6 +72,12 @@ const routes: Routes = [
       },
       {
         path: 'reservas/nueva',
+        canDeactivate: [CanDeactivateReservaCreateGuard],
+        loadComponent: () => import('./demo/reservas/reserva-create.component').then((c) => c.ReservaCreateComponent)
+      },
+      {
+        path: 'reservas/:id/editar',
+        canDeactivate: [CanDeactivateReservaCreateGuard],
         loadComponent: () => import('./demo/reservas/reserva-create.component').then((c) => c.ReservaCreateComponent)
       },
       {
@@ -166,7 +173,7 @@ const routes: Routes = [
         loadComponent: () => import('./demo/catalogos/servicios/servicio-form.component').then((c) => c.ServicioFormComponent)
       },
       {
-        path: 'editar/:id',
+        path: 'editar/:codReceta',
         loadComponent: () => import('./demo/catalogos/servicios/servicio-form.component').then((c) => c.ServicioFormComponent)
       }
     ]
@@ -213,6 +220,14 @@ const routes: Routes = [
       {
         path: 'suplidores',
         loadComponent: () => import('./demo/catalogos/suplidores/suplidores.component').then((c) => c.SuplidoresComponent)
+      },
+      {
+        path: 'suplidores/nuevo',
+        loadComponent: () => import('./demo/catalogos/suplidores/suplidor-form.component').then((c) => c.SuplidorFormComponent)
+      },
+      {
+        path: 'suplidores/editar/:codProve',
+        loadComponent: () => import('./demo/catalogos/suplidores/suplidor-form.component').then((c) => c.SuplidorFormComponent)
       }
     ]
   },
@@ -227,10 +242,18 @@ const routes: Routes = [
     ]
   },
   {
-    canActivate: [AuthGuard],
-    canActivateChild: [AuthGuard],
     path: 'suplidores',
     redirectTo: 'catalogos/suplidores',
+    pathMatch: 'full'
+  },
+  {
+    path: 'suplidores/nuevo',
+    redirectTo: 'catalogos/suplidores/nuevo',
+    pathMatch: 'full'
+  },
+  {
+    path: 'suplidores/editar/:codProve',
+    redirectTo: 'catalogos/suplidores/editar/:codProve',
     pathMatch: 'full'
   },
   {
@@ -259,22 +282,16 @@ const routes: Routes = [
     ]
   },
   {
-    canActivate: [AuthGuard],
-    canActivateChild: [AuthGuard],
     path: 'usuarios-perfiles',
     redirectTo: 'usuarios',
     pathMatch: 'full'
   },
   {
-    canActivate: [AuthGuard],
-    canActivateChild: [AuthGuard],
     path: 'usuario-detalle',
     redirectTo: 'usuarios/nuevo',
     pathMatch: 'full'
   },
   {
-    canActivate: [AuthGuard],
-    canActivateChild: [AuthGuard],
     path: 'usuario-detalle/:usuario',
     redirectTo: 'usuarios/:usuario/editar',
     pathMatch: 'full'
@@ -344,8 +361,6 @@ const routes: Routes = [
     ]
   },
   {
-    canActivate: [AuthGuard],
-    canActivateChild: [AuthGuard],
     path: 'tipo-cambio',
     redirectTo: 'administracion/tipo-cambio',
     pathMatch: 'full'

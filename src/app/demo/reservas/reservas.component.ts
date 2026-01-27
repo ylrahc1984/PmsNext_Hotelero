@@ -5,7 +5,7 @@ import { Subscription } from 'rxjs';
 import { Router } from '@angular/router';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
-import { Reserva, ReservaFiltros, ReservasService } from './reservas.service';
+import { Reserva, ReservasService } from './reservas.service';
 
 @Component({
   selector: 'app-reservas',
@@ -14,66 +14,107 @@ import { Reserva, ReservaFiltros, ReservasService } from './reservas.service';
   styleUrls: ['./reservas.component.scss']
 })
 export class ReservasComponent implements OnInit, OnDestroy {
-  reservas: Reserva[] = [];
-  filteredReservas: Reserva[] = [];
-  pagedReservas: Reserva[] = [];
-  filtros: ReservaFiltros = {
-    numeroBoleta: '',
+    private subscription: Subscription = new Subscription();
+
+    ngOnDestroy(): void {
+      this.subscription.unsubscribe();
+    }     
+    
+    reservas: Reserva[] = [];
+    totalReservas = 0;
+    pageSizeOptions = [5, 10, 20];
+    pageSize = 10;
+    currentPage = 1;
+    loading = false;
+    errorMsg = '';
+
+    private reservasService = inject(ReservasService);
+    private router = inject(Router);
+
+    ngOnInit(): void {
+      this.loadReservas();
+    }
+
+    // --- Filtros y paginación para reservas.component.ts ---
+
+  filtros = {
     fechaDesde: '',
     fechaHasta: '',
-    clienteFinal: '',
-    agencia: '',
     estado: '',
-    formaPago: ''
+    termino: ''
   };
 
   agencias: string[] = [];
-  formasPago: string[] = [];
-  pageSizeOptions = [5, 10, 20];
-  pageSize = 10;
-  currentPage = 1;
+  formasPago: string[] = ['Prepago', 'Crédito', 'Efectivo', 'Transferencia'];
 
-  private subscriptions = new Subscription();
-  private reservasService = inject(ReservasService);
-  private router = inject(Router);
-
-  ngOnInit(): void {
-    this.subscriptions.add(
-      this.reservasService.getAll().subscribe(reservas => {
-        this.reservas = reservas;
-        this.buildCatalogos(reservas);
-        this.applyFilters();
-      })
-    );
-  }
-
-  ngOnDestroy(): void {
-    this.subscriptions.unsubscribe();
-  }
+  filteredReservas: Reserva[] = [];
+  pagedReservas: Reserva[] = [];
 
   applyFilters(): void {
-    this.filteredReservas = this.reservasService.getByFiltros(this.filtros);
-    this.currentPage = 1;
-    this.updatePagination();
+    let filtered = this.reservas;
+    if (this.filtros.fechaDesde) {
+      filtered = filtered.filter(r => r.PRV01_FecCreacion && r.PRV01_FecCreacion >= this.filtros.fechaDesde);
+    }
+    if (this.filtros.fechaHasta) {
+      filtered = filtered.filter(r => r.PRV01_FecCreacion && r.PRV01_FecCreacion <= this.filtros.fechaHasta);
+    }
+    if (this.filtros.estado) {
+      filtered = filtered.filter(r => r.PRV01_Estado === this.filtros.estado);
+    }
+    if (this.filtros.termino) {
+      const term = this.filtros.termino.toLowerCase();
+      filtered = filtered.filter(r =>
+        r.PRV01_CodReserva?.toString().toLowerCase().includes(term) ||
+        r.PRV01_Folio?.toString().toLowerCase().includes(term) ||
+        r.PRV01_NomCliente?.toLowerCase().includes(term) ||
+        r.PRV01_CodAgencia?.toLowerCase().includes(term) ||
+        r.PRV01_FormaPago?.toLowerCase().includes(term)
+      );
+    }
+    this.filteredReservas = filtered;
+    this.updatePagedReservas();
+  }
+
+  updatePagedReservas(): void {
+    const start = (this.currentPage - 1) * this.pageSize;
+    const end = start + this.pageSize;
+    this.pagedReservas = this.filteredReservas.slice(start, end);
   }
 
   resetFilters(): void {
     this.filtros = {
-      numeroBoleta: '',
       fechaDesde: '',
       fechaHasta: '',
-      clienteFinal: '',
-      agencia: '',
       estado: '',
-      formaPago: ''
+      termino: ''
     };
     this.applyFilters();
+  }
+
+  // Modificar loadReservas para poblar agencias y aplicar filtros
+  loadReservas(): void {
+    this.loading = true;
+    this.errorMsg = '';
+    this.reservasService.getReservas(this.currentPage, this.pageSize).subscribe({
+      next: (res) => {
+        this.reservas = res.data;
+        this.totalReservas = res.total;
+        // Poblar agencias únicas
+        this.agencias = Array.from(new Set(this.reservas.map(r => r.PRV01_CodAgencia).filter(Boolean)));
+        this.applyFilters();
+        this.loading = false;
+      },
+      error: (err) => {
+        this.errorMsg = 'Error al cargar reservas';
+        this.loading = false;
+      }
+    });
   }
 
   changePageSize(size: number): void {
     this.pageSize = size;
     this.currentPage = 1;
-    this.updatePagination();
+    this.updatePagedReservas();
   }
 
   goToPage(page: number): void {
@@ -81,7 +122,7 @@ export class ReservasComponent implements OnInit, OnDestroy {
       return;
     }
     this.currentPage = page;
-    this.updatePagination();
+    this.updatePagedReservas();
   }
 
   nextPage(): void {
@@ -93,21 +134,15 @@ export class ReservasComponent implements OnInit, OnDestroy {
   }
 
   get totalPages(): number {
-    return Math.max(1, Math.ceil(this.filteredReservas.length / this.pageSize));
+    return Math.max(1, Math.ceil(this.totalReservas / this.pageSize));
   }
 
   get pageStart(): number {
-    return this.filteredReservas.length ? (this.pageSize * (this.currentPage - 1)) + 1 : 0;
+    return this.reservas.length ? (this.pageSize * (this.currentPage - 1)) + 1 : 0;
   }
 
   get pageEnd(): number {
-    return Math.min(this.pageSize * this.currentPage, this.filteredReservas.length);
-  }
-
-  private updatePagination(): void {
-    const start = (this.currentPage - 1) * this.pageSize;
-    const end = start + this.pageSize;
-    this.pagedReservas = this.filteredReservas.slice(start, end);
+    return Math.min(this.pageSize * this.currentPage, this.totalReservas);
   }
 
   nuevaReserva(): void {
@@ -115,24 +150,28 @@ export class ReservasComponent implements OnInit, OnDestroy {
   }
 
   verReserva(reserva: Reserva): void {
-    console.log('Ver/Editar Reserva', reserva);
+    this.router.navigate(['/operaciones/reservas', reserva.PRV01_CodReserva, 'editar']);
   }
 
   verDetalles(reserva: Reserva): void {
-    console.log('Ver Detalles de Reserva', reserva);
-  }
-
-  imprimirConfirmacion(reserva: Reserva): void {
-    console.log('Imprimir Confirmacion', reserva);
+    this.router.navigate(['/operaciones/reservas', reserva.PRV01_CodReserva, 'detalle']);
   }
 
   cancelarReserva(reserva: Reserva): void {
-    this.reservasService.cancel(reserva.id);
-    this.applyFilters();
+    if (confirm('¿Está seguro de eliminar la reserva?')) {
+      this.loading = true;
+      this.reservasService.eliminarReserva(reserva.PRV01_CodReserva).subscribe({
+        next: () => this.loadReservas(),
+        error: () => {
+          this.errorMsg = 'Error al eliminar reserva';
+          this.loading = false;
+        }
+      });
+    }
   }
 
-  getEstadoBadge(estado: Reserva['estado']): string {
-    const badges = {
+  getEstadoBadge(estado: string): string {
+    const badges: any = {
       Pendiente: 'bg-warning text-dark',
       Confirmada: 'bg-success',
       Cancelada: 'bg-danger'
@@ -144,16 +183,13 @@ export class ReservasComponent implements OnInit, OnDestroy {
     return cantidad > 1 ? 'bg-primary text-white' : 'bg-light text-dark';
   }
 
-  trackByReservaId(index: number, reserva: Reserva): number {
-    return reserva.id;
-  }
-
-  private buildCatalogos(reservas: Reserva[]): void {
-    this.agencias = Array.from(new Set(reservas.map(r => r.agencia))).sort();
-    this.formasPago = Array.from(new Set(reservas.map(r => r.formaPago))).sort();
+  trackByReservaId(index: number, reserva: Reserva): string {
+    return reserva.PRV01_CodReserva;
   }
 
   getCantidadServicios(reserva: Reserva): number {
-    return reserva.detalles?.length || 0;
+    // Si el backend no retorna el detalle, este método puede requerir ajuste
+    return reserva['detalles']?.length || 0;
   }
+
 }

@@ -4,10 +4,11 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { ContadorApi, ContadorPayload, ContadorResponse, ContadorUI } from './contador.models';
+import { environment } from 'src/environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class ContadorService {
-  private apiUrl = 'http://localhost:5000/api/contadorvarios';
+  private apiUrl = `${environment.apiUrl}/contadorvarios`;
   private readonly tipoCreate = 1;
   private readonly tipoUpdate = 2;
 

@@ -1,15 +1,16 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { ClienteDto, ClientePost, ClienteUI } from './cliente.models';
+import { environment } from 'src/environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ClienteService {
-  private apiUrl = 'http://localhost:5000/api/cliente';
+  private apiUrl = `${environment.apiUrl}/cliente`;
 
   constructor(private http: HttpClient, private auth: AuthService) {}
 
@@ -38,8 +39,11 @@ export class ClienteService {
   }
 
   getClienteByCodigo(codigo: string): Observable<ClienteUI | null> {
-    const params = new HttpParams().set('codigo', codigo).set('pageNumber', '1').set('pageSize', '1');
-    return this.http.get<{ datos?: ClienteDto[] }>(this.apiUrl, { params }).pipe(
+    const normalized = (codigo || '').trim();
+    if (!normalized) {
+      return of(null);
+    }
+    return this.http.get<{ datos?: ClienteDto[] }>(`${this.apiUrl}/${normalized}`).pipe(
       map((response) => {
         const item = response?.datos?.[0];
         return item ? this.mapFromApi(item) : null;
@@ -54,8 +58,8 @@ export class ClienteService {
 
   editarCliente(codigo: string, payload: ClientePost): Observable<{ respuesta?: string }> {
     const normalized = this.normalizePayload(payload, 2);
-    const params = new HttpParams().set('codigo', codigo);
-    return this.http.put(this.apiUrl, normalized, { params, responseType: 'text' }).pipe(map((res) => this.parseTextResponse(res)));
+    
+    return this.http.put( `${this.apiUrl}/${codigo}` , normalized, {responseType: 'text' }).pipe(map((res) => this.parseTextResponse(res)));
   }
 
   eliminarCliente(codigo: string): Observable<{ respuesta?: string }> {
@@ -105,27 +109,28 @@ export class ClienteService {
   }
 
   private mapFromApi(apiData: ClienteDto): ClienteUI {
+    const zona = (apiData.MPV00_Zona ?? apiData.MPV00_ZONA ?? '').trim();
     return {
       codigo: apiData.MPV00_CodClien,
       nombre: apiData.MPV00_NomClien,
       ruc: apiData.MPV00_RucClien,
       contacto: apiData.MPV00_Contacto,
       direccion: apiData.MPV00_DirClien,
-      provincia: apiData.MPV00_PrvClien,
-      ciudad: apiData.MPV00_CiuClien,
-      pais: '',
-      zona: apiData.MPV00_ZONA,
+      provincia: apiData.MPV00_PrvClien || '',
+      ciudad: apiData.MPV00_CiuClien || '',
+      pais: apiData.MPV00_PaiClien || '',
+      zona,
       email: apiData.MPV00_Email,
       telefono1: apiData.MPV00_Te1Clien,
       telefono2: apiData.MPV00_Te2Clien,
-      fax: '',
+      fax: apiData.MPV00_FaxClien || '',
       tipoCli: apiData.MPV00_TipClien,
       mtoCredito: apiData.MPV00_MtoCredito ?? 0,
-      idProvincia: '',
-      idCanton: '',
-      idDistrito: '',
-      tCliente: apiData.MPV00_TCliente,
-      enviarCorreo: false
+      idProvincia: apiData.MPV00_IdProvincia || '',
+      idCanton: apiData.MPV00_IdCanton || '',
+      idDistrito: apiData.MPV00_IdDistrito || '',
+      tCliente: (apiData.MPV00_TCliente || '').trim(),
+      enviarCorreo: (apiData.MPV00_BanderaCorreo ?? 0) === 1
     };
   }
 
@@ -148,4 +153,3 @@ export class ClienteService {
     return this.auth.getCurrentUser()?.usuario ?? '';
   }
 }
-

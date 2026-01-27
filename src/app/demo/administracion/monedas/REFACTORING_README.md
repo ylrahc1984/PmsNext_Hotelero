@@ -2,7 +2,7 @@
 
 ## 📋 Resumen de Cambios
 
-El componente de **Monedas** ha sido completamente refactorizado para trabajar con la API real en `http://localhost:5000/api/moneda`.
+El componente de **Monedas** ha sido completamente refactorizado para trabajar con la API configurada en `environment.apiUrl` (endpoint `/moneda`).
 
 ## 🔄 Cambios Principales
 

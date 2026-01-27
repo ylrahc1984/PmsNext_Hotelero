@@ -64,18 +64,30 @@ export class DashboardComponent implements OnInit {
   }
 
   calculateMetrics() {
-    const reservas = this.reservasService.getReservas();
+    // Usar la API correctamente y procesar los datos en el callback
+    this.reservasService.getReservas(1, 100).subscribe({
+      next: (res) => {
+        const reservas = res.data;
+        const today = new Date().toISOString().split('T')[0];
+        this.reservasDia = reservas.filter(r => r.PRV01_FecCreacion?.split('T')[0] === today).length;
+        this.reservasPendientes = reservas.filter(r => r.PRV01_Estado === 'Pendiente' || r.PRV01_Estado === 'Confirmada').length;
+        this.ingresosEstimados = reservas.filter(r => r.PRV01_Estado !== 'Cancelada').reduce((sum, r) => sum + (r.PRV01_TotalRsv || 0), 0);
+        this.sales[0].amount = this.reservasDia.toString();
+        this.sales[1].amount = this.reservasPendientes.toString();
+        this.sales[3].amount = `CRC ${this.ingresosEstimados.toLocaleString()}`;
+      },
+      error: () => {
+        this.reservasDia = 0;
+        this.reservasPendientes = 0;
+        this.ingresosEstimados = 0;
+        this.sales[0].amount = '0';
+        this.sales[1].amount = '0';
+        this.sales[3].amount = 'CRC 0';
+      }
+    });
+    // Ordenes activas (mock local)
     const ordenes = this.ordenesService.getOrdenes();
-    const today = new Date().toISOString().split('T')[0];
-
-    this.reservasDia = reservas.filter(r => r.fecha === today).length;
-    this.reservasPendientes = reservas.filter(r => r.estado === 'Pendiente' || r.estado === 'Confirmada').length;
     this.ordenesActivas = ordenes.filter(o => o.estado !== 'Finalizada' && o.estado !== 'Anulada').length;
-    this.ingresosEstimados = reservas.filter(r => r.estado !== 'Cancelada').reduce((sum, r) => sum + r.totalNeto, 0);
-
-    this.sales[0].amount = this.reservasDia.toString();
-    this.sales[1].amount = this.reservasPendientes.toString();
     this.sales[2].amount = this.ordenesActivas.toString();
-    this.sales[3].amount = `CRC ${this.ingresosEstimados.toLocaleString()}`;
   }
 }

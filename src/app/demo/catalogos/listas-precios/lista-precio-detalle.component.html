@@ -67,9 +67,10 @@
           </div>
 
           <div class="header-actions">
-            <button class="btn btn-primary btn-action" (click)="openForm()">
+            <button class="btn btn-primary btn-action" (click)="addReglaBlank()" [disabled]="isCreatingRegla || !hasServicioSeleccionado()">
               <i class="feather icon-plus"></i>
               <span>Agregar Regla</span>
+              <span *ngIf="isCreatingRegla" class="spinner-border spinner-border-sm ms-2" role="status" aria-label="Creando regla"></span>
             </button>
           </div>
         </div>
@@ -77,7 +78,7 @@
     </div>
 
     <!-- Tabla de Reglas Tarifarias -->
-    <div class="rules-table-container" *ngIf="selectedServicioId() > 0">
+    <div class="rules-table-container" *ngIf="hasServicioSeleccionado()">
       <div class="table-header">
         <h6 class="table-title">
           <i class="feather icon-list"></i>
@@ -129,68 +130,221 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let regla of reglasFiltradas()" class="table-row">
+            <tr *ngFor="let regla of reglasFiltradas(); trackBy: trackByReglaId" class="table-row">
               <td class="col-tarifa">
-                <span class="badge-tarifa">{{ regla.tarifa }}</span>
+                <ng-container *ngIf="isEditing(regla.id); else viewTarifa">
+                  <select
+                    class="form-control form-control-sm custom-select"
+                    [ngModel]="getDraft(regla).tarifa"
+                    (ngModelChange)="onDraftChange(regla.id, { tarifa: $event })"
+                    aria-label="Tarifa">
+                    <option [ngValue]="'A'">A</option>
+                    <option [ngValue]="'B'">B</option>
+                    <option [ngValue]="'C'">C</option>
+                    <option [ngValue]="'D'">D</option>
+                  </select>
+                </ng-container>
+                <ng-template #viewTarifa>
+                  <span class="badge-tarifa">{{ regla.tarifa }}</span>
+                </ng-template>
               </td>
               <td class="col-horario">
-                <div class="time-range">
-                  <i class="feather icon-clock time-icon"></i>
-                  <span>{{ regla.horaInicio }} - {{ regla.horaFin }}</span>
-                </div>
+                <ng-container *ngIf="isEditing(regla.id); else viewHorario">
+                  <div class="time-range">
+                    <i class="feather icon-clock time-icon"></i>
+                    <input
+                      type="time"
+                      class="form-control form-control-sm"
+                      [ngModel]="getDraft(regla).horaInicio"
+                      (ngModelChange)="onDraftChange(regla.id, { horaInicio: $event })"
+                      aria-label="Hora desde" />
+                    <span class="mx-1">-</span>
+                    <input
+                      type="time"
+                      class="form-control form-control-sm"
+                      [ngModel]="getDraft(regla).horaFin"
+                      (ngModelChange)="onDraftChange(regla.id, { horaFin: $event })"
+                      aria-label="Hora hasta" />
+                  </div>
+                </ng-container>
+                <ng-template #viewHorario>
+                  <div class="time-range">
+                    <i class="feather icon-clock time-icon"></i>
+                    <span>{{ regla.horaInicio }} - {{ regla.horaFin }}</span>
+                  </div>
+                </ng-template>
               </td>
               <td class="col-precio">
-                <div class="price-display">
-                  <span class="currency">{{ listaPrecio.moneda }}</span>
-                  <span class="amount">{{ regla.precioBase | number }}</span>
-                </div>
+                <ng-container *ngIf="isEditing(regla.id); else viewPrecioBase">
+                  <div class="price-display">
+                    <span class="currency">{{ listaPrecio.moneda }}</span>
+                    <input
+                      type="number"
+                      class="form-control form-control-sm"
+                      min="0"
+                      step="0.01"
+                      [ngModel]="getDraft(regla).precioBase"
+                      (ngModelChange)="onDraftChange(regla.id, { precioBase: $event })"
+                      aria-label="Precio base" />
+                  </div>
+                </ng-container>
+                <ng-template #viewPrecioBase>
+                  <div class="price-display">
+                    <span class="currency">{{ listaPrecio.moneda }}</span>
+                    <span class="amount">{{ regla.precioBase | number }}</span>
+                  </div>
+                </ng-template>
               </td>
               <td class="col-adultos">
-                <div class="adults-info">
-                  <i class="feather icon-users"></i>
-                  <span>{{ regla.adultosIncluidos }}</span>
-                </div>
+                <ng-container *ngIf="isEditing(regla.id); else viewIncluye">
+                  <div class="adults-info">
+                    <i class="feather icon-users"></i>
+                    <input
+                      type="number"
+                      class="form-control form-control-sm"
+                      min="0"
+                      step="1"
+                      [ngModel]="getDraft(regla).cantMinPax"
+                      (ngModelChange)="onDraftChange(regla.id, { cantMinPax: $event })"
+                      aria-label="Cantidad mínima pax" />
+                    <span class="mx-1">-</span>
+                    <input
+                      type="number"
+                      class="form-control form-control-sm"
+                      min="0"
+                      step="1"
+                      [ngModel]="getDraft(regla).cantMaxPax"
+                      (ngModelChange)="onDraftChange(regla.id, { cantMaxPax: $event })"
+                      aria-label="Cantidad máxima pax" />
+                  </div>
+                </ng-container>
+                <ng-template #viewIncluye>
+                  <div class="adults-info">
+                    <i class="feather icon-users"></i>
+                    <span>{{ regla.cantMaxPax }}</span>
+                  </div>
+                </ng-template>
               </td>
               <td class="col-extra">
-                <div class="price-display">
-                  <span class="currency">{{ listaPrecio.moneda }}</span>
-                  <span class="amount">{{ regla.precioAdultoExtra | number }}</span>
-                </div>
+                <ng-container *ngIf="isEditing(regla.id); else viewAdultoExtra">
+                  <div class="price-display">
+                    <span class="currency">{{ listaPrecio.moneda }}</span>
+                    <input
+                      type="number"
+                      class="form-control form-control-sm"
+                      min="0"
+                      step="0.01"
+                      [ngModel]="getDraft(regla).precioAdultoExtra"
+                      (ngModelChange)="onDraftChange(regla.id, { precioAdultoExtra: $event })"
+                      aria-label="Precio pax extra" />
+                  </div>
+                </ng-container>
+                <ng-template #viewAdultoExtra>
+                  <div class="price-display">
+                    <span class="currency">{{ listaPrecio.moneda }}</span>
+                    <span class="amount">{{ regla.precioAdultoExtra | number }}</span>
+                  </div>
+                </ng-template>
               </td>
               <td class="col-nino">
-                <div class="price-display">
-                  <span class="currency">{{ listaPrecio.moneda }}</span>
-                  <span class="amount">{{ regla.precioNino | number }}</span>
-                </div>
+                <ng-container *ngIf="isEditing(regla.id); else viewNino">
+                  <div class="price-display">
+                    <span class="currency">{{ listaPrecio.moneda }}</span>
+                    <input
+                      type="number"
+                      class="form-control form-control-sm"
+                      min="0"
+                      step="0.01"
+                      [ngModel]="getDraft(regla).precioNino"
+                      (ngModelChange)="onDraftChange(regla.id, { precioNino: $event })"
+                      aria-label="Precio niño" />
+                  </div>
+                </ng-container>
+                <ng-template #viewNino>
+                  <div class="price-display">
+                    <span class="currency">{{ listaPrecio.moneda }}</span>
+                    <span class="amount">{{ regla.precioNino | number }}</span>
+                  </div>
+                </ng-template>
               </td>
               <td class="col-observaciones">
-                <div class="notes-cell">
-                  <span class="notes-text" [title]="regla.observaciones">
-                    {{ regla.observaciones || 'Sin observaciones' }}
-                  </span>
-                </div>
+                <ng-container *ngIf="isEditing(regla.id); else viewNotas">
+                  <input
+                    type="text"
+                    class="form-control form-control-sm"
+                    [ngModel]="getDraft(regla).observaciones"
+                    (ngModelChange)="onDraftChange(regla.id, { observaciones: $event })"
+                    aria-label="Observaciones" />
+                </ng-container>
+                <ng-template #viewNotas>
+                  <div class="notes-cell">
+                    <span class="notes-text" [title]="regla.observaciones">
+                      {{ regla.observaciones || 'Sin observaciones' }}
+                    </span>
+                  </div>
+                </ng-template>
               </td>
               <td class="col-estado">
-                <span class="badge-status {{ getEstadoBadge(regla.activa) }}">
-                  <i class="feather {{ getIconClass(regla.activa) }}"></i>
-                  {{ getEstadoText(regla.activa) }}
-                </span>
+                <ng-container *ngIf="isEditing(regla.id); else viewEstado">
+                  <div class="form-check form-switch m-0 d-inline-flex align-items-center">
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      [checked]="getDraft(regla).activa"
+                      (change)="onDraftChange(regla.id, { activa: $event.target.checked })"
+                      [disabled]="isSavingRegla(regla.id)"
+                      [id]="'estadoSwitch-' + regla.id"
+                      aria-label="Activo">
+                    <label class="form-check-label ms-1" [for]="'estadoSwitch-' + regla.id">
+                      {{ getDraft(regla).activa ? 'Activa' : 'Inactiva' }}
+                    </label>
+                  </div>
+                </ng-container>
+                <ng-template #viewEstado>
+                  <span class="badge-status {{ getEstadoBadge(regla.activa) }}">
+                    <i class="feather {{ getIconClass(regla.activa) }}"></i>
+                    {{ getEstadoText(regla.activa) }}
+                  </span>
+                </ng-template>
               </td>
               <td class="col-acciones">
                 <div class="action-buttons">
-                  <button class="btn-action btn-edit" (click)="openForm(regla)"
-                          title="Editar regla" data-toggle="tooltip">
-                    <i class="feather icon-edit-2"></i>
-                  </button>
+                  <ng-container *ngIf="isEditing(regla.id); else editButton">
+                    <button
+                      class="btn-action btn-edit"
+                      (click)="saveRegla(regla.id)"
+                      [disabled]="isSavingRegla(regla.id)"
+                      title="Guardar"
+                      data-toggle="tooltip">
+                      <i class="feather icon-save"></i>
+                    </button>
+                    <button
+                      class="btn-action btn-edit"
+                      (click)="cancelEdit(regla.id)"
+                      [disabled]="isSavingRegla(regla.id)"
+                      title="Cancelar"
+                      data-toggle="tooltip">
+                      <i class="feather icon-x"></i>
+                    </button>
+                  </ng-container>
+                  <ng-template #editButton>
+                    <button class="btn-action btn-edit" (click)="startEdit(regla)"
+                            title="Editar regla" data-toggle="tooltip">
+                      <i class="feather icon-edit-2"></i>
+                    </button>
+                  </ng-template>
                   <button class="btn-action btn-toggle" (click)="toggleActive(regla.id)"
+                          [disabled]="isSavingRegla(regla.id)"
                           [title]="getToggleTitle(regla.activa)" data-toggle="tooltip">
                     <i class="feather {{ getPausePlayIcon(regla.activa) }}"></i>
                   </button>
                   <button class="btn-action btn-delete" (click)="deleteRegla(regla.id)"
+                          [disabled]="isSavingRegla(regla.id)"
                           title="Eliminar regla" data-toggle="tooltip">
                     <i class="feather icon-trash-2"></i>
                   </button>
                 </div>
+                <div class="text-danger small mt-1" *ngIf="getRowError(regla.id)">{{ getRowError(regla.id) }}</div>
               </td>
             </tr>
           </tbody>
@@ -207,7 +361,7 @@
             Este servicio aun no tiene reglas de precio definidas.
             Crea la primera regla para comenzar a configurar los precios.
           </p>
-          <button class="btn btn-primary btn-empty-action" (click)="openForm()">
+          <button class="btn btn-primary btn-empty-action" (click)="addReglaBlank()" [disabled]="isCreatingRegla">
             <i class="feather icon-plus"></i>
             Crear Primera Regla
           </button>
@@ -216,32 +370,6 @@
     </div>
   </div>
 </div>
-
-<!-- Modal para formulario -->
-<div class="modal fade" [ngClass]="{'show': showForm, 'd-block': showForm}" *ngIf="showForm" tabindex="-1" role="dialog">
-  <div class="modal-dialog modal-lg" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">{{ editingRegla ? 'Editar Regla Tarifaria' : 'Nueva Regla Tarifaria' }}</h5>
-        <button type="button" class="close" (click)="closeForm()" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body">
-        <app-regla-tarifa-form
-          [reglaTarifa]="editingRegla"
-          [listaPrecio]="listaPrecio"
-          [servicioId]="selectedServicioId()"
-          (onSave)="onFormSave()"
-          (onCancel)="closeForm()">
-        </app-regla-tarifa-form>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Modal backdrop -->
-<div class="modal-backdrop fade show" *ngIf="showForm"></div>
 
 <!-- Boton flotante para volver -->
 <button class="btn btn-secondary btn-flotante-volver" (click)="volverAListas()" title="Volver a Listas de Precios">

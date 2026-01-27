@@ -4,15 +4,22 @@ export interface ClienteDto {
   MPV00_RucClien: string;
   MPV00_Contacto: string;
   MPV00_DirClien: string;
-  MPV00_PrvClien: string;
-  MPV00_CiuClien: string;
+  MPV00_PrvClien?: string;
+  MPV00_CiuClien?: string;
+  MPV00_PaiClien?: string;
   MPV00_Email: string;
   MPV00_Te1Clien: string;
   MPV00_Te2Clien: string;
+  MPV00_FaxClien?: string;
   MPV00_TipClien: string;
   MPV00_MtoCredito: number;
-  MPV00_ZONA: string;
+  MPV00_ZONA?: string;
+  MPV00_Zona?: string;
+  MPV00_IdProvincia?: string;
+  MPV00_IdCanton?: string;
+  MPV00_IdDistrito?: string;
   MPV00_TCliente: string;
+  MPV00_BanderaCorreo?: number;
 }
 
 export interface ClientePost {
@@ -65,4 +72,3 @@ export interface ClienteUI {
   tCliente: string;
   enviarCorreo: boolean;
 }
-

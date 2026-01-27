@@ -5,8 +5,7 @@ import { FormsModule } from '@angular/forms';
 
 // project import
 import { SharedModule } from 'src/app/theme/shared/shared.module';
-import { ReglasTarifariasService, ReglaTarifa, ListaPrecio } from './listas-precios.service';
-import { ServiciosService } from '../servicios.service';
+import { ReglasTarifariasService, ReglaTarifa, ListaPrecio, Servicio } from './listas-precios.service';
 
 @Component({
   selector: 'app-regla-tarifa-form',
@@ -17,15 +16,18 @@ import { ServiciosService } from '../servicios.service';
 export class ReglaTarifaFormComponent implements OnInit, OnChanges {
   @Input() reglaTarifa: ReglaTarifa | null = null;
   @Input() listaPrecio: ListaPrecio | null = null;
-  @Input() servicioId: number = 0;
+  @Input() codLstPrecio: string = '';
+  @Input() servicioId: string = '';
+  @Input() servicios: Servicio[] = [];
 
   @Output() onSave = new EventEmitter<void>();
   @Output() onCancel = new EventEmitter<void>();
 
-  formData: Partial<Omit<ReglaTarifa, 'tarifa'>> & { tarifa?: ReglaTarifa['tarifa'] } = {};
+  formData: Partial<ReglaTarifa> = {};
+  isSaving = false;
+  saveError = '';
 
   private reglasService = inject(ReglasTarifariasService);
-  private serviciosService = inject(ServiciosService);
 
   ngOnInit() {
     this.initializeForm();
@@ -40,7 +42,9 @@ export class ReglaTarifaFormComponent implements OnInit, OnChanges {
       ? { ...this.reglaTarifa }
       : {
           listaPrecioId: this.listaPrecio?.id || 0,
+          codLstPrecio: this.codLstPrecio || String(this.listaPrecio?.id || ''),
           servicioId: this.servicioId,
+          codServicio: String(this.servicioId || ''),
           servicioNombre: this.getServicioNombre(),
           tarifa: 'A' as ReglaTarifa['tarifa'],
           horaInicio: '08:00',
@@ -49,6 +53,9 @@ export class ReglaTarifaFormComponent implements OnInit, OnChanges {
           adultosIncluidos: 1,
           precioAdultoExtra: 0,
           precioNino: 0,
+          cantMinPax: 1,
+          cantMaxPax: 1,
+          moneda: this.listaPrecio?.moneda || '',
           observaciones: '',
           activa: true
         };
@@ -56,14 +63,17 @@ export class ReglaTarifaFormComponent implements OnInit, OnChanges {
     this.formData = {
       ...baseForm,
       listaPrecioId: this.listaPrecio?.id || baseForm.listaPrecioId || 0,
+      codLstPrecio: this.codLstPrecio || baseForm.codLstPrecio || '',
       servicioId: this.servicioId,
+      codServicio: String(this.servicioId || ''),
+      moneda: this.listaPrecio?.moneda || baseForm.moneda || '',
       servicioNombre: this.getServicioNombre()
     };
   }
 
   getServicioNombre(): string {
     if (this.servicioId) {
-      const servicio = this.serviciosService.getServicioById(this.servicioId);
+      const servicio = this.servicios.find((item) => item.id === this.servicioId);
       return servicio?.nombre || '';
     }
     return '';
@@ -71,34 +81,51 @@ export class ReglaTarifaFormComponent implements OnInit, OnChanges {
 
   private syncContextFields() {
     this.formData.listaPrecioId = this.listaPrecio?.id || 0;
+    this.formData.codLstPrecio = this.codLstPrecio || String(this.listaPrecio?.id || '');
     this.formData.servicioId = this.servicioId;
+    this.formData.codServicio = String(this.servicioId || '');
+    this.formData.moneda = this.listaPrecio?.moneda || this.formData.moneda || '';
     this.formData.servicioNombre = this.getServicioNombre();
   }
 
   save() {
     this.syncContextFields();
     if (this.validateForm()) {
-      const payload: Omit<ReglaTarifa, 'id'> = {
-        listaPrecioId: this.formData.listaPrecioId!,
-        servicioId: this.formData.servicioId!,
-        servicioNombre: this.formData.servicioNombre || this.getServicioNombre(),
-        tarifa: this.formData.tarifa as ReglaTarifa['tarifa'],
-        horaInicio: this.formData.horaInicio!,
-        horaFin: this.formData.horaFin!,
-        precioBase: Number(this.formData.precioBase),
-        adultosIncluidos: Number(this.formData.adultosIncluidos),
-        precioAdultoExtra: Number(this.formData.precioAdultoExtra ?? 0),
+      const cantMinPax = this.getCantMinPax();
+      const cantMaxPax = this.getCantMaxPax();
+      const payloadBase = {
+        codLstPrecio: this.formData.codLstPrecio || '',
+        codServicio: this.formData.codServicio || String(this.formData.servicioId || ''),
+        tipoTarifa: this.reglasService.getTipoTarifaFromCodigo(this.formData.tarifa),
+        cantMinPax,
+        cantMaxPax,
+        precioAdulto: Number(this.formData.precioBase),
         precioNino: Number(this.formData.precioNino ?? 0),
-        observaciones: this.formData.observaciones?.trim(),
-        activa: !!this.formData.activa
+        precioPaxExtra: Number(this.formData.precioAdultoExtra ?? 0),
+        horaDesde: this.formData.horaInicio || '',
+        horaHasta: this.formData.horaFin || '',
+        moneda: this.formData.moneda || this.listaPrecio?.moneda || '',
+        observaciones: this.formData.observaciones?.trim() || '',
+        activo: !!this.formData.activa
       };
-
-      if (this.reglaTarifa) {
-        this.reglasService.update({ ...payload, id: this.reglaTarifa.id });
-      } else {
-        this.reglasService.create(payload);
-      }
-      this.onSave.emit();
+      const tipo = this.reglaTarifa ? 2 : 1;
+      const id = this.reglaTarifa?.id ?? 0;
+      const payload = this.reglasService.buildPayload(payloadBase, tipo, id);
+      this.isSaving = true;
+      this.saveError = '';
+      const request$ = this.reglaTarifa
+        ? this.reglasService.updateDetalle(id, payload)
+        : this.reglasService.createDetalle(payload);
+      request$.subscribe({
+        next: () => {
+          this.isSaving = false;
+          this.onSave.emit();
+        },
+        error: () => {
+          this.isSaving = false;
+          this.saveError = 'No se pudo guardar la regla tarifaria.';
+        }
+      });
     }
   }
 
@@ -107,15 +134,18 @@ export class ReglaTarifaFormComponent implements OnInit, OnChanges {
   }
 
   validateForm(): boolean {
-    return !!(this.formData.listaPrecioId &&
+    const cantMinPax = this.getCantMinPax();
+    const cantMaxPax = this.getCantMaxPax();
+    return !!(this.formData.codLstPrecio &&
              this.formData.servicioId &&
              this.formData.tarifa &&
              this.formData.horaInicio &&
              this.formData.horaFin &&
-             this.formData.precioBase !== undefined && this.formData.precioBase >= 0 &&
+             this.formData.precioBase !== undefined && this.formData.precioBase > 0 &&
              this.formData.adultosIncluidos !== undefined && this.formData.adultosIncluidos > 0 &&
              this.formData.precioAdultoExtra !== undefined && this.formData.precioAdultoExtra >= 0 &&
              this.formData.precioNino !== undefined && this.formData.precioNino >= 0 &&
+             cantMinPax <= cantMaxPax &&
              this.isValidTimeRange());
   }
 
@@ -129,5 +159,21 @@ export class ReglaTarifaFormComponent implements OnInit, OnChanges {
   hasTimeRangeError(): boolean {
     return !!(this.formData.horaInicio && this.formData.horaFin &&
              this.formData.horaFin <= this.formData.horaInicio);
+  }
+
+  private getCantMinPax(): number {
+    const adultosIncluidos = Number(this.formData.adultosIncluidos ?? 0);
+    if (adultosIncluidos > 0) {
+      return adultosIncluidos;
+    }
+    return Number(this.formData.cantMinPax ?? 0);
+  }
+
+  private getCantMaxPax(): number {
+    const adultosIncluidos = Number(this.formData.adultosIncluidos ?? 0);
+    if (adultosIncluidos > 0) {
+      return adultosIncluidos;
+    }
+    return Number(this.formData.cantMaxPax ?? 0);
   }
 }

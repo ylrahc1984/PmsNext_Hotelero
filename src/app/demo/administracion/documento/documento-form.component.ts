@@ -21,7 +21,8 @@ export class DocumentoFormComponent implements OnInit {
   tDocFeOptions = [
     { value: '01', label: 'Factura electronica' },
     { value: '02', label: 'Nota debito' },
-    { value: '03', label: 'Nota credito' }
+    { value: '03', label: 'Nota credito' },
+    { value: '04', label: 'Tique electronico' },
   ];
 
   constructor(

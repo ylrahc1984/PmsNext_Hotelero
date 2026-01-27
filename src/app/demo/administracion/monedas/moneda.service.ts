@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { environment } from 'src/environments/environment';
 
 /**
  * Interfaz para el modelo interno de la UI
@@ -54,7 +55,7 @@ export interface MonedaPayload {
   providedIn: 'root'
 })
 export class MonedaService {
-  private apiUrl = 'http://localhost:5000/api/moneda';
+  private apiUrl = `${environment.apiUrl}/moneda`;
 
   // Códigos de proceso
   private readonly PROCESO_INSERT = 1;

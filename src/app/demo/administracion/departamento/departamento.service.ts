@@ -4,10 +4,11 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { DepartamentoApi, DepartamentoPayload, DepartamentoResponse, DepartamentoUI } from './departamento.models';
+import { environment } from 'src/environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class DepartamentoService {
-  private apiUrl = 'http://localhost:5000/api/departamento';
+  private apiUrl = `${environment.apiUrl}/departamento`;
   private readonly tipoCreate = 1;
   private readonly tipoUpdate = 2;
 

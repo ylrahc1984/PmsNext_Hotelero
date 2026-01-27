@@ -2,8 +2,10 @@
  * GUÍA RÁPIDA DE PRUEBA - Componente Monedas con API Real
  * 
  * Este archivo contiene ejemplos de cómo probar el componente
- * con la API real en http://localhost:5000/api/moneda
+ * con la API configurada en `environment.apiUrl` (endpoint `/moneda`)
  */
+
+import { environment } from 'src/environments/environment';
 
 // ============================================
 // 1. VERIFICAR QUE LA API ESTÁ CORRIENDO
@@ -12,7 +14,7 @@
 /*
 En la consola del navegador (F12), ejecutar:
 
-fetch('http://localhost:5000/api/moneda', {
+fetch(`${environment.apiUrl}/moneda`, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -178,7 +180,7 @@ Se muestra confirmación antes, y el toast informa el resultado.
 
 /*
 PASO 1: Cargar el componente
-- Ir a: http://localhost:4200/monedas
+- Ir a: `/monedas` (normalmente con `ng serve` en el puerto 4200)
 - Debería ver tabla vacía o con datos de la API
 - Si hay error, revisar consola (F12)
 
@@ -318,7 +320,7 @@ monedas.deleteMoneda(monedas.filteredMonedas[0]);
 */
 
 export const TESTING_NOTES = {
-  apiUrl: 'http://localhost:5000/api/moneda',
+  apiUrl: `${environment.apiUrl}/moneda`,
   processes: {
     INSERT: 1,
     UPDATE: 2,

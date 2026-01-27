@@ -1,63 +1,101 @@
-<div class="row">
+﻿<div class="row">
   <div class="col-12">
     <app-card [customHeader]="true">
       <div class="app-card-header">
-        <h5>Catálogo de Servicios</h5>
+        <h5>Catalogo de Servicios</h5>
         <div class="card-header-right">
           <button class="btn btn-primary btn-nuevo-servicio" routerLink="/servicios/nuevo">
             <i class="feather icon-plus"></i> Nuevo Servicio
           </button>
         </div>
       </div>
-      <div class="row mb-3">
-        <div class="col-md-4">
-          <input type="text" class="form-control" [(ngModel)]="filterNombre" (input)="applyFilters()" placeholder="Filtrar por nombre">
+      <div class="filters-card mb-3">
+        <div class="row">
+          <div class="col-lg-3 col-md-6 mb-3">
+            <label class="small-label">Nombre</label>
+            <input type="text" class="form-control" [(ngModel)]="filterNombre" placeholder="Buscar por nombre">
+          </div>
+          <div class="col-lg-3 col-md-6 mb-3">
+            <label class="small-label">Categoria</label>
+            <select class="form-control" [(ngModel)]="filterCategoria">
+              <option value="">Todas</option>
+              <option *ngFor="let categoria of categoriaOptions" [value]="categoria">{{ categoria }}</option>
+            </select>
+          </div>
+          <div class="col-lg-3 col-md-6 mb-3">
+            <label class="small-label">Grupo</label>
+            <select class="form-control" [(ngModel)]="filterGrupo">
+              <option value="">Todos</option>
+              <option *ngFor="let grupo of grupoOptions" [value]="grupo">{{ grupo }}</option>
+            </select>
+          </div>
+          <div class="col-lg-3 col-md-6 mb-3">
+            <label class="small-label">Visible</label>
+            <select class="form-control" [(ngModel)]="filterVisible">
+              <option value="">Todos</option>
+              <option value="1">Si</option>
+              <option value="0">No</option>
+            </select>
+          </div>
         </div>
-        <div class="col-md-4">
-          <select class="form-control" [(ngModel)]="filterTipo" (change)="applyFilters()">
-            <option value="">Todos los tipos</option>
-            <option value="transporte">Transporte</option>
-            <option value="tour">Tour</option>
-            <option value="alojamiento">Alojamiento</option>
-            <option value="otro">Otro</option>
-          </select>
-        </div>
-        <div class="col-md-4">
-          <select class="form-control" [(ngModel)]="filterActivo" (change)="applyFilters()">
-            <option value="">Todos</option>
-            <option value="activo">Activo</option>
-            <option value="inactivo">Inactivo</option>
-          </select>
+        <div class="row align-items-end">
+          <div class="col-12 text-right">
+            <button class="btn btn-outline-secondary mr-2" (click)="onLimpiar()" [disabled]="isLoading">Limpiar</button>
+            <button class="btn btn-primary" (click)="onBuscar()" [disabled]="isLoading">Buscar</button>
+          </div>
         </div>
       </div>
       <div class="table-responsive">
         <table class="table table-striped">
           <thead>
             <tr>
-              <th>ID</th>
+              <th>Codigo</th>
               <th>Nombre</th>
-              <th>Tipo</th>
-              <th>Estado</th>
+              <th>Categoria</th>
+              <th>Grupo</th>
+              <th>Visible</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let servicio of filteredServicios">
-              <td>{{ servicio.id }}</td>
-              <td>{{ servicio.nombre }}</td>
-              <td><span class="badge {{ getTipoBadge(servicio.tipo) }}">{{ servicio.tipo }}</span></td>
-              <td><span class="badge {{ getActivoBadge(servicio.activo) }}">{{ servicio.activo ? 'Activo' : 'Inactivo' }}</span></td>
+              <td>{{ servicio.codReceta }}</td>
+              <td>{{ servicio.nomReceta }}</td>
+              <td>{{ servicio.codCateg }}</td>
+              <td>{{ servicio.codGrupo }}</td>
               <td>
-                <button class="btn btn-sm btn-outline-info" routerLink="/servicios/editar/{{servicio.id}}" title="Editar">
+                <span class="badge {{ getVisibleBadge(servicio.visible) }}">
+                  {{ servicio.visible === 1 ? 'Si' : 'No' }}
+                </span>
+              </td>
+              <td>
+                <button class="btn btn-sm btn-outline-info" routerLink="/servicios/editar/{{ servicio.codReceta }}" title="Editar">
                   <i class="feather icon-edit"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-danger ml-2" (click)="deleteServicio(servicio.id)" title="Eliminar">
+                <button class="btn btn-sm btn-outline-danger ml-2" (click)="deleteServicio(servicio)" title="Eliminar">
                   <i class="feather icon-trash"></i>
                 </button>
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div class="row mt-3 align-items-center" *ngIf="totalPages > 0">
+        <div class="col-md-4 text-muted">
+          Pagina {{ currentPage }} de {{ totalPages }} ({{ totalRegistros }} registros)
+        </div>
+        <div class="col-md-4 text-center">
+          <select class="form-select form-select-sm d-inline-block w-auto" [(ngModel)]="pageSize" (change)="onPageSizeChange()" [disabled]="isLoading">
+            <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }} por pagina</option>
+          </select>
+        </div>
+        <div class="col-md-4 text-end">
+          <div class="btn-group" role="group">
+            <button class="btn btn-outline-secondary btn-sm" [disabled]="currentPage === 1 || isLoading" (click)="goToPageRelative(-1)">Prev</button>
+            <button class="btn btn-outline-secondary btn-sm" [disabled]="currentPage === totalPages || isLoading" (click)="goToPageRelative(1)">Next</button>
+          </div>
+        </div>
       </div>
     </app-card>
   </div>

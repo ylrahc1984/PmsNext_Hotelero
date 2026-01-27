@@ -2,6 +2,8 @@
       Generic-class css start
 ========================== **/
 /*====== Padding , Margin css starts ======*/
+@use "sass:list";
+
 $i: 0;
 @while $i<=50 {
   .p {
@@ -52,20 +54,20 @@ $i: 0;
 
 /*====== text-color, background color css starts ======*/
 @each $value in $color-name {
-  $i: index($color-name, $value);
+  $i: list.index($color-name, $value);
   .bg-#{$value} {
-    background: nth($color-color, $i);
+    background: list.nth($color-color, $i);
   }
   .text-#{$value} {
-    color: nth($color-color, $i);
+    color: list.nth($color-color, $i);
   }
 }
 /*====== text-color css ends ======*/
 /*====== Card top border css starts ======*/
 @each $value in $color-name {
-  $i: index($color-name, $value);
+  $i: list.index($color-name, $value);
   .card-border-#{$value} {
-    border-top: 4px solid nth($color-color, $i);
+    border-top: 4px solid list.nth($color-color, $i);
   }
 }
 /*====== Card top border ends ======*/

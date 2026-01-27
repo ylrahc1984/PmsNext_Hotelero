@@ -1,5 +1,10 @@
 // angular import
 import { Injectable, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { AuthService } from 'src/app/core/services/auth.service';
+import { environment } from 'src/environments/environment';
 
 // Datos y modelos para listas de precios y reglas tarifarias (mock)
 export interface ListaPrecio {
@@ -15,7 +20,7 @@ export interface ListaPrecio {
 }
 
 export interface Servicio {
-  id: number;
+  id: string;
   nombre: string;
   descripcion?: string;
   categoria: string;
@@ -25,7 +30,9 @@ export interface Servicio {
 export interface ReglaTarifa {
   id: number;
   listaPrecioId: number;
-  servicioId: number;
+  codLstPrecio: string;
+  servicioId: string;
+  codServicio: string;
   servicioNombre: string;
   tarifa: 'A' | 'B' | 'C' | 'D';
   horaInicio: string;
@@ -34,80 +41,60 @@ export interface ReglaTarifa {
   adultosIncluidos: number;
   precioAdultoExtra: number;
   precioNino: number;
+  cantMinPax: number;
+  cantMaxPax: number;
+  moneda: string;
   observaciones?: string;
   activa: boolean;
+  operador?: string;
+  fechaRegistro?: string;
 }
 
+export interface DetalleLstPrecioDto {
+  MPV05_ID: number;
+  MPV05_CodLstPrecio: string;
+  MPV05_CodServicio: string;
+  MPV05_TipoTarifa: number;
+  MPV05_CantMinPax: number;
+  MPV05_CantMaxPax: number;
+  MPV05_PrecioAdulto: number;
+  MPV05_PrecioNino: number;
+  MPV05_PrecioPaxExtra: number;
+  MPV05_HoraDesde: string;
+  MPV05_HoraHasta: string;
+  MPV05_Moneda: string;
+  MPV05_Observaciones: string;
+  MPV05_Activo: boolean | number | string;
+  MPV05_Operador: string;
+  MPV05_FechaRegistro: string;
+}
+
+export interface DetalleLstPrecioPost {
+  tipo: number;
+  id: number;
+  codLstPrecio: string;
+  codServicio: string;
+  tipoTarifa: number;
+  cantMinPax: number;
+  cantMaxPax: number;
+  precioAdulto: number;
+  precioNino: number;
+  precioPaxExtra: number;
+  horaDesde: string;
+  horaHasta: string;
+  moneda: string;
+  observaciones: string;
+  activo: boolean;
+  operador: string;
+  respuesta: string;
+}
+
+// Servicio para gestionar listas de precios (mock)
 @Injectable({
   providedIn: 'root'
 })
 export class ListasPreciosService {
-  private listasPrecios = signal<ListaPrecio[]>([
-    {
-      id: 1,
-      nombre: 'Temporada Alta 2025',
-      descripcion: 'Tarifas para temporada alta del ano 2025',
-      moneda: 'USD',
-      vigenciaDesde: new Date('2025-01-01'),
-      vigenciaHasta: new Date('2025-04-30'),
-      activa: true,
-      updatedAt: new Date('2025-12-01'),
-      observaciones: 'Aplicar descuentos para grupos grandes'
-    },
-    {
-      id: 2,
-      nombre: 'Temporada Baja 2025',
-      descripcion: 'Tarifas reducidas para temporada baja',
-      moneda: 'USD',
-      vigenciaDesde: new Date('2025-05-01'),
-      vigenciaHasta: new Date('2025-12-31'),
-      activa: true,
-      updatedAt: new Date('2025-12-01')
-    },
-    {
-      id: 3,
-      nombre: 'Tarifa Agencias Nacionales',
-      descripcion: 'Precios especiales para agencias nacionales',
-      moneda: 'CRC',
-      vigenciaDesde: new Date('2025-01-01'),
-      vigenciaHasta: new Date('2025-12-31'),
-      activa: true,
-      updatedAt: new Date('2025-11-15'),
-      observaciones: 'Requiere contrato firmado'
-    },
-    {
-      id: 4,
-      nombre: 'Convenio Hotel Monteverde',
-      descripcion: 'Acuerdo especial con Hotel Monteverde',
-      moneda: 'USD',
-      vigenciaDesde: new Date('2025-03-01'),
-      vigenciaHasta: new Date('2025-08-31'),
-      activa: false,
-      updatedAt: new Date('2025-10-20'),
-      observaciones: 'Pendiente renovacion'
-    },
-    {
-      id: 5,
-      nombre: 'Corporativo',
-      descripcion: 'Tarifas para clientes corporativos',
-      moneda: 'USD',
-      vigenciaDesde: new Date('2025-01-01'),
-      vigenciaHasta: new Date('2025-12-31'),
-      activa: true,
-      updatedAt: new Date('2025-12-01')
-    },
-    {
-      id: 6,
-      nombre: 'Promocion Fin de Ano',
-      descripcion: 'Descuentos especiales para fin de ano',
-      moneda: 'CRC',
-      vigenciaDesde: new Date('2025-12-15'),
-      vigenciaHasta: new Date('2025-12-31'),
-      activa: false,
-      updatedAt: new Date('2025-11-30'),
-      observaciones: 'Limitado a habitaciones disponibles'
-    }
-  ]);
+  private listasPrecios = signal<ListaPrecio[]>([]);
 
   getListasPrecios() {
     return this.listasPrecios;
@@ -147,155 +134,236 @@ export class ListasPreciosService {
   deleteListaPrecio(id: number) {
     this.listasPrecios.update(listas => listas.filter(lp => lp.id !== id));
   }
+
 }
 
+// Servicio para gestionar reglas tarifarias asociadas a listas de precios
 @Injectable({
   providedIn: 'root'
 })
 export class ReglasTarifariasService {
-  private reglasTarifarias = signal<ReglaTarifa[]>([
-    // Reglas para Lista de Precios 1 - Transporte Hotel-Hotel
-    {
-      id: 1,
-      listaPrecioId: 1,
-      servicioId: 1,
-      servicioNombre: 'Transporte Hotel-Hotel',
-      tarifa: 'A',
-      horaInicio: '06:00',
-      horaFin: '18:00',
-      precioBase: 80,
-      adultosIncluidos: 4,
-      precioAdultoExtra: 15,
-      precioNino: 10,
-      observaciones: 'Tarifa diurna estandar',
-      activa: true
-    },
-    {
-      id: 2,
-      listaPrecioId: 1,
-      servicioId: 1,
-      servicioNombre: 'Transporte Hotel-Hotel',
-      tarifa: 'A',
-      horaInicio: '18:01',
-      horaFin: '23:59',
-      precioBase: 100,
-      adultosIncluidos: 4,
-      precioAdultoExtra: 20,
-      precioNino: 15,
-      observaciones: 'Tarifa nocturna',
-      activa: true
-    },
-    {
-      id: 3,
-      listaPrecioId: 1,
-      servicioId: 1,
-      servicioNombre: 'Transporte Hotel-Hotel',
-      tarifa: 'B',
-      horaInicio: '06:00',
-      horaFin: '23:59',
-      precioBase: 120,
-      adultosIncluidos: 6,
-      precioAdultoExtra: 18,
-      precioNino: 12,
-      observaciones: 'Tarifa premium con mayor capacidad',
-      activa: true
-    },
-    // Reglas para Lista de Precios 2 - Transporte Privado
-    {
-      id: 4,
-      listaPrecioId: 2,
-      servicioId: 2,
-      servicioNombre: 'Transporte Privado',
-      tarifa: 'A',
-      horaInicio: '00:00',
-      horaFin: '23:59',
-      precioBase: 150,
-      adultosIncluidos: 4,
-      precioAdultoExtra: 25,
-      precioNino: 18,
-      observaciones: 'Servicio privado 24 horas',
-      activa: true
-    },
-    // Reglas para Lista de Precios 3 - Tours
-    {
-      id: 5,
-      listaPrecioId: 3,
-      servicioId: 3,
-      servicioNombre: 'Tours',
-      tarifa: 'A',
-      horaInicio: '08:00',
-      horaFin: '17:00',
-      precioBase: 200,
-      adultosIncluidos: 2,
-      precioAdultoExtra: 50,
-      precioNino: 30,
-      observaciones: 'Tour completo con guia',
-      activa: true
-    }
-  ]);
+  private apiUrl = `${environment.apiUrl}/detalleLstPrecio`;
 
-  getByListaPrecioAndServicio(listaPrecioId: number, servicioId: number) {
-    return this.reglasTarifarias().filter(r =>
-      r.listaPrecioId === listaPrecioId && r.servicioId === servicioId
-    );
-  }
+  constructor(private http: HttpClient, private auth: AuthService) {}
 
-  // Alias para compatibilidad con referencias previas
-  getReglasByListaPrecioAndServicio(listaPrecioId: number, servicioId: number) {
-    return this.getByListaPrecioAndServicio(listaPrecioId, servicioId);
-  }
-
-  getReglaById(id: number) {
-    return this.reglasTarifarias().find(r => r.id === id);
-  }
-
-  create(regla: Omit<ReglaTarifa, 'id'>) {
-    const current = this.reglasTarifarias();
-    const newId = current.length > 0 ? Math.max(...current.map(r => r.id)) + 1 : 1;
-    const newRegla: ReglaTarifa = {
-      ...regla,
-      id: newId
-    };
-    this.reglasTarifarias.update(reglas => [...reglas, newRegla]);
-    return newRegla;
-  }
-
-  createReglaTarifa(regla: Omit<ReglaTarifa, 'id'>) {
-    return this.create(regla);
-  }
-
-  update(reglaActualizada: ReglaTarifa) {
-    const { id, ...rest } = reglaActualizada;
-    this.updateReglaTarifa(id, rest);
-  }
-
-  updateReglaTarifa(id: number, updates: Partial<Omit<ReglaTarifa, 'id'>>) {
-    const current = this.getReglaById(id);
-    if (!current) {
-      return;
-    }
-
-    this.reglasTarifarias.update(reglas =>
-      reglas.map(r =>
-        r.id === id
-          ? { ...r, ...updates }
-          : r
+  getDetallesByListaPrecio(codLstPrecio: string): Observable<ReglaTarifa[]> {
+    const normalized = codLstPrecio?.trim();
+    return this.http.get<DetalleLstPrecioDto[]>(this.apiUrl).pipe(
+      map((response) =>
+        (response ?? [])
+          .map((item) => this.mapFromApi(item))
+          .filter((item) => !normalized || item.codLstPrecio === normalized)
       )
     );
   }
 
-  delete(id: number) {
-    this.deleteReglaTarifa(id);
+  getByListaPrecioAndServicio(codLstPrecio: string, servicioId: string): Observable<ReglaTarifa[]> {
+    return this.getDetallesByListaPrecio(codLstPrecio).pipe(
+      map((reglas) => reglas.filter((regla) => regla.servicioId === servicioId))
+    );
   }
 
-  deleteReglaTarifa(id: number) {
-    this.reglasTarifarias.update(reglas => reglas.filter(r => r.id !== id));
+  // Alias para compatibilidad con referencias previas
+  getReglasByListaPrecioAndServicio(codLstPrecio: string, servicioId: string) {
+    return this.getByListaPrecioAndServicio(codLstPrecio, servicioId);
   }
 
-  toggleActive(id: number) {
-    const regla = this.getReglaById(id);
-    if (regla) {
-      this.updateReglaTarifa(id, { activa: !regla.activa });
+  createDetalle(payload: DetalleLstPrecioPost): Observable<{ respuesta?: string }> {
+    return this.http
+      .post(this.apiUrl, payload, { responseType: 'text' })
+      .pipe(map((response) => this.parseTextResponse(response)));
+  }
+
+  updateDetalle(id: number, payload: DetalleLstPrecioPost): Observable<{ respuesta?: string }> {
+    return this.http
+      .put(`${this.apiUrl}/${id}`, payload, { responseType: 'text' })
+      .pipe(map((response) => this.parseTextResponse(response)));
+  }
+
+  createDetalleWithResult(payload: DetalleLstPrecioPost): Observable<ReglaTarifa | null> {
+    return this.http.post(this.apiUrl, payload, { responseType: 'text' }).pipe(
+      map((response) => {
+        const parsed = this.tryParseUnknown(response);
+        return this.mapFromAny(parsed);
+      })
+    );
+  }
+
+  updateDetalleWithResult(id: number, payload: DetalleLstPrecioPost): Observable<ReglaTarifa | null> {
+    return this.http.put(`${this.apiUrl}/${id}`, payload, { responseType: 'text' }).pipe(
+      map((response) => {
+        const parsed = this.tryParseUnknown(response);
+        return this.mapFromAny(parsed);
+      })
+    );
+  }
+
+  deleteDetalle(id: number): Observable<unknown> {
+    return this.http.delete(`${this.apiUrl}/${id}`, { responseType: 'text' });
+  }
+
+  buildPayload(base: Omit<DetalleLstPrecioPost, 'tipo' | 'id' | 'operador' | 'respuesta'>, tipo: number, id: number): DetalleLstPrecioPost {
+    return {
+      ...base,
+      tipo,
+      id,
+      operador: this.getOperador(),
+      respuesta: ''
+    };
+  }
+
+  getTipoTarifaFromCodigo(codigo: ReglaTarifa['tarifa'] | string | undefined | null): number {
+    switch ((codigo || '').toString().toUpperCase()) {
+      case 'B':
+        return 2;
+      case 'C':
+        return 3;
+      case 'D':
+        return 4;
+      default:
+        return 1;
     }
+  }
+
+  private mapFromApi(apiData: DetalleLstPrecioDto): ReglaTarifa {
+    const tipoTarifa = Number(apiData.MPV05_TipoTarifa) || 0;
+    const cantMinPax = Number(apiData.MPV05_CantMinPax) || 0;
+    const cantMaxPax = Number(apiData.MPV05_CantMaxPax) || 0;
+    const servicioId = String(apiData.MPV05_CodServicio) || '';
+    return {
+      id: Number(apiData.MPV05_ID) || 0,
+      listaPrecioId: Number(apiData.MPV05_CodLstPrecio) || 0,
+      codLstPrecio: (apiData.MPV05_CodLstPrecio || '').trim(),
+      servicioId,
+      codServicio: (apiData.MPV05_CodServicio || '').trim(),
+      servicioNombre: '',
+      tarifa: this.mapTipoTarifaToCodigo(tipoTarifa),
+      horaInicio: (apiData.MPV05_HoraDesde || '').trim(),
+      horaFin: (apiData.MPV05_HoraHasta || '').trim(),
+      precioBase: Number(apiData.MPV05_PrecioAdulto) || 0,
+      adultosIncluidos: cantMinPax,
+      precioAdultoExtra: Number(apiData.MPV05_PrecioPaxExtra) || 0,
+      precioNino: Number(apiData.MPV05_PrecioNino) || 0,
+      cantMinPax,
+      cantMaxPax,
+      moneda: (apiData.MPV05_Moneda || '').trim(),
+      observaciones: apiData.MPV05_Observaciones || '',
+      activa: this.normalizeActivo(apiData.MPV05_Activo),
+      operador: apiData.MPV05_Operador,
+      fechaRegistro: apiData.MPV05_FechaRegistro
+    };
+  }
+
+  private mapTipoTarifaToCodigo(tipoTarifa: number): ReglaTarifa['tarifa'] {
+    switch (tipoTarifa) {
+      case 2:
+        return 'B';
+      case 3:
+        return 'C';
+      case 4:
+        return 'D';
+      default:
+        return 'A';
+    }
+  }
+
+  private normalizeActivo(value: unknown): boolean {
+    if (typeof value === 'boolean') {
+      return value;
+    }
+    if (typeof value === 'number') {
+      return value === 1;
+    }
+    if (typeof value === 'string') {
+      const normalized = value.trim().toUpperCase();
+      return normalized === 'S' || normalized === '1' || normalized === 'TRUE';
+    }
+    return false;
+  }
+
+  private parseTextResponse(response: string): { respuesta?: string } {
+    if (!response) {
+      return {};
+    }
+    const trimmed = response.trim();
+    if (!trimmed) {
+      return {};
+    }
+    try {
+      return JSON.parse(trimmed) as { respuesta?: string };
+    } catch {
+      return { respuesta: trimmed };
+    }
+  }
+
+  private tryParseUnknown(response: string): unknown {
+    if (!response) {
+      return null;
+    }
+    const trimmed = response.trim();
+    if (!trimmed) {
+      return null;
+    }
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      const asNumber = Number(trimmed);
+      if (Number.isFinite(asNumber)) {
+        return asNumber;
+      }
+      return trimmed;
+    }
+  }
+
+  private mapFromAny(value: unknown): ReglaTarifa | null {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+
+    const asRecord = value as Record<string, unknown>;
+    if ('MPV05_ID' in asRecord) {
+      return this.mapFromApi(value as DetalleLstPrecioDto);
+    }
+
+    if ('id' in asRecord || 'codLstPrecio' in asRecord || 'codServicio' in asRecord) {
+      return this.mapFromReglaPayload(asRecord);
+    }
+
+    return null;
+  }
+
+  private mapFromReglaPayload(apiData: Record<string, unknown>): ReglaTarifa {
+    const tipoTarifa = Number(apiData['tipoTarifa'] ?? 0) || 0;
+    const cantMinPax = Number(apiData['cantMinPax'] ?? 0) || 0;
+    const cantMaxPax = Number(apiData['cantMaxPax'] ?? 0) || 0;
+    const codLstPrecio = String(apiData['codLstPrecio'] ?? '').trim();
+    const codServicio = String(apiData['codServicio'] ?? '').trim();
+
+    return {
+      id: Number(apiData['id'] ?? 0) || 0,
+      listaPrecioId: Number(codLstPrecio) || 0,
+      codLstPrecio,
+      servicioId: codServicio,
+      codServicio,
+      servicioNombre: '',
+      tarifa: this.mapTipoTarifaToCodigo(tipoTarifa),
+      horaInicio: String(apiData['horaDesde'] ?? '').trim(),
+      horaFin: String(apiData['horaHasta'] ?? '').trim(),
+      precioBase: Number(apiData['precioAdulto'] ?? 0) || 0,
+      adultosIncluidos: cantMinPax,
+      precioAdultoExtra: Number(apiData['precioPaxExtra'] ?? 0) || 0,
+      precioNino: Number(apiData['precioNino'] ?? 0) || 0,
+      cantMinPax,
+      cantMaxPax,
+      moneda: String(apiData['moneda'] ?? '').trim(),
+      observaciones: String(apiData['observaciones'] ?? ''),
+      activa: this.normalizeActivo(apiData['activo']),
+      operador: String(apiData['operador'] ?? ''),
+      fechaRegistro: String(apiData['fechaRegistro'] ?? '')
+    };
+  }
+
+  private getOperador(): string {
+    return this.auth.getCurrentUser()?.usuario ?? '';
   }
 }

@@ -1,68 +1,373 @@
-// angular import
-import { Injectable } from '@angular/core';
+﻿import { Injectable } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable, forkJoin, of } from 'rxjs';
+import { map, switchMap } from 'rxjs/operators';
+import { AuthService } from 'src/app/core/services/auth.service';
+import { environment } from 'src/environments/environment';
 
-// project import
-export interface Servicio {
-  id: number;
-  nombre: string;
+export interface ServicioDto {
+  MPV01_CodCategoria: string;
+  MPV01_CodGrupo: string;
+  MPV01_CodReceta: string;
+  MPV01_NomReceta: string;
+  MPV01_NomCorto: string;
+  MPV01_UMedida: string;
+  MPV01_NumPorciones: number;
+  MPV01_CtoReceta: number;
+  MPV01_CtoProduccion: number;
+  MPV01_CtoNeto: number;
+  MPV01_Utilidad: number;
+  MPV01_TotalCUtilidad: number;
+  MPV01_CtoTotal: number;
+  MPV01_Descripcion: string;
+  MPV01_Visible: number;
+  MPV01_UrlImagen: string;
+  MPV01_Operador: string;
+  MPV01_CABYS: string;
+  MPV01_Compuesto: string;
+}
+
+export interface ServicioPost {
+  proceso: number;
+  tmpDetalle: string;
+  codCateg: string;
+  codGrupo: string;
+  codReceta: string;
+  nomReceta: string;
+  nomCorto: string;
+  uMedida: string;
+  numPorciones: number;
+  ctoReceta: number;
+  ctoProduccion: number;
+  ctoNeto: number;
+  utilidad: number;
+  totalCUtilidad: number;
+  ctoTotal: number;
   descripcion: string;
-  precio: number;
-  tipo: 'transporte' | 'tour' | 'alojamiento' | 'otro';
-  activo: boolean;
+  visible: number;
+  urlImagen: string;
+  operador: string;
+  cabys: string;
+  compuesto: string;
+  pageNumber: number;
+  pageSize: number;
+  respuesta: string;
+}
+
+export interface ServicioUI {
+  codCateg: string;
+  codGrupo: string;
+  codReceta: string;
+  nomReceta: string;
+  nomCorto: string;
+  uMedida: string;
+  numPorciones: number;
+  ctoReceta: number;
+  ctoProduccion: number;
+  ctoNeto: number;
+  utilidad: number;
+  totalCUtilidad: number;
+  ctoTotal: number;
+  descripcion: string;
+  visible: number;
+  urlImagen: string;
+  cabys: string;
+  compuesto: string;
+}
+
+export interface CentroCostoDto {
+  CA10_CodCCto: string;
+  CA10_CentroCosto: string;
+  CA10_Impuesto: number;
+  CA10_Orden: number;
+  CA10_TipCCto: string;
+  CA10_Operador: string;
+  Impuesto: number;
+}
+
+export interface CentroCostoOption {
+  codigo: string;
+  nombre: string;
+}
+
+export interface CategoriaDto {
+  MPV00_CodCategoria: string;
+  MPV00_NomCategoria: string;
+  MPV00_VisiblePnt: number;
+  MPV00_Orden: number;
+  MPV00_Operador: string;
+}
+
+export interface CategoriaOption {
+  codigo: string;
+  nombre: string;
+}
+
+export interface UnidadMedidaDto {
+  CAC04_UnmMed: string;
+  CAC04_Descripcion: string;
+  CAC04_Operador: string;
+}
+
+export interface UnidadMedidaOption {
+  codigo: string;
+  descripcion: string;
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class ServiciosService {
-  private servicios: Servicio[] = [
-    {
-      id: 1,
-      nombre: 'Transporte Aeropuerto - Hotel',
-      descripcion: 'Servicio de transporte desde el aeropuerto hasta el hotel',
-      precio: 25000,
-      tipo: 'transporte',
-      activo: true
-    },
-    {
-      id: 2,
-      nombre: 'Tour Volcán Arenal',
-      descripcion: 'Excursión al volcán Arenal con guía incluido',
-      precio: 75000,
-      tipo: 'tour',
-      activo: true
-    },
-    {
-      id: 3,
-      nombre: 'Alojamiento Hotel Costa Rica',
-      descripcion: 'Habitación doble con vista al mar',
-      precio: 120000,
-      tipo: 'alojamiento',
-      activo: true
+  private apiUrl = `${environment.apiUrl}/encreceta`;
+  private centroCostoUrl = `${environment.apiUrl}/centrocosto`;
+  private categoriaUrl = `${environment.apiUrl}/categoria`;
+  private unidadMedidaUrl = `${environment.apiUrl}/unidadmedida`;
+
+  constructor(private http: HttpClient, private auth: AuthService) {}
+
+  getServicios(
+    visible: number | undefined,
+    pageNumber = 1,
+    pageSize = 20,
+    codGrupo?: string,
+    codCateg?: string
+  ): Observable<{
+    data: ServicioUI[];
+    totalRegistros: number;
+    paginaActual: number;
+    pageSize: number;
+    totalPages: number;
+  }> {
+    let params = new HttpParams().set('pageNumber', String(pageNumber)).set('pageSize', String(pageSize));
+    if (typeof visible === 'number') {
+      params = params.set('visible', String(visible));
     }
-  ];
-
-  getServicios(): Servicio[] {
-    return this.servicios;
+    if (codGrupo) {
+      params = params.set('codGrupo', codGrupo);
+    }
+    if (codCateg) {
+      params = params.set('codCateg', codCateg);
+    }
+    return this.http.get<{ datos?: ServicioDto[]; paginacion?: any }>(this.apiUrl, { params }).pipe(
+      map((response) => {
+        const data = (response?.datos ?? []).map((item) => this.mapFromApi(item));
+        const paginacion = response?.paginacion;
+        const totalRegistros = paginacion?.totalRegistros ?? data.length;
+        const paginaActual = paginacion?.paginaActual ?? pageNumber;
+        const size = paginacion?.pageSize ?? pageSize;
+        const totalPages = totalRegistros > 0 ? Math.ceil(totalRegistros / size) : 1;
+        return { data, totalRegistros, paginaActual, pageSize: size, totalPages };
+      })
+    );
   }
 
-  getServicioById(id: number): Servicio | undefined {
-    return this.servicios.find(s => s.id === id);
+  buscarServicios(
+    nomReceta: string,
+    visible: number | undefined,
+    pageNumber = 1,
+    pageSize = 20
+  ): Observable<{
+    data: ServicioUI[];
+    totalRegistros: number;
+    paginaActual: number;
+    pageSize: number;
+    totalPages: number;
+  }> {
+    let params = new HttpParams().set('nomReceta', nomReceta).set('pageNumber', String(pageNumber)).set('pageSize', String(pageSize));
+    if (typeof visible === 'number') {
+      params = params.set('visible', String(visible));
+    }
+    return this.http.get<{ datos?: ServicioDto[]; paginacion?: any }>(`${this.apiUrl}/buscar`, { params }).pipe(
+      map((response) => {
+        const data = (response?.datos ?? []).map((item) => this.mapFromApi(item));
+        const paginacion = response?.paginacion;
+        const totalRegistros = paginacion?.totalRegistros ?? data.length;
+        const paginaActual = paginacion?.paginaActual ?? pageNumber;
+        const size = paginacion?.pageSize ?? pageSize;
+        const totalPages = totalRegistros > 0 ? Math.ceil(totalRegistros / size) : 1;
+        return { data, totalRegistros, paginaActual, pageSize: size, totalPages };
+      })
+    );
   }
 
-  addServicio(servicio: Omit<Servicio, 'id'>): void {
-    const newId = Math.max(...this.servicios.map(s => s.id)) + 1;
-    this.servicios.push({ ...servicio, id: newId });
+  getServicioByCodigo(codReceta: string): Observable<ServicioUI | null> {
+    const normalized = codReceta.trim();
+    return this.http.get<ServicioDto[]>(`${this.apiUrl}/${normalized}`).pipe(
+      map((response) => {
+        const item = response?.[0];
+        return item ? this.mapFromApi(item) : null;
+      })
+    );
   }
 
-  updateServicio(id: number, servicio: Partial<Servicio>): void {
-    const index = this.servicios.findIndex(s => s.id === id);
-    if (index !== -1) {
-      this.servicios[index] = { ...this.servicios[index], ...servicio };
+  getServiciosActivosAll(pageSize = 20): Observable<ServicioUI[]> {
+    return this.buscarServicios('', 1, 1, pageSize).pipe(
+      switchMap((result) => {
+        const totalPages = result.totalPages ?? 1;
+        if (totalPages <= 1) {
+          return of(result.data ?? []);
+        }
+        const requests = Array.from({ length: totalPages - 1 }, (_, index) =>
+          this.buscarServicios('', 1, index + 2, pageSize).pipe(map((page) => page.data ?? []))
+        );
+        return forkJoin(requests).pipe(map((pages) => (result.data ?? []).concat(...pages)));
+      })
+    );
+  }
+
+  getCentroCostoOptions(pageNumber = 1, pageSize = 100): Observable<CentroCostoOption[]> {
+    const params = new HttpParams().set('pageNumber', String(pageNumber)).set('pageSize', String(pageSize));
+    return this.http.get<{ datos?: CentroCostoDto[] }>(this.centroCostoUrl, { params }).pipe(
+      map((response) => {
+        const uniqueByCodigo = new Map<string, CentroCostoOption>();
+        (response?.datos ?? []).forEach((item) => {
+          const codigo = (item?.CA10_CodCCto || '').trim().toUpperCase();
+          if (!codigo) {
+            return;
+          }
+          uniqueByCodigo.set(item.CA10_CodCCto, {
+            codigo,
+            nombre: (item.CA10_CentroCosto || '').trim() || codigo
+          });
+        });
+        return Array.from(uniqueByCodigo.values()).sort((a, b) => a.codigo.localeCompare(b.codigo));
+      })
+    );
+  }
+
+  getCategoriaOptions(): Observable<CategoriaOption[]> {
+    return this.http.get<CategoriaDto[]>(this.categoriaUrl).pipe(
+      map((response) => {
+        const uniqueByCodigo = new Map<string, CategoriaOption>();
+        (response ?? []).forEach((item) => {
+          const codigo = (item?.MPV00_CodCategoria || '').trim().toUpperCase();
+          if (!codigo) {
+            return;
+          }
+          uniqueByCodigo.set(codigo, {
+            codigo,
+            nombre: (item.MPV00_NomCategoria || '').trim() || codigo
+          });
+        });
+        return Array.from(uniqueByCodigo.values()).sort((a, b) => a.codigo.localeCompare(b.codigo));
+      })
+    );
+  }
+
+  getUnidadMedidaOptions(): Observable<UnidadMedidaOption[]> {
+    return this.http.get<UnidadMedidaDto[]>(this.unidadMedidaUrl).pipe(
+      map((response) => {
+        const uniqueByCodigo = new Map<string, UnidadMedidaOption>();
+        (response ?? []).forEach((item) => {
+          const codigo = (item?.CAC04_UnmMed || '').trim().toUpperCase();
+          if (!codigo) {
+            return;
+          }
+          uniqueByCodigo.set(codigo, {
+            codigo,
+            descripcion: (item.CAC04_Descripcion || '').trim() || codigo
+          });
+        });
+        return Array.from(uniqueByCodigo.values()).sort((a, b) => a.codigo.localeCompare(b.codigo));
+      })
+    );
+  }
+
+  crearServicio(payload: ServicioPost): Observable<{ respuesta?: string }> {
+    const normalized = this.normalizePayload(payload, 1);
+    return this.http.post(this.apiUrl, normalized, { responseType: 'text' }).pipe(map((res) => this.parseTextResponse(res)));
+  }
+
+  editarServicio(codReceta: string, payload: ServicioPost): Observable<{ respuesta?: string }> {
+    const normalized = this.normalizePayload(payload, 2);
+    return this.http.put( `${this.apiUrl}/${codReceta}`, normalized, { responseType: 'text' }).pipe(map((res) => this.parseTextResponse(res)));
+  }
+
+  eliminarServicio(codReceta: string): Observable<{ respuesta?: string }> {
+    
+    return this.http.delete( `${this.apiUrl}/${codReceta}`, { responseType: 'text' }).pipe(map((res) => this.parseTextResponse(res)));
+  }
+
+  buildPayloadFromUI(value: Partial<ServicioUI>, proceso: number, pageNumber = 0, pageSize = 0): ServicioPost {
+    return this.normalizePayload(
+      {
+        proceso,
+        tmpDetalle: '',
+        codCateg: value.codCateg || '',
+        codGrupo: value.codGrupo || '',
+        codReceta: value.codReceta || '',
+        nomReceta: value.nomReceta || '',
+        nomCorto: value.nomCorto || '',
+        uMedida: value.uMedida || '',
+        numPorciones: Number(value.numPorciones || 0),
+        ctoReceta: Number(value.ctoReceta || 0),
+        ctoProduccion: Number(value.ctoProduccion || 0),
+        ctoNeto: Number(value.ctoNeto || 0),
+        utilidad: Number(value.utilidad || 0),
+        totalCUtilidad: Number(value.totalCUtilidad || 0),
+        ctoTotal: Number(value.ctoTotal || 0),
+        descripcion: value.descripcion || '',
+        visible: Number(value.visible ?? 0),
+        urlImagen: value.urlImagen || '',
+        operador: '',
+        cabys: value.cabys || '',
+        compuesto: value.compuesto || 'N',
+        pageNumber,
+        pageSize,
+        respuesta: ''
+      },
+      proceso
+    );
+  }
+
+  private normalizePayload(payload: ServicioPost, proceso: number): ServicioPost {
+    return {
+      ...payload,
+      proceso,
+      operador: this.getOperador(),
+      respuesta: ''
+    };
+  }
+
+  private mapFromApi(apiData: ServicioDto): ServicioUI {
+    return {
+      codCateg: (apiData.MPV01_CodCategoria || '').trim().toUpperCase(),
+      codGrupo: (apiData.MPV01_CodGrupo || '').trim().toUpperCase(),
+      codReceta: (apiData.MPV01_CodReceta || '').trim(),
+      nomReceta: apiData.MPV01_NomReceta,
+      nomCorto: apiData.MPV01_NomCorto,
+      uMedida: (apiData.MPV01_UMedida || '').trim().toUpperCase(),
+      numPorciones: apiData.MPV01_NumPorciones ?? 0,
+      ctoReceta: apiData.MPV01_CtoReceta ?? 0,
+      ctoProduccion: apiData.MPV01_CtoProduccion ?? 0,
+      ctoNeto: apiData.MPV01_CtoNeto ?? 0,
+      utilidad: apiData.MPV01_Utilidad ?? 0,
+      totalCUtilidad: apiData.MPV01_TotalCUtilidad ?? 0,
+      ctoTotal: apiData.MPV01_CtoTotal ?? 0,
+      descripcion: apiData.MPV01_Descripcion,
+      visible: apiData.MPV01_Visible ?? 0,
+      urlImagen: apiData.MPV01_UrlImagen,
+      cabys: apiData.MPV01_CABYS,
+      compuesto: apiData.MPV01_Compuesto || 'N'
+    };
+  }
+
+  private parseTextResponse(response: string): { respuesta?: string } {
+    if (!response) {
+      return {};
+    }
+    const trimmed = response.trim();
+    if (!trimmed) {
+      return {};
+    }
+    try {
+      return JSON.parse(trimmed) as { respuesta?: string };
+    } catch {
+      return { respuesta: trimmed };
     }
   }
 
-  deleteServicio(id: number): void {
-    this.servicios = this.servicios.filter(s => s.id !== id);
+  private getOperador(): string {
+    return this.auth.getCurrentUser()?.usuario ?? '';
   }
 }

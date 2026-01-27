@@ -25,7 +25,7 @@
             <div class="row mb-3">
               <div class="col-md-4">
                 <label class="form-label">Codigo <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" formControlName="codGrupo" [class.is-invalid]="isFieldInvalid('codGrupo')" placeholder="Ej: CC01">
+                <input type="text" class="form-control" formControlName="codGrupo" [class.is-invalid]="isFieldInvalid('codGrupo')" placeholder="Ej: CC0001", maxlength="6">
                 <div class="invalid-feedback">El codigo es requerido.</div>
               </div>
               <div class="col-md-8">

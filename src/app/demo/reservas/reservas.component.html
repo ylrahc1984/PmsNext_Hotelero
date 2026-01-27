@@ -1,66 +1,64 @@
-<div class="row">
+﻿<div class="row">
   <div class="col-12">
     <app-card cardTitle="Reservas">
       <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
         <div>
-          <h5 class="mb-1">Reservas</h5>
-          <p class="mb-0 text-muted">Listado general de reservas</p>
+          <p class="mb-0 text-muted">Listado general, filtros rápidos y acciones</p>
         </div>
         <button class="btn btn-primary" (click)="nuevaReserva()">
           <i class="feather icon-plus"></i> Nueva Reserva
         </button>
       </div>
 
-      <div class="row align-items-end mb-3">
-        <div class="col-md-3 mb-2">
-          <label class="form-label small text-muted">Número de Reserva / Boleta</label>
-          <input type="text" class="form-control" [(ngModel)]="filtros.numeroBoleta" (input)="applyFilters()" placeholder="Ej: 25933">
-        </div>
-        <div class="col-md-2 mb-2">
-          <label class="form-label small text-muted">Fecha desde</label>
-          <input type="date" class="form-control" [(ngModel)]="filtros.fechaDesde" (change)="applyFilters()">
-        </div>
-        <div class="col-md-2 mb-2">
-          <label class="form-label small text-muted">Fecha hasta</label>
-          <input type="date" class="form-control" [(ngModel)]="filtros.fechaHasta" (change)="applyFilters()">
-        </div>
-        <div class="col-md-3 mb-2">
-          <label class="form-label small text-muted">Cliente Final</label>
-          <input type="text" class="form-control" [(ngModel)]="filtros.clienteFinal" (input)="applyFilters()" placeholder="Nombre del pasajero">
-        </div>
-        <div class="col-md-2 mb-2">
-          <label class="form-label small text-muted">Agencia / Comisionista</label>
-          <select class="form-control" [(ngModel)]="filtros.agencia" (change)="applyFilters()">
-            <option value="">Todas</option>
-            <option *ngFor="let agencia of agencias" [ngValue]="agencia">{{ agencia }}</option>
-          </select>
-        </div>
-        <div class="col-md-2 mb-2">
-          <label class="form-label small text-muted">Estado</label>
-          <select class="form-control" [(ngModel)]="filtros.estado" (change)="applyFilters()">
-            <option value="">Todos</option>
-            <option value="Pendiente">Pendiente</option>
-            <option value="Confirmada">Confirmada</option>
-            <option value="Cancelada">Cancelada</option>
-          </select>
-        </div>
-        <div class="col-md-2 mb-2">
-          <label class="form-label small text-muted">Forma de Pago</label>
-          <select class="form-control" [(ngModel)]="filtros.formaPago" (change)="applyFilters()">
-            <option value="">Todas</option>
-            <option *ngFor="let forma of formasPago" [ngValue]="forma">{{ forma }}</option>
-          </select>
-        </div>
-        <div class="col-md-2 mb-2 d-flex">
-          <button class="btn btn-link text-secondary ml-auto" type="button" (click)="resetFilters()">
-            Limpiar filtros
-          </button>
+      <div class="card shadow-none border mb-3">
+        <div class="card-body p-3">
+          <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
+            <div class="d-flex align-items-center">
+              <i class="feather icon-filter text-muted me-2"></i>
+              <h6 class="mb-0">Filtros</h6>
+            </div>
+            <div class="d-flex align-items-center">
+              <small class="text-muted me-3">
+                Resultados: <strong>{{ filteredReservas.length }}</strong>
+              </small>
+              <button class="btn btn-sm btn-outline-secondary" type="button" (click)="resetFilters()">
+                <i class="feather icon-rotate-ccw me-1"></i> Limpiar
+              </button>
+            </div>
+          </div>
+
+          <div class="row align-items-end">
+            <div class="col-md-2 mb-2">
+              <label class="form-label small text-muted">Fecha desde</label>
+              <input type="date" class="form-control form-control-sm" [(ngModel)]="filtros.fechaDesde" (change)="applyFilters()">
+            </div>
+            <div class="col-md-2 mb-2">
+              <label class="form-label small text-muted">Fecha hasta</label>
+              <input type="date" class="form-control form-control-sm" [(ngModel)]="filtros.fechaHasta" (change)="applyFilters()">
+            </div>
+            <div class="col-md-6 mb-2">
+              <label class="form-label small text-muted">Búsqueda</label>
+              <div class="input-group input-group-sm">
+                <span class="input-group-text"><i class="feather icon-search"></i></span>
+                <input type="text" class="form-control" [(ngModel)]="filtros.termino" (input)="applyFilters()" placeholder="Reserva, cliente, agencia...">
+              </div>
+            </div>
+            <div class="col-md-2 mb-2">
+              <label class="form-label small text-muted">Estado</label>
+              <select class="form-control form-control-sm" [(ngModel)]="filtros.estado" (change)="applyFilters()">
+                <option value="">Todos</option>
+                <option value="Pendiente">Pendiente</option>
+                <option value="Confirmada">Confirmada</option>
+                <option value="Cancelada">Cancelada</option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
 
       <div class="table-responsive">
-        <table class="table table-hover mb-0">
-          <thead>
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
             <tr>
               <th>Reserva / Boleta</th>
               <th>Fecha</th>
@@ -76,39 +74,51 @@
           <tbody>
             <tr *ngFor="let reserva of pagedReservas; trackBy: trackByReservaId">
               <td>
-                <div class="font-weight-bold">#{{ reserva.numeroBoleta }}</div>
-                <small class="text-muted">ID {{ reserva.id }}</small>
+                <div class="fw-semibold font-monospace">#{{ reserva.PRV01_CodReserva }}</div>
               </td>
-              <td>{{ reserva.fecha }}</td>
-              <td>{{ reserva.clienteFinal }}</td>
-              <td>{{ reserva.agencia }}</td>
+              <td class="text-nowrap">{{ reserva.PRV01_FecCreacion | date:'dd/MM/yyyy' }}</td>
+              <td>{{ reserva.PRV01_NomCliente }}</td>
+              <td>{{ reserva.PRV01_CodAgencia }}</td>
               <td>
-                <span class="badge badge-pill" [ngClass]="getServiciosBadge(getCantidadServicios(reserva))">
-                  <i class="feather icon-layers mr-1"></i>
+                <span class="badge rounded-pill" [ngClass]="getServiciosBadge(getCantidadServicios(reserva))">
+                  <i class="feather icon-layers me-1"></i>
                   {{ getCantidadServicios(reserva) }} servicio{{ getCantidadServicios(reserva) > 1 ? 's' : '' }}
                 </span>
               </td>
               <td>
-                <span class="badge badge-pill" [ngClass]="getEstadoBadge(reserva.estado)">
-                  {{ reserva.estado }}
+                <span class="badge rounded-pill" [ngClass]="getEstadoBadge(reserva.PRV01_Estado)">
+                  {{ reserva.PRV01_Estado }}
                 </span>
               </td>
-              <td>{{ reserva.formaPago }}</td>
-              <td>{{ reserva.totalNeto | number:'1.0-0' }}</td>
+              <td>{{ reserva.PRV01_FormaPago }}</td>
+              <td>{{ reserva.PRV01_TotalRsv | number:'1.0-0' }}</td>
               <td>
-                <div class="btn-group btn-group-sm" role="group" aria-label="Acciones">
-                  <button class="btn btn-outline-info" (click)="verReserva(reserva)" title="Ver / Editar">
-                    <i class="feather icon-edit"></i>
+                <div class="dropdown" ngbDropdown container="body" [placement]="'bottom-end'">
+                  <button
+                    class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                    type="button"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                    title="Acciones"
+                    ngbDropdownToggle
+                  >
+                    <i class="feather icon-more-vertical"></i>
                   </button>
-                  <button class="btn btn-outline-secondary" (click)="verDetalles(reserva)" title="Ver Detalles">
-                    <i class="feather icon-list"></i>
-                  </button>
-                  <button class="btn btn-outline-primary" (click)="imprimirConfirmacion(reserva)" title="Imprimir Confirmación">
-                    <i class="feather icon-printer"></i>
-                  </button>
-                  <button class="btn btn-outline-danger" (click)="cancelarReserva(reserva)" title="Cancelar Reserva">
-                    <i class="feather icon-x-circle"></i>
-                  </button>
+                  <div class="dropdown-menu dropdown-menu-end" ngbDropdownMenu>
+                    <button class="dropdown-item" type="button" (click)="verReserva(reserva)">
+                      <i class="feather icon-edit me-2"></i> Ver / Editar
+                    </button>
+                    <button class="dropdown-item" type="button" (click)="verDetalles(reserva)">
+                      <i class="feather icon-list me-2"></i> Ver Detalles
+                    </button>
+                    <button class="dropdown-item" type="button" (click)="imprimirConfirmacion(reserva)">
+                      <i class="feather icon-printer me-2"></i> Imprimir Confirmación
+                    </button>
+                    <div class="dropdown-divider"></div>
+                    <button class="dropdown-item text-danger" type="button" (click)="cancelarReserva(reserva)">
+                      <i class="feather icon-x-circle me-2"></i> Cancelar Reserva
+                    </button>
+                  </div>
                 </div>
               </td>
             </tr>
@@ -121,11 +131,11 @@
 
       <div class="d-flex flex-wrap justify-content-between align-items-center mt-3">
         <div class="form-inline mb-2">
-          <label class="mr-2 mb-0">Mostrar</label>
+          <label class="me-2 mb-0">Mostrar</label>
           <select class="form-control" [ngModel]="pageSize" (ngModelChange)="changePageSize($event)">
             <option *ngFor="let size of pageSizeOptions" [ngValue]="size">{{ size }}</option>
           </select>
-          <span class="ml-2">por página</span>
+          <span class="ms-2">por página</span>
         </div>
         <div class="mb-2 text-muted">
           Mostrando

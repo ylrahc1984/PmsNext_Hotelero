@@ -23,8 +23,17 @@ export class ReservaDetalleComponent {
     const paramId = this.route.snapshot.paramMap.get('id');
     this.reservaId = paramId ? Number(paramId) : null;
 
-    if (this.reservaId && !this.reservasService.getById(this.reservaId)) {
-      this.router.navigate(['/operaciones/reservas']);
+    if (this.reservaId) {
+      this.reservasService.getReservaByCod(this.reservaId.toString()).subscribe({
+        next: (res) => {
+          if (!res) {
+            this.router.navigate(['/operaciones/reservas']);
+          }
+        },
+        error: () => {
+          this.router.navigate(['/operaciones/reservas']);
+        }
+      });
     }
   }
 }

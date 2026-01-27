@@ -1,118 +1,132 @@
 <form>
-  <div class="form-group">
-    <label>Servicio</label>
-    <input type="text" class="form-control" [value]="getServicioNombre()" readonly>
-  </div>
-
-  <div class="row">
-    <div class="col-md-6">
-      <div class="form-group">
-        <label>Tarifa <span class="text-danger">*</span></label>
-        <select class="form-control" [(ngModel)]="formData.tarifa" name="tarifa" required>
-          <option value="A">A - Estandar</option>
-          <option value="B">B - Premium</option>
-          <option value="C">C - VIP</option>
-          <option value="D">D - Especial</option>
-        </select>
+  <div class="form-section">
+    <div class="section-title">Contexto</div>
+    <div class="row form-grid">
+      <div class="col-md-6">
+        <div class="form-group">
+          <label>Servicio</label>
+          <input type="text" class="form-control" [value]="getServicioNombre()" readonly>
+        </div>
       </div>
-    </div>
-    <div class="col-md-3">
-      <div class="form-group">
-        <label>Hora Inicio <span class="text-danger">*</span></label>
-        <input type="time" class="form-control" [(ngModel)]="formData.horaInicio" name="horaInicio" required>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="form-group">
-        <label>Hora Fin <span class="text-danger">*</span></label>
-        <input type="time" class="form-control" [(ngModel)]="formData.horaFin" name="horaFin" required
-               [class.is-invalid]="hasTimeRangeError()">
-        <div class="invalid-feedback" *ngIf="hasTimeRangeError()">
-          La hora fin debe ser mayor que la hora inicio.
+      <div class="col-md-6">
+        <div class="form-group">
+          <label>Tarifa <span class="text-danger">*</span></label>
+          <select class="form-control" [(ngModel)]="formData.tarifa" name="tarifa" required>
+            <option value="A">A - Estandar</option>
+            <option value="B">B - Premium</option>
+            <option value="C">C - VIP</option>
+            <option value="D">D - Especial</option>
+          </select>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="row">
-    <div class="col-md-4">
-      <div class="form-group">
-        <label>Precio Base <span class="text-danger">*</span></label>
-        <div class="input-group">
-          <div class="input-group-prepend">
-            <span class="input-group-text">{{ listaPrecio?.moneda }}</span>
-          </div>
-          <input type="number" class="form-control" [(ngModel)]="formData.precioBase" name="precioBase"
-                 min="0" step="0.01" required [class.is-invalid]="formData.precioBase !== undefined && formData.precioBase < 0">
-          <div class="invalid-feedback" *ngIf="formData.precioBase !== undefined && formData.precioBase < 0">
-            El precio debe ser mayor o igual a 0.
+  <div class="form-section">
+    <div class="section-title">Horario y Estado</div>
+    <div class="row form-grid">
+      <div class="col-md-4">
+        <div class="form-group">
+          <label>Hora Inicio <span class="text-danger">*</span></label>
+          <input type="time" class="form-control" [(ngModel)]="formData.horaInicio" name="horaInicio" required>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="form-group">
+          <label>Hora Fin <span class="text-danger">*</span></label>
+          <input type="time" class="form-control" [(ngModel)]="formData.horaFin" name="horaFin" required
+                 [class.is-invalid]="hasTimeRangeError()">
+          <div class="invalid-feedback" *ngIf="hasTimeRangeError()">
+            La hora fin debe ser mayor que la hora inicio.
           </div>
         </div>
       </div>
-    </div>
-    <div class="col-md-4">
-      <div class="form-group">
-        <label>Cantidad Incluida de Adultos <span class="text-danger">*</span></label>
-        <input type="number" class="form-control" [(ngModel)]="formData.adultosIncluidos" name="adultosIncluidos"
-               min="1" required [class.is-invalid]="formData.adultosIncluidos !== undefined && formData.adultosIncluidos < 1">
-        <div class="invalid-feedback" *ngIf="formData.adultosIncluidos !== undefined && formData.adultosIncluidos < 1">
-          Debe incluir al menos 1 adulto.
-        </div>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="form-group">
-        <label>Precio Adulto Adicional</label>
-        <div class="input-group">
-          <div class="input-group-prepend">
-            <span class="input-group-text">{{ listaPrecio?.moneda }}</span>
-          </div>
-          <input type="number" class="form-control" [(ngModel)]="formData.precioAdultoExtra" name="precioAdultoExtra"
-                 min="0" step="0.01" [class.is-invalid]="formData.precioAdultoExtra !== undefined && formData.precioAdultoExtra < 0">
-          <div class="invalid-feedback" *ngIf="formData.precioAdultoExtra !== undefined && formData.precioAdultoExtra < 0">
-            El precio debe ser mayor o igual a 0.
+      <div class="col-md-4">
+        <div class="form-group">
+          <label class="d-block">Estado</label>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" [(ngModel)]="formData.activa" name="activa" id="activaCheck">
+            <label class="form-check-label" for="activaCheck">
+              Regla Activa
+            </label>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="row">
-    <div class="col-md-6">
-      <div class="form-group">
-        <label>Precio Nino</label>
-        <div class="input-group">
-          <div class="input-group-prepend">
-            <span class="input-group-text">{{ listaPrecio?.moneda }}</span>
-          </div>
-          <input type="number" class="form-control" [(ngModel)]="formData.precioNino" name="precioNino"
-                 min="0" step="0.01" [class.is-invalid]="formData.precioNino !== undefined && formData.precioNino < 0">
-          <div class="invalid-feedback" *ngIf="formData.precioNino !== undefined && formData.precioNino < 0">
-            El precio debe ser mayor o igual a 0.
+  <div class="form-section">
+    <div class="section-title">Precios y Cantidades</div>
+    <div class="row form-grid">
+      <div class="col-md-4">
+        <div class="form-group">
+          <label>Precio Base <span class="text-danger">*</span></label>
+          <div class="input-group">
+            <div class="input-group-prepend">
+              <span class="input-group-text">{{ listaPrecio?.moneda }}</span>
+            </div>
+            <input type="number" class="form-control" [(ngModel)]="formData.precioBase" name="precioBase"
+                   min="0" step="0.01" required [class.is-invalid]="formData.precioBase !== undefined && formData.precioBase < 0">
+            <div class="invalid-feedback" *ngIf="formData.precioBase !== undefined && formData.precioBase < 0">
+              El precio debe ser mayor o igual a 0.
+            </div>
           </div>
         </div>
       </div>
-    </div>
-    <div class="col-md-6">
-      <div class="form-group">
-        <div class="form-check mt-4">
-          <input class="form-check-input" type="checkbox" [(ngModel)]="formData.activa" name="activa" id="activaCheck">
-          <label class="form-check-label" for="activaCheck">
-            Regla Activa
-          </label>
+      <div class="col-md-4">
+        <div class="form-group">
+          <label>Adultos Incluidos <span class="text-danger">*</span></label>
+          <input type="number" class="form-control" [(ngModel)]="formData.adultosIncluidos" name="adultosIncluidos"
+                 min="1" required [class.is-invalid]="formData.adultosIncluidos !== undefined && formData.adultosIncluidos < 1">
+          <div class="invalid-feedback" *ngIf="formData.adultosIncluidos !== undefined && formData.adultosIncluidos < 1">
+            Debe incluir al menos 1 adulto.
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="form-group">
+          <label>Precio Adulto Adicional</label>
+          <div class="input-group">
+            <div class="input-group-prepend">
+              <span class="input-group-text">{{ listaPrecio?.moneda }}</span>
+            </div>
+            <input type="number" class="form-control" [(ngModel)]="formData.precioAdultoExtra" name="precioAdultoExtra"
+                   min="0" step="0.01" [class.is-invalid]="formData.precioAdultoExtra !== undefined && formData.precioAdultoExtra < 0">
+            <div class="invalid-feedback" *ngIf="formData.precioAdultoExtra !== undefined && formData.precioAdultoExtra < 0">
+              El precio debe ser mayor o igual a 0.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="form-group">
+          <label>Precio Nino</label>
+          <div class="input-group">
+            <div class="input-group-prepend">
+              <span class="input-group-text">{{ listaPrecio?.moneda }}</span>
+            </div>
+            <input type="number" class="form-control" [(ngModel)]="formData.precioNino" name="precioNino"
+                   min="0" step="0.01" [class.is-invalid]="formData.precioNino !== undefined && formData.precioNino < 0">
+            <div class="invalid-feedback" *ngIf="formData.precioNino !== undefined && formData.precioNino < 0">
+              El precio debe ser mayor o igual a 0.
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="form-group">
-    <label>Observaciones</label>
-    <textarea class="form-control" [(ngModel)]="formData.observaciones" name="observaciones" rows="2"
-              placeholder="Observaciones opcionales sobre esta regla tarifaria"></textarea>
+  <div class="form-section">
+    <div class="section-title">Notas</div>
+    <div class="form-group mb-0">
+      <label>Observaciones</label>
+      <textarea class="form-control" [(ngModel)]="formData.observaciones" name="observaciones" rows="2"
+                placeholder="Observaciones opcionales sobre esta regla tarifaria"></textarea>
+    </div>
   </div>
 
-  <div class="d-flex justify-content-end">
-    <button type="button" class="btn btn-secondary mr-2" (click)="cancel()">Cancelar</button>
+  <div class="d-flex justify-content-end gap-2">
+    <button type="button" class="btn btn-secondary" (click)="cancel()">Cancelar</button>
     <button type="button" class="btn btn-primary" (click)="save()" [disabled]="!validateForm()">Guardar</button>
   </div>
 </form>

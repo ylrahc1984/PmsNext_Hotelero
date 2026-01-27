@@ -9,7 +9,7 @@ import { ClienteUI } from './cliente.models';
 
 @Component({
   selector: 'app-agencias-comisionistas',
-  imports: [CommonModule, FormsModule, SharedModule, RouterLink],
+  imports: [CommonModule, FormsModule, SharedModule],
   templateUrl: './agencias-comisionistas.component.html',
   styleUrls: ['./agencias-comisionistas.component.scss']
 })

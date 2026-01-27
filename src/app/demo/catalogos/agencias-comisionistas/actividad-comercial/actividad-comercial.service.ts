@@ -3,10 +3,11 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { ActividadDto, ActividadPost, ActividadResponse } from './actividad-comercial.models';
+import { environment } from 'src/environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class ActividadComercialService {
-  private apiUrl = 'http://localhost:5000/api/actividadcomercialmh';
+  private apiUrl = `${environment.apiUrl}/actividadcomercialmh`;
 
   constructor(private http: HttpClient, private auth: AuthService) {}
 

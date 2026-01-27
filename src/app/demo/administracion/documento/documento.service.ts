@@ -3,10 +3,11 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { DocumentoDto, DocumentoPost, DocumentoResponse } from './documento.models';
+import { environment } from 'src/environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class DocumentoService {
-  private apiUrl = 'http://localhost:5000/api/documento';
+  private apiUrl = `${environment.apiUrl}/documento`;
 
   constructor(private http: HttpClient, private auth: AuthService) {}
 
@@ -32,17 +33,60 @@ export class DocumentoService {
   }
 
   crearDocumento(payload: DocumentoPost): Observable<DocumentoResponse> {
-    return this.http.post<DocumentoResponse>(this.apiUrl, this.decoratePayload(payload, 1));
+    return this.http
+      .post(this.apiUrl, this.decoratePayload(payload, 1), { responseType: 'text' })
+      .pipe(
+        map((response) => {
+          const trimmed = response?.trim();
+          if (!trimmed) {
+            return { respuesta: '' };
+          }
+          try {
+            const parsed = JSON.parse(trimmed) as DocumentoResponse;
+            return parsed ?? { respuesta: trimmed };
+          } catch {
+            return { respuesta: trimmed };
+          }
+        })
+      );
   }
 
   editarDocumento(codigo: string, payload: DocumentoPost): Observable<DocumentoResponse> {
-    const encoded = encodeURIComponent(codigo);
-    return this.http.put<DocumentoResponse>(`${this.apiUrl}?codigo=${encoded}`, this.decoratePayload(payload, 2));
+    return this.http
+      .put(`${this.apiUrl}/${codigo}`, this.decoratePayload(payload, 2), { responseType: 'text' })
+      .pipe(
+        map((response) => {
+          const trimmed = response?.trim();
+          if (!trimmed) {
+            return { respuesta: '' };
+          }
+          try {
+            const parsed = JSON.parse(trimmed) as DocumentoResponse;
+            return parsed ?? { respuesta: trimmed };
+          } catch {
+            return { respuesta: trimmed };
+          }
+        })
+      );
   }
 
   eliminarDocumento(codigo: string): Observable<DocumentoResponse> {
-    const encoded = encodeURIComponent(codigo);
-    return this.http.delete<DocumentoResponse>(`${this.apiUrl}?codigo=${encoded}`);
+    return this.http
+      .delete(`${this.apiUrl}/${encodeURIComponent(codigo)}`, { responseType: 'text' })
+      .pipe(
+        map((response) => {
+          const trimmed = response?.trim();
+          if (!trimmed) {
+            return { respuesta: '' };
+          }
+          try {
+            const parsed = JSON.parse(trimmed) as DocumentoResponse;
+            return parsed ?? { respuesta: trimmed };
+          } catch {
+            return { respuesta: trimmed };
+          }
+        })
+      );
   }
 
   buildPayload(formValue: Partial<DocumentoPost>, proceso: number): DocumentoPost {

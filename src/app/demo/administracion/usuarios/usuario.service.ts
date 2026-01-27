@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { AuthService } from 'src/app/core/services/auth.service';
+import { environment } from 'src/environments/environment';
 import {
   CambioClavePayload,
   DescuentoNivel,
@@ -23,13 +24,13 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class UsuarioService {
-  private apiUrl = 'http://localhost:5000/api/usuarios';
-  private modxUsaurio = 'http://localhost:5000/api/modxusuario';
-  private modulosUrl = 'http://localhost:5000/api/modulo';
-  private puntosVentaUrl = 'http://localhost:5000/api/puntoventa';
-  private mozoxPntVentaUrl = 'http://localhost:5000/api/mozoporpuntoventa';
-  private descuentosUrl = 'http://localhost:5000/api/confdescuento';
-  private privilegiosUrl = 'http://localhost:5000/api/privilegiogeneral';
+  private apiUrl = `${environment.apiUrl}/usuarios`;
+  private modxUsaurio = `${environment.apiUrl}/modxusuario`;
+  private modulosUrl = `${environment.apiUrl}/modulo`;
+  private puntosVentaUrl = `${environment.apiUrl}/puntoventa`;
+  private mozoxPntVentaUrl = `${environment.apiUrl}/mozoporpuntoventa`;
+  private descuentosUrl = `${environment.apiUrl}/confdescuento`;
+  private privilegiosUrl = `${environment.apiUrl}/privilegiogeneral`;
   private readonly tipoCreate = 1;
   private readonly tipoUpdate = 2;
   private readonly tipoCambioClave = 3;

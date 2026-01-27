@@ -1,103 +1,128 @@
+﻿import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import Swal from 'sweetalert2';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
-import { Suplidor, SuplidoresService, TipoSuplidor } from './suplidores.service';
-import { SuplidorFormComponent } from './suplidor-form.component';
+import { ProveedorService, ProveedorUI } from './proveedor.service';
 
 @Component({
   selector: 'app-suplidores',
-  imports: [CommonModule, FormsModule, SharedModule, SuplidorFormComponent],
+  imports: [CommonModule, FormsModule, SharedModule],
   templateUrl: './suplidores.component.html',
   styleUrls: ['./suplidores.component.scss']
 })
-export class SuplidoresComponent {
-  private suplidoresService = inject(SuplidoresService);
+export class SuplidoresComponent implements OnInit {
+  private proveedorService = inject(ProveedorService);
+  private router = inject(Router);
 
-  filterCodigo = signal('');
-  filterNombre = signal('');
-  filterIdentificacion = signal('');
-  filterTipo = signal<TipoSuplidor | 'Todos'>('Todos');
-  filterEstado = signal<'Todos' | 'Activo' | 'Inactivo'>('Todos');
+  proveedores: ProveedorUI[] = [];
+  isLoading = false;
 
-  showForm = false;
-  readOnly = false;
-  editingSuplidor: Suplidor | null = null;
+  filterCodigo = '';
+  filterDescripcion = '';
 
-  suplidoresSignal = this.suplidoresService.getSignal();
+  currentPage = 1;
+  pageSize = 20;
+  totalPages = 1;
+  totalRegistros = 0;
+  pageSizeOptions = [10, 20, 50, 100];
 
-  suplidoresFiltrados = computed(() => {
-    const codigo = this.filterCodigo().toLowerCase();
-    const nombre = this.filterNombre().toLowerCase();
-    const identificacion = this.filterIdentificacion().toLowerCase();
-    const tipo = this.filterTipo();
-    const estado = this.filterEstado();
+  ngOnInit(): void {
+    this.loadProveedores();
+  }
 
-    return this.suplidoresSignal().filter(s => {
-      const matchesCodigo = !codigo || s.codigo.toLowerCase().includes(codigo);
-      const matchesNombre = !nombre || s.nombre.toLowerCase().includes(nombre);
-      const matchesIdentificacion = !identificacion || s.identificacion.toLowerCase().includes(identificacion);
-      const matchesTipo = tipo === 'Todos' || s.tipoSuplidor === tipo;
-      const matchesEstado = estado === 'Todos' || (estado === 'Activo' ? s.activo : !s.activo);
-      return matchesCodigo && matchesNombre && matchesIdentificacion && matchesTipo && matchesEstado;
+  loadProveedores(): void {
+    this.isLoading = true;
+    const codigo = this.filterCodigo.trim() || undefined;
+    const descripcion = this.filterDescripcion.trim() || undefined;
+    this.proveedorService.getProveedores(this.currentPage, this.pageSize, codigo, descripcion).subscribe({
+      next: (result) => {
+        this.proveedores = result.data ?? [];
+        this.totalRegistros = result.totalRegistros ?? this.proveedores.length;
+        this.currentPage = result.paginaActual ?? this.currentPage;
+        this.pageSize = result.pageSize ?? this.pageSize;
+        this.totalPages = result.totalPages ?? 1;
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error al cargar proveedores:', error);
+        Swal.fire({
+          title: 'Error',
+          text: 'No se pudieron cargar los proveedores.',
+          icon: 'error'
+        });
+        this.isLoading = false;
+      }
     });
-  });
-
-  openForm(suplidor?: Suplidor, readOnly = false) {
-    this.editingSuplidor = suplidor ? { ...suplidor } : null;
-    this.readOnly = readOnly;
-    this.showForm = true;
   }
 
-  closeForm() {
-    this.showForm = false;
-    this.editingSuplidor = null;
-    this.readOnly = false;
+  onBuscar(): void {
+    this.currentPage = 1;
+    this.loadProveedores();
   }
 
-  onSave(suplidor: Suplidor) {
-    if (this.editingSuplidor) {
-      this.suplidoresService.update(suplidor);
-    } else {
-      this.suplidoresService.create(suplidor);
+  onLimpiar(): void {
+    this.filterCodigo = '';
+    this.filterDescripcion = '';
+    this.currentPage = 1;
+    this.loadProveedores();
+  }
+
+  onPageSizeChange(): void {
+    this.currentPage = 1;
+    this.loadProveedores();
+  }
+
+  goToPageRelative(delta: number): void {
+    const nextPage = this.currentPage + delta;
+    if (nextPage < 1 || nextPage > this.totalPages) {
+      return;
     }
-    this.closeForm();
+    this.currentPage = nextPage;
+    this.loadProveedores();
   }
 
-  toggleActive(codigo: string) {
-    this.suplidoresService.toggleActive(codigo);
+  openForm(): void {
+    this.router.navigate(['/catalogos/suplidores/nuevo']);
   }
 
-  clearFilters() {
-    this.filterCodigo.set('');
-    this.filterNombre.set('');
-    this.filterIdentificacion.set('');
-    this.filterTipo.set('Todos');
-    this.filterEstado.set('Todos');
+  editar(proveedor: ProveedorUI): void {
+    this.router.navigate(['/catalogos/suplidores/editar', proveedor.codigo]);
   }
 
-  getTipoBadge(tipo: TipoSuplidor) {
-    const badges: Record<TipoSuplidor, string> = {
-      Transportista: 'badge-primary',
-      Guía: 'badge-info',
-      Empresa: 'badge-success',
-      Otro: 'badge-secondary'
-    };
-    return badges[tipo] || 'badge-light';
-  }
-
-  getEstadoBadge(activo: boolean) {
-    return activo ? 'badge-success' : 'badge-danger';
-  }
-
-  resumenServicios(suplidor: Suplidor) {
-    if (!suplidor.servicios || suplidor.servicios.length === 0) {
-      return 'Sin servicios';
-    }
-    if (suplidor.servicios.length > 2) {
-      const [first, second, ...rest] = suplidor.servicios;
-      return `${first}, ${second} +${rest.length} más`;
-    }
-    return suplidor.servicios.join(', ');
+  eliminar(proveedor: ProveedorUI): void {
+    Swal.fire({
+      title: 'Eliminar proveedor',
+      text: `Desea eliminar el proveedor ${proveedor.codigo}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Si, eliminar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (!result.isConfirmed) {
+        return;
+      }
+      this.isLoading = true;
+      this.proveedorService.eliminarProveedor(proveedor.codigo).subscribe({
+        next: () => {
+          Swal.fire({
+            title: 'Eliminado',
+            text: 'Proveedor eliminado correctamente.',
+            icon: 'success'
+          });
+          this.loadProveedores();
+        },
+        error: (error) => {
+          console.error('Error al eliminar proveedor:', error);
+          Swal.fire({
+            title: 'Error',
+            text: 'No se pudo eliminar el proveedor.',
+            icon: 'error'
+          });
+          this.isLoading = false;
+        }
+      });
+    });
   }
 }

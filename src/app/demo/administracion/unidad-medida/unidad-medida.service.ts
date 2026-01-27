@@ -3,10 +3,11 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { UnidadMedidaDto, UnidadMedidaPost, UnidadMedidaResponse } from './unidad-medida.models';
+import { environment } from 'src/environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class UnidadMedidaService {
-  private apiUrl = 'http://localhost:5000/api/unidadmedida';
+  private apiUrl = `${environment.apiUrl}/unidadmedida`;
 
   constructor(private http: HttpClient, private auth: AuthService) {}
 
@@ -22,17 +23,21 @@ export class UnidadMedidaService {
   }
 
   crearUnidad(payload: UnidadMedidaPost): Observable<UnidadMedidaResponse> {
-    return this.http.post<UnidadMedidaResponse>(this.apiUrl, this.decoratePayload(payload, 1));
+    return this.http
+      .post(this.apiUrl, this.decoratePayload(payload, 1), { responseType: 'text' })
+      .pipe(map((respuesta) => ({ respuesta: respuesta || 'OK' } as UnidadMedidaResponse)));
   }
 
   editarUnidad(codUMed: string, payload: UnidadMedidaPost): Observable<UnidadMedidaResponse> {
-    const encoded = encodeURIComponent(codUMed);
-    return this.http.put<UnidadMedidaResponse>(`${this.apiUrl}?codUMed=${encoded}`, this.decoratePayload(payload, 2));
+    return this.http
+      .put(`${this.apiUrl}/${codUMed}`, this.decoratePayload(payload, 2), { responseType: 'text' })
+      .pipe(map((respuesta) => ({ respuesta: respuesta || 'OK' } as UnidadMedidaResponse)));
   }
 
   eliminarUnidad(codUMed: string): Observable<UnidadMedidaResponse> {
-    const encoded = encodeURIComponent(codUMed);
-    return this.http.delete<UnidadMedidaResponse>(`${this.apiUrl}?codUMed=${encoded}`);
+    return this.http
+      .delete(`${this.apiUrl}/${codUMed}`, { responseType: 'text' })
+      .pipe(map((respuesta) => ({ respuesta: respuesta || 'OK' } as UnidadMedidaResponse)));
   }
 
   buildPayload(codUMed: string, descripcion: string, proceso: number): UnidadMedidaPost {

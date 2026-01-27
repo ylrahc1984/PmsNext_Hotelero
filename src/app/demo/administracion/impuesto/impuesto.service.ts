@@ -4,10 +4,11 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { ImpuestoApi, ImpuestoPayload, ImpuestoResponse, ImpuestoUI } from './impuesto.models';
+import { environment } from 'src/environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class ImpuestoService {
-  private apiUrl = 'http://localhost:5000/api/impuesto';
+  private apiUrl = `${environment.apiUrl}/impuesto`;
   private readonly defaultTipo = 1;
 
   constructor(private http: HttpClient, private auth: AuthService) {}

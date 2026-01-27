@@ -1,12 +1,11 @@
-// angular import
-import { Component, OnInit, inject } from '@angular/core';
+﻿import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import Swal from 'sweetalert2';
 
-// project import
 import { SharedModule } from 'src/app/theme/shared/shared.module';
-import { ServiciosService, Servicio } from './servicios.service';
+import { ServiciosService, ServicioUI } from './servicios.service';
 
 @Component({
   selector: 'app-servicios',
@@ -15,13 +14,23 @@ import { ServiciosService, Servicio } from './servicios.service';
   styleUrls: ['./servicios.component.scss']
 })
 export class ServiciosComponent implements OnInit {
-  servicios: Servicio[] = [];
-  filteredServicios: Servicio[] = [];
+  servicios: ServicioUI[] = [];
+  filteredServicios: ServicioUI[] = [];
+  isLoading = false;
 
-  // Filtros
   filterNombre = '';
-  filterTipo = '';
-  filterActivo = '';
+  filterCategoria = '';
+  filterGrupo = '';
+  filterVisible = '';
+
+  categoriaOptions: string[] = [];
+  grupoOptions: string[] = [];
+
+  currentPage = 1;
+  pageSize = 20;
+  totalPages = 1;
+  totalRegistros = 0;
+  pageSizeOptions = [10, 20, 50, 100];
 
   private serviciosService = inject(ServiciosService);
 
@@ -29,35 +38,124 @@ export class ServiciosComponent implements OnInit {
     this.loadServicios();
   }
 
-  loadServicios() {
-    this.servicios = this.serviciosService.getServicios();
-    this.applyFilters();
-  }
+  loadServicios(): void {
+    this.isLoading = true;
+    const visible = this.filterVisible === '' ? undefined : Number(this.filterVisible);
+    const codGrupo = this.filterGrupo.trim() || undefined;
+    const codCateg = this.filterCategoria.trim() || undefined;
+    const nombre = this.filterNombre.trim();
 
-  applyFilters() {
-    this.filteredServicios = this.servicios.filter(s => {
-      return (!this.filterNombre || s.nombre.toLowerCase().includes(this.filterNombre.toLowerCase())) &&
-             (!this.filterTipo || s.tipo === this.filterTipo) &&
-             (!this.filterActivo || (this.filterActivo === 'activo' ? s.activo : !s.activo));
+    const request = nombre
+      ? this.serviciosService.buscarServicios(nombre, visible, this.currentPage, this.pageSize)
+      : this.serviciosService.getServicios(visible, this.currentPage, this.pageSize, codGrupo, codCateg);
+
+    request.subscribe({
+      next: (result) => {
+        this.servicios = result.data ?? [];
+        this.totalRegistros = result.totalRegistros ?? this.servicios.length;
+        this.currentPage = result.paginaActual ?? this.currentPage;
+        this.pageSize = result.pageSize ?? this.pageSize;
+        this.totalPages = result.totalPages ?? 1;
+        this.updateFilterOptions();
+        this.applyLocalFilters();
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error al cargar servicios:', error);
+        Swal.fire({
+          title: 'Error',
+          text: 'No se pudieron cargar los servicios.',
+          icon: 'error'
+        });
+        this.isLoading = false;
+      }
     });
   }
 
-  deleteServicio(id: number) {
-    this.serviciosService.deleteServicio(id);
+  private updateFilterOptions(): void {
+    const categorias = new Set(this.servicios.map((item) => item.codCateg).filter(Boolean));
+    const grupos = new Set(this.servicios.map((item) => item.codGrupo).filter(Boolean));
+    this.categoriaOptions = Array.from(categorias).sort();
+    this.grupoOptions = Array.from(grupos).sort();
+  }
+
+  applyLocalFilters(): void {
+    const categoria = this.filterCategoria.trim();
+    const grupo = this.filterGrupo.trim();
+    const visible = this.filterVisible === '' ? null : Number(this.filterVisible);
+
+    this.filteredServicios = this.servicios.filter((item) => {
+      const matchesCategoria = !categoria || item.codCateg === categoria;
+      const matchesGrupo = !grupo || item.codGrupo === grupo;
+      const matchesVisible = visible === null || item.visible === visible;
+      return matchesCategoria && matchesGrupo && matchesVisible;
+    });
+  }
+
+  onBuscar(): void {
+    this.currentPage = 1;
     this.loadServicios();
   }
 
-  getTipoBadge(tipo: string) {
-    const badges = {
-      transporte: 'badge-primary',
-      tour: 'badge-success',
-      alojamiento: 'badge-info',
-      otro: 'badge-secondary'
-    };
-    return badges[tipo as keyof typeof badges] || 'badge-light';
+  onLimpiar(): void {
+    this.filterNombre = '';
+    this.filterCategoria = '';
+    this.filterGrupo = '';
+    this.filterVisible = '';
+    this.currentPage = 1;
+    this.loadServicios();
   }
 
-  getActivoBadge(activo: boolean) {
-    return activo ? 'badge-success' : 'badge-danger';
+  onPageSizeChange(): void {
+    this.currentPage = 1;
+    this.loadServicios();
+  }
+
+  goToPageRelative(delta: number): void {
+    const nextPage = this.currentPage + delta;
+    if (nextPage < 1 || nextPage > this.totalPages) {
+      return;
+    }
+    this.currentPage = nextPage;
+    this.loadServicios();
+  }
+
+  deleteServicio(servicio: ServicioUI): void {
+    Swal.fire({
+      title: 'Eliminar servicio',
+      text: `Desea eliminar el servicio ${servicio.codReceta}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Si, eliminar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (!result.isConfirmed) {
+        return;
+      }
+      this.isLoading = true;
+      this.serviciosService.eliminarServicio(servicio.codReceta).subscribe({
+        next: () => {
+          Swal.fire({
+            title: 'Eliminado',
+            text: 'Servicio eliminado correctamente.',
+            icon: 'success'
+          });
+          this.loadServicios();
+        },
+        error: (error) => {
+          console.error('Error al eliminar servicio:', error);
+          Swal.fire({
+            title: 'Error',
+            text: 'No se pudo eliminar el servicio.',
+            icon: 'error'
+          });
+          this.isLoading = false;
+        }
+      });
+    });
+  }
+
+  getVisibleBadge(visible: number): string {
+    return visible === 1 ? 'badge-success' : 'badge-secondary';
   }
 }
