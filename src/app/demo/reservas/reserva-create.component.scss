@@ -8,3 +8,141 @@
   --gmpx-color-primary: #0d6efd;
   --gmpx-shadow-elevation-1: 0 2px 6px rgba(0, 0, 0, 0.16);
 }
+
+:host .rsv-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 10px;
+  padding: 0.55rem 0.9rem;
+  line-height: 1.1;
+}
+
+:host .rsv-action-btn__icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+:host .rsv-action-btn--compact {
+  padding: 0.42rem 0.75rem;
+}
+
+:host .rsv-action-btn--compact .rsv-action-btn__icon {
+  width: 20px;
+  height: 20px;
+}
+
+:host .rsv-action-btn--primary .rsv-action-btn__icon {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+:host .rsv-action-btn--outline .rsv-action-btn__icon {
+  background: rgba(108, 117, 125, 0.12);
+}
+
+:host .rsv-page-header h5 {
+  font-size: 1rem;
+  line-height: 1.1;
+}
+
+:host .rsv-page-header p {
+  font-size: 0.8rem;
+  line-height: 1.1;
+}
+
+:host .rsv-icon-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+:host .rsv-icon-btn i {
+  font-size: 16px;
+}
+
+:host ::ng-deep .rsv-action-btn--primary {
+  border-radius: 10px;
+  box-shadow: 0 8px 18px rgba(13, 110, 253, 0.18);
+}
+
+:host ::ng-deep .rsv-action-btn--primary:disabled {
+  box-shadow: none;
+}
+
+:host .rsv-total-reserva {
+  position: relative;
+  overflow: hidden;
+  background: #f8f9fa;
+  border: 1px solid rgba(13, 110, 253, 0.18);
+  border-radius: 14px;
+  padding: 0.85rem 0.9rem;
+  box-shadow: 0 10px 22px rgba(13, 110, 253, 0.08);
+}
+
+:host .rsv-total-reserva::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background: #0d6efd;
+}
+
+:host .rsv-total-reserva__label {
+  font-size: 0.72rem;
+  color: #495057;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  line-height: 1.1;
+}
+
+:host .rsv-total-reserva__content {
+  flex: 1 1 auto;
+}
+
+:host .rsv-total-reserva__value {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: #0b5ed7;
+  line-height: 1.15;
+}
+
+:host .rsv-total-reserva__currency {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid #dee2e6;
+  background: #ffffff;
+  color: #495057;
+}
+
+:host .rsv-total-reserva__icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(13, 110, 253, 0.14);
+  color: #0b5ed7;
+  flex: 0 0 auto;
+}
+
+:host .rsv-total-reserva__hint {
+  margin-top: 0.35rem;
+}

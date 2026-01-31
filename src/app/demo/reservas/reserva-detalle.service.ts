@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, catchError, throwError } from 'rxjs';
 import { environment } from 'src/environments/environment';
 
 export interface ReservaDetalle {
@@ -14,6 +14,8 @@ export interface ReservaDetalle {
   PRV02_HoraServicio: string;
   PRV02_OrigenTexto: string;
   PRV02_DestinoTexto: string;
+  PRV02_OrigenGoogle: any;
+  PRV02_DestinoGoogle: any;
   PRV02_OrigenPlaceId: string;
   PRV02_DestinoPlaceId: string;
   PRV02_OrigenLat: number;
@@ -41,6 +43,14 @@ export class ReservaDetalleService {
   private apiUrl = `${environment.apiUrl}/reserva/detalle`;
 
   constructor(private http: HttpClient) {}
+
+  private buildDetalleUrl(id?: number | null, codReserva?: string | null): string {
+    const parsedId = Number(id);
+    const hasId = Number.isFinite(parsedId) && parsedId > 0;
+    const cod = (codReserva || '').trim();
+    const base = hasId ? `${this.apiUrl}/${parsedId}` : this.apiUrl;
+    return cod ? `${base}?codReserva=${encodeURIComponent(cod)}` : base;
+  }
 
   private toIsoDateTime(value: any): string | null {
     if (!value) return null;
@@ -70,6 +80,8 @@ export class ReservaDetalleService {
       horaServicio: p.horaServicio ?? '',
       origenTexto: p.origenTexto ?? '',
       destinoTexto: p.destinoTexto ?? '',
+      origenGoogle: p.origenGoogle ?? '',
+      destinoGoogle: p.destinoGoogle ?? '',
       origenPlaceId: p.origenPlaceId ?? '',
       destinoPlaceId: p.destinoPlaceId ?? '',
       origenLat: p.origenLat ?? 0,
@@ -104,10 +116,29 @@ export class ReservaDetalleService {
   }
 
   actualizarDetalle(payload: any): Observable<any> {
-    return this.http.put(this.apiUrl, this.toApiPayload(payload, 2), { responseType: 'text' });
+    const body = this.toApiPayload(payload, 2);
+    const id = Number(payload?.id ?? body?.id);
+    const codReserva = (payload?.codReserva ?? body?.codReserva) as string | undefined;
+
+    // La API expone endpoints por ID (ej: GET/PUT /reserva/detalle/{id}).
+    // Incluimos fallback a PUT sin /{id} para compatibilidad con implementaciones anteriores.
+    const urlWithId = this.buildDetalleUrl(id, codReserva);
+    if (urlWithId === this.apiUrl) {
+      return this.http.put(this.apiUrl, body, { responseType: 'text' });
+    }
+
+    return this.http.put(urlWithId, body, { responseType: 'text' }).pipe(
+      catchError((err: any) => {
+        const status = Number(err?.status);
+        if (status === 404 || status === 405) {
+          return this.http.put(this.apiUrl, body, { responseType: 'text' });
+        }
+        return throwError(() => err);
+      })
+    );
   }
 
   eliminarDetalle(id: number, codReserva: string): Observable<any> {
-    return this.http.delete(`${this.apiUrl}?id=${id}&codReserva=${codReserva}`, { responseType: 'text' });
+    return this.http.delete(`${this.apiUrl}/${id}?codReserva=${codReserva}`, { responseType: 'text' });
   }
 }

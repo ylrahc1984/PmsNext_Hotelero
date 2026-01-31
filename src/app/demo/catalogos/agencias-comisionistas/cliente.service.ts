@@ -6,13 +6,71 @@ import { AuthService } from 'src/app/core/services/auth.service';
 import { ClienteDto, ClientePost, ClienteUI } from './cliente.models';
 import { environment } from 'src/environments/environment';
 
+export type SelectOption<TValue extends string | number = string> = { value: TValue; label: string };
+
 @Injectable({
   providedIn: 'root'
 })
 export class ClienteService {
-  private apiUrl = `${environment.apiUrl}/cliente`;
+  private baseApiUrl = environment.apiUrl;
+  private apiUrl = `${this.baseApiUrl}/cliente`;
 
   constructor(private http: HttpClient, private auth: AuthService) {}
+
+  getTipoIdentificacionOptions(): Observable<SelectOption[]> {
+    const url = `${this.baseApiUrl}/tipoidentificacion`;
+    return this.http.get<Array<{ CA24_Codigo: string; CA24_Tipo: string }> | null>(url).pipe(
+      map((response) => (response ?? []).map((item) => ({ value: (item.CA24_Codigo ?? '').trim(), label: (item.CA24_Tipo ?? '').trim() })))
+    );
+  }
+
+  getTipoClienteOptions(): Observable<SelectOption[]> {
+    const url = `${this.baseApiUrl}/tipocliente`;
+    return this.http.get<Array<{ CPV00_Codigo: string; CPV00_Descripcion: string }> | null>(url).pipe(
+      map((response) =>
+        (response ?? []).map((item) => ({ value: (item.CPV00_Codigo ?? '').trim(), label: (item.CPV00_Descripcion ?? '').trim() }))
+      )
+    );
+  }
+
+  getZonaOptions(): Observable<SelectOption[]> {
+    const url = `${this.baseApiUrl}/zona`;
+    return this.http.get<Array<{ CPV01_Codigo: string; CPV01_Zona: string }> | null>(url).pipe(
+      map((response) => (response ?? []).map((item) => ({ value: (item.CPV01_Codigo ?? '').trim(), label: (item.CPV01_Zona ?? '').trim() })))
+    );
+  }
+
+  getProvinciasOptions(): Observable<SelectOption<number>[]> {
+    const url = `${this.baseApiUrl}/provincia`;
+    return this.http.get<Array<{ CA23_numeroProvincia: number; CA23_nombre: string }> | null>(url).pipe(
+      map((response) => (response ?? []).map((item) => ({ value: item.CA23_numeroProvincia, label: (item.CA23_nombre ?? '').trim() })))
+    );
+  }
+
+  getCantonesOptions(idProvincia: string): Observable<SelectOption[]> {
+    const normalized = (idProvincia ?? '').toString().trim();
+    if (!normalized) {
+      return of([]);
+    }
+    const url = `${this.baseApiUrl}/canton`;
+    const params = new HttpParams().set('idProvincia', normalized);
+    return this.http.get<Array<{ CA21_numeroCanton: string; CA21_nombre: string }> | null>(url, { params }).pipe(
+      map((response) => (response ?? []).map((item) => ({ value: (item.CA21_numeroCanton ?? '').trim(), label: (item.CA21_nombre ?? '').trim() })))
+    );
+  }
+
+  getDistritosOptions(idProvincia: string, idCanton: string): Observable<SelectOption[]> {
+    const provincia = (idProvincia ?? '').toString().trim();
+    const canton = (idCanton ?? '').toString().trim();
+    if (!provincia || !canton) {
+      return of([]);
+    }
+    const url = `${this.baseApiUrl}/distrito`;
+    const params = new HttpParams().set('idProvincia', provincia).set('idCanton', canton);
+    return this.http.get<Array<{ CA22_DIS_CODIGO: string; CA22_DIS_NOMBRE: string }> | null>(url, { params }).pipe(
+      map((response) => (response ?? []).map((item) => ({ value: (item.CA22_DIS_CODIGO ?? '').trim(), label: (item.CA22_DIS_NOMBRE ?? '').trim() })))
+    );
+  }
 
   getClientes(pageNumber = 1, pageSize = 50, nombreCli?: string): Observable<{
     data: ClienteUI[];

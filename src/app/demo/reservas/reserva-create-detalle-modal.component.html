@@ -1,0 +1,347 @@
+<div class="modal" tabindex="-1" role="dialog" [ngClass]="{ show: open }" *ngIf="open" style="display: block;">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ editingDetalleId ? 'Editar Servicio' : 'Agregar Servicio' }}</h5>
+        <button type="button" class="btn-close" aria-label="Close" (click)="onClose()"></button>
+      </div>
+
+      <form #detalleFormRef="ngForm" (ngSubmit)="onSubmit(detalleFormRef)">
+        <div class="modal-body">
+          <div class="alert alert-warning py-2" role="alert" *ngIf="allowManualPricing">
+            {{ reglaTarifaError || 'No hay una regla tarifaria aplicable. Ingrese los montos manualmente.' }}
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-2">
+              <label class="form-label">Servicio <span class="text-danger">*</span></label>
+              <select
+                class="form-control form-control-sm"
+                [(ngModel)]="detalleForm.codServicio"
+                name="codServicio"
+                required
+                (ngModelChange)="serviceChange.emit($event)"
+              >
+                <option value="">Seleccione servicio</option>
+                <option *ngIf="serviciosLoading" value="" disabled>Cargando servicios...</option>
+                <option *ngFor="let servicio of servicios" [ngValue]="servicio.codReceta">
+                  {{ servicio.codReceta }} - {{ servicio.nomReceta }}
+                </option>
+              </select>
+              <small class="form-text text-muted" *ngIf="!serviciosLoading && servicios.length === 0">No hay servicios disponibles.</small>
+            </div>
+
+            <div class="col-md-3 mb-2">
+              <label class="form-label">Fecha del Servicio <span class="text-danger">*</span></label>
+              <input type="date" class="form-control form-control-sm" [(ngModel)]="detalleForm.fechaServicio" name="fechaServicio" required>
+            </div>
+
+            <div class="col-md-3 mb-2">
+              <label class="form-label">Tarifa</label>
+              <select class="form-control form-control-sm" [(ngModel)]="detalleForm.tarifa" name="tarifa" (change)="recalculate.emit()">
+                <option *ngFor="let t of tarifas" [ngValue]="t">{{ t }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-3 mb-2">
+              <label class="form-label">Hora Pick-Up</label>
+              <input type="time" class="form-control form-control-sm" [(ngModel)]="detalleForm.horaPickup" name="horaPickup" (ngModelChange)="recalculate.emit()">
+            </div>
+            <div class="col-md-3 mb-2">
+              <label class="form-label">Hora Inicio</label>
+              <input type="time" class="form-control form-control-sm" [(ngModel)]="detalleForm.horaInicio" name="horaInicio" (ngModelChange)="recalculate.emit()">
+            </div>
+            <div class="col-md-3 mb-2">
+              <label class="form-label">Adultos</label>
+              <input type="number" min="0" class="form-control form-control-sm" [(ngModel)]="detalleForm.adultos" name="adultos" (input)="recalculate.emit()">
+            </div>
+            <div class="col-md-3 mb-2">
+              <label class="form-label">Niños</label>
+              <input type="number" min="0" class="form-control form-control-sm" [(ngModel)]="detalleForm.ninos" name="ninos" (input)="recalculate.emit()">
+            </div>
+          </div>
+
+          <!-- ORIGEN -->
+          <div class="row">
+            <div class="col-12 d-flex justify-content-between align-items-center mb-1">
+              <h6 class="mb-0">Origen</h6>
+              <span class="badge badge-light-primary">Buscar en Google</span>
+            </div>
+            <div class="col-12">
+              <div class="card shadow-none border mb-2">
+                <div class="card-body p-2">
+                  <div class="row">
+                    <div class="col-md-6 mb-2">
+                      <label class="form-label">Lugar <span class="text-danger">*</span></label>
+                      <input type="text" class="form-control form-control-sm" [(ngModel)]="detalleForm.origenLugar" name="origenLugar" required placeholder="Hotel, aeropuerto, etc.">
+                    </div>
+                    <div class="col-md-6 mb-2">
+                      <label class="form-label">Zona <span class="text-danger">*</span></label>
+                      <select class="form-control form-control-sm" [(ngModel)]="detalleForm.origenZona" name="origenZona" required (change)="recalculate.emit()">
+                        <option value="">Seleccione zona</option>
+                        <option *ngFor="let zona of zonas" [ngValue]="zona">{{ zona }}</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="mb-1">
+                    <label class="form-label">Ubicación exacta de recojo (Google Maps)</label>
+                    <div class="w-100">
+                      <input
+                        type="text"
+                        class="form-control form-control-sm"
+                        [(ngModel)]="detalleForm.origenDireccionGoogle"
+                        (ngModelChange)="onDireccionGoogleChange('origen', $event)"
+                        name="origenDireccionGoogle"
+                        placeholder="Escriba y seleccione del listado"
+                        autocomplete="off"
+                        appGooglePlacesAutocomplete
+                        [componentRestrictions]="{ country: 'cr' }"
+                        [types]="['geocode']"
+                        (placeSelected)="onPlaceSelected('origen', $event)"
+                        (placeSelectionError)="onPlaceSelectionError('origen', $event)"
+                      >
+                    </div>
+                    <small class="form-text text-muted small">Recomendado: seleccione una opción para guardar coordenadas.</small>
+
+                    <div class="text-danger small mt-1" *ngIf="origenAutocompleteMessage">{{ origenAutocompleteMessage }}</div>
+
+                    <div
+                      class="mt-2 d-flex align-items-center justify-content-between p-2 rounded border bg-light"
+                      *ngIf="detalleForm.origenDireccionGoogle || getMapsLink('origen')"
+                    >
+                      <div class="d-flex align-items-center text-truncate me-2" style="min-width: 0;">
+                        <i class="feather icon-map-pin text-primary me-2"></i>
+                        <div class="text-truncate" style="min-width: 0;">
+                          <div class="fw-semibold small text-truncate">{{ detalleForm.origenDireccionGoogle || 'Ubicación seleccionada' }}</div>
+                          <div class="text-muted small" *ngIf="getMapsLink('origen')">Coordenadas guardadas</div>
+                          <div class="text-muted small" *ngIf="!getMapsLink('origen')">Sin coordenadas</div>
+                        </div>
+                      </div>
+
+                      <div class="d-flex align-items-center">
+                        <span class="badge bg-success me-2" *ngIf="detalleForm.origenPlaceId && getMapsLink('origen')">OK</span>
+                        <button type="button" class="btn btn-outline-secondary btn-sm rsv-icon-btn" (click)="openLocationInfo('origen')" title="Ver detalles">
+                          <i class="feather icon-info"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- DESTINO -->
+          <div class="row">
+            <div class="col-12 d-flex justify-content-between align-items-center mb-1">
+              <h6 class="mb-0">Destino</h6>
+              <span class="badge badge-light-primary">Buscar en Google</span>
+            </div>
+            <div class="col-12">
+              <div class="card shadow-none border mb-2">
+                <div class="card-body p-2">
+                  <div class="row">
+                    <div class="col-md-6 mb-2">
+                      <label class="form-label">Lugar <span class="text-danger">*</span></label>
+                      <input type="text" class="form-control form-control-sm" [(ngModel)]="detalleForm.destinoLugar" name="destinoLugar" required placeholder="Hotel, aeropuerto, etc.">
+                    </div>
+                    <div class="col-md-6 mb-2">
+                      <label class="form-label">Zona <span class="text-danger">*</span></label>
+                      <select class="form-control form-control-sm" [(ngModel)]="detalleForm.destinoZona" name="destinoZona" required (change)="recalculate.emit()">
+                        <option value="">Seleccione zona</option>
+                        <option *ngFor="let zona of zonas" [ngValue]="zona">{{ zona }}</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="mb-1">
+                    <label class="form-label">Ubicación exacta de entrega (Google Maps)</label>
+                    <div class="w-100">
+                      <input
+                        type="text"
+                        class="form-control form-control-sm"
+                        [(ngModel)]="detalleForm.destinoDireccionGoogle"
+                        (ngModelChange)="onDireccionGoogleChange('destino', $event)"
+                        name="destinoDireccionGoogle"
+                        placeholder="Escriba y seleccione del listado"
+                        autocomplete="off"
+                        appGooglePlacesAutocomplete
+                        [componentRestrictions]="{ country: 'cr' }"
+                        [types]="['geocode']"
+                        (placeSelected)="onPlaceSelected('destino', $event)"
+                        (placeSelectionError)="onPlaceSelectionError('destino', $event)"
+                      >
+                    </div>
+                    <small class="form-text text-muted small">Recomendado: seleccione una opción para guardar coordenadas.</small>
+
+                    <div class="text-danger small mt-1" *ngIf="destinoAutocompleteMessage">{{ destinoAutocompleteMessage }}</div>
+
+                    <div
+                      class="mt-2 d-flex align-items-center justify-content-between p-2 rounded border bg-light"
+                      *ngIf="detalleForm.destinoDireccionGoogle || getMapsLink('destino')"
+                    >
+                      <div class="d-flex align-items-center text-truncate me-2" style="min-width: 0;">
+                        <i class="feather icon-map-pin text-primary me-2"></i>
+                        <div class="text-truncate" style="min-width: 0;">
+                          <div class="fw-semibold small text-truncate">{{ detalleForm.destinoDireccionGoogle || 'Ubicación seleccionada' }}</div>
+                          <div class="text-muted small" *ngIf="getMapsLink('destino')">Coordenadas guardadas</div>
+                          <div class="text-muted small" *ngIf="!getMapsLink('destino')">Sin coordenadas</div>
+                        </div>
+                      </div>
+
+                      <div class="d-flex align-items-center">
+                        <span class="badge bg-success me-2" *ngIf="detalleForm.destinoPlaceId && getMapsLink('destino')">OK</span>
+                        <button type="button" class="btn btn-outline-secondary btn-sm rsv-icon-btn" (click)="openLocationInfo('destino')" title="Ver detalles">
+                          <i class="feather icon-info"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-4 mb-2">
+              <label class="form-label">Costo Neto</label>
+              <input
+                type="number"
+                class="form-control form-control-sm"
+                [(ngModel)]="detalleForm.costoNeto"
+                name="costoNeto"
+                [readonly]="!allowManualPricing"
+                (input)="onManualCostoChange()"
+              >
+            </div>
+            <div class="col-md-4 mb-2">
+              <label class="form-label">Costo Rack</label>
+              <input
+                type="number"
+                class="form-control form-control-sm"
+                [(ngModel)]="detalleForm.costoRack"
+                name="costoRack"
+                [readonly]="!allowManualPricing"
+              >
+            </div>
+            <div class="col-md-4 mb-2">
+              <label class="form-label">Observaciones</label>
+              <textarea class="form-control form-control-sm" rows="1" [(ngModel)]="detalleForm.observaciones" name="observaciones"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary rsv-action-btn rsv-action-btn--outline" (click)="onClose()">
+            <span class="rsv-action-btn__icon"><i class="feather icon-x"></i></span>
+            <span>Cancelar</span>
+          </button>
+          <button type="submit" class="btn btn-primary rsv-action-btn rsv-action-btn--primary">
+            <span class="rsv-action-btn__icon"><i class="feather icon-save"></i></span>
+            <span>Guardar Servicio</span>
+          </button>
+        </div>
+
+        <!-- Modal interno: detalle ubicación -->
+        <div
+          class="modal-backdrop fade show"
+          *ngIf="locationInfoTarget"
+          style="z-index: 1060;"
+          (click)="closeLocationInfo()"
+        ></div>
+        <div
+          class="modal fade show"
+          *ngIf="locationInfoTarget"
+          tabindex="-1"
+          role="dialog"
+          style="display: block; z-index: 1065;"
+        >
+          <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+              <div class="modal-header py-2">
+                <h6 class="modal-title mb-0">{{ locationInfoTarget === 'origen' ? 'Detalle de Origen' : 'Detalle de Destino' }}</h6>
+                <button type="button" class="btn-close" aria-label="Close" (click)="closeLocationInfo()"></button>
+              </div>
+              <div class="modal-body">
+                <ng-container *ngIf="locationInfoTarget === 'origen'; else destinoInfo">
+                  <div class="fw-semibold">{{ detalleForm.origenDireccionGoogle || 'Ubicación no definida' }}</div>
+                  <div class="text-muted small mt-1">Lat: {{ detalleForm.origenLat }} · Lng: {{ detalleForm.origenLng }}</div>
+                  <details class="mt-2" *ngIf="detalleForm.origenPlaceId">
+                    <summary class="small text-muted">Place ID</summary>
+                    <div class="small text-muted mt-1">{{ detalleForm.origenPlaceId }}</div>
+                  </details>
+
+                  <div class="mt-3 d-flex align-items-center flex-wrap">
+                    <a
+                      class="btn btn-outline-primary btn-sm rsv-action-btn rsv-action-btn--outline me-2 mb-2"
+                      [attr.href]="getMapsLink('origen') || null"
+                      [attr.target]="getMapsLink('origen') ? '_blank' : null"
+                      [attr.rel]="getMapsLink('origen') ? 'noopener' : null"
+                      [class.disabled]="!getMapsLink('origen')"
+                    >
+                      <span class="rsv-action-btn__icon"><i class="feather icon-external-link"></i></span>
+                      <span>Abrir mapa</span>
+                    </a>
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary btn-sm rsv-action-btn rsv-action-btn--outline me-2 mb-2"
+                      (click)="copyMapsLink('origen')"
+                      [disabled]="!getMapsLink('origen')"
+                    >
+                      <span class="rsv-action-btn__icon"><i class="feather icon-copy"></i></span>
+                      <span>Copiar enlace</span>
+                    </button>
+                    <small class="text-success me-2 mb-0" *ngIf="copiedLink === 'origen'">Enlace copiado</small>
+                    <small class="text-danger mb-0" *ngIf="copyError && copyErrorTarget === 'origen'">{{ copyError }}</small>
+                  </div>
+                </ng-container>
+
+                <ng-template #destinoInfo>
+                  <div class="fw-semibold">{{ detalleForm.destinoDireccionGoogle || 'Ubicación no definida' }}</div>
+                  <div class="text-muted small mt-1">Lat: {{ detalleForm.destinoLat }} · Lng: {{ detalleForm.destinoLng }}</div>
+                  <details class="mt-2" *ngIf="detalleForm.destinoPlaceId">
+                    <summary class="small text-muted">Place ID</summary>
+                    <div class="small text-muted mt-1">{{ detalleForm.destinoPlaceId }}</div>
+                  </details>
+
+                  <div class="mt-3 d-flex align-items-center flex-wrap">
+                    <a
+                      class="btn btn-outline-primary btn-sm rsv-action-btn rsv-action-btn--outline me-2 mb-2"
+                      [attr.href]="getMapsLink('destino') || null"
+                      [attr.target]="getMapsLink('destino') ? '_blank' : null"
+                      [attr.rel]="getMapsLink('destino') ? 'noopener' : null"
+                      [class.disabled]="!getMapsLink('destino')"
+                    >
+                      <span class="rsv-action-btn__icon"><i class="feather icon-external-link"></i></span>
+                      <span>Abrir mapa</span>
+                    </a>
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary btn-sm rsv-action-btn rsv-action-btn--outline me-2 mb-2"
+                      (click)="copyMapsLink('destino')"
+                      [disabled]="!getMapsLink('destino')"
+                    >
+                      <span class="rsv-action-btn__icon"><i class="feather icon-copy"></i></span>
+                      <span>Copiar enlace</span>
+                    </button>
+                    <small class="text-success me-2 mb-0" *ngIf="copiedLink === 'destino'">Enlace copiado</small>
+                    <small class="text-danger mb-0" *ngIf="copyError && copyErrorTarget === 'destino'">{{ copyError }}</small>
+                  </div>
+                </ng-template>
+              </div>
+              <div class="modal-footer py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm rsv-action-btn rsv-action-btn--outline" (click)="closeLocationInfo()">
+                  <span class="rsv-action-btn__icon"><i class="feather icon-x"></i></span>
+                  <span>Cerrar</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

@@ -1,11 +1,14 @@
 import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Subscription } from 'rxjs';
 import { Router } from '@angular/router';
+import { Subject, Subscription, debounceTime } from 'rxjs';
+import Swal from 'sweetalert2';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { Reserva, ReservasService } from './reservas.service';
+import { environment } from 'src/environments/environment';
 
 @Component({
   selector: 'app-reservas',
@@ -14,29 +17,22 @@ import { Reserva, ReservasService } from './reservas.service';
   styleUrls: ['./reservas.component.scss']
 })
 export class ReservasComponent implements OnInit, OnDestroy {
-    private subscription: Subscription = new Subscription();
+  private subscription: Subscription = new Subscription();
+  private filtrosDebounce$ = new Subject<void>();
 
-    ngOnDestroy(): void {
-      this.subscription.unsubscribe();
-    }     
-    
-    reservas: Reserva[] = [];
-    totalReservas = 0;
-    pageSizeOptions = [5, 10, 20];
-    pageSize = 10;
-    currentPage = 1;
-    loading = false;
-    errorMsg = '';
+  reservas: Reserva[] = [];
+  totalReservas = 0;
+  pageSizeOptions = [5, 10, 20];
+  pageSize = 10;
+  currentPage = 1;
+  loading = false;
+  errorMsg = '';
 
-    private reservasService = inject(ReservasService);
-    private router = inject(Router);
+  private reservasService = inject(ReservasService);
+  private router = inject(Router);
+  private http = inject(HttpClient);
 
-    ngOnInit(): void {
-      this.loadReservas();
-    }
-
-    // --- Filtros y paginación para reservas.component.ts ---
-
+  // --- Filtros y paginaciÃ³n para reservas.component.ts ---
   filtros = {
     fechaDesde: '',
     fechaHasta: '',
@@ -45,76 +41,94 @@ export class ReservasComponent implements OnInit, OnDestroy {
   };
 
   agencias: string[] = [];
-  formasPago: string[] = ['Prepago', 'Crédito', 'Efectivo', 'Transferencia'];
+  formasPago: string[] = ['Prepago', 'CrÃ©dito', 'Efectivo', 'Transferencia'];
 
   filteredReservas: Reserva[] = [];
   pagedReservas: Reserva[] = [];
 
-  applyFilters(): void {
-    let filtered = this.reservas;
-    if (this.filtros.fechaDesde) {
-      filtered = filtered.filter(r => r.PRV01_FecCreacion && r.PRV01_FecCreacion >= this.filtros.fechaDesde);
-    }
-    if (this.filtros.fechaHasta) {
-      filtered = filtered.filter(r => r.PRV01_FecCreacion && r.PRV01_FecCreacion <= this.filtros.fechaHasta);
-    }
-    if (this.filtros.estado) {
-      filtered = filtered.filter(r => r.PRV01_Estado === this.filtros.estado);
-    }
-    if (this.filtros.termino) {
-      const term = this.filtros.termino.toLowerCase();
-      filtered = filtered.filter(r =>
-        r.PRV01_CodReserva?.toString().toLowerCase().includes(term) ||
-        r.PRV01_Folio?.toString().toLowerCase().includes(term) ||
-        r.PRV01_NomCliente?.toLowerCase().includes(term) ||
-        r.PRV01_CodAgencia?.toLowerCase().includes(term) ||
-        r.PRV01_FormaPago?.toLowerCase().includes(term)
-      );
-    }
-    this.filteredReservas = filtered;
-    this.updatePagedReservas();
+  ngOnInit(): void {
+    this.setDefaultFechas();
+    this.subscription.add(
+      this.filtrosDebounce$.pipe(debounceTime(350)).subscribe(() => {
+        this.currentPage = 1;
+        this.loadReservas();
+      })
+    );
+    this.loadReservas();
   }
 
-  updatePagedReservas(): void {
-    const start = (this.currentPage - 1) * this.pageSize;
-    const end = start + this.pageSize;
-    this.pagedReservas = this.filteredReservas.slice(start, end);
+  ngOnDestroy(): void {
+    this.subscription.unsubscribe();
+  }
+
+  applyFilters(): void {
+    // Filtros principales (fechas + parÃ¡metro general) se resuelven en backend con /api/reserva/consulta.
+    // Debounce para evitar disparar requests en cada pulsaciÃ³n.
+    this.filtrosDebounce$.next();
+  }
+
+  private applyLocalFilters(): void {
+    // El endpoint /consulta no contempla estado; lo filtramos localmente sobre la pÃ¡gina ya cargada.
+    let filtered = this.reservas;
+    if (this.filtros.estado) {
+      const filtro = this.normalizeEstado(this.filtros.estado);
+      filtered = filtered.filter((r) => this.normalizeEstado(r.PRV01_Estado) === filtro);
+    }
+
+    this.filteredReservas = filtered;
+    this.pagedReservas = filtered;
   }
 
   resetFilters(): void {
+    this.currentPage = 1;
     this.filtros = {
-      fechaDesde: '',
-      fechaHasta: '',
+      fechaDesde: this.defaultFechaDesde(),
+      fechaHasta: this.defaultFechaHasta(),
       estado: '',
       termino: ''
     };
-    this.applyFilters();
+    this.loadReservas();
   }
 
-  // Modificar loadReservas para poblar agencias y aplicar filtros
   loadReservas(): void {
     this.loading = true;
     this.errorMsg = '';
-    this.reservasService.getReservas(this.currentPage, this.pageSize).subscribe({
-      next: (res) => {
-        this.reservas = res.data;
-        this.totalReservas = res.total;
-        // Poblar agencias únicas
-        this.agencias = Array.from(new Set(this.reservas.map(r => r.PRV01_CodAgencia).filter(Boolean)));
-        this.applyFilters();
-        this.loading = false;
-      },
-      error: (err) => {
-        this.errorMsg = 'Error al cargar reservas';
-        this.loading = false;
-      }
-    });
+
+    const fechaInicio = this.toApiDate(this.filtros.fechaDesde);
+    const fechaFin = this.toApiDate(this.filtros.fechaHasta);
+    const parametroBusqueda = (this.filtros.termino ?? '').toString().trim();
+
+    this.reservasService
+      .consultarReservas({
+        fechaInicio,
+        fechaFin,
+        parametroBusqueda: parametroBusqueda || null,
+        pageNumber: this.currentPage,
+        pageSize: this.pageSize
+      })
+      .subscribe({
+        next: (res) => {
+          this.reservas = res.data;
+          this.totalReservas = res.total;
+          this.agencias = Array.from(new Set(this.reservas.map((r) => r.PRV01_CodAgencia).filter(Boolean)));
+          this.applyLocalFilters();
+          this.loading = false;
+        },
+        error: () => {
+          this.errorMsg = 'Error al cargar reservas';
+          this.reservas = [];
+          this.totalReservas = 0;
+          this.filteredReservas = [];
+          this.pagedReservas = [];
+          this.loading = false;
+        }
+      });
   }
 
   changePageSize(size: number): void {
     this.pageSize = size;
     this.currentPage = 1;
-    this.updatePagedReservas();
+    this.loadReservas();
   }
 
   goToPage(page: number): void {
@@ -122,7 +136,7 @@ export class ReservasComponent implements OnInit, OnDestroy {
       return;
     }
     this.currentPage = page;
-    this.updatePagedReservas();
+    this.loadReservas();
   }
 
   nextPage(): void {
@@ -138,11 +152,13 @@ export class ReservasComponent implements OnInit, OnDestroy {
   }
 
   get pageStart(): number {
-    return this.reservas.length ? (this.pageSize * (this.currentPage - 1)) + 1 : 0;
+    return this.totalReservas ? this.pageSize * (this.currentPage - 1) + 1 : 0;
   }
 
   get pageEnd(): number {
-    return Math.min(this.pageSize * this.currentPage, this.totalReservas);
+    if (!this.totalReservas) return 0;
+    const start = this.pageSize * (this.currentPage - 1);
+    return Math.min(start + this.reservas.length, this.totalReservas);
   }
 
   nuevaReserva(): void {
@@ -158,25 +174,119 @@ export class ReservasComponent implements OnInit, OnDestroy {
   }
 
   cancelarReserva(reserva: Reserva): void {
-    if (confirm('¿Está seguro de eliminar la reserva?')) {
+    const cod = reserva?.PRV01_CodReserva ?? '';
+    const cliente = reserva?.PRV01_NomCliente ?? '';
+
+    void Swal.fire({
+      title: 'Cancelar reserva',
+      html: `Â¿Desea cancelar la reserva <strong>#${cod}</strong>${cliente ? ` de <strong>${cliente}</strong>` : ''}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'SÃ­, cancelar',
+      cancelButtonText: 'No, volver',
+      confirmButtonColor: '#dc3545'
+    }).then((result) => {
+      if (!result.isConfirmed) return;
+
       this.loading = true;
-      this.reservasService.eliminarReserva(reserva.PRV01_CodReserva).subscribe({
-        next: () => this.loadReservas(),
+      this.reservasService.eliminarReserva(cod).subscribe({
+        next: () => {
+          this.loadReservas();
+          void Swal.fire({
+            title: 'Cancelada',
+            text: 'La reserva fue cancelada correctamente.',
+            icon: 'success',
+            timer: 1800,
+            showConfirmButton: false
+          });
+        },
         error: () => {
-          this.errorMsg = 'Error al eliminar reserva';
+          this.errorMsg = 'Error al cancelar reserva';
           this.loading = false;
+          void Swal.fire({
+            title: 'Error',
+            text: 'No se pudo cancelar la reserva.',
+            icon: 'error'
+          });
         }
       });
+    });
+  }
+
+  imprimirConfirmacion(codReserva: string): void {
+    const cod = (codReserva ?? '').toString().trim();
+    if (!cod) {
+      void Swal.fire({
+        title: 'Imprimir confirmación',
+        text: 'Código de reserva inválido.',
+        icon: 'warning'
+      });
+      return;
     }
+
+    const baseApiUrl = (environment.apiUrl ?? '').toString().replace(/\/+$/, '');
+    const url = `${baseApiUrl}/reservas/${encodeURIComponent(cod)}/confirmacion-pdf`;
+
+    this.subscription.add(
+      this.http.get(url, { responseType: 'blob' as const }).subscribe({
+        next: (data) => {
+          try {
+            const pdfBlob = new Blob([data], { type: 'application/pdf' });
+            const objectUrl = URL.createObjectURL(pdfBlob);
+
+            const link = document.createElement('a');
+            link.href = objectUrl;
+            link.download = `Confirmacion_Reserva_${cod}.pdf`;
+            link.rel = 'noopener';
+
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+          } catch (e) {
+            console.error('Error descargando confirmación PDF', e);
+            void Swal.fire({
+              title: 'Error',
+              text: 'No se pudo descargar la confirmación en PDF.',
+              icon: 'error'
+            });
+          }
+        },
+        error: (err) => {
+          console.error('Error obteniendo confirmación PDF', err);
+          void Swal.fire({
+            title: 'Error',
+            text: 'No se pudo obtener la confirmación en PDF.',
+            icon: 'error'
+          });
+        }
+      })
+    );
+  }
+
+  private normalizeEstado(value: string): 'PEN' | 'CON' | 'CAN' | 'UNK' {
+    const v = (value || '').toString().trim().toUpperCase();
+    if (v === 'PEN' || v === 'PENDIENTE') return 'PEN';
+    if (v === 'CON' || v === 'CONFIRMADA' || v === 'CONFIRMADO') return 'CON';
+    if (v === 'CAN' || v === 'CANCELADA' || v === 'CANCELADO' || v === 'ANULADA' || v === 'ANULADO') return 'CAN';
+    return 'UNK';
+  }
+
+  getEstadoLabel(estado: string): string {
+    const normalized = this.normalizeEstado(estado);
+    if (normalized === 'PEN') return 'Pendiente';
+    if (normalized === 'CON') return 'Confirmada';
+    if (normalized === 'CAN') return 'Cancelada';
+    return (estado || '').toString() || 'Desconocido';
   }
 
   getEstadoBadge(estado: string): string {
-    const badges: any = {
-      Pendiente: 'bg-warning text-dark',
-      Confirmada: 'bg-success',
-      Cancelada: 'bg-danger'
-    };
-    return badges[estado] || 'bg-light text-dark';
+    const normalized = this.normalizeEstado(estado);
+    if (normalized === 'PEN') return 'bg-warning text-dark';
+    if (normalized === 'CON') return 'bg-success';
+    if (normalized === 'CAN') return 'bg-danger';
+    return 'bg-secondary';
   }
 
   getServiciosBadge(cantidad: number): string {
@@ -188,8 +298,39 @@ export class ReservasComponent implements OnInit, OnDestroy {
   }
 
   getCantidadServicios(reserva: Reserva): number {
-    // Si el backend no retorna el detalle, este método puede requerir ajuste
+    // Si el backend no retorna el detalle, este mÃ©todo puede requerir ajuste
     return reserva['detalles']?.length || 0;
   }
 
+  private setDefaultFechas(): void {
+    if (!this.filtros.fechaDesde) this.filtros.fechaDesde = this.defaultFechaDesde();
+    if (!this.filtros.fechaHasta) this.filtros.fechaHasta = this.defaultFechaHasta();
+  }
+
+  private defaultFechaDesde(): string {
+    const today = new Date();
+    const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    return this.toDateInput(firstOfMonth);
+  }
+
+  private defaultFechaHasta(): string {
+    return this.toDateInput(new Date());
+  }
+
+  private toDateInput(d: Date): string {
+    const yyyy = d.getFullYear().toString().padStart(4, '0');
+    const mm = (d.getMonth() + 1).toString().padStart(2, '0');
+    const dd = d.getDate().toString().padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  private toApiDate(dateInput: string): string | null {
+    const v = (dateInput ?? '').toString().trim();
+    if (!v) return null;
+    const parts = v.split('-');
+    if (parts.length !== 3) return null;
+    const [yyyy, mm, dd] = parts;
+    if (!yyyy || !mm || !dd) return null;
+    return `${dd}/${mm}/${yyyy}`;
+  }
 }

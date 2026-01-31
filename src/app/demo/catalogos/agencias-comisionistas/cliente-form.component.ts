@@ -1,10 +1,11 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { HttpClientModule } from '@angular/common/http';
 import Swal from 'sweetalert2';
 import { Observable, forkJoin, of } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { catchError, finalize, map, switchMap, tap } from 'rxjs/operators';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { ClienteService } from './cliente.service';
@@ -22,7 +23,7 @@ export class ClienteFormComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private clienteService = inject(ClienteService);
-  private http = inject(HttpClient);
+  private destroyRef = inject(DestroyRef);
 
   form!: FormGroup;
   isEditing = false;
@@ -50,39 +51,46 @@ export class ClienteFormComponent implements OnInit {
       this.isEditing = true;
       this.loadCliente(this.codigoCliente);
     } else {
-      this.loadTipoIdentificacion();
-      this.loadTipoCliente();
-      this.loadZonas();
-      this.loadProvincias();
       this.applyState();
+      this.loadCatalogosIniciales();
     }
   }
 
-  private loadTipoIdentificacion(): void {
-    this.fetchTipoIdentificacionOptions().subscribe((options) => {
-      const selected = this.form.get('tCliente')?.value;
-      this.tipoIdentificacionOptions = this.mergeSelectedOption(options, selected);
-    });
-  }
-
-  private loadTipoCliente(): void {
-    this.fetchTipoClienteOptions().subscribe((options) => {
-      const selected = this.form.get('tipoCli')?.value;
-      this.tipoClienteOptions = this.mergeSelectedOption(options, selected);
-    });
-  }
-
-  private loadZonas(): void {
-    this.fetchZonaOptions().subscribe((options) => {
-      const selected = this.form.get('zona')?.value;
-      this.zonaOptions = this.mergeSelectedOption(options, selected);
-    });
-  }
-
-  private loadProvincias(): void {
-    this.fetchProvincias().subscribe((options) => {
-      this.provinciaOptions = options;
-    });
+  private loadCatalogosIniciales(): void {
+    this.isLoading = true;
+    forkJoin({
+      tipoIdentificacion: this.clienteService.getTipoIdentificacionOptions().pipe(
+        catchError((error) => {
+          console.error('Error al cargar tipos de identificacion:', error);
+          return of([]);
+        })
+      ),
+      tipoCliente: this.clienteService.getTipoClienteOptions().pipe(
+        catchError((error) => {
+          console.error('Error al cargar tipos de cliente:', error);
+          return of([]);
+        })
+      ),
+      zonas: this.clienteService.getZonaOptions().pipe(
+        catchError((error) => {
+          console.error('Error al cargar zonas:', error);
+          return of([]);
+        })
+      ),
+      provincias: this.clienteService.getProvinciasOptions().pipe(
+        catchError((error) => {
+          console.error('Error al cargar provincias:', error);
+          return of([]);
+        })
+      )
+    })
+      .pipe(finalize(() => (this.isLoading = false)))
+      .subscribe(({ tipoIdentificacion, tipoCliente, zonas, provincias }) => {
+        this.tipoIdentificacionOptions = this.mergeSelectedOption(tipoIdentificacion, this.form.get('tCliente')?.value);
+        this.tipoClienteOptions = this.mergeSelectedOption(tipoCliente, this.form.get('tipoCli')?.value);
+        this.zonaOptions = this.mergeSelectedOption(zonas, this.form.get('zona')?.value);
+        this.provinciaOptions = provincias;
+      });
   }
 
   private listenProvinciaChanges(): void {
@@ -91,7 +99,7 @@ export class ClienteFormComponent implements OnInit {
       return;
     }
 
-    control.valueChanges.subscribe((value) => {
+    control.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((value) => {
       const provincia = value ? String(value) : '';
       if (!provincia) {
         this.cantonOptions = [];
@@ -109,11 +117,28 @@ export class ClienteFormComponent implements OnInit {
       this.cantonOptions = [];
       return;
     }
-    this.fetchCantones(idProvincia).subscribe((options) => {
-      this.cantonOptions = options;
-      this.distritoOptions = [];
-      this.form.get('idDistrito')?.setValue('');
-    });
+    this.isLoadingCantones = true;
+    this.clienteService
+      .getCantonesOptions(idProvincia)
+      .pipe(
+        catchError((error) => {
+          console.error('Error al cargar cantones:', error);
+          Swal.fire({
+            title: 'Error',
+            text: 'No se pudieron cargar los cantones. Verifique la provincia seleccionada.',
+            icon: 'error'
+          });
+          return of([]);
+        }),
+        finalize(() => {
+          this.isLoadingCantones = false;
+        })
+      )
+      .subscribe((options) => {
+        this.cantonOptions = options;
+        this.distritoOptions = [];
+        this.form.get('idDistrito')?.setValue('');
+      });
   }
 
   private listenCantonChanges(): void {
@@ -123,7 +148,7 @@ export class ClienteFormComponent implements OnInit {
       return;
     }
 
-    cantonControl.valueChanges.subscribe((value) => {
+    cantonControl.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((value) => {
       const provincia = provinciaControl.value ? String(provinciaControl.value) : '';
       const canton = value ? String(value) : '';
       if (!provincia || !canton) {
@@ -140,16 +165,33 @@ export class ClienteFormComponent implements OnInit {
       this.distritoOptions = [];
       return;
     }
-    this.fetchDistritos(idProvincia, idCanton).subscribe((options) => {
-      this.distritoOptions = options;
-    });
+    this.isLoadingDistritos = true;
+    this.clienteService
+      .getDistritosOptions(idProvincia, idCanton)
+      .pipe(
+        catchError((error) => {
+          console.error('Error al cargar distritos:', error);
+          Swal.fire({
+            title: 'Error',
+            text: 'No se pudieron cargar los distritos. Verifique la provincia y canton seleccionados.',
+            icon: 'error'
+          });
+          return of([]);
+        }),
+        finalize(() => {
+          this.isLoadingDistritos = false;
+        })
+      )
+      .subscribe((options) => {
+        this.distritoOptions = options;
+      });
   }
 
   private buildForm(): void {
     this.form = this.fb.group({
       codigo: [''],
       nombreCli: ['', [Validators.required]],
-      ruc: [''],
+      ruc: ['', [Validators.required]],
       contacto: [''],
       direccion: [''],
       provincia: [''],
@@ -245,88 +287,16 @@ export class ClienteFormComponent implements OnInit {
     return (value ?? '').toString().trim();
   }
 
-  private fetchTipoIdentificacionOptions(): Observable<Array<{ value: string; label: string }>> {
-    const apiUrl = 'http://localhost:5000/api/tipoidentificacion';
-    return this.http.get<Array<{ CA24_Codigo: string; CA24_Tipo: string }> | null>(apiUrl).pipe(
-      map((response) => {
-        const data = response ?? [];
-        return data.map((item) => ({
-          value: this.normalizeSelectValue(item.CA24_Codigo),
-          label: this.normalizeSelectValue(item.CA24_Tipo)
-        }));
-      }),
-      catchError((error) => {
-        console.error('Error al cargar tipos de identificacion:', error);
-        return of([]);
-      })
-    );
-  }
-
-  private fetchTipoClienteOptions(): Observable<Array<{ value: string; label: string }>> {
-    const apiUrl = 'http://localhost:5000/api/tipocliente';
-    return this.http.get<Array<{ CPV00_Codigo: string; CPV00_Descripcion: string }> | null>(apiUrl).pipe(
-      map((response) => {
-        const data = response ?? [];
-        return data.map((item) => ({
-          value: this.normalizeSelectValue(item.CPV00_Codigo),
-          label: this.normalizeSelectValue(item.CPV00_Descripcion)
-        }));
-      }),
-      catchError((error) => {
-        console.error('Error al cargar tipos de cliente:', error);
-        return of([]);
-      })
-    );
-  }
-
-  private fetchZonaOptions(): Observable<Array<{ value: string; label: string }>> {
-    const apiUrl = 'http://localhost:5000/api/zona';
-    return this.http.get<Array<{ CPV01_Codigo: string; CPV01_Zona: string }> | null>(apiUrl).pipe(
-      map((response) => {
-        const data = response ?? [];
-        return data.map((item) => ({
-          value: this.normalizeSelectValue(item.CPV01_Codigo),
-          label: this.normalizeSelectValue(item.CPV01_Zona)
-        }));
-      }),
-      catchError((error) => {
-        console.error('Error al cargar zonas:', error);
-        return of([]);
-      })
-    );
-  }
-
-  private fetchProvincias(): Observable<Array<{ value: number; label: string }>> {
-    const apiUrl = 'http://localhost:5000/api/provincia';
-    return this.http.get<Array<{ CA23_numeroProvincia: number; CA23_nombre: string }> | null>(apiUrl).pipe(
-      map((response) => {
-        const data = response ?? [];
-        return data.map((item) => ({
-          value: item.CA23_numeroProvincia,
-          label: item.CA23_nombre
-        }));
-      }),
-      catchError((error) => {
-        console.error('Error al cargar provincias:', error);
-        return of([]);
-      })
-    );
-  }
-
-  private fetchCantones(idProvincia: string): Observable<Array<{ value: string; label: string }>> {
-    if (!idProvincia) {
-      return of([]);
+  private loadUbicacionChain(cliente: ClienteUI): Observable<void> {
+    const provincia = String(cliente.idProvincia || '');
+    const canton = String(cliente.idCanton || '');
+    const distrito = String(cliente.idDistrito || '');
+    if (!provincia) {
+      return of(void 0);
     }
+    this.form.get('idProvincia')?.setValue(provincia, { emitEvent: false });
     this.isLoadingCantones = true;
-    const apiUrl = `http://localhost:5000/api/canton?idProvincia=${encodeURIComponent(idProvincia)}`;
-    return this.http.get<Array<{ CA21_numeroCanton: string; CA21_nombre: string }> | null>(apiUrl).pipe(
-      map((response) => {
-        const data = response ?? [];
-        return data.map((item) => ({
-          value: item.CA21_numeroCanton,
-          label: item.CA21_nombre
-        }));
-      }),
+    return this.clienteService.getCantonesOptions(provincia).pipe(
       catchError((error) => {
         console.error('Error al cargar cantones:', error);
         Swal.fire({
@@ -338,48 +308,7 @@ export class ClienteFormComponent implements OnInit {
       }),
       finalize(() => {
         this.isLoadingCantones = false;
-      })
-    );
-  }
-
-  private fetchDistritos(idProvincia: string, idCanton: string): Observable<Array<{ value: string; label: string }>> {
-    if (!idProvincia || !idCanton) {
-      return of([]);
-    }
-    this.isLoadingDistritos = true;
-    const apiUrl = `http://localhost:5000/api/distrito?idProvincia=${encodeURIComponent(idProvincia)}&idCanton=${encodeURIComponent(idCanton)}`;
-    return this.http.get<Array<{ CA22_DIS_CODIGO: string; CA22_DIS_NOMBRE: string }> | null>(apiUrl).pipe(
-      map((response) => {
-        const data = response ?? [];
-        return data.map((item) => ({
-          value: item.CA22_DIS_CODIGO,
-          label: item.CA22_DIS_NOMBRE
-        }));
       }),
-      catchError((error) => {
-        console.error('Error al cargar distritos:', error);
-        Swal.fire({
-          title: 'Error',
-          text: 'No se pudieron cargar los distritos. Verifique la provincia y canton seleccionados.',
-          icon: 'error'
-        });
-        return of([]);
-      }),
-      finalize(() => {
-        this.isLoadingDistritos = false;
-      })
-    );
-  }
-
-  private loadUbicacionChain(cliente: ClienteUI): Observable<void> {
-    const provincia = String(cliente.idProvincia || '');
-    const canton = String(cliente.idCanton || '');
-    const distrito = String(cliente.idDistrito || '');
-    if (!provincia) {
-      return of(void 0);
-    }
-    this.form.get('idProvincia')?.setValue(provincia, { emitEvent: false });
-    return this.fetchCantones(provincia).pipe(
       tap((options) => {
         this.cantonOptions = this.mergeSelectedOption(options, canton);
         if (canton) {
@@ -392,7 +321,21 @@ export class ClienteFormComponent implements OnInit {
           this.form.get('idDistrito')?.setValue('', { emitEvent: false });
           return of([]);
         }
-        return this.fetchDistritos(provincia, canton);
+        this.isLoadingDistritos = true;
+        return this.clienteService.getDistritosOptions(provincia, canton).pipe(
+          catchError((error) => {
+            console.error('Error al cargar distritos:', error);
+            Swal.fire({
+              title: 'Error',
+              text: 'No se pudieron cargar los distritos. Verifique la provincia y canton seleccionados.',
+              icon: 'error'
+            });
+            return of([]);
+          }),
+          finalize(() => {
+            this.isLoadingDistritos = false;
+          })
+        );
       }),
       tap((options) => {
         this.distritoOptions = this.mergeSelectedOption(options, distrito);
@@ -416,10 +359,30 @@ export class ClienteFormComponent implements OnInit {
     this.isLoading = true;
     forkJoin({
       cliente: this.clienteService.getClienteByCodigo(codigo),
-      tipoIdentificacion: this.fetchTipoIdentificacionOptions(),
-      tipoCliente: this.fetchTipoClienteOptions(),
-      zonas: this.fetchZonaOptions(),
-      provincias: this.fetchProvincias()
+      tipoIdentificacion: this.clienteService.getTipoIdentificacionOptions().pipe(
+        catchError((error) => {
+          console.error('Error al cargar tipos de identificacion:', error);
+          return of([]);
+        })
+      ),
+      tipoCliente: this.clienteService.getTipoClienteOptions().pipe(
+        catchError((error) => {
+          console.error('Error al cargar tipos de cliente:', error);
+          return of([]);
+        })
+      ),
+      zonas: this.clienteService.getZonaOptions().pipe(
+        catchError((error) => {
+          console.error('Error al cargar zonas:', error);
+          return of([]);
+        })
+      ),
+      provincias: this.clienteService.getProvinciasOptions().pipe(
+        catchError((error) => {
+          console.error('Error al cargar provincias:', error);
+          return of([]);
+        })
+      )
     })
       .pipe(
         switchMap(({ cliente, tipoIdentificacion, tipoCliente, zonas, provincias }) => {
@@ -498,34 +461,40 @@ export class ClienteFormComponent implements OnInit {
       : this.clienteService.crearCliente(this.clienteService.buildPayloadFromUI(payload, 1));
 
     this.isLoading = true;
-    request.subscribe({
-      next: () => {
-        Swal.fire({
-          title: 'Exito',
-          text: this.isEditing ? 'Cliente actualizado correctamente.' : 'Cliente creado correctamente.',
-          icon: 'success'
-        });
-        this.router.navigate(['/catalogos/clientes']);
-      },
-      error: (error) => {
-        console.error('Error al guardar cliente:', error);
-        Swal.fire({
-          title: 'Error',
-          text: 'No se pudo guardar el cliente.',
-          icon: 'error'
-        });
-        this.isLoading = false;
-      }
-    });
+    request
+      .pipe(
+        finalize(() => {
+          this.isLoading = false;
+        })
+      )
+      .subscribe({
+        next: () => {
+          Swal.fire({
+            title: 'Exito',
+            text: this.isEditing ? 'Cliente actualizado correctamente.' : 'Cliente creado correctamente.',
+            icon: 'success'
+          });
+          this.router.navigate(['/catalogos/clientes']);
+        },
+        error: (error) => {
+          console.error('Error al guardar cliente:', error);
+          Swal.fire({
+            title: 'Error',
+            text: 'No se pudo guardar el cliente.',
+            icon: 'error'
+          });
+        }
+      });
   }
 
   cancelForm(): void {
     this.router.navigate(['/catalogos/clientes']);
   }
 
-  setActividadPrincipal(actividad: any): void {
-    if (actividad) {
-      this.form.patchValue({ tCliente: actividad.MPV32_CodigoAMH });
+  setActividadPrincipal(actividad: { MPV32_CodigoAMH?: string } | null | undefined): void {
+    const codigo = actividad?.MPV32_CodigoAMH;
+    if (codigo) {
+      this.form.patchValue({ tCliente: codigo });
     }
   }
 }

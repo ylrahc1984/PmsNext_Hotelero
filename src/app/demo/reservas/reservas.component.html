@@ -5,8 +5,9 @@
         <div>
           <p class="mb-0 text-muted">Listado general, filtros rápidos y acciones</p>
         </div>
-        <button class="btn btn-primary" (click)="nuevaReserva()">
-          <i class="feather icon-plus"></i> Nueva Reserva
+        <button class="btn btn-primary rsv-action-btn rsv-action-btn--primary" (click)="nuevaReserva()">
+          <span class="rsv-action-btn__icon"><i class="feather icon-plus"></i></span>
+          <span>Nueva Reserva</span>
         </button>
       </div>
 
@@ -19,10 +20,11 @@
             </div>
             <div class="d-flex align-items-center">
               <small class="text-muted me-3">
-                Resultados: <strong>{{ filteredReservas.length }}</strong>
+                Total: <strong>{{ totalReservas }}</strong>
               </small>
-              <button class="btn btn-sm btn-outline-secondary" type="button" (click)="resetFilters()">
-                <i class="feather icon-rotate-ccw me-1"></i> Limpiar
+              <button class="btn btn-sm btn-outline-secondary rsv-action-btn rsv-action-btn--outline" type="button" (click)="resetFilters()">
+                <span class="rsv-action-btn__icon"><i class="feather icon-rotate-ccw"></i></span>
+                <span>Limpiar</span>
               </button>
             </div>
           </div>
@@ -47,9 +49,9 @@
               <label class="form-label small text-muted">Estado</label>
               <select class="form-control form-control-sm" [(ngModel)]="filtros.estado" (change)="applyFilters()">
                 <option value="">Todos</option>
-                <option value="Pendiente">Pendiente</option>
-                <option value="Confirmada">Confirmada</option>
-                <option value="Cancelada">Cancelada</option>
+                <option value="PEN">Pendiente</option>
+                <option value="CON">Confirmada</option>
+                <option value="CAN">Cancelada</option>
               </select>
             </div>
           </div>
@@ -67,7 +69,7 @@
               <th>Cantidad de Servicios</th>
               <th>Estado de la Reserva</th>
               <th>Forma de Pago</th>
-              <th>Total Neto</th>
+              <th>Total Reserva</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -78,7 +80,7 @@
               </td>
               <td class="text-nowrap">{{ reserva.PRV01_FecCreacion | date:'dd/MM/yyyy' }}</td>
               <td>{{ reserva.PRV01_NomCliente }}</td>
-              <td>{{ reserva.PRV01_CodAgencia }}</td>
+              <td>{{ reserva.MPV00_NomClien }}</td>
               <td>
                 <span class="badge rounded-pill" [ngClass]="getServiciosBadge(getCantidadServicios(reserva))">
                   <i class="feather icon-layers me-1"></i>
@@ -86,12 +88,12 @@
                 </span>
               </td>
               <td>
-                <span class="badge rounded-pill" [ngClass]="getEstadoBadge(reserva.PRV01_Estado)">
-                  {{ reserva.PRV01_Estado }}
+                <span class="badge rounded-pill" [ngClass]="getEstadoBadge(reserva.PRV01_Estado)" [attr.title]="reserva.PRV01_Estado">
+                  {{ getEstadoLabel(reserva.PRV01_Estado) }}
                 </span>
               </td>
               <td>{{ reserva.PRV01_FormaPago }}</td>
-              <td>{{ reserva.PRV01_TotalRsv | number:'1.0-0' }}</td>
+              <td class="text-end">{{ reserva.PRV01_TotalRsv | number:'1.2-2' }}</td>
               <td>
                 <div class="dropdown" ngbDropdown container="body" [placement]="'bottom-end'">
                   <button
@@ -111,7 +113,7 @@
                     <button class="dropdown-item" type="button" (click)="verDetalles(reserva)">
                       <i class="feather icon-list me-2"></i> Ver Detalles
                     </button>
-                    <button class="dropdown-item" type="button" (click)="imprimirConfirmacion(reserva)">
+                    <button class="dropdown-item" type="button" (click)="imprimirConfirmacion(reserva.PRV01_CodReserva)">
                       <i class="feather icon-printer me-2"></i> Imprimir Confirmación
                     </button>
                     <div class="dropdown-divider"></div>
@@ -122,7 +124,7 @@
                 </div>
               </td>
             </tr>
-            <tr *ngIf="filteredReservas.length === 0">
+            <tr *ngIf="pagedReservas.length === 0">
               <td colspan="9" class="text-center text-muted">No se encontraron reservas con los filtros aplicados.</td>
             </tr>
           </tbody>
@@ -143,7 +145,7 @@
           -
           <strong>{{ pageEnd }}</strong>
           de
-          <strong>{{ filteredReservas.length }}</strong>
+          <strong>{{ totalReservas }}</strong>
         </div>
         <div class="btn-group mb-2" role="group">
           <button class="btn btn-light" (click)="prevPage()" [disabled]="currentPage === 1">

@@ -7,113 +7,81 @@ import Swal from 'sweetalert2';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { AuthService } from 'src/app/core/services/auth.service';
-import { GooglePlaceSelection, GooglePlacesAutocompleteDirective } from './google-places-autocomplete.directive';
-import { Reserva, ReservasService } from './reservas.service';
+import { ReservasService } from './reservas.service';
 import { ReservaDetalleService, ReservaDetalle } from './reserva-detalle.service';
 import { CanDeactivateReservaCreate } from 'src/app/core/guards/can-deactivate-reserva-create.guard';
 import { FormaPagoService } from '../administracion/forma-pago/forma-pago.service';
 import { FormaPago } from '../administracion/forma-pago/forma-pago.models';
 import { MonedaService, MonedaUI } from '../administracion/monedas/moneda.service';
+
+// Tarifa
 import { ListaPrecioService } from '../catalogos/listas-precios/lista-precio.service';
+
+// Tarifa engine
+import { ReglaTarifa } from '../catalogos/listas-precios/listas-precios.service';
+
+// Tarifa models
 import { ListaPrecioUI } from '../catalogos/listas-precios/lista-precio.models';
-import { ReglaTarifa, ReglasTarifariasService } from '../catalogos/listas-precios/listas-precios.service';
+
 import { ClienteService } from '../catalogos/agencias-comisionistas/cliente.service';
 import { ClienteUI } from '../catalogos/agencias-comisionistas/cliente.models';
 import { ServiciosService, ServicioUI } from '../catalogos/servicios/servicios.service';
+import { IdiomasService } from '../catalogos/idiomas/idiomas.service';
+import { IdiomaDto } from '../catalogos/idiomas/idiomas.models';
+import { FormaReservasService } from '../catalogos/forma-reservas/forma-reservas.service';
+import { FormaReservaDto } from '../catalogos/forma-reservas/forma-reservas.models';
 
-type ReservaEstado = 'PEN' | 'CON' | 'CAN';
-
-interface ReservaCreateForm {
-  fecha: string;
-  codAgencia: string;
-  nomCliente: string;
-  telCliente: string;
-  emailCliente: string;
-  idioma: string;
-  formaReservacion: string;
-  formaPago: string;
-  codLstPrecio: string;
-  moneda: string;
-  estado: ReservaEstado;
-  totalRsv: number;
-  comentarios: string;
-}
-
-// No se usa DetalleForm para la API, pero se mantiene para el modal local
-interface DetalleForm {
-  codServicio: string;
-  nomServicio: string;
-  tipoServicio: string;
-  fechaServicio: string;
-  horaPickup: string;
-  horaInicio: string;
-  adultos: number;
-  ninos: number;
-  totalPax: number;
-  origenLugar: string;
-  origenZona: string;
-  origenDireccionGoogle: string;
-  origenLat: number;
-  origenLng: number;
-  origenPlaceId: string;
-  destinoLugar: string;
-  destinoZona: string;
-  destinoDireccionGoogle: string;
-  destinoLat: number;
-  destinoLng: number;
-  destinoPlaceId: string;
-  tarifa: string;
-  costoNeto: number;
-  costoRack: number;
-  montoServicio: number;
-  estado: string;
-  observaciones?: string;
-}
+import { showAlertWithFocusRestore } from './reserva-create.alert';
+import { buildInitialDetalleForm, buildInitialReservaCreateForm } from './reserva-create.builders';
+import { clearReservaCreateDraftCod, getReservaCreateDraftCod, setReservaCreateDraftCod } from './reserva-create.draft-storage';
+import { DetalleForm, ReservaCreateForm, ReservaEstado } from './reserva-create.models';
+import {
+  extractCodReserva,
+  extractGoogleDisplayText,
+  hasCoordinates,
+  normalizeReservaEstado,
+  parseCodigoValue,
+  parseNumericId,
+  safeNumber,
+  safeJsonStringify,
+  safeString,
+  toDateInputValue
+} from './reserva-create.utils';
+import { ReservaCreateTarifaService } from './reserva-create.tarifa.service';
+import { computeAdultosExtra } from './reserva-create.tarifa-engine';
+import { ReservaCreateClienteModalComponent } from './reserva-create-cliente-modal.component';
+import { ReservaCreateDetalleModalComponent } from './reserva-create-detalle-modal.component';
 
 @Component({
   selector: 'app-reserva-create',
   standalone: true,
-  imports: [CommonModule, FormsModule, SharedModule, GooglePlacesAutocompleteDirective],
+  imports: [CommonModule, FormsModule, SharedModule, ReservaCreateClienteModalComponent, ReservaCreateDetalleModalComponent],
   templateUrl: './reserva-create.component.html',
   styleUrls: ['./reserva-create.component.scss']
 })
 export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreate {
-  private static readonly DRAFT_STORAGE_KEY = 'reserva_create_draft_cod';
-
-  form: ReservaCreateForm = this.buildInitialForm();
+  form: ReservaCreateForm = buildInitialReservaCreateForm();
   detalles: ReservaDetalle[] = [];
-  detalleForm: DetalleForm = this.buildDetalleForm();
+  detalleForm: DetalleForm = buildInitialDetalleForm();
   showDetalleModal = false;
   editingDetalleId: number | null = null;
   guardado = false;
 
-  idiomas = ['Español', 'Inglés', 'Francés'];
-  formasReservacion = ['Correo Electrónico', 'Teléfono', 'WhatsApp', 'Web'];
-  formasPago = ['Prepago', 'Crédito', 'Efectivo', 'Transferencia'];
+  idiomas: IdiomaDto[] = [];
+  formasReservacion: FormaReservaDto[] = [];
   formasPagoApi: FormaPago[] = [];
   listaPrecios: ListaPrecioUI[] = [];
   monedas: MonedaUI[] = [];
-  clientes: ClienteUI[] = [];
   servicios: ServicioUI[] = [];
   tarifas = ['A', 'B', 'C', 'D'];
   zonas = ['San Jose', 'Alajuela', 'Monteverde', 'Liberia', 'La Fortuna', 'Tamarindo', 'Sarapiqui'];
 
+  // Resultado de la última aplicación de regla tarifaria al detalleForm.
   reglaTarifaAplicada: ReglaTarifa | null = null;
   reglaTarifaError = '';
-  private reglasTarifaCache = new Map<string, ReglaTarifa[]>();
+  allowManualPricing = false;
 
-  origenAutocompleteMessage = '';
-  destinoAutocompleteMessage = '';
-  copiedLink: 'origen' | 'destino' | null = null;
-  copyError = '';
-  copyErrorTarget: 'origen' | 'destino' | null = null;
   showClienteModal = false;
-  clienteSearchTerm = '';
-  clientesLoading = false;
-  clientePage = 1;
-  clientePageSize = 10;
-  clienteTotalPages = 1;
-  clienteTotalRegistros = 0;
   selectedCliente: ClienteUI | null = null;
   serviciosLoading = false;
 
@@ -123,10 +91,21 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
   private formaPagoService = inject(FormaPagoService);
   private monedaService = inject(MonedaService);
   private listaPrecioService = inject(ListaPrecioService);
-  private reglasTarifariasService = inject(ReglasTarifariasService);
+  private tarifaService = inject(ReservaCreateTarifaService);
   private clienteService = inject(ClienteService);
   private serviciosService = inject(ServiciosService);
   private authService = inject(AuthService);
+  private idiomasService = inject(IdiomasService);
+  private formaReservasService = inject(FormaReservasService);
+
+  private isLikelyPlaceId(value: unknown): boolean {
+    const v = safeString(value).trim();
+    if (!v) return false;
+    // Place IDs suelen verse como "ChIJ..." y no contienen espacios/comas.
+    if (/\s|,/.test(v)) return false;
+    if (v.length < 10) return false;
+    return v.startsWith('ChI') || v.startsWith('GhI') || v.startsWith('E') || v.startsWith('g');
+  }
 
   
   codReservaActual: string | null = null;
@@ -147,7 +126,14 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
   private pendingExitMode: 'toListado' | 'allowNext' | 'toUrl' | null = null;
   private pendingExitUrl: string | null = null;
 
+  /**
+   * Punto de entrada del componente.
+   * - Carga catálogos (idiomas, formas de reservación, formas de pago, monedas, listas de precios).
+   * - Inicializa el flujo de creación/recuperación de reserva (borrador o edición por URL).
+   */
   ngOnInit(): void {
+    this.cargarIdiomas();
+    this.cargarFormasReservacion();
     this.initReserva();
 
     this.formaPagoService.getAll().subscribe({
@@ -188,20 +174,66 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     });
   }
 
+  /**
+   * Carga catálogo de formas de reservación y establece un valor por defecto
+   * (priorizando el primer registro activo).
+   */
+  private cargarFormasReservacion(): void {
+    this.formaReservasService.getAll().subscribe({
+      next: (res) => {
+        const list = (res ?? []).filter((i) => !!i);
+        this.formasReservacion = this.mergeFormasReservacion(list);
+        if (!this.form.formaReservacion) {
+          const firstActive = this.formasReservacion.find((i) => !!i.CA54_Activo) ?? this.formasReservacion[0];
+          this.form.formaReservacion = (firstActive?.CA54_Codigo ?? '').trim();
+        }
+      },
+      error: () => {
+        this.formasReservacion = [];
+      }
+    });
+  }
+
+  /**
+   * Carga catálogo de idiomas y establece un valor por defecto
+   * (priorizando el primer registro activo).
+   */
+  private cargarIdiomas(): void {
+    this.idiomasService.getAll().subscribe({
+      next: (res) => {
+        const list = (res ?? []).filter((i) => !!i);
+        this.idiomas = this.mergeIdiomas(list);
+        if (!this.form.idioma) {
+          const firstActive = this.idiomas.find((i) => !!i.CA53_Activo) ?? this.idiomas[0];
+          this.form.idioma = (firstActive?.CA53_Codigo ?? '').trim();
+        }
+      },
+      error: () => {
+        this.idiomas = [];
+      }
+    });
+  }
+
+  /**
+   * Inicializa el contexto de la reserva en tres escenarios:
+   * 1) Si la URL trae un código (editar/detalle), carga encabezado y detalle.
+   * 2) Si existe un borrador en sessionStorage, lo retoma.
+   * 3) Si no hay nada, crea un borrador automáticamente (PEN) apenas haya usuario/operador.
+   */
   private initReserva(): void {
     // Si viene codReserva por ruta, cargar para edición
     const url = window.location.pathname;
     const match = url.match(/reservas\/(.+?)\/(editar|detalle)/);
     if (match) {
       this.codReservaActual = match[1];
-      this.setDraftCod(this.codReservaActual);
+      setReservaCreateDraftCod(this.codReservaActual);
       this.cargarEncabezado(this.codReservaActual);
       this.cargarDetalle(this.codReservaActual);
       return;
     }
 
     // Caso crítico: refresh / reopen. Si hay un borrador en storage, lo retomamos para NO crear otro código.
-    const storedDraft = this.getDraftCod();
+    const storedDraft = getReservaCreateDraftCod();
     if (storedDraft) {
       this.resumeDraft(storedDraft);
       return;
@@ -221,16 +253,21 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     setTimeout(() => this.crearBorrador(), 1200);
   }
 
+  /**
+   * Retoma un borrador existente (estado PEN).
+   * - Si el backend indica que ya no es PEN, descarta el draft local y crea uno nuevo.
+   * - Si es válido, estabiliza la URL (nueva -> /editar) y carga encabezado/detalle.
+   */
   private resumeDraft(codReserva: string): void {
     this.codReservaActual = codReserva;
     this.loading = true;
 
     this.reservasService.getReservaByCod(codReserva).subscribe({
       next: (res) => {
-        const estado = this.normalizeEstado((res.PRV01_Estado as any) ?? 'PEN');
+        const estado = normalizeReservaEstado((res.PRV01_Estado as any) ?? 'PEN');
         if (estado !== 'PEN') {
           // Ya no es borrador: no lo reutilizamos.
-          this.clearDraftCod();
+          clearReservaCreateDraftCod();
           this.codReservaActual = null;
           this.loading = false;
           this.crearBorrador();
@@ -247,7 +284,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       },
       error: () => {
         // Borrador inválido/ya no existe: limpiamos y creamos uno nuevo.
-        this.clearDraftCod();
+        clearReservaCreateDraftCod();
         this.codReservaActual = null;
         this.loading = false;
         this.crearBorrador();
@@ -255,6 +292,10 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     });
   }
 
+  /**
+   * Crea automáticamente un borrador en backend (estado PEN) si aún no existe `codReservaActual`.
+   * Guarda el código en sessionStorage para sobrevivir refresh y estabiliza la URL a /editar.
+   */
   private crearBorrador(): void {
     if (this.creandoBorrador || this.codReservaActual) {
       return;
@@ -270,14 +311,14 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
 
     this.reservasService.crearReserva(payload).subscribe({
       next: (res) => {
-        const cod = this.extractCodReserva(res);
+        const cod = extractCodReserva(res);
         if (!cod) {
           this.creandoBorrador = false;
           this.showAlert('Error', 'No se recibió el código de reserva al crear el borrador.', 'error');
           return;
         }
         this.codReservaActual = cod;
-        this.setDraftCod(cod);
+        setReservaCreateDraftCod(cod);
         // URL estable para sobrevivir refresh (evita crear otro borrador).
         this.navigateInternal(['/operaciones/reservas', cod, 'editar'], { replaceUrl: true });
         this.form.estado = 'PEN';
@@ -291,26 +332,44 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     });
   }
 
+  /**
+   * Carga el encabezado de la reserva desde API y lo mapea a `form`.
+   * - Normaliza el estado a PEN/CON/CAN.
+   * - Resuelve idioma/forma de reservación cuando la API devuelve ID numérico.
+   * - Precarga `selectedCliente` si hay `codAgencia`.
+   */
   cargarEncabezado(codReserva: string): void {
     this.loading = true;
     this.reservasService.getReservaByCod(codReserva).subscribe({
       next: (res) => {
-        const estadoNormalizado = this.normalizeEstado((res.PRV01_Estado as any) ?? 'PEN');
+        const estadoNormalizado = normalizeReservaEstado((res.PRV01_Estado as any) ?? 'PEN');
+        const idiomaRaw = (res as any).PRV01_Idioma;
+        const formaRaw = (res as any).PRV01_FormaReserva;
+        const idiomaCodigo = parseCodigoValue(idiomaRaw);
+        const formaCodigo = parseCodigoValue(formaRaw);
+        const idiomaId = parseNumericId(idiomaRaw);
+        const formaId = parseNumericId(formaRaw);
         this.form = {
-          fecha: this.toDateInputValue(res.PRV01_FecCreacion) || this.form.fecha || '',
-          codAgencia: res.PRV01_CodAgencia,
-          nomCliente: res.PRV01_NomCliente,
-          telCliente: res.PRV01_TelCliente,
-          emailCliente: res.PRV01_EmailCliente,
-          idioma: res.PRV01_Idioma,
-          formaReservacion: res.PRV01_FormaReserva,
-          formaPago: res.PRV01_FormaPago,
-          codLstPrecio: res.PRV01_CodLstPrecio,
-          moneda: res.PRV01_Moneda,
+          fecha: toDateInputValue(res.PRV01_FecCreacion) || this.form.fecha || '',
+          codAgencia: safeString((res as any).PRV01_CodAgencia),
+          nomCliente: safeString((res as any).PRV01_NomCliente),
+          telCliente: safeString((res as any).PRV01_TelCliente),
+          emailCliente: safeString((res as any).PRV01_EmailCliente),
+          idioma: idiomaCodigo ?? '',
+          formaReservacion: formaCodigo ?? '',
+          formaPago: safeString((res as any).PRV01_FormaPago),
+          codLstPrecio: safeString((res as any).PRV01_CodLstPrecio),
+          moneda: safeString((res as any).PRV01_Moneda),
           estado: estadoNormalizado,
-          totalRsv: res.PRV01_TotalRsv || 0,
-          comentarios: res.PRV01_Observacion
+          totalRsv: safeNumber((res as any).PRV01_TotalRsv),
+          comentarios: safeString((res as any).PRV01_Observacion)
         };
+        if (!this.form.idioma && idiomaId != null) {
+          this.resolveIdiomaCodigoFromId(idiomaId);
+        }
+        if (!this.form.formaReservacion && formaId != null) {
+          this.resolveFormaReservacionCodigoFromId(formaId);
+        }
         if (this.form.codAgencia) {
           this.clienteService.getClienteByCodigo(this.form.codAgencia).subscribe({
             next: (cliente) => {
@@ -332,6 +391,9 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     });
   }
 
+  /**
+   * Carga el detalle (servicios) de la reserva desde API y lo asigna a `detalles`.
+   */
   cargarDetalle(codReserva: string): void {
     this.loading = true;
     this.detalleService.getDetalle(codReserva).subscribe({
@@ -346,155 +408,112 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     });
   }
 
+  /**
+   * Abre el modal de detalle/servicio.
+   * - Si recibe un detalle, mapea API -> `DetalleForm` para editar.
+   * - Si no recibe detalle, inicializa un `DetalleForm` nuevo.
+   * - Protege el flujo cuando la reserva no existe o está CON/CAN.
+   */
   abrirModalDetalle(detalle?: ReservaDetalle): void {
     if (!this.codReservaActual) {
       this.showAlert('Atención', 'Espere la creación del borrador para agregar servicios.', 'warning');
       return;
     }
-    if (this.form.estado === 'CON' || this.form.estado === 'CAN') {
-      this.showAlert('Atención', 'No se pueden modificar servicios en una reserva confirmada o anulada.', 'warning');
+    
+    if (this.form.estado === 'CAN') {
+      this.showAlert('Atención', 'No se pueden modificar servicios en una reserva anulada.', 'warning');
       return;
     }
+
     if (detalle) {
-      // Mapear campos de ReservaDetalle (API) a DetalleForm (modal)
+      // Mapear campos de ReservaDetalle (API) a DetalleForm (modal) preservando defaults (ej: tarifa='A').
+      const baseForm = buildInitialDetalleForm();
+
+      const origenGoogleText = extractGoogleDisplayText((detalle as any).PRV02_OrigenGoogle);
+      const destinoGoogleText = extractGoogleDisplayText((detalle as any).PRV02_DestinoGoogle);
+
+      const apiOrigenPlaceId = safeString(detalle.PRV02_OrigenPlaceId);
+      const apiDestinoPlaceId = safeString(detalle.PRV02_DestinoPlaceId);
+
+      const origenDireccionGoogle = origenGoogleText || (!this.isLikelyPlaceId(apiOrigenPlaceId) ? apiOrigenPlaceId : '');
+      const destinoDireccionGoogle = destinoGoogleText || (!this.isLikelyPlaceId(apiDestinoPlaceId) ? apiDestinoPlaceId : '');
       this.detalleForm = {
+        ...baseForm,
         codServicio: detalle.PRV02_CodServicio || '',
         nomServicio: detalle.PRV02_NomServicio || '',
         tipoServicio: detalle.PRV02_TipoServicio || '',
-        fechaServicio: this.toDateInputValue(detalle.PRV02_FecServicio) || this.detalleForm.fechaServicio || '',
-        horaPickup: '', // No hay campo directo en API, dejar vacío o mapear si existe
+        fechaServicio: toDateInputValue(detalle.PRV02_FecServicio) || baseForm.fechaServicio || '',
+        horaPickup: detalle.PRV02_HoraServicio || '',
         horaInicio: detalle.PRV02_HoraServicio || '',
-        adultos: detalle.PRV02_Adultos || 1,
+        adultos: detalle.PRV02_Adultos || baseForm.adultos,
         ninos: detalle.PRV02_Ninos || 0,
         totalPax: detalle.PRV02_TotalPax || 0,
         origenLugar: detalle.PRV02_OrigenTexto || '',
-        origenZona: '', // No hay campo directo en API
-        origenDireccionGoogle: '', // No hay campo directo en API
+        origenDireccionGoogle,
+        origenGoogle: safeJsonStringify((detalle as any).PRV02_OrigenGoogle),
         origenLat: detalle.PRV02_OrigenLat || 0,
         origenLng: detalle.PRV02_OrigenLng || 0,
-        origenPlaceId: detalle.PRV02_OrigenPlaceId || '',
+        // Ahora estos campos guardan el Place ID real (técnico).
+        origenPlaceId: this.isLikelyPlaceId(apiOrigenPlaceId) ? apiOrigenPlaceId : '',
         destinoLugar: detalle.PRV02_DestinoTexto || '',
-        destinoZona: '', // No hay campo directo en API
-        destinoDireccionGoogle: '', // No hay campo directo en API
+        destinoDireccionGoogle,
+        destinoGoogle: safeJsonStringify((detalle as any).PRV02_DestinoGoogle),
         destinoLat: detalle.PRV02_DestinoLat || 0,
         destinoLng: detalle.PRV02_DestinoLng || 0,
-        destinoPlaceId: detalle.PRV02_DestinoPlaceId || '',
-        tarifa: '', // No hay campo directo en API
+        destinoPlaceId: this.isLikelyPlaceId(apiDestinoPlaceId) ? apiDestinoPlaceId : '',
         costoNeto: detalle.PRV02_MontoServicio || 0,
         costoRack: (detalle.PRV02_PrecioAdulto || 0) + (detalle.PRV02_PrecioNino || 0) + (detalle.PRV02_PrecioPaxExtra || 0),
         montoServicio: detalle.PRV02_MontoServicio || 0,
-        estado: detalle.PRV02_Estado || 'Pendiente',
+        estado: detalle.PRV02_Estado || baseForm.estado,
         observaciones: detalle.PRV02_Observacion || ''
       };
       this.editingDetalleId = detalle.PRV02_ID;
     } else {
-      this.detalleForm = this.buildDetalleForm();
+      this.detalleForm = buildInitialDetalleForm();
       this.editingDetalleId = null;
       // this.recalcularCosto(); // El cálculo se puede hacer al guardar
     }
-    this.resetAutocompleteState();
+    this.allowManualPricing = false;
+    this.reglaTarifaError = '';
     this.showDetalleModal = true;
     if (!this.servicios.length) {
       this.cargarServicios();
     }
   }
 
+  /**
+   * Cierra el modal de detalle/servicio (sin persistir cambios del formulario local).
+   */
   cerrarModalDetalle(): void {
-    this.resetAutocompleteState();
     this.showDetalleModal = false;
   }
 
+  /**
+   * Dispara un recálculo "silencioso" del costo basado en reglas tarifarias,
+   * actualizando los campos calculados del `DetalleForm` cuando aplique.
+   */
   recalcularCosto(): void {
     void this.applyReglaTarifaToDetalleForm({ silent: true });
   }
 
-  onPlaceSelected(tipo: 'origen' | 'destino', selection: GooglePlaceSelection): void {
-    if (tipo === 'origen') {
-      this.detalleForm.origenDireccionGoogle = selection.formattedAddress;
-      this.detalleForm.origenLat = selection.lat;
-      this.detalleForm.origenLng = selection.lng;
-      this.detalleForm.origenPlaceId = selection.placeId;
-      this.origenAutocompleteMessage = '';
-    } else {
-      this.detalleForm.destinoDireccionGoogle = selection.formattedAddress;
-      this.detalleForm.destinoLat = selection.lat;
-      this.detalleForm.destinoLng = selection.lng;
-      this.detalleForm.destinoPlaceId = selection.placeId;
-      this.destinoAutocompleteMessage = '';
-    }
-    this.copyError = '';
-    this.copiedLink = null;
-    this.copyErrorTarget = null;
-  }
-
-  onPlaceSelectionError(tipo: 'origen' | 'destino', message: string): void {
-    const normalizedMessage =
-      message || 'Seleccione una opción del listado de Google para obtener coordenadas.';
-    if (tipo === 'origen') {
-      this.origenAutocompleteMessage = normalizedMessage;
-      this.detalleForm.origenPlaceId = '';
-      this.detalleForm.origenLat = 0;
-      this.detalleForm.origenLng = 0;
-    } else {
-      this.destinoAutocompleteMessage = normalizedMessage;
-      this.detalleForm.destinoPlaceId = '';
-      this.detalleForm.destinoLat = 0;
-      this.detalleForm.destinoLng = 0;
-    }
-    this.copyError = '';
-    this.copyErrorTarget = null;
-    this.copiedLink = null;
-  }
-
-  getMapsLink(tipo: 'origen' | 'destino'): string {
-    const lat = tipo === 'origen' ? this.detalleForm.origenLat : this.detalleForm.destinoLat;
-    const lng = tipo === 'origen' ? this.detalleForm.origenLng : this.detalleForm.destinoLng;
-    if (!this.hasCoordinates(lat, lng)) {
-      return '';
-    }
-    return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-  }
-
+  /**
+   * Construye un enlace de Google Maps para un detalle ya persistido (lista de servicios).
+   */
   getDetalleMapsLink(detalle: ReservaDetalle, tipo: 'origen' | 'destino'): string {
     const lat = tipo === 'origen' ? detalle.PRV02_OrigenLat : detalle.PRV02_DestinoLat;
     const lng = tipo === 'origen' ? detalle.PRV02_OrigenLng : detalle.PRV02_DestinoLng;
-    if (!this.hasCoordinates(lat, lng)) {
+    if (!hasCoordinates(lat, lng)) {
       return '';
     }
     return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
   }
 
-  async copyMapsLink(tipo: 'origen' | 'destino'): Promise<void> {
-    const link = this.getMapsLink(tipo);
-    const lat = tipo === 'origen' ? this.detalleForm.origenLat : this.detalleForm.destinoLat;
-    const lng = tipo === 'origen' ? this.detalleForm.origenLng : this.detalleForm.destinoLng;
-    if (!this.hasCoordinates(lat, lng) || !link) {
-      this.copyError = 'Seleccione una opción del listado de Google para obtener coordenadas.';
-      this.copyErrorTarget = tipo;
-      this.copiedLink = null;
-      return;
-    }
-
-    if (!navigator?.clipboard?.writeText) {
-      this.copyError = 'Copiado no disponible en este navegador.';
-      this.copyErrorTarget = tipo;
-      this.copiedLink = null;
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(link);
-      this.copyError = '';
-      this.copyErrorTarget = null;
-      this.copiedLink = tipo;
-      setTimeout(() => (this.copiedLink = null), 2000);
-    } catch {
-      this.copyError = 'No se pudo copiar el enlace. Intente manualmente.';
-      this.copyErrorTarget = tipo;
-      this.copiedLink = null;
-    }
-  }
-
+  /**
+   * Guarda (crea/actualiza) el detalle del servicio en backend.
+   * - Valida formulario del modal.
+   * - Aplica regla tarifaria antes de persistir (usa los precios resultantes).
+   * - Construye el payload esperado por `ReservaDetalleService`.
+   */
   async guardarDetalle(detalleFormRef: any): Promise<void> {
     if (detalleFormRef?.invalid) {
       detalleFormRef.control?.markAllAsTouched?.();
@@ -507,7 +526,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
 
     try {
       const reglaAplicada = await this.applyReglaTarifaToDetalleForm();
-      if (!reglaAplicada) {
+      if (!reglaAplicada && !this.allowManualPricing) {
         this.showAlert(
           'Atención',
           this.reglaTarifaError ||
@@ -517,7 +536,21 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         return;
       }
 
+      if (!reglaAplicada && this.allowManualPricing) {
+        const neto = Number(this.detalleForm.costoNeto ?? 0) || 0;
+        const rack = Number(this.detalleForm.costoRack ?? 0) || 0;
+        if (neto <= 0 && rack <= 0) {
+          this.showAlert('Atención', 'No hay regla tarifaria. Ingrese Costo Neto y/o Costo Rack para continuar.', 'warning');
+          return;
+        }
+      }
+
       const totalPax = (this.detalleForm.adultos || 0) + (this.detalleForm.ninos || 0);
+      const ninosCount = Number(this.detalleForm.ninos ?? 0) || 0;
+      const paxExtraCount =
+        this.reglaTarifaAplicada && typeof this.detalleForm.adultos === 'number'
+          ? computeAdultosExtra(this.detalleForm.adultos, this.reglaTarifaAplicada)
+          : 0;
       const existing = this.editingDetalleId ? this.detalles.find((d) => d.PRV02_ID === this.editingDetalleId) : null;
       const linea = existing?.PRV02_Linea ?? (this.detalles.length + 1);
       const montoServicio =
@@ -537,8 +570,11 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         horaServicio: this.detalleForm.horaPickup || this.detalleForm.horaInicio || '',
         origenTexto: this.detalleForm.origenLugar || '',
         destinoTexto: this.detalleForm.destinoLugar || '',
-        origenPlaceId: this.detalleForm.origenPlaceId || '',
-        destinoPlaceId: this.detalleForm.destinoPlaceId || '',
+        // Nuevos campos: guardar el JSON/metadata de Google y el Place ID real.
+        origenGoogle: (this.detalleForm.origenGoogle || '').toString(),
+        destinoGoogle: (this.detalleForm.destinoGoogle || '').toString(),
+        origenPlaceId: (this.detalleForm.origenPlaceId || '').toString(),
+        destinoPlaceId: (this.detalleForm.destinoPlaceId || '').toString(),
         origenLat: this.detalleForm.origenLat || 0,
         origenLng: this.detalleForm.origenLng || 0,
         destinoLat: this.detalleForm.destinoLat || 0,
@@ -549,8 +585,11 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         codLstPrecio: this.form.codLstPrecio || '',
         idReglaPrecio: this.reglaTarifaAplicada?.id ?? 0,
         precioAdulto: this.reglaTarifaAplicada?.precioBase ?? 0,
-        precioNino: this.reglaTarifaAplicada?.precioNino ?? 0,
-        precioPaxExtra: this.reglaTarifaAplicada?.precioAdultoExtra ?? 0,
+        // Si no hay niños, no se debe guardar precioNino.
+        precioNino: ninosCount > 0 ? this.reglaTarifaAplicada?.precioNino ?? 0 : 0,
+        // Si NO excede el máximo de la regla, no se debe guardar precioPaxExtra.
+        // Solo se envía cuando hay adultos extra (adultos > cantMaxPax).
+        precioPaxExtra: paxExtraCount > 0 ? this.reglaTarifaAplicada?.precioAdultoExtra ?? 0 : 0,
         montoServicio,
         codSuplidor: '',
         estado: (this.detalleForm.estado || 'PEN').toString(),
@@ -574,30 +613,83 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     }
   }
 
+  /**
+   * Elimina un detalle del backend y recarga la lista de detalles.
+   */
   eliminarDetalle(detalle: ReservaDetalle): void {
-    if (this.codReservaActual && detalle.PRV02_ID) {
-      this.detalleService.eliminarDetalle(detalle.PRV02_ID, this.codReservaActual).subscribe({
-        next: () => this.cargarDetalle(this.codReservaActual!),
+    if (this.form.estado !== 'PEN') {
+      this.showAlert('Atención', 'No se pueden eliminar servicios en una reserva confirmada o anulada.', 'warning');
+      return;
+    }
+
+    const codReserva = (this.codReservaActual || '').trim();
+    const id = Number((detalle as any)?.PRV02_ID);
+
+    if (!codReserva) {
+      this.showAlert('Atención', 'No hay una reserva creada para eliminar servicios.', 'warning');
+      return;
+    }
+    if (!Number.isFinite(id) || id <= 0) {
+      this.showAlert('Error', 'No se pudo identificar el detalle a eliminar.', 'error');
+      return;
+    }
+
+    Swal.fire({
+      title: `Eliminar servicio #${id} - ${codReserva}`,
+      text: 'Esta acción eliminará el servicio de la reserva. ¿Desea continuar?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (!result.isConfirmed) return;
+      this.detalleService.eliminarDetalle(id, codReserva).pipe(take(1)).subscribe({
+        next: () => this.cargarDetalle(codReserva),
         error: () => {
           this.showAlert('Error', 'No se pudo eliminar el detalle.', 'error');
         }
       });
-    }
+    });
   }
 
+  /**
+   * Guarda la reserva según estado:
+   * - CAN: bloquea cambios.
+   * - CON: guarda encabezado (sin reconfirmar) y vuelve al listado.
+   * - PEN: confirma con modal (guardar + confirmar).
+   */
   guardarReserva(formRef?: any): void {
-    // Nuevo UX: un solo botón ("Guardar cambios") que guarda y confirma (evita doble paso).
-    if (this.form.estado === 'CON' || this.form.estado === 'CAN') {
-      this.showAlert('Atención', 'No se puede confirmar una reserva confirmada o anulada.', 'warning');
+    // PEN: guardar + confirmar (flujo actual).
+    // CON: solo guardar cambios del encabezado (no reconfirma).
+    // CAN: no permite cambios.
+    if (this.form.estado === 'CAN') {
+      this.showAlert('Atención', 'La reserva está anulada y no puede modificarse.', 'warning');
       return;
     }
     if (formRef && formRef.invalid) {
-      formRef.control.markAllAsTouched();
+      this.showValidationErrors(formRef);
       return;
     }
     if (!this.codReservaActual) {
       this.showAlert('Atención', 'Espere la creación del borrador para guardar.', 'warning');
       this.crearBorrador();
+      return;
+    }
+
+    if (this.form.estado === 'CON') {
+      this.confirmando = true;
+      const payload = this.buildEncabezadoPayload('CON');
+      this.reservasService.actualizarReserva(this.codReservaActual, payload).subscribe({
+        next: () => {
+          this.confirmando = false;
+          this.showAlert('Éxito', 'Cambios guardados correctamente.', 'success');
+          setTimeout(() => this.router.navigate(['/operaciones/reservas']), 400);
+        },
+        error: () => {
+          this.confirmando = false;
+          this.showAlert('Error', 'No se pudieron guardar los cambios.', 'error');
+        }
+      });
       return;
     }
 
@@ -614,6 +706,11 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     });
   }
 
+  /**
+   * Confirma una reserva.
+   * - Primero guarda el encabezado actual (estado PEN) para confirmar con datos actualizados.
+   * - Luego llama al endpoint de confirmación y cambia estado a CON.
+   */
   confirmarReserva(formRef?: any): void {
     if (this.form.estado === 'CON') {
       this.showAlert('Información', 'La reserva ya está confirmada.', 'info');
@@ -624,7 +721,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       return;
     }
     if (formRef && formRef.invalid) {
-      formRef.control.markAllAsTouched();
+      this.showValidationErrors(formRef);
       return;
     }
     if (!this.codReservaActual) {
@@ -641,7 +738,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         this.reservasService.confirmarReserva(this.codReservaActual!).subscribe({
           next: () => {
             this.form.estado = 'CON';
-            this.clearDraftCod();
+            clearReservaCreateDraftCod();
             this.confirmando = false;
             this.showAlert('Éxito', 'Reserva confirmada correctamente.', 'success');
             setTimeout(() => this.router.navigate(['/operaciones/reservas']), 400);
@@ -659,10 +756,19 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     });
   }
 
+  /**
+   * Acción de "volver/cancelar" desde la UI. Delegado al flujo de salida controlada.
+   */
   cancelar(): void {
     void this.requestExit('toListado');
   }
 
+  /**
+   * Hook del guard CanDeactivate:
+   * - Si está en borrador (PEN) y existe `codReservaActual`, bloquea navegación y dispara flujo
+   *   de decisión (guardar borrador / seguir editando / descartar).
+   * - En otros estados permite salir.
+   */
   canDeactivate(_nextUrl?: string): boolean | Promise<boolean> {
     // Esta navegación ocurre desde el propio componente para estabilizar la URL (nueva -> editar).
     // No debe disparar el flujo de salida/cancelación.
@@ -682,6 +788,10 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     return false;
   }
 
+  /**
+   * Navegación interna del componente que no debe disparar el flujo CanDeactivate.
+   * Se usa para "estabilizar" la URL (nueva -> /editar) sin warnings/loops.
+   */
   private navigateInternal(commands: any[], extras?: any): void {
     this.internalNavigation = true;
     void this.router.navigate(commands, extras).finally(() => {
@@ -689,6 +799,12 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     });
   }
 
+  /**
+   * Flujo central de salida desde el componente cuando hay un borrador (PEN):
+   * - Si el borrador no tiene detalle, elimina automáticamente el borrador en backend.
+   * - Si tiene detalle (o no se pudo verificar), muestra un modal de decisión.
+   * Retorna si se debe permitir la navegación.
+   */
   private async requestExit(mode: 'toListado' | 'allowNext'): Promise<boolean> {
     if (this.allowNavigation) return true;
     if (this.cancelDecisionBusy) return false;
@@ -727,7 +843,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       try {
         await firstValueFrom(this.reservasService.eliminarReservaBorrador(codReserva).pipe(take(1)));
         this.cancelDecisionBusy = false;
-        this.clearDraftCod();
+        clearReservaCreateDraftCod();
         if (mode === 'toListado') {
           this.navigateToListado();
           return false;
@@ -749,6 +865,10 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     return shouldAllow;
   }
 
+  /**
+   * Variante del flujo de salida cuando la navegación viene por URL destino (guard).
+   * Evita promesas largas dentro del guard: cancela la navegación y maneja la salida fuera.
+   */
   private startExitToUrl(targetUrl: string): void {
     if (this.cancelDecisionBusy) return;
     if (this.showCancelDecisionModal) return;
@@ -777,7 +897,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         try {
           await firstValueFrom(this.reservasService.eliminarReservaBorrador(codReserva).pipe(take(1)));
           this.cancelDecisionBusy = false;
-          this.clearDraftCod();
+          clearReservaCreateDraftCod();
           this.allowNavigation = true;
           void this.router.navigateByUrl(targetUrl);
           return;
@@ -796,6 +916,9 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     })();
   }
 
+  /**
+   * Abre el modal de decisión para borrador (PEN) con un mensaje contextual (cantidad de servicios).
+   */
   private openCancelDecisionModal(detalleCount: number | null, verifyFailed = false): void {
     this.cancelDecisionTitle = 'Reserva en borrador (PEN)';
     if (verifyFailed) {
@@ -810,6 +933,10 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     this.showCancelDecisionModal = true;
   }
 
+  /**
+   * Abre el modal de decisión y devuelve una Promise que se resuelve cuando el usuario elige una opción.
+   * Se usa para coordinar CanDeactivate con una UI no bloqueante.
+   */
   private openCancelDecisionModalAndWait(detalleCount: number | null, verifyFailed = false): Promise<boolean> {
     if (this.pendingExitPromise) {
       return this.pendingExitPromise;
@@ -822,6 +949,11 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     return this.pendingExitPromise;
   }
 
+  /**
+   * Opción del modal: "Guardar borrador".
+   * - Persiste encabezado en backend como PEN.
+   * - Luego permite/dirige la navegación pendiente según el modo.
+   */
   onCancelDecisionGuardarBorrador(): void {
     const codReserva = this.codReservaActual;
     if (!codReserva) {
@@ -859,7 +991,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         this.resolvePendingExit(false);
 
         if (mode === 'toUrl' && url) {
-          this.clearDraftCod();
+          clearReservaCreateDraftCod();
           this.allowNavigation = true;
           void this.router.navigateByUrl(url);
           return;
@@ -874,6 +1006,9 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     });
   }
 
+  /**
+   * Opción del modal: "Seguir editando". Cierra el modal y mantiene al usuario en la pantalla.
+   */
   onCancelDecisionSeguirEditando(): void {
     if (this.cancelDecisionBusy) return;
     this.showCancelDecisionModal = false;
@@ -882,6 +1017,11 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     this.resolvePendingExit(false);
   }
 
+  /**
+   * Opción del modal: "Descartar reserva".
+   * - Elimina el borrador en backend.
+   * - Limpia el draft en storage y vuelve al listado (o permite navegación pendiente).
+   */
   onCancelDecisionDescartar(): void {
     const codReserva = this.codReservaActual;
     if (!codReserva) {
@@ -904,7 +1044,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         this.pendingExitMode = null;
         this.pendingExitUrl = null;
 
-        this.clearDraftCod();
+        clearReservaCreateDraftCod();
 
         if (mode === 'allowNext') {
           this.allowNavigation = true;
@@ -930,12 +1070,18 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     });
   }
 
+  /**
+   * Navega al listado de reservas y habilita la navegación (salida controlada).
+   */
   private navigateToListado(): void {
     this.allowNavigation = true;
-    this.clearDraftCod();
+    clearReservaCreateDraftCod();
     this.router.navigate(['/reservas']);
   }
 
+  /**
+   * Resuelve el "pending exit" (promise) del flujo CanDeactivate y limpia flags internos.
+   */
   private resolvePendingExit(allow: boolean): void {
     const resolve = this.pendingExitResolver;
     this.pendingExitResolver = null;
@@ -945,46 +1091,16 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     if (resolve) resolve(allow);
   }
 
+  /**
+   * Abre el modal de selección de cliente (agencia/comisionista).
+   */
   abrirModalClientes(): void {
     this.showClienteModal = true;
-    this.clientePage = 1;
-    this.buscarClientes();
   }
 
-  cerrarModalClientes(): void {
-    this.showClienteModal = false;
-  }
-
-  buscarClientes(): void {
-    this.clientesLoading = true;
-    this.clienteService.getClientes(this.clientePage, this.clientePageSize, this.clienteSearchTerm).subscribe({
-      next: (res) => {
-        this.clientes = res.data ?? [];
-        this.clienteTotalRegistros = res.totalRegistros ?? 0;
-        this.clienteTotalPages = res.totalPages ?? 1;
-        this.clientesLoading = false;
-      },
-      error: () => {
-        this.clientes = [];
-        this.clienteTotalRegistros = 0;
-        this.clienteTotalPages = 1;
-        this.clientesLoading = false;
-      }
-    });
-  }
-
-  limpiarBusquedaClientes(): void {
-    this.clienteSearchTerm = '';
-    this.clientePage = 1;
-    this.buscarClientes();
-  }
-
-  seleccionarCliente(cliente: ClienteUI): void {
-    this.form.codAgencia = cliente.codigo;
-    this.selectedCliente = cliente;
-    this.showClienteModal = false;
-  }
-
+  /**
+   * Carga catálogo de servicios para el selector del modal de detalle.
+   */
   cargarServicios(): void {
     this.serviciosLoading = true;
     this.serviciosService.getServicios(1, 1, 200).subscribe({
@@ -999,16 +1115,26 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     });
   }
 
+  /**
+   * Aplica la selección de un servicio desde el catálogo al formulario del modal.
+   */
   seleccionarServicio(servicio: ServicioUI): void {
     this.detalleForm.codServicio = servicio.codReceta;
     this.detalleForm.nomServicio = servicio.nomReceta;
     this.detalleForm.tipoServicio = servicio.codGrupo || servicio.codCateg || '';
   }
 
+  /**
+   * Handler del cambio de servicio en el modal:
+   * - Actualiza nombre/tipo de servicio en `DetalleForm`.
+   * - Dispara recálculo de costo (reglas tarifarias).
+   */
   onServicioChange(codServicio: string): void {
     const servicio = this.servicios.find((item) => item.codReceta === codServicio);
     if (servicio) {
       this.seleccionarServicio(servicio);
+      this.allowManualPricing = false;
+      this.reglaTarifaError = '';
       this.recalcularCosto();
       return;
     }
@@ -1016,41 +1142,52 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     this.detalleForm.tipoServicio = '';
     this.reglaTarifaAplicada = null;
     this.reglaTarifaError = '';
+    this.allowManualPricing = false;
   }
 
+  /**
+   * Limpia la agencia/comisionista seleccionada del encabezado.
+   */
   limpiarSeleccionCliente(): void {
     this.form.codAgencia = '';
     this.selectedCliente = null;
   }
 
-  paginaAnteriorClientes(): void {
-    if (this.clientePage > 1) {
-      this.clientePage -= 1;
-      this.buscarClientes();
-    }
+  /**
+   * Recibe el cliente elegido desde el componente modal y lo aplica al encabezado.
+   */
+  onClienteSelected(cliente: ClienteUI): void {
+    this.form.codAgencia = cliente.codigo;
+    this.selectedCliente = cliente;
+    this.showClienteModal = false;
   }
 
-  paginaSiguienteClientes(): void {
-    if (this.clientePage < this.clienteTotalPages) {
-      this.clientePage += 1;
-      this.buscarClientes();
-    }
-  }
-
+  /**
+   * Total neto calculado a partir de `PRV02_MontoServicio` en los detalles.
+   */
   get totalNeto(): number {
     // Sumar PRV02_MontoServicio de los detalles
     return this.detalles.reduce((sum, d) => sum + (d.PRV02_MontoServicio || 0), 0);
   }
 
+  /**
+   * Total rack calculado sumando componentes de precio del detalle.
+   */
   get totalRack(): number {
     // Sumar PRV02_PrecioAdulto + PRV02_PrecioNino + PRV02_PrecioPaxExtra de los detalles
     return this.detalles.reduce((sum, d) => sum + ((d.PRV02_PrecioAdulto || 0) + (d.PRV02_PrecioNino || 0) + (d.PRV02_PrecioPaxExtra || 0)), 0);
   }
 
+  /**
+   * Cantidad de servicios agregados a la reserva.
+   */
   get cantidadServicios(): number {
     return this.detalles.length;
   }
 
+  /**
+   * Etiqueta de estado de reserva para UI.
+   */
   get estadoLabel(): string {
     switch (this.form.estado) {
       case 'CON':
@@ -1062,6 +1199,9 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     }
   }
 
+  /**
+   * Clase CSS del badge de estado para UI.
+   */
   get estadoBadgeClass(): string {
     switch (this.form.estado) {
       case 'CON':
@@ -1073,76 +1213,30 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     }
   }
 
-  private resetAutocompleteState(): void {
-    this.origenAutocompleteMessage = '';
-    this.destinoAutocompleteMessage = '';
-    this.copiedLink = null;
-    this.copyError = '';
-    this.copyErrorTarget = null;
-  }
-
+  /**
+   * Wrapper de alertas para estandarizar UX y evitar warnings de foco/aria cuando hay modales abiertos.
+   */
   private showAlert(title: string, text: string, icon: 'success' | 'error' | 'warning' | 'info'): void {
-    // SweetAlert2 aplica `aria-hidden="true"` sobre el app mientras el popup está abierto.
-    // Si un modal interno (Bootstrap) mantiene el foco, el navegador reporta el warning de aria-hidden.
-    // Mitigación: mover el foco fuera del modal antes de abrir SweetAlert2.
-    const active = (document?.activeElement as HTMLElement | null) ?? null;
-    const shouldRestoreFocus = !!active && typeof active.focus === 'function';
-    try {
-      active?.blur?.();
-    } catch {
-      // ignore
-    }
-
-    Swal.fire({ title, text, icon }).then(() => {
-      // Restaurar foco solo si el elemento sigue en el DOM y algún modal sigue abierto.
-      if (!shouldRestoreFocus) return;
-      if (!active?.isConnected) return;
-      if (!(this.showDetalleModal || this.showClienteModal || this.showCancelDecisionModal)) return;
-      try {
-        active.focus();
-      } catch {
-        // ignore
-      }
+    showAlertWithFocusRestore({
+      title,
+      text,
+      icon,
+      shouldRestoreFocus: () => this.showDetalleModal || this.showClienteModal || this.showCancelDecisionModal
     });
   }
 
-  private hasCoordinates(lat?: number, lng?: number): boolean {
-    return (
-      typeof lat === 'number' &&
-      typeof lng === 'number' &&
-      Number.isFinite(lat) &&
-      Number.isFinite(lng) &&
-      !(lat === 0 && lng === 0)
-    );
-  }
-
-  private normalizeEstado(estado: string): ReservaEstado {
-    const v = (estado || '').toString().trim().toUpperCase();
-    if (v === 'PEN' || v === 'PENDIENTE') return 'PEN';
-    if (v === 'CON' || v === 'CONFIRMADA' || v === 'CONFIRMADO') return 'CON';
-    if (v === 'CAN' || v === 'ANULADA' || v === 'ANULADO') return 'CAN';
-    return 'PEN';
-  }
-
-  private extractCodReserva(res: any): string | null {
-    // La API puede devolver PRV01_CodReserva o { datos: [{ CodReserva: '...' }] }
-    return (
-      res?.PRV01_CodReserva ||
-      res?.CodReserva ||
-      res?.datos?.[0]?.CodReserva ||
-      res?.datos?.[0]?.PRV01_CodReserva ||
-      null
-    );
-  }
-
+  /**
+   * Construye el payload de encabezado esperado por la API/servicio de reservas.
+   * Nota: `totalRsv` se envía como `totalRack` (regla de negocio actual).
+   */
   private buildEncabezadoPayload(estado: ReservaEstado): any {
     return {
       codAgencia: this.form.codAgencia,
       nomCliente: this.form.nomCliente,
       telCliente: this.form.telCliente,
       emailCliente: this.form.emailCliente,
-      idioma: this.form.idioma,
-      formaReserva: this.form.formaReservacion,
+      idioma: (this.form.idioma || '').trim(),
+      formaReserva: (this.form.formaReservacion || '').trim(),
       formaPago: this.form.formaPago,
       estado,
       observacion: this.form.comentarios,
@@ -1154,132 +1248,133 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     };
   }
 
+  /**
+   * Obtiene el usuario/operador actual desde AuthService.
+   */
   private getOperador(): string {
     return this.authService.getCurrentUser()?.usuario ?? '';
   }
 
-  private getDraftCod(): string | null {
+  /**
+   * Marca todos los controles como touched y muestra un resumen de campos requeridos faltantes.
+   */
+  private showValidationErrors(formRef: any): void {
     try {
-      const v = sessionStorage.getItem(ReservaCreateComponent.DRAFT_STORAGE_KEY);
-      return v && v.trim() ? v.trim() : null;
+      formRef?.control?.markAllAsTouched?.();
     } catch {
-      return null;
+      // ignore
     }
+
+    const labels: Record<string, string> = {
+      codAgencia: 'Agencia / Comisionista',
+      codLstPrecio: 'Lista de Precios',
+      nomCliente: 'Cliente Final',
+      idioma: 'Idioma',
+      formaReservacion: 'Forma de Reservación',
+      formaPago: 'Forma de Pago',
+      moneda: 'Moneda'
+    };
+
+    const controls = (formRef?.controls ?? {}) as Record<string, any>;
+    const missing = Object.keys(controls)
+      .filter((key) => controls[key]?.invalid)
+      .map((key) => labels[key] ?? key);
+
+    const unique = Array.from(new Set(missing));
+    if (!unique.length) return;
+    this.showAlert('Validación', `Revise los campos requeridos: ${unique.join(', ')}.`, 'warning');
   }
 
-  private setDraftCod(codReserva: string): void {
-    try {
-      if (codReserva && codReserva.trim()) {
-        sessionStorage.setItem(ReservaCreateComponent.DRAFT_STORAGE_KEY, codReserva.trim());
+  /**
+   * Cuando el encabezado viene con `idioma` como ID numérico, resuelve el código consultando por ID
+   * y actualiza el catálogo local (merge sin duplicados).
+   */
+  private resolveIdiomaCodigoFromId(idIdioma: number): void {
+    if (!Number.isFinite(idIdioma) || idIdioma <= 0) return;
+    this.idiomasService.getById(idIdioma).pipe(take(1)).subscribe({
+      next: (idioma) => {
+        if (!idioma) return;
+        this.idiomas = this.mergeIdiomas([idioma, ...(this.idiomas ?? [])]);
+        this.form.idioma = (idioma.CA53_Codigo ?? '').trim();
+      },
+      error: () => {
+        // ignore
       }
-    } catch {
-      // ignore
-    }
+    });
   }
 
-  private clearDraftCod(): void {
-    try {
-      sessionStorage.removeItem(ReservaCreateComponent.DRAFT_STORAGE_KEY);
-    } catch {
-      // ignore
-    }
+  /**
+   * Cuando el encabezado viene con `formaReservacion` como ID numérico, resuelve el código consultando por ID
+   * y actualiza el catálogo local (merge sin duplicados).
+   */
+  private resolveFormaReservacionCodigoFromId(idFormaReservacion: number): void {
+    if (!Number.isFinite(idFormaReservacion) || idFormaReservacion <= 0) return;
+    this.formaReservasService.getById(idFormaReservacion).pipe(take(1)).subscribe({
+      next: (forma) => {
+        if (!forma) return;
+        this.formasReservacion = this.mergeFormasReservacion([forma, ...(this.formasReservacion ?? [])]);
+        this.form.formaReservacion = (forma.CA54_Codigo ?? '').trim();
+      },
+      error: () => {
+        // ignore
+      }
+    });
   }
 
-  private generateDetalleId(): number {
-    // Usar el máximo PRV02_ID existente + 1
-    const ids = this.detalles.map(d => d.PRV02_ID);
-    const maxId = ids.length ? Math.max(...ids) : 0;
-    return maxId + 1;
+  /**
+   * Une idiomas (sin duplicados por ID) y ordena por clave (código + nombre).
+   */
+  private mergeIdiomas(items: IdiomaDto[]): IdiomaDto[] {
+    const mapById = new Map<number, IdiomaDto>();
+    for (const item of items ?? []) {
+      if (!item) continue;
+      const id = Number(item.CA53_IdIdioma);
+      if (!Number.isFinite(id) || id <= 0) continue;
+      mapById.set(id, item);
+    }
+    return Array.from(mapById.values()).sort((a, b) => {
+      const aKey = `${(a.CA53_Codigo || '').trim()} ${(a.CA53_Nombre || '').trim()}`.trim().toUpperCase();
+      const bKey = `${(b.CA53_Codigo || '').trim()} ${(b.CA53_Nombre || '').trim()}`.trim().toUpperCase();
+      return aKey.localeCompare(bKey);
+    });
   }
 
-  private buildInitialForm(): ReservaCreateForm {
-    const today = new Date().toISOString().split('T')[0];
-    return {
-      fecha: today,
-      codAgencia: '',
-      nomCliente: '',
-      telCliente: '',
-      emailCliente: '',
-      idioma: 'Español',
-      formaReservacion: 'Correo Electrónico',
-      formaPago: '',
-      codLstPrecio: '',
-      moneda: '',
-      estado: 'PEN',
-      totalRsv: 0,
-      comentarios: ''
-    };
+  /**
+   * Une formas de reservación (sin duplicados por ID) y ordena por clave (código + descripción).
+   */
+  private mergeFormasReservacion(items: FormaReservaDto[]): FormaReservaDto[] {
+    const mapById = new Map<number, FormaReservaDto>();
+    for (const item of items ?? []) {
+      if (!item) continue;
+      const id = Number(item.CA54_IdFormaReservacion);
+      if (!Number.isFinite(id) || id <= 0) continue;
+      mapById.set(id, item);
+    }
+    return Array.from(mapById.values()).sort((a, b) => {
+      const aKey = `${(a.CA54_Codigo || '').trim()} ${(a.CA54_Descripcion || '').trim()}`.trim().toUpperCase();
+      const bKey = `${(b.CA54_Codigo || '').trim()} ${(b.CA54_Descripcion || '').trim()}`.trim().toUpperCase();
+      return aKey.localeCompare(bKey);
+    });
   }
 
-  private buildDetalleForm(): DetalleForm {
-    const today = new Date().toISOString().split('T')[0];
-    return {
-      codServicio: '',
-      nomServicio: '',
-      tipoServicio: '',
-      fechaServicio: today,
-      horaPickup: '',
-      horaInicio: '',
-      adultos: 1,
-      ninos: 0,
-      totalPax: 0,
-      origenLugar: '',
-      origenZona: '',
-      origenDireccionGoogle: '',
-      origenLat: 0,
-      origenLng: 0,
-      origenPlaceId: '',
-      destinoLugar: '',
-      destinoZona: '',
-      destinoDireccionGoogle: '',
-      destinoLat: 0,
-      destinoLng: 0,
-      destinoPlaceId: '',
-      tarifa: 'A',
-      costoNeto: 0,
-      costoRack: 0,
-      montoServicio: 0,
-      estado: 'Pendiente',
-      observaciones: ''
-    };
-  }
-
-  private toDateInputValue(value: unknown): string {
-    if (!value) {
-      return '';
-    }
-
-    if (value instanceof Date) {
-      return Number.isNaN(value.getTime()) ? '' : value.toISOString().slice(0, 10);
-    }
-
-    const raw = String(value).trim();
-    if (!raw) {
-      return '';
-    }
-
-    const isoLike = raw.match(/^(\d{4})[-/](\d{2})[-/](\d{2})/);
-    if (isoLike) {
-      return `${isoLike[1]}-${isoLike[2]}-${isoLike[3]}`;
-    }
-
-    // Formato común en sistemas ES: dd/MM/yyyy
-    const dmy = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-    if (dmy) {
-      return `${dmy[3]}-${dmy[2]}-${dmy[1]}`;
-    }
-
-    const parsed = new Date(raw);
-    return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString().slice(0, 10);
-  }
-
+  /**
+   * Handler cuando cambia la lista de precios en el encabezado:
+   * - Limpia caché de reglas tarifarias.
+   * - Si el modal de detalle está abierto, recalcula costo con la nueva lista.
+   */
   onListaPrecioChange(): void {
-    this.reglasTarifaCache.clear();
+    this.tarifaService.clearCache();
+    this.allowManualPricing = false;
+    this.reglaTarifaError = '';
     if (this.showDetalleModal) {
       this.recalcularCosto();
     }
   }
 
+  /**
+   * Aplica reglas tarifarias al `DetalleForm` actual (si el modal está abierto).
+   * Actualiza `reglaTarifaAplicada`, `reglaTarifaError` y campos calculados (costo/monto).
+   */
   private async applyReglaTarifaToDetalleForm(options?: { silent?: boolean }): Promise<boolean> {
     if (!this.showDetalleModal) return false;
 
@@ -1291,6 +1386,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     if (!codLstPrecio || !codServicio || !tarifa) {
       this.reglaTarifaAplicada = null;
       this.reglaTarifaError = '';
+      this.allowManualPricing = false;
       return false;
     }
 
@@ -1300,133 +1396,58 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     this.detalleForm.totalPax = totalPax;
 
     const horaReferencia = (this.detalleForm.horaPickup || this.detalleForm.horaInicio || '').trim();
-    if (!horaReferencia) {
+    const result = await this.tarifaService.applyReglaTarifa({
+      codLstPrecio,
+      codServicio,
+      tarifa,
+      adultos,
+      ninos,
+      horaPickup: horaReferencia,
+      moneda
+    });
+
+    if (result.ok === false) {
       this.reglaTarifaAplicada = null;
-      this.reglaTarifaError = 'Debe indicar la hora Pick-Up para aplicar la tarifa.';
+      this.reglaTarifaError = result.error || '';
+
+      // Solo habilitamos edición manual cuando el problema es "no hay coincidencia" de reglas.
+      // Si falta hora o es inválida, se mantiene bloqueado para que el usuario corrija inputs primero.
+      const isNoMatch =
+        !!result.error &&
+        (result.error.includes('No hay una regla tarifaria') || result.error.includes('No se pudo seleccionar una regla'));
+      this.allowManualPricing = isNoMatch;
+
+      if (this.allowManualPricing) {
+        // En creación, limpiamos montos para evitar dejar valores viejos que no corresponden.
+        // En edición, preservamos montos existentes (solo habilitamos edición).
+        if (!this.editingDetalleId) {
+          this.detalleForm.costoRack = 0;
+          this.detalleForm.costoNeto = 0;
+          this.detalleForm.montoServicio = 0;
+        }
+      }
       return false;
     }
 
-    const horaMin = this.timeToMinutes(horaReferencia);
-    if (horaMin == null) {
-      this.reglaTarifaAplicada = null;
-      this.reglaTarifaError = 'Hora Pick-Up inválida.';
-      return false;
-    }
-
-    const reglas = await this.getReglasTarifa(codLstPrecio, codServicio);
-    const candidatas = (reglas ?? [])
-      .filter((r) => !!r.activa)
-      .filter((r) => !moneda || (r.moneda || '').trim().toUpperCase() === moneda)
-      .filter((r) => (r.tarifa || '').toString().toUpperCase() === tarifa)
-      .filter((r) => this.matchAdultosEnRango(adultos, r.cantMinPax, r.cantMaxPax))
-      .filter((r) => this.matchHoraEnRango(horaMin, r.horaInicio, r.horaFin));
-
-    if (!candidatas.length) {
-      this.reglaTarifaAplicada = null;
-      this.reglaTarifaError = 'No hay una regla tarifaria que coincida con adultos y hora Pick-Up.';
-      return false;
-    }
-
-    const selected = this.pickMostSpecificRegla(candidatas);
-    if (!selected) {
-      this.reglaTarifaAplicada = null;
-      this.reglaTarifaError = 'No se pudo seleccionar una regla tarifaria.';
-      return false;
-    }
-
-    const incluidos = Number(selected.cantMinPax ?? 0) || 0;
-    const paxExtra = Math.max(0, adultos - Math.max(0, incluidos));
-    const montoServicio =
-      (Number(selected.precioBase ?? 0) || 0) +
-      (ninos * (Number(selected.precioNino ?? 0) || 0)) +
-      (paxExtra * (Number(selected.precioAdultoExtra ?? 0) || 0));
-
-    this.reglaTarifaAplicada = selected;
+    this.reglaTarifaAplicada = result.regla;
     this.reglaTarifaError = '';
+    this.allowManualPricing = false;
 
-    this.detalleForm.costoRack = montoServicio;
-    this.detalleForm.costoNeto = montoServicio;
-    this.detalleForm.montoServicio = montoServicio;
+    this.detalleForm.costoRack = result.montoServicio;
+    this.detalleForm.costoNeto = result.montoServicio;
+    this.detalleForm.montoServicio = result.montoServicio;
 
     return true;
   }
 
-  private async getReglasTarifa(codLstPrecio: string, codServicio: string): Promise<ReglaTarifa[]> {
-    const key = `${codLstPrecio}::${codServicio}`;
-    const cached = this.reglasTarifaCache.get(key);
-    if (cached) return cached;
-
-    const reglas = await firstValueFrom(
-      this.reglasTarifariasService.getByListaPrecioAndServicio(codLstPrecio, codServicio).pipe(take(1))
-    );
-    const normalized = (reglas ?? []).filter((r) => (r.codLstPrecio || '').trim() === codLstPrecio);
-    this.reglasTarifaCache.set(key, normalized);
-    return normalized;
-  }
-
+  /**
+   * Determina la moneda a utilizar para filtrar reglas tarifarias:
+   * - Prioriza la moneda configurada en la lista de precios seleccionada.
+   * - Si no existe, usa la moneda del formulario.
+   */
   private getSelectedMonedaForReglas(): string {
     const cod = (this.form.codLstPrecio || '').trim();
     const fromLista = this.listaPrecios.find((lp) => (lp.codigo || '').trim() === cod)?.moneda;
     return ((fromLista || this.form.moneda || '') as string).trim().toUpperCase();
-  }
-
-  private matchAdultosEnRango(adultos: number, min: number, max: number): boolean {
-    const minN = Number(min ?? 0) || 0;
-    const maxN = Number(max ?? 0) || 0;
-    if (minN > 0 && adultos < minN) return false;
-    if (maxN > 0 && adultos > maxN) return false;
-    return true;
-  }
-
-  // Rango horario: [desde, hasta) para evitar solapamientos (ej: 09:00 cae en la regla 09:00-10:00).
-  private matchHoraEnRango(horaMin: number, desde: string, hasta: string): boolean {
-    const start = this.timeToMinutes(desde);
-    const end = this.timeToMinutes(hasta);
-    if (start == null || end == null) return false;
-    return horaMin >= start && horaMin < end;
-  }
-
-  private timeToMinutes(value: string): number | null {
-    const v = (value || '').trim();
-    if (!v) return null;
-    const parts = v.split(':');
-    if (parts.length < 2) return null;
-    const hh = Number(parts[0]);
-    const mm = Number(parts[1]);
-    if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
-    if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
-    return hh * 60 + mm;
-  }
-
-  private pickMostSpecificRegla(reglas: ReglaTarifa[]): ReglaTarifa | null {
-    const sorted = [...(reglas ?? [])].sort((a, b) => {
-      const aMin = Number(a.cantMinPax ?? 0) || 0;
-      const aMax = Number(a.cantMaxPax ?? 0) || 0;
-      const bMin = Number(b.cantMinPax ?? 0) || 0;
-      const bMax = Number(b.cantMaxPax ?? 0) || 0;
-
-      const aWidth = aMax > 0 && aMin > 0 ? aMax - aMin : Number.POSITIVE_INFINITY;
-      const bWidth = bMax > 0 && bMin > 0 ? bMax - bMin : Number.POSITIVE_INFINITY;
-      if (aWidth !== bWidth) return aWidth - bWidth;
-
-      if (aMin !== bMin) return bMin - aMin;
-      if (aMax !== bMax) return aMax - bMax;
-
-      const aStart = this.timeToMinutes(a.horaInicio) ?? Number.POSITIVE_INFINITY;
-      const aEnd = this.timeToMinutes(a.horaFin) ?? Number.POSITIVE_INFINITY;
-      const bStart = this.timeToMinutes(b.horaInicio) ?? Number.POSITIVE_INFINITY;
-      const bEnd = this.timeToMinutes(b.horaFin) ?? Number.POSITIVE_INFINITY;
-      const aTimeWidth = Number.isFinite(aStart) && Number.isFinite(aEnd) ? aEnd - aStart : Number.POSITIVE_INFINITY;
-      const bTimeWidth = Number.isFinite(bStart) && Number.isFinite(bEnd) ? bEnd - bStart : Number.POSITIVE_INFINITY;
-      if (aTimeWidth !== bTimeWidth) return aTimeWidth - bTimeWidth;
-
-      const aDate = a.fechaRegistro ? new Date(a.fechaRegistro).getTime() : 0;
-      const bDate = b.fechaRegistro ? new Date(b.fechaRegistro).getTime() : 0;
-      if (aDate !== bDate) return bDate - aDate;
-
-      return (b.id ?? 0) - (a.id ?? 0);
-    });
-
-    return sorted[0] ?? null;
   }
 }

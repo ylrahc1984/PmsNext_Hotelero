@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from 'src/environments/environment';
@@ -7,11 +7,12 @@ import { environment } from 'src/environments/environment';
 export interface Reserva {
   PRV01_CodReserva: string;
   PRV01_CodAgencia: string;
+  MPV00_NomClien: string;
   PRV01_NomCliente: string;
   PRV01_TelCliente: string;
   PRV01_EmailCliente: string;
-  PRV01_Idioma: string;
-  PRV01_FormaReserva: string;
+  PRV01_Idioma: number | string;
+  PRV01_FormaReserva: number | string;
   PRV01_FormaPago: string;
   PRV01_CodLstPrecio: string;
   PRV01_CodPlan: string;
@@ -114,8 +115,45 @@ export class ReservasService {
       }));
   }
 
+  consultarReservas(options: {
+    fechaInicio?: string | null;
+    fechaFin?: string | null;
+    parametroBusqueda?: string | null;
+    pageNumber: number;
+    pageSize: number;
+  }): Observable<{ data: Reserva[]; total: number }> {
+    let params = new HttpParams()
+      .set('pageNumber', (options.pageNumber ?? 1).toString())
+      .set('pageSize', (options.pageSize ?? 10).toString());
+
+    const fechaInicio = (options.fechaInicio ?? '').toString().trim();
+    const fechaFin = (options.fechaFin ?? '').toString().trim();
+    const parametroBusqueda = (options.parametroBusqueda ?? '').toString().trim();
+
+    if (fechaInicio) params = params.set('fechaInicio', fechaInicio);
+    if (fechaFin) params = params.set('fechaFin', fechaFin);
+    if (parametroBusqueda) params = params.set('parametroBusqueda', parametroBusqueda);
+
+    return this.http.get<any>(`${this.apiUrl}/consulta`, { params }).pipe(
+      map((res) => {
+        const datos = res?.datos || [];
+        const total = res?.paginacion?.totalRegistros ?? datos.length;
+        return { data: datos, total };
+      })
+    );
+  }
+
   getReservaByCod(codReserva: string): Observable<Reserva> {
-    return this.http.get<Reserva>(`${this.apiUrl}?codReserva=${codReserva}`);
+    const encoded = encodeURIComponent((codReserva ?? '').toString().trim());
+    return this.http.get<any>(`${this.apiUrl}/codigo/${encoded}`).pipe(
+      map((res) => {
+        const item = res?.datos?.[0] ?? (Array.isArray(res) ? res[0] : res);
+        if (!item) {
+          throw new Error('Reserva no encontrada');
+        }
+        return item as Reserva;
+      })
+    );
   }
 
   crearReserva(payload: any): Observable<any> {

@@ -1,17 +1,20 @@
 ﻿<div class="row">
   <div class="col-12">
     <app-card cardTitle="Reserva">
-      <div class="d-flex justify-content-between align-items-center mb-3">
+      <div class="d-flex justify-content-between align-items-center mb-0 rsv-page-header">
         <div>
-          <div class="d-flex align-items-center flex-wrap gap-2">
+          <div class="d-flex align-items-center flex-wrap gap-1">
             <h5 class="mb-0">Nueva Reserva</h5>
             <span *ngIf="codReservaActual" class="badge bg-light text-dark border">#{{ codReservaActual }}</span>
             <span *ngIf="codReservaActual" class="badge text-white" [ngClass]="estadoBadgeClass">{{ estadoLabel }}</span>
           </div>
-          <p class="text-muted mb-0">Información general y servicios</p>
+          <p class="text-muted mb-0 small">Información general y servicios</p>
         </div>
-        <button class="btn btn-outline-secondary" (click)="cancelar()">
-          <i class="feather icon-chevron-left"></i> Volver
+        <button class="btn btn-outline-secondary rsv-action-btn rsv-action-btn--outline rsv-action-btn--compact" (click)="cancelar()">
+          <span class="rsv-action-btn__icon">
+            <i class="feather icon-chevron-left"></i>
+          </span>
+          <span>Volver</span>
         </button>
       </div>
 
@@ -39,7 +42,7 @@
                     <label class="form-label">Agencia / Comisionista <span class="text-danger">*</span></label>
                     <div class="input-group input-group-sm">
                       <input type="text" class="form-control" [(ngModel)]="form.codAgencia" name="codAgencia" required placeholder="Seleccione agencia" readonly>
-                      <button class="btn btn-outline-primary" type="button" (click)="abrirModalClientes()">
+                      <button class="btn btn-outline-primary btn-sm rsv-icon-btn" type="button" (click)="abrirModalClientes()" title="Buscar cliente">
                         <i class="feather icon-search"></i>
                       </button>
                     </div>
@@ -83,15 +86,24 @@
                     <input type="email" class="form-control form-control-sm" [(ngModel)]="form.emailCliente" name="emailCliente" placeholder="Correo de contacto">
                   </div>
                   <div class="col-md-4 mb-2">
-                    <label class="form-label">Idioma</label>
-                    <select class="form-control form-control-sm" [(ngModel)]="form.idioma" name="idioma">
-                      <option *ngFor="let idioma of idiomas" [ngValue]="idioma">{{ idioma }}</option>
+                    <label class="form-label">Idioma <span class="text-danger">*</span></label>
+                    <select class="form-control form-control-sm" [(ngModel)]="form.idioma" name="idioma" required>
+                      <option [ngValue]="''">Seleccione idioma</option>
+                      <option *ngFor="let idioma of idiomas" [ngValue]="idioma.CA53_Codigo">
+                        {{ idioma.CA53_Codigo }} - {{ idioma.CA53_Nombre }}{{ idioma.CA53_Activo ? '' : ' (Inactivo)' }}
+                      </option>
                     </select>
+                    <div class="text-danger small" *ngIf="reservaForm.submitted && reservaForm.controls.idioma?.invalid">
+                      Idioma es requerido.
+                    </div>
                   </div>
                   <div class="col-md-4 mb-2">
                     <label class="form-label">Forma de Reservación <span class="text-danger">*</span></label>
                     <select class="form-control form-control-sm" [(ngModel)]="form.formaReservacion" name="formaReservacion" required>
-                      <option *ngFor="let forma of formasReservacion" [ngValue]="forma">{{ forma }}</option>
+                      <option [ngValue]="''">Seleccione forma</option>
+                      <option *ngFor="let forma of formasReservacion" [ngValue]="forma.CA54_Codigo">
+                        {{ forma.CA54_Descripcion }}{{ forma.CA54_Activo ? '' : ' (Inactivo)' }}
+                      </option>
                     </select>
                     <div class="text-danger small" *ngIf="reservaForm.submitted && reservaForm.controls.formaReservacion?.invalid">
                       Forma de Reservación es requerida.
@@ -133,9 +145,21 @@
                       Moneda es requerida.
                     </div>
                   </div>
-                  <div class="col-12 mb-2">
-                    <label class="form-label">Total Reserva</label>
-                    <input type="text" class="form-control form-control-sm" [value]="form.totalRsv || totalRack | number:'1.0-0'" readonly>
+                  <div class="col-12 mb-4">
+                    <div class="rsv-total-reserva text-end" aria-label="Total Reserva">
+                      <div class="d-flex align-items-center justify-content-between gap-2">
+                        <div class="rsv-total-reserva__content">
+                          <div class="rsv-total-reserva__label">Total Reserva</div>
+                          <div class="rsv-total-reserva__value">
+                            {{ (form.totalRsv || totalRack) | number:'1.2-2' }}
+                            <span class="rsv-total-reserva__currency" *ngIf="form.moneda">{{ form.moneda }}</span>
+                          </div>
+                        </div>
+                        <div class="rsv-total-reserva__icon" aria-hidden="true" title="Total de la reserva">
+                          <i class="feather icon-credit-card"></i>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -151,8 +175,16 @@
                 <h6 class="mb-0">Servicios</h6>
                 <span class="badge bg-light text-dark border ms-2">{{ cantidadServicios }}</span>
               </div>
-              <button type="button" class="btn btn-sm btn-primary" (click)="abrirModalDetalle()" [disabled]="!codReservaActual || form.estado !== 'PEN'">
-                <i class="feather icon-plus me-1"></i> Agregar servicio
+              <button
+                type="button"
+                class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2 px-3 py-2"
+                (click)="abrirModalDetalle()"
+                [disabled]="!codReservaActual || form.estado !== 'PEN'"
+              >
+                <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-white bg-opacity-25" style="width: 22px; height: 22px;">
+                  <i class="feather icon-plus"></i>
+                </span>
+                <span>Agregar servicio</span>
               </button>
             </div>
 
@@ -165,12 +197,11 @@
                     <th>Servicio</th>
                     <th>Fecha</th>
                     <th>Origen (Lugar)</th>
-                    <th>Ubic. Origen (Zona / Mapa)</th>
+                    <th>(Origen / Mapa)</th>
                     <th>Destino (Lugar)</th>
-                    <th>Ubic. Destino (Zona / Mapa)</th>
+                    <th>(Destino / Mapa)</th>
                     <th>Pax</th>
-                    <th>Costo Rack</th>
-                    <th>Costo Neto</th>
+                    <th>Total</th>
                     <th class="text-end">Acciones</th>
                   </tr>
                 </thead>
@@ -180,10 +211,8 @@
                     <td class="text-nowrap">{{ detalle.PRV02_FecServicio | date:'dd/MM/yyyy' }}</td>
                 <td>
                   <div>{{ detalle.PRV02_OrigenTexto }}</div>
-                  <div class="text-muted small" *ngIf="detalle.PRV02_OrigenPlaceId">Place ID: {{ detalle.PRV02_OrigenPlaceId }}</div>
                 </td>
                 <td>
-                  <div class="text-muted small">Lat: {{ detalle.PRV02_OrigenLat }} - Lng: {{ detalle.PRV02_OrigenLng }}</div>
                   <a
                     *ngIf="getDetalleMapsLink(detalle, 'origen')"
                     class="text-primary small d-inline-flex align-items-center"
@@ -196,11 +225,9 @@
                   </a>
                 </td>
                 <td>
-                  <div>{{ detalle.PRV02_DestinoTexto }}</div>
-                  <div class="text-muted small" *ngIf="detalle.PRV02_DestinoPlaceId">Place ID: {{ detalle.PRV02_DestinoPlaceId }}</div>
+                  <div>{{ detalle.PRV02_DestinoTexto }}</div> 
                 </td>
                 <td>
-                  <div class="text-muted small">Lat: {{ detalle.PRV02_DestinoLat }} - Lng: {{ detalle.PRV02_DestinoLng }}</div>
                   <a
                     *ngIf="getDetalleMapsLink(detalle, 'destino')"
                     class="text-primary small d-inline-flex align-items-center"
@@ -213,14 +240,13 @@
                   </a>
                 </td>
                 <td>{{ detalle.PRV02_Adultos }} / {{ detalle.PRV02_Ninos }}</td>
-                <td>{{ ((detalle.PRV02_PrecioAdulto || 0) + (detalle.PRV02_PrecioNino || 0) + (detalle.PRV02_PrecioPaxExtra || 0)) | number:'1.0-0' }}</td>
-                <td>{{ detalle.PRV02_MontoServicio | number:'1.0-0' }}</td>
+                <td>{{ detalle.PRV02_MontoServicio | number:'1.2-2' }}</td>
                 <td>
-                  <div class="btn-group btn-group-sm d-flex justify-content-end">
-                    <button class="btn btn-outline-info" type="button" (click)="abrirModalDetalle(detalle)">
+                  <div class="d-flex justify-content-end gap-2">
+                    <button class="btn btn-outline-info btn-sm rsv-icon-btn" type="button" (click)="abrirModalDetalle(detalle)" title="Editar servicio">
                       <i class="feather icon-edit"></i>
                     </button>
-                    <button class="btn btn-outline-danger" type="button" (click)="eliminarDetalle(detalle)">
+                    <button class="btn btn-outline-danger btn-sm rsv-icon-btn" type="button" (click)="eliminarDetalle(detalle)" title="Eliminar servicio">
                       <i class="feather icon-trash"></i>
                     </button>
                   </div>
@@ -233,38 +259,24 @@
               </table>
             </div>
 
-            <div class="row g-2 mt-3">
-              <div class="col-md-4">
-                <div class="card shadow-none border h-100">
-                  <div class="card-body p-3">
-                    <div class="text-muted small">Total Neto</div>
-                    <div class="fs-5 fw-semibold">{{ totalNeto | number:'1.0-0' }}</div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="card shadow-none border h-100">
-                  <div class="card-body p-3">
-                    <div class="text-muted small">Total Rack</div>
-                    <div class="fs-5 fw-semibold">{{ totalRack | number:'1.0-0' }}</div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="card shadow-none border h-100">
-                  <div class="card-body p-3">
-                    <div class="text-muted small">Servicios</div>
-                    <div class="fs-5 fw-semibold">{{ cantidadServicios }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             <div class="d-flex justify-content-end gap-2 mt-3">
-              <button type="button" class="btn btn-outline-secondary" (click)="cancelar()">Cancelar</button>
-              <button type="button" class="btn btn-primary" (click)="guardarReserva(reservaForm)" [disabled]="!codReservaActual || confirmando || creandoBorrador || form.estado !== 'PEN'">
-                <span *ngIf="confirmando" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
-                Guardar cambios
+              <button type="button" class="btn btn-outline-secondary rsv-action-btn rsv-action-btn--outline" (click)="cancelar()">
+                <span class="rsv-action-btn__icon">
+                  <i class="feather icon-x"></i>
+                </span>
+                <span>Cancelar</span>
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary rsv-action-btn rsv-action-btn--primary"
+                (click)="guardarReserva(reservaForm)"
+                [disabled]="!codReservaActual || confirmando || creandoBorrador || form.estado === 'CAN'"
+              >
+                <span class="rsv-action-btn__icon">
+                  <span *ngIf="confirmando" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                  <i *ngIf="!confirmando" class="feather icon-save"></i>
+                </span>
+                <span>Guardar cambios</span>
               </button>
             </div>
           </div>
@@ -289,107 +301,31 @@
 ></app-decision-modal>
 
 <!-- Modal clientes -->
-<div class="modal fade" tabindex="-1" role="dialog" aria-modal="true" [ngClass]="{'show': showClienteModal, 'd-block': showClienteModal}" *ngIf="showClienteModal">
-  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <div>
-          <h5 class="modal-title mb-0">
-            <i class="feather icon-users me-1"></i>
-            Seleccionar Agencia / Comisionista
-          </h5>
-          <small class="text-muted">Busca y selecciona el cliente para asociarlo a la reserva.</small>
-        </div>
-        <button type="button" class="btn-close" aria-label="Close" (click)="cerrarModalClientes()"></button>
-      </div>
-      <div class="modal-body">
-        <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
-          <div class="input-group" style="min-width: 280px; flex: 1 1 360px;">
-            <span class="input-group-text"><i class="feather icon-search"></i></span>
-            <input
-              type="text"
-              class="form-control"
-              [(ngModel)]="clienteSearchTerm"
-              name="clienteSearchTerm"
-              placeholder="Buscar por código o nombre..."
-              autocomplete="off"
-              (keyup.enter)="buscarClientes()"
-            >
-            <button type="button" class="btn btn-primary" (click)="buscarClientes()" [disabled]="clientesLoading">
-              <span *ngIf="clientesLoading" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
-              Buscar
-            </button>
-          </div>
-          <button type="button" class="btn btn-outline-secondary" (click)="limpiarBusquedaClientes()" [disabled]="clientesLoading && !clienteSearchTerm">
-            <i class="feather icon-x me-1"></i>
-            Limpiar
-          </button>
-        </div>
-
-        <div class="table-responsive">
-          <table class="table table-hover align-middle mb-2">
-            <thead class="table-light">
-              <tr>
-                <th style="width: 140px;">Código</th>
-                <th>Nombre</th>
-                <th class="text-center" style="width: 140px;">Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let cliente of clientes">
-                <td>{{ cliente.codigo }}</td>
-                <td>{{ cliente.nombre }}</td>
-                <td class="text-center">
-                  <button
-                    class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
-                    type="button"
-                    (click)="seleccionarCliente(cliente)"
-                    [disabled]="clientesLoading"
-                    title="Seleccionar cliente"
-                  >
-                    <i class="feather icon-check"></i>
-                    <span>Elegir</span>
-                  </button>
-                </td>
-              </tr>
-              <tr *ngIf="clientes.length === 0 && !clientesLoading">
-                <td colspan="3" class="text-center text-muted">No hay resultados.</td>
-              </tr>
-              <tr *ngIf="clientesLoading">
-                <td colspan="3" class="text-center text-muted">
-                  <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
-                  Cargando...
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="d-flex justify-content-between align-items-center">
-          <small class="text-muted">Registros: {{ clienteTotalRegistros }} · Página {{ clientePage }} / {{ clienteTotalPages }}</small>
-          <div class="btn-group btn-group-sm">
-            <button class="btn btn-outline-secondary" type="button" (click)="paginaAnteriorClientes()" [disabled]="clientePage <= 1 || clientesLoading">
-              <i class="feather icon-chevron-left"></i>
-              <span class="ms-1">Anterior</span>
-            </button>
-            <button class="btn btn-outline-secondary" type="button" (click)="paginaSiguienteClientes()" [disabled]="clientePage >= clienteTotalPages || clientesLoading">
-              <span class="me-1">Siguiente</span>
-              <i class="feather icon-chevron-right"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" (click)="cerrarModalClientes()">Cerrar</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Modal backdrop -->
-<div class="modal-backdrop fade show" *ngIf="showClienteModal"></div>
+<app-reserva-create-cliente-modal
+  [open]="showClienteModal"
+  (close)="showClienteModal = false"
+  (clienteSelected)="onClienteSelected($event)"
+></app-reserva-create-cliente-modal>
 
 <!-- Modal detalle servicio -->
+<app-reserva-create-detalle-modal
+  [open]="showDetalleModal"
+  [editingDetalleId]="editingDetalleId"
+  [detalleForm]="detalleForm"
+  [tarifas]="tarifas"
+  [zonas]="zonas"
+  [servicios]="servicios"
+  [serviciosLoading]="serviciosLoading"
+  [reglaTarifaError]="reglaTarifaError"
+  [allowManualPricing]="allowManualPricing"
+  (close)="cerrarModalDetalle()"
+  (save)="guardarDetalle($event)"
+  (serviceChange)="onServicioChange($event)"
+  (recalculate)="recalcularCosto()"
+></app-reserva-create-detalle-modal>
+
+<!-- legacy: movido a app-reserva-create-detalle-modal -->
+<!--
 <div class="modal" tabindex="-1" role="dialog" [ngClass]="{'show': showDetalleModal}" *ngIf="showDetalleModal" style="display: block;">
   <div class="modal-dialog modal-lg" role="document">
     <div class="modal-content">
@@ -638,3 +574,4 @@
     </div>
   </div>
 </div>
+-->

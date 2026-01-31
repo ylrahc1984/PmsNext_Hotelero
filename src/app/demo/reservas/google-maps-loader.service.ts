@@ -52,11 +52,27 @@ export class GoogleMapsLoaderService {
 
       const existingScript = document.querySelector<HTMLScriptElement>('script[data-google-maps-loader]');
       if (existingScript) {
+        // Si el script ya fue cargado por otro loader, pero no tiene nuestra marca `data-loaded`,
+        // igual intentamos finalizar (evita quedar "colgado" esperando el evento load).
+        if (this.isGoogleMapsLoaded()) {
+          console.info('[GoogleMapsLoader] Script existente detectado y Google Maps ya disponible');
+          finalize();
+          return;
+        }
+
         if (existingScript.getAttribute('data-loaded') === 'true') {
           console.info('[GoogleMapsLoader] Script existente ya cargado');
           finalize();
           return;
         }
+
+        const readyState = (existingScript as any)?.readyState;
+        if (readyState === 'complete' || readyState === 'loaded') {
+          console.info('[GoogleMapsLoader] Script existente con readyState completo');
+          finalize();
+          return;
+        }
+
         existingScript.addEventListener('load', () => {
           console.info('[GoogleMapsLoader] Script existente finalizo carga');
           finalize();
