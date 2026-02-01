@@ -38,3 +38,104 @@ gmpx-place-autocomplete.places-autocomplete-themed {
   border: 1px solid #e5e7eb;
   display: block;
 }
+
+/* Estilos unificados de botones (acciones) */
+:root {
+  --app-btn-radius: 10px;
+}
+
+.btn {
+  border-radius: var(--app-btn-radius);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  line-height: 1.1;
+}
+
+.btn:not(.btn-sm):not(.btn-lg) {
+  padding: 0.55rem 0.9rem;
+}
+
+.btn.btn-sm {
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--app-btn-radius);
+}
+
+.btn.btn-lg {
+  border-radius: calc(var(--app-btn-radius) + 2px);
+}
+
+.btn > i {
+  margin-right: 0;
+}
+
+.btn.btn-primary {
+  box-shadow: 0 8px 18px rgba(13, 110, 253, 0.18);
+}
+
+.btn.btn-primary:disabled,
+.btn.btn-primary.disabled {
+  box-shadow: none;
+}
+
+.app-action-btn,
+.rsv-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.app-action-btn__icon,
+.rsv-action-btn__icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.app-action-btn--compact,
+.rsv-action-btn--compact {
+  padding: 0.42rem 0.75rem;
+}
+
+.app-action-btn--compact .app-action-btn__icon,
+.app-action-btn--compact .rsv-action-btn__icon,
+.rsv-action-btn--compact .app-action-btn__icon,
+.rsv-action-btn--compact .rsv-action-btn__icon {
+  width: 20px;
+  height: 20px;
+}
+
+.app-action-btn--primary .app-action-btn__icon,
+.app-action-btn--primary .rsv-action-btn__icon,
+.rsv-action-btn--primary .app-action-btn__icon,
+.rsv-action-btn--primary .rsv-action-btn__icon {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.app-action-btn--outline .app-action-btn__icon,
+.app-action-btn--outline .rsv-action-btn__icon,
+.rsv-action-btn--outline .app-action-btn__icon,
+.rsv-action-btn--outline .rsv-action-btn__icon {
+  background: rgba(108, 117, 125, 0.12);
+}
+
+.app-icon-btn,
+.rsv-icon-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: var(--app-btn-radius);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-icon-btn i,
+.rsv-icon-btn i {
+  font-size: 16px;
+}
