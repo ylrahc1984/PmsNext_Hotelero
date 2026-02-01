@@ -14,6 +14,8 @@ export interface ReservaDetalle {
   PRV02_HoraServicio: string;
   PRV02_OrigenTexto: string;
   PRV02_DestinoTexto: string;
+  PRV02_ZonaOrigen: string;
+  PRV02_ZonaDestino: string;
   PRV02_OrigenGoogle: any;
   PRV02_DestinoGoogle: any;
   PRV02_OrigenPlaceId: string;
@@ -80,6 +82,8 @@ export class ReservaDetalleService {
       horaServicio: p.horaServicio ?? '',
       origenTexto: p.origenTexto ?? '',
       destinoTexto: p.destinoTexto ?? '',
+      origenZona: p.origenZona ?? '',
+      destinoZona: p.destinoZona ?? '',
       origenGoogle: p.origenGoogle ?? '',
       destinoGoogle: p.destinoGoogle ?? '',
       origenPlaceId: p.origenPlaceId ?? '',

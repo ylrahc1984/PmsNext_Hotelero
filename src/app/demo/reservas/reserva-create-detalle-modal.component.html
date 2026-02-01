@@ -79,10 +79,15 @@
                     </div>
                     <div class="col-md-6 mb-2">
                       <label class="form-label">Zona <span class="text-danger">*</span></label>
-                      <select class="form-control form-control-sm" [(ngModel)]="detalleForm.origenZona" name="origenZona" required (change)="recalculate.emit()">
-                        <option value="">Seleccione zona</option>
-                        <option *ngFor="let zona of zonas" [ngValue]="zona">{{ zona }}</option>
-                      </select>
+                      <input
+                        type="text"
+                        class="form-control form-control-sm"
+                        [(ngModel)]="detalleForm.origenZona"
+                        name="origenZona"
+                        required
+                        placeholder="Digite la zona"
+                        (ngModelChange)="recalculate.emit()"
+                      >
                     </div>
                   </div>
 
@@ -150,10 +155,15 @@
                     </div>
                     <div class="col-md-6 mb-2">
                       <label class="form-label">Zona <span class="text-danger">*</span></label>
-                      <select class="form-control form-control-sm" [(ngModel)]="detalleForm.destinoZona" name="destinoZona" required (change)="recalculate.emit()">
-                        <option value="">Seleccione zona</option>
-                        <option *ngFor="let zona of zonas" [ngValue]="zona">{{ zona }}</option>
-                      </select>
+                      <input
+                        type="text"
+                        class="form-control form-control-sm"
+                        [(ngModel)]="detalleForm.destinoZona"
+                        name="destinoZona"
+                        required
+                        placeholder="Digite la zona"
+                        (ngModelChange)="recalculate.emit()"
+                      >
                     </div>
                   </div>
 
@@ -207,7 +217,7 @@
 
           <div class="row">
             <div class="col-md-4 mb-2">
-              <label class="form-label">Costo Neto</label>
+              <label class="form-label">Total Servicio</label>
               <input
                 type="number"
                 class="form-control form-control-sm"
@@ -217,19 +227,10 @@
                 (input)="onManualCostoChange()"
               >
             </div>
-            <div class="col-md-4 mb-2">
-              <label class="form-label">Costo Rack</label>
-              <input
-                type="number"
-                class="form-control form-control-sm"
-                [(ngModel)]="detalleForm.costoRack"
-                name="costoRack"
-                [readonly]="!allowManualPricing"
-              >
-            </div>
-            <div class="col-md-4 mb-2">
+ 
+            <div class="col-md-8 mb-2">
               <label class="form-label">Observaciones</label>
-              <textarea class="form-control form-control-sm" rows="1" [(ngModel)]="detalleForm.observaciones" name="observaciones"></textarea>
+              <textarea class="form-control form-control-lg" rows="1" [(ngModel)]="detalleForm.observaciones" name="observaciones"></textarea>
             </div>
           </div>
         </div>

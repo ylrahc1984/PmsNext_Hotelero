@@ -1,14 +1,274 @@
 <div class="row">
   <div class="col-12">
     <app-card cardTitle="Detalle de Reserva">
-      <p class="mb-0 text-muted">
-        Detalle de la reserva #{{ reservaId }}. Esta sección está preparada para futuros servicios y operaciones.
-      </p>
-      <div class="mt-3">
-        <button class="btn btn-secondary" routerLink="/operaciones/reservas">
-          <i class="feather icon-chevron-left"></i> Volver al listado
-        </button>
+      <div class="d-flex justify-content-between align-items-center mb-0 rsv-page-header">
+        <div>
+          <div class="d-flex align-items-center flex-wrap gap-1">
+            <h5 class="mb-0">Reserva</h5>
+            <span class="badge bg-light text-dark border" *ngIf="codReserva">#{{ codReserva }}</span>
+            <span class="badge text-white" *ngIf="reserva" [ngClass]="estadoBadgeClass">{{ estadoLabel }}</span>
+          </div>
+          <p class="text-muted mb-0 small">Resumen, totales y servicios</p>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+          <button class="btn btn-outline-secondary rsv-action-btn rsv-action-btn--outline rsv-action-btn--compact" routerLink="/operaciones/reservas">
+            <span class="rsv-action-btn__icon"><i class="feather icon-chevron-left"></i></span>
+            <span>Volver</span>
+          </button>
+
+          <button
+            class="btn btn-outline-primary rsv-action-btn rsv-action-btn--outline rsv-action-btn--compact"
+            type="button"
+            (click)="editarReserva()"
+            [disabled]="!codReserva"
+          >
+            <span class="rsv-action-btn__icon"><i class="feather icon-edit"></i></span>
+            <span>Editar</span>
+          </button>
+
+          <button
+            class="btn btn-outline-info rsv-action-btn rsv-action-btn--outline rsv-action-btn--compact"
+            type="button"
+            (click)="imprimirConfirmacion()"
+            [disabled]="!codReserva || busyPdf"
+          >
+            <span class="rsv-action-btn__icon">
+              <span *ngIf="busyPdf" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+              <i *ngIf="!busyPdf" class="feather icon-printer"></i>
+            </span>
+            <span>Confirmación PDF</span>
+          </button>
+        </div>
       </div>
+
+      <div *ngIf="loading" class="alert alert-info d-flex align-items-center mt-3" role="alert">
+        <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+        <span>Cargando detalle de la reserva...</span>
+      </div>
+
+      <div *ngIf="errorMsg" class="alert alert-danger mt-3" role="alert">
+        {{ errorMsg }}
+      </div>
+
+      <ng-container *ngIf="reserva as r">
+        <div class="row g-3 mt-1">
+          <div class="col-lg-8">
+            <div class="card shadow-none border h-100">
+              <div class="card-body p-3">
+                <div class="d-flex align-items-center mb-2">
+                  <i class="feather icon-file-text text-muted me-2"></i>
+                  <h6 class="mb-0">Datos Generales</h6>
+                </div>
+
+                <div class="row">
+                  <div class="col-md-6 mb-2">
+                    <div class="text-muted small">Agencia / Comisionista</div>
+                    <div class="fw-semibold">
+                      {{ r.PRV01_CodAgencia || '—' }}
+                      <span class="text-muted fw-normal" *ngIf="r.MPV00_NomClien">- {{ r.MPV00_NomClien }}</span>
+                    </div>
+                    <div class="text-muted small" *ngIf="!r.PRV01_CodAgencia && r.MPV00_NomClien">{{ r.MPV00_NomClien }}</div>
+                  </div>
+                  <div class="col-md-6 mb-2">
+                    <div class="text-muted small">Cliente Final</div>
+                    <div class="fw-semibold">{{ r.PRV01_NomCliente || '—' }}</div>
+                  </div>
+                  <div class="col-md-6 mb-2">
+                    <div class="text-muted small">Teléfono</div>
+                    <div>{{ r.PRV01_TelCliente || '—' }}</div>
+                  </div>
+                  <div class="col-md-6 mb-2">
+                    <div class="text-muted small">Correo</div>
+                    <div class="text-truncate">{{ r.PRV01_EmailCliente || '—' }}</div>
+                  </div>
+                  <div class="col-md-4 mb-2">
+                    <div class="text-muted small">Forma de Pago</div>
+                    <div>{{ r.PRV01_FormaPago || '—' }}</div>
+                  </div>
+                  <div class="col-md-4 mb-2">
+                    <div class="text-muted small">Moneda</div>
+                    <div>{{ r.PRV01_Moneda || '—' }}</div>
+                  </div>
+                  <div class="col-md-4 mb-2">
+                    <div class="text-muted small">Creación</div>
+                    <div class="text-nowrap">{{ r.PRV01_FecCreacion | date:'dd/MM/yyyy HH:mm' }}</div>
+                  </div>
+                  <div class="col-12" *ngIf="r.PRV01_Observacion">
+                    <div class="text-muted small">Observación</div>
+                    <div class="small">{{ r.PRV01_Observacion }}</div>
+                  </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                  <button
+                    type="button"
+                    class="btn btn-primary rsv-action-btn rsv-action-btn--primary"
+                    (click)="confirmarReserva()"
+                    [disabled]="busyConfirm || estadoLabel !== 'PENDIENTE'"
+                  >
+                    <span class="rsv-action-btn__icon">
+                      <span *ngIf="busyConfirm" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                      <i *ngIf="!busyConfirm" class="feather icon-check"></i>
+                    </span>
+                    <span>Confirmar</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="btn btn-outline-danger rsv-action-btn rsv-action-btn--outline"
+                    (click)="cancelarReserva()"
+                    [disabled]="busyCancel || estadoLabel === 'ANULADA'"
+                  >
+                    <span class="rsv-action-btn__icon">
+                      <span *ngIf="busyCancel" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                      <i *ngIf="!busyCancel" class="feather icon-trash-2"></i>
+                    </span>
+                    <span>Cancelar</span>
+                  </button>
+
+                  <button type="button" class="btn btn-outline-secondary rsv-action-btn rsv-action-btn--outline" (click)="reload()" [disabled]="loading">
+                    <span class="rsv-action-btn__icon"><i class="feather icon-rotate-ccw"></i></span>
+                    <span>Refrescar</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-4">
+            <div class="rsv-total-reserva" aria-label="Totales de la reserva">
+              <div class="d-flex align-items-center justify-content-between gap-2">
+                <div class="rsv-total-reserva__content">
+                  <div class="rsv-total-reserva__label">Total Reserva</div>
+                  <div class="rsv-total-reserva__value">
+                    {{ (r.PRV01_TotalRsv || totalRack) | number:'1.2-2' }}
+                    <span class="rsv-total-reserva__currency" *ngIf="r.PRV01_Moneda">{{ r.PRV01_Moneda }}</span>
+                  </div>
+                  <div class="rsv-total-reserva__hint small text-muted">
+                    Servicios: <strong>{{ cantidadServicios }}</strong> · Pax: <strong>{{ totalPax }}</strong>
+                  </div>
+                </div>
+                <div class="rsv-total-reserva__icon" aria-hidden="true" title="Totales">
+                  <i class="feather icon-credit-card"></i>
+                </div>
+              </div>
+
+              <div class="mt-2 d-flex flex-wrap gap-2 justify-content-end">
+                <span class="badge bg-light text-dark border">Neto: {{ totalNeto | number:'1.2-2' }}</span>
+                <span class="badge bg-light text-dark border">Rack: {{ totalRack | number:'1.2-2' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card shadow-none border mt-3">
+          <div class="card-body p-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+              <div class="d-flex align-items-center">
+                <i class="feather icon-layers text-muted me-2"></i>
+                <h6 class="mb-0">Servicios</h6>
+                <span class="badge bg-light text-dark border ms-2">{{ cantidadServicios }}</span>
+              </div>
+
+              <div class="d-flex align-items-center gap-2">
+                <input
+                  type="text"
+                  class="form-control form-control-sm"
+                  style="width: 260px;"
+                  [(ngModel)]="filtro"
+                  placeholder="Buscar servicio, zona, observación..."
+                >
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>Servicio</th>
+                    <th>Fecha / Hora</th>
+                    <th>Origen</th>
+                    <th>Destino</th>
+                    <th class="text-center">Pax</th>
+                    <th class="text-end">Monto</th>
+                    <th class="text-end">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let d of detallesFiltrados">
+                    <td style="min-width: 220px;">
+                      <div class="fw-semibold">{{ d.PRV02_NomServicio || d.PRV02_CodServicio }}</div>
+                      <div class="text-muted small">{{ d.PRV02_CodServicio }}</div>
+                      <div class="text-muted small" *ngIf="d.PRV02_Observacion">{{ d.PRV02_Observacion }}</div>
+                    </td>
+                    <td class="text-nowrap">
+                      <div>{{ d.PRV02_FecServicio | date:'dd/MM/yyyy' }}</div>
+                      <div class="text-muted small">{{ d.PRV02_HoraServicio || '—' }}</div>
+                    </td>
+                    <td style="min-width: 240px;">
+                      <div class="fw-semibold">{{ d.PRV02_OrigenTexto || '—' }}</div>
+                      <div class="text-muted small">Zona: {{ d.PRV02_ZonaOrigen || '—' }}</div>
+                      <div class="text-muted small" *ngIf="getGoogleDisplayText(d.PRV02_OrigenGoogle)">{{ getGoogleDisplayText(d.PRV02_OrigenGoogle) }}</div>
+                    </td>
+                    <td style="min-width: 240px;">
+                      <div class="fw-semibold">{{ d.PRV02_DestinoTexto || '—' }}</div>
+                      <div class="text-muted small">Zona: {{ d.PRV02_ZonaDestino || '—' }}</div>
+                      <div class="text-muted small" *ngIf="getGoogleDisplayText(d.PRV02_DestinoGoogle)">{{ getGoogleDisplayText(d.PRV02_DestinoGoogle) }}</div>
+                    </td>
+                    <td class="text-center">
+                      <span class="badge bg-light text-dark border">{{ d.PRV02_TotalPax || 0 }}</span>
+                      <div class="text-muted small">{{ d.PRV02_Adultos || 0 }} / {{ d.PRV02_Ninos || 0 }}</div>
+                    </td>
+                    <td class="text-end text-nowrap">
+                      {{ d.PRV02_MontoServicio | number:'1.2-2' }}
+                    </td>
+                    <td class="text-end text-nowrap">
+                      <div class="d-inline-flex gap-2 justify-content-end">
+                        <a
+                          class="btn btn-outline-primary btn-sm rsv-icon-btn"
+                          [href]="getDetalleMapsLink(d, 'origen') || null"
+                          [class.disabled]="!getDetalleMapsLink(d, 'origen')"
+                          [attr.target]="getDetalleMapsLink(d, 'origen') ? '_blank' : null"
+                          [attr.rel]="getDetalleMapsLink(d, 'origen') ? 'noopener' : null"
+                          title="Ver origen en Google Maps"
+                        >
+                          <i class="feather icon-map-pin"></i>
+                        </a>
+
+                        <button type="button" class="btn btn-outline-secondary btn-sm rsv-icon-btn" (click)="copiarLink('origen', d)" title="Copiar link de origen">
+                          <i class="feather icon-copy"></i>
+                        </button>
+
+                        <a
+                          class="btn btn-outline-info btn-sm rsv-icon-btn"
+                          [href]="getDetalleMapsLink(d, 'destino') || null"
+                          [class.disabled]="!getDetalleMapsLink(d, 'destino')"
+                          [attr.target]="getDetalleMapsLink(d, 'destino') ? '_blank' : null"
+                          [attr.rel]="getDetalleMapsLink(d, 'destino') ? 'noopener' : null"
+                          title="Ver destino en Google Maps"
+                        >
+                          <i class="feather icon-navigation-2"></i>
+                        </a>
+
+                        <button type="button" class="btn btn-outline-secondary btn-sm rsv-icon-btn" (click)="copiarLink('destino', d)" title="Copiar link de destino">
+                          <i class="feather icon-copy"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <tr *ngIf="detallesFiltrados.length === 0">
+                    <td colspan="7" class="text-center text-muted py-4">
+                      {{ detalles.length === 0 ? 'Aún no hay servicios agregados.' : 'No hay resultados para el filtro.' }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </ng-container>
     </app-card>
   </div>
 </div>

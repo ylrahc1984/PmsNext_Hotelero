@@ -74,7 +74,6 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
   monedas: MonedaUI[] = [];
   servicios: ServicioUI[] = [];
   tarifas = ['A', 'B', 'C', 'D'];
-  zonas = ['San Jose', 'Alajuela', 'Monteverde', 'Liberia', 'La Fortuna', 'Tamarindo', 'Sarapiqui'];
 
   // Resultado de la última aplicación de regla tarifaria al detalleForm.
   reglaTarifaAplicada: ReglaTarifa | null = null;
@@ -449,6 +448,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         ninos: detalle.PRV02_Ninos || 0,
         totalPax: detalle.PRV02_TotalPax || 0,
         origenLugar: detalle.PRV02_OrigenTexto || '',
+        origenZona: detalle.PRV02_ZonaOrigen || '',
         origenDireccionGoogle,
         origenGoogle: safeJsonStringify((detalle as any).PRV02_OrigenGoogle),
         origenLat: detalle.PRV02_OrigenLat || 0,
@@ -456,13 +456,14 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         // Ahora estos campos guardan el Place ID real (técnico).
         origenPlaceId: this.isLikelyPlaceId(apiOrigenPlaceId) ? apiOrigenPlaceId : '',
         destinoLugar: detalle.PRV02_DestinoTexto || '',
+        destinoZona: detalle.PRV02_ZonaDestino || '',
         destinoDireccionGoogle,
         destinoGoogle: safeJsonStringify((detalle as any).PRV02_DestinoGoogle),
         destinoLat: detalle.PRV02_DestinoLat || 0,
         destinoLng: detalle.PRV02_DestinoLng || 0,
         destinoPlaceId: this.isLikelyPlaceId(apiDestinoPlaceId) ? apiDestinoPlaceId : '',
         costoNeto: detalle.PRV02_MontoServicio || 0,
-        costoRack: (detalle.PRV02_PrecioAdulto || 0) + (detalle.PRV02_PrecioNino || 0) + (detalle.PRV02_PrecioPaxExtra || 0),
+        costoRack: 0,
         montoServicio: detalle.PRV02_MontoServicio || 0,
         estado: detalle.PRV02_Estado || baseForm.estado,
         observaciones: detalle.PRV02_Observacion || ''
@@ -570,6 +571,10 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         horaServicio: this.detalleForm.horaPickup || this.detalleForm.horaInicio || '',
         origenTexto: this.detalleForm.origenLugar || '',
         destinoTexto: this.detalleForm.destinoLugar || '',
+        
+        origenZona: this.detalleForm.origenZona || '',
+        destinoZona: this.detalleForm.destinoZona || '',
+
         // Nuevos campos: guardar el JSON/metadata de Google y el Place ID real.
         origenGoogle: (this.detalleForm.origenGoogle || '').toString(),
         destinoGoogle: (this.detalleForm.destinoGoogle || '').toString(),

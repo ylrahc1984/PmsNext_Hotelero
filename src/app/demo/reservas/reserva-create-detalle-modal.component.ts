@@ -19,7 +19,6 @@ export class ReservaCreateDetalleModalComponent implements OnChanges {
   @Input() editingDetalleId: number | null = null;
   @Input({ required: true }) detalleForm!: DetalleForm;
   @Input() tarifas: string[] = [];
-  @Input() zonas: string[] = [];
   @Input() servicios: ServicioUI[] = [];
   @Input() serviciosLoading = false;
   @Input() reglaTarifaError = '';
