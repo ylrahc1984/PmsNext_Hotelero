@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { BehaviorSubject, Observable, forkJoin, throwError, of } from 'rxjs';
 import { map, catchError, tap, switchMap } from 'rxjs/operators';
 
@@ -70,6 +70,40 @@ export interface OrdenTrabajoEncabezadoResponse {
 }
 
 /**
+ * DTO de respuesta del GET /api/ordentrabajo/codigo/{codOT}
+ */
+export interface EncabezadoOrdenTrabajoApiDTO {
+  PRV10_CodOT: string;
+  PRV10_CodReserva: string;
+  PRV10_CodSuplidor: string;
+  MRV10_DescSuplidor: string;
+  PRV10_FecServicio: string;
+  PRV10_RutaCodigo: string;
+  PRV10_Rotulacion: string;
+  PRV10_Conexion: string;
+  PRV10_KmInicial: number;
+  PRV10_KmFinal: number;
+  KmRecorridos: number;
+  PRV10_Observaciones: string;
+  PRV10_Estado: string;
+  EstadoDescripcion: string;
+  PRV10_Moneda: string;
+  PRV10_TCambio: number;
+  PRV10_TotalOT: number;
+  PRV10_Operador: string;
+  PRV10_FechaRegistro: string;
+  PRV10_CodVehiculo: string;
+  PRV10_CodChofer: string;
+}
+
+/**
+ * Response del GET encabezado por código
+ */
+export interface EncabezadoOrdenTrabajoApiResponse {
+  datos: EncabezadoOrdenTrabajoApiDTO[];
+}
+
+/**
  * DTO para enviar al endpoint POST/PUT /api/orden-trabajo/detalle
  */
 export interface OrdenTrabajoDetalleDTO {
@@ -102,6 +136,48 @@ export interface OrdenTrabajoDetalleDTO {
   respuesta?: string;
 }
 
+/**
+ * DTO de respuesta del GET /api/orden-trabajo/detalle/por-codOT
+ */
+export interface DetalleOrdenTrabajoApiDTO {
+  PRV11_ID: number;
+  PRV11_CodOT: string;
+  PRV11_Linea: number;
+  PRV11_CodReserva: string;
+  PRV11_IdDetReserva: number;
+  PRV11_CodServicio: string;
+  PRV11_NomServicio: string;
+  PRV11_OrigenTexto: string;
+  PRV11_DestinoTexto: string;
+  PRV11_OrigenPlaceId: string;
+  PRV11_DestinoPlaceId: string;
+  PRV11_OrigenLat: number;
+  PRV11_OrigenLng: number;
+  PRV11_DestinoLat: number;
+  PRV11_DestinoLng: number;
+  PRV11_HoraPax: string;
+  PRV11_Adultos: number;
+  PRV11_Ninos: number;
+  PRV11_TotalPax: number;
+  PRV11_Boleta: string;
+  PRV11_Voucher: string;
+  PRV11_AgenciaCobro: string;
+  PRV11_Estado: string;
+  PRV11_Observacion: string;
+  PRV11_Operador: string;
+  PRV11_FechaRegistro: string;
+  PRV01_NomCliente: string;
+  PRV01_TelCliente: string;
+  PRV01_EmailCliente: string;
+}
+
+/**
+ * Response del GET detalles por codOT
+ */
+export interface DetalleOrdenTrabajoApiResponse {
+  datos: DetalleOrdenTrabajoApiDTO[];
+}
+
 // ==================== Modelos de UI ====================
 
 export interface OrdenTrabajoDetalle {
@@ -109,6 +185,8 @@ export interface OrdenTrabajoDetalle {
   reservaId: string;           // Cambiado de number a string (código de reserva)
   numeroBoleta: string;         // Cambiado de number a string (folio)
   clienteFinal: string;
+  telefonoCliente?: string;     // Teléfono del cliente
+  emailCliente?: string;        // Email del cliente
   agencia: string;
   servicioId?: string;         // Código del servicio
   servicio: string;
@@ -152,6 +230,7 @@ export interface OrdenTrabajoDetalle {
 export interface OrdenTrabajo {
   id: number;
   numeroOrden: number;
+  codOT?: string;               // Código generado por el backend
   fechaCreacion: string;
   fechaServicio: string;
   suplidor: string;
@@ -165,6 +244,7 @@ export interface OrdenTrabajo {
   codVehiculo?: string;
   codChofer?: string;
   estado: EstadoOrden;
+  moneda?: string;              // Moneda de la orden
   detalles: OrdenTrabajoDetalle[];
   totalPax: number;
   totalPagar: number;
@@ -207,6 +287,207 @@ export class OrdenesService {
 
   getOrdenById(id: number): OrdenTrabajo | undefined {
     return this.getOrdenes().find(o => o.id === id);
+  }
+
+  getOrdenByCodOT(codOT: string): OrdenTrabajo | undefined {
+    return this.getOrdenes().find(o => o.codOT === codOT);
+  }
+
+  /**
+   * Obtiene los detalles de una orden desde el API por codOT
+   */
+  getDetallesPorCodOT(codOT: string): Observable<OrdenTrabajoDetalle[]> {
+    const url = `${this.apiDetalleUrl}/por-codOT`;
+    const params = new HttpParams().set('codOT', codOT);
+
+    console.log('🔍 Obteniendo detalles de orden:', codOT);
+    console.log('   URL:', url);
+
+    return this.http.get<DetalleOrdenTrabajoApiResponse>(url, { params }).pipe(
+      map(response => {
+        const datos = response?.datos ?? [];
+        console.log('✅ Detalles recibidos:', datos.length);
+        return datos.map(d => this.mapDetalleApiToUI(d));
+      }),
+      catchError(error => {
+        console.error('❌ Error obteniendo detalles de orden:', error);
+        return throwError(() => new Error(error.error?.respuesta || 'Error al obtener detalles de la orden'));
+      })
+    );
+  }
+
+  /**
+   * Obtiene el encabezado de una orden desde el API por codOT
+   */
+  getEncabezadoPorCodOT(codOT: string): Observable<OrdenTrabajo | null> {
+    const url = `${this.apiUrl}/codigo/${codOT}`;
+
+    console.log('🔍 Obteniendo encabezado de orden:', codOT);
+    console.log('   URL:', url);
+
+    return this.http.get<EncabezadoOrdenTrabajoApiResponse>(url).pipe(
+      map(response => {
+        const datos = response?.datos ?? [];
+        if (datos.length === 0) {
+          console.warn('⚠️ No se encontró encabezado para:', codOT);
+          return null;
+        }
+        console.log('✅ Encabezado recibido:', datos[0]);
+        return this.mapEncabezadoApiToUI(datos[0]);
+      }),
+      catchError(error => {
+        console.error('❌ Error obteniendo encabezado de orden:', error);
+        return throwError(() => new Error(error.error?.respuesta || 'Error al obtener el encabezado de la orden'));
+      })
+    );
+  }
+
+  /**
+   * Obtiene la orden completa (encabezado + detalles) por codOT
+   */
+  getOrdenCompletaPorCodOT(codOT: string): Observable<OrdenTrabajo> {
+    console.log('🚀 Obteniendo orden completa:', codOT);
+    
+    return forkJoin({
+      encabezado: this.getEncabezadoPorCodOT(codOT),
+      detalles: this.getDetallesPorCodOT(codOT)
+    }).pipe(
+      map(({ encabezado, detalles }) => {
+        if (!encabezado) {
+          throw new Error('No se encontró el encabezado de la orden');
+        }
+        
+        // Combinar encabezado con detalles
+        const ordenCompleta: OrdenTrabajo = {
+          ...encabezado,
+          detalles
+        };
+        
+        console.log('✅ Orden completa obtenida:', ordenCompleta);
+        return ordenCompleta;
+      })
+    );
+  }
+
+  /**
+   * Mapea el encabezado del API al modelo de UI
+   */
+  private mapEncabezadoApiToUI(apiEncabezado: EncabezadoOrdenTrabajoApiDTO): OrdenTrabajo {
+    return {
+      id: 0, // No hay ID numérico en el API
+      numeroOrden: 0, // Se podría extraer del codOT si es necesario
+      codOT: apiEncabezado.PRV10_CodOT,
+      fechaCreacion: apiEncabezado.PRV10_FechaRegistro?.split('T')[0] ?? '',
+      fechaServicio: apiEncabezado.PRV10_FecServicio?.split('T')[0] ?? '',
+      suplidor: apiEncabezado.MRV10_DescSuplidor || '',
+      codSuplidor: apiEncabezado.PRV10_CodSuplidor,
+      ruta: apiEncabezado.PRV10_RutaCodigo || '',
+      conexion: apiEncabezado.PRV10_Conexion || '',
+      observaciones: apiEncabezado.PRV10_Observaciones || '',
+      kmInicial: apiEncabezado.PRV10_KmInicial || 0,
+      kmFinal: apiEncabezado.PRV10_KmFinal || 0,
+      rotulacion: apiEncabezado.PRV10_Rotulacion === '1' || apiEncabezado.PRV10_Rotulacion?.toLowerCase() === 'true',
+      codVehiculo: apiEncabezado.PRV10_CodVehiculo || '',
+      codChofer: apiEncabezado.PRV10_CodChofer || '',
+      estado: this.mapEstadoCodigo(apiEncabezado.PRV10_Estado),
+      moneda: apiEncabezado.PRV10_Moneda || 'USD',
+      detalles: [], // Se llenarán después
+      totalPax: 0, // Se calculará desde detalles
+      totalPagar: apiEncabezado.PRV10_TotalOT || 0
+    };
+  }
+
+  /**
+   * Mapea el código de estado del API al tipo EstadoOrden
+   */
+  private mapEstadoCodigo(estadoApi: string): EstadoOrden {
+    const codigo = (estadoApi || 'PEN').toUpperCase().trim();
+    
+    if (['PEN', 'ASI', 'PRO', 'COM', 'CAN'].includes(codigo)) {
+      return codigo as EstadoOrden;
+    }
+    
+    // Mapeo de estados no estándar
+    const mapeo: Record<string, EstadoOrden> = {
+      'PENDIENTE': 'PEN',
+      'ASIGNADA': 'ASI',
+      'EN PROCESO': 'PRO',
+      'PROCESO': 'PRO',
+      'COMPLETADA': 'COM',
+      'FINALIZADA': 'COM',
+      'CANCELADA': 'CAN',
+      'ANULADA': 'CAN'
+    };
+    
+    return mapeo[codigo] || 'PEN';
+  }
+
+  /**
+   * Mapea un detalle del API al modelo de UI
+   */
+  private mapDetalleApiToUI(apiDetalle: DetalleOrdenTrabajoApiDTO): OrdenTrabajoDetalle {
+    // Parsear PlaceId JSON para obtener lat/lng
+    const origenPlace = this.parsePlaceIdJson(apiDetalle.PRV11_OrigenPlaceId);
+    const destinoPlace = this.parsePlaceIdJson(apiDetalle.PRV11_DestinoPlaceId);
+    
+    return {
+      id: apiDetalle.PRV11_ID,
+      reservaId: apiDetalle.PRV11_CodReserva,
+      numeroBoleta: apiDetalle.PRV11_Boleta || apiDetalle.PRV11_CodReserva,
+      clienteFinal: apiDetalle.PRV01_NomCliente || '',
+      telefonoCliente: apiDetalle.PRV01_TelCliente || '',
+      emailCliente: apiDetalle.PRV01_EmailCliente || '',
+      agencia: apiDetalle.PRV11_AgenciaCobro,
+      servicioId: apiDetalle.PRV11_CodServicio,
+      servicio: apiDetalle.PRV11_NomServicio,
+      fechaServicio: apiDetalle.PRV11_FechaRegistro?.split('T')[0] ?? '',
+      hora: apiDetalle.PRV11_HoraPax,
+      
+      origenReserva: apiDetalle.PRV11_OrigenTexto,
+      destinoReserva: apiDetalle.PRV11_DestinoTexto,
+      
+      origenOT: apiDetalle.PRV11_OrigenTexto,
+      destinoOT: apiDetalle.PRV11_DestinoTexto,
+      
+      origenPlaceId: origenPlace?.placeId || apiDetalle.PRV11_OrigenPlaceId || '',
+      destinoPlaceId: destinoPlace?.placeId || apiDetalle.PRV11_DestinoPlaceId || '',
+      origenLat: origenPlace?.lat || apiDetalle.PRV11_OrigenLat || 0,
+      origenLng: origenPlace?.lng || apiDetalle.PRV11_OrigenLng || 0,
+      destinoLat: destinoPlace?.lat || apiDetalle.PRV11_DestinoLat || 0,
+      destinoLng: destinoPlace?.lng || apiDetalle.PRV11_DestinoLng || 0,
+      
+      pax: apiDetalle.PRV11_TotalPax,
+      adultos: apiDetalle.PRV11_Adultos,
+      ninos: apiDetalle.PRV11_Ninos,
+      
+      detalleReservaId: apiDetalle.PRV11_IdDetReserva,
+      boleta: apiDetalle.PRV11_Boleta,
+      voucher: apiDetalle.PRV11_Voucher,
+      
+      montoServicio: 0, // No viene en la respuesta
+      moneda: undefined,
+      
+      observaciones: apiDetalle.PRV11_Observacion
+    };
+  }
+
+  /**
+   * Parsea el JSON string del PlaceId para extraer coordenadas
+   */
+  private parsePlaceIdJson(placeIdJson: string): { placeId: string; lat: number; lng: number } | null {
+    if (!placeIdJson) return null;
+    
+    try {
+      const parsed = JSON.parse(placeIdJson);
+      return {
+        placeId: parsed.placeId || '',
+        lat: parsed.lat || 0,
+        lng: parsed.lng || 0
+      };
+    } catch (err) {
+      console.warn('Error parseando PlaceId JSON:', err);
+      return null;
+    }
   }
 
   createOrden(
@@ -341,13 +622,13 @@ export class OrdenesService {
       origenOT: origenCustom || disponible.origen,
       destinoOT: destinoCustom || disponible.destino,
       
-      // Información geográfica (por defecto vacía, se puede agregar más tarde)
-      origenPlaceId: '',
-      destinoPlaceId: '',
-      origenLat: 0,
-      origenLng: 0,
-      destinoLat: 0,
-      destinoLng: 0,
+      // Información geográfica (Google Places ID y coordenadas)
+      origenPlaceId: disponible.origenPlaceId || '',
+      destinoPlaceId: disponible.destinoPlaceId || '',
+      origenLat: disponible.origenLat || 0,
+      origenLng: disponible.origenLng || 0,
+      destinoLat: disponible.destinoLat || 0,
+      destinoLng: disponible.destinoLng || 0,
       
       // Pasajeros
       pax: disponible.pax,

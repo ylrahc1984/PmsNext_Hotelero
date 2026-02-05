@@ -71,6 +71,10 @@ const routes: Routes = [
         loadComponent: () => import('./demo/ordenes/orden-trabajo-form.component').then((c) => c.OrdenTrabajoFormComponent)
       },
       {
+        path: 'ordenes-trabajo/:id/detalle',
+        loadComponent: () => import('./demo/ordenes/orden-detalle.component').then((c) => c.OrdenDetalleComponent)
+      },
+      {
         path: 'reservas/nueva',
         canDeactivate: [CanDeactivateReservaCreateGuard],
         loadComponent: () => import('./demo/reservas/reserva-create.component').then((c) => c.ReservaCreateComponent)
@@ -104,6 +108,11 @@ const routes: Routes = [
   {
     path: 'ordenes-trabajo/:id/editar',
     redirectTo: 'operaciones/ordenes-trabajo/:id/editar',
+    pathMatch: 'full'
+  },
+  {
+    path: 'ordenes-trabajo/:id/detalle',
+    redirectTo: 'operaciones/ordenes-trabajo/:id/detalle',
     pathMatch: 'full'
   },
   {

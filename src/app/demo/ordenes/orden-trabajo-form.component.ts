@@ -97,9 +97,9 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
 
     this.subs.add(
       this.route.params.subscribe(params => {
-        const id = params['id'];
-        if (id) {
-          this.loadOrden(Number(id));
+        const codOT = params['id'];
+        if (codOT) {
+          this.loadOrdenPorCodigo(codOT);
         } else {
           this.iniciarNueva();
         }
@@ -239,6 +239,42 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     const raw = this.form.getRawValue();
     const estadoFinal = estado ?? raw.estado ?? 'PEN';
 
+    // Mostrar diálogo de confirmación
+    Swal.fire({
+      title: '¿Guardar Orden de Trabajo?',
+      html: `
+        <div style="text-align: left;">
+          <p><strong>Resumen de la orden:</strong></p>
+          <ul style="list-style: none; padding-left: 0;">
+            <li>📋 Suplidor: <strong>${this.getSuplidorSeleccionado()}</strong></li>
+            <li>🚗 Vehículo: <strong>${this.getVehiculoSeleccionado()}</strong></li>
+            <li>👤 Chofer: <strong>${this.getChoferSeleccionado()}</strong></li>
+            <li>📦 Servicios: <strong>${this.detallesOrden.length}</strong></li>
+            <li>👥 Pasajeros: <strong>${this.totalPax}</strong></li>
+            <li>💰 Total: <strong>${raw.moneda || 'USD'} ${(raw.totalPagar || this.totalPagarSugerido).toLocaleString()}</strong></li>
+            <li>📌 Estado: <strong>${this.getEstadoDescripcion(estadoFinal)}</strong></li>
+          </ul>
+        </div>
+      `,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#4680ff',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: '<i class="feather icon-check"></i> Sí, guardar',
+      cancelButtonText: '<i class="feather icon-x"></i> Cancelar',
+      reverseButtons: true
+    }).then((result) => {
+      if (!result.isConfirmed) {
+        // Usuario canceló, no hacer nada
+        return;
+      }
+
+      // Usuario confirmó, proceder con el guardado
+      this.ejecutarGuardado(raw, estadoFinal);
+    });
+  }
+
+  private ejecutarGuardado(raw: any, estadoFinal: EstadoOrden): void {
     // Preparar DTO para el encabezado
     const encabezadoDTO = this.ordenesService.mapFormToEncabezadoDTO(raw, this.detallesOrden);
     encabezadoDTO.estado = estadoFinal;
@@ -489,6 +525,86 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     this.detallesOrden[newIndex] = temp;
   }
 
+  /**
+   * Carga una orden existente por su código OT desde la API
+   */
+  private loadOrdenPorCodigo(codOT: string): void {
+    console.log('🔍 Cargando orden para edición:', codOT);
+    
+    // Primero buscar en el servicio local
+    const ordenLocal = this.ordenesService.getOrdenByCodOT(codOT);
+    
+    if (ordenLocal) {
+      console.log('✅ Orden encontrada localmente');
+      this.cargarDatosOrden(ordenLocal, codOT);
+      return;
+    }
+    
+    // Si no está local, cargar desde la API
+    console.log('🌐 Cargando orden desde API...');
+    this.subs.add(
+      this.ordenesService.getOrdenCompletaPorCodOT(codOT).subscribe({
+        next: (orden) => {
+          console.log('✅ Orden cargada desde API:', orden);
+          this.cargarDatosOrden(orden, codOT);
+        },
+        error: (err) => {
+          console.error('❌ Error cargando orden:', err);
+          Swal.fire({
+            title: 'Error',
+            text: 'No se pudo cargar la orden de trabajo para edición.',
+            icon: 'error'
+          });
+          this.router.navigate(['/operaciones/ordenes-trabajo']);
+        }
+      })
+    );
+  }
+
+  /**
+   * Carga los datos de una orden en el formulario
+   */
+  private cargarDatosOrden(orden: OrdenTrabajo, codOT: string): void {
+    this.orden = orden;
+    this.isEdit = true;
+    this.titulo = `Editar Orden #${codOT}`;
+    this.detallesOrden = [...orden.detalles];
+    this.estadoBloqueado = orden.estado === 'COM';
+    
+    // Cargar suplidor, vehículo y chofer si existen
+    this.selectedSupplierId = orden.codSuplidor || null;
+    this.selectedVehiculoId = orden.codVehiculo || null;
+    this.selectedChoferId = orden.codChofer || null;
+    
+    this.updateFormDisabledState();
+
+    this.form.patchValue({
+      numeroOrden: codOT,
+      fechaCreacion: orden.fechaCreacion,
+      fechaServicio: orden.fechaServicio,
+      estado: orden.estado,
+      suplidor: orden.suplidor,
+      observaciones: orden.observaciones,
+      totalPagar: orden.totalPagar,
+      rutaCodigo: orden.ruta,
+      conexion: orden.conexion,
+      kmInicial: orden.kmInicial,
+      kmFinal: orden.kmFinal,
+      rotulacion: orden.rotulacion ? 'Sí' : '',
+      moneda: orden.moneda || 'USD',
+      tCambio: 1
+    });
+    
+    // Cargar suplidores disponibles para la fecha de la orden
+    if (orden.fechaServicio) {
+      this.loadSuplidoresDisponibilidad(orden.fechaServicio);
+    }
+  }
+
+  /**
+   * Carga una orden existente por su ID numérico (retrocompatibilidad)
+   * @deprecated Usar loadOrdenPorCodigo en su lugar
+   */
   private loadOrden(id: number): void {
     const orden = this.ordenesService.getOrdenById(id);
     if (!orden) {

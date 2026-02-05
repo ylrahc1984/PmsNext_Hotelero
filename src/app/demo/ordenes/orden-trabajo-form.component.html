@@ -520,11 +520,16 @@
             <div class="acciones-principales">
               <div class="mb-2">
                 <label class="form-label small text-muted mb-1">Total a pagar (estimado)</label>
-                <input 
-                  class="form-control" 
-                  type="number" 
-                  [formControl]="$any(form.get('totalPagar'))"
-                  [placeholder]="totalPagarSugerido.toString()">
+                <div class="input-group">
+                  <span class="input-group-text bg-light text-primary fw-bold">{{ form.get('moneda')?.value || 'USD' }}</span>
+                  <input 
+                    class="form-control text-end money-input" 
+                    type="number" 
+                    step="0.01"
+                    min="0"
+                    [formControl]="$any(form.get('totalPagar'))"
+                    [placeholder]="totalPagarSugerido.toFixed(2)">
+                </div>
               </div>
 
               <div class="d-grid gap-2">

@@ -109,7 +109,7 @@ export class OrdenesComponent implements OnInit, OnDestroy {
   }
 
   verEditar(orden: OrdenTrabajoUI): void {
-    const id = orden?.id;
+    const id = orden?.codOT;
     if (id === null || id === undefined || id === '') {
       Swal.fire({
         title: 'No disponible',
@@ -119,6 +119,19 @@ export class OrdenesComponent implements OnInit, OnDestroy {
       return;
     }
     this.router.navigate(['/operaciones/ordenes-trabajo', id, 'editar']);
+  }
+
+  verDetalle(orden: OrdenTrabajoUI): void {
+    const id = orden?.codOT;
+    if (id === null || id === undefined || id === '') {
+      Swal.fire({
+        title: 'No disponible',
+        text: 'No se pudo determinar el identificador de la OT para ver el detalle.',
+        icon: 'info'
+      });
+      return;
+    }
+    this.router.navigate(['/operaciones/ordenes-trabajo', id, 'detalle']);
   }
 
   nuevaOrden(): void {

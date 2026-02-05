@@ -107,8 +107,14 @@ export interface ReservaDetalleDisponible {
   hora: string;
   origen: string;
   zonaOrigen: string;
+  origenPlaceId: string;
+  origenLat: number;
+  origenLng: number;
   destino: string;
   zonaDestino: string;
+  destinoPlaceId: string;
+  destinoLat: number;
+  destinoLng: number;
   adultos: number;
   ninos: number;
   pax: number;
@@ -289,8 +295,14 @@ export class ReservasService {
       hora: apiData.PRV02_HoraServicio,
       origen: apiData.PRV02_OrigenTexto,
       zonaOrigen: apiData.PRV02_ZonaOrigen,
+      origenPlaceId: apiData.PRV02_OrigenGoogle || '',
+      origenLat: apiData.PRV02_OrigenLat || 0,
+      origenLng: apiData.PRV02_OrigenLng || 0,
       destino: apiData.PRV02_DestinoTexto,
       zonaDestino: apiData.PRV02_ZonaDestino,
+      destinoPlaceId: apiData.PRV02_DestinoGoogle || '',
+      destinoLat: apiData.PRV02_DestinoLat || 0,
+      destinoLng: apiData.PRV02_DestinoLng || 0,
       adultos: apiData.PRV02_Adultos,
       ninos: apiData.PRV02_Ninos,
       pax: apiData.PRV02_TotalPax,
