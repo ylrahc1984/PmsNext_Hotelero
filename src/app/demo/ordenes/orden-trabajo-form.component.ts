@@ -1,17 +1,21 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
+import Swal from 'sweetalert2';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
-import { EstadoOrden, OrdenTrabajo, OrdenTrabajoDetalle, OrdenesService } from './ordenes.service';
+import { EstadoOrden, EstadoOrdenOption, ESTADOS_OT, OrdenTrabajo, OrdenTrabajoDetalle, OrdenesService } from './ordenes.service';
 import { ReservaDetalleDisponible, ReservasService } from '../reservas/reservas.service';
+import { SuplidorDisponibilidadUI, SuplidorService } from '../catalogos/suplidores/suplidor.service';
+import { MonedaService, MonedaUI } from '../administracion/monedas/moneda.service';
+import { AuthService } from 'src/app/core/services/auth.service';
 
 @Component({
   selector: 'app-orden-trabajo-form',
   standalone: true,
-  imports: [CommonModule, SharedModule, ReactiveFormsModule],
+  imports: [CommonModule, SharedModule, ReactiveFormsModule, FormsModule],
   templateUrl: './orden-trabajo-form.component.html',
   styleUrls: ['./orden-trabajo-form.component.scss']
 })
@@ -21,6 +25,9 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private ordenesService = inject(OrdenesService);
   private reservasService = inject(ReservasService);
+  private suplidorService = inject(SuplidorService);
+  private monedaService = inject(MonedaService);
+  private authService = inject(AuthService);
   private orden?: OrdenTrabajo;
   private subs = new Subscription();
 
@@ -30,13 +37,19 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     fechaServicio: ['', Validators.required],
     estado: ['Pendiente' as EstadoOrden, Validators.required],
     suplidor: ['', Validators.required],
-    ruta: [''],
-    conexion: [''],
     observaciones: [''],
-    kmInicial: [null],
-    kmFinal: [null],
-    rotulacion: [false],
-    totalPagar: [0]
+    totalPagar: [0],
+    
+    // Campos adicionales de configuración OT
+    tipo: [0, Validators.required],           // 0=Transfer, 1=Tour, 2=Excursión, etc.
+    moneda: ['USD', Validators.required],     // USD, CRC, EUR
+    tCambio: [1],                             // Tipo de cambio
+    rutaCodigo: [''],                         // Código de ruta
+    rotulacion: [''],                         // Indicaciones de rotulación
+    conexion: [''],                           // Conexión/enlace
+    kmInicial: [null as number | null],       // Kilometraje inicial
+    kmFinal: [null as number | null],         // Kilometraje final
+    operador: [{ value: '', disabled: true }] // Usuario que crea la OT
   });
 
   detallesDisponibles: ReservaDetalleDisponible[] = [];
@@ -46,22 +59,96 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
   isEdit = false;
   titulo = 'Nueva Orden de Trabajo';
 
+  // Propiedades UI/UX para control visual
+  selectedSupplierId: string | null = null;
+  selectedVehiculoId: string | null = null;
+  selectedChoferId: string | null = null;
+  selectedTime: string | null = null;
+  selectedRows: Set<string> = new Set();
+  searchText = '';
+  showConfigOT = false; // Controla el acordeón de configuración
+  loadingSuplidores = false;
+  loadingServicios = false;
+  
+  // Datos reales de suplidores con disponibilidad
+  suplidoresDisponibles: SuplidorDisponibilidadUI[] = [];
+  horariosDisponibles = ['06:00', '08:00', '11:00', '11:30', '14:00', '16:00', '18:00'];
+
+  // Catálogos para selectores
+  tiposOT = [
+    { value: 0, label: 'Transfer' },
+    { value: 1, label: 'Tour' },
+    { value: 2, label: 'Excursión' },
+    { value: 3, label: 'Servicio Especial' }
+  ];
+
+  monedas: MonedaUI[] = [];
+
+  // Map para almacenar origen/destino editados temporalmente (key = det.key)
+  // Estructura: { key: { origenOT: string, destinoOT: string } }
+  origenDestinoEditados = new Map<string, { origenOT: string; destinoOT: string }>();
+
   ngOnInit(): void {
+    // Cargar catálogo de monedas
+    this.loadMonedas();
+    
+    // Cargar usuario actual como operador
+    this.loadCurrentUser();
+
     this.subs.add(
       this.route.params.subscribe(params => {
         const id = params['id'];
         if (id) {
           this.loadOrden(Number(id));
         } else {
-          this.initNuevaOrden();
+          this.iniciarNueva();
         }
-        this.refreshDisponibles();
+      })
+    );
+
+    // Cargar suplidores y servicios cuando cambie la fecha de servicio
+    this.subs.add(
+      this.form.get('fechaServicio')?.valueChanges.subscribe(fecha => {
+        if (fecha) {
+          this.loadSuplidoresDisponibilidad(fecha);
+          this.loadServiciosDisponibles(fecha);
+        }
       })
     );
   }
 
   ngOnDestroy(): void {
     this.subs.unsubscribe();
+  }
+
+  private updateFormDisabledState(): void {
+    if (this.estadoBloqueado) {
+      this.form.get('fechaServicio')?.disable();
+      this.form.get('estado')?.disable();
+      this.form.get('observaciones')?.disable();
+      this.form.get('totalPagar')?.disable();
+      this.form.get('tipo')?.disable();
+      this.form.get('moneda')?.disable();
+      this.form.get('tCambio')?.disable();
+      this.form.get('rutaCodigo')?.disable();
+      this.form.get('rotulacion')?.disable();
+      this.form.get('conexion')?.disable();
+      this.form.get('kmInicial')?.disable();
+      this.form.get('kmFinal')?.disable();
+    } else {
+      this.form.get('fechaServicio')?.enable();
+      this.form.get('estado')?.enable();
+      this.form.get('observaciones')?.enable();
+      this.form.get('totalPagar')?.enable();
+      this.form.get('tipo')?.enable();
+      this.form.get('moneda')?.enable();
+      this.form.get('tCambio')?.enable();
+      this.form.get('rutaCodigo')?.enable();
+      this.form.get('rotulacion')?.enable();
+      this.form.get('conexion')?.enable();
+      this.form.get('kmInicial')?.enable();
+      this.form.get('kmFinal')?.enable();
+    }
   }
 
   get totalServicios(): number {
@@ -76,8 +163,26 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     return this.detallesOrden.reduce((sum, d) => sum + d.pax * 15000, 0);
   }
 
-  get estadosDisponibles(): EstadoOrden[] {
-    return ['Pendiente', 'Asignada', 'En Proceso', 'Finalizada'];
+  get estadosDisponibles(): EstadoOrdenOption[] {
+    return ESTADOS_OT;
+  }
+
+  /**
+   * Obtiene la descripción de un estado por su código
+   */
+  getEstadoDescripcion(codigo: string | EstadoOrden | undefined): string {
+    if (!codigo) return 'Pendiente';
+    const estado = ESTADOS_OT.find(e => e.codigo === codigo);
+    return estado?.descripcion || codigo;
+  }
+
+  /**
+   * Obtiene la clase CSS del badge para un estado
+   */
+  getEstadoBadgeClass(codigo: string | EstadoOrden | undefined): string {
+    if (!codigo) return 'badge-secondary';
+    const estado = ESTADOS_OT.find(e => e.codigo === codigo);
+    return estado?.badge || 'badge-secondary';
   }
 
   toggleSeleccion(detalle: ReservaDetalleDisponible, checked: boolean): void {
@@ -95,10 +200,19 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     }
     let nextId = this.getNextDetalleId();
     seleccionados.forEach(det => {
-      const detalleOrden = this.ordenesService.mapDisponibleADetalle(det, nextId++);
+      // Obtener origen/destino editados o usar los originales
+      const editados = this.origenDestinoEditados.get(det.key);
+      const origenOT = editados?.origenOT || det.origen;
+      const destinoOT = editados?.destinoOT || det.destino;
+      
+      const detalleOrden = this.ordenesService.mapDisponibleADetalle(det, nextId++, origenOT, destinoOT);
       this.detallesOrden.push(detalleOrden);
     });
+    
+    // Limpiar selección y ediciones temporales
     this.detallesSeleccionados.clear();
+    this.origenDestinoEditados.clear();
+    
     this.recalcularTotales();
     this.refreshDisponibles();
   }
@@ -123,75 +237,256 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     }
 
     const raw = this.form.getRawValue();
-    const estadoFinal = estado ?? raw.estado ?? 'Pendiente';
+    const estadoFinal = estado ?? raw.estado ?? 'PEN';
 
-    const payload: OrdenTrabajo = {
-      id: this.orden?.id || 0,
-      numeroOrden: this.orden?.numeroOrden || 0,
-      fechaCreacion: this.orden?.fechaCreacion || new Date().toISOString().split('T')[0],
-      fechaServicio: raw.fechaServicio || '',
-      suplidor: raw.suplidor || '',
-      ruta: raw.ruta || '',
-      conexion: raw.conexion || '',
-      observaciones: raw.observaciones || '',
-      kmInicial: raw.kmInicial ?? undefined,
-      kmFinal: raw.kmFinal ?? undefined,
-      rotulacion: raw.rotulacion ?? false,
-      estado: estadoFinal,
-      detalles: this.detallesOrden,
-      totalPax: this.totalPax,
-      totalPagar: raw.totalPagar || this.totalPagarSugerido
-    };
+    // Preparar DTO para el encabezado
+    const encabezadoDTO = this.ordenesService.mapFormToEncabezadoDTO(raw, this.detallesOrden);
+    encabezadoDTO.estado = estadoFinal;
+    
+    // Agregar suplidor, vehículo y chofer seleccionados (códigos)
+    encabezadoDTO.codSuplidor = this.selectedSupplierId || '';
+    encabezadoDTO.codVehiculo = this.selectedVehiculoId || '';
+    encabezadoDTO.codChofer = this.selectedChoferId || '';
 
-    if (this.isEdit && this.orden) {
-      payload.id = this.orden.id;
-      payload.numeroOrden = this.orden.numeroOrden;
-      payload.fechaCreacion = this.orden.fechaCreacion;
-      this.ordenesService.updateOrden(payload);
-    } else {
-      this.ordenesService.createOrden(payload);
-    }
+    // Deshabilitar el formulario durante el guardado
+    this.form.disable();
 
-    this.estadoBloqueado = estadoFinal === 'Finalizada';
-    this.router.navigate(['/operaciones/ordenes-trabajo']);
+    // Mostrar loading
+    Swal.fire({
+      title: 'Guardando Orden de Trabajo...',
+      html: `Guardando encabezado y ${this.detallesOrden.length} servicio(s)...`,
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    // Obtener operador actual
+    const currentUser = this.authService.getCurrentUser();
+    const operadorActual = raw.operador || (currentUser ? (currentUser.usuario || currentUser.nombre) : null) || 'Admin';
+
+    // Llamar al servicio para guardar
+    this.ordenesService.guardarOrdenCompleta(encabezadoDTO, this.detallesOrden, operadorActual)
+      .subscribe({
+        next: (resultado) => {
+          Swal.close();
+
+          // Verificar si hubo errores en los detalles
+          if (resultado.errores && resultado.errores.length > 0) {
+            Swal.fire({
+              title: 'Guardado con advertencias',
+              html: `
+                <p>El encabezado se guardó correctamente con código <strong>${resultado.codOT}</strong></p>
+                <p>${resultado.detallesGuardados} de ${this.detallesOrden.length} servicios guardados.</p>
+                <p>Hubo ${resultado.errores.length} error(es) al guardar algunos detalles.</p>
+              `,
+              icon: 'warning',
+              confirmButtonText: 'Entendido'
+            });
+          } else {
+            // Todo exitoso
+            Swal.fire({
+              title: '¡Orden Guardada!',
+              html: `
+                <p>Código de orden: <strong>${resultado.codOT}</strong></p>
+                <p>${resultado.detallesGuardados} servicio(s) guardado(s) exitosamente.</p>
+              `,
+              icon: 'success',
+              timer: 2000,
+              showConfirmButton: false
+            });
+          }
+
+          // Actualizar estado local (para mantener compatibilidad con mock data)
+          const payload: OrdenTrabajo = {
+            id: this.orden?.id || 0,
+            numeroOrden: this.orden?.numeroOrden || 0,
+            fechaCreacion: this.orden?.fechaCreacion || new Date().toISOString().split('T')[0],
+            fechaServicio: raw.fechaServicio || '',
+            suplidor: raw.suplidor || '',
+            codSuplidor: this.selectedSupplierId || undefined,
+            ruta: raw.rutaCodigo || '',
+            conexion: raw.conexion || '',
+            observaciones: raw.observaciones || '',
+            kmInicial: raw.kmInicial ?? undefined,
+            kmFinal: raw.kmFinal ?? undefined,
+            rotulacion: !!raw.rotulacion,
+            codVehiculo: this.selectedVehiculoId || undefined,
+            codChofer: this.selectedChoferId || undefined,
+            estado: estadoFinal,
+            detalles: this.detallesOrden,
+            totalPax: this.totalPax,
+            totalPagar: raw.totalPagar || this.totalPagarSugerido
+          };
+
+          if (this.isEdit && this.orden) {
+            payload.id = this.orden.id;
+            payload.numeroOrden = this.orden.numeroOrden;
+            payload.fechaCreacion = this.orden.fechaCreacion;
+            this.ordenesService.updateOrden(payload);
+          } else {
+            this.ordenesService.createOrden(payload);
+          }
+
+          // Navegar de vuelta al listado
+          setTimeout(() => {
+            this.router.navigate(['/operaciones/ordenes-trabajo']);
+          }, 2100);
+        },
+        error: (error) => {
+          Swal.close();
+          this.form.enable();
+          this.updateFormDisabledState();
+
+          Swal.fire({
+            title: 'Error al guardar',
+            text: error.message || 'No se pudo guardar la orden. Por favor, intente nuevamente.',
+            icon: 'error',
+            confirmButtonText: 'Aceptar'
+          });
+
+          console.error('Error guardando orden:', error);
+        }
+      });
   }
 
   guardarYAsignar(): void {
-    this.guardar('Asignada');
+    this.guardar('ASI');
   }
 
   finalizar(): void {
-    this.guardar('Finalizada');
+    this.guardar('COM');
   }
 
   cancelar(): void {
     this.router.navigate(['/operaciones/ordenes-trabajo']);
   }
 
+  /**
+   * @deprecated Usar getEstadoBadgeClass() en su lugar
+   */
   getEstadoBadge(estado?: EstadoOrden | null): string {
-    const badges = {
-      Pendiente: 'bg-secondary text-white',
-      Asignada: 'bg-primary',
-      'En Proceso': 'bg-warning text-dark',
-      Finalizada: 'bg-success',
-      Anulada: 'bg-danger'
-    };
-    return badges[estado || 'Pendiente'] || 'bg-light text-dark';
+    // Delegar al nuevo método
+    return this.getEstadoBadgeClass(estado || undefined);
   }
 
-  private initNuevaOrden(): void {
-    this.isEdit = false;
-    this.titulo = 'Nueva Orden de Trabajo';
-    const hoy = new Date().toISOString().split('T')[0];
-    this.form.patchValue({
-      numeroOrden: 'Auto',
-      fechaCreacion: hoy,
-      fechaServicio: hoy,
-      estado: 'Pendiente',
-      totalPagar: 0
-    });
-    this.detallesOrden = [];
-    this.estadoBloqueado = false;
+  // Métodos UI/UX
+  selectSuplidor(suplidorId: string): void {
+    if (this.estadoBloqueado) return;
+    this.selectedSupplierId = this.selectedSupplierId === suplidorId ? null : suplidorId;
+    // Limpiar selecciones de vehículo y chofer si se cambia de suplidor
+    if (this.selectedSupplierId !== suplidorId) {
+      this.selectedVehiculoId = null;
+      this.selectedChoferId = null;
+    }
+    // Actualizar formulario
+    if (this.selectedSupplierId) {
+      const suplidor = this.suplidoresDisponibles.find(s => s.codigo === suplidorId);
+      if (suplidor) {
+        this.form.patchValue({ suplidor: suplidor.nombre });
+      }
+    }
+  }
+
+  selectVehiculo(vehiculoId: string): void {
+    if (this.estadoBloqueado) return;
+    this.selectedVehiculoId = this.selectedVehiculoId === vehiculoId ? null : vehiculoId;
+  }
+
+  selectChofer(choferId: string): void {
+    if (this.estadoBloqueado) return;
+    this.selectedChoferId = this.selectedChoferId === choferId ? null : choferId;
+  }
+
+  selectTime(time: string | null): void {
+    this.selectedTime = this.selectedTime === time ? null : time;
+    // Filtrar servicios por horario (lógica futura)
+  }
+
+  clearFilters(): void {
+    this.searchText = '';
+    this.selectedTime = null;
+    this.form.patchValue({ estado: 'PEN' });
+    this.refreshDisponibles();
+  }
+
+  getSuplidorEstadoBadge(estado: 'sin-asignar' | 'parcial' | 'completo'): string {
+    const badges = {
+      'sin-asignar': 'badge-secondary',
+      'parcial': 'badge-warning',
+      'completo': 'badge-success'
+    };
+    return badges[estado] || 'badge-secondary';
+  }
+
+  getSuplidorEstadoTexto(estado: 'sin-asignar' | 'parcial' | 'completo'): string {
+    const textos = {
+      'sin-asignar': 'Sin asignar',
+      'parcial': 'Parcial',
+      'completo': 'Completo'
+    };
+    return textos[estado] || 'Sin asignar';
+  }
+
+  getVacantes(suplidor: SuplidorDisponibilidadUI): number {
+    return suplidor.capacidadDisponible;
+  }
+
+  /**
+   * Actualiza el origen de la OT para un detalle seleccionado.
+   * El cambio se almacena temporalmente hasta que se ejecute "Agregar Seleccionados".
+   */
+  updateOrigenOT(detalle: ReservaDetalleDisponible, nuevoOrigen: string): void {
+    if (!this.origenDestinoEditados.has(detalle.key)) {
+      // Primera edición, inicializar con valores originales
+      this.origenDestinoEditados.set(detalle.key, {
+        origenOT: detalle.origen,
+        destinoOT: detalle.destino
+      });
+    }
+    const editado = this.origenDestinoEditados.get(detalle.key)!;
+    editado.origenOT = nuevoOrigen;
+  }
+
+  /**
+   * Actualiza el destino de la OT para un detalle seleccionado.
+   * El cambio se almacena temporalmente hasta que se ejecute "Agregar Seleccionados".
+   */
+  updateDestinoOT(detalle: ReservaDetalleDisponible, nuevoDestino: string): void {
+    if (!this.origenDestinoEditados.has(detalle.key)) {
+      // Primera edición, inicializar con valores originales
+      this.origenDestinoEditados.set(detalle.key, {
+        origenOT: detalle.origen,
+        destinoOT: detalle.destino
+      });
+    }
+    const editado = this.origenDestinoEditados.get(detalle.key)!;
+    editado.destinoOT = nuevoDestino;
+  }
+
+  /**
+   * Obtiene el origen de la OT (editado o original) para mostrar en el input.
+   */
+  getOrigenOT(detalle: ReservaDetalleDisponible): string {
+    return this.origenDestinoEditados.get(detalle.key)?.origenOT || detalle.origen;
+  }
+
+  /**
+   * Obtiene el destino de la OT (editado o original) para mostrar en el input.
+   */
+  getDestinoOT(detalle: ReservaDetalleDisponible): string {
+    return this.origenDestinoEditados.get(detalle.key)?.destinoOT || detalle.destino;
+  }
+
+  moverDetalle(index: number, direccion: 'up' | 'down'): void {
+    if (this.estadoBloqueado) return;
+    const newIndex = direccion === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= this.detallesOrden.length) return;
+    
+    const temp = this.detallesOrden[index];
+    this.detallesOrden[index] = this.detallesOrden[newIndex];
+    this.detallesOrden[newIndex] = temp;
   }
 
   private loadOrden(id: number): void {
@@ -204,7 +499,14 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     this.isEdit = true;
     this.titulo = `Editar Orden #${orden.numeroOrden}`;
     this.detallesOrden = [...orden.detalles];
-    this.estadoBloqueado = orden.estado === 'Finalizada';
+    this.estadoBloqueado = orden.estado === 'COM';
+    
+    // Cargar suplidor, vehículo y chofer si existen
+    this.selectedSupplierId = orden.codSuplidor || null;
+    this.selectedVehiculoId = orden.codVehiculo || null;
+    this.selectedChoferId = orden.codChofer || null;
+    
+    this.updateFormDisabledState();
 
     this.form.patchValue({
       numeroOrden: String(orden.numeroOrden),
@@ -212,24 +514,48 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
       fechaServicio: orden.fechaServicio,
       estado: orden.estado,
       suplidor: orden.suplidor,
-      ruta: orden.ruta,
-      conexion: orden.conexion,
       observaciones: orden.observaciones,
+      totalPagar: orden.totalPagar,
+      rutaCodigo: orden.ruta,
+      conexion: orden.conexion,
       kmInicial: orden.kmInicial,
       kmFinal: orden.kmFinal,
-      rotulacion: orden.rotulacion,
-      totalPagar: orden.totalPagar
+      rotulacion: orden.rotulacion ? 'Sí' : ''
     });
-  }
-
-  private refreshDisponibles(): void {
-    const asignados = this.ordenesService.getDetallesAsignados();
-    this.detallesOrden.forEach(det => asignados.delete(`${det.reservaId}-${det.detalleReservaId ?? det.id}`));
-    this.detallesDisponibles = this.reservasService.getDetallesDisponibles(asignados);
+    
+    // Cargar suplidores disponibles para la fecha de la orden
+    this.loadSuplidoresDisponibilidad(orden.fechaServicio);
   }
 
   private getNextDetalleId(): number {
     return this.detallesOrden.length ? Math.max(...this.detallesOrden.map(d => d.id)) + 1 : 1;
+  }
+
+  refreshDisponibles(): void {
+    const fecha = this.form.get('fechaServicio')?.value;
+    if (fecha) {
+      this.loadServiciosDisponibles(fecha);
+    }
+  }
+
+  getSuplidorSeleccionado(): string {
+    if (!this.selectedSupplierId) return '-';
+    const suplidor = this.suplidoresDisponibles.find(s => s.codigo === this.selectedSupplierId);
+    return suplidor?.nombre || '-';
+  }
+
+  getVehiculoSeleccionado(): string {
+    if (!this.selectedVehiculoId || !this.selectedSupplierId) return '-';
+    const suplidor = this.suplidoresDisponibles.find(s => s.codigo === this.selectedSupplierId);
+    const vehiculo = suplidor?.vehiculos.find(v => v.codigo === this.selectedVehiculoId);
+    return vehiculo?.nombre || '-';
+  }
+
+  getChoferSeleccionado(): string {
+    if (!this.selectedChoferId || !this.selectedSupplierId) return '-';
+    const suplidor = this.suplidoresDisponibles.find(s => s.codigo === this.selectedSupplierId);
+    const chofer = suplidor?.choferes.find(c => c.codigo === this.selectedChoferId);
+    return chofer?.nombre || '-';
   }
 
   private recalcularTotales(): void {
@@ -240,5 +566,105 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     if (!this.form.get('totalPagar')?.value) {
       this.form.patchValue({ totalPagar: this.totalPagarSugerido }, { emitEvent: false });
     }
+  }
+
+  private loadCurrentUser(): void {
+    const currentUser = this.authService.getCurrentUser();
+    if (currentUser) {
+      // Asignar el nombre de usuario al formControl operador
+      this.form.patchValue({
+        operador: currentUser.usuario || currentUser.nombre || 'Admin'
+      });
+    }
+  }
+
+  private loadMonedas(): void {
+    this.subs.add(
+      this.monedaService.getAll().subscribe({
+        next: (monedas) => {
+          // Filtrar solo las monedas activas
+          this.monedas = monedas.filter(m => m.activo === 1);
+        },
+        error: (err) => {
+          console.error('Error al cargar monedas:', err);
+          // Fallback a monedas por defecto
+          this.monedas = [];
+        }
+      })
+    );
+  }
+
+  private loadSuplidoresDisponibilidad(fecha: string): void {
+    if (!fecha) return;
+    
+    this.loadingSuplidores = true;
+    // Convertir fecha de YYYY-MM-DD a DD/MM/YYYY para la API
+    const [year, month, day] = fecha.split('-');
+    const fechaAPI = `${day}/${month}/${year}`;
+    
+    this.subs.add(
+      this.suplidorService.getDisponibilidad(fechaAPI).subscribe({
+        next: (suplidores) => {
+          this.suplidoresDisponibles = suplidores;
+          this.loadingSuplidores = false;
+        },
+        error: (err) => {
+          console.error('Error al cargar disponibilidad de suplidores:', err);
+          this.suplidoresDisponibles = [];
+          this.loadingSuplidores = false;
+        }
+      })
+    );
+  }
+
+  private iniciarNueva(): void {
+    this.isEdit = false;
+    this.titulo = 'Nueva Orden de Trabajo';
+    const hoy = new Date().toISOString().split('T')[0];
+    const currentUser = this.authService.getCurrentUser();
+    const operadorActual = currentUser ? (currentUser.usuario || currentUser.nombre || 'Admin') : 'Admin';
+    
+    this.form.patchValue({
+      numeroOrden: 'Auto',
+      fechaCreacion: hoy,
+      fechaServicio: hoy,
+      estado: 'PEN',
+      totalPagar: 0,
+      tipo: 0,
+      moneda: 'USD',
+      tCambio: 1,
+      operador: operadorActual
+    });
+    this.detallesOrden = [];
+    this.estadoBloqueado = false;
+    
+    // Cargar datos iniciales
+    this.loadSuplidoresDisponibilidad(hoy);
+    this.loadServiciosDisponibles(hoy);
+  }
+
+  private loadServiciosDisponibles(fecha: string): void {
+    if (!fecha) return;
+    
+    this.loadingServicios = true;
+    // Convertir fecha de YYYY-MM-DD a DD/MM/YYYY para la API
+    const [year, month, day] = fecha.split('-');
+    const fechaAPI = `${day}/${month}/${year}`;
+    
+    this.subs.add(
+      this.reservasService.getDetallesPendientes(fechaAPI).subscribe({
+        next: (detalles) => {
+          // Filtrar los que ya están en la orden actual
+          const idsAsignados = new Set(this.detallesOrden.map(d => d.detalleReservaId));
+          this.detallesDisponibles = detalles.filter(d => !idsAsignados.has(d.id));
+          this.loadingServicios = false;
+        },
+        error: (err) => {
+          console.error('Error al cargar servicios disponibles:', err);
+          this.detallesDisponibles = [];
+          this.loadingServicios = false;
+        }
+      })
+    );
   }
 }

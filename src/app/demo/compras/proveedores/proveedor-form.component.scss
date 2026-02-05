@@ -1,23 +1,29 @@
-/* Estilos compactos para el formulario de suplidores */
-.suplidor-form .section-title {
+/* Estilos compactos para el formulario de proveedores */
+.proveedor-form .section-title {
   font-weight: 600;
   margin: 0.75rem 0 0.5rem;
   color: #495057;
 }
 
-.suplidor-form .form-group {
+.proveedor-form .form-group {
   margin-bottom: 0.75rem;
 }
 
-.suplidor-form input,
-.suplidor-form select,
-.suplidor-form textarea {
+.proveedor-form input,
+.proveedor-form select,
+.proveedor-form textarea {
   font-size: 0.9rem;
   padding: 0.55rem 0.75rem;
 }
 
-.suplidor-form .form-check {
+.proveedor-form .form-check {
   margin-top: 0.4rem;
+}
+
+.proveedor-form .checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.35rem 0.5rem;
 }
 
 .section-card {

@@ -4,61 +4,49 @@
       <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
         <div>
           <h5 class="mb-1">Ordenes de Trabajo</h5>
-          <p class="mb-0 text-muted">Listado general de ordenes generadas desde las reservas y asignadas a suplidores.</p>
+          <p class="mb-0 text-muted">Listado general de ordenes generadas desde las reservas y asignadas a proveedores.</p>
         </div>
-        <button class="btn btn-primary" (click)="nuevaOrden()">
+        <button class="btn btn-primary" (click)="nuevaOrden()" [disabled]="isLoading">
           <i class="feather icon-plus"></i> Nueva Orden de Trabajo
         </button>
       </div>
 
       <div class="row align-items-end mb-3">
-        <div class="col-md-3 mb-2">
-          <label class="form-label small text-muted">Numero de Orden</label>
-          <input type="text" class="form-control" [(ngModel)]="filtros.numeroOrden" (input)="applyFilters()" placeholder="Ej: 2025002">
+        <div class="col-lg-4 col-md-6 mb-2">
+          <label class="form-label small text-muted">Búsqueda general</label>
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="filtros.busqueda"
+            (keyup.enter)="onBuscar()"
+            [disabled]="isLoading"
+            placeholder="Código OT / Código Reserva / Suplidor">
         </div>
-        <div class="col-md-2 mb-2">
-          <label class="form-label small text-muted">Fecha desde</label>
-          <input type="date" class="form-control" [(ngModel)]="filtros.fechaDesde" (change)="applyFilters()">
-        </div>
-        <div class="col-md-2 mb-2">
-          <label class="form-label small text-muted">Fecha hasta</label>
-          <input type="date" class="form-control" [(ngModel)]="filtros.fechaHasta" (change)="applyFilters()">
-        </div>
-        <div class="col-md-3 mb-2">
-          <label class="form-label small text-muted">Suplidor</label>
-          <select class="form-control" [(ngModel)]="filtros.suplidor" (change)="applyFilters()">
+        <div class="col-lg-2 col-md-6 mb-2">
+          <label class="form-label small text-muted">Estado</label>
+          <select class="form-control" [(ngModel)]="filtros.estado" (change)="onBuscar()" [disabled]="isLoading">
             <option value="">Todos</option>
-            <option *ngFor="let suplidor of suplidores" [ngValue]="suplidor">{{ suplidor }}</option>
+            <option *ngFor="let estado of estadosDisponibles" [value]="estado.codigo">{{ estado.descripcion }}</option>
           </select>
         </div>
-        <div class="col-md-2 mb-2">
-          <label class="form-label small text-muted">Estado de la Orden</label>
-          <select class="form-control" [(ngModel)]="filtros.estado" (change)="applyFilters()">
-            <option value="">Todos</option>
-            <option *ngFor="let estado of estadosDisponibles" [ngValue]="estado">{{ estado }}</option>
-          </select>
+        <div class="col-lg-2 col-md-6 mb-2">
+          <label class="form-label small text-muted">Fecha inicio</label>
+          <input type="date" class="form-control" [(ngModel)]="filtros.fechaInicio" (change)="onBuscar()" [disabled]="isLoading">
         </div>
-        <div class="col-md-3 mb-2">
-          <label class="form-label small text-muted">Ruta / Zona (opcional)</label>
-          <input type="text" class="form-control" [(ngModel)]="filtros.rutaZona" (input)="applyFilters()" placeholder="Ej: San Jose - Jaco">
+        <div class="col-lg-2 col-md-6 mb-2">
+          <label class="form-label small text-muted">Fecha fin</label>
+          <input type="date" class="form-control" [(ngModel)]="filtros.fechaFin" (change)="onBuscar()" [disabled]="isLoading">
         </div>
-        <div class="col-md-3 mb-2">
-          <label class="form-label small text-muted">Agencia (opcional)</label>
-          <select class="form-control" [(ngModel)]="filtros.agencia" (change)="applyFilters()">
-            <option value="">Todas</option>
-            <option *ngFor="let agencia of agencias" [ngValue]="agencia">{{ agencia }}</option>
-          </select>
-        </div>
-        <div class="col-md-2 mb-2 d-flex filters-reset">
-          <button class="btn btn-link text-secondary ml-auto" type="button" (click)="resetFilters()">
-            Limpiar filtros
-          </button>
+        <div class="col-lg-2 col-md-12 mb-2 d-flex justify-content-end">
+          <button class="btn btn-outline-secondary me-2" type="button" (click)="onLimpiar()" [disabled]="isLoading">Limpiar</button>
+          <button class="btn btn-primary" type="button" (click)="onBuscar()" [disabled]="isLoading">Buscar</button>
         </div>
       </div>
 
       <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
         <div class="text-muted small">
-          Mostrando <strong>{{ ordenesFiltradas.length }}</strong> de <strong>{{ ordenes.length }}</strong> ordenes
+          Página <strong>{{ paginacion.paginaActual }}</strong> de <strong>{{ paginacion.totalPaginas }}</strong> ·
+          Mostrando <strong>{{ ordenes.length }}</strong> de <strong>{{ paginacion.totalRegistros }}</strong> órdenes
         </div>
       </div>
 
@@ -66,101 +54,91 @@
         <table class="table table-hover mb-0">
           <thead>
             <tr>
-              <th>No. Orden</th>
-              <th>Fecha de Servicio</th>
+              <th>Código OT</th>
               <th>Suplidor</th>
-              <th>Ruta / Zona</th>
-              <th>Cantidad de Servicios</th>
-              <th>Total Pax</th>
-              <th>Total a Pagar</th>
+              <th>Fecha de servicio</th>
+              <th>Ruta / Conexión</th>
+              <th class="text-end">Km</th>
               <th>Estado</th>
-              <th>Acciones</th>
+              <th class="text-end">Total OT</th>
+              <th>Moneda</th>
+              <th class="text-center">Acciones</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let orden of ordenesPaginadas; trackBy: trackByOrdenId">
-              <td>
-                <div class="font-weight-bold">#{{ orden.numeroOrden }}</div>
-                <small class="text-muted">ID {{ orden.id }}</small>
-              </td>
-              <td>{{ orden.fechaServicio }}</td>
-              <td>{{ orden.suplidor }}</td>
-              <td>{{ orden.ruta || 'N/D' }}</td>
-              <td>
-                <span class="badge badge-pill bg-light text-dark border">
-                  <i class="feather icon-layers mr-1"></i>
-                  {{ orden.detalles.length }} servicio{{ orden.detalles.length > 1 ? 's' : '' }}
-                </span>
-              </td>
-              <td>
-                <span class="badge badge-pill bg-info text-white">
-                  <i class="feather icon-users mr-1"></i>
-                  {{ orden.totalPax }} pax
-                </span>
-              </td>
-              <td>CRC {{ orden.totalPagar | number:'1.0-0' }}</td>
-              <td>
-                <span class="badge badge-pill estado-badge" [ngClass]="getEstadoBadge(orden.estado)">{{ orden.estado }}</span>
-              </td>
-              <td>
-                <div class="btn-group btn-group-sm action-buttons" role="group" aria-label="Acciones">
-                  <button class="btn btn-outline-info" (click)="verEditar(orden)" title="Ver / Editar">
-                    <i class="feather icon-edit"></i>
-                  </button>
-                  <button class="btn btn-outline-secondary" (click)="imprimirOrden(orden)" title="Imprimir Orden de Trabajo">
-                    <i class="feather icon-printer"></i>
-                  </button>
-                  <div ngbDropdown class="btn-group btn-group-sm" display="static">
-                    <button class="btn btn-outline-primary dropdown-toggle" ngbDropdownToggle title="Cambiar Estado">
-                      <i class="feather icon-refresh-cw"></i>
-                    </button>
-                    <div ngbDropdownMenu>
-                      <button
-                        ngbDropdownItem
-                        *ngFor="let estado of estadosDisponibles"
-                        (click)="cambiarEstado(orden, estado)"
-                        [disabled]="orden.estado === estado">
-                        {{ estado }}
-                      </button>
-                    </div>
-                  </div>
-                  <button class="btn btn-outline-danger" (click)="anularOrden(orden)" title="Anular Orden">
-                    <i class="feather icon-x-circle"></i>
-                  </button>
-                </div>
+            <tr *ngIf="isLoading">
+              <td colspan="10" class="text-center text-muted py-4">
+                <i class="feather icon-loader me-1"></i> Cargando órdenes...
               </td>
             </tr>
-            <tr *ngIf="ordenesFiltradas.length === 0">
-              <td colspan="9" class="text-center text-muted">No se encontraron ordenes con los filtros aplicados.</td>
+            <ng-container *ngIf="!isLoading">
+              <tr *ngFor="let orden of ordenes; trackBy: trackByOrdenId">
+                <td>
+                  <div class="font-weight-bold">{{ orden.codOT || 'N/D' }}</div>
+                  <small class="text-muted" *ngIf="orden.id !== null && orden.id !== undefined">ID {{ orden.id }}</small>
+                </td>
+                <td>{{ orden.suplidor || 'N/D' }}</td>
+                <td>{{ orden.fechaServicio ? (orden.fechaServicio | date:'dd/MM/yyyy') : 'N/D' }}</td>
+                <td>
+                  <div>{{ orden.ruta || 'N/D' }}</div>
+                  <small class="text-muted" *ngIf="orden.conexion">{{ orden.conexion }}</small>
+                </td>
+                <td class="text-end">
+                  <ng-container *ngIf="orden.kmRecorridos !== null && orden.kmRecorridos !== undefined; else kmND">
+                    {{ orden.kmRecorridos | number:'1.0-2' }}
+                  </ng-container>
+                  <ng-template #kmND>N/D</ng-template>
+                </td>
+                <td>
+                  <span
+                    class="badge badge-pill estado-badge"
+                    [ngClass]="getEstadoBadge(orden.estado?.codigo, orden.estado?.descripcion)">
+                    {{ orden.estado?.descripcion || orden.estado?.codigo || 'N/D' }}
+                  </span>
+                </td>
+                <td class="text-end">
+                  <ng-container *ngIf="orden.total !== null && orden.total !== undefined; else totalND">
+                    {{ orden.total | number:'1.2-2' }}
+                  </ng-container>
+                  <ng-template #totalND>N/D</ng-template>
+                </td>
+                <td>{{ orden.moneda || 'N/D' }}</td>
+                <td class="text-center">
+                  <div class="action-buttons">
+                    <button class="btn btn-sm btn-outline-secondary" (click)="verEditar(orden)" [disabled]="isLoading" title="Ver / Editar">
+                      <i class="feather icon-eye"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary ms-1" (click)="verEditar(orden)" [disabled]="isLoading" title="Editar">
+                      <i class="feather icon-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary ms-1" (click)="imprimirOrden(orden)" [disabled]="isLoading" title="Imprimir">
+                      <i class="feather icon-printer"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </ng-container>
+            <tr *ngIf="!isLoading && ordenes.length === 0">
+              <td colspan="10" class="text-center text-muted">No se encontraron órdenes con los filtros aplicados.</td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <div class="d-flex flex-wrap justify-content-between align-items-center mt-3" *ngIf="ordenesFiltradas.length">
-        <div class="form-inline mb-2">
-          <label class="mr-2 mb-0">Mostrar</label>
-          <select class="form-control" [ngModel]="pageSize" (ngModelChange)="changePageSize($event)">
-            <option *ngFor="let size of pageSizeOptions" [ngValue]="size">{{ size }}</option>
+      <div class="row mt-3 align-items-center">
+        <div class="col-md-4 text-muted mb-2">
+          Pagina {{ paginacion.paginaActual }} de {{ paginacion.totalPaginas }} ({{ paginacion.totalRegistros }} registros)
+        </div>
+        <div class="col-md-4 text-center mb-2">
+          <select class="form-select form-select-sm d-inline-block w-auto" [(ngModel)]="pageSize" (change)="onPageSizeChange()" [disabled]="isLoading">
+            <option *ngFor="let size of pageSizeOptions" [ngValue]="size">{{ size }} por pagina</option>
           </select>
-          <span class="ml-2">por pagina</span>
         </div>
-        <div class="mb-2 text-muted">
-          Mostrando
-          <strong>{{ pageStart }}</strong>
-          -
-          <strong>{{ pageEnd }}</strong>
-          de
-          <strong>{{ ordenesFiltradas.length }}</strong>
-        </div>
-        <div class="btn-group mb-2" role="group">
-          <button class="btn btn-light" (click)="prevPage()" [disabled]="currentPage === 1">
-            <i class="feather icon-chevron-left"></i>
-          </button>
-          <button class="btn btn-light" disabled>Pagina {{ currentPage }} / {{ totalPages }}</button>
-          <button class="btn btn-light" (click)="nextPage()" [disabled]="currentPage === totalPages">
-            <i class="feather icon-chevron-right"></i>
-          </button>
+        <div class="col-md-4 text-end mb-2">
+          <div class="btn-group" role="group">
+            <button class="btn btn-outline-secondary btn-sm" [disabled]="!paginacion.tienePaginaAnterior || isLoading" (click)="goToPageRelative(-1)">Prev</button>
+            <button class="btn btn-outline-secondary btn-sm" [disabled]="!paginacion.tienePaginaSiguiente || isLoading" (click)="goToPageRelative(1)">Next</button>
+          </div>
         </div>
       </div>
     </app-card>

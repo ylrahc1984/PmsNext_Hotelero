@@ -1,0 +1,111 @@
+<div class="vehiculo-form-wrapper">
+  <div class="form-header mb-3">
+    <h6 class="mb-0">
+      <i class="feather icon-truck"></i> {{ isEdit ? 'Editar Vehículo' : 'Nuevo Vehículo' }}
+    </h6>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="guardar()">
+    <div class="row">
+      <!-- Descripción -->
+      <div class="col-md-12 mb-3">
+        <label class="form-label">
+          Nombre del Vehículo <span class="text-danger">*</span>
+        </label>
+        <input 
+          class="form-control" 
+          formControlName="descripcion" 
+          placeholder="Ej: COASTER 1"
+          [class.is-invalid]="form.get('descripcion')?.invalid && form.get('descripcion')?.touched">
+        <div class="invalid-feedback" *ngIf="form.get('descripcion')?.invalid && form.get('descripcion')?.touched">
+          El nombre del vehículo es requerido
+        </div>
+      </div>
+
+      <!-- Placa -->
+      <div class="col-md-6 mb-3">
+        <label class="form-label">
+          Placa <span class="text-danger">*</span>
+        </label>
+        <input 
+          class="form-control" 
+          formControlName="placa" 
+          placeholder="A123456"
+          [class.is-invalid]="form.get('placa')?.invalid && form.get('placa')?.touched">
+        <div class="invalid-feedback" *ngIf="form.get('placa')?.invalid && form.get('placa')?.touched">
+          La placa es requerida
+        </div>
+      </div>
+
+      <!-- Tipo de Vehículo -->
+      <div class="col-md-6 mb-3">
+        <label class="form-label">Tipo de Vehículo</label>
+        <select class="form-select" formControlName="tipoVehiculo">
+          <option value="">Seleccione...</option>
+          <option *ngFor="let tipo of tiposVehiculo" [value]="tipo.value">
+            {{ tipo.label }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Capacidad -->
+      <div class="col-md-12 mb-3">
+        <label class="form-label">
+          Capacidad Máxima (pasajeros) <span class="text-danger">*</span>
+        </label>
+        <input 
+          class="form-control" 
+          type="number" 
+          formControlName="capacidad" 
+          placeholder="0"
+          min="1"
+          [class.is-invalid]="form.get('capacidad')?.invalid && form.get('capacidad')?.touched">
+        <div class="invalid-feedback" *ngIf="form.get('capacidad')?.invalid && form.get('capacidad')?.touched">
+          La capacidad debe ser mayor a 0
+        </div>
+      </div>
+
+      <!-- Observaciones -->
+      <div class="col-md-12 mb-3">
+        <label class="form-label">Observaciones</label>
+        <textarea 
+          class="form-control" 
+          formControlName="observaciones" 
+          rows="3"
+          placeholder="Observaciones sobre el vehículo"></textarea>
+      </div>
+
+      <!-- Estado -->
+      <div class="col-md-12 mb-3">
+        <label class="form-label">Estado</label>
+        <div class="form-check form-switch">
+          <input 
+            class="form-check-input" 
+            type="checkbox" 
+            [checked]="form.get('estado')?.value === 'ACT'"
+            (change)="form.patchValue({ estado: $any($event.target).checked ? 'ACT' : 'INA' })">
+          <label class="form-check-label">
+            {{ form.get('estado')?.value === 'ACT' ? 'Activo' : 'Inactivo' }}
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botones -->
+    <div class="form-actions mt-3">
+      <button 
+        type="button" 
+        class="btn btn-outline-secondary" 
+        (click)="cancelar()" 
+        [disabled]="isLoading">
+        <i class="feather icon-x"></i> Cancelar
+      </button>
+      <button 
+        type="submit" 
+        class="btn btn-primary" 
+        [disabled]="isLoading || form.invalid">
+        <i class="feather icon-save"></i> {{ isEdit ? 'Actualizar' : 'Guardar' }}
+      </button>
+    </div>
+  </form>
+</div>

@@ -53,6 +53,22 @@ export const NavigationItems: NavigationItem[] = [
         ]
       },
       {
+        id: 'compras',
+        title: 'COMPRAS',
+        type: 'collapse',
+        icon: 'feather icon-shopping-cart',
+        children: [
+          {
+            id: 'proveedores',
+            title: 'Proveedores',
+            type: 'item',
+            url: '/compras/proveedores',
+            icon: 'feather icon-users',
+            classes: 'nav-item'
+          }
+        ]
+      },
+      {
         id: 'catalogos',
         title: 'CATALOGOS',
         type: 'collapse',
@@ -87,7 +103,7 @@ export const NavigationItems: NavigationItem[] = [
             title: 'Suplidores',
             type: 'item',
             url: '/catalogos/suplidores',
-            icon: 'feather icon-box',
+            icon: 'feather icon-package',
             classes: 'nav-item'
           }
         ]

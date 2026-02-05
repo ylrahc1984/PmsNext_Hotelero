@@ -226,8 +226,28 @@ const routes: Routes = [
         loadComponent: () => import('./demo/catalogos/suplidores/suplidor-form.component').then((c) => c.SuplidorFormComponent)
       },
       {
-        path: 'suplidores/editar/:codProve',
+        path: 'suplidores/editar/:codSuplidor',
         loadComponent: () => import('./demo/catalogos/suplidores/suplidor-form.component').then((c) => c.SuplidorFormComponent)
+      }
+    ]
+  },
+  {
+    path: 'compras',
+    component: AdminComponent,
+    canActivate: [AuthGuard],
+    canActivateChild: [AuthGuard],
+    children: [
+      {
+        path: 'proveedores',
+        loadComponent: () => import('./demo/compras/proveedores/proveedores.component').then((c) => c.ProveedoresComponent)
+      },
+      {
+        path: 'proveedores/nuevo',
+        loadComponent: () => import('./demo/compras/proveedores/proveedor-form.component').then((c) => c.ProveedorFormComponent)
+      },
+      {
+        path: 'proveedores/editar/:codProve',
+        loadComponent: () => import('./demo/compras/proveedores/proveedor-form.component').then((c) => c.ProveedorFormComponent)
       }
     ]
   },
@@ -243,17 +263,32 @@ const routes: Routes = [
   },
   {
     path: 'suplidores',
-    redirectTo: 'catalogos/suplidores',
+    redirectTo: 'compras/proveedores',
     pathMatch: 'full'
   },
   {
     path: 'suplidores/nuevo',
-    redirectTo: 'catalogos/suplidores/nuevo',
+    redirectTo: 'compras/proveedores/nuevo',
     pathMatch: 'full'
   },
   {
     path: 'suplidores/editar/:codProve',
-    redirectTo: 'catalogos/suplidores/editar/:codProve',
+    redirectTo: 'compras/proveedores/editar/:codProve',
+    pathMatch: 'full'
+  },
+  {
+    path: 'catalogos/suplidores',
+    redirectTo: 'compras/proveedores',
+    pathMatch: 'full'
+  },
+  {
+    path: 'catalogos/suplidores/nuevo',
+    redirectTo: 'compras/proveedores/nuevo',
+    pathMatch: 'full'
+  },
+  {
+    path: 'catalogos/suplidores/editar/:codProve',
+    redirectTo: 'compras/proveedores/editar/:codProve',
     pathMatch: 'full'
   },
   {

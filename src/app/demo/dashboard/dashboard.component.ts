@@ -87,7 +87,7 @@ export class DashboardComponent implements OnInit {
     });
     // Ordenes activas (mock local)
     const ordenes = this.ordenesService.getOrdenes();
-    this.ordenesActivas = ordenes.filter(o => o.estado !== 'Finalizada' && o.estado !== 'Anulada').length;
+    this.ordenesActivas = ordenes.filter(o => o.estado !== 'COM' && o.estado !== 'CAN').length;
     this.sales[2].amount = this.ordenesActivas.toString();
   }
 }

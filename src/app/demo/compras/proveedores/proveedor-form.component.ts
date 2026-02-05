@@ -5,18 +5,19 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import Swal from 'sweetalert2';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
-import { SuplidorService, SuplidorUI } from './suplidor.service';
-import { environment } from 'src/environments/environment';
+import { ProveedorService, ProveedorUI } from './proveedor.service';
 
-interface SuplidorFormData {
+interface ProveedorFormData {
   codigo: string;
   descripcion: string;
   tipCedula: string;
   ruc: string;
+  codTipo: string;
   contacto: string;
   email: string;
   telefono1: string;
   telefono2: string;
+  fax: string;
   direccion: string;
   ciudad: string;
   provincia: string;
@@ -24,66 +25,64 @@ interface SuplidorFormData {
   limiteCre: number;
   banco: string;
   ctaBanco: string;
-  estado: string;
 }
 
 @Component({
-  selector: 'app-suplidor-form',
+  selector: 'app-proveedor-form',
   imports: [CommonModule, FormsModule, SharedModule],
-  templateUrl: './suplidor-form.component.html',
-  styleUrls: ['./suplidor-form.component.scss']
+  templateUrl: './proveedor-form.component.html',
+  styleUrls: ['./proveedor-form.component.scss']
 })
-export class SuplidorFormComponent implements OnInit {
+export class ProveedorFormComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
-  private suplidorService = inject(SuplidorService);
+  private proveedorService = inject(ProveedorService);
   private http = inject(HttpClient);
 
-  formData: SuplidorFormData = this.createEmpty();
+  formData: ProveedorFormData = this.createEmpty();
   isEditing = false;
   isLoading = false;
   readOnly = false;
 
   tipCedulaOptions: Array<{ value: string; label: string }> = [];
-  estadoOptions: Array<{ value: string; label: string }> = [
-    { value: 'ACT', label: 'Activo' },
-    { value: 'INA', label: 'Inactivo' }
-  ];
+  tipoOptions: Array<{ value: string; label: string }> = [];
 
   ngOnInit(): void {
     this.loadTipCedula();
-    const codSuplidor = this.route.snapshot.paramMap.get('codSuplidor') ?? '';
-    if (codSuplidor) {
+    this.loadTipoProveedor();
+    const codProve = this.route.snapshot.paramMap.get('codProve') ?? '';
+    if (codProve) {
       this.isEditing = true;
-      this.loadSuplidor(codSuplidor);
+      this.loadProveedor(codProve);
     } else {
       this.formData = this.createEmpty();
     }
   }
 
-  private createEmpty(): SuplidorFormData {
+  private createEmpty(): ProveedorFormData {
     return {
       codigo: '',
       descripcion: '',
       tipCedula: '01',
       ruc: '',
+      codTipo: '001',
       contacto: '',
       email: '',
       telefono1: '',
       telefono2: '',
+      fax: '',
       direccion: '',
       ciudad: '',
       provincia: '',
       pais: '',
       limiteCre: 0,
       banco: '',
-      ctaBanco: '',
-      estado: 'ACT'
+      ctaBanco: ''
     };
   }
 
   private loadTipCedula(): void {
-    const apiUrl = `${environment.apiUrl}/tipoidentificacion`;
+    const apiUrl = 'http://localhost:5000/api/tipoidentificacion';
     this.http.get<Array<{ CA24_Codigo: string; CA24_Tipo: string }> | null>(apiUrl).subscribe({
       next: (response) => {
         const data = response ?? [];
@@ -93,34 +92,51 @@ export class SuplidorFormComponent implements OnInit {
         }));
       },
       error: (error) => {
-        console.error('Error al cargar tipos de identificación:', error);
+        console.error('Error al cargar tipos de identificacion:', error);
         this.tipCedulaOptions = [];
       }
     });
   }
 
-  private loadSuplidor(codSuplidor: string): void {
+  private loadTipoProveedor(): void {
+    const apiUrl = 'http://localhost:5000/api/tipoproveedor';
+    this.http.get<Array<{ CAC01_CodTipo: string; CAC01_TipoProve: string }> | null>(apiUrl).subscribe({
+      next: (response) => {
+        const data = response ?? [];
+        this.tipoOptions = data.map((item) => ({
+          value: item.CAC01_CodTipo,
+          label: item.CAC01_TipoProve
+        }));
+      },
+      error: (error) => {
+        console.error('Error al cargar tipos de proveedor:', error);
+        this.tipoOptions = [];
+      }
+    });
+  }
+
+  private loadProveedor(codProve: string): void {
     this.isLoading = true;
-    this.suplidorService.getSuplidorByCodigo(codSuplidor).subscribe({
-      next: (suplidor) => {
-        if (!suplidor) {
+    this.proveedorService.getProveedorByCodigo(codProve).subscribe({
+      next: (proveedor) => {
+        if (!proveedor) {
           Swal.fire({
             title: 'No encontrado',
-            text: 'No se encontró el suplidor.',
+            text: 'No se encontro el proveedor.',
             icon: 'warning'
           });
           this.isLoading = false;
-          this.router.navigate(['/catalogos/suplidores']);
+          this.router.navigate(['/compras/proveedores']);
           return;
         }
-        this.applySuplidor(suplidor);
+        this.applyProveedor(proveedor);
         this.isLoading = false;
       },
       error: (error) => {
-        console.error('Error al cargar suplidor:', error);
+        console.error('Error al cargar proveedor:', error);
         Swal.fire({
           title: 'Error',
-          text: 'No se pudo cargar el suplidor.',
+          text: 'No se pudo cargar el proveedor.',
           icon: 'error'
         });
         this.isLoading = false;
@@ -128,39 +144,35 @@ export class SuplidorFormComponent implements OnInit {
     });
   }
 
-  private applySuplidor(suplidor: SuplidorUI): void {
+  private applyProveedor(proveedor: ProveedorUI): void {
     this.formData = {
       ...this.createEmpty(),
-      codigo: suplidor.codigo,
-      descripcion: suplidor.descripcion,
-      tipCedula: suplidor.tipCedula || '01',
-      ruc: suplidor.ruc,
-      contacto: suplidor.contacto || '',
-      email: suplidor.email || '',
-      telefono1: suplidor.telefono1 || '',
-      telefono2: suplidor.telefono2 || '',
-      direccion: suplidor.direccion || '',
-      ciudad: suplidor.ciudad || '',
-      provincia: suplidor.provincia || '',
-      pais: suplidor.pais || '',
-      limiteCre: Number(suplidor.limiteCre || 0),
-      banco: suplidor.banco || '',
-      ctaBanco: suplidor.ctaBanco || '',
-      estado: suplidor.estado || 'ACT'
+      codigo: proveedor.codigo,
+      descripcion: proveedor.descripcion,
+      tipCedula: proveedor.tipCedula || '01',
+      ruc: proveedor.ruc,
+      codTipo: proveedor.codTipo || '001',
+      contacto: proveedor.contacto || '',
+      email: proveedor.email || '',
+      telefono1: proveedor.telefono1 || '',
+      telefono2: proveedor.telefono2 || '',
+      fax: proveedor.fax || '',
+      direccion: proveedor.direccion || '',
+      ciudad: proveedor.ciudad || '',
+      provincia: proveedor.provincia || '',
+      pais: proveedor.pais || '',
+      limiteCre: Number(proveedor.limiteCre || 0),
+      banco: proveedor.banco || '',
+      ctaBanco: proveedor.ctaBanco || ''
     };
   }
 
   submit(form: NgForm): void {
     if (!form.valid) {
-      Swal.fire({
-        title: 'Formulario incompleto',
-        text: 'Por favor complete todos los campos obligatorios.',
-        icon: 'warning'
-      });
       return;
     }
 
-    const cleaned: SuplidorUI = {
+    const cleaned: ProveedorUI = {
       codigo: this.formData.codigo.trim(),
       descripcion: this.formData.descripcion.trim(),
       tipCedula: (this.formData.tipCedula || '01').trim(),
@@ -169,6 +181,7 @@ export class SuplidorFormComponent implements OnInit {
       email: this.formData.email?.trim() || '',
       telefono1: this.formData.telefono1?.trim() || '',
       telefono2: this.formData.telefono2?.trim() || '',
+      fax: this.formData.fax?.trim() || '',
       direccion: this.formData.direccion?.trim() || '',
       ciudad: this.formData.ciudad?.trim() || '',
       provincia: this.formData.provincia?.trim() || '',
@@ -176,31 +189,30 @@ export class SuplidorFormComponent implements OnInit {
       limiteCre: Number(this.formData.limiteCre || 0),
       banco: this.formData.banco?.trim() || '',
       ctaBanco: this.formData.ctaBanco?.trim() || '',
-      estado: this.formData.estado || 'ACT',
-      operador: '',
-      fechaReg: ''
+      codTipo: this.formData.codTipo || '001',
+      tipoProveedor: ''
     };
 
-    const payload = this.suplidorService.buildPayloadFromUI(cleaned, this.isEditing ? 2 : 1);
+    const payload = this.proveedorService.buildPayloadFromUI(cleaned, this.isEditing ? 2 : 1);
     const request = this.isEditing
-      ? this.suplidorService.editarSuplidor(cleaned.codigo, payload)
-      : this.suplidorService.crearSuplidor(payload);
+      ? this.proveedorService.editarProveedor(cleaned.codigo, payload)
+      : this.proveedorService.crearProveedor(payload);
 
     this.isLoading = true;
     request.subscribe({
       next: () => {
         Swal.fire({
-          title: 'Éxito',
-          text: this.isEditing ? 'Suplidor actualizado correctamente.' : 'Suplidor creado correctamente.',
+          title: 'Exito',
+          text: this.isEditing ? 'Proveedor actualizado correctamente.' : 'Proveedor creado correctamente.',
           icon: 'success'
         });
-        this.router.navigate(['/catalogos/suplidores']);
+        this.router.navigate(['/compras/proveedores']);
       },
       error: (error) => {
-        console.error('Error al guardar suplidor:', error);
+        console.error('Error al guardar proveedor:', error);
         Swal.fire({
           title: 'Error',
-          text: 'No se pudo guardar el suplidor.',
+          text: 'No se pudo guardar el proveedor.',
           icon: 'error'
         });
         this.isLoading = false;
@@ -209,6 +221,6 @@ export class SuplidorFormComponent implements OnInit {
   }
 
   cancelForm(): void {
-    this.router.navigate(['/catalogos/suplidores']);
+    this.router.navigate(['/compras/proveedores']);
   }
 }

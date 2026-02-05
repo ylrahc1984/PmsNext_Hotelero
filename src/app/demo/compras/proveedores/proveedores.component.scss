@@ -1,4 +1,4 @@
-.suplidores-wrapper {
+.proveedores-wrapper {
   background: #f8f9fb;
   padding: 1rem;
   border-radius: 10px;
@@ -66,30 +66,11 @@
   font-size: 0.9rem;
 }
 
-.action-buttons {
-  display: flex;
-  gap: 0.25rem;
-  justify-content: center;
-  flex-wrap: wrap;
-
-  .btn {
-    padding: 0.25rem 0.5rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    i {
-      font-size: 0.9rem;
-    }
-  }
+.action-buttons .btn {
+  padding: 0.25rem 0.45rem;
 }
 
 .empty-state .empty-icon {
   font-size: 2rem;
   color: #adb5bd;
-}
-
-.badge {
-  font-size: 0.75rem;
-  padding: 0.35rem 0.6rem;
 }

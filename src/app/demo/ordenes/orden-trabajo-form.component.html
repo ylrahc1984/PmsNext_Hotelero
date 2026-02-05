@@ -1,204 +1,565 @@
 <div class="row">
   <div class="col-12">
-    <app-card [cardTitle]="titulo">
-      <form [formGroup]="form">
-        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+    <app-card cardTitle="Gestión de Órdenes de Trabajo">
+      <!-- Botón de retornar en el header del card -->
+      <div class="card-header-right">
+        <button 
+          type="button" 
+          class="btn btn-sm btn-outline-secondary" 
+          (click)="cancelar()"
+          title="Volver al listado">
+          <i class="feather icon-arrow-left"></i> Volver
+        </button>
+      </div>
+      
+      <!-- ==================== ENCABEZADO SUPERIOR ==================== -->
+      <div class="ot-header">
+        <!-- Sección A: Título + Breadcrumb -->
+        <div class="d-flex justify-content-between align-items-start mb-2">
           <div>
             <h5 class="mb-1">{{ titulo }}</h5>
-            <p class="mb-0 text-muted">Crea o edita órdenes de trabajo asignando suplidor y servicios operativos.</p>
+            <p class="text-muted mb-0 small">Asigne servicios a suplidores y genere la orden operativa</p>
           </div>
-          <span class="badge badge-pill px-3 py-2" [ngClass]="getEstadoBadge($any(form.get('estado')?.value))">
-            {{ form.get('estado')?.value }}
+          <span class="badge badge-pill px-2 py-1" [ngClass]="getEstadoBadgeClass(form.get('estado')?.value)">
+            {{ getEstadoDescripcion(form.get('estado')?.value) }}
           </span>
         </div>
 
-      <h6 class="mb-2">Encabezado de la Orden</h6>
-      <div class="row">
-        <div class="col-md-3 mb-3">
-          <label class="form-label small text-muted">Número de Orden</label>
-          <input class="form-control" type="text" [value]="form.get('numeroOrden')?.value" disabled>
+        <!-- Sección B: Controles de filtro -->
+        <div class="row mb-2">
+          <div class="col-md-3 mb-2">
+            <label class="form-label small text-muted mb-1">Fecha de Servicio <span class="text-danger">*</span></label>
+            <input 
+              class="form-control form-control-sm" 
+              type="date" 
+              [formControl]="$any(form.get('fechaServicio'))">
+          </div>
+          <div class="col-md-3 mb-2">
+            <label class="form-label small text-muted mb-1">Estado</label>
+            <select class="form-control form-control-sm" [formControl]="$any(form.get('estado'))">
+              <option value="">Todos</option>
+              <option *ngFor="let estado of estadosDisponibles" [ngValue]="estado.codigo">{{ estado.descripcion }}</option>
+            </select>
+          </div>
+          <div class="col-md-4 mb-2">
+            <label class="form-label small text-muted mb-1">Búsqueda</label>
+            <input 
+              class="form-control form-control-sm" 
+              type="text" 
+              [(ngModel)]="searchText"
+              placeholder="Código OT / Reserva / Suplidor">
+          </div>
+          <div class="col-md-2 mb-2 d-flex align-items-end">
+            <button class="btn btn-outline-secondary btn-sm mr-2" type="button" (click)="refreshDisponibles()">
+              <i class="feather icon-search"></i> Buscar
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" type="button" (click)="clearFilters()">
+              <i class="feather icon-x"></i>
+            </button>
+          </div>
         </div>
-        <div class="col-md-3 mb-3">
-          <label class="form-label small text-muted">Fecha de Creación</label>
-          <input class="form-control" type="date" [value]="form.get('fechaCreacion')?.value" disabled>
-        </div>
-        <div class="col-md-3 mb-3">
-          <label class="form-label small text-muted">Fecha de Servicio</label>
-          <input class="form-control" type="date" formControlName="fechaServicio" [disabled]="estadoBloqueado">
-        </div>
-        <div class="col-md-3 mb-3">
-          <label class="form-label small text-muted">Estado</label>
-          <select class="form-control" formControlName="estado" [disabled]="estadoBloqueado">
-            <option *ngFor="let estado of estadosDisponibles" [ngValue]="estado">{{ estado }}</option>
-          </select>
-        </div>
-      </div>
 
-      <hr>
-      <h6 class="mb-2">Asignación Operativa</h6>
-      <div class="row">
-        <div class="col-md-4 mb-3">
-          <label class="form-label small text-muted">Suplidor</label>
-          <input class="form-control" type="text" formControlName="suplidor" placeholder="Selecciona suplidor" [disabled]="estadoBloqueado">
+        <!-- Sección C: Chips de horario -->
+        <div class="mb-2">
+          <label class="form-label small text-muted mb-1">Filtrar por horario</label>
+          <div class="d-flex flex-wrap gap-2 time-chips">
+            <button 
+              type="button"
+              class="btn btn-sm time-chip"
+              [class.active]="selectedTime === null"
+              (click)="selectTime(null)">
+              Todos
+            </button>
+            <button 
+              *ngFor="let time of horariosDisponibles"
+              type="button"
+              class="btn btn-sm time-chip"
+              [class.active]="selectedTime === time"
+              (click)="selectTime(time)">
+              {{ time }}
+            </button>
+          </div>
         </div>
-        <div class="col-md-4 mb-3">
-          <label class="form-label small text-muted">Ruta / Zona</label>
-          <input class="form-control" type="text" formControlName="ruta" placeholder="Ej: San José - Jacó" [disabled]="estadoBloqueado">
-        </div>
-        <div class="col-md-4 mb-3">
-          <label class="form-label small text-muted">Conexión (opcional)</label>
-          <input class="form-control" type="text" formControlName="conexion" placeholder="Vuelo / Tren / Ferry" [disabled]="estadoBloqueado">
-        </div>
-      </div>
-      <div class="row">
-        <div class="col-md-6 mb-3">
-          <label class="form-label small text-muted">Observaciones generales</label>
-          <textarea class="form-control" rows="3" formControlName="observaciones" placeholder="Indicaciones para el suplidor" [disabled]="estadoBloqueado"></textarea>
-        </div>
-        <div class="col-md-6 mb-3">
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label class="form-label small text-muted">Kilometraje Inicial</label>
-              <input class="form-control" type="number" formControlName="kmInicial" [disabled]="estadoBloqueado">
-            </div>
-            <div class="col-md-6 mb-3">
-              <label class="form-label small text-muted">Kilometraje Final</label>
-              <input class="form-control" type="number" formControlName="kmFinal" [disabled]="estadoBloqueado">
-            </div>
-            <div class="col-12 mb-3">
-              <div class="form-check mt-2">
-                <input class="form-check-input" type="checkbox" formControlName="rotulacion" [disabled]="estadoBloqueado">
-                <label class="form-check-label">Rotulación en unidad</label>
+
+        <!-- Sección D: Configuración adicional de OT (Acordeón) -->
+        <div class="config-ot-accordion mt-2">
+          <button 
+            type="button"
+            class="btn btn-sm btn-outline-secondary w-100 d-flex justify-content-between align-items-center"
+            (click)="showConfigOT = !showConfigOT">
+            <span>
+              <i class="feather icon-settings"></i>
+              Configuración Adicional OT
+            </span>
+            <i class="feather" [class.icon-chevron-down]="!showConfigOT" [class.icon-chevron-up]="showConfigOT"></i>
+          </button>
+          
+          <div class="config-ot-content" *ngIf="showConfigOT">
+            <div class="row">
+              <!-- Fila 1 -->
+              <div class="col-md-4 mb-2">
+                <label class="form-label small text-muted mb-1">Tipo de OT <span class="text-danger">*</span></label>
+                <select class="form-control form-control-sm" [formControl]="$any(form.get('tipo'))">
+                  <option *ngFor="let tipo of tiposOT" [ngValue]="tipo.value">{{ tipo.label }}</option>
+                </select>
+              </div>
+              <div class="col-md-4 mb-2">
+                <label class="form-label small text-muted mb-1">Moneda <span class="text-danger">*</span></label>
+                <select class="form-control form-control-sm" [formControl]="$any(form.get('moneda'))">
+                  <option *ngFor="let mon of monedas" [ngValue]="mon.codMoneda">{{ mon.moneda }} ({{ mon.simbolo }})</option>
+                </select>
+              </div>
+              <div class="col-md-4 mb-2">
+                <label class="form-label small text-muted mb-1">Tipo de Cambio</label>
+                <input 
+                  class="form-control form-control-sm" 
+                  type="number" 
+                  step="0.01"
+                  [formControl]="$any(form.get('tCambio'))"
+                  placeholder="1.00">
+              </div>
+
+              <!-- Fila 2 -->
+              <div class="col-md-6 mb-2">
+                <label class="form-label small text-muted mb-1">Ruta / Zona</label>
+                <input 
+                  class="form-control form-control-sm" 
+                  type="text" 
+                  [formControl]="$any(form.get('rutaCodigo'))"
+                  placeholder="Ej: PUJ-BVR-001">
+              </div>
+              <div class="col-md-6 mb-2">
+                <label class="form-label small text-muted mb-1">Conexión</label>
+                <input 
+                  class="form-control form-control-sm" 
+                  type="text" 
+                  [formControl]="$any(form.get('conexion'))"
+                  placeholder="Ej: Enlace con OT #2025123">
+              </div>
+
+              <!-- Fila 3 -->
+              <div class="col-md-4 mb-2">
+                <label class="form-label small text-muted mb-1">Rotulación</label>
+                <input 
+                  class="form-control form-control-sm" 
+                  type="text" 
+                  [formControl]="$any(form.get('rotulacion'))"
+                  placeholder="Ej: TOUR PUNTA CANA">
+              </div>
+              <div class="col-md-3 mb-2">
+                <label class="form-label small text-muted mb-1">KM Inicial</label>
+                <input 
+                  class="form-control form-control-sm" 
+                  type="number" 
+                  [formControl]="$any(form.get('kmInicial'))"
+                  placeholder="0">
+              </div>
+              <div class="col-md-3 mb-2">
+                <label class="form-label small text-muted mb-1">KM Final</label>
+                <input 
+                  class="form-control form-control-sm" 
+                  type="number" 
+                  [formControl]="$any(form.get('kmFinal'))"
+                  placeholder="0">
+              </div>
+              <div class="col-md-2 mb-2">
+                <label class="form-label small text-muted mb-1">Operador</label>
+                <input 
+                  class="form-control form-control-sm" 
+                  type="text" 
+                  [formControl]="$any(form.get('operador'))"
+                  readonly>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <hr>
-      <h6 class="mb-2">Selección de Reservas / Servicios</h6>
-      <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
-        <div class="text-muted small">Reservas pendientes o confirmadas sin asignar a otra orden.</div>
-        <button class="btn btn-outline-primary btn-sm" (click)="agregarSeleccionados()" [disabled]="!detallesSeleccionados.size || estadoBloqueado">
-          <i class="feather icon-plus"></i> Agregar a la Orden
-        </button>
-      </div>
-      <div class="table-responsive mb-3">
-        <table class="table table-hover mb-0">
-          <thead>
-            <tr>
-              <th style="width: 40px;"></th>
-              <th>Boleta</th>
-              <th>Cliente Final</th>
-              <th>Agencia</th>
-              <th>Servicio</th>
-              <th>Fecha</th>
-              <th>Hora</th>
-              <th>Origen</th>
-              <th>Destino</th>
-              <th>Pax</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let det of detallesDisponibles">
-              <td>
-                <input
-                  type="checkbox"
-                  class="form-check-input position-static"
-                  [checked]="detallesSeleccionados.has(det.key)"
-                  (change)="toggleSeleccion(det, $event.target.checked)"
-                  [disabled]="estadoBloqueado">
-              </td>
-              <td>#{{ det.numeroBoleta }}</td>
-              <td>{{ det.clienteFinal }}</td>
-              <td>{{ det.agencia }}</td>
-              <td>{{ det.servicio }}</td>
-              <td>{{ det.fechaServicio }}</td>
-              <td>{{ det.hora }}</td>
-              <td>{{ det.origen }}</td>
-              <td>{{ det.destino }}</td>
-              <td><span class="badge badge-pill bg-info text-white">{{ det.pax }}</span></td>
-            </tr>
-            <tr *ngIf="!detallesDisponibles.length">
-              <td colspan="10" class="text-center text-muted">No hay servicios disponibles para agregar.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <hr class="my-2">
 
-      <h6 class="mb-2">Servicios agregados a la Orden</h6>
-      <div class="table-responsive">
-        <table class="table table-hover mb-0" *ngIf="detallesOrden.length; else noDetalles">
-          <thead>
-            <tr>
-              <th>Boleta</th>
-              <th>Cliente Final</th>
-              <th>Servicio</th>
-              <th>Fecha Servicio</th>
-              <th>Hora</th>
-              <th>Origen</th>
-              <th>Destino</th>
-              <th>Pax</th>
-              <th>Agencia</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let det of detallesOrden">
-              <td>#{{ det.numeroBoleta }}</td>
-              <td>{{ det.clienteFinal }}</td>
-              <td>{{ det.servicio }}</td>
-              <td>
-                <input type="date" class="form-control form-control-sm" [value]="det.fechaServicio" (change)="actualizarDetalle(det, 'fechaServicio', $event.target.value)" [disabled]="estadoBloqueado">
-              </td>
-              <td>
-                <input type="time" class="form-control form-control-sm" [value]="det.hora" (change)="actualizarDetalle(det, 'hora', $event.target.value)" [disabled]="estadoBloqueado">
-              </td>
-              <td>{{ det.origen }}</td>
-              <td>{{ det.destino }}</td>
-              <td><span class="badge badge-pill bg-info text-white">{{ det.pax }}</span></td>
-              <td>{{ det.agencia }}</td>
-              <td>
-                <button class="btn btn-outline-danger btn-sm" (click)="quitarDetalle(det)" [disabled]="estadoBloqueado">
-                  <i class="feather icon-x"></i>
+      <!-- ==================== GRID PRINCIPAL (3 COLUMNAS) ==================== -->
+      <div class="ot-grid">
+        
+        <!-- COLUMNA IZQUIERDA: Suplidores -->
+        <div class="ot-panel ot-panel-suplidores">
+          <div class="panel-header">
+            <h6 class="mb-0">Suplidores / Vehículos</h6>
+            <small class="text-muted">Seleccione uno para asignar</small>
+          </div>
+          
+          <div class="panel-body">
+            <!-- Mensaje de carga -->
+            <div *ngIf="loadingSuplidores" class="text-center py-5">
+              <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Cargando...</span>
+              </div>
+              <p class="text-muted mt-2">Cargando disponibilidad...</p>
+            </div>
+
+            <!-- Mensaje sin suplidores -->
+            <div *ngIf="!loadingSuplidores && suplidoresDisponibles.length === 0" class="text-center py-5">
+              <i class="feather icon-alert-circle text-muted" style="font-size: 3rem;"></i>
+              <p class="text-muted mt-2">No hay suplidores disponibles para esta fecha</p>
+              <small class="text-muted">Seleccione una fecha de servicio válida</small>
+            </div>
+
+            <!-- Lista de suplidores -->
+            <div 
+              *ngFor="let suplidor of suplidoresDisponibles" 
+              class="suplidor-card"
+              [class.selected]="selectedSupplierId === suplidor.codigo"
+              (click)="selectSuplidor(suplidor.codigo)">
+              
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="flex-grow-1">
+                  <h6 class="mb-1">{{ suplidor.nombre }}</h6>
+                  <span class="badge badge-sm" [ngClass]="getSuplidorEstadoBadge(suplidor.estadoOcupacion)">
+                    {{ getSuplidorEstadoTexto(suplidor.estadoOcupacion) }}
+                  </span>
+                </div>
+                <i class="feather icon-check-circle text-success" *ngIf="selectedSupplierId === suplidor.codigo"></i>
+              </div>
+
+              <div class="suplidor-capacity">
+                <div class="d-flex justify-content-between text-muted small mb-1">
+                  <span>{{ suplidor.capacidadOcupada }} de {{ suplidor.capacidadTotal }}</span>
+                  <span>Vacantes: {{ getVacantes(suplidor) }}</span>
+                </div>
+                <div class="progress" style="height: 6px;">
+                  <div 
+                    class="progress-bar" 
+                    [class.bg-success]="suplidor.estadoOcupacion === 'sin-asignar'"
+                    [class.bg-warning]="suplidor.estadoOcupacion === 'parcial'"
+                    [class.bg-danger]="suplidor.estadoOcupacion === 'completo'"
+                    [style.width.%]="(suplidor.capacidadOcupada / suplidor.capacidadTotal) * 100">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Información de vehículos disponibles -->
+              <div class="mt-2" *ngIf="suplidor.vehiculos.length > 0">
+                <div class="small text-muted mb-1">
+                  <i class="feather icon-truck"></i>
+                  {{ suplidor.vehiculosActivos }} vehículos activos
+                </div>
+                <!-- Expandir lista de vehículos cuando está seleccionado -->
+                <div *ngIf="selectedSupplierId === suplidor.codigo" class="mt-2">
+                  <div class="vehiculo-item" 
+                       *ngFor="let vehiculo of suplidor.vehiculos"
+                       [class.selected]="selectedVehiculoId === vehiculo.codigo"
+                       (click)="selectVehiculo(vehiculo.codigo); $event.stopPropagation()">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div>
+                        <strong class="small">{{ vehiculo.nombre }}</strong>
+                        <small class="text-muted d-block">Cap: {{ vehiculo.capacidadMax }} | Disponible: {{ vehiculo.capacidadDisponible }}</small>
+                      </div>
+                      <i class="feather icon-check text-success" *ngIf="selectedVehiculoId === vehiculo.codigo"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Información de choferes disponibles -->
+              <div class="mt-2" *ngIf="suplidor.choferes.length > 0 && selectedSupplierId === suplidor.codigo">
+                <div class="small text-muted mb-1">
+                  <i class="feather icon-user"></i>
+                  Choferes disponibles
+                </div>
+                <div class="chofer-item" 
+                     *ngFor="let chofer of suplidor.choferes"
+                     [class.selected]="selectedChoferId === chofer.codigo"
+                     [class.disabled]="chofer.asignado"
+                     (click)="!chofer.asignado && selectChofer(chofer.codigo); $event.stopPropagation()">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <strong class="small">{{ chofer.nombre }}</strong>
+                      <small class="text-muted d-block">Lic: {{ chofer.tipoLicencia }}</small>
+                    </div>
+                    <div>
+                      <span *ngIf="chofer.asignado" class="badge badge-warning badge-sm">Asignado</span>
+                      <i class="feather icon-check text-success" *ngIf="selectedChoferId === chofer.codigo"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-2 text-right">
+                <button 
+                  type="button"
+                  class="btn btn-outline-primary btn-sm"
+                  [disabled]="estadoBloqueado || !selectedVehiculoId || !selectedChoferId"
+                  (click)="selectSuplidor(suplidor.codigo); $event.stopPropagation()">
+                  <i class="feather icon-plus"></i> Asignar aquí
                 </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <ng-template #noDetalles>
-          <div class="alert alert-light mb-0">Agrega servicios desde el listado de reservas disponibles.</div>
-        </ng-template>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- COLUMNA CENTRAL: Reservas/Servicios pendientes -->
+        <div class="ot-panel ot-panel-reservas">
+          <div class="panel-header">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h6 class="mb-0">Servicios pendientes</h6>
+                <small class="text-muted">Mostrando {{ detallesDisponibles.length }} servicios</small>
+              </div>
+              <button 
+                class="btn btn-outline-primary btn-sm" 
+                (click)="agregarSeleccionados()" 
+                [disabled]="!detallesSeleccionados.size || estadoBloqueado || !selectedSupplierId">
+                <i class="feather icon-arrow-right"></i> Agregar seleccionados ({{ detallesSeleccionados.size }})
+              </button>
+            </div>
+          </div>
+
+          <div class="panel-body">
+            <div *ngIf="!form.get('fechaServicio')?.value" class="alert alert-info">
+              <i class="feather icon-info"></i> Seleccione una fecha para cargar los servicios
+            </div>
+
+            <div *ngIf="!selectedSupplierId && form.get('fechaServicio')?.value" class="alert alert-warning">
+              <i class="feather icon-alert-triangle"></i> Seleccione un suplidor para asignar servicios
+            </div>
+
+            <div class="table-responsive" *ngIf="detallesDisponibles.length">
+              <table class="table table-hover table-sm mb-0">
+                <thead>
+                  <tr>
+                    <th style="width: 40px;"></th>
+                    <th>Hora</th>
+                    <th>Origen / Destino</th>
+                    <th class="text-center">Pax</th>
+                    <th>Cliente</th>
+                    <th>Reserva</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr 
+                    *ngFor="let det of detallesDisponibles"
+                    [class.row-selected]="detallesSeleccionados.has(det.key)">
+                    <td (click)="$event.stopPropagation()">
+                      <input
+                        type="checkbox"
+                        class="form-check-input position-static"
+                        [checked]="detallesSeleccionados.has(det.key)"
+                        (change)="toggleSeleccion(det, $any($event.target).checked)"
+                        [disabled]="estadoBloqueado">
+                    </td>
+                    <td><strong>{{ det.hora }}</strong></td>
+                    <td>
+                      <!-- MOSTRAR ORIGEN/DESTINO SEGÚN SELECCIÓN -->
+                      <div *ngIf="!detallesSeleccionados.has(det.key)">
+                        <!-- SIN SELECCIONAR: Solo texto -->
+                        <div class="text-truncate small">
+                          <i class="feather icon-map-pin text-primary"></i>
+                          <strong>{{ det.origen }}</strong>
+                        </div>
+                        <div class="text-truncate small text-muted">
+                          <i class="feather icon-flag text-success"></i>
+                          {{ det.destino }}
+                        </div>
+                      </div>
+                      
+                      <div *ngIf="detallesSeleccionados.has(det.key)">
+                        <!-- SELECCIONADO: Inputs editables + info de reserva -->
+                        <div class="mb-1">
+                          <label class="form-label mb-0 small text-muted">
+                            <i class="feather icon-info"></i> Reserva:
+                          </label>
+                          <div class="small text-muted ms-2">
+                            {{ det.origen }} → {{ det.destino }}
+                          </div>
+                        </div>
+                        <div class="mb-1">
+                          <label class="form-label mb-0 small text-primary">
+                            <i class="feather icon-edit-2"></i> Origen OT:
+                          </label>
+                          <input 
+                            type="text" 
+                            class="form-control form-control-sm"
+                            [value]="getOrigenOT(det)"
+                            (input)="updateOrigenOT(det, $any($event.target).value)"
+                            (click)="$event.stopPropagation()"
+                            placeholder="Ej: Hotel Bávaro">
+                        </div>
+                        <div>
+                          <label class="form-label mb-0 small text-success">
+                            <i class="feather icon-edit-2"></i> Destino OT:
+                          </label>
+                          <input 
+                            type="text" 
+                            class="form-control form-control-sm"
+                            [value]="getDestinoOT(det)"
+                            (input)="updateDestinoOT(det, $any($event.target).value)"
+                            (click)="$event.stopPropagation()"
+                            placeholder="Ej: Hotel Punta Cana">
+                        </div>
+                      </div>
+                    </td>
+                    <td class="text-center">
+                      <span class="badge badge-info badge-pill">{{ det.pax }}</span>
+                    </td>
+                    <td>{{ det.cliente }}</td>
+                    <td><small class="text-muted">#{{ det.codReserva }}</small></td>
+                    <td>
+                      <span class="badge badge-sm badge-secondary">Pendiente</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div *ngIf="!detallesDisponibles.length && form.get('fechaServicio')?.value" class="text-center text-muted py-4">
+              <i class="feather icon-calendar" style="font-size: 2rem; opacity: 0.3;"></i>
+              <p class="mb-0 mt-2">No hay servicios para los filtros aplicados</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- COLUMNA DERECHA: Resumen / Detalle -->
+        <div class="ot-panel ot-panel-resumen">
+          <div class="panel-header">
+            <h6 class="mb-0">Resumen de Asignación</h6>
+          </div>
+
+          <div class="panel-body">
+            <!-- Sección 1: Resumen -->
+            <div class="resumen-info mb-2">
+              <div class="info-item">
+                <span class="text-muted small">Suplidor seleccionado</span>
+                <p class="mb-0 font-weight-bold small">
+                  {{ getSuplidorSeleccionado() }}
+                </p>
+              </div>
+              
+              <div class="info-item">
+                <span class="text-muted small">Servicios asignados</span>
+                <p class="mb-0">
+                  <span class="badge badge-primary">{{ totalServicios }}</span>
+                </p>
+              </div>
+
+              <div class="info-item">
+                <span class="text-muted small">Total Pax</span>
+                <p class="mb-0">
+                  <span class="badge badge-info">{{ totalPax }}</span>
+                </p>
+              </div>
+
+              <div class="info-item">
+                <label class="form-label small text-muted mb-1">Observaciones</label>
+                <textarea 
+                  class="form-control form-control-sm" 
+                  rows="2" 
+                  [formControl]="$any(form.get('observaciones'))"
+                  placeholder="Indicaciones para el suplidor"
+                  [disabled]="estadoBloqueado"></textarea>
+              </div>
+            </div>
+
+            <hr class="my-2">
+
+            <!-- Sección 2: Orden y secuencia -->
+            <div class="orden-secuencia mb-2">
+              <h6 class="mb-1 small text-uppercase text-muted">Secuencia de servicios</h6>
+              
+              <div *ngIf="!detallesOrden.length" class="text-center text-muted py-3">
+                <i class="feather icon-list" style="font-size: 1.5rem; opacity: 0.3;"></i>
+                <p class="mb-0 mt-2 small">Agregue servicios desde el listado</p>
+              </div>
+
+              <div class="secuencia-list">
+                <div 
+                  *ngFor="let det of detallesOrden; let i = index"
+                  class="secuencia-item">
+                  <div class="d-flex align-items-center">
+                    <span class="sequence-number">{{ i + 1 }}</span>
+                    <div class="flex-grow-1">
+                      <div class="font-weight-bold small">{{ det.origenOT }} → {{ det.destinoOT }}</div>
+                      <div class="text-muted" style="font-size: 0.75rem;">
+                        {{ det.hora }} | {{ det.pax }} pax
+                      </div>
+                      <!-- Mostrar info de reserva original si difiere -->
+                      <div class="text-muted" style="font-size: 0.65rem;" *ngIf="det.origenReserva !== det.origenOT || det.destinoReserva !== det.destinoOT">
+                        <i class="feather icon-info"></i> Reserva: {{ det.origenReserva }} → {{ det.destinoReserva }}
+                      </div>
+                    </div>
+                    <div class="btn-group-vertical btn-group-sm">
+                      <button 
+                        type="button"
+                        class="btn btn-outline-secondary btn-xs"
+                        [disabled]="i === 0 || estadoBloqueado"
+                        (click)="moverDetalle(i, 'up')">
+                        <i class="feather icon-chevron-up"></i>
+                      </button>
+                      <button 
+                        type="button"
+                        class="btn btn-outline-secondary btn-xs"
+                        [disabled]="i === detallesOrden.length - 1 || estadoBloqueado"
+                        (click)="moverDetalle(i, 'down')">
+                        <i class="feather icon-chevron-down"></i>
+                      </button>
+                    </div>
+                    <button 
+                      type="button"
+                      class="btn btn-outline-danger btn-sm ml-2"
+                      [disabled]="estadoBloqueado"
+                      (click)="quitarDetalle(det)">
+                      <i class="feather icon-x"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <hr>
+
+            <!-- Sección 3: Acciones principales -->
+            <div class="acciones-principales">
+              <div class="mb-2">
+                <label class="form-label small text-muted mb-1">Total a pagar (estimado)</label>
+                <input 
+                  class="form-control" 
+                  type="number" 
+                  [formControl]="$any(form.get('totalPagar'))"
+                  [placeholder]="totalPagarSugerido.toString()">
+              </div>
+
+              <div class="d-grid gap-2">
+                <button 
+                  class="btn btn-outline-secondary btn-block" 
+                  type="button" 
+                  (click)="guardar()"
+                  [disabled]="form.invalid || !detallesOrden.length || estadoBloqueado">
+                  <i class="feather icon-save"></i> Guardar borrador
+                </button>
+                <button 
+                  class="btn btn-primary btn-block" 
+                  type="button" 
+                  (click)="guardarYAsignar()"
+                  [disabled]="form.invalid || !detallesOrden.length || estadoBloqueado">
+                  <i class="feather icon-check"></i> Generar Orden de Trabajo
+                </button>
+                <button 
+                  class="btn btn-outline-danger btn-block" 
+                  type="button" 
+                  (click)="cancelar()">
+                  <i class="feather icon-x"></i> Cancelar
+                </button>
+                <button 
+                  class="btn btn-link btn-block text-secondary" 
+                  type="button" 
+                  (click)="cancelar()">
+                  ← Volver al listado
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <hr>
-      <h6 class="mb-2">Resumen Operativo</h6>
-      <div class="row align-items-center">
-        <div class="col-md-4 mb-2">
-          <span class="badge badge-pill bg-light text-dark border px-3 py-2">
-            <i class="feather icon-layers mr-1"></i>
-            {{ totalServicios }} servicio{{ totalServicios === 1 ? '' : 's' }}
-          </span>
-        </div>
-        <div class="col-md-4 mb-2">
-          <span class="badge badge-pill bg-info text-white px-3 py-2">
-            <i class="feather icon-users mr-1"></i>
-            {{ totalPax }} pax
-          </span>
-        </div>
-        <div class="col-md-4 mb-2">
-          <label class="form-label small text-muted mb-1">Total a Pagar (mock)</label>
-          <input class="form-control" type="number" formControlName="totalPagar" [placeholder]="totalPagarSugerido" [disabled]="estadoBloqueado">
-        </div>
-      </div>
-
-        <div class="d-flex flex-wrap justify-content-end mt-3">
-          <button class="btn btn-link text-secondary mr-2" type="button" (click)="cancelar()">Cancelar</button>
-          <button class="btn btn-outline-primary mr-2" type="button" (click)="guardar()" [disabled]="estadoBloqueado">Guardar</button>
-          <button class="btn btn-primary mr-2" type="button" (click)="guardarYAsignar()" [disabled]="estadoBloqueado">Guardar y Asignar</button>
-          <button class="btn btn-success" type="button" (click)="finalizar()" [disabled]="estadoBloqueado">Finalizar Orden</button>
-        </div>
-      </form>
     </app-card>
   </div>
 </div>

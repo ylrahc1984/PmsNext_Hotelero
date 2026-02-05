@@ -1,23 +1,152 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, Observable, forkJoin, throwError, of } from 'rxjs';
+import { map, catchError, tap, switchMap } from 'rxjs/operators';
 
+import { environment } from 'src/environments/environment';
 import { ReservaDetalleDisponible } from '../reservas/reservas.service';
 
-export type EstadoOrden = 'Pendiente' | 'Asignada' | 'En Proceso' | 'Finalizada' | 'Anulada';
+export type EstadoOrden = 'PEN' | 'ASI' | 'PRO' | 'COM' | 'CAN';
+
+/**
+ * Interfaz para opciones de estado con código y descripción
+ */
+export interface EstadoOrdenOption {
+  codigo: EstadoOrden;
+  descripcion: string;
+  badge: string; // Clase CSS para el badge
+}
+
+/**
+ * Catálogo de estados de órdenes de trabajo
+ */
+export const ESTADOS_OT: EstadoOrdenOption[] = [
+  { codigo: 'PEN', descripcion: 'Pendiente', badge: 'badge-secondary' },
+  { codigo: 'ASI', descripcion: 'Asignada', badge: 'badge-info' },
+  { codigo: 'PRO', descripcion: 'En Proceso', badge: 'badge-warning' },
+  { codigo: 'COM', descripcion: 'Completada', badge: 'badge-success' },
+  { codigo: 'CAN', descripcion: 'Cancelada', badge: 'badge-danger' }
+];
+
+// ==================== DTOs del API ====================
+
+/**
+ * DTO para enviar al endpoint POST/PUT /api/ordentrabajo
+ */
+export interface OrdenTrabajoEncabezadoDTO {
+  tipo: number;
+  codOT?: string;              // Solo en PUT, generado automáticamente en POST
+  codReserva: string;
+  codSuplidor: string;
+  fecServicio: string;         // ISO 8601: "2026-02-05T03:55:13.213Z"
+  rutaCodigo: string;
+  rotulacion: string;
+  conexion: string;
+  kmInicial: number;
+  kmFinal: number;
+  observaciones: string;
+  estado: string;
+  moneda: string;
+  tCambio: number;
+  totalOT: number;
+  operador: string;
+  codVehiculo: string;         // Código del vehículo asignado
+  codChofer: string;           // Código del chofer asignado
+  fechaInicio: string;
+  fechaFin: string;
+  nombreSuplidor: string;
+  pageNumber?: number;
+  pageSize?: number;
+  respuesta?: string;
+}
+
+/**
+ * Response del POST encabezado
+ */
+export interface OrdenTrabajoEncabezadoResponse {
+  mensaje?: string;
+  datos?: Array<{ CodOT?: string }>;
+  respuesta?: string;  // Mantener retrocompatibilidad
+}
+
+/**
+ * DTO para enviar al endpoint POST/PUT /api/orden-trabajo/detalle
+ */
+export interface OrdenTrabajoDetalleDTO {
+  tipo: number;
+  id?: number;                 // Solo en PUT
+  codOT: string;
+  linea: number;               // Secuencia
+  codReserva: string;
+  idDetReserva: number;
+  codServicio: string;
+  nomServicio: string;
+  origenTexto: string;
+  destinoTexto: string;
+  origenPlaceId: string;
+  destinoPlaceId: string;
+  origenLat: number;
+  origenLng: number;
+  destinoLat: number;
+  destinoLng: number;
+  horaPax: string;
+  adultos: number;
+  ninos: number;
+  totalPax: number;
+  boleta: string;
+  voucher: string;
+  agenciaCobro: string;
+  estado: string;
+  observacion: string;
+  operador: string;
+  respuesta?: string;
+}
+
+// ==================== Modelos de UI ====================
 
 export interface OrdenTrabajoDetalle {
   id: number;
-  reservaId: number;
-  numeroBoleta: number;
+  reservaId: string;           // Cambiado de number a string (código de reserva)
+  numeroBoleta: string;         // Cambiado de number a string (folio)
   clienteFinal: string;
   agencia: string;
+  servicioId?: string;         // Código del servicio
   servicio: string;
   fechaServicio: string;
   hora: string;
-  origen: string;
-  destino: string;
+  
+  // ORIGEN Y DESTINO DE LA RESERVA (Solo lectura, informativo)
+  origenReserva: string;        // Origen original de la reserva
+  destinoReserva: string;       // Destino original de la reserva
+  
+  // ORIGEN Y DESTINO DE LA ORDEN DE TRABAJO (Editable)
+  origenOT: string;             // Origen para este tramo específico de la OT
+  destinoOT: string;            // Destino para este tramo específico de la OT
+  
+  // Información geográfica
+  origenPlaceId?: string;
+  destinoPlaceId?: string;
+  origenLat?: number;
+  origenLng?: number;
+  destinoLat?: number;
+  destinoLng?: number;
+  
+  // Datos de pasajeros
   pax: number;
-  detalleReservaId?: number;
+  adultos?: number;
+  ninos?: number;
+  
+  // Referencias y documentos
+  detalleReservaId?: number;    // ID del PRV02
+  boleta?: string;              // Número de boleta
+  voucher?: string;             // Número de voucher
+  
+  // Información financiera
+  montoServicio?: number;       // Precio del servicio
+  moneda?: string;              // Moneda (USD, CRC)
+  
+  // Observaciones
+  observaciones?: string;       // Observaciones del servicio
 }
 
 export interface OrdenTrabajo {
@@ -26,12 +155,15 @@ export interface OrdenTrabajo {
   fechaCreacion: string;
   fechaServicio: string;
   suplidor: string;
+  codSuplidor?: string;
   ruta: string;
   conexion?: string;
   observaciones?: string;
   kmInicial?: number;
   kmFinal?: number;
   rotulacion?: boolean;
+  codVehiculo?: string;
+  codChofer?: string;
   estado: EstadoOrden;
   detalles: OrdenTrabajoDetalle[];
   totalPax: number;
@@ -52,90 +184,11 @@ export interface OrdenTrabajoFiltros {
   providedIn: 'root'
 })
 export class OrdenesService {
-  private readonly ordenesSubject = new BehaviorSubject<OrdenTrabajo[]>([
-    {
-      id: 1,
-      numeroOrden: 2025001,
-      fechaCreacion: '2025-12-20',
-      fechaServicio: '2025-12-23',
-      suplidor: 'Transportes Pacífico',
-      ruta: 'San José - Aeropuerto SJO',
-      estado: 'Pendiente',
-      detalles: [
-        {
-          id: 1,
-          reservaId: 1,
-          numeroBoleta: 25933,
-          clienteFinal: "KIM D'AURIA",
-          agencia: 'ELEMENTO NATURAL',
-          servicio: 'Traslado Privado',
-          fechaServicio: '2025-12-23',
-          hora: '08:00',
-          origen: 'Hotel Costa Rica',
-          destino: 'Aeropuerto SJO',
-          pax: 2,
-          detalleReservaId: 1
-        },
-        {
-          id: 2,
-          reservaId: 2,
-          numeroBoleta: 25934,
-          clienteFinal: 'CARLOS MENDEZ',
-          agencia: 'AMAZON TRAVEL',
-          servicio: 'Tour Volcán Arenal',
-          fechaServicio: '2025-12-23',
-          hora: '07:30',
-          origen: 'Hotel Downtown',
-          destino: 'Parque Nacional Volcán Arenal',
-          pax: 4,
-          detalleReservaId: 1
-        }
-      ],
-      totalPax: 6,
-      totalPagar: 185000
-    },
-    {
-      id: 2,
-      numeroOrden: 2025002,
-      fechaCreacion: '2025-12-21',
-      fechaServicio: '2025-12-24',
-      suplidor: 'Caribe Tours',
-      ruta: 'San José - La Fortuna',
-      estado: 'Asignada',
-      detalles: [
-        {
-          id: 1,
-          reservaId: 3,
-          numeroBoleta: 25935,
-          clienteFinal: 'SOFIA RAMOS',
-          agencia: 'BOSQUES TOURS',
-          servicio: 'Caminata Nocturna',
-          fechaServicio: '2025-12-24',
-          hora: '17:00',
-          origen: 'Hotel Monteverde',
-          destino: 'Reserva Monteverde',
-          pax: 2,
-          detalleReservaId: 1
-        },
-        {
-          id: 2,
-          reservaId: 3,
-          numeroBoleta: 25935,
-          clienteFinal: 'SOFIA RAMOS',
-          agencia: 'BOSQUES TOURS',
-          servicio: 'Canopy Tour',
-          fechaServicio: '2025-12-24',
-          hora: '09:30',
-          origen: 'Hotel Monteverde',
-          destino: 'Sky Adventures',
-          pax: 2,
-          detalleReservaId: 2
-        }
-      ],
-      totalPax: 4,
-      totalPagar: 198000
-    }
-  ]);
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = `${environment.apiUrl}/ordentrabajo`;
+  private readonly apiDetalleUrl = `${environment.apiUrl}/orden-trabajo/detalle`;
+  
+  private readonly ordenesSubject = new BehaviorSubject<OrdenTrabajo[]>([]);
 
   private lastId = this.ordenesSubject.getValue().length;
   private readonly detallesAsignados = new Set<string>();
@@ -162,7 +215,7 @@ export class OrdenesService {
     this.lastId += 1;
     const numeroOrden = this.generarNumeroOrden();
     const fechaCreacion = new Date().toISOString().split('T')[0];
-    const estado = orden.estado ?? 'Pendiente';
+    const estado = orden.estado ?? 'PEN';
     const { totalPax, totalPagar } = this.recalcularTotales(orden.detalles, orden.totalPagar);
 
     const nuevaOrden: OrdenTrabajo = {
@@ -221,7 +274,7 @@ export class OrdenesService {
   }
 
   anularOrden(id: number): void {
-    this.changeEstado(id, 'Anulada');
+    this.changeEstado(id, 'CAN');
   }
 
   filtrarOrdenes(filtros: OrdenTrabajoFiltros): OrdenTrabajo[] {
@@ -256,20 +309,62 @@ export class OrdenesService {
     return new Set(this.detallesAsignados);
   }
 
-  mapDisponibleADetalle(disponible: ReservaDetalleDisponible, nextDetalleId: number): OrdenTrabajoDetalle {
+  /**
+   * Mapea un detalle de reserva disponible a un detalle de orden de trabajo.
+   * @param disponible - Detalle de reserva disponible
+   * @param nextDetalleId - ID secuencial para el detalle
+   * @param origenCustom - Origen personalizado para la OT (opcional, si no se provee usa el de la reserva)
+   * @param destinoCustom - Destino personalizado para la OT (opcional, si no se provee usa el de la reserva)
+   */
+  mapDisponibleADetalle(
+    disponible: ReservaDetalleDisponible, 
+    nextDetalleId: number,
+    origenCustom?: string,
+    destinoCustom?: string
+  ): OrdenTrabajoDetalle {
     return {
       id: nextDetalleId,
-      reservaId: disponible.reservaId,
-      numeroBoleta: disponible.numeroBoleta,
-      clienteFinal: disponible.clienteFinal,
-      agencia: disponible.agencia,
+      reservaId: disponible.codReserva,
+      numeroBoleta: disponible.folio || disponible.codReserva,
+      clienteFinal: disponible.cliente,
+      agencia: disponible.nombreAgencia || disponible.agencia,
+      servicioId: disponible.codServicio,
       servicio: disponible.servicio,
       fechaServicio: disponible.fechaServicio,
       hora: disponible.hora,
-      origen: disponible.origen,
-      destino: disponible.destino,
+      
+      // Origen y destino de la reserva (inmutable)
+      origenReserva: disponible.origen,
+      destinoReserva: disponible.destino,
+      
+      // Origen y destino de la OT (editable, por defecto copia los de la reserva)
+      origenOT: origenCustom || disponible.origen,
+      destinoOT: destinoCustom || disponible.destino,
+      
+      // Información geográfica (por defecto vacía, se puede agregar más tarde)
+      origenPlaceId: '',
+      destinoPlaceId: '',
+      origenLat: 0,
+      origenLng: 0,
+      destinoLat: 0,
+      destinoLng: 0,
+      
+      // Pasajeros
       pax: disponible.pax,
-      detalleReservaId: disponible.detalleReservaId
+      adultos: disponible.adultos,
+      ninos: disponible.ninos,
+      
+      // Referencias
+      detalleReservaId: disponible.id,
+      boleta: disponible.folio,
+      voucher: disponible.folio, // Usar folio como voucher por ahora
+      
+      // Financiero
+      montoServicio: disponible.montoServicio,
+      moneda: disponible.moneda,
+      
+      // Observaciones
+      observaciones: disponible.observacion
     };
   }
 
@@ -299,5 +394,277 @@ export class OrdenesService {
         this.detallesAsignados.add(key);
       });
     });
+  }
+
+  // ========================================
+  // API PERSISTENCE METHODS
+  // ========================================
+
+  /**
+   * Guarda el encabezado de la orden de trabajo (POST).
+   * Retorna el codOT generado por el backend.
+   */
+  guardarEncabezado(dto: OrdenTrabajoEncabezadoDTO): Observable<OrdenTrabajoEncabezadoResponse> {
+    console.log('=== GUARDANDO ENCABEZADO ===');
+    console.log('URL:', this.apiUrl);
+    console.log('Método: POST');
+    console.log('DTO enviado:', JSON.stringify(dto, null, 2));
+    console.log('🔍 Verificación de tipos de datos:');
+    console.log('  - tipo:', typeof dto.tipo, dto.tipo);
+    console.log('  - codSuplidor:', typeof dto.codSuplidor, dto.codSuplidor);
+    console.log('  - kmInicial:', typeof dto.kmInicial, dto.kmInicial);
+    console.log('  - kmFinal:', typeof dto.kmFinal, dto.kmFinal);
+    console.log('  - tCambio:', typeof dto.tCambio, dto.tCambio);
+    console.log('  - totalOT:', typeof dto.totalOT, dto.totalOT);
+    console.log('  - estado:', typeof dto.estado, dto.estado);
+    console.log('  - codVehiculo:', typeof dto.codVehiculo, dto.codVehiculo);
+    console.log('  - codChofer:', typeof dto.codChofer, dto.codChofer);
+    
+    return this.http.post<OrdenTrabajoEncabezadoResponse>(this.apiUrl, dto).pipe(
+      tap(response => {
+        console.log('✅ Encabezado guardado exitosamente');
+        console.log('Response completo:', response);
+        console.log('Estructura de response:', {
+          mensaje: response.mensaje,
+          datos: response.datos,
+          codOT_extraido: response.datos?.[0]?.CodOT
+        });
+      }),
+      catchError(error => {
+        console.error('❌ Error al guardar encabezado');
+        console.error('Status:', error.status);
+        console.error('StatusText:', error.statusText);
+        console.error('Error completo:', error);
+        console.error('Error body:', error.error);
+        return throwError(() => new Error(error.error?.respuesta || error.error?.mensaje || error.message || 'Error al guardar el encabezado de la orden'));
+      })
+    );
+  }
+
+  /**
+   * Actualiza el encabezado de una orden existente (PUT).
+   */
+  actualizarEncabezado(codOT: string, dto: OrdenTrabajoEncabezadoDTO): Observable<any> {
+    return this.http.put(this.apiUrl, { ...dto, codOT }).pipe(
+      tap(response => console.log('Encabezado actualizado:', response)),
+      catchError(error => {
+        console.error('Error al actualizar encabezado:', error);
+        return throwError(() => new Error(error.error?.respuesta || 'Error al actualizar el encabezado'));
+      })
+    );
+  }
+
+  /**
+   * Guarda un detalle individual de la orden (POST).
+   */
+  guardarDetalle(dto: OrdenTrabajoDetalleDTO): Observable<any> {
+    console.log(`📝 Guardando detalle línea ${dto.linea}:`, { codOT: dto.codOT, servicio: dto.nomServicio });
+    
+    return this.http.post(this.apiDetalleUrl, dto).pipe(
+      tap(response => console.log(`✅ Detalle línea ${dto.linea} guardado:`, response)),
+      catchError(error => {
+        console.error(`❌ Error al guardar detalle línea ${dto.linea}:`, error);
+        return throwError(() => new Error(error.error?.respuesta || 'Error al guardar detalle'));
+      })
+    );
+  }
+
+  /**
+   * Guarda la orden completa: encabezado + todos los detalles.
+   * Estrategia:
+   * 1. Guarda encabezado (POST) → recibe codOT
+   * 2. Guarda todos los detalles en paralelo usando forkJoin (optimización)
+   * 3. Retorna el codOT y el resultado de todos los detalles
+   */
+  guardarOrdenCompleta(
+    encabezadoDTO: OrdenTrabajoEncabezadoDTO, 
+    detalles: OrdenTrabajoDetalle[],
+    operador: string = 'Admin'
+  ): Observable<{ codOT: string; detallesGuardados: number; errores: any[] }> {
+    console.log('🚀 === INICIANDO GUARDADO DE ORDEN COMPLETA ===');
+    console.log('Cantidad de detalles:', detalles.length);
+    console.log('Operador:', operador);
+    
+    // Paso 1: Guardar encabezado
+    return this.guardarEncabezado(encabezadoDTO).pipe(
+      // Paso 2: Con el codOT, preparar y guardar detalles
+      switchMap(responseEncabezado => {
+        // Extraer codOT de la nueva estructura de respuesta
+        const codOT = responseEncabezado.datos?.[0]?.CodOT || '';
+        
+        console.log('🎯 CodOT recibido del backend:', codOT);
+        
+        if (!codOT) {
+          console.error('⚠️ No se recibió codOT del backend');
+          return throwError(() => new Error('No se recibió el código de la orden del servidor'));
+        }
+        
+        // Si no hay detalles, retornar directamente
+        if (!detalles || detalles.length === 0) {
+          return of({ codOT, detallesGuardados: 0, errores: [] });
+        }
+        
+        // Mapear cada detalle al DTO
+        const detallesDTO = detalles.map((detalle, index) => 
+          this.mapDetalleToDTO(detalle, codOT, index + 1, operador)
+        );
+
+        // Crear observables para cada detalle con manejo de errores individual
+        const detalleObservables = detallesDTO.map(dto => 
+          this.guardarDetalle(dto).pipe(
+            map(() => ({ success: true, dto, error: null })),
+            catchError(error => {
+              console.error(`Error guardando detalle línea ${dto.linea}:`, error);
+              // No lanzar error, sino retornar objeto con el error
+              return of({ success: false, dto, error });
+            })
+          )
+        );
+
+        // Ejecutar todas las llamadas en paralelo y procesar resultados
+        return forkJoin(detalleObservables).pipe(
+          map(resultados => {
+            const exitosos = resultados.filter(r => r.success).length;
+            const errores = resultados.filter(r => !r.success);
+            
+            return {
+              codOT,
+              detallesGuardados: exitosos,
+              errores
+            };
+          })
+        );
+      }),
+      
+      catchError(error => {
+        console.error('Error en guardarOrdenCompleta:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Mapea los valores del formulario al DTO del encabezado.
+   */
+  mapFormToEncabezadoDTO(formValue: any, detalles: OrdenTrabajoDetalle[]): OrdenTrabajoEncabezadoDTO {
+    console.log('📋 Mapeando formulario a DTO encabezado...');
+    console.log('FormValue recibido:', formValue);
+    console.log('Cantidad de detalles:', detalles.length);
+    console.log('Vehículo/Chofer en form:', {
+      codVehiculo: formValue.codVehiculo,
+      codChofer: formValue.codChofer
+    });
+    
+    const totales = this.recalcularTotales(detalles, formValue.totalPagar);
+    console.log('Totales calculados:', totales);
+    
+    // Mapear estado a código corto
+    const estadoCodigo = this.mapEstadoToCodigo(formValue.estado);
+    console.log('Estado mapeado:', { original: formValue.estado, codigo: estadoCodigo });
+    
+    const dto = {
+      tipo: Number(formValue.tipo ?? 0),
+      codOT: '', // Se genera en el backend
+      codReserva: String(detalles[0]?.reservaId || ''),
+      codSuplidor: String(formValue.suplidor || ''),
+      fecServicio: formValue.fechaServicio || new Date().toISOString().split('T')[0],
+      rutaCodigo: String(formValue.rutaCodigo || ''),
+      rotulacion: String(formValue.rotulacion || ''),
+      conexion: String(formValue.conexion || ''),
+      kmInicial: this.toSafeNumber(formValue.kmInicial, 0),
+      kmFinal: this.toSafeNumber(formValue.kmFinal, 0),
+      observaciones: String(formValue.observaciones || ''),
+      estado: estadoCodigo,
+      moneda: String(formValue.moneda || 'USD'),
+      tCambio: this.toSafeNumber(formValue.tCambio, 1),
+      totalOT: this.toSafeNumber(totales.totalPagar, 0),
+      operador: String(formValue.operador || 'ADMIN').toUpperCase(),
+      codVehiculo: String(formValue.codVehiculo || ''),
+      codChofer: String(formValue.codChofer || ''),
+      fechaInicio: formValue.fechaCreacion || new Date().toISOString(),
+      fechaFin: formValue.fechaServicio || new Date().toISOString().split('T')[0],
+      nombreSuplidor: '', // Se completa desde el backend o catálogo
+      pageNumber: 0,
+      pageSize: 0,
+      respuesta: ''
+    };
+    
+    console.log('✅ DTO encabezado preparado:', JSON.stringify(dto, null, 2));
+    return dto;
+  }
+
+  /**
+   * Mapea el estado del UI al código del API
+   */
+  private mapEstadoToCodigo(estado: string | undefined): string {
+    if (!estado) return 'PEN';
+    
+    const estadoUpper = estado.toUpperCase();
+    
+    // Si ya es un código corto, retornarlo
+    if (['PEN', 'ASI', 'PRO', 'COM', 'CAN'].includes(estadoUpper)) {
+      return estadoUpper;
+    }
+    
+    // Mapeo de nombres completos a códigos
+    const mapeo: Record<string, string> = {
+      'PENDIENTE': 'PEN',
+      'ASIGNADA': 'ASI',
+      'EN PROCESO': 'PRO',
+      'COMPLETADA': 'COM',
+      'FINALIZADA': 'COM',
+      'CANCELADA': 'CAN',
+      'ANULADA': 'CAN'
+    };
+    
+    return mapeo[estadoUpper] || 'PEN';
+  }
+
+  /**
+   * Convierte un valor a número de forma segura, evitando NaN
+   */
+  private toSafeNumber(value: any, defaultValue: number = 0): number {
+    const num = Number(value);
+    return isNaN(num) ? defaultValue : num;
+  }
+
+  /**
+   * Mapea un OrdenTrabajoDetalle al DTO para la API.
+   */
+  mapDetalleToDTO(
+    detalle: OrdenTrabajoDetalle, 
+    codOT: string, 
+    linea: number, 
+    operador: string
+  ): OrdenTrabajoDetalleDTO {
+    return {
+      tipo: 0,
+      id: 0, // Se genera en el backend
+      codOT,
+      linea,
+      codReserva: detalle.reservaId,
+      idDetReserva: detalle.detalleReservaId || 0,
+      codServicio: detalle.servicioId || '',
+      nomServicio: detalle.servicio,
+      origenTexto: detalle.origenOT || detalle.origenReserva || '',
+      destinoTexto: detalle.destinoOT || detalle.destinoReserva || '',
+      origenPlaceId: detalle.origenPlaceId || '',
+      destinoPlaceId: detalle.destinoPlaceId || '',
+      origenLat: detalle.origenLat || 0,
+      origenLng: detalle.origenLng || 0,
+      destinoLat: detalle.destinoLat || 0,
+      destinoLng: detalle.destinoLng || 0,
+      horaPax: detalle.hora,
+      adultos: detalle.adultos || 0,
+      ninos: detalle.ninos || 0,
+      totalPax: detalle.pax,
+      boleta: detalle.boleta || '',
+      voucher: detalle.voucher || '',
+      agenciaCobro: detalle.agencia || '',
+      estado: 'PENDIENTE',
+      observacion: detalle.observaciones || '',
+      operador,
+      respuesta: ''
+    };
   }
 }

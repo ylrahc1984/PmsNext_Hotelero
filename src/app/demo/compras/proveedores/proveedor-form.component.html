@@ -4,10 +4,10 @@
       <a routerLink="/dashboard"><i class="feather icon-home"></i></a>
     </li>
     <li class="breadcrumb-item">
-      <a>Catálogos</a>
+      <a>Compras</a>
     </li>
     <li class="breadcrumb-item">
-      <a routerLink="/catalogos/suplidores">Suplidores</a>
+      <a routerLink="/compras/proveedores">Proveedores</a>
     </li>
     <li class="breadcrumb-item">
       <a>{{ isEditing ? 'Editar' : 'Nuevo' }}</a>
@@ -15,8 +15,8 @@
   </ul>
   <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div>
-      <h4 class="title mb-1">{{ isEditing ? 'Editar Suplidor' : 'Nuevo Suplidor' }}</h4>
-      <p class="subtitle mb-0">Complete la información para guardar el registro del suplidor.</p>
+      <h4 class="title mb-1">{{ isEditing ? 'Editar Proveedor' : 'Nuevo Proveedor' }}</h4>
+      <p class="subtitle mb-0">Complete la informacion para guardar el registro.</p>
     </div>
     <div>
       <button type="button" class="btn btn-outline-secondary" (click)="cancelForm()">Volver</button>
@@ -24,28 +24,34 @@
   </div>
 </div>
 
-<form #suplidorForm="ngForm" (ngSubmit)="submit(suplidorForm)" class="suplidor-form">
+<form #proveedorForm="ngForm" (ngSubmit)="submit(proveedorForm)" class="proveedor-form">
   <div class="row g-4">
     <div class="col-lg-8">
       <div class="section-card">
-        <div class="section-header">Información General</div>
+        <div class="section-header">Informacion General</div>
         <div class="row g-3">
-          <div class="col-md-3">
-            <label class="form-label">Tipo Cédula <span class="text-danger">*</span></label>
+          <div class="col-md-4">
+            <label class="form-label">Tipo Cedula <span class="text-danger">*</span></label>
             <select class="form-control" name="tipCedula" [(ngModel)]="formData.tipCedula" required [disabled]="readOnly">
               <option value="">Seleccionar</option>
               <option *ngFor="let tipo of tipCedulaOptions" [value]="tipo.value">{{ tipo.label }}</option>
             </select>
           </div>
-          <div class="col-md-3">
-            <label class="form-label">RUC / Identificación <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" name="ruc" [(ngModel)]="formData.ruc" required [readonly]="readOnly">
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Descripción <span class="text-danger">*</span></label>
+          <div class="col-md-5">
+            <label class="form-label">Nombre / Razon Social <span class="text-danger">*</span></label>
             <input type="text" class="form-control" name="descripcion" [(ngModel)]="formData.descripcion" required [readonly]="readOnly">
           </div>
-          <div class="col-md-6">
+          <div class="col-md-3">
+            <label class="form-label">Identificacion <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="ruc" [(ngModel)]="formData.ruc" required [readonly]="readOnly">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Tipo de Proveedor</label>
+            <select class="form-control" name="codTipo" [(ngModel)]="formData.codTipo" [disabled]="readOnly">
+              <option *ngFor="let tipo of tipoOptions" [value]="tipo.value">{{ tipo.label }}</option>
+            </select>
+          </div>
+          <div class="col-md-4">
             <label class="form-label">Contacto Principal</label>
             <input type="text" class="form-control" name="contacto" [(ngModel)]="formData.contacto" [readonly]="readOnly">
           </div>
@@ -53,49 +59,54 @@
       </div>
 
       <div class="section-card">
-        <div class="section-header">Ubicación</div>
+        <div class="section-header">Ubicacion</div>
         <div class="row g-3">
-          <div class="col-md-12">
-            <label class="form-label">Dirección</label>
+          <div class="col-md-6">
+            <label class="form-label">Direccion</label>
             <input type="text" class="form-control" name="direccion" [(ngModel)]="formData.direccion" [readonly]="readOnly">
           </div>
-          <div class="col-md-4">
-            <label class="form-label">Ciudad</label>
-            <input type="text" class="form-control" name="ciudad" [(ngModel)]="formData.ciudad" [readonly]="readOnly">
-          </div>
-          <div class="col-md-4">
+          <div class="col-md-3">
             <label class="form-label">Provincia</label>
             <input type="text" class="form-control" name="provincia" [(ngModel)]="formData.provincia" [readonly]="readOnly">
           </div>
-          <div class="col-md-4">
-            <label class="form-label">País</label>
+          <div class="col-md-3">
+            <label class="form-label">Ciudad</label>
+            <input type="text" class="form-control" name="ciudad" [(ngModel)]="formData.ciudad" [readonly]="readOnly">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Pais</label>
             <input type="text" class="form-control" name="pais" [(ngModel)]="formData.pais" [readonly]="readOnly">
           </div>
         </div>
       </div>
 
       <div class="section-card">
-        <div class="section-header">Comunicación</div>
+        <div class="section-header">Comunicacion</div>
         <div class="row g-3">
           <div class="col-md-6">
             <label class="form-label">Email</label>
             <input type="email" class="form-control" name="email" [(ngModel)]="formData.email" email [readonly]="readOnly" placeholder="correo@ejemplo.com">
           </div>
           <div class="col-md-3">
-            <label class="form-label">Teléfono 1</label>
+            <label class="form-label">Telefono 1</label>
             <input type="tel" class="form-control" name="telefono1" [(ngModel)]="formData.telefono1" [readonly]="readOnly">
           </div>
           <div class="col-md-3">
-            <label class="form-label">Teléfono 2</label>
+            <label class="form-label">Telefono 2</label>
             <input type="tel" class="form-control" name="telefono2" [(ngModel)]="formData.telefono2" [readonly]="readOnly">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Fax</label>
+            <input type="text" class="form-control" name="fax" [(ngModel)]="formData.fax" [readonly]="readOnly">
           </div>
         </div>
       </div>
+
     </div>
 
     <div class="col-lg-4">
       <div class="section-card">
-        <div class="section-header">Información Financiera</div>
+        <div class="section-header">Informacion Comercial</div>
         <div class="row g-3">
           <div class="col-12">
             <label class="form-label">Banco</label>
@@ -106,28 +117,16 @@
             <input type="text" class="form-control" name="ctaBanco" [(ngModel)]="formData.ctaBanco" [readonly]="readOnly">
           </div>
           <div class="col-12">
-            <label class="form-label">Límite de crédito</label>
+            <label class="form-label">Limite de credito</label>
             <input type="number" class="form-control" name="limiteCre" [(ngModel)]="formData.limiteCre" min="0" step="0.01" [readonly]="readOnly">
           </div>
         </div>
       </div>
 
-      <div class="section-card">
-        <div class="section-header">Estado</div>
-        <div class="row g-3">
-          <div class="col-12">
-            <label class="form-label">Estado del Suplidor <span class="text-danger">*</span></label>
-            <select class="form-control" name="estado" [(ngModel)]="formData.estado" required [disabled]="readOnly">
-              <option *ngFor="let estado of estadoOptions" [value]="estado.value">{{ estado.label }}</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
       <div class="section-card section-note">
-        <div class="section-header">Recomendación</div>
+        <div class="section-header">Recomendacion</div>
         <p class="text-muted mb-0">
-          Verifique los datos del suplidor antes de guardar. Los suplidores activos podrán ser asignados a órdenes de trabajo.
+          Verifique los datos del proveedor antes de guardar.
         </p>
       </div>
     </div>
@@ -135,9 +134,6 @@
 
   <div class="form-actions d-flex justify-content-end mt-3">
     <button type="button" class="btn btn-light me-2" (click)="cancelForm()">{{ readOnly ? 'Cerrar' : 'Cancelar' }}</button>
-    <button *ngIf="!readOnly" type="submit" class="btn btn-primary" [disabled]="!suplidorForm.form.valid || isLoading">
-      <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-      Guardar
-    </button>
+    <button *ngIf="!readOnly" type="submit" class="btn btn-primary" [disabled]="!proveedorForm.form.valid || isLoading">Guardar</button>
   </div>
 </form>

@@ -1,0 +1,94 @@
+<div class="proveedores-wrapper">
+  <div class="page-header">
+    <div>
+      <h4 class="title">Proveedores</h4>
+      <p class="subtitle">Administra transportistas, guias y operadores aliados.</p>
+    </div>
+    <div>
+      <button class="btn btn-primary" (click)="openForm()" [disabled]="isLoading">
+        <i class="feather icon-plus"></i> Nuevo Proveedor
+      </button>
+    </div>
+  </div>
+
+  <div class="filters-card">
+    <div class="row">
+      <div class="col-lg-4 col-md-6 mb-3">
+        <label class="small-label">Codigo</label>
+        <input class="form-control" [(ngModel)]="filterCodigo" placeholder="Buscar por codigo">
+      </div>
+      <div class="col-lg-5 col-md-6 mb-3">
+        <label class="small-label">Nombre / Razon Social</label>
+        <input class="form-control" [(ngModel)]="filterDescripcion" placeholder="Buscar por nombre o razon social">
+      </div>
+      <div class="col-lg-3 col-md-12 mb-3 d-flex align-items-end justify-content-end">
+        <button class="btn btn-outline-secondary me-2" (click)="onLimpiar()" [disabled]="isLoading">Limpiar</button>
+        <button class="btn btn-primary" (click)="onBuscar()" [disabled]="isLoading">Buscar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <h6 class="m-0"><i class="feather icon-truck"></i> Listado de proveedores</h6>
+      <span class="count-chip">{{ totalRegistros }} registros</span>
+    </div>
+    <div class="table-responsive" *ngIf="proveedores.length; else noData">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Codigo</th>
+            <th>Proveedor</th>
+            <th>Contacto</th>
+            <th>Telefono</th>
+            <th>Tipo</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let proveedor of proveedores">
+            <td>{{ proveedor.codigo }}</td>
+            <td>{{ proveedor.descripcion }}</td>
+            <td>{{ proveedor.contacto || 'N/D' }}</td>
+            <td>{{ proveedor.telefono1 || proveedor.telefono2 || 'N/D' }}</td>
+            <td>{{ proveedor.tipoProveedor || 'N/D' }}</td>
+            <td class="text-center">
+              <div class="action-buttons">
+                <button class="btn btn-sm btn-outline-primary" (click)="editar(proveedor)" title="Editar">
+                  <i class="feather icon-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger ms-1" (click)="eliminar(proveedor)" title="Eliminar">
+                  <i class="feather icon-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <ng-template #noData>
+      <div class="empty-state text-center p-4">
+        <i class="feather icon-archive empty-icon"></i>
+        <p class="mb-2">No hay proveedores para mostrar.</p>
+        <button class="btn btn-primary" (click)="openForm()"><i class="feather icon-plus"></i> Crear proveedor</button>
+      </div>
+    </ng-template>
+
+    <div class="row mt-3 align-items-center" *ngIf="totalPages > 0">
+      <div class="col-md-4 text-muted">
+        Pagina {{ currentPage }} de {{ totalPages }} ({{ totalRegistros }} registros)
+      </div>
+      <div class="col-md-4 text-center">
+        <select class="form-select form-select-sm d-inline-block w-auto" [(ngModel)]="pageSize" (change)="onPageSizeChange()" [disabled]="isLoading">
+          <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }} por pagina</option>
+        </select>
+      </div>
+      <div class="col-md-4 text-end">
+        <div class="btn-group" role="group">
+          <button class="btn btn-outline-secondary btn-sm" [disabled]="currentPage === 1 || isLoading" (click)="goToPageRelative(-1)">Prev</button>
+          <button class="btn btn-outline-secondary btn-sm" [disabled]="currentPage === totalPages || isLoading" (click)="goToPageRelative(1)">Next</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

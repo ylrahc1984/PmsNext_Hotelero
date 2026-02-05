@@ -31,7 +31,7 @@ export class CorrelativosComponent implements OnInit {
   modules: CorrelativoModule[] = [
     { value: 'reservations', label: 'Reservas', description: 'Códigos para reservas de habitaciones' },
     { value: 'clients', label: 'Clientes', description: 'Códigos para clientes' },
-    { value: 'suppliers', label: 'Suplidores', description: 'Códigos para suplidores' },
+    { value: 'suppliers', label: 'Proveedores', description: 'Códigos para proveedores' },
     { value: 'agencies', label: 'Agencias', description: 'Códigos para agencias comisionistas' },
     { value: 'invoices', label: 'Facturas', description: 'Códigos para facturas' },
     { value: 'receipts', label: 'Recibos', description: 'Códigos para recibos de pago' },

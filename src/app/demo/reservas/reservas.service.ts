@@ -37,20 +37,89 @@ export interface Reserva {
   PRV01_Operador: string;
 }
 
-// Copia local del tipo para compatibilidad con ordenes.service.ts y orden-trabajo-form.component.ts
+// Interfaces para detalles pendientes de asignar
+export interface DetalleReservaPendienteDto {
+  PRV02_ID: number;
+  PRV02_CodReserva: string;
+  PRV02_Linea: number;
+  PRV01_NomCliente: string;
+  PRV01_TelCliente: string;
+  PRV01_EmailCliente: string;
+  PRV01_CodAgencia: string;
+  MPV00_NomAgencia: string;
+  PRV01_Estado: string;
+  PRV01_Folio: any;
+  PRV02_TipoServicio: string;
+  PRV02_CodServicio: string;
+  PRV02_NomServicio: string;
+  PRV02_Observacion: string;
+  PRV02_FecServicio: string;
+  PRV02_HoraServicio: string;
+  PRV02_OrigenTexto: string;
+  PRV02_ZonaOrigen: string;
+  PRV02_OrigenPlaceId: string;
+  PRV02_OrigenLat: number;
+  PRV02_OrigenLng: number;
+  PRV02_OrigenGoogle: string;
+  PRV02_DestinoTexto: string;
+  PRV02_ZonaDestino: string;
+  PRV02_DestinoPlaceId: string;
+  PRV02_DestinoLat: number;
+  PRV02_DestinoLng: number;
+  PRV02_DestinoGoogle: string;
+  PRV02_Adultos: number;
+  PRV02_Ninos: number;
+  PRV02_TotalPax: number;
+  PRV02_CodLstPrecio: string;
+  PRV02_IdReglaPrecio: number;
+  PRV02_PrecioAdulto: number;
+  PRV02_PrecioNino: number;
+  PRV02_PrecioPaxExtra: number;
+  PRV02_MontoServicio: number;
+  PRV01_Moneda: string;
+  PRV02_Estado: string;
+  AsignadoOT: number;
+  CodOrdenTrabajo: any;
+  DistanciaKm: number;
+  TiempoEstimadoMin: number;
+  PRV02_Operador: string;
+  PRV02_FechaRegistro: string;
+}
+
+// Interfaz UI simplificada para orden de trabajo
 export interface ReservaDetalleDisponible {
   key: string;
-  reservaId: number;
-  detalleReservaId: number;
-  numeroBoleta: number;
-  clienteFinal: string;
+  id: number;
+  codReserva: string;
+  linea: number;
+  cliente: string;
+  telefono: string;
+  email: string;
   agencia: string;
+  nombreAgencia: string;
+  estadoReserva: string;
+  folio: string;
+  tipoServicio: string;
+  codServicio: string;
   servicio: string;
+  observacion: string;
   fechaServicio: string;
   hora: string;
   origen: string;
+  zonaOrigen: string;
   destino: string;
+  zonaDestino: string;
+  adultos: number;
+  ninos: number;
   pax: number;
+  precioAdulto: number;
+  precioNino: number;
+  montoServicio: number;
+  moneda: string;
+  distanciaKm: number;
+  tiempoEstimadoMin: number;
+  asignadoOT: boolean;
+  codOrdenTrabajo: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -179,11 +248,60 @@ export class ReservasService {
     return this.http.delete(`${this.apiUrl}/${codReserva}/eliminar`, { responseType: 'text' });
   }
 
-  // Devuelve un array vacío y muestra advertencia, ya que la función ya no existe en el servicio real
-  getDetallesDisponibles(asignados: Set<string>): ReservaDetalleDisponible[] {
-    // Esta función debe ser implementada con una llamada real a la API si es necesario
-    // Por ahora, retorna un array vacío para evitar errores de compilación
-    console.warn('getDetallesDisponibles: función mock, implementar llamada real a API si es necesario');
-    return [];
+  getDetallesPendientes(fechaIngreso: string, estado?: string, codReserva?: string): Observable<ReservaDetalleDisponible[]> {
+    let params = new HttpParams().set('fechaIngreso', fechaIngreso);
+    
+    if (estado) {
+      params = params.set('estado', estado);
+    }
+    if (codReserva) {
+      params = params.set('codReserva', codReserva);
+    }
+
+    return this.http.get<{ datos?: DetalleReservaPendienteDto[] }>(`${this.apiUrl}/consulta-fecha-estado`, { params }).pipe(
+      map((response) => {
+        const datos = response?.datos ?? [];
+        return datos
+          .filter(d => d.AsignadoOT === 0) // Solo detalles no asignados
+          .map((d) => this.mapDetallePendienteFromApi(d));
+      })
+    );
+  }
+
+  private mapDetallePendienteFromApi(apiData: DetalleReservaPendienteDto): ReservaDetalleDisponible {
+    return {
+      key: `${apiData.PRV02_CodReserva}-${apiData.PRV02_ID}`,
+      id: apiData.PRV02_ID,
+      codReserva: apiData.PRV02_CodReserva,
+      linea: apiData.PRV02_Linea,
+      cliente: apiData.PRV01_NomCliente,
+      telefono: apiData.PRV01_TelCliente,
+      email: apiData.PRV01_EmailCliente,
+      agencia: apiData.PRV01_CodAgencia,
+      nombreAgencia: apiData.MPV00_NomAgencia,
+      estadoReserva: apiData.PRV01_Estado,
+      folio: typeof apiData.PRV01_Folio === 'object' ? '' : String(apiData.PRV01_Folio || ''),
+      tipoServicio: apiData.PRV02_TipoServicio,
+      codServicio: apiData.PRV02_CodServicio,
+      servicio: apiData.PRV02_NomServicio,
+      observacion: apiData.PRV02_Observacion,
+      fechaServicio: apiData.PRV02_FecServicio,
+      hora: apiData.PRV02_HoraServicio,
+      origen: apiData.PRV02_OrigenTexto,
+      zonaOrigen: apiData.PRV02_ZonaOrigen,
+      destino: apiData.PRV02_DestinoTexto,
+      zonaDestino: apiData.PRV02_ZonaDestino,
+      adultos: apiData.PRV02_Adultos,
+      ninos: apiData.PRV02_Ninos,
+      pax: apiData.PRV02_TotalPax,
+      precioAdulto: apiData.PRV02_PrecioAdulto,
+      precioNino: apiData.PRV02_PrecioNino,
+      montoServicio: apiData.PRV02_MontoServicio,
+      moneda: apiData.PRV01_Moneda,
+      distanciaKm: apiData.DistanciaKm,
+      tiempoEstimadoMin: apiData.TiempoEstimadoMin,
+      asignadoOT: apiData.AsignadoOT === 1,
+      codOrdenTrabajo: typeof apiData.CodOrdenTrabajo === 'object' ? null : String(apiData.CodOrdenTrabajo || '')
+    };
   }
 }
