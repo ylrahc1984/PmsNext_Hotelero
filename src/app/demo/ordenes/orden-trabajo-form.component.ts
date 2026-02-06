@@ -43,7 +43,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     // Campos adicionales de configuración OT
     tipo: [0, Validators.required],           // 0=Transfer, 1=Tour, 2=Excursión, etc.
     moneda: ['USD', Validators.required],     // USD, CRC, EUR
-    tCambio: [1],                             // Tipo de cambio
+    tCambio: [500],                             // Tipo de cambio
     rutaCodigo: [''],                         // Código de ruta
     rotulacion: [''],                         // Indicaciones de rotulación
     conexion: [''],                           // Conexión/enlace
