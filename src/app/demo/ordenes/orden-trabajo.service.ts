@@ -364,4 +364,19 @@ export class OrdenTrabajoService {
     const diff = kmFinal - kmInicial;
     return Number.isFinite(diff) ? diff : null;
   }
+
+  actualizarSuplidorVehiculo(codOT: string, codSuplidor: string, codVehiculo: string, codChofer: string): Observable<any> {
+    const url = `${this.apiUrl}/${codOT}/suplidor-vehiculo`;
+    const body = {
+      codSuplidor,
+      codVehiculo,
+      codChofer
+    };
+    return this.http.patch(url, body, { responseType: 'text' });
+  }
+
+  cancelarOrden(codOT: string): Observable<any> {
+    const url = `${this.apiUrl}/${codOT}`;
+    return this.http.delete(url, { responseType: 'text' });
+  }
 }

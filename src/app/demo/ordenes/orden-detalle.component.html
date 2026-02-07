@@ -21,7 +21,8 @@
             class="btn btn-outline-primary ot-action-btn ot-action-btn--outline ot-action-btn--compact"
             type="button"
             (click)="editarOrden()"
-            [disabled]="!codOT"
+            [disabled]="!codOT || esOrdenAnulada"
+            [title]="esOrdenAnulada ? 'No se puede editar una orden anulada' : 'Editar'"
           >
             <span class="ot-action-btn__icon"><i class="feather icon-edit"></i></span>
             <span>Editar</span>
@@ -56,6 +57,13 @@
         {{ errorMsg }}
       </div>
 
+      <div *ngIf="esOrdenAnulada && !loading" class="alert alert-warning d-flex align-items-center mt-3" role="alert">
+        <i class="feather icon-alert-triangle me-2"></i>
+        <div>
+          <strong>Orden Anulada:</strong> Esta orden de trabajo ha sido cancelada y no puede ser modificada.
+        </div>
+      </div>
+
       <ng-container *ngIf="orden as o">
         <div class="row g-3 mt-1">
           <div class="col-lg-8">
@@ -74,11 +82,11 @@
                   </div>
                   <div class="col-md-6 mb-2">
                     <div class="text-muted small">Vehículo</div>
-                    <div class="fw-semibold">{{ o.codVehiculo || '—' }}</div>
+                    <div class="fw-semibold">{{ o.placaVehiculo || '—' }}</div>
                   </div>
                   <div class="col-md-6 mb-2">
                     <div class="text-muted small">Chofer</div>
-                    <div class="fw-semibold">{{ o.codChofer || '—' }}</div>
+                    <div class="fw-semibold">{{ o.nombreChofer || '—' }}</div>
                   </div>
                   <div class="col-md-6 mb-2">
                     <div class="text-muted small">Moneda</div>

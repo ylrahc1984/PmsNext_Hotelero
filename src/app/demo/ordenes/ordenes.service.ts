@@ -93,7 +93,9 @@ export interface EncabezadoOrdenTrabajoApiDTO {
   PRV10_Operador: string;
   PRV10_FechaRegistro: string;
   PRV10_CodVehiculo: string;
+  MRV11_Placa:string;
   PRV10_CodChofer: string;
+  MRV12_NombreCompleto:string;
 }
 
 /**
@@ -242,7 +244,9 @@ export interface OrdenTrabajo {
   kmFinal?: number;
   rotulacion?: boolean;
   codVehiculo?: string;
+  placaVehiculo?: string;          // Placa del vehículo (opcional, para mostrar en UI)
   codChofer?: string;
+  nombreChofer?: string;          // Nombre del chofer (opcional, para mostrar en UI)
   estado: EstadoOrden;
   moneda?: string;              // Moneda de la orden
   detalles: OrdenTrabajoDetalle[];
@@ -388,7 +392,9 @@ export class OrdenesService {
       kmFinal: apiEncabezado.PRV10_KmFinal || 0,
       rotulacion: apiEncabezado.PRV10_Rotulacion === '1' || apiEncabezado.PRV10_Rotulacion?.toLowerCase() === 'true',
       codVehiculo: apiEncabezado.PRV10_CodVehiculo || '',
+      placaVehiculo: apiEncabezado.MRV11_Placa || '', // Placa del vehículo
       codChofer: apiEncabezado.PRV10_CodChofer || '',
+      nombreChofer: apiEncabezado.MRV12_NombreCompleto || '', // Nombre del chofer
       estado: this.mapEstadoCodigo(apiEncabezado.PRV10_Estado),
       moneda: apiEncabezado.PRV10_Moneda || 'USD',
       detalles: [], // Se llenarán después
@@ -724,13 +730,34 @@ export class OrdenesService {
 
   /**
    * Actualiza el encabezado de una orden existente (PUT).
+   * El codOT va en la URL, no en el body.
    */
   actualizarEncabezado(codOT: string, dto: OrdenTrabajoEncabezadoDTO): Observable<any> {
-    return this.http.put(this.apiUrl, { ...dto, codOT }).pipe(
-      tap(response => console.log('Encabezado actualizado:', response)),
+    const url = `${this.apiUrl}/${codOT}`;
+    console.log('=== ACTUALIZANDO ENCABEZADO ===');
+    console.log('URL completa:', url);
+    console.log('Método: PUT');
+    console.log('CodOT en URL:', codOT);
+    console.log('DTO enviado (body):', JSON.stringify(dto, null, 2));
+    
+    // Usar responseType: 'text' porque la API devuelve texto plano en vez de JSON
+    return this.http.put(url, dto, { responseType: 'text' }).pipe(
+      tap(response => {
+        console.log('✅ Encabezado actualizado exitosamente');
+        console.log('Response:', response);
+      }),
       catchError(error => {
-        console.error('Error al actualizar encabezado:', error);
-        return throwError(() => new Error(error.error?.respuesta || 'Error al actualizar el encabezado'));
+        console.error('❌ Error al actualizar encabezado');
+        console.error('Status:', error.status);
+        console.error('Error completo:', error);
+        
+        // Si el error es 200 con problema de parsing, considerarlo éxito
+        if (error.status === 200) {
+          console.log('⚠️ Status 200 con error de parsing - considerando como éxito');
+          return of({ mensaje: 'Actualizado correctamente' });
+        }
+        
+        return throwError(() => new Error(error.error?.respuesta || error.error?.mensaje || 'Error al actualizar el encabezado'));
       })
     );
   }
@@ -751,25 +778,115 @@ export class OrdenesService {
   }
 
   /**
-   * Guarda la orden completa: encabezado + todos los detalles.
+   * Actualiza un detalle existente de la orden (PUT).
+   */
+  actualizarDetalle(dto: OrdenTrabajoDetalleDTO): Observable<any> {
+    console.log(`🔄 Actualizando detalle ID ${dto.id}, línea ${dto.linea}:`, { codOT: dto.codOT, servicio: dto.nomServicio });
+    
+    return this.http.put(this.apiDetalleUrl, dto).pipe(
+      tap(response => console.log(`✅ Detalle ID ${dto.id} actualizado:`, response)),
+      catchError(error => {
+        console.error(`❌ Error al actualizar detalle ID ${dto.id}:`, error);
+        return throwError(() => new Error(error.error?.respuesta || 'Error al actualizar detalle'));
+      })
+    );
+  }
+
+  /**
+   * Elimina un detalle de la orden (DELETE).
+   */
+  eliminarDetalle(id: number): Observable<any> {
+    console.log(`🗑️ Eliminando detalle ID ${id}`);
+    
+    return this.http.delete(`${this.apiDetalleUrl}/${id}`).pipe(
+      tap(response => console.log(`✅ Detalle ID ${id} eliminado:`, response)),
+      catchError(error => {
+        console.error(`❌ Error al eliminar detalle ID ${id}:`, error);
+        return throwError(() => new Error(error.error?.respuesta || 'Error al eliminar detalle'));
+      })
+    );
+  }
+
+  /**
+   * Actualiza el suplidor, vehículo y chofer de una orden de trabajo.
+   * Endpoint: PUT /api/ordentrabajo/{codOT}/suplidor-vehiculo
+   */
+  actualizarSuplidorVehiculo(
+    codOT: string, 
+    codSuplidor: string, 
+    codVehiculo: string, 
+    codChofer: string,
+    operador: string
+  ): Observable<any> {
+    const url = `${this.apiUrl}/${codOT}/suplidor-vehiculo`;
+    const body = {
+      codSuplidor,
+      codVehiculo,
+      codChofer,
+      operador
+    };
+    
+    console.log('=== ACTUALIZANDO SUPLIDOR/VEHÍCULO/CHOFER ===');
+    console.log('URL:', url);
+    console.log('Body:', body);
+    
+    return this.http.put(url, body, { responseType: 'text' }).pipe(
+      tap(response => {
+        console.log('✅ Suplidor/Vehículo/Chofer actualizados exitosamente');
+        console.log('Response:', response);
+      }),
+      catchError(error => {
+        console.error('❌ Error al actualizar suplidor/vehículo/chofer');
+        console.error('Error completo:', error);
+        
+        // Si el error es 200 con problema de parsing, considerarlo éxito
+        if (error.status === 200) {
+          console.log('⚠️ Status 200 con error de parsing - considerando como éxito');
+          return of({ mensaje: 'Actualizado correctamente' });
+        }
+        
+        return throwError(() => new Error(error.error?.respuesta || error.error?.mensaje || 'Error al actualizar'));
+      })
+    );
+  }
+
+  /**
+   * Guarda o actualiza la orden completa: encabezado + todos los detalles.
    * Estrategia:
-   * 1. Guarda encabezado (POST) → recibe codOT
-   * 2. Guarda todos los detalles en paralelo usando forkJoin (optimización)
-   * 3. Retorna el codOT y el resultado de todos los detalles
+   * 1. Si codOTExistente, actualiza encabezado (PUT), sino crea (POST) → recibe codOT
+   * 2. Si es edición, hace diff de detalles (nuevos/modificados/eliminados)
+   * 3. Ejecuta operaciones correspondientes en paralelo usando forkJoin
+   * 4. Retorna el codOT y el resultado de todas las operaciones
+   * 
+   * @param encabezadoDTO - DTO del encabezado
+   * @param detalles - Array de detalles actuales de la orden
+   * @param operador - Usuario que realiza la operación
+   * @param codOTExistente - Si está presente, actualiza la orden existente (modo edición)
+   * @param detallesOriginales - Snapshot de detalles originales para hacer diff (solo en edición)
    */
   guardarOrdenCompleta(
     encabezadoDTO: OrdenTrabajoEncabezadoDTO, 
     detalles: OrdenTrabajoDetalle[],
-    operador: string = 'Admin'
+    operador: string = 'Admin',
+    codOTExistente?: string,
+    detallesOriginales?: OrdenTrabajoDetalle[]
   ): Observable<{ codOT: string; detallesGuardados: number; errores: any[] }> {
-    console.log('🚀 === INICIANDO GUARDADO DE ORDEN COMPLETA ===');
+    const esEdicion = !!codOTExistente;
+    console.log('🚀 === INICIANDO', esEdicion ? 'ACTUALIZACIÓN' : 'GUARDADO', 'DE ORDEN COMPLETA ===');
+    console.log('CodOT existente:', codOTExistente);
     console.log('Cantidad de detalles:', detalles.length);
     console.log('Operador:', operador);
     
-    // Paso 1: Guardar encabezado
-    return this.guardarEncabezado(encabezadoDTO).pipe(
+    // Paso 1: Guardar o actualizar encabezado
+    const encabezadoObs$: Observable<OrdenTrabajoEncabezadoResponse> = esEdicion 
+      ? this.actualizarEncabezado(codOTExistente!, encabezadoDTO).pipe(
+          map(() => ({ datos: [{ CodOT: codOTExistente }] } as OrdenTrabajoEncabezadoResponse))
+        )
+      : this.guardarEncabezado(encabezadoDTO);
+    
+    return encabezadoObs$.pipe(
       // Paso 2: Con el codOT, preparar y guardar detalles
-      switchMap(responseEncabezado => {
+      switchMap((responseEncabezado: OrdenTrabajoEncabezadoResponse) => {
         // Extraer codOT de la nueva estructura de respuesta
         const codOT = responseEncabezado.datos?.[0]?.CodOT || '';
         
@@ -782,35 +899,111 @@ export class OrdenesService {
         
         // Si no hay detalles, retornar directamente
         if (!detalles || detalles.length === 0) {
+          // Si es edición y había detalles originales, eliminarlos todos
+          if (esEdicion && detallesOriginales && detallesOriginales.length > 0) {
+            console.log('🗑️ Eliminando todos los detalles de la orden...');
+            const deleteObs = detallesOriginales
+              .filter(d => d.detalleReservaId)
+              .map(d => this.eliminarDetalle(d.detalleReservaId!).pipe(
+                map(() => ({ success: true, operacion: 'delete', id: d.detalleReservaId })),
+                catchError(error => of({ success: false, operacion: 'delete', id: d.detalleReservaId, error }))
+              ));
+            
+            if (deleteObs.length === 0) {
+              return of({ codOT, detallesGuardados: 0, errores: [] });
+            }
+            
+            return forkJoin(deleteObs).pipe(
+              map(resultados => ({
+                codOT,
+                detallesGuardados: 0,
+                errores: resultados.filter(r => !r.success)
+              }))
+            );
+          }
           return of({ codOT, detallesGuardados: 0, errores: [] });
         }
         
-        // Mapear cada detalle al DTO
-        const detallesDTO = detalles.map((detalle, index) => 
-          this.mapDetalleToDTO(detalle, codOT, index + 1, operador)
-        );
+        // Determinar operaciones a realizar según si es edición o creación
+        let operaciones: Observable<{ success: boolean; operacion: string; dto?: any; id?: number; error?: any }>[] = [];
+        
+        if (esEdicion && detallesOriginales) {
+          console.log('🔍 Modo EDICIÓN: Analizando diferencias en detalles...');
+          const diff = this.calcularDiffDetalles(detalles, detallesOriginales, codOT, operador);
+          
+          console.log('📊 Resumen de cambios:', {
+            nuevos: diff.nuevos.length,
+            modificados: diff.modificados.length,
+            eliminados: diff.eliminados.length,
+            sinCambios: diff.sinCambios
+          });
+          
+          // Crear observables para cada operación
+          operaciones = [
+            ...diff.nuevos.map(dto => 
+              this.guardarDetalle(dto).pipe(
+                map(() => ({ success: true, operacion: 'insert', dto })),
+                catchError(error => of({ success: false, operacion: 'insert', dto, error }))
+              )
+            ),
+            ...diff.modificados.map(dto => 
+              this.actualizarDetalle(dto).pipe(
+                map(() => ({ success: true, operacion: 'update', dto })),
+                catchError(error => of({ success: false, operacion: 'update', dto, error }))
+              )
+            ),
+            ...diff.eliminados.map(id => 
+              this.eliminarDetalle(id).pipe(
+                map(() => ({ success: true, operacion: 'delete', id })),
+                catchError(error => of({ success: false, operacion: 'delete', id, error }))
+              )
+            )
+          ];
+        } else {
+          console.log('📝 Modo CREACIÓN: Guardando todos los detalles como nuevos...');
+          // Mapear cada detalle al DTO
+          const detallesDTO = detalles.map((detalle, index) => 
+            this.mapDetalleToDTO(detalle, codOT, index + 1, operador)
+          );
 
-        // Crear observables para cada detalle con manejo de errores individual
-        const detalleObservables = detallesDTO.map(dto => 
-          this.guardarDetalle(dto).pipe(
-            map(() => ({ success: true, dto, error: null })),
-            catchError(error => {
-              console.error(`Error guardando detalle línea ${dto.linea}:`, error);
-              // No lanzar error, sino retornar objeto con el error
-              return of({ success: false, dto, error });
-            })
-          )
-        );
+          // Crear observables para guardar (POST)
+          operaciones = detallesDTO.map(dto => 
+            this.guardarDetalle(dto).pipe(
+              map(() => ({ success: true, operacion: 'insert', dto })),
+              catchError(error => of({ success: false, operacion: 'insert', dto, error }))
+            )
+          );
+        }
 
-        // Ejecutar todas las llamadas en paralelo y procesar resultados
-        return forkJoin(detalleObservables).pipe(
+        // Si no hay operaciones, retornar éxito
+        if (operaciones.length === 0) {
+          console.log('✅ Sin cambios en detalles');
+          return of({ codOT, detallesGuardados: detalles.length, errores: [] });
+        }
+
+        // Ejecutar todas las operaciones en paralelo y procesar resultados
+        return forkJoin(operaciones).pipe(
           map(resultados => {
-            const exitosos = resultados.filter(r => r.success).length;
+            const exitosos = resultados.filter(r => r.success);
             const errores = resultados.filter(r => !r.success);
+            
+            // Contar solo inserts y updates como guardados
+            const detallesGuardados = exitosos.filter(r => r.operacion === 'insert' || r.operacion === 'update').length;
+            
+            console.log('📊 Resultado de operaciones:', {
+              total: resultados.length,
+              exitosos: exitosos.length,
+              errores: errores.length,
+              porOperacion: {
+                insert: exitosos.filter(r => r.operacion === 'insert').length,
+                update: exitosos.filter(r => r.operacion === 'update').length,
+                delete: exitosos.filter(r => r.operacion === 'delete').length
+              }
+            });
             
             return {
               codOT,
-              detallesGuardados: exitosos,
+              detallesGuardados,
               errores
             };
           })
@@ -818,9 +1011,97 @@ export class OrdenesService {
       }),
       
       catchError(error => {
-        console.error('Error en guardarOrdenCompleta:', error);
+        console.error('❌ Error en guardarOrdenCompleta:', error);
         return throwError(() => error);
       })
+    );
+  }
+
+  /**
+   * Calcula las diferencias entre detalles actuales y originales.
+   * Detecta: nuevos, modificados, eliminados.
+   */
+  private calcularDiffDetalles(
+    detallesActuales: OrdenTrabajoDetalle[],
+    detallesOriginales: OrdenTrabajoDetalle[],
+    codOT: string,
+    operador: string
+  ): {
+    nuevos: OrdenTrabajoDetalleDTO[];
+    modificados: OrdenTrabajoDetalleDTO[];
+    eliminados: number[];
+    sinCambios: number;
+  } {
+    const nuevos: OrdenTrabajoDetalleDTO[] = [];
+    const modificados: OrdenTrabajoDetalleDTO[] = [];
+    const eliminados: number[] = [];
+    let sinCambios = 0;
+
+    // Crear mapa de detalles actuales por detalleReservaId para búsqueda rápida
+    const actualesMap = new Map<number, OrdenTrabajoDetalle>();
+    detallesActuales.forEach(d => {
+      if (d.detalleReservaId) {
+        actualesMap.set(d.detalleReservaId, d);
+      }
+    });
+
+    // Paso 1: Detectar eliminados
+    // (están en originales pero no en actuales)
+    detallesOriginales.forEach(original => {
+      if (original.detalleReservaId && !actualesMap.has(original.detalleReservaId)) {
+        eliminados.push(original.detalleReservaId);
+      }
+    });
+
+    // Paso 2: Detectar nuevos y modificados
+    detallesActuales.forEach((actual, index) => {
+      const linea = index + 1;
+      
+      if (!actual.detalleReservaId) {
+        // Sin ID de backend = NUEVO
+        const dto = this.mapDetalleToDTO(actual, codOT, linea, operador);
+        nuevos.push(dto);
+      } else {
+        // Tiene ID = puede ser MODIFICADO o SIN CAMBIOS
+        const original = detallesOriginales.find(o => o.detalleReservaId === actual.detalleReservaId);
+        
+        if (!original) {
+          // No debería pasar, pero por seguridad lo tratamos como nuevo
+          const dto = this.mapDetalleToDTO(actual, codOT, linea, operador);
+          nuevos.push(dto);
+          return;
+        }
+        
+        // Comparar campos relevantes para detectar cambios
+        const cambio = this.detalleHaCambiado(actual, original);
+        
+        if (cambio) {
+          // MODIFICADO
+          const dto = this.mapDetalleToDTO(actual, codOT, linea, operador);
+          dto.id = actual.detalleReservaId; // Importante: incluir ID para PUT
+          modificados.push(dto);
+        } else {
+          // SIN CAMBIOS
+          sinCambios++;
+        }
+      }
+    });
+
+    return { nuevos, modificados, eliminados, sinCambios };
+  }
+
+  /**
+   * Compara dos detalles para determinar si hubo cambios.
+   * Solo compara campos editables que afectan la operación.
+   */
+  private detalleHaCambiado(actual: OrdenTrabajoDetalle, original: OrdenTrabajoDetalle): boolean {
+    // Comparar campos que el usuario puede modificar
+    return (
+      actual.origenOT !== original.origenOT ||
+      actual.destinoOT !== original.destinoOT ||
+      actual.hora !== original.hora ||
+      actual.pax !== original.pax ||
+      actual.observaciones !== original.observaciones
     );
   }
 

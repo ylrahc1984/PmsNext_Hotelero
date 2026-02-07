@@ -1,10 +1,12 @@
 import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Subscription, finalize } from 'rxjs';
 import Swal from 'sweetalert2';
 
+import { environment } from 'src/environments/environment';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { EstadoOrden, EstadoOrdenOption, ESTADOS_OT, OrdenTrabajo, OrdenTrabajoDetalle, OrdenesService } from './ordenes.service';
 import { ReservaDetalleDisponible, ReservasService } from '../reservas/reservas.service';
@@ -28,6 +30,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
   private suplidorService = inject(SuplidorService);
   private monedaService = inject(MonedaService);
   private authService = inject(AuthService);
+  private http = inject(HttpClient);
   private orden?: OrdenTrabajo;
   private subs = new Subscription();
 
@@ -55,6 +58,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
   detallesDisponibles: ReservaDetalleDisponible[] = [];
   detallesSeleccionados = new Set<string>();
   detallesOrden: OrdenTrabajoDetalle[] = [];
+  detallesOriginales: OrdenTrabajoDetalle[] = []; // Snapshot de detalles al cargar la orden
   estadoBloqueado = false;
   isEdit = false;
   titulo = 'Nueva Orden de Trabajo';
@@ -151,6 +155,12 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     }
   }
 
+  private esOrdenAnulada(orden: OrdenTrabajo | undefined): boolean {
+    if (!orden?.estado) return false;
+    const estado = orden.estado.toUpperCase().trim();
+    return estado === 'ANU';
+  }
+
   get totalServicios(): number {
     return this.detallesOrden.length;
   }
@@ -160,7 +170,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
   }
 
   get totalPagarSugerido(): number {
-    return this.detallesOrden.reduce((sum, d) => sum + d.pax * 15000, 0);
+    return this.detallesOrden.reduce((sum, d) => sum + d.pax * 20, 0);
   }
 
   get estadosDisponibles(): EstadoOrdenOption[] {
@@ -198,6 +208,53 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     if (!seleccionados.length || this.estadoBloqueado) {
       return;
     }
+
+    // Validar capacidad del vehículo
+    if (this.selectedVehiculoId && this.selectedSupplierId) {
+      const suplidor = this.suplidoresDisponibles.find(s => s.codigo === this.selectedSupplierId);
+      const vehiculo = suplidor?.vehiculos.find(v => v.codigo === this.selectedVehiculoId);
+      
+      if (vehiculo) {
+        const totalPaxSeleccionados = seleccionados.reduce((sum, det) => sum + (det.pax || 0), 0);
+        const capacidadDisponible = vehiculo.capacidadDisponible;
+        
+        if (totalPaxSeleccionados > capacidadDisponible) {
+          // Mostrar alerta de sobrecarga
+          Swal.fire({
+            title: '⚠️ Capacidad Excedida',
+            html: `
+              <div style="text-align: left;">
+                <p>La cantidad de pasajeros seleccionados <strong>excede la capacidad disponible</strong> del vehículo:</p>
+                <ul style="list-style: none; padding-left: 0;">
+                  <li>🚗 <strong>Vehículo:</strong> ${vehiculo.nombre}</li>
+                  <li>👥 <strong>Capacidad disponible:</strong> ${capacidadDisponible} pax</li>
+                  <li>📊 <strong>Pax seleccionados:</strong> ${totalPaxSeleccionados} pax</li>
+                  <li>❌ <strong>Exceso:</strong> ${totalPaxSeleccionados - capacidadDisponible} pax</li>
+                </ul>
+                <p class="text-danger"><strong>¿Desea continuar y sobrecargar la unidad?</strong></p>
+              </div>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, continuar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6'
+          }).then((result) => {
+            if (result.isConfirmed) {
+              this.procesarAgregarSeleccionados(seleccionados);
+            }
+          });
+          return;
+        }
+      }
+    }
+
+    // Si no hay problema de capacidad, proceder normalmente
+    this.procesarAgregarSeleccionados(seleccionados);
+  }
+
+  private procesarAgregarSeleccionados(seleccionados: ReservaDetalleDisponible[]): void {
     let nextId = this.getNextDetalleId();
     seleccionados.forEach(det => {
       // Obtener origen/destino editados o usar los originales
@@ -287,10 +344,14 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     // Deshabilitar el formulario durante el guardado
     this.form.disable();
 
+    // Determinar si es edición y obtener codOT
+    const codOTExistente = this.isEdit && this.orden?.codOT ? this.orden.codOT : undefined;
+    const accion = codOTExistente ? 'Actualizando' : 'Guardando';
+
     // Mostrar loading
     Swal.fire({
-      title: 'Guardando Orden de Trabajo...',
-      html: `Guardando encabezado y ${this.detallesOrden.length} servicio(s)...`,
+      title: `${accion} Orden de Trabajo...`,
+      html: `${accion} encabezado y ${this.detallesOrden.length} servicio(s)...`,
       allowOutsideClick: false,
       allowEscapeKey: false,
       didOpen: () => {
@@ -302,8 +363,20 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     const currentUser = this.authService.getCurrentUser();
     const operadorActual = raw.operador || (currentUser ? (currentUser.usuario || currentUser.nombre) : null) || 'Admin';
 
-    // Llamar al servicio para guardar
-    this.ordenesService.guardarOrdenCompleta(encabezadoDTO, this.detallesOrden, operadorActual)
+    console.log('🔧 Ejecutando guardado:', {
+      esEdicion: this.isEdit,
+      codOTExistente,
+      accion
+    });
+
+    // Llamar al servicio para guardar o actualizar
+    this.ordenesService.guardarOrdenCompleta(
+      encabezadoDTO, 
+      this.detallesOrden, 
+      operadorActual, 
+      codOTExistente,
+      this.detallesOriginales // Pasar detalles originales para diff
+    )
       .subscribe({
         next: (resultado) => {
           Swal.close();
@@ -322,8 +395,9 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
             });
           } else {
             // Todo exitoso
+            const tituloExito = codOTExistente ? '¡Orden Actualizada!' : '¡Orden Guardada!';
             Swal.fire({
-              title: '¡Orden Guardada!',
+              title: tituloExito,
               html: `
                 <p>Código de orden: <strong>${resultado.codOT}</strong></p>
                 <p>${resultado.detallesGuardados} servicio(s) guardado(s) exitosamente.</p>
@@ -363,6 +437,13 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
             this.ordenesService.updateOrden(payload);
           } else {
             this.ordenesService.createOrden(payload);
+          }
+
+          // Si es guardarYAsignar (estado ASI), imprimir automáticamente
+          if (estadoFinal === 'ASI' && resultado.codOT) {
+            setTimeout(() => {
+              this.imprimirOrdenPDF(resultado.codOT);
+            }, 2200);
           }
 
           // Navegar de vuelta al listado
@@ -565,10 +646,31 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
    * Carga los datos de una orden en el formulario
    */
   private cargarDatosOrden(orden: OrdenTrabajo, codOT: string): void {
+    // Validar que la orden no esté anulada antes de permitir edición
+    if (this.esOrdenAnulada(orden)) {
+      Swal.fire({
+        title: 'Orden Anulada',
+        html: `
+          <div style="text-align: left;">
+            <p>Esta orden de trabajo ha sido <strong>anulada</strong> y no puede ser modificada.</p>
+            <p><strong>Código OT:</strong> ${codOT}</p>
+            <p class="text-muted">Será redirigido a la vista de detalle.</p>
+          </div>
+        `,
+        icon: 'warning',
+        confirmButtonText: 'Ver Detalle'
+      }).then(() => {
+        this.router.navigate(['/operaciones/ordenes-trabajo', codOT, 'detalle']);
+      });
+      return;
+    }
+    
     this.orden = orden;
     this.isEdit = true;
     this.titulo = `Editar Orden #${codOT}`;
     this.detallesOrden = [...orden.detalles];
+    // Guardar snapshot de detalles originales para diff posterior
+    this.detallesOriginales = JSON.parse(JSON.stringify(orden.detalles));
     this.estadoBloqueado = orden.estado === 'COM';
     
     // Cargar suplidor, vehículo y chofer si existen
@@ -592,7 +694,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
       kmFinal: orden.kmFinal,
       rotulacion: orden.rotulacion ? 'Sí' : '',
       moneda: orden.moneda || 'USD',
-      tCambio: 1
+      tCambio: 500
     });
     
     // Cargar suplidores disponibles para la fecha de la orden
@@ -684,6 +786,58 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     }
   }
 
+  private imprimirOrdenPDF(codOT: string): void {
+    if (!codOT) return;
+
+    const baseApiUrl = environment.apiUrl.replace(/\/+$/, '');
+    const url = `${baseApiUrl}/ordentrabajo/${encodeURIComponent(codOT)}/reporte-pdf`;
+
+    this.http.get(url, { responseType: 'blob' })
+      .pipe(finalize(() => {}))
+      .subscribe({
+        next: (data) => {
+          try {
+            const pdfBlob = new Blob([data], { type: 'application/pdf' });
+            const objectUrl = URL.createObjectURL(pdfBlob);
+
+            const link = document.createElement('a');
+            link.href = objectUrl;
+            link.download = `Orden_Trabajo_${codOT}.pdf`;
+            link.rel = 'noopener';
+
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+
+            Swal.fire({
+              title: 'PDF Generado',
+              text: 'La orden de trabajo se ha descargado correctamente.',
+              icon: 'success',
+              timer: 2000,
+              showConfirmButton: false
+            });
+          } catch (e) {
+            console.error('Error descargando orden PDF', e);
+            Swal.fire({
+              title: 'Error',
+              text: 'No se pudo descargar la orden en PDF.',
+              icon: 'error'
+            });
+          }
+        },
+        error: (err) => {
+          console.error('Error obteniendo orden PDF', err);
+          Swal.fire({
+            title: 'Error',
+            text: 'No se pudo generar el PDF de la orden.',
+            icon: 'error'
+          });
+        }
+      });
+  }
+
   private loadCurrentUser(): void {
     const currentUser = this.authService.getCurrentUser();
     if (currentUser) {
@@ -748,7 +902,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
       totalPagar: 0,
       tipo: 0,
       moneda: 'USD',
-      tCambio: 1,
+      tCambio: 500,
       operador: operadorActual
     });
     this.detallesOrden = [];

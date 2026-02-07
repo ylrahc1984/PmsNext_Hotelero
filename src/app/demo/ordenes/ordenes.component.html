@@ -108,11 +108,29 @@
                     <button class="btn btn-sm btn-outline-secondary" (click)="verDetalle(orden)" [disabled]="isLoading" title="Ver detalle">
                       <i class="feather icon-eye"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-primary ms-1" (click)="verEditar(orden)" [disabled]="isLoading" title="Editar">
+                    <button 
+                      class="btn btn-sm btn-outline-primary ms-1" 
+                      (click)="verEditar(orden)" 
+                      [disabled]="isLoading || esOrdenAnulada(orden)" 
+                      [title]="esOrdenAnulada(orden) ? 'No se puede editar una orden anulada' : 'Editar'">
                       <i class="feather icon-edit"></i>
+                    </button>
+                    <button 
+                      class="btn btn-sm btn-outline-info ms-1" 
+                      (click)="cambiarSuplidorVehiculo(orden)" 
+                      [disabled]="isLoading || esOrdenAnulada(orden)" 
+                      [title]="esOrdenAnulada(orden) ? 'No se puede modificar una orden anulada' : 'Cambiar Suplidor/Vehículo/Chofer'">
+                      <i class="feather icon-shuffle"></i>
                     </button>
                     <button class="btn btn-sm btn-outline-secondary ms-1" (click)="imprimirOrden(orden)" [disabled]="isLoading" title="Imprimir">
                       <i class="feather icon-printer"></i>
+                    </button>
+                    <button 
+                      class="btn btn-sm btn-outline-danger ms-1" 
+                      (click)="cancelarOrden(orden)" 
+                      [disabled]="isLoading || esOrdenAnulada(orden)" 
+                      [title]="esOrdenAnulada(orden) ? 'Orden ya cancelada' : 'Cancelar orden'">
+                      <i class="feather icon-x-circle"></i>
                     </button>
                   </div>
                 </td>

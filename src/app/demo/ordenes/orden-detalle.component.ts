@@ -91,6 +91,13 @@ export class OrdenDetalleComponent implements OnInit, OnDestroy {
     };
   }
 
+  get esOrdenAnulada(): boolean {
+    if (!this.orden?.estado) return false;
+    const estado = this.orden.estado.toUpperCase().trim();
+    const estadoDesc = this.estadoLabel.toLowerCase().trim();
+    return estado === 'ANU' || estadoDesc.includes('anul');
+  }
+
   get detallesFiltrados(): OrdenTrabajoDetalle[] {
     const q = (this.filtro ?? '').toString().trim().toLowerCase();
     if (!q) return this.detalles;
@@ -119,6 +126,17 @@ export class OrdenDetalleComponent implements OnInit, OnDestroy {
 
   editarOrden(): void {
     if (!this.codOT) return;
+    
+    // Validar que la orden no esté anulada
+    if (this.esOrdenAnulada) {
+      Swal.fire({
+        title: 'Orden Anulada',
+        text: 'No se puede editar una orden de trabajo que ha sido anulada.',
+        icon: 'warning'
+      });
+      return;
+    }
+    
     this.router.navigate(['/operaciones/ordenes-trabajo', this.codOT, 'editar']);
   }
 
@@ -133,7 +151,7 @@ export class OrdenDetalleComponent implements OnInit, OnDestroy {
     this.busyPdf = true;
 
     const baseApiUrl = (environment.apiUrl ?? '').toString().replace(/\/+$/, '');
-    const url = `${baseApiUrl}/ordentrabajo/${encodeURIComponent(cod)}/pdf`;
+    const url = `${baseApiUrl}/ordentrabajo/${encodeURIComponent(cod)}/reporte-pdf`;
 
     this.http
       .get(url, { responseType: 'blob' as const })
