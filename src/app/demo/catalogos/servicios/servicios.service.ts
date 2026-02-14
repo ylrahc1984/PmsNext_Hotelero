@@ -152,9 +152,9 @@ export class ServiciosService {
       map((response) => {
         const data = (response?.datos ?? []).map((item) => this.mapFromApi(item));
         const paginacion = response?.paginacion;
-        const totalRegistros = paginacion?.totalRegistros ?? data.length;
-        const paginaActual = paginacion?.paginaActual ?? pageNumber;
-        const size = paginacion?.pageSize ?? pageSize;
+        const totalRegistros = Number(paginacion?.totalRegistros ?? data.length) || data.length;
+        const paginaActual = Number(paginacion?.paginaActual ?? pageNumber) || pageNumber;
+        const size = Number(paginacion?.pageSize ?? pageSize) || pageSize;
         const totalPages = totalRegistros > 0 ? Math.ceil(totalRegistros / size) : 1;
         return { data, totalRegistros, paginaActual, pageSize: size, totalPages };
       })
@@ -181,9 +181,9 @@ export class ServiciosService {
       map((response) => {
         const data = (response?.datos ?? []).map((item) => this.mapFromApi(item));
         const paginacion = response?.paginacion;
-        const totalRegistros = paginacion?.totalRegistros ?? data.length;
-        const paginaActual = paginacion?.paginaActual ?? pageNumber;
-        const size = paginacion?.pageSize ?? pageSize;
+        const totalRegistros = Number(paginacion?.totalRegistros ?? data.length) || data.length;
+        const paginaActual = Number(paginacion?.paginaActual ?? pageNumber) || pageNumber;
+        const size = Number(paginacion?.pageSize ?? pageSize) || pageSize;
         const totalPages = totalRegistros > 0 ? Math.ceil(totalRegistros / size) : 1;
         return { data, totalRegistros, paginaActual, pageSize: size, totalPages };
       })

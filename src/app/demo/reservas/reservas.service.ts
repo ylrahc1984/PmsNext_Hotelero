@@ -242,6 +242,12 @@ export class ReservasService {
     return this.http.put(`${this.apiUrl}/${codReserva}`, this.toApiPayload(payload, 2), { responseType: 'text' });
   }
 
+  cambiarEstadoDirecto(codReserva: string, directo: '0' | '1'): Observable<any> {
+    const encoded = encodeURIComponent((codReserva ?? '').toString().trim());
+    const params = new HttpParams().set('Directo', (directo ?? '0').toString());
+    return this.http.put(`${this.apiUrl}/${encoded}/cambiar-estado-directo`, {}, { params, responseType: 'text' });
+  }
+
   confirmarReserva(codReserva: string): Observable<any> {
     return this.http.post(`${this.apiUrl}/${codReserva}/confirmar`, {}, { responseType: 'text' });
   }

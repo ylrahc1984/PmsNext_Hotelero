@@ -25,6 +25,8 @@ export class ListaPickupComponent implements OnInit, OnDestroy {
   pickups: PickupListaItem[] = [];
   isLoading = false;
   errorMsg = '';
+  pageNumber = 1;
+  pageSize = 5;
 
   private destroy$ = new Subject<void>();
   private refresh$ = new Subject<void>();
@@ -64,6 +66,7 @@ export class ListaPickupComponent implements OnInit, OnDestroy {
       )
       .subscribe((data) => {
         this.pickups = data ?? [];
+        this.pageNumber = 1;
       });
 
     this.refresh$.next();
@@ -75,11 +78,13 @@ export class ListaPickupComponent implements OnInit, OnDestroy {
   }
 
   onBuscar(): void {
+    this.pageNumber = 1;
     this.refresh$.next();
   }
 
   onLimpiar(): void {
     this.searchControl.setValue('', { emitEvent: false });
+    this.pageNumber = 1;
     this.refresh$.next();
   }
 
@@ -135,6 +140,35 @@ export class ListaPickupComponent implements OnInit, OnDestroy {
 
   getEstadoBadgeClass(estado: number): string {
     return Number(estado) === 1 ? 'badge bg-success' : 'badge bg-danger';
+  }
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.pickups.length / this.pageSize));
+  }
+
+  get pagedPickups(): PickupListaItem[] {
+    const start = (this.pageNumber - 1) * this.pageSize;
+    return this.pickups.slice(start, start + this.pageSize);
+  }
+
+  get pageStart(): number {
+    if (!this.pickups.length) return 0;
+    return (this.pageNumber - 1) * this.pageSize + 1;
+  }
+
+  get pageEnd(): number {
+    if (!this.pickups.length) return 0;
+    return Math.min(this.pageNumber * this.pageSize, this.pickups.length);
+  }
+
+  goToPreviousPage(): void {
+    if (this.pageNumber <= 1) return;
+    this.pageNumber -= 1;
+  }
+
+  goToNextPage(): void {
+    if (this.pageNumber >= this.totalPages) return;
+    this.pageNumber += 1;
   }
 
   trackById(index: number, item: PickupListaItem): number {

@@ -96,6 +96,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
   selectedCliente: ClienteUI | null = null;
   serviciosLoading = false;
   tarifaLocked = false;
+  directoUpdating = false;
 
   private planTarifaChanges$ = new Subject<number>();
 
@@ -404,7 +405,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     // En el borrador, el backend debe generar el CodReserva. Enviamos un payload mínimo.
     const payload = {
       estado: 'PEN',
-      directo: '0',
+      directo: (this.form.directo || '0').toString(),
       totNoches: 0,
       totDias: 0,
       cntHabitaciones: 0,
@@ -457,6 +458,8 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         const formaId = parseNumericId(formaRaw);
         const codPlanId = parseNumericId(codPlanRaw);
         const codLstPrecioApi = safeString((res as any).PRV01_CodLstPrecio);
+        const directoValue = safeString((res as any).PRV01_Directo).trim();
+        const directoNormalized = directoValue === '1' ? '1' : '0';
         this.form = {
           fecha: toDateInputValue(res.PRV01_FecCreacion) || this.form.fecha || '',
           codAgencia: safeString((res as any).PRV01_CodAgencia),
@@ -469,6 +472,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
           codLstPrecio: codLstPrecioApi,
           codPlan: codPlanCodigo ?? safeString(codPlanRaw),
           moneda: safeString((res as any).PRV01_Moneda),
+          directo: directoNormalized,
           estado: estadoNormalizado,
           totalRsv: safeNumber((res as any).PRV01_TotalRsv),
           comentarios: safeString((res as any).PRV01_Observacion)
@@ -1718,6 +1722,16 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     }
   }
 
+  get directoSwitchChecked(): boolean {
+    return (this.form.directo || '0').toString() === '1';
+  }
+
+  get directoSwitchDisabled(): boolean {
+    const estado = (this.form.estado || '').toString();
+    const allowed = estado === 'PEN' || estado === 'CON';
+    return !this.codReservaActual || !allowed || this.directoUpdating;
+  }
+
   /**
    * Wrapper de alertas para estandarizar UX y evitar warnings de foco/aria cuando hay modales abiertos.
    */
@@ -1761,7 +1775,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       estado,
       totNoches: 0,
       totDias: 0,
-      directo: "0",
+      directo: (this.form.directo || '0').toString(),
       folio: 'S/F',
       cntHabitaciones: 0,
       observacion: this.form.comentarios,
@@ -1941,6 +1955,64 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     if (this.showDetalleModal) {
       this.recalcularCosto();
     }
+  }
+
+  onDirectoSwitchChange(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    if (!input) return;
+
+    const nextValue = input.checked ? '1' : '0';
+    const previousValue = (this.form.directo || '0').toString();
+
+    if (nextValue === previousValue) {
+      return;
+    }
+
+    const codReserva = (this.codReservaActual || '').toString().trim();
+    if (!codReserva || this.directoSwitchDisabled) {
+      this.form.directo = previousValue;
+      input.checked = previousValue === '1';
+      return;
+    }
+
+    const actionLabel = nextValue === '1' ? 'desactivar' : 'activar';
+    const actionText =
+      nextValue === '1'
+        ? 'Se desactivará el cálculo de impuestos y se recalcularán los montos en backend.'
+        : 'Se activará el cálculo de impuestos y se recalcularán los montos en backend.';
+
+    void Swal.fire({
+      title: `¿Desea ${actionLabel} el cálculo de impuestos?`,
+      text: actionText,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, continuar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (!result.isConfirmed) {
+        this.form.directo = previousValue;
+        input.checked = previousValue === '1';
+        return;
+      }
+
+      this.directoUpdating = true;
+      this.form.directo = nextValue;
+
+      this.reservasService.cambiarEstadoDirecto(codReserva, nextValue).pipe(take(1)).subscribe({
+        next: () => {
+          this.directoUpdating = false;
+          this.cargarEncabezado(codReserva);
+          this.cargarDetalle(codReserva);
+        },
+        error: (err) => {
+          this.directoUpdating = false;
+          this.form.directo = previousValue;
+          input.checked = previousValue === '1';
+          this.logHttpError('Cambiar estado directo', err, { codReserva, directo: nextValue });
+          this.showAlert('Error', 'No se pudo actualizar el estado de impuestos.', 'error');
+        }
+      });
+    });
   }
 
   /**

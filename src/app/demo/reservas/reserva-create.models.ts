@@ -12,6 +12,7 @@ export interface ReservaCreateForm {
   codLstPrecio: string;
   codPlan: string;
   moneda: string;
+  directo: string;
   estado: ReservaEstado;
   totalRsv: number;
   comentarios: string;

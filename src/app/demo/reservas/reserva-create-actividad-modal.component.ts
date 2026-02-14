@@ -660,7 +660,7 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
 
   private buildPickupFormGroup(pickup?: Partial<ActividadPickupForm>): PickupFormGroup {
     return this.fb.group({
-      direccion: this.fb.control((pickup?.direccion || '').toString(), { nonNullable: true }),
+      direccion: this.fb.control((pickup?.direccion || '').toString(), { nonNullable: true, validators: [Validators.required] }),
       zona: this.fb.control((pickup?.zona || '').toString(), { nonNullable: true }),
       google: this.fb.control((pickup?.google || '').toString(), { nonNullable: true }),
       placeId: this.fb.control((pickup?.placeId || '').toString(), { nonNullable: true }),

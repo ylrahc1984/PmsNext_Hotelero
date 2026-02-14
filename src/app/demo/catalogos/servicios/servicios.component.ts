@@ -52,10 +52,10 @@ export class ServiciosComponent implements OnInit {
     request.subscribe({
       next: (result) => {
         this.servicios = result.data ?? [];
-        this.totalRegistros = result.totalRegistros ?? this.servicios.length;
-        this.currentPage = result.paginaActual ?? this.currentPage;
-        this.pageSize = result.pageSize ?? this.pageSize;
-        this.totalPages = result.totalPages ?? 1;
+        this.totalRegistros = Number(result.totalRegistros ?? this.servicios.length) || this.servicios.length;
+        this.currentPage = Number(result.paginaActual ?? this.currentPage) || this.currentPage;
+        this.pageSize = Number(result.pageSize ?? this.pageSize) || this.pageSize;
+        this.totalPages = Number(result.totalPages ?? 1) || 1;
         this.updateFilterOptions();
         this.applyLocalFilters();
         this.isLoading = false;
@@ -108,11 +108,12 @@ export class ServiciosComponent implements OnInit {
 
   onPageSizeChange(): void {
     this.currentPage = 1;
+    this.pageSize = Number(this.pageSize) || 20;
     this.loadServicios();
   }
 
   goToPageRelative(delta: number): void {
-    const nextPage = this.currentPage + delta;
+    const nextPage = Number(this.currentPage) + delta;
     if (nextPage < 1 || nextPage > this.totalPages) {
       return;
     }

@@ -18,6 +18,7 @@ export function buildInitialReservaCreateForm(now: Date = new Date()): ReservaCr
     codLstPrecio: '',
     codPlan: '',
     moneda: '',
+    directo: '0',
     estado: 'PEN',
     totalRsv: 0,
     comentarios: ''

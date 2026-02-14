@@ -58,6 +58,9 @@
                         autocomplete="off"
                       >
                       <div class="text-danger rsv-pickup-row__error" *ngIf="pickup.controls.error.value">{{ pickup.controls.error.value }}</div>
+                      <div class="text-danger rsv-pickup-row__error" *ngIf="pickup.controls.direccion.touched && pickup.controls.direccion.invalid">
+                        El pickup es obligatorio.
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -111,10 +114,17 @@
                       <small class="text-muted">{{ actividad.controls.codServicio.value }}</small>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                      <div class="text-end">
-                        <small class="text-muted d-block">Total linea</small>
-                        <strong>{{ actividad.controls.totalLinea.value | number:'1.2-2' }}</strong>
+                        <div class="text-end">
+                        <small class="text-muted d-block">Total línea</small>
+                        <span
+                          [ngClass]="{
+                            'fw-bold text-success': actividad.get('totalLinea')?.value > 0,
+                            'text-muted': actividad.get('totalLinea')?.value <= 0
+                          }">
+                          {{ actividad.get('totalLinea')?.value | number:'1.2-2' }}
+                        </span>
                       </div>
+
                       <button type="button" class="btn btn-outline-secondary btn-sm rsv-icon-btn" (click)="toggleActividad(i)" title="Expandir/contraer">
                         <i class="feather" [ngClass]="actividad.controls.expanded.value ? 'icon-chevron-up' : 'icon-chevron-down'"></i>
                       </button>
@@ -149,10 +159,16 @@
         </div>
 
         <div class="modal-footer rsv-modal__footer">
-          <div class="rsv-footer__summary">
-            <label class="form-label mb-0">Total General</label>
-            <input type="number" class="form-control form-control-sm" [value]="form.controls.totalGeneral.value" readonly>
+          <div class="rsv-footer__summary d-flex justify-content-end align-items-center gap-3">
+            <label class="form-label mb-0 fw-semibold text-muted">
+              Total General:
+            </label>
+
+            <div class="rsv-total-value fw-bold fs-5 text-end">
+              {{ form.get('totalGeneral')?.value | number:'1.2-2' }}
+            </div>
           </div>
+
           <div class="rsv-footer__actions">
             <button type="button" class="btn btn-outline-secondary rsv-action-btn rsv-action-btn--outline" (click)="onClose()">
               <span class="rsv-action-btn__icon"><i class="feather icon-x"></i></span>

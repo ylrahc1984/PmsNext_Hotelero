@@ -58,7 +58,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let pickup of pickups; trackBy: trackById">
+          <tr *ngFor="let pickup of pagedPickups; trackBy: trackById">
             <td><strong>{{ pickup.CR11_ID }}</strong></td>
             <td>{{ pickup.CR11_Nombre }}</td>
             <td>{{ pickup.CR11_Duracion || '00:00' }}</td>
@@ -82,6 +82,20 @@
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mt-3" *ngIf="pickups.length > pageSize">
+      <small class="text-muted">
+        Mostrando {{ pageStart }}-{{ pageEnd }} de {{ pickups.length }}
+      </small>
+      <div class="btn-group btn-group-sm">
+        <button class="btn btn-outline-secondary" (click)="goToPreviousPage()" [disabled]="pageNumber <= 1">
+          Anterior
+        </button>
+        <button class="btn btn-outline-secondary" (click)="goToNextPage()" [disabled]="pageNumber >= totalPages">
+          Siguiente
+        </button>
+      </div>
     </div>
 
     <ng-template #noData>
