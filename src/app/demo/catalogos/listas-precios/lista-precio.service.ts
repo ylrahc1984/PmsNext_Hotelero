@@ -52,6 +52,31 @@ export class ListaPrecioService {
     );
   }
 
+  getListasByPlanRate(planRate: number, pageNumber = 1, pageSize = 10): Observable<{
+    data: ListaPrecioUI[];
+    totalRegistros: number;
+    paginaActual: number;
+    pageSize: number;
+    totalPages: number;
+  }> {
+    const params = new HttpParams()
+      .set('planRate', String(planRate))
+      .set('pageNumber', String(pageNumber))
+      .set('pageSize', String(pageSize));
+    return this.http.get<{ datos?: ListaPrecioDto[]; paginacion?: any }>(`${this.apiUrl}/planrate`, { params }).pipe(
+      map((response) => {
+        const dataArray = response?.datos ?? [];
+        const data = dataArray.map((item) => this.mapFromApi(item));
+        const paginacion = response?.paginacion;
+        const totalRegistros = paginacion?.totalRegistros ?? data.length;
+        const paginaActual = paginacion?.paginaActual ?? pageNumber;
+        const size = paginacion?.pageSize ?? pageSize;
+        const totalPages = totalRegistros > 0 ? Math.ceil(totalRegistros / size) : 1;
+        return { data, totalRegistros, paginaActual, pageSize: size, totalPages };
+      })
+    );
+  }
+
   getListaByCodigo(cod: string): Observable<ListaPrecioUI | null> {
     const params = new HttpParams()
       .set('codLstPrecio', cod)
@@ -97,6 +122,7 @@ export class ListaPrecioService {
         fechaDesde: this.toIsoDate(value.fechaDesde),
         fechaHasta: this.toIsoDate(value.fechaHasta),
         observaciones: value.observaciones || '',
+        planRate: value.planRate ?? '',
         operador: '',
         respuesta: ''
       },
@@ -123,6 +149,7 @@ export class ListaPrecioService {
       fechaDesde: this.normalizeDate(apiData.MPV04_FechaDesde),
       fechaHasta: this.normalizeDate(apiData.MPV04_FechaHasta),
       observaciones: this.normalizeString(apiData.MPV04_Observaciones),
+      planRate: apiData.NombrePlan ?? '',
       operador: apiData.MPV04_Operador
     };
   }

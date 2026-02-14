@@ -53,9 +53,28 @@
           <div class="col-md-3">
             <div class="form-group">
               <label>Simbolo</label>
-              <input type="text" class="form-control" formControlName="simbolo">
+              <input type="text" class="form-control" formControlName="simbolo" readonly>
             </div>
           </div>
+          <div class="col-md-5">
+            <div class="form-group">
+              <label>Plan de Tarifa <span class="text-danger">*</span></label>
+              <select
+                class="form-control"
+                formControlName="planRate"
+                [class.is-invalid]="form.get('planRate')?.touched && form.get('planRate')?.invalid"
+              >
+                <option [ngValue]="null">Seleccione un plan de tarifa</option>
+                <option *ngFor="let plan of planesTarifas" [ngValue]="plan.planId">
+                  {{ plan.nombrePlan }} ({{ plan.tipoTarifaDescripcion }})
+                </option>
+              </select>
+              <div class="invalid-feedback">El plan de tarifa es requerido.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
           <div class="col-md-5">
             <div class="form-group">
               <label>Vigente</label>

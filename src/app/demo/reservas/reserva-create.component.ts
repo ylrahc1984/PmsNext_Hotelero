@@ -1,14 +1,16 @@
-﻿import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { filter, firstValueFrom, take } from 'rxjs';
+import { Subject, catchError, distinctUntilChanged, filter, firstValueFrom, map, of, switchMap, take } from 'rxjs';
 import Swal from 'sweetalert2';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { ReservasService } from './reservas.service';
-import { ReservaDetalleService, ReservaDetalle } from './reserva-detalle.service';
+import { ReservaDetalle } from './reserva-detalle.service';
+import { DetallePax, DetalleToursCompletoService } from './detalle-tours-completo.service';
 import { CanDeactivateReservaCreate } from 'src/app/core/guards/can-deactivate-reserva-create.guard';
 import { FormaPagoService } from '../administracion/forma-pago/forma-pago.service';
 import { FormaPago } from '../administracion/forma-pago/forma-pago.models';
@@ -16,9 +18,7 @@ import { MonedaService, MonedaUI } from '../administracion/monedas/moneda.servic
 
 // Tarifa
 import { ListaPrecioService } from '../catalogos/listas-precios/lista-precio.service';
-
-// Tarifa engine
-import { ReglaTarifa } from '../catalogos/listas-precios/listas-precios.service';
+import { PlanesTarifasService, PlanTarifaUI } from '../catalogos/listas-precios/planes-tarifas.service';
 
 // Tarifa models
 import { ListaPrecioUI } from '../catalogos/listas-precios/lista-precio.models';
@@ -32,9 +32,9 @@ import { FormaReservasService } from '../catalogos/forma-reservas/forma-reservas
 import { FormaReservaDto } from '../catalogos/forma-reservas/forma-reservas.models';
 
 import { showAlertWithFocusRestore } from './reserva-create.alert';
-import { buildInitialDetalleForm, buildInitialReservaCreateForm } from './reserva-create.builders';
+import { buildInitialActividadDetalleForm, buildInitialDetalleForm, buildInitialReservaCreateForm } from './reserva-create.builders';
 import { clearReservaCreateDraftCod, getReservaCreateDraftCod, setReservaCreateDraftCod } from './reserva-create.draft-storage';
-import { DetalleForm, ReservaCreateForm, ReservaEstado } from './reserva-create.models';
+import { ActividadDetalleForm, DetalleForm, DetallePaxForm, ReservaCreateForm, ReservaEstado } from './reserva-create.models';
 import {
   extractCodReserva,
   extractGoogleDisplayText,
@@ -47,50 +47,68 @@ import {
   safeString,
   toDateInputValue
 } from './reserva-create.utils';
-import { ReservaCreateTarifaService } from './reserva-create.tarifa.service';
-import { computeAdultosExtra } from './reserva-create.tarifa-engine';
+import { ReservaCreateTarifaService, ReglaTarifaPaxAplicada } from './reserva-create.tarifa.service';
+import { TipoPaxService, TipoPaxUI } from './tipo-pax.service';
 import { ReservaCreateClienteModalComponent } from './reserva-create-cliente-modal.component';
 import { ReservaCreateDetalleModalComponent } from './reserva-create-detalle-modal.component';
+import { ActividadModalSavePayload, ReservaCreateActividadModalComponent } from './reserva-create-actividad-modal.component';
+
+type ReservaDetalleCompleto = ReservaDetalle & { detallesPax: DetallePax[] };
 
 @Component({
   selector: 'app-reserva-create',
   standalone: true,
-  imports: [CommonModule, FormsModule, SharedModule, ReservaCreateClienteModalComponent, ReservaCreateDetalleModalComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    SharedModule,
+    ReservaCreateClienteModalComponent,
+    ReservaCreateDetalleModalComponent,
+    ReservaCreateActividadModalComponent
+  ],
   templateUrl: './reserva-create.component.html',
   styleUrls: ['./reserva-create.component.scss']
 })
 export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreate {
   form: ReservaCreateForm = buildInitialReservaCreateForm();
-  detalles: ReservaDetalle[] = [];
+  detalles: ReservaDetalleCompleto[] = [];
   detalleForm: DetalleForm = buildInitialDetalleForm();
+  actividadForm: ActividadDetalleForm = buildInitialActividadDetalleForm();
   showDetalleModal = false;
+  showActividadModal = false;
   editingDetalleId: number | null = null;
+  editingActividadId: number | null = null;
   guardado = false;
 
   idiomas: IdiomaDto[] = [];
   formasReservacion: FormaReservaDto[] = [];
   formasPagoApi: FormaPago[] = [];
   listaPrecios: ListaPrecioUI[] = [];
+  planesTarifas: PlanTarifaUI[] = [];
   monedas: MonedaUI[] = [];
   servicios: ServicioUI[] = [];
-  tarifas = ['A', 'B', 'C', 'D'];
+  tiposPax: TipoPaxUI[] = [];
 
-  // Resultado de la última aplicación de regla tarifaria al detalleForm.
-  reglaTarifaAplicada: ReglaTarifa | null = null;
   reglaTarifaError = '';
   allowManualPricing = false;
 
   showClienteModal = false;
   selectedCliente: ClienteUI | null = null;
   serviciosLoading = false;
+  tarifaLocked = false;
+
+  private planTarifaChanges$ = new Subject<number>();
 
   private reservasService = inject(ReservasService);
-  private detalleService = inject(ReservaDetalleService);
+  private detalleService = inject(DetalleToursCompletoService);
   private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
   private formaPagoService = inject(FormaPagoService);
   private monedaService = inject(MonedaService);
   private listaPrecioService = inject(ListaPrecioService);
+  private planesTarifasService = inject(PlanesTarifasService);
   private tarifaService = inject(ReservaCreateTarifaService);
+  private tipoPaxService = inject(TipoPaxService);
   private clienteService = inject(ClienteService);
   private serviciosService = inject(ServiciosService);
   private authService = inject(AuthService);
@@ -131,10 +149,64 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
    * - Inicializa el flujo de creación/recuperación de reserva (borrador o edición por URL).
    */
   ngOnInit(): void {
+    this.setupPlanTarifaListener();
     this.cargarIdiomas();
     this.cargarFormasReservacion();
-    this.initReserva();
+    this.cargarPlanesTarifas();
+    this.cargarTiposPax();
+    this.cargarMonedaReservaciones();
+    this.cargarFormasPago();
 
+    // Luego de cargar catálogos, inicializamos la reserva (borrador o edición).
+    this.initReserva();
+  }
+
+  private setupPlanTarifaListener(): void {
+    this.planTarifaChanges$
+      .pipe(
+        distinctUntilChanged(),
+        switchMap((planId) => {
+          if (!planId) {
+            return of<ListaPrecioUI[]>([]);
+          }
+          return this.listaPrecioService.getListasByPlanRate(planId, 1, 200).pipe(
+            map((res) => res.data ?? []),
+            catchError(() => of<ListaPrecioUI[]>([]))
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((listas) => {
+        this.listaPrecios = listas ?? [];
+        if (!this.listaPrecios.length) {
+          this.form.codLstPrecio = '';
+          return;
+        }
+
+        const preferred = (this.form.codLstPrecio || '').trim();
+        const preferredExists =
+          !!preferred && this.listaPrecios.some((item) => (item?.codigo || '').trim() === preferred);
+        const firstCode = (this.listaPrecios[0]?.codigo ?? '').trim();
+
+        this.form.codLstPrecio = preferredExists ? preferred : firstCode;
+        this.onListaPrecioChange();
+      });
+  }
+
+  private emitPlanTarifaChange(source: 'user' | 'system' = 'system'): void {
+    if (source === 'user' && this.tarifaLocked) {
+      return;
+    }
+    const planId = Number(this.form.codPlan ?? 0) || 0;
+    this.planTarifaChanges$.next(planId);
+  }
+
+  private actualizarEstadoTarifario(): void {
+    this.tarifaLocked = this.detalles.length > 0;
+  }
+
+  /// Carga catálogo de formas de pago para reservaciones y establece un valor por defecto (priorizando el primer registro).
+  private cargarFormasPago(): void {
     this.formaPagoService.getAll().subscribe({
       next: (res) => {
         this.formasPagoApi = res;
@@ -147,7 +219,9 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         this.formasPagoApi = [];
       }
     });
-
+  }
+  /// Carga catálogo de monedas para reservaciones y establece un valor por defecto (priorizando la moneda local).
+  private cargarMonedaReservaciones(): void {
     this.monedaService.getAll().subscribe({
       next: (res) => {
         this.monedas = res;
@@ -159,20 +233,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         this.monedas = [];
       }
     });
-
-    this.listaPrecioService.getListas({ pageNumber: 1, pageSize: 200 }).subscribe({
-      next: (res) => {
-        this.listaPrecios = res.data ?? [];
-        if (this.listaPrecios.length > 0 && !this.form.codLstPrecio) {
-          this.form.codLstPrecio = this.listaPrecios[0].codigo;
-        }
-      },
-      error: () => {
-        this.listaPrecios = [];
-      }
-    });
   }
-
   /**
    * Carga catálogo de formas de reservación y establece un valor por defecto
    * (priorizando el primer registro activo).
@@ -192,7 +253,6 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       }
     });
   }
-
   /**
    * Carga catálogo de idiomas y establece un valor por defecto
    * (priorizando el primer registro activo).
@@ -211,6 +271,46 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         this.idiomas = [];
       }
     });
+  }
+
+  /**
+   * Carga catálogo de planes tarifarios y establece un valor por defecto.
+   */
+  private cargarPlanesTarifas(): void {
+    this.planesTarifasService.getPlanesTarifas(1, 50).subscribe({
+      next: (planes) => {
+        this.planesTarifas = planes ?? [];
+        const currentPlanId = Number(this.form.codPlan ?? 0) || 0;
+        const currentExists =
+          currentPlanId > 0 && this.planesTarifas.some((plan) => Number(plan?.planId ?? 0) === currentPlanId);
+        if (!currentExists && this.planesTarifas.length > 0) {
+          this.form.codPlan = String(this.planesTarifas[0].planId);
+        }
+        this.emitPlanTarifaChange('system');
+      },
+      error: () => {
+        this.planesTarifas = [];
+      }
+    });
+  }
+
+  /**
+   * Carga catálogo de tipo pax para el modal de detalle.
+   */
+  private cargarTiposPax(): void {
+    this.tipoPaxService.getTiposPax().subscribe({
+      next: (tipos) => {
+        this.tiposPax = tipos ?? [];
+        this.ensureDetallePaxDefaults();
+      },
+      error: () => {
+        this.tiposPax = [];
+      }
+    });
+  }
+
+  get tiposPaxBase(): TipoPaxUI[] {
+    return this.tiposPax ?? [];
   }
 
   /**
@@ -304,6 +404,10 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     // En el borrador, el backend debe generar el CodReserva. Enviamos un payload mínimo.
     const payload = {
       estado: 'PEN',
+      directo: '0',
+      totNoches: 0,
+      totDias: 0,
+      cntHabitaciones: 0,
       fecCreacion: this.form.fecha,
       operador: this.getOperador()
     };
@@ -324,8 +428,9 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         this.guardado = true;
         this.creandoBorrador = false;
       },
-      error: () => {
+      error: (err) => {
         this.creandoBorrador = false;
+        this.logHttpError('Crear borrador', err, { payload });
         this.showAlert('Error', 'No se pudo crear el borrador de la reserva.', 'error');
       }
     });
@@ -344,10 +449,14 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         const estadoNormalizado = normalizeReservaEstado((res.PRV01_Estado as any) ?? 'PEN');
         const idiomaRaw = (res as any).PRV01_Idioma;
         const formaRaw = (res as any).PRV01_FormaReserva;
+        const codPlanRaw = (res as any).PRV01_CodPlan;
         const idiomaCodigo = parseCodigoValue(idiomaRaw);
         const formaCodigo = parseCodigoValue(formaRaw);
+        const codPlanCodigo = parseCodigoValue(codPlanRaw);
         const idiomaId = parseNumericId(idiomaRaw);
         const formaId = parseNumericId(formaRaw);
+        const codPlanId = parseNumericId(codPlanRaw);
+        const codLstPrecioApi = safeString((res as any).PRV01_CodLstPrecio);
         this.form = {
           fecha: toDateInputValue(res.PRV01_FecCreacion) || this.form.fecha || '',
           codAgencia: safeString((res as any).PRV01_CodAgencia),
@@ -357,7 +466,8 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
           idioma: idiomaCodigo ?? '',
           formaReservacion: formaCodigo ?? '',
           formaPago: safeString((res as any).PRV01_FormaPago),
-          codLstPrecio: safeString((res as any).PRV01_CodLstPrecio),
+          codLstPrecio: codLstPrecioApi,
+          codPlan: codPlanCodigo ?? safeString(codPlanRaw),
           moneda: safeString((res as any).PRV01_Moneda),
           estado: estadoNormalizado,
           totalRsv: safeNumber((res as any).PRV01_TotalRsv),
@@ -369,6 +479,13 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         if (!this.form.formaReservacion && formaId != null) {
           this.resolveFormaReservacionCodigoFromId(formaId);
         }
+        if (!this.form.codPlan && codPlanId != null) {
+          this.form.codPlan = String(codPlanId);
+        }
+        if (codPlanId != null) {
+          this.resolveCodPlanFromId(codPlanId);
+        }
+        this.emitPlanTarifaChange('system');
         if (this.form.codAgencia) {
           this.clienteService.getClienteByCodigo(this.form.codAgencia).subscribe({
             next: (cliente) => {
@@ -383,7 +500,8 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         }
         this.loading = false;
       },
-      error: () => {
+      error: (err) => {
+        this.logHttpError('Cargar encabezado', err, { codReserva });
         this.showAlert('Error', 'No se pudo cargar el encabezado.', 'error');
         this.loading = false;
       }
@@ -395,16 +513,204 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
    */
   cargarDetalle(codReserva: string): void {
     this.loading = true;
-    this.detalleService.getDetalle(codReserva).subscribe({
+    this.detalleService.getDetalleByReserva(codReserva).subscribe({
       next: (res) => {
-        this.detalles = res;
+        const detalleList = Array.isArray(res?.detalle) ? res.detalle : res?.detalle ? [res.detalle] : [];
+        const paxList = Array.isArray(res?.detallesPax) ? res.detallesPax : res?.detallesPax ? [res.detallesPax] : [];
+        this.detalles = (detalleList ?? []).map((item) => ({
+          ...item,
+          detallesPax: (paxList ?? []).filter((pax) => Number(pax?.PRV03_PRV02_ID) === Number(item?.PRV02_ID))
+        }));
+        this.actualizarEstadoTarifario();
         this.loading = false;
       },
-      error: () => {
+      error: (err) => {
+        this.logHttpError('Cargar detalle', err, { codReserva });
         this.showAlert('Error', 'No se pudo cargar el detalle.', 'error');
         this.loading = false;
       }
     });
+  }
+
+  private getDefaultTipoPaxCode(): string {
+    const list = this.tiposPax ?? [];
+    const pax = list.find((item) => item.code === 'PAX')?.code;
+    return (pax || list[0]?.code || 'PAX').toString().trim().toUpperCase();
+  }
+
+  private buildDefaultDetallePax(): DetallePaxForm {
+    return {
+      tipoPax: this.getDefaultTipoPaxCode(),
+      cantidad: 1,
+      precioTotal: 0
+    };
+  }
+
+  private ensureDetallePaxDefaults(): void {
+    const list = this.detalleForm?.detallesPax ?? [];
+    if (!list.length) {
+      this.detalleForm.detallesPax = [this.buildDefaultDetallePax()];
+      return;
+    }
+
+    const defaultTipo = this.getDefaultTipoPaxCode();
+    let changed = false;
+    for (const item of list) {
+      if (!item.tipoPax && defaultTipo) {
+        item.tipoPax = defaultTipo;
+        changed = true;
+      }
+    }
+    if (changed) {
+      this.detalleForm.detallesPax = [...list];
+    }
+  }
+
+  private mapDetallePaxFromApi(list: DetallePax[]): DetallePaxForm[] {
+    return (list ?? [])
+      .map((item) => {
+        const cantidad = Number(item?.PRV03_Cantidad ?? 0) || 0;
+        const unitario = Number(item?.PRV03_PrecioUnitarioTotal ?? 0) || 0;
+        const subtotal = Number(item?.PRV03_SubtotalTotal ?? 0) || 0;
+        const precioTotal = subtotal || (unitario * cantidad);
+        return {
+          tipoPax: (item?.PRV03_TipoPax || '').toString().trim().toUpperCase(),
+          cantidad,
+          precioTotal: Number(precioTotal ?? 0) || 0,
+          precioUnitario: unitario || (cantidad > 0 ? (Number(precioTotal ?? 0) || 0) / cantidad : 0)
+        } as DetallePaxForm;
+      })
+      .filter((item) => !!item.tipoPax);
+  }
+
+  private sumPaxPrecioTotal(paxList: Array<{ precioTotal?: number }>): number {
+    return (paxList ?? []).reduce((sum, item) => sum + (Number(item?.precioTotal ?? 0) || 0), 0);
+  }
+
+  private getDetallePaxItemsForPayload(): DetallePaxForm[] {
+    return (this.detalleForm?.detallesPax ?? [])
+      .map((item) => ({
+        ...item,
+        tipoPax: (item?.tipoPax || '').toString().trim().toUpperCase(),
+        cantidad: Number(item?.cantidad ?? 0) || 0,
+        precioTotal: Number(item?.precioTotal ?? 0) || 0,
+        precioUnitario: Number(item?.precioUnitario ?? 0) || 0,
+        precioPaxExtra: Number(item?.precioPaxExtra ?? 0) || 0,
+        reglaPrecioId: Number(item?.reglaPrecioId ?? 0) || 0
+      }))
+      .filter((item) => !!item.tipoPax && item.cantidad > 0);
+  }
+
+  private getDetallePaxItemsForTarifa(): Array<{ tipoPax: string; cantidad: number }> {
+    return this.getDetallePaxItemsForPayload().map((item) => ({
+      tipoPax: item.tipoPax,
+      cantidad: item.cantidad
+    }));
+  }
+
+  private mergeTarifaResultados(resultados: ReglaTarifaPaxAplicada[]): void {
+    if (!resultados?.length) return;
+    const map = new Map(resultados.map((item) => [item.tipoPax, item]));
+
+    this.detalleForm.detallesPax = (this.detalleForm.detallesPax ?? []).map((row) => {
+      const tipo = (row.tipoPax || '').toString().trim().toUpperCase();
+      const result = map.get(tipo);
+      if (!result) return row;
+
+      if (result.error) {
+        return {
+          ...row,
+          manual: true,
+          error: result.error
+        };
+      }
+
+      return {
+        ...row,
+        precioTotal: Number(result.precioTotal ?? 0) || 0,
+        precioUnitario: Number(result.precioUnitario ?? 0) || 0,
+        precioPaxExtra: Number(result.precioPaxExtra ?? 0) || 0,
+        reglaPrecioId: Number(result.reglaPrecioId ?? 0) || 0,
+        manual: false,
+        error: ''
+      };
+    });
+  }
+
+  private findDuplicatedTiposPax(codes: string[]): string[] {
+    const seen = new Set<string>();
+    const duplicated = new Set<string>();
+    for (const raw of codes ?? []) {
+      const code = (raw || '').toString().trim().toUpperCase();
+      if (!code) continue;
+      if (seen.has(code)) duplicated.add(code);
+      seen.add(code);
+    }
+    return Array.from(duplicated.values());
+  }
+
+  private isNinoTipoPax(code: string): boolean {
+    return (code || '').toString().trim().toUpperCase() === 'CHL';
+  }
+
+  private isAdultoTipoPax(code: string): boolean {
+    const normalized = (code || '').toString().trim().toUpperCase();
+    if (!normalized) return false;
+    return normalized !== 'CHL';
+  }
+
+  private pickLineaAdultos(paxItems: DetallePaxForm[]): DetallePaxForm | undefined {
+    return paxItems.find((item) => this.isAdultoTipoPax(item.tipoPax)) ?? paxItems[0];
+  }
+
+  private getPrecioUnitarioFallback(item?: DetallePaxForm): number {
+    if (!item) return 0;
+    const cantidad = Number(item.cantidad ?? 0) || 0;
+    const total = Number(item.precioTotal ?? 0) || 0;
+    if (cantidad <= 0) return 0;
+    return Number((total / cantidad).toFixed(2));
+  }
+
+  private normalizeActividadTipoPax(code: string): string {
+    const normalized = (code || '')
+      .toString()
+      .trim()
+      .toUpperCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+    if (normalized === 'PAX' || normalized === 'ADT' || normalized === 'ADL') return 'ADULTO';
+    if (normalized === 'CHL') return 'NINO';
+    if (normalized === 'NAC') return 'NACIONAL';
+    if (normalized.startsWith('ADULT')) return 'ADULTO';
+    if (normalized.startsWith('NIN')) return 'NINO';
+    if (normalized.startsWith('NAC')) return 'NACIONAL';
+    return normalized;
+  }
+
+  private getActividadPrecioUnitario(
+    detalles: Array<{ tipoPax: string; cantidad: number; precioNeto: number }>,
+    tipoObjetivo: 'ADULTO' | 'NINO'
+  ): number {
+    const match = (detalles ?? []).find((item) => this.normalizeActividadTipoPax(item?.tipoPax || '') === tipoObjetivo);
+    if (!match) return 0;
+
+    const cantidad = Number(match.cantidad ?? 0) || 0;
+    const precioNeto = Number(match.precioNeto ?? 0) || 0;
+    if (cantidad <= 0) return 0;
+
+    return Number((precioNeto / cantidad).toFixed(2));
+  }
+
+  getDetallePaxSummary(detalle: ReservaDetalleCompleto): string {
+    const list = detalle?.detallesPax ?? [];
+    if (!list.length) {
+      const total = Number(detalle?.PRV02_TotalPax ?? 0) || 0;
+      return total > 0 ? `${total}` : '-';
+    }
+    return list
+      .map((item) => `${(item.PRV03_TipoPax || '').toString().trim().toUpperCase()}: ${Number(item.PRV03_Cantidad ?? 0) || 0}`)
+      .join(', ');
   }
 
   /**
@@ -413,9 +719,11 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
    * - Si no recibe detalle, inicializa un `DetalleForm` nuevo.
    * - Protege el flujo cuando la reserva no existe o está CON/CAN.
    */
-  abrirModalDetalle(detalle?: ReservaDetalle): void {
-    if (!this.codReservaActual) {
+  abrirModalDetalle(detalle?: ReservaDetalleCompleto): void {
+    const codReserva = (this.codReservaActual ?? '').toString().trim();
+    if (!codReserva) {
       this.showAlert('Atención', 'Espere la creación del borrador para agregar servicios.', 'warning');
+      this.crearBorrador();
       return;
     }
     
@@ -425,7 +733,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     }
 
     if (detalle) {
-      // Mapear campos de ReservaDetalle (API) a DetalleForm (modal) preservando defaults (ej: tarifa='A').
+      // Mapear campos de ReservaDetalle (API) a DetalleForm (modal) preservando defaults.
       const baseForm = buildInitialDetalleForm();
 
       const origenGoogleText = extractGoogleDisplayText((detalle as any).PRV02_OrigenGoogle);
@@ -436,6 +744,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
 
       const origenDireccionGoogle = origenGoogleText || (!this.isLikelyPlaceId(apiOrigenPlaceId) ? apiOrigenPlaceId : '');
       const destinoDireccionGoogle = destinoGoogleText || (!this.isLikelyPlaceId(apiDestinoPlaceId) ? apiDestinoPlaceId : '');
+      const detallesPaxForm = this.mapDetallePaxFromApi(detalle.detallesPax ?? []);
       this.detalleForm = {
         ...baseForm,
         codServicio: detalle.PRV02_CodServicio || '',
@@ -444,9 +753,6 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         fechaServicio: toDateInputValue(detalle.PRV02_FecServicio) || baseForm.fechaServicio || '',
         horaPickup: detalle.PRV02_HoraServicio || '',
         horaInicio: detalle.PRV02_HoraServicio || '',
-        adultos: detalle.PRV02_Adultos || baseForm.adultos,
-        ninos: detalle.PRV02_Ninos || 0,
-        totalPax: detalle.PRV02_TotalPax || 0,
         origenLugar: detalle.PRV02_OrigenTexto || '',
         origenZona: detalle.PRV02_ZonaOrigen || '',
         origenDireccionGoogle,
@@ -462,9 +768,8 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         destinoLat: detalle.PRV02_DestinoLat || 0,
         destinoLng: detalle.PRV02_DestinoLng || 0,
         destinoPlaceId: this.isLikelyPlaceId(apiDestinoPlaceId) ? apiDestinoPlaceId : '',
-        costoNeto: detalle.PRV02_MontoServicio || 0,
-        costoRack: 0,
-        montoServicio: detalle.PRV02_MontoServicio || 0,
+        montoServicio: this.sumPaxPrecioTotal(detallesPaxForm) || detalle.PRV02_MontoServicio || 0,
+        detallesPax: detallesPaxForm.length ? detallesPaxForm : baseForm.detallesPax,
         estado: detalle.PRV02_Estado || baseForm.estado,
         observaciones: detalle.PRV02_Observacion || ''
       };
@@ -476,6 +781,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     }
     this.allowManualPricing = false;
     this.reglaTarifaError = '';
+    this.ensureDetallePaxDefaults();
     this.showDetalleModal = true;
     if (!this.servicios.length) {
       this.cargarServicios();
@@ -490,17 +796,174 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
   }
 
   /**
+   * Abre el modal de actividad turística (nuevo flujo).
+   */
+  abrirModalActividad(): void {
+    const codReserva = (this.codReservaActual ?? '').toString().trim();
+    if (!codReserva) {
+      this.showAlert('Atención', 'Espere la creación del borrador para agregar servicios.', 'warning');
+      this.crearBorrador();
+      return;
+    }
+
+    if (this.form.estado === 'CAN') {
+      this.showAlert('Atención', 'No se pueden modificar servicios en una reserva anulada.', 'warning');
+      return;
+    }
+
+    this.actividadForm = buildInitialActividadDetalleForm();
+    this.editingActividadId = null;
+    this.showActividadModal = true;
+    if (!this.servicios.length) {
+      this.cargarServicios();
+    }
+  }
+
+  /**
+   * Cierra el modal de actividad turística (sin persistir).
+   */
+  cerrarModalActividad(): void {
+    this.showActividadModal = false;
+  }
+
+  /**
+   * Handler para el cambio de servicio en actividad.
+   */
+  onActividadServicioChange(codServicio: string): void {
+    const servicio = this.servicios.find((item) => item.codReceta === codServicio);
+    if (servicio) {
+      this.actividadForm.codServicio = servicio.codReceta;
+      this.actividadForm.nomServicio = servicio.nomReceta;
+      this.actividadForm.tipoServicio = servicio.codGrupo || servicio.codCateg || '';
+      return;
+    }
+    this.actividadForm.codServicio = codServicio || '';
+    this.actividadForm.nomServicio = '';
+    this.actividadForm.tipoServicio = '';
+  }
+
+  /**
+   * Guarda actividades dinámicas usando el endpoint existente de detalle de tours.
+   */
+  async guardarActividadDetalle(saveData: ActividadModalSavePayload): Promise<void> {
+    const codReserva = (this.codReservaActual ?? '').toString().trim();
+    if (!codReserva) {
+      this.showAlert('Atención', 'Espere la creación del borrador para agregar servicios.', 'warning');
+      this.crearBorrador();
+      return;
+    }
+
+    const payloadItems = (saveData?.payload ?? []).filter((item) => {
+      const monto = Number(item?.montoServicio ?? 0) || 0;
+      const tienePax = (item?.detallesPax ?? []).some((pax) => (Number(pax?.cantidad ?? 0) || 0) > 0);
+      return monto > 0 && tienePax;
+    });
+    if (!payloadItems.length) {
+      this.showAlert('Atención', 'Agregue al menos una actividad con cantidades mayores a cero.', 'warning');
+      return;
+    }
+
+    const pickupOrigen = saveData?.pickups?.[0] ?? null;
+    const pickupDestino = saveData?.pickups?.[1] ?? null;
+    const firstPickupGoogle = safeJsonStringify(saveData?.pickups ?? []);
+
+    const currentMaxLinea = this.detalles.reduce((max, item) => {
+      const value = Number(item?.PRV02_Linea ?? 0) || 0;
+      return value > max ? value : max;
+    }, 0);
+    const baseLinea = currentMaxLinea + 1;
+
+    try {
+      console.groupCollapsed(
+        `[ReservaCreate] Guardar actividad -> POST /detalle-tours-completo (${payloadItems.length} registro(s))`
+      );
+      console.log('codReserva:', codReserva);
+      console.log('payload modal (saveData):', saveData);
+      console.log('items a persistir (monto > 0 y con pax):', payloadItems);
+      console.groupEnd();
+
+      for (let i = 0; i < payloadItems.length; i++) {
+        const item = payloadItems[i];
+        const totalPax = (item.detallesPax ?? []).reduce((sum, pax) => sum + (Number(pax?.cantidad ?? 0) || 0), 0);
+        const precioAdulto = this.getActividadPrecioUnitario(item.detallesPax ?? [], 'ADULTO');
+        const precioNino = this.getActividadPrecioUnitario(item.detallesPax ?? [], 'NINO');
+
+        const payload = {
+          id: 0,
+          codReserva,
+          linea: baseLinea + i,
+          tipoServicio: 'ACT',
+          codServicio: item.codServicio || '',
+          nomServicio: item.nomServicio || '',
+          fecServicio: item.fecServicio,
+          horaServicio: item.horaServicio || '',
+          origenTexto: pickupOrigen?.direccion || '',
+          destinoTexto: pickupDestino?.direccion || '',
+          origenZona: pickupOrigen?.zona || '',
+          destinoZona: pickupDestino?.zona || '',
+          origenGoogle: pickupOrigen?.google || firstPickupGoogle,
+          destinoGoogle: pickupDestino?.google || '',
+          origenPlaceId: pickupOrigen?.placeId || '',
+          destinoPlaceId: pickupDestino?.placeId || '',
+          origenLat: pickupOrigen?.lat || 0,
+          origenLng: pickupOrigen?.lng || 0,
+          destinoLat: pickupDestino?.lat || 0,
+          destinoLng: pickupDestino?.lng || 0,
+          adultos: Number(item.adultos ?? 0) || 0,
+          ninos: Number(item.ninos ?? 0) || 0,
+          totalPax,
+          codLstPrecio: this.form.codLstPrecio || '',
+          idReglaPrecio: Number(item.reglaPrecioID ?? 0) || 0,
+          precioAdulto,
+          precioNino,
+          precioPaxExtra: 0,
+          montoServicio: Number(item.montoServicio ?? 0) || 0,
+          codSuplidor: '',
+          estado: 'PEN',
+          observacion: saveData?.observaciones || '',
+          detallesPax: item.detallesPax ?? [],
+          detallesPaxJson: safeJsonStringify(item.detallesPax ?? []),
+          operador: this.getOperador(),
+          respuesta: ''
+        };
+
+        console.groupCollapsed(
+          `[ReservaCreate] POST ${i + 1}/${payloadItems.length} - codServicio: ${payload.codServicio} - linea: ${payload.linea}`
+        );
+        console.log('request payload:', payload);
+
+        try {
+          const response = await firstValueFrom(this.detalleService.crearDetalle(payload));
+          console.log('response:', response);
+          console.groupEnd();
+        } catch (itemError) {
+          console.error('error:', itemError);
+          console.groupEnd();
+          throw itemError;
+        }
+      }
+
+      this.cargarDetalle(this.codReservaActual!);
+      this.cerrarModalActividad();
+      this.showAlert('Éxito', `Actividades guardadas correctamente (${payloadItems.length}).`, 'success');
+    } catch (err) {
+      this.logHttpError('Guardar actividad', err, { saveData });
+      this.showAlert('Error', 'No se pudieron guardar las actividades.', 'error');
+    }
+  }
+
+  /**
    * Dispara un recálculo "silencioso" del costo basado en reglas tarifarias,
    * actualizando los campos calculados del `DetalleForm` cuando aplique.
    */
   recalcularCosto(): void {
-    void this.applyReglaTarifaToDetalleForm({ silent: true });
+    void this.applyReglaTarifaToDetalleForm();
   }
 
   /**
    * Construye un enlace de Google Maps para un detalle ya persistido (lista de servicios).
    */
-  getDetalleMapsLink(detalle: ReservaDetalle, tipo: 'origen' | 'destino'): string {
+  getDetalleMapsLink(detalle: ReservaDetalleCompleto, tipo: 'origen' | 'destino'): string {
     const lat = tipo === 'origen' ? detalle.PRV02_OrigenLat : detalle.PRV02_DestinoLat;
     const lng = tipo === 'origen' ? detalle.PRV02_OrigenLng : detalle.PRV02_DestinoLng;
     if (!hasCoordinates(lat, lng)) {
@@ -513,15 +976,29 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
    * Guarda (crea/actualiza) el detalle del servicio en backend.
    * - Valida formulario del modal.
    * - Aplica regla tarifaria antes de persistir (usa los precios resultantes).
-   * - Construye el payload esperado por `ReservaDetalleService`.
+   * - Construye el payload esperado por `DetalleToursCompletoController`.
    */
   async guardarDetalle(detalleFormRef: any): Promise<void> {
     if (detalleFormRef?.invalid) {
       detalleFormRef.control?.markAllAsTouched?.();
       return;
     }
-    if (!this.codReservaActual) {
+    const codReserva = (this.codReservaActual ?? '').toString().trim();
+    if (!codReserva) {
       this.showAlert('Atención', 'Espere la creación del borrador para agregar servicios.', 'warning');
+      this.crearBorrador();
+      return;
+    }
+
+    const paxItems = this.getDetallePaxItemsForPayload();
+    if (!paxItems.length) {
+      this.showAlert('Atención', 'Agregue al menos un tipo de pax con cantidad mayor a cero.', 'warning');
+      return;
+    }
+
+    const duplicated = this.findDuplicatedTiposPax(paxItems.map((item) => item.tipoPax));
+    if (duplicated.length) {
+      this.showAlert('Atención', `No puede repetir tipos de pax: ${duplicated.join(', ')}.`, 'warning');
       return;
     }
 
@@ -531,97 +1008,111 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         this.showAlert(
           'Atención',
           this.reglaTarifaError ||
-            'No se encontró una regla tarifaria que aplique para la lista de precios, servicio, tarifa, cantidad de adultos y hora Pick-Up seleccionados.',
+            'No se encontró una regla tarifaria que aplique para la lista de precios, servicio, pax y hora Pick-Up seleccionados.',
           'warning'
         );
         return;
       }
+    } catch {
+      this.showAlert('Error', 'Ocurrió un error al aplicar la regla tarifaria antes de guardar el detalle.', 'error');
+      return;
+    }
 
-      if (!reglaAplicada && this.allowManualPricing) {
-        const neto = Number(this.detalleForm.costoNeto ?? 0) || 0;
-        const rack = Number(this.detalleForm.costoRack ?? 0) || 0;
-        if (neto <= 0 && rack <= 0) {
-          this.showAlert('Atención', 'No hay regla tarifaria. Ingrese Costo Neto y/o Costo Rack para continuar.', 'warning');
-          return;
-        }
-      }
+    const invalidPrice = paxItems.some((item) => Number(item.precioTotal ?? 0) <= 0);
+    if (invalidPrice) {
+      this.showAlert('Atención', 'Ingrese el precio total para cada tipo de pax.', 'warning');
+      return;
+    }
 
-      const totalPax = (this.detalleForm.adultos || 0) + (this.detalleForm.ninos || 0);
-      const ninosCount = Number(this.detalleForm.ninos ?? 0) || 0;
-      const paxExtraCount =
-        this.reglaTarifaAplicada && typeof this.detalleForm.adultos === 'number'
-          ? computeAdultosExtra(this.detalleForm.adultos, this.reglaTarifaAplicada)
-          : 0;
-      const existing = this.editingDetalleId ? this.detalles.find((d) => d.PRV02_ID === this.editingDetalleId) : null;
-      const linea = existing?.PRV02_Linea ?? (this.detalles.length + 1);
-      const montoServicio =
-        (typeof this.detalleForm.montoServicio === 'number' && this.detalleForm.montoServicio > 0
-          ? this.detalleForm.montoServicio
-          : (typeof this.detalleForm.costoNeto === 'number' ? this.detalleForm.costoNeto : 0)) || 0;
+    const totalPax = paxItems.reduce((sum, item) => sum + (Number(item.cantidad ?? 0) || 0), 0);
+    const adultos = paxItems
+      .filter((item) => this.isAdultoTipoPax(item.tipoPax))
+      .reduce((sum, item) => sum + (Number(item.cantidad ?? 0) || 0), 0);
+    const ninos = paxItems
+      .filter((item) => this.isNinoTipoPax(item.tipoPax))
+      .reduce((sum, item) => sum + (Number(item.cantidad ?? 0) || 0), 0);
+    const montoServicio = this.sumPaxPrecioTotal(paxItems);
+    this.detalleForm.montoServicio = montoServicio;
+
+    const existing = this.editingDetalleId ? this.detalles.find((d) => d.PRV02_ID === this.editingDetalleId) : null;
+    const linea = existing?.PRV02_Linea ?? (this.detalles.length + 1);
+
+    const adultosLine = this.pickLineaAdultos(paxItems);
+    const ninosLine = paxItems.find((item) => this.isNinoTipoPax(item.tipoPax));
+    const idReglaPrecio = adultosLine?.reglaPrecioId ?? ninosLine?.reglaPrecioId ?? 0;
+    const precioAdulto = adultosLine?.precioUnitario ?? this.getPrecioUnitarioFallback(adultosLine);
+    const precioNino = ninosLine?.precioUnitario ?? this.getPrecioUnitarioFallback(ninosLine);
+    const precioPaxExtra = adultosLine?.precioPaxExtra ?? 0;
+
+    const detallesPaxPayload = paxItems.map((item) => ({
+      tipoPax: item.tipoPax,
+      cantidad: item.cantidad,
+      precioNeto: Number(item.precioTotal ?? 0) || 0
+    }));
 
       const payload = {
         id: this.editingDetalleId ?? 0,
-        codReserva: this.codReservaActual,
-        linea,
-        tipoServicio: this.detalleForm.tipoServicio || '',
-        codServicio: this.detalleForm.codServicio || '',
-        nomServicio: this.detalleForm.nomServicio || '',
-        fecServicio: this.detalleForm.fechaServicio,
-        // Por negocio, la referencia principal es la hora Pick-Up.
-        horaServicio: this.detalleForm.horaPickup || this.detalleForm.horaInicio || '',
-        origenTexto: this.detalleForm.origenLugar || '',
-        destinoTexto: this.detalleForm.destinoLugar || '',
-        
-        origenZona: this.detalleForm.origenZona || '',
-        destinoZona: this.detalleForm.destinoZona || '',
+        codReserva,
+      linea,
+      tipoServicio: this.detalleForm.tipoServicio || '',
+      codServicio: this.detalleForm.codServicio || '',
+      nomServicio: this.detalleForm.nomServicio || '',
+      fecServicio: this.detalleForm.fechaServicio,
+      // Por negocio, la referencia principal es la hora Pick-Up.
+      horaServicio: this.detalleForm.horaPickup || this.detalleForm.horaInicio || '',
+      origenTexto: this.detalleForm.origenLugar || '',
+      destinoTexto: this.detalleForm.destinoLugar || '',
+      origenZona: this.detalleForm.origenZona || '',
+      destinoZona: this.detalleForm.destinoZona || '',
+      // Google metadata + Place ID
+      origenGoogle: (this.detalleForm.origenGoogle || '').toString(),
+      destinoGoogle: (this.detalleForm.destinoGoogle || '').toString(),
+      origenPlaceId: (this.detalleForm.origenPlaceId || '').toString(),
+      destinoPlaceId: (this.detalleForm.destinoPlaceId || '').toString(),
+      origenLat: this.detalleForm.origenLat || 0,
+      origenLng: this.detalleForm.origenLng || 0,
+      destinoLat: this.detalleForm.destinoLat || 0,
+      destinoLng: this.detalleForm.destinoLng || 0,
+      adultos,
+      ninos,
+      totalPax,
+      codLstPrecio: this.form.codLstPrecio || '',
+      idReglaPrecio,
+      precioAdulto: precioAdulto || 0,
+      precioNino: precioNino || 0,
+      precioPaxExtra: precioPaxExtra || 0,
+      montoServicio,
+      codSuplidor: '',
+      estado: (this.detalleForm.estado || 'PEN').toString(),
+      observacion: this.detalleForm.observaciones || '',
+      detallesPax: detallesPaxPayload,
+      detallesPaxJson: safeJsonStringify(detallesPaxPayload),
+      operador: this.getOperador(),
+      respuesta: ''
+    };
 
-        // Nuevos campos: guardar el JSON/metadata de Google y el Place ID real.
-        origenGoogle: (this.detalleForm.origenGoogle || '').toString(),
-        destinoGoogle: (this.detalleForm.destinoGoogle || '').toString(),
-        origenPlaceId: (this.detalleForm.origenPlaceId || '').toString(),
-        destinoPlaceId: (this.detalleForm.destinoPlaceId || '').toString(),
-        origenLat: this.detalleForm.origenLat || 0,
-        origenLng: this.detalleForm.origenLng || 0,
-        destinoLat: this.detalleForm.destinoLat || 0,
-        destinoLng: this.detalleForm.destinoLng || 0,
-        adultos: this.detalleForm.adultos || 0,
-        ninos: this.detalleForm.ninos || 0,
-        totalPax,
-        codLstPrecio: this.form.codLstPrecio || '',
-        idReglaPrecio: this.reglaTarifaAplicada?.id ?? 0,
-        precioAdulto: this.reglaTarifaAplicada?.precioBase ?? 0,
-        // Si no hay niños, no se debe guardar precioNino.
-        precioNino: ninosCount > 0 ? this.reglaTarifaAplicada?.precioNino ?? 0 : 0,
-        // Si NO excede el máximo de la regla, no se debe guardar precioPaxExtra.
-        // Solo se envía cuando hay adultos extra (adultos > cantMaxPax).
-        precioPaxExtra: paxExtraCount > 0 ? this.reglaTarifaAplicada?.precioAdultoExtra ?? 0 : 0,
-        montoServicio,
-        codSuplidor: '',
-        estado: (this.detalleForm.estado || 'PEN').toString(),
-        observacion: this.detalleForm.observaciones || '',
-        operador: this.getOperador(),
-        respuesta: ''
-      };
+    console.log('[ReservaCreate] Payload DetalleToursCompleto', payload);
 
-      const request$ = this.editingDetalleId ? this.detalleService.actualizarDetalle(payload) : this.detalleService.crearDetalle(payload);
-      request$.subscribe({
-        next: () => {
-          this.cargarDetalle(this.codReservaActual!);
-          this.cerrarModalDetalle();
-        },
-        error: () => {
-          this.showAlert('Error', 'No se pudo guardar el detalle.', 'error');
-        }
-      });
-    } catch {
-      this.showAlert('Error', 'Ocurrió un error al aplicar la regla tarifaria antes de guardar el detalle.', 'error');
-    }
+    const request$ = this.editingDetalleId
+      ? this.detalleService.actualizarDetalle(this.editingDetalleId, payload)
+      : this.detalleService.crearDetalle(payload);
+
+    request$.subscribe({
+      next: () => {
+        this.cargarDetalle(this.codReservaActual!);
+        this.cerrarModalDetalle();
+      },
+      error: (err) => {
+        this.logHttpError('Guardar detalle', err, { payload });
+        this.showAlert('Error', 'No se pudo guardar el detalle.', 'error');
+      }
+    });
   }
 
   /**
    * Elimina un detalle del backend y recarga la lista de detalles.
    */
-  eliminarDetalle(detalle: ReservaDetalle): void {
+  eliminarDetalle(detalle: ReservaDetalleCompleto): void {
     if (this.form.estado !== 'PEN') {
       this.showAlert('Atención', 'No se pueden eliminar servicios en una reserva confirmada o anulada.', 'warning');
       return;
@@ -650,7 +1141,8 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       if (!result.isConfirmed) return;
       this.detalleService.eliminarDetalle(id, codReserva).pipe(take(1)).subscribe({
         next: () => this.cargarDetalle(codReserva),
-        error: () => {
+        error: (err) => {
+          this.logHttpError('Eliminar detalle', err, { id, codReserva });
           this.showAlert('Error', 'No se pudo eliminar el detalle.', 'error');
         }
       });
@@ -681,12 +1173,13 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       return;
     }
 
-    if (this.form.estado === 'CON') {
-      this.confirmando = true;
-      const payload = this.buildEncabezadoPayload('CON');
-      this.reservasService.actualizarReserva(this.codReservaActual, payload).subscribe({
-        next: () => {
-          this.confirmando = false;
+      if (this.form.estado === 'CON') {
+        this.confirmando = true;
+        const payload = this.buildEncabezadoPayload('CON');
+        console.log('[ReservaCreate] Guardar cambios (CON) payload', payload);
+        this.reservasService.actualizarReserva(this.codReservaActual, payload).subscribe({
+          next: () => {
+            this.confirmando = false;
           this.showAlert('Éxito', 'Cambios guardados correctamente.', 'success');
           setTimeout(() => this.router.navigate(['/operaciones/reservas']), 400);
         },
@@ -734,11 +1227,12 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       return;
     }
 
-    this.confirmando = true;
+      this.confirmando = true;
 
-    // Primero guardamos el encabezado para asegurar que el backend confirme con datos actuales.
-    const payload = this.buildEncabezadoPayload('PEN');
-    this.reservasService.actualizarReserva(this.codReservaActual, payload).subscribe({
+      // Primero guardamos el encabezado para asegurar que el backend confirme con datos actuales.
+      const payload = this.buildEncabezadoPayload('PEN');
+      console.log('[ReservaCreate] Guardar encabezado (PEN) antes de confirmar payload', payload);
+      this.reservasService.actualizarReserva(this.codReservaActual, payload).subscribe({
       next: () => {
         this.reservasService.confirmarReserva(this.codReservaActual!).subscribe({
           next: () => {
@@ -837,8 +1331,9 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     let detalleCount: number | null = null;
     let verifyFailed = false;
     try {
-      const detalles = await firstValueFrom(this.detalleService.getDetalle(codReserva).pipe(take(1)));
-      detalleCount = Array.isArray(detalles) ? detalles.length : 0;
+      const response = await firstValueFrom(this.detalleService.getDetalleByReserva(codReserva).pipe(take(1)));
+      const detalleList = Array.isArray(response?.detalle) ? response.detalle : response?.detalle ? [response.detalle] : [];
+      detalleCount = detalleList.length;
     } catch {
       verifyFailed = true;
     }
@@ -891,8 +1386,9 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       let detalleCount: number | null = null;
       let verifyFailed = false;
       try {
-        const detalles = await firstValueFrom(this.detalleService.getDetalle(codReserva).pipe(take(1)));
-        detalleCount = Array.isArray(detalles) ? detalles.length : 0;
+        const response = await firstValueFrom(this.detalleService.getDetalleByReserva(codReserva).pipe(take(1)));
+        const detalleList = Array.isArray(response?.detalle) ? response.detalle : response?.detalle ? [response.detalle] : [];
+        detalleCount = detalleList.length;
       } catch {
         verifyFailed = true;
       }
@@ -1140,12 +1636,16 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       this.seleccionarServicio(servicio);
       this.allowManualPricing = false;
       this.reglaTarifaError = '';
+      this.detalleForm.detallesPax = (this.detalleForm.detallesPax ?? []).map((item) => ({
+        ...item,
+        manual: false,
+        error: ''
+      }));
       this.recalcularCosto();
       return;
     }
     this.detalleForm.nomServicio = '';
     this.detalleForm.tipoServicio = '';
-    this.reglaTarifaAplicada = null;
     this.reglaTarifaError = '';
     this.allowManualPricing = false;
   }
@@ -1179,8 +1679,8 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
    * Total rack calculado sumando componentes de precio del detalle.
    */
   get totalRack(): number {
-    // Sumar PRV02_PrecioAdulto + PRV02_PrecioNino + PRV02_PrecioPaxExtra de los detalles
-    return this.detalles.reduce((sum, d) => sum + ((d.PRV02_PrecioAdulto || 0) + (d.PRV02_PrecioNino || 0) + (d.PRV02_PrecioPaxExtra || 0)), 0);
+    // Con el nuevo modelo, el total se calcula desde PRV02_MontoServicio.
+    return this.detalles.reduce((sum, d) => sum + (d.PRV02_MontoServicio || 0), 0);
   }
 
   /**
@@ -1230,6 +1730,21 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     });
   }
 
+  private logHttpError(context: string, error: any, extra?: any): void {
+    const status = error?.status;
+    const statusText = error?.statusText;
+    const message = error?.message;
+    const apiError = error?.error;
+    const traceId = apiError?.traceId ?? apiError?.traceid ?? null;
+    console.groupCollapsed(`[ReservaCreate] ${context} - Error${status ? ` (${status})` : ''}`);
+    if (status || statusText) console.log('status:', status, statusText);
+    if (message) console.log('message:', message);
+    if (traceId) console.log('traceId:', traceId);
+    if (apiError) console.log('apiError:', apiError);
+    if (extra) console.log('extra:', extra);
+    console.groupEnd();
+  }
+
   /**
    * Construye el payload de encabezado esperado por la API/servicio de reservas.
    * Nota: `totalRsv` se envía como `totalRack` (regla de negocio actual).
@@ -1244,8 +1759,14 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       formaReserva: (this.form.formaReservacion || '').trim(),
       formaPago: this.form.formaPago,
       estado,
+      totNoches: 0,
+      totDias: 0,
+      directo: "0",
+      folio: 'S/F',
+      cntHabitaciones: 0,
       observacion: this.form.comentarios,
       codLstPrecio: this.form.codLstPrecio,
+      codPlan: (this.form.codPlan || '1').toString(),
       moneda: this.form.moneda,
       fecCreacion: this.form.fecha,
       operador: this.getOperador(),
@@ -1273,6 +1794,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     const labels: Record<string, string> = {
       codAgencia: 'Agencia / Comisionista',
       codLstPrecio: 'Lista de Precios',
+      codPlan: 'Plan Tarifario',
       nomCliente: 'Cliente Final',
       idioma: 'Idioma',
       formaReservacion: 'Forma de Reservación',
@@ -1327,6 +1849,32 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
   }
 
   /**
+   * Cuando el encabezado viene con `codPlan` como ID numérico, garantiza que el plan exista en el combo
+   * y deja seleccionado el valor para sincronizar la lista de precios ligada.
+   */
+  private resolveCodPlanFromId(idCodPlan: number): void {
+    if (!Number.isFinite(idCodPlan) || idCodPlan <= 0) return;
+    const exists = (this.planesTarifas ?? []).some((item) => Number(item?.planId ?? 0) === idCodPlan);
+    if (exists) {
+      this.form.codPlan = String(idCodPlan);
+      this.emitPlanTarifaChange('system');
+      return;
+    }
+
+    this.planesTarifasService.getPlanById(idCodPlan).pipe(take(1)).subscribe({
+      next: (plan) => {
+        if (!plan) return;
+        this.planesTarifas = this.mergePlanesTarifas([plan, ...(this.planesTarifas ?? [])]);
+        this.form.codPlan = String(plan.planId);
+        this.emitPlanTarifaChange('system');
+      },
+      error: () => {
+        // ignore
+      }
+    });
+  }
+
+  /**
    * Une idiomas (sin duplicados por ID) y ordena por clave (código + nombre).
    */
   private mergeIdiomas(items: IdiomaDto[]): IdiomaDto[] {
@@ -1363,6 +1911,25 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
   }
 
   /**
+   * Une planes tarifarios (sin duplicados por planId) y ordena por nombre.
+   */
+  private mergePlanesTarifas(items: PlanTarifaUI[]): PlanTarifaUI[] {
+    const mapById = new Map<number, PlanTarifaUI>();
+    for (const item of items ?? []) {
+      if (!item) continue;
+      const id = Number(item.planId);
+      if (!Number.isFinite(id) || id <= 0) continue;
+      mapById.set(id, item);
+    }
+
+    return Array.from(mapById.values()).sort((a, b) => {
+      const aKey = `${(a.nombrePlan || '').trim()} ${(a.tipoTarifaDescripcion || '').trim()}`.trim().toUpperCase();
+      const bKey = `${(b.nombrePlan || '').trim()} ${(b.tipoTarifaDescripcion || '').trim()}`.trim().toUpperCase();
+      return aKey.localeCompare(bKey);
+    });
+  }
+
+  /**
    * Handler cuando cambia la lista de precios en el encabezado:
    * - Limpia caché de reglas tarifarias.
    * - Si el modal de detalle está abierto, recalcula costo con la nueva lista.
@@ -1377,82 +1944,73 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
   }
 
   /**
-   * Aplica reglas tarifarias al `DetalleForm` actual (si el modal está abierto).
-   * Actualiza `reglaTarifaAplicada`, `reglaTarifaError` y campos calculados (costo/monto).
+   * Handler cuando cambia el plan tarifario:
+   * - Limpia errores y recalcula si el modal está abierto.
    */
-  private async applyReglaTarifaToDetalleForm(options?: { silent?: boolean }): Promise<boolean> {
+  onPlanTarifaChange(): void {
+    if (this.tarifaLocked) {
+      return;
+    }
+    this.allowManualPricing = false;
+    this.reglaTarifaError = '';
+    this.emitPlanTarifaChange('user');
+    if (this.showDetalleModal) {
+      this.recalcularCosto();
+    }
+  }
+
+  /**
+   * Aplica reglas tarifarias al `DetalleForm` actual (si el modal está abierto).
+   * Actualiza errores, precios por tipo pax y el total del servicio.
+   */
+  private async applyReglaTarifaToDetalleForm(): Promise<boolean> {
     if (!this.showDetalleModal) return false;
 
+    const planId = Number(this.form.codPlan ?? 0) || 0;
     const codLstPrecio = (this.form.codLstPrecio || '').trim();
     const codServicio = (this.detalleForm.codServicio || '').trim();
-    const tarifa = (this.detalleForm.tarifa || '').trim().toUpperCase();
-    const moneda = this.getSelectedMonedaForReglas();
+    const detallesPax = this.getDetallePaxItemsForTarifa();
 
-    if (!codLstPrecio || !codServicio || !tarifa) {
-      this.reglaTarifaAplicada = null;
+    if (!planId || !codLstPrecio || !codServicio) {
       this.reglaTarifaError = '';
       this.allowManualPricing = false;
       return false;
     }
 
-    const adultos = Number(this.detalleForm.adultos ?? 0) || 0;
-    const ninos = Number(this.detalleForm.ninos ?? 0) || 0;
-    const totalPax = adultos + ninos;
-    this.detalleForm.totalPax = totalPax;
-
-    const horaReferencia = (this.detalleForm.horaPickup || this.detalleForm.horaInicio || '').trim();
-    const result = await this.tarifaService.applyReglaTarifa({
-      codLstPrecio,
-      codServicio,
-      tarifa,
-      adultos,
-      ninos,
-      horaPickup: horaReferencia,
-      moneda
-    });
-
-    if (result.ok === false) {
-      this.reglaTarifaAplicada = null;
-      this.reglaTarifaError = result.error || '';
-
-      // Solo habilitamos edición manual cuando el problema es "no hay coincidencia" de reglas.
-      // Si falta hora o es inválida, se mantiene bloqueado para que el usuario corrija inputs primero.
-      const isNoMatch =
-        !!result.error &&
-        (result.error.includes('No hay una regla tarifaria') || result.error.includes('No se pudo seleccionar una regla'));
-      this.allowManualPricing = isNoMatch;
-
-      if (this.allowManualPricing) {
-        // En creación, limpiamos montos para evitar dejar valores viejos que no corresponden.
-        // En edición, preservamos montos existentes (solo habilitamos edición).
-        if (!this.editingDetalleId) {
-          this.detalleForm.costoRack = 0;
-          this.detalleForm.costoNeto = 0;
-          this.detalleForm.montoServicio = 0;
-        }
-      }
+    if (!detallesPax.length) {
+      this.reglaTarifaError = '';
+      this.allowManualPricing = false;
       return false;
     }
 
-    this.reglaTarifaAplicada = result.regla;
+    const horaReferencia = (this.detalleForm.horaPickup || this.detalleForm.horaInicio || '').trim();
+    const result = await this.tarifaService.applyReglaTarifaPorTipos({
+      planId,
+      codLstPrecio,
+      codServicio,
+      horaPickup: horaReferencia,
+      detallesPax
+    });
+
+    if (result.ok === false) {
+      this.reglaTarifaError = result.error || '';
+      if (result.detalles?.length) {
+        this.mergeTarifaResultados(result.detalles);
+      }
+
+      const isNoMatch = !!result.error && result.error.includes('No hay una regla tarifaria');
+      this.allowManualPricing = isNoMatch;
+      this.detalleForm.montoServicio = this.sumPaxPrecioTotal(this.detalleForm.detallesPax);
+      return false;
+    }
+
     this.reglaTarifaError = '';
     this.allowManualPricing = false;
-
-    this.detalleForm.costoRack = result.montoServicio;
-    this.detalleForm.costoNeto = result.montoServicio;
+    this.mergeTarifaResultados(result.detalles);
     this.detalleForm.montoServicio = result.montoServicio;
 
     return true;
   }
 
-  /**
-   * Determina la moneda a utilizar para filtrar reglas tarifarias:
-   * - Prioriza la moneda configurada en la lista de precios seleccionada.
-   * - Si no existe, usa la moneda del formulario.
-   */
-  private getSelectedMonedaForReglas(): string {
-    const cod = (this.form.codLstPrecio || '').trim();
-    const fromLista = this.listaPrecios.find((lp) => (lp.codigo || '').trim() === cod)?.moneda;
-    return ((fromLista || this.form.moneda || '') as string).trim().toUpperCase();
-  }
 }
+

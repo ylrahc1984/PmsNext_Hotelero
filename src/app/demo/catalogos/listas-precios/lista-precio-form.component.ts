@@ -7,6 +7,7 @@ import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { MonedaService, MonedaUI } from 'src/app/demo/administracion/monedas/moneda.service';
 import { ListaPrecioService } from './lista-precio.service';
 import { ListaPrecioUI } from './lista-precio.models';
+import { PlanesTarifasService, PlanTarifaUI } from './planes-tarifas.service';
 
 @Component({
   selector: 'app-lista-precio-form',
@@ -18,6 +19,7 @@ export class ListaPrecioFormComponent implements OnInit {
   private fb = inject(FormBuilder);
   private listaPrecioService = inject(ListaPrecioService);
   private monedaService = inject(MonedaService);
+  private planesTarifasService = inject(PlanesTarifasService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
 
@@ -25,10 +27,12 @@ export class ListaPrecioFormComponent implements OnInit {
   isEditing = false;
   isLoading = false;
   monedas: MonedaUI[] = [];
+  planesTarifas: PlanTarifaUI[] = [];
 
   ngOnInit() {
     this.buildForm();
     this.loadMonedas();
+    this.loadPlanesTarifas();
     const codigo = this.route.snapshot.paramMap.get('id');
     if (codigo) {
       this.isEditing = true;
@@ -42,6 +46,7 @@ export class ListaPrecioFormComponent implements OnInit {
       desLstPrecio: ['', [Validators.required]],
       moneda: ['', [Validators.required]],
       simbolo: [''],
+      planRate: [null, [Validators.required]],
       vigencia: ['S', [Validators.required]],
       fechaDesde: [null],
       fechaHasta: [null],
@@ -56,6 +61,23 @@ export class ListaPrecioFormComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error al cargar monedas:', error);
+      }
+    });
+  }
+
+  private loadPlanesTarifas() {
+    this.planesTarifasService.getPlanesTarifas().subscribe({
+      next: (planes) => {
+        this.planesTarifas = planes ?? [];
+        console.log('Planes de tarifas cargados:', this.planesTarifas);
+      },
+      error: (error) => {
+        console.error('Error al cargar planes de tarifas:', error);
+        Swal.fire({
+          title: 'Advertencia',
+          text: 'No se pudieron cargar los planes de tarifas.',
+          icon: 'warning'
+        });
       }
     });
   }
@@ -79,6 +101,7 @@ export class ListaPrecioFormComponent implements OnInit {
           desLstPrecio: lista.descripcion,
           moneda: lista.moneda,
           simbolo: lista.simbolo,
+          planRate: lista.planRate || null,
           vigencia: lista.vigente || 'S',
           fechaDesde: lista.fechaDesde || null,
           fechaHasta: lista.fechaHasta || null,
@@ -129,6 +152,7 @@ export class ListaPrecioFormComponent implements OnInit {
       descripcion: raw.desLstPrecio,
       moneda: raw.moneda,
       simbolo: raw.simbolo || '',
+      planRate: raw.planRate || 0,
       vigente: raw.vigencia || 'S',
       fechaDesde: raw.fechaDesde || '',
       fechaHasta: raw.fechaHasta || '',
@@ -189,5 +213,10 @@ export class ListaPrecioFormComponent implements OnInit {
 
   get isVigente() {
     return this.form.get('vigencia')?.value === 'S';
+  }
+
+  get planSeleccionado(): PlanTarifaUI | undefined {
+    const planId = this.form.get('planRate')?.value;
+    return this.planesTarifas.find(p => p.planId === planId);
   }
 }

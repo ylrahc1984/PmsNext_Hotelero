@@ -7,6 +7,7 @@ export interface ListaPrecioDto {
   MPV04_FechaDesde: string;
   MPV04_FechaHasta: string;
   MPV04_Observaciones: string;
+  NombrePlan: string;
   MPV04_Operador: string;
 }
 
@@ -20,6 +21,7 @@ export interface ListaPrecioPost {
   fechaDesde: string;
   fechaHasta: string;
   observaciones: string;
+  planRate: string;
   operador: string;
   respuesta: string;
 }
@@ -33,6 +35,8 @@ export interface ListaPrecioUI {
   fechaDesde: string;
   fechaHasta: string;
   observaciones: string;
+  planRate: string ;
   operador: string;
+
 }
 

@@ -105,6 +105,14 @@ export const NavigationItems: NavigationItem[] = [
             url: '/catalogos/suplidores',
             icon: 'feather icon-package',
             classes: 'nav-item'
+          },
+          {
+            id: 'lista-pickup',
+            title: 'Lista Pickup',
+            type: 'item',
+            url: '/catalogos/lista-pickup',
+            icon: 'feather icon-map-pin',
+            classes: 'nav-item'
           }
         ]
       },

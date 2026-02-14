@@ -6,6 +6,7 @@ import Swal from 'sweetalert2';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { ListaPrecioService } from './lista-precio.service';
 import { ListaPrecioUI } from './lista-precio.models';
+import { PlanesTarifasService, PlanTarifaUI } from './planes-tarifas.service';
 
 @Component({
   selector: 'app-listas-precios',
@@ -15,14 +16,17 @@ import { ListaPrecioUI } from './lista-precio.models';
 })
 export class ListasPreciosComponent implements OnInit {
   private listasPreciosService = inject(ListaPrecioService);
+  private planesTarifasService = inject(PlanesTarifasService);
   private router = inject(Router);
 
   listasPrecios: ListaPrecioUI[] = [];
   filteredListas: ListaPrecioUI[] = [];
+  planesTarifas: PlanTarifaUI[] = [];
   isLoading = false;
 
   filterDescripcion = '';
   filterVigente = '';
+  filterPlanRate: number | null = null;
   currentPage = 1;
   pageSize = 10;
   totalPages = 1;
@@ -30,12 +34,53 @@ export class ListasPreciosComponent implements OnInit {
   pageSizeOptions = [5, 10, 20, 50];
 
   ngOnInit() {
+    this.loadPlanesTarifas();
     this.loadListas();
+  }
+
+  loadPlanesTarifas() {
+    this.planesTarifasService.getPlanesTarifas().subscribe({
+      next: (planes) => {
+        this.planesTarifas = planes;
+      },
+      error: (error) => {
+        console.error('Error al cargar planes tarifarios:', error);
+      }
+    });
   }
 
   loadListas() {
     this.isLoading = true;
     const filtro = this.filterDescripcion.trim() || undefined;
+
+    // Si hay filtro por planRate, usar el endpoint específico
+    if (this.filterPlanRate !== null && this.filterPlanRate !== undefined) {
+      this.listasPreciosService
+        .getListasByPlanRate(this.filterPlanRate, this.currentPage, this.pageSize)
+        .subscribe({
+          next: (result) => {
+            this.listasPrecios = result.data ?? [];
+            this.totalRegistros = result.totalRegistros ?? this.listasPrecios.length;
+            this.currentPage = result.paginaActual ?? this.currentPage;
+            this.pageSize = result.pageSize ?? this.pageSize;
+            this.totalPages = result.totalPages ?? 1;
+            this.applyLocalFilters();
+            this.isLoading = false;
+          },
+          error: (error) => {
+            console.error('Error al cargar listas de precios por planRate:', error);
+            Swal.fire({
+              title: 'Error',
+              text: 'No se pudieron cargar las listas de precios por plan tarifario.',
+              icon: 'error'
+            });
+            this.isLoading = false;
+          }
+        });
+      return;
+    }
+
+    // Búsqueda estándar
     this.listasPreciosService
       .getListas({ descripcion: filtro, pageNumber: this.currentPage, pageSize: this.pageSize })
       .subscribe({
@@ -76,6 +121,7 @@ export class ListasPreciosComponent implements OnInit {
   onLimpiar() {
     this.filterDescripcion = '';
     this.filterVigente = '';
+    this.filterPlanRate = null;
     this.currentPage = 1;
     this.loadListas();
   }
@@ -103,7 +149,7 @@ export class ListasPreciosComponent implements OnInit {
   }
 
   verDetalle(codigo: string) {
-    this.router.navigate(['/catalogos/listas-precios', codigo, 'detalle']);
+    this.router.navigate(['/catalogos/detalle-lista-precio-v2', codigo]);
   }
 
   eliminar(codigo: string) {
@@ -149,13 +195,4 @@ export class ListasPreciosComponent implements OnInit {
     return vigente === 'S' ? 'Vigente' : 'No vigente';
   }
 
-  formatVigencia(fechaDesde: string, fechaHasta: string) {
-    if (!fechaDesde && !fechaHasta) {
-      return '-';
-    }
-    if (fechaDesde && fechaHasta) {
-      return `${fechaDesde} - ${fechaHasta}`;
-    }
-    return fechaDesde || fechaHasta;
-  }
 }

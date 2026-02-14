@@ -38,7 +38,7 @@
             <div class="row">
               <div class="col-lg-8">
                 <div class="row">
-                  <div class="col-md-6 mb-2">
+                  <div class="col-12 col-md-4 mb-2">
                     <label class="form-label">Agencia / Comisionista <span class="text-danger">*</span></label>
                     <div class="input-group input-group-sm">
                       <input type="text" class="form-control" [(ngModel)]="form.codAgencia" name="codAgencia" required placeholder="Seleccione agencia" readonly>
@@ -56,36 +56,7 @@
                       Limpiar selección
                     </button>
                   </div>
-                  <div class="col-md-6 mb-2">
-                    <label class="form-label">Lista de Precios <span class="text-danger">*</span></label>
-                    <select class="form-control form-control-sm" [(ngModel)]="form.codLstPrecio" name="codLstPrecio" required (ngModelChange)="onListaPrecioChange()">
-                      <option value="">Seleccione lista</option>
-                      <option *ngFor="let lista of listaPrecios" [ngValue]="lista.codigo">
-                        {{ lista.codigo }} - {{ lista.descripcion }}
-                      </option>
-                    </select>
-                    <div class="text-danger small" *ngIf="reservaForm.submitted && reservaForm.controls.codLstPrecio?.invalid">
-                      Lista de Precios es requerida.
-                    </div>
-                  </div>
-                </div>
-                <div class="row">
-                  <div class="col-md-4 mb-2">
-                    <label class="form-label">Cliente Final <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control form-control-sm" [(ngModel)]="form.nomCliente" name="nomCliente" required placeholder="Nombre del pasajero principal">
-                    <div class="text-danger small" *ngIf="reservaForm.submitted && reservaForm.controls.nomCliente?.invalid">
-                      Cliente Final es requerido.
-                    </div>
-                  </div>
-                  <div class="col-md-4 mb-2">
-                    <label class="form-label">Teléfono</label>
-                    <input type="tel" class="form-control form-control-sm" [(ngModel)]="form.telCliente" name="telCliente" placeholder="Teléfono de contacto">
-                  </div>
-                  <div class="col-md-4 mb-2">
-                    <label class="form-label">Email</label>
-                    <input type="email" class="form-control form-control-sm" [(ngModel)]="form.emailCliente" name="emailCliente" placeholder="Correo de contacto">
-                  </div>
-                  <div class="col-md-4 mb-2">
+                  <div class="col-12 col-md-4 mb-2">
                     <label class="form-label">Idioma <span class="text-danger">*</span></label>
                     <select class="form-control form-control-sm" [(ngModel)]="form.idioma" name="idioma" required>
                       <option [ngValue]="''">Seleccione idioma</option>
@@ -97,7 +68,7 @@
                       Idioma es requerido.
                     </div>
                   </div>
-                  <div class="col-md-4 mb-2">
+                  <div class="col-12 col-md-4 mb-2">
                     <label class="form-label">Forma de Reservación <span class="text-danger">*</span></label>
                     <select class="form-control form-control-sm" [(ngModel)]="form.formaReservacion" name="formaReservacion" required>
                       <option [ngValue]="''">Seleccione forma</option>
@@ -107,6 +78,57 @@
                     </select>
                     <div class="text-danger small" *ngIf="reservaForm.submitted && reservaForm.controls.formaReservacion?.invalid">
                       Forma de Reservación es requerida.
+                    </div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-12 col-md-4 mb-2">
+                    <label class="form-label">Cliente Final <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control form-control-sm" [(ngModel)]="form.nomCliente" name="nomCliente" required placeholder="Nombre del pasajero principal">
+                    <div class="text-danger small" *ngIf="reservaForm.submitted && reservaForm.controls.nomCliente?.invalid">
+                      Cliente Final es requerido.
+                    </div>
+                  </div>
+                  <div class="col-12 col-md-4 mb-2">
+                    <label class="form-label">Teléfono</label>
+                    <input type="tel" class="form-control form-control-sm" [(ngModel)]="form.telCliente" name="telCliente" placeholder="Teléfono de contacto">
+                  </div>
+                  <div class="col-12 col-md-4 mb-2">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control form-control-sm" [(ngModel)]="form.emailCliente" name="emailCliente" placeholder="Correo de contacto">
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-12 col-md-4 mb-2">
+                    <label class="form-label">Plan Tarifario <span class="text-danger">*</span></label>
+                    <select class="form-control form-control-sm" [(ngModel)]="form.codPlan" name="codPlan" required (ngModelChange)="onPlanTarifaChange()" [disabled]="tarifaLocked">
+                      <option value="">Seleccione plan tarifario</option>
+                      <option *ngFor="let plan of planesTarifas" [ngValue]="plan.planId.toString()">
+                        {{ plan.nombrePlan }} ({{ plan.tipoTarifaDescripcion }})
+                      </option>
+                    </select>
+                    <div class="text-danger small" *ngIf="reservaForm.submitted && reservaForm.controls.codPlan?.invalid">
+                      Plan Tarifario es requerido.
+                    </div>
+                  </div>
+                  <div class="col-12 col-md-8 mb-2">
+                    <label class="form-label">Lista de Precios <span class="text-danger">*</span></label>
+                    <select
+                      class="form-control form-control-sm"
+                      [(ngModel)]="form.codLstPrecio"
+                      name="codLstPrecio"
+                      required
+                      (ngModelChange)="onListaPrecioChange()"
+                      [disabled]="tarifaLocked || !form.codPlan"
+                    >
+                      <option value="">Seleccione lista de precios</option>
+                      <option *ngFor="let lista of listaPrecios" [ngValue]="lista.codigo">
+                        {{ lista.codigo }} - {{ lista.descripcion }}
+                      </option>
+                    </select>
+                    <small class="text-muted">Se cargará según el plan tarifario seleccionado</small>
+                    <div class="text-danger small" *ngIf="reservaForm.submitted && reservaForm.controls.codLstPrecio?.invalid">
+                      Lista de Precios es requerida.
                     </div>
                   </div>
                 </div>
@@ -127,6 +149,7 @@
                   <div class="col-12 mb-2">
                     <label class="form-label">Forma de Pago <span class="text-danger">*</span></label>
                     <select class="form-control form-control-sm" [(ngModel)]="form.formaPago" name="formaPago" required>
+                      <option value="">Seleccione forma de pago</option>
                       <option *ngFor="let forma of formasPagoApi" [ngValue]="forma.codigo">{{ forma.descripcion }}</option>
                     </select>
                     <div class="text-danger small" *ngIf="reservaForm.submitted && reservaForm.controls.formaPago?.invalid">
@@ -145,22 +168,6 @@
                       Moneda es requerida.
                     </div>
                   </div>
-                  <div class="col-12 mb-4">
-                    <div class="rsv-total-reserva text-end" aria-label="Total Reserva">
-                      <div class="d-flex align-items-center justify-content-between gap-2">
-                        <div class="rsv-total-reserva__content">
-                          <div class="rsv-total-reserva__label">Total Reserva</div>
-                          <div class="rsv-total-reserva__value">
-                            {{ (form.totalRsv || totalRack) | number:'1.2-2' }}
-                            <span class="rsv-total-reserva__currency" *ngIf="form.moneda">{{ form.moneda }}</span>
-                          </div>
-                        </div>
-                        <div class="rsv-total-reserva__icon" aria-hidden="true" title="Total de la reserva">
-                          <i class="feather icon-credit-card"></i>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -175,17 +182,31 @@
                 <h6 class="mb-0">Servicios</h6>
                 <span class="badge bg-light text-dark border ms-2">{{ cantidadServicios }}</span>
               </div>
-              <button
-                type="button"
-                class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2 px-3 py-2"
-                (click)="abrirModalDetalle()"
-                [disabled]="!codReservaActual || form.estado !== 'PEN'"
-              >
-                <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-white bg-opacity-25" style="width: 22px; height: 22px;">
-                  <i class="feather icon-plus"></i>
-                </span>
-                <span>Agregar servicio</span>
-              </button>
+              <div class="d-flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2 px-3 py-2"
+                  (click)="abrirModalDetalle()"
+                  [disabled]="!codReservaActual || form.estado !== 'PEN'"
+                  title="Agregar servicio de transporte / transfer"
+                >
+                  <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-white bg-opacity-25" style="width: 22px; height: 22px;">
+                    <i class="feather icon-plus"></i>
+                  </span>
+                  <span>Agregar transfer</span>
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2 px-3 py-2"
+                  (click)="abrirModalActividad()"
+                  [disabled]="!codReservaActual || form.estado !== 'PEN'"
+                >
+                  <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary bg-opacity-10" style="width: 22px; height: 22px;">
+                    <i class="feather icon-map-pin text-primary"></i>
+                  </span>
+                  <span>Agregar actividad</span>
+                </button>
+              </div>
             </div>
 
             <small class="text-muted d-block mb-2" *ngIf="!codReservaActual">Creando borrador para habilitar los servicios...</small>
@@ -200,7 +221,7 @@
                     <th>(Origen / Mapa)</th>
                     <th>Destino (Lugar)</th>
                     <th>(Destino / Mapa)</th>
-                    <th>Pax</th>
+                    <th>Detalle Pax</th>
                     <th>Total</th>
                     <th class="text-end">Acciones</th>
                   </tr>
@@ -239,7 +260,7 @@
                     <i class="feather icon-map-pin me-1"></i>Mapa
                   </a>
                 </td>
-                <td>{{ detalle.PRV02_Adultos }} / {{ detalle.PRV02_Ninos }}</td>
+                <td>{{ getDetallePaxSummary(detalle) }}</td>
                 <td>{{ detalle.PRV02_MontoServicio | number:'1.2-2' }}</td>
                 <td>
                   <div class="d-flex justify-content-end gap-2">
@@ -257,6 +278,23 @@
               </tr>
                 </tbody>
               </table>
+            </div>
+
+            <div class="d-flex justify-content-end mt-3">
+              <div class="rsv-total-reserva text-end" aria-label="Total Reserva">
+                <div class="d-flex align-items-center justify-content-between gap-2">
+                  <div class="rsv-total-reserva__content">
+                    <div class="rsv-total-reserva__label">Total Reserva</div>
+                    <div class="rsv-total-reserva__value">
+                      {{ (form.totalRsv || totalRack) | number:'1.2-2' }}
+                      <span class="rsv-total-reserva__currency" *ngIf="form.moneda">{{ form.moneda }}</span>
+                    </div>
+                  </div>
+                  <div class="rsv-total-reserva__icon" aria-hidden="true" title="Total de la reserva">
+                    <i class="feather icon-credit-card"></i>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div class="d-flex justify-content-end gap-2 mt-3">
@@ -312,15 +350,28 @@
   [open]="showDetalleModal"
   [editingDetalleId]="editingDetalleId"
   [detalleForm]="detalleForm"
-  [tarifas]="tarifas"
   [servicios]="servicios"
   [serviciosLoading]="serviciosLoading"
   [reglaTarifaError]="reglaTarifaError"
   [allowManualPricing]="allowManualPricing"
+  [tiposPax]="tiposPaxBase"
   (close)="cerrarModalDetalle()"
   (save)="guardarDetalle($event)"
   (serviceChange)="onServicioChange($event)"
   (recalculate)="recalcularCosto()"
 ></app-reserva-create-detalle-modal>
+
+<!-- Modal actividad turística -->
+<app-reserva-create-actividad-modal
+  [open]="showActividadModal"
+  [actividadForm]="actividadForm"
+  [servicios]="servicios"
+  [serviciosLoading]="serviciosLoading"
+  [codLstPrecio]="form.codLstPrecio"
+  [tiposPax]="tiposPaxBase"
+  (close)="cerrarModalActividad()"
+  (save)="guardarActividadDetalle($event)"
+  (serviceChange)="onActividadServicioChange($event)"
+></app-reserva-create-actividad-modal>
 
 <!-- legacy modal eliminado: ahora se usa app-reserva-create-detalle-modal -->

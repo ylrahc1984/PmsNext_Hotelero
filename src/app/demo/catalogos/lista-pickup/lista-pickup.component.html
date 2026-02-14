@@ -1,0 +1,104 @@
+<div class="lista-pickup-wrapper">
+  <div class="page-header">
+    <div>
+      <h4 class="title">Lista Pickup</h4>
+      <p class="subtitle">Administracion de pickups y ubicaciones asociadas</p>
+    </div>
+    <div>
+      <button class="btn btn-primary" (click)="nuevoPickup()" [disabled]="isLoading">
+        <i class="feather icon-plus"></i> Nuevo Pickup
+      </button>
+    </div>
+  </div>
+
+  <div class="filters-card">
+    <div class="row">
+      <div class="col-lg-8 col-md-6 mb-3">
+        <label class="small-label">Buscar por nombre</label>
+        <input
+          class="form-control"
+          [formControl]="searchControl"
+          placeholder="Buscar por nombre..."
+          autocomplete="off"
+          (keyup.enter)="onBuscar()"
+        >
+      </div>
+      <div class="col-lg-4 col-md-6 mb-3 d-flex align-items-end justify-content-end">
+        <button class="btn btn-outline-secondary me-2" (click)="onLimpiar()" [disabled]="isLoading">
+          Limpiar
+        </button>
+        <button class="btn btn-primary" (click)="onBuscar()" [disabled]="isLoading">
+          Buscar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <h6 class="m-0"><i class="feather icon-map-pin"></i> Listado de pickups</h6>
+      <span class="count-chip">{{ pickups.length }} registros</span>
+    </div>
+
+    <div *ngIf="errorMsg" class="alert alert-danger mb-3">
+      {{ errorMsg }}
+    </div>
+
+    <div class="table-responsive" *ngIf="pickups.length; else noData">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Duracion</th>
+            <th>Estado</th>
+            <th>Localizacion</th>
+            <th>Operador</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let pickup of pickups; trackBy: trackById">
+            <td><strong>{{ pickup.CR11_ID }}</strong></td>
+            <td>{{ pickup.CR11_Nombre }}</td>
+            <td>{{ pickup.CR11_Duracion || '00:00' }}</td>
+            <td>
+              <span [class]="getEstadoBadgeClass(pickup.CR11_Estado)">
+                {{ getEstadoText(pickup.CR11_Estado) }}
+              </span>
+            </td>
+            <td class="location-cell">{{ pickup.CR11_Localizacion || 'N/D' }}</td>
+            <td>{{ pickup.CR11_Operador || 'N/D' }}</td>
+            <td class="text-center">
+              <div class="action-buttons">
+                <button class="btn btn-sm btn-outline-primary" (click)="editarPickup(pickup)" title="Editar">
+                  <i class="feather icon-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" (click)="eliminarPickup(pickup)" title="Eliminar">
+                  <i class="feather icon-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ng-template #noData>
+      <div class="empty-state text-center p-4" *ngIf="!isLoading">
+        <i class="feather icon-archive empty-icon"></i>
+        <p class="mb-2">No hay pickups para mostrar.</p>
+        <button class="btn btn-primary" (click)="nuevoPickup()">
+          <i class="feather icon-plus"></i> Crear pickup
+        </button>
+      </div>
+    </ng-template>
+
+    <div *ngIf="isLoading" class="alert alert-light border mt-3">
+      <small class="text-muted">
+        <i class="feather icon-loader me-1"></i>
+        Cargando pickups...
+      </small>
+    </div>
+  </div>
+</div>

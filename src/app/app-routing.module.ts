@@ -210,6 +210,10 @@ const routes: Routes = [
         loadComponent: () => import('./demo/catalogos/listas-precios/lista-precio-detalle.component').then((c) => c.ListaPrecioDetalleComponent)
       },
       {
+        path: 'detalle-lista-precio-v2/:codLstPrecio',
+        loadComponent: () => import('./demo/catalogos/listas-precios/detalle-lista-precio-v2.component').then((c) => c.DetalleListaPrecioV2Component)
+      },
+      {
         path: 'clientes',
         loadComponent: () => import('./demo/catalogos/agencias-comisionistas/agencias-comisionistas.component').then((c) => c.AgenciasComisionistasComponent)
       },
@@ -225,6 +229,18 @@ const routes: Routes = [
         path: 'clientes/:codigo/detalle',
         loadComponent: () => import('./demo/catalogos/agencias-comisionistas/cliente-form.component').then((c) => c.ClienteFormComponent),
         data: { readOnly: true }
+      },
+      {
+        path: 'lista-pickup',
+        loadComponent: () => import('./demo/catalogos/lista-pickup/lista-pickup.component').then((c) => c.ListaPickupComponent)
+      },
+      {
+        path: 'lista-pickup/nuevo',
+        loadComponent: () => import('./demo/catalogos/lista-pickup/lista-pickup-form.component').then((c) => c.ListaPickupFormComponent)
+      },
+      {
+        path: 'lista-pickup/:id/editar',
+        loadComponent: () => import('./demo/catalogos/lista-pickup/lista-pickup-form.component').then((c) => c.ListaPickupFormComponent)
       },
       {
         path: 'suplidores',
@@ -562,7 +578,5 @@ const routes: Routes = [
   exports: [RouterModule]
 })
 export class AppRoutingModule {}
-
-
 
 

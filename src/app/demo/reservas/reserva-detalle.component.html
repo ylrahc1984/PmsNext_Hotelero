@@ -94,6 +94,14 @@
                     <div class="text-muted small">Creación</div>
                     <div class="text-nowrap">{{ r.PRV01_FecCreacion | date:'dd/MM/yyyy HH:mm' }}</div>
                   </div>
+                  <div class="col-md-4 mb-2">
+                    <div class="text-muted small">Canal de Reserva</div>
+                    <div>{{ r.CA54_Descripcion || '—' }}</div>
+                  </div>
+                  <div class="col-md-4 mb-2">
+                    <div class="text-muted small">Idioma</div>
+                    <div>{{ r.CA53_Nombre || '—' }}</div>
+                  </div>
                   <div class="col-12" *ngIf="r.PRV01_Observacion">
                     <div class="text-muted small">Observación</div>
                     <div class="small">{{ r.PRV01_Observacion }}</div>
@@ -152,11 +160,6 @@
                 <div class="rsv-total-reserva__icon" aria-hidden="true" title="Totales">
                   <i class="feather icon-credit-card"></i>
                 </div>
-              </div>
-
-              <div class="mt-2 d-flex flex-wrap gap-2 justify-content-end">
-                <span class="badge bg-light text-dark border">Neto: {{ totalNeto | number:'1.2-2' }}</span>
-                <span class="badge bg-light text-dark border">Rack: {{ totalRack | number:'1.2-2' }}</span>
               </div>
             </div>
           </div>

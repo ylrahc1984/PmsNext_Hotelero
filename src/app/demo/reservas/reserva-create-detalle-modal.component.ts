@@ -6,6 +6,7 @@ import { GooglePlaceSelection, GooglePlacesAutocompleteDirective } from './googl
 import { DetalleForm } from './reserva-create.models';
 import { hasCoordinates, safeJsonStringify } from './reserva-create.utils';
 import { ServicioUI } from '../catalogos/servicios/servicios.service';
+import { TipoPaxUI } from './tipo-pax.service';
 
 @Component({
   selector: 'app-reserva-create-detalle-modal',
@@ -18,11 +19,11 @@ export class ReservaCreateDetalleModalComponent implements OnChanges {
   @Input() open = false;
   @Input() editingDetalleId: number | null = null;
   @Input({ required: true }) detalleForm!: DetalleForm;
-  @Input() tarifas: string[] = [];
   @Input() servicios: ServicioUI[] = [];
   @Input() serviciosLoading = false;
   @Input() reglaTarifaError = '';
   @Input() allowManualPricing = false;
+  @Input() tiposPax: TipoPaxUI[] = [];
 
   @Output() close = new EventEmitter<void>();
   @Output() save = new EventEmitter<any>();
@@ -67,10 +68,43 @@ export class ReservaCreateDetalleModalComponent implements OnChanges {
     this.copiedLink = null;
   }
 
-  onManualCostoChange(): void {
-    if (!this.allowManualPricing) return;
-    const neto = Number(this.detalleForm?.costoNeto ?? 0) || 0;
-    this.detalleForm.montoServicio = neto;
+  addPaxRow(): void {
+    const list = this.detalleForm.detallesPax ?? [];
+    const used = new Set(list.map((item) => (item.tipoPax || '').toString().trim().toUpperCase()));
+    const defaultTipo = (this.tiposPax || []).find((item) => !used.has((item.code || '').toString().trim().toUpperCase()))?.code ?? '';
+    this.detalleForm.detallesPax = [
+      ...list,
+      {
+        tipoPax: defaultTipo,
+        cantidad: 0,
+        precioTotal: 0
+      }
+    ];
+    this.recalculate.emit();
+  }
+
+  removePaxRow(index: number): void {
+    const list = this.detalleForm.detallesPax ?? [];
+    if (list.length <= 1) {
+      list[0] = { ...list[0], cantidad: 0, precioTotal: 0 };
+      this.detalleForm.detallesPax = [...list];
+      this.recalculate.emit();
+      return;
+    }
+    this.detalleForm.detallesPax = list.filter((_, i) => i !== index);
+    this.onManualPaxPriceChange();
+    this.recalculate.emit();
+  }
+
+  onManualPaxPriceChange(): void {
+    const total = (this.detalleForm.detallesPax ?? []).reduce((sum, item) => sum + (Number(item?.precioTotal ?? 0) || 0), 0);
+    this.detalleForm.montoServicio = total;
+  }
+
+  isTipoPaxDisabled(tipo: string, index: number): boolean {
+    const normalized = (tipo || '').toString().trim().toUpperCase();
+    if (!normalized) return false;
+    return (this.detalleForm.detallesPax ?? []).some((item, idx) => idx !== index && (item.tipoPax || '').toString().trim().toUpperCase() === normalized);
   }
 
   onPlaceSelected(tipo: 'origen' | 'destino', selection: GooglePlaceSelection): void {

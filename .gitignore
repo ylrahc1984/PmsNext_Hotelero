@@ -3,6 +3,7 @@ node_modules/
 
 # Builds / outputs
 dist/
+dist-temp*/
 tmp/
 .tmp/
 coverage/

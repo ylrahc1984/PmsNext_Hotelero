@@ -2,7 +2,7 @@
   color: inherit;
 }
 
-.rsv-detalle-modal {
+.rsv-actividad-modal {
   background: rgba(55, 71, 79, 0.45);
   backdrop-filter: blur(1.5px);
 }
@@ -58,12 +58,12 @@
   margin-bottom: 12px;
 }
 
-.rsv-section--map {
-  border-left: 3px solid rgba(var(--bs-primary-rgb), 0.35);
+.rsv-section--compact {
+  padding-bottom: 10px;
 }
 
-.rsv-section--summary {
-  background: #fff;
+.rsv-section--map {
+  border-left: 3px solid rgba(var(--bs-primary-rgb), 0.35);
 }
 
 .rsv-section__header {
@@ -104,11 +104,11 @@
   border-radius: 999px;
 }
 
-.rsv-detalle-modal .form-label {
+.rsv-actividad-modal .form-label {
   font-weight: 600;
 }
 
-.rsv-detalle-modal .form-control {
+.rsv-actividad-modal .form-control {
   background: #fff;
   border: 1px solid var(--bs-border-color);
   border-radius: 10px;
@@ -116,15 +116,9 @@
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.rsv-detalle-modal .form-control:focus {
+.rsv-actividad-modal .form-control:focus {
   border-color: var(--bs-primary);
   box-shadow: 0 0 0 3px rgba(var(--bs-primary-rgb), 0.18);
-}
-
-.rsv-detalle-modal .alert-warning {
-  background: rgba(var(--bs-warning-rgb), 0.18);
-  border-color: rgba(var(--bs-warning-rgb), 0.35);
-  color: #6c4a00;
 }
 
 .rsv-table thead th {
@@ -141,18 +135,111 @@
   padding: 0.45rem 0.55rem;
 }
 
-.rsv-map-card {
-  background: #fff;
+.rsv-table--pickups td {
+  vertical-align: top;
 }
 
-.rsv-detalle-modal .rsv-map-input {
-  background: #fff;
+.rsv-inline-panel {
+  border: 1px solid var(--bs-border-color);
+  border-radius: 10px;
+  padding: 8px;
+  background: var(--bs-body-bg);
 }
 
-.rsv-map-preview {
+.rsv-inline-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.rsv-inline-panel__title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.rsv-pickup-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rsv-pickup-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  align-items: start;
+}
+
+.rsv-pickup-row__field {
+  min-width: 0;
+}
+
+.rsv-pickup-row__error {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.rsv-actividad-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rsv-servicios-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.rsv-servicios-toolbar__search {
+  flex: 1 1 280px;
+  max-width: 380px;
+}
+
+.rsv-servicios-toolbar__pagination {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.rsv-actividad-card {
+  border: 1px solid var(--bs-border-color);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.rsv-actividad-card__header {
   background: var(--bs-light);
-  border-color: rgba(var(--bs-primary-rgb), 0.2);
-  padding: 0.5rem;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.rsv-actividad-card__body {
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.rsv-tarifa-box {
+  border: 1px solid var(--bs-border-color);
+  border-radius: 8px;
+  padding: 8px;
+  background: #fff;
+}
+
+.rsv-actividad-modal .rsv-map-input {
+  background: #fff;
 }
 
 .rsv-modal__footer {
@@ -199,6 +286,10 @@
 }
 
 @media (max-width: 575.98px) {
+  .rsv-pickup-row {
+    grid-template-columns: 1fr;
+  }
+
   .rsv-footer__summary,
   .rsv-footer__actions {
     width: 100%;
@@ -218,5 +309,15 @@
 
   .rsv-section {
     padding: 10px 12px 6px;
+  }
+
+  .rsv-servicios-toolbar__search {
+    max-width: none;
+    flex-basis: 100%;
+  }
+
+  .rsv-servicios-toolbar__pagination {
+    width: 100%;
+    align-items: flex-start;
   }
 }

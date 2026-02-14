@@ -393,7 +393,8 @@ export class ListaPrecioDetalleComponent implements OnInit {
       vigenciaHasta: lista.fechaHasta ? new Date(lista.fechaHasta) : new Date(),
       activa: lista.vigente === 'S',
       updatedAt: new Date(),
-      observaciones: lista.observaciones || ''
+      observaciones: lista.observaciones || '',
+      planRate: lista.planRate 
     };
   }
 

@@ -1,14 +1,15 @@
 ﻿<div class="row">
   <div class="col-12">
-    <app-card cardTitle="Reservas">
-      <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
-        <div>
-          <p class="mb-0 text-muted">Listado general, filtros rápidos y acciones</p>
-        </div>
+    <app-card  [customHeader]="true">
+ 
+      <div class="app-card-header">
+        <h5>Listado general, filtros rápidos y acciones</h5>
+        <div class="card-header-right">
         <button class="btn btn-primary rsv-action-btn rsv-action-btn--primary" (click)="nuevaReserva()">
           <span class="rsv-action-btn__icon"><i class="feather icon-plus"></i></span>
           <span>Nueva Reserva</span>
         </button>
+        </div>
       </div>
 
       <div class="card shadow-none border mb-3">

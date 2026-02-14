@@ -1,76 +1,151 @@
-<div class="modal" tabindex="-1" role="dialog" [ngClass]="{ show: open }" *ngIf="open" style="display: block;">
-  <div class="modal-dialog modal-lg" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">{{ editingDetalleId ? 'Editar Servicio' : 'Agregar Servicio' }}</h5>
+<div class="modal rsv-detalle-modal" tabindex="-1" role="dialog" [ngClass]="{ show: open }" *ngIf="open" style="display: block;">
+  <div class="modal-dialog modal-lg rsv-modal" role="document">
+    <div class="modal-content rsv-modal__content">
+      <div class="modal-header rsv-modal__header">
+        <h5 class="modal-title rsv-modal__title">{{ editingDetalleId ? 'Editar Servicio' : 'Agregar Servicio' }}</h5>
         <button type="button" class="btn-close" aria-label="Close" (click)="onClose()"></button>
       </div>
 
-      <form #detalleFormRef="ngForm" (ngSubmit)="onSubmit(detalleFormRef)">
-        <div class="modal-body">
+      <form #detalleFormRef="ngForm" (ngSubmit)="onSubmit(detalleFormRef)" class="rsv-form">
+        <div class="modal-body rsv-modal__body">
           <div class="alert alert-warning py-2" role="alert" *ngIf="allowManualPricing">
-            {{ reglaTarifaError || 'No hay una regla tarifaria aplicable. Ingrese los montos manualmente.' }}
+            {{ reglaTarifaError || 'No hay una regla tarifaria aplicable. Ingrese los precios totales por tipo pax.' }}
           </div>
 
-          <div class="row">
-            <div class="col-md-6 mb-2">
-              <label class="form-label">Servicio <span class="text-danger">*</span></label>
-              <select
-                class="form-control form-control-sm"
-                [(ngModel)]="detalleForm.codServicio"
-                name="codServicio"
-                required
-                (ngModelChange)="serviceChange.emit($event)"
-              >
-                <option value="">Seleccione servicio</option>
-                <option *ngIf="serviciosLoading" value="" disabled>Cargando servicios...</option>
-                <option *ngFor="let servicio of servicios" [ngValue]="servicio.codReceta">
-                  {{ servicio.codReceta }} - {{ servicio.nomReceta }}
-                </option>
-              </select>
-              <small class="form-text text-muted" *ngIf="!serviciosLoading && servicios.length === 0">No hay servicios disponibles.</small>
+          <section class="rsv-section">
+            <div class="rsv-section__header">
+              <h6 class="rsv-section__title">Datos del servicio</h6>
+              <span class="rsv-section__tag">Campos requeridos</span>
             </div>
+            <div class="rsv-section__body">
+              <div class="row">
+                <div class="col-md-6 mb-2">
+                  <label class="form-label">Servicio <span class="text-danger">*</span></label>
+                  <select
+                    class="form-control form-control-sm"
+                    [(ngModel)]="detalleForm.codServicio"
+                    name="codServicio"
+                    required
+                    (ngModelChange)="serviceChange.emit($event)"
+                  >
+                    <option value="">Seleccione servicio</option>
+                    <option *ngIf="serviciosLoading" value="" disabled>Cargando servicios...</option>
+                    <option *ngFor="let servicio of servicios" [ngValue]="servicio.codReceta">
+                      {{ servicio.codReceta }} - {{ servicio.nomReceta }}
+                    </option>
+                  </select>
+                  <small class="form-text text-muted" *ngIf="!serviciosLoading && servicios.length === 0">No hay servicios disponibles.</small>
+                </div>
 
-            <div class="col-md-3 mb-2">
-              <label class="form-label">Fecha del Servicio <span class="text-danger">*</span></label>
-              <input type="date" class="form-control form-control-sm" [(ngModel)]="detalleForm.fechaServicio" name="fechaServicio" required>
-            </div>
+                <div class="col-md-6 mb-2">
+                  <label class="form-label">Fecha del Servicio <span class="text-danger">*</span></label>
+                  <input type="date" class="form-control form-control-sm" [(ngModel)]="detalleForm.fechaServicio" name="fechaServicio" required>
+                </div>
+              </div>
 
-            <div class="col-md-3 mb-2">
-              <label class="form-label">Tarifa</label>
-              <select class="form-control form-control-sm" [(ngModel)]="detalleForm.tarifa" name="tarifa" (change)="recalculate.emit()">
-                <option *ngFor="let t of tarifas" [ngValue]="t">{{ t }}</option>
-              </select>
+              <div class="row">
+                <div class="col-md-6 mb-2">
+                  <label class="form-label">Observaciones</label>
+                  <textarea class="form-control form-control-sm" rows="2" [(ngModel)]="detalleForm.observaciones" name="observaciones"></textarea>
+                </div>
+                <div class="col-md-6 mb-2">
+                  <div class="row">
+                    <div class="col-6 mb-2">
+                      <label class="form-label">Hora Pick-Up</label>
+                      <input type="time" class="form-control form-control-sm" [(ngModel)]="detalleForm.horaPickup" name="horaPickup" (ngModelChange)="recalculate.emit()">
+                    </div>
+                    <div class="col-6 mb-2">
+                      <label class="form-label">Hora Inicio</label>
+                      <input type="time" class="form-control form-control-sm" [(ngModel)]="detalleForm.horaInicio" name="horaInicio" (ngModelChange)="recalculate.emit()">
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+          </section>
 
-          <div class="row">
-            <div class="col-md-3 mb-2">
-              <label class="form-label">Hora Pick-Up</label>
-              <input type="time" class="form-control form-control-sm" [(ngModel)]="detalleForm.horaPickup" name="horaPickup" (ngModelChange)="recalculate.emit()">
+          <section class="rsv-section">
+            <div class="rsv-section__header rsv-section__header--split">
+              <h6 class="rsv-section__title">Detalle por tipo pax</h6>
+              <button type="button" class="btn btn-outline-primary btn-sm rsv-action-btn rsv-action-btn--outline" (click)="addPaxRow()">
+                <span class="rsv-action-btn__icon"><i class="feather icon-plus"></i></span>
+                <span>Agregar tipo pax</span>
+              </button>
             </div>
-            <div class="col-md-3 mb-2">
-              <label class="form-label">Hora Inicio</label>
-              <input type="time" class="form-control form-control-sm" [(ngModel)]="detalleForm.horaInicio" name="horaInicio" (ngModelChange)="recalculate.emit()">
+            <div class="rsv-section__body">
+              <div class="table-responsive mb-2">
+                <table class="table table-sm table-hover align-middle mb-0 rsv-table">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Tipo Pax</th>
+                      <th class="text-end">Cantidad</th>
+                      <th class="text-end">Precio Total</th>
+                      <th class="text-end">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let pax of detalleForm.detallesPax; let i = index">
+                      <td>
+                        <select
+                          class="form-control form-control-sm"
+                          [(ngModel)]="pax.tipoPax"
+                          name="tipoPax{{ i }}"
+                          (change)="recalculate.emit()"
+                          [disabled]="tiposPax.length === 0"
+                        >
+                          <option value="">Seleccione tipo pax</option>
+                          <option *ngIf="tiposPax.length === 0" value="" disabled>Cargando tipos pax...</option>
+                          <option *ngFor="let tipo of tiposPax" [ngValue]="tipo.code" [disabled]="isTipoPaxDisabled(tipo.code, i)">
+                            {{ tipo.code }} - {{ tipo.label }}
+                          </option>
+                        </select>
+                        <div class="text-danger small mt-1" *ngIf="pax.error">{{ pax.error }}</div>
+                      </td>
+                      <td class="text-end">
+                        <input
+                          type="number"
+                          min="0"
+                          class="form-control form-control-sm text-end"
+                          [(ngModel)]="pax.cantidad"
+                          name="cantidad{{ i }}"
+                          (input)="recalculate.emit()"
+                        >
+                      </td>
+                      <td class="text-end">
+                        <input
+                          type="number"
+                          min="0"
+                          class="form-control form-control-sm text-end"
+                          [(ngModel)]="pax.precioTotal"
+                          name="precioTotal{{ i }}"
+                          [readonly]="!pax.manual"
+                          (input)="onManualPaxPriceChange()"
+                        >
+                      </td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-outline-danger btn-sm rsv-icon-btn" (click)="removePaxRow(i)" title="Eliminar tipo pax">
+                          <i class="feather icon-trash"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr *ngIf="(detalleForm.detallesPax || []).length === 0">
+                      <td colspan="4" class="text-center text-muted py-3">Agregue tipos de pax para continuar.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div class="col-md-3 mb-2">
-              <label class="form-label">Adultos</label>
-              <input type="number" min="0" class="form-control form-control-sm" [(ngModel)]="detalleForm.adultos" name="adultos" (input)="recalculate.emit()">
-            </div>
-            <div class="col-md-3 mb-2">
-              <label class="form-label">Niños</label>
-              <input type="number" min="0" class="form-control form-control-sm" [(ngModel)]="detalleForm.ninos" name="ninos" (input)="recalculate.emit()">
-            </div>
-          </div>
+          </section>
 
           <!-- ORIGEN -->
-          <div class="row">
-            <div class="col-12 d-flex justify-content-between align-items-center mb-1">
-              <h6 class="mb-0">Origen</h6>
-              <span class="badge badge-light-primary">Buscar en Google</span>
-            </div>
+          <section class="rsv-section rsv-section--map">
+            <div class="row">
+              <div class="col-12 d-flex justify-content-between align-items-center mb-1 rsv-section__header rsv-section__header--split">
+                <h6 class="mb-0 rsv-section__title">Origen</h6>
+                <span class="rsv-badge">Buscar en Google</span>
+              </div>
             <div class="col-12">
-              <div class="card shadow-none border mb-2">
+              <div class="card shadow-none border mb-2 rsv-map-card">
                 <div class="card-body p-2">
                   <div class="row">
                     <div class="col-md-6 mb-2">
@@ -96,7 +171,7 @@
                     <div class="w-100">
                       <input
                         type="text"
-                        class="form-control form-control-sm"
+                        class="form-control form-control-sm rsv-map-input"
                         [(ngModel)]="detalleForm.origenDireccionGoogle"
                         (ngModelChange)="onDireccionGoogleChange('origen', $event)"
                         name="origenDireccionGoogle"
@@ -114,7 +189,7 @@
                     <div class="text-danger small mt-1" *ngIf="origenAutocompleteMessage">{{ origenAutocompleteMessage }}</div>
 
                     <div
-                      class="mt-2 d-flex align-items-center justify-content-between p-2 rounded border bg-light"
+                      class="mt-2 d-flex align-items-center justify-content-between p-2 rounded border rsv-map-preview"
                       *ngIf="detalleForm.origenDireccionGoogle || getMapsLink('origen')"
                     >
                       <div class="d-flex align-items-center text-truncate me-2" style="min-width: 0;">
@@ -138,16 +213,18 @@
               </div>
             </div>
           </div>
+          </section>
 
           <!-- DESTINO -->
-          <div class="row">
-            <div class="col-12 d-flex justify-content-between align-items-center mb-1">
-              <h6 class="mb-0">Destino</h6>
-              <span class="badge badge-light-primary">Buscar en Google</span>
-            </div>
-            <div class="col-12">
-              <div class="card shadow-none border mb-2">
-                <div class="card-body p-2">
+          <section class="rsv-section rsv-section--map">
+            <div class="row">
+              <div class="col-12 d-flex justify-content-between align-items-center mb-1 rsv-section__header rsv-section__header--split">
+                <h6 class="mb-0 rsv-section__title">Destino</h6>
+                <span class="rsv-badge">Buscar en Google</span>
+              </div>
+              <div class="col-12">
+                <div class="card shadow-none border mb-2 rsv-map-card">
+                  <div class="card-body p-2">
                   <div class="row">
                     <div class="col-md-6 mb-2">
                       <label class="form-label">Lugar <span class="text-danger">*</span></label>
@@ -172,7 +249,7 @@
                     <div class="w-100">
                       <input
                         type="text"
-                        class="form-control form-control-sm"
+                        class="form-control form-control-sm rsv-map-input"
                         [(ngModel)]="detalleForm.destinoDireccionGoogle"
                         (ngModelChange)="onDireccionGoogleChange('destino', $event)"
                         name="destinoDireccionGoogle"
@@ -190,7 +267,7 @@
                     <div class="text-danger small mt-1" *ngIf="destinoAutocompleteMessage">{{ destinoAutocompleteMessage }}</div>
 
                     <div
-                      class="mt-2 d-flex align-items-center justify-content-between p-2 rounded border bg-light"
+                      class="mt-2 d-flex align-items-center justify-content-between p-2 rounded border rsv-map-preview"
                       *ngIf="detalleForm.destinoDireccionGoogle || getMapsLink('destino')"
                     >
                       <div class="d-flex align-items-center text-truncate me-2" style="min-width: 0;">
@@ -210,40 +287,35 @@
                       </div>
                     </div>
                   </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          </section>
 
-          <div class="row">
-            <div class="col-md-4 mb-2">
-              <label class="form-label">Total Servicio</label>
-              <input
-                type="number"
-                class="form-control form-control-sm"
-                [(ngModel)]="detalleForm.costoNeto"
-                name="costoNeto"
-                [readonly]="!allowManualPricing"
-                (input)="onManualCostoChange()"
-              >
-            </div>
- 
-            <div class="col-md-8 mb-2">
-              <label class="form-label">Observaciones</label>
-              <textarea class="form-control form-control-lg" rows="1" [(ngModel)]="detalleForm.observaciones" name="observaciones"></textarea>
-            </div>
-          </div>
         </div>
 
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary rsv-action-btn rsv-action-btn--outline" (click)="onClose()">
-            <span class="rsv-action-btn__icon"><i class="feather icon-x"></i></span>
-            <span>Cancelar</span>
-          </button>
-          <button type="submit" class="btn btn-primary rsv-action-btn rsv-action-btn--primary">
-            <span class="rsv-action-btn__icon"><i class="feather icon-save"></i></span>
-            <span>Guardar Servicio</span>
-          </button>
+        <div class="modal-footer rsv-modal__footer">
+          <div class="rsv-footer__summary">
+            <label class="form-label mb-0">Total Servicio</label>
+            <input
+              type="number"
+              class="form-control form-control-sm"
+              [(ngModel)]="detalleForm.montoServicio"
+              name="montoServicio"
+              readonly
+            >
+          </div>
+          <div class="rsv-footer__actions">
+            <button type="button" class="btn btn-outline-secondary rsv-action-btn rsv-action-btn--outline" (click)="onClose()">
+              <span class="rsv-action-btn__icon"><i class="feather icon-x"></i></span>
+              <span>Cancelar</span>
+            </button>
+            <button type="submit" class="btn btn-primary rsv-action-btn rsv-action-btn--primary">
+              <span class="rsv-action-btn__icon"><i class="feather icon-save"></i></span>
+              <span>Guardar Servicio</span>
+            </button>
+          </div>
         </div>
 
         <!-- Modal interno: detalle ubicación -->
@@ -346,3 +418,7 @@
     </div>
   </div>
 </div>
+
+
+
+

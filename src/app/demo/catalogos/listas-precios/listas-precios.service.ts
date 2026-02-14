@@ -17,6 +17,7 @@ export interface ListaPrecio {
   activa: boolean;
   updatedAt: Date;
   observaciones?: string;
+  planRate?: string;
 }
 
 export interface Servicio {

@@ -2,7 +2,7 @@
   <div class="col-12">
     <app-card cardTitle="Listas de Precios">
       <div class="row mb-3 align-items-end">
-        <div class="col-md-6">
+        <div class="col-md-4">
           <label class="form-label">Descripcion</label>
           <input
             type="text"
@@ -12,6 +12,15 @@
           >
         </div>
         <div class="col-md-3">
+          <label class="form-label">Plan Tarifario</label>
+          <select class="form-control" [(ngModel)]="filterPlanRate">
+            <option [ngValue]="null">Todos</option>
+            <option *ngFor="let plan of planesTarifas" [ngValue]="plan.planId">
+              {{ plan.nombrePlan }} ({{ plan.tipoTarifaDescripcion }})
+            </option>
+          </select>
+        </div>
+        <div class="col-md-2">
           <label class="form-label">Vigente</label>
           <select class="form-control" [(ngModel)]="filterVigente" (change)="applyLocalFilters()">
             <option value="">Todos</option>
@@ -57,7 +66,14 @@
                   {{ getVigenteText(lista.vigente) }}
                 </span>
               </td>
-              <td>{{ formatVigencia(lista.fechaDesde, lista.fechaHasta) }}</td>
+              <td>
+                <ng-container *ngIf="lista.fechaDesde || lista.fechaHasta; else noVigencia">
+                  <span *ngIf="lista.fechaDesde">{{ lista.fechaDesde | date: 'dd/MM/yyyy' }}</span>
+                  <span *ngIf="lista.fechaDesde && lista.fechaHasta"> - </span>
+                  <span *ngIf="lista.fechaHasta">{{ lista.fechaHasta | date: 'dd/MM/yyyy' }}</span>
+                </ng-container>
+                <ng-template #noVigencia>-</ng-template>
+              </td>
               <td class="text-center">
                 <button class="btn btn-sm btn-outline-info" (click)="verDetalle(lista.codigo)" title="Ver detalle">
                   <i class="feather icon-eye"></i>

@@ -38,6 +38,11 @@
               <strong>{{ listaPrecio.moneda }}</strong>
             </span>
             <span class="meta-chip">
+              <i class="feather icon-tag"></i>
+              <span>Plan Tarifario:</span>
+              <strong>{{ listaPrecio.planRate || 'No asignado' }}</strong>
+            </span>
+            <span class="meta-chip">
               <i class="feather icon-calendar"></i>
               <span>Vigencia</span>
               <strong>{{ formatDate(listaPrecio.vigenciaDesde) }} - {{ formatDate(listaPrecio.vigenciaHasta) }}</strong>
