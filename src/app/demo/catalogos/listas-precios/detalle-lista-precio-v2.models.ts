@@ -102,8 +102,8 @@ export interface PrecioTipoPaxVm {
   precio: EditableField<number>;
   paxExtra: EditableField<number>;
   cantPaxMax: EditableField<number>;
-  porcentajeComision?: EditableField<number | null>;
-  montoComision?: EditableField<number | null>;
+  porcentajeComision: EditableField<number | null>;
+  montoComision: EditableField<number | null>;
 }
 
 export interface ReglaPrecioVm {

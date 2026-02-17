@@ -163,18 +163,20 @@
 .precio-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.35rem;
 }
 
 .precio-chip {
   display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: 999px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 12px;
   background: #eef2ff;
+  border: 1px solid #e0e7ff;
   color: #1f2a44;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 600;
 }
 
@@ -182,12 +184,38 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: #4c5a7d;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
 }
 
-.precio-chip .chip-value {
-  color: #111827;
-  font-size: 0.8rem;
+.precio-chip .chip-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  line-height: 1.1;
+}
+
+.precio-chip .chip-rack {
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: #1f2937;
+}
+
+.precio-chip .chip-neto {
+  font-weight: 400;
+  font-size: 0.72rem;
+  color: #4b5563;
+}
+
+.precio-chip .chip-com {
+  font-weight: 400;
+  font-size: 0.7rem;
+  color: #6b7280;
+}
+
+.precio-chip .chip-sep {
+  color: #9ca3af;
+  font-size: 0.7rem;
 }
 
 .no-precios {
@@ -414,6 +442,32 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 0.5rem;
+}
+
+.precio-rack-input {
+  font-weight: 600;
+  font-size: 1.02rem;
+  color: #1f2937;
+}
+
+.precio-comision-input {
+  font-weight: 400;
+  color: #111827;
+}
+
+.precio-neto-input {
+  background: #f3f4f6;
+  font-weight: 500;
+  color: #374151;
+}
+
+.precio-neto-input[readonly] {
+  cursor: not-allowed;
+}
+
+.field-hint {
+  font-size: 0.68rem;
+  color: #6b7280;
 }
 
 .field {

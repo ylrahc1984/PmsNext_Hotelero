@@ -1,6 +1,6 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, OnDestroy, OnInit, inject } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs/operators';
@@ -33,6 +33,7 @@ import {
 } from './detalle-lista-precio-v2.mappers';
 import { normalizeTipoPax, toBackendTipoPax } from './detalle-lista-precio-v2.utils';
 
+// Valores por defecto usados en filtros y precios.
 const DEFAULT_PAGE_SIZE = 10;
 const DEFAULT_TIPO_TARIFA = 'A';
 const DEFAULT_MONEDA: Moneda = 'USD';
@@ -45,21 +46,25 @@ const DEFAULT_TIPO_PAX_LABELS: Record<TipoPax, string> = {
 
 @Component({
   selector: 'app-detalle-lista-precio-v2',
-  imports: [CommonModule, SharedModule, FormsModule],
+  imports: [CommonModule, SharedModule, FormsModule, ReactiveFormsModule],
   templateUrl: './detalle-lista-precio-v2.component.html',
   styleUrls: ['./detalle-lista-precio-v2.component.scss']
 })
 export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
+  // Inyecciones de dependencias.
   private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly service = inject(DetalleListaPrecioV2Service);
   private readonly serviciosService = inject(ServiciosService);
   private readonly auth = inject(AuthService);
+  private readonly fb = inject(FormBuilder);
 
+  // Identificadores de la lista seleccionada.
   codLstPrecio = '';
   desLstPrecio = '';
 
+  // Filtros de busqueda/paginacion.
   filtros: ReglasFiltroVm = {
     codLstPrecio: '',
     pageNumber: 1,
@@ -67,6 +72,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     soloActivos: true
   };
 
+  // Estado UI de reglas y paginacion.
   state: DetalleListaPrecioV2State = {
     reglas: [],
     paginacion: {
@@ -78,16 +84,22 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     error: ''
   };
 
+  // Catalogos y seleccion actual.
   servicios: ServicioResumenDto[] = [];
   selectedServicio = '';
   tipoPaxCatalog: TipoPaxCatalogItem[] = [];
 
+  // Opciones de pagina para el selector.
   pageSizeOptions = [10, 20, 50];
 
+  // Bandera de creacion para evitar doble submit.
   isCreating = false;
 
+  // Timers de guardado y cache de forms por regla/tipo.
   private readonly saveTimers: Record<number, ReturnType<typeof setTimeout>> = {};
+  private readonly precioForms = new Map<number, Map<TipoPax, FormGroup>>();
 
+  // Inicializa estado, lee codLstPrecio y dispara cargas iniciales.
   ngOnInit(): void {
     const codLstPrecio = (this.route.snapshot.paramMap.get('codLstPrecio') || this.route.snapshot.paramMap.get('id') || '').trim();
     if (!codLstPrecio) {
@@ -95,6 +107,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
       return;
     }
 
+    this.hydrateDescripcion();
     this.codLstPrecio = codLstPrecio;
     this.filtros = {
       ...this.filtros,
@@ -107,32 +120,44 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     this.loadReglas();
   }
 
+  // Limpia timers pendientes.
   ngOnDestroy(): void {
     Object.values(this.saveTimers).forEach((timer) => clearTimeout(timer));
   }
 
+  // Expose reglas actuales para la plantilla.
   get reglas(): ReglaPrecioVm[] {
     return this.state.reglas;
   }
 
+  // Expose paginacion actual.
   get paginacion(): PaginacionDto {
     return this.state.paginacion;
   }
 
+  // Calcula total de paginas en base a la paginacion.
   get totalPages(): number {
     const total = this.paginacion.totalRegistros ?? 0;
     const size = this.paginacion.pageSize || DEFAULT_PAGE_SIZE;
     return Math.max(1, Math.ceil(total / size));
   }
 
+  // Optimiza ngFor usando el id de regla.
   trackByReglaId(_: number, regla: ReglaPrecioVm): number {
     return regla.id;
   }
 
+  // Optimiza ngFor usando el tipo de pax.
   trackByPrecioTipo(_: number, precio: PrecioTipoPaxVm): TipoPax {
     return precio.tipoPax;
   }
 
+  // Devuelve el form group de precio para regla/tipo.
+  getPrecioFormGroup(reglaId: number, tipoPax: TipoPax): FormGroup | null {
+    return this.precioForms.get(reglaId)?.get(tipoPax) ?? null;
+  }
+
+  // Aplica cambios de filtros y recarga reglas.
   onFiltroChange(): void {
     this.filtros = {
       ...this.filtros,
@@ -142,10 +167,12 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     this.loadReglas();
   }
 
+  // Handler de cambio de page size.
   onPageSizeChange(): void {
     this.onFiltroChange();
   }
 
+  // Navega a una pagina relativa si es valida.
   goToPage(delta: number): void {
     const next = (this.paginacion.paginaActual ?? 1) + delta;
     if (next < 1 || next > this.totalPages) {
@@ -158,6 +185,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     this.loadReglas();
   }
 
+  // Carga reglas desde servicio y actualiza estado.
   loadReglas(): void {
     this.state = {
       ...this.state,
@@ -180,6 +208,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
             loading: false,
             error: ''
           };
+          this.prunePrecioForms(reglas);
           this.preloadDetalles(reglas);
         },
         error: () => {
@@ -193,6 +222,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
       });
   }
 
+  // Carga catalogo de servicios activos.
   loadServicios(): void {
     this.serviciosService
       .getServiciosActivosAll()
@@ -214,6 +244,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
       });
   }
 
+  // Actualiza servicio seleccionado y limpia filtro si aplica.
   onServicioFilterChange(codServicio: string): void {
     this.selectedServicio = codServicio;
     if (this.filtros.codServicio) {
@@ -224,6 +255,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     }
   }
 
+  // Crea una nueva regla con precios por defecto.
   addRegla(): void {
     if (!this.selectedServicio || this.isCreating) {
       return;
@@ -273,6 +305,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
             reglas: [{ ...withDefaults, expanded: true }, ...this.reglas],
             error: ''
           };
+          this.ensurePrecioForms(withDefaults);
         },
         error: () => {
           this.state = {
@@ -283,6 +316,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
       });
   }
 
+  // Expande/colapsa regla y carga detalle si aplica.
   toggleExpand(reglaId: number): void {
     const regla = this.findRegla(reglaId);
     if (!regla) {
@@ -300,6 +334,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     }
   }
 
+  // Guarda cambios de cabecera de una regla.
   saveRegla(reglaId: number): void {
     const regla = this.findRegla(reglaId);
     if (!regla || regla.saving || !regla.dirty) {
@@ -336,6 +371,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
       });
   }
 
+  // Desactiva una regla via servicio.
   desactivarRegla(reglaId: number): void {
     const regla = this.findRegla(reglaId);
     if (!regla || regla.saving) {
@@ -373,6 +409,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
       });
   }
 
+  // Actualiza un campo editable y agenda guardado si aplica.
   onFieldChange(reglaId: number, field: ReglaFieldKey, value: unknown): void {
     const updated = this.updateRegla(reglaId, (current) => {
       const next = { ...current };
@@ -417,37 +454,126 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     }
   }
 
-  onPrecioChange(reglaId: number, tipoPax: TipoPax, field: PrecioFieldKey, value: unknown): void {
+  // Asegura forms de precios por tipo dentro de la regla.
+  private ensurePrecioForms(regla: ReglaPrecioVm): void {
+    if (!regla.precios?.length) {
+      return;
+    }
+    let byTipo = this.precioForms.get(regla.id);
+    if (!byTipo) {
+      byTipo = new Map<TipoPax, FormGroup>();
+      this.precioForms.set(regla.id, byTipo);
+    }
+
+    regla.precios.forEach((precio) => {
+      const existing = byTipo?.get(precio.tipoPax);
+      if (!existing) {
+        byTipo?.set(precio.tipoPax, this.buildPrecioFormGroup(regla.id, precio));
+      } else {
+        this.patchPrecioFormGroup(existing, precio);
+      }
+    });
+  }
+
+  // Construye el form group para una fila de precios.
+  private buildPrecioFormGroup(reglaId: number, precio: PrecioTipoPaxVm): FormGroup {
+    const porcentaje = this.normalizePercent(precio.porcentajeComision.value);
+    const neto = this.calculateNeto(precio.precio.value, porcentaje);
+    const form = this.fb.group({
+      precio: [precio.precio.value],
+      paxExtra: [precio.paxExtra.value],
+      cantPaxMax: [precio.cantPaxMax.value],
+      porcentajeComision: [porcentaje],
+      montoComision: [neto]
+    });
+    this.bindPrecioFormGroup(reglaId, precio.tipoPax, form);
+    return form;
+  }
+
+  // Sincroniza form group con la vm de precios.
+  private patchPrecioFormGroup(form: FormGroup, precio: PrecioTipoPaxVm): void {
+    const porcentaje = this.normalizePercent(precio.porcentajeComision.value);
+    const neto = this.calculateNeto(precio.precio.value, porcentaje);
+    form.patchValue(
+      {
+        precio: precio.precio.value,
+        paxExtra: precio.paxExtra.value,
+        cantPaxMax: precio.cantPaxMax.value,
+        porcentajeComision: porcentaje,
+        montoComision: neto
+      },
+      { emitEvent: false }
+    );
+  }
+
+  // Vincula cambios del form con la regla.
+  private bindPrecioFormGroup(reglaId: number, tipoPax: TipoPax, form: FormGroup): void {
+    ['precio', 'porcentajeComision', 'paxExtra', 'cantPaxMax'].forEach((controlName) => {
+      const control = form.get(controlName);
+      if (!control) {
+        return;
+      }
+      control.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+        this.handlePrecioFormChange(reglaId, tipoPax, form);
+      });
+    });
+    this.handlePrecioFormChange(reglaId, tipoPax, form);
+  }
+
+  // Calcula neto y actualiza vm a partir del form.
+  private handlePrecioFormChange(reglaId: number, tipoPax: TipoPax, form: FormGroup): void {
+    const raw = form.getRawValue() as {
+      precio: unknown;
+      paxExtra: unknown;
+      cantPaxMax: unknown;
+      porcentajeComision: unknown;
+      montoComision: unknown;
+    };
+    const precioRack = this.toNumber(raw.precio, 0);
+    const porcentaje = this.normalizePercent(raw.porcentajeComision);
+    const neto = this.calculateNeto(precioRack, porcentaje);
+
+    if (this.toNumber(raw.montoComision, 0) !== neto) {
+      form.patchValue({ montoComision: neto }, { emitEvent: false });
+    }
+
+    this.updatePrecioFromForm(reglaId, tipoPax, {
+      precio: precioRack,
+      paxExtra: this.toNumber(raw.paxExtra, 0),
+      cantPaxMax: this.toNumber(raw.cantPaxMax, 1),
+      porcentajeComision: porcentaje,
+      montoComision: neto
+    });
+  }
+
+  // Actualiza los precios en la regla.
+  private updatePrecioFromForm(
+    reglaId: number,
+    tipoPax: TipoPax,
+    values: {
+      precio: number;
+      paxExtra: number;
+      cantPaxMax: number;
+      porcentajeComision: number;
+      montoComision: number;
+    }
+  ): void {
     this.updateRegla(reglaId, (current) => {
       const precios = current.precios.map((precio) => {
         if (precio.tipoPax !== tipoPax) {
           return precio;
         }
-        const next = { ...precio };
-        switch (field) {
-          case 'precio':
-            next.precio = this.updateField(precio.precio, this.toNumber(value, 0));
-            break;
-          case 'paxExtra':
-            next.paxExtra = this.updateField(precio.paxExtra, this.toNumber(value, 0));
-            break;
-          case 'cantPaxMax':
-            next.cantPaxMax = this.updateField(precio.cantPaxMax, this.toNumber(value, 1));
-            break;
-          case 'porcentajeComision':
-            if (precio.porcentajeComision) {
-              next.porcentajeComision = this.updateField(precio.porcentajeComision, this.toNullableNumber(value));
-            }
-            break;
-          case 'montoComision':
-            if (precio.montoComision) {
-              next.montoComision = this.updateField(precio.montoComision, this.toNullableNumber(value));
-            }
-            break;
-          default:
-            break;
-        }
-        return this.validatePrecio(next);
+        const porcentajeField = precio.porcentajeComision;
+        const montoField = precio.montoComision;
+        const updated: PrecioTipoPaxVm = {
+          ...precio,
+          precio: this.updateField(precio.precio, values.precio),
+          paxExtra: this.updateField(precio.paxExtra, values.paxExtra),
+          cantPaxMax: this.updateField(precio.cantPaxMax, values.cantPaxMax),
+          porcentajeComision: this.updateField(porcentajeField, values.porcentajeComision),
+          montoComision: this.updateField(montoField, values.montoComision)
+        };
+        return this.validatePrecio(updated);
       });
 
       return {
@@ -458,13 +584,50 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     });
   }
 
+  // Recalcula el neto para todos los precios.
+  private recalculateNetoForRegla(reglaId: number): ReglaPrecioVm | null {
+    const updated = this.updateRegla(reglaId, (current) => {
+      const precios = current.precios.map((precio) => {
+        const porcentajeField = precio.porcentajeComision;
+        const montoField = precio.montoComision;
+        const porcentaje = this.normalizePercent(porcentajeField.value);
+        const neto = this.calculateNeto(precio.precio.value, porcentaje);
+        return {
+          ...precio,
+          porcentajeComision: this.updateField(porcentajeField, porcentaje),
+          montoComision: this.updateField(montoField, neto)
+        };
+      });
+
+      return {
+        ...current,
+        precios,
+        preciosError: ''
+      };
+    });
+
+    if (updated) {
+      const byTipo = this.precioForms.get(reglaId);
+      updated.precios.forEach((precio) => {
+        const form = byTipo?.get(precio.tipoPax);
+        if (form) {
+          form.patchValue({ montoComision: precio.montoComision.value }, { emitEvent: false });
+        }
+      });
+    }
+
+    return updated;
+  }
+
+  // Guarda precios de una regla.
   savePrecios(reglaId: number): void {
     const regla = this.findRegla(reglaId);
     if (!regla || regla.savingPrecios) {
       return;
     }
 
-    const validated = this.validatePrecios(regla);
+    const recalculated = this.recalculateNetoForRegla(reglaId) ?? regla;
+    const validated = this.validatePrecios(recalculated);
     if (validated.preciosError) {
       this.updateRegla(reglaId, () => validated);
       return;
@@ -496,6 +659,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
       });
   }
 
+  // Detecta si hay cambios pendientes en precios.
   isPreciosDirty(regla: ReglaPrecioVm): boolean {
     return regla.precios.some((precio) =>
       [precio.precio, precio.paxExtra, precio.cantPaxMax, precio.porcentajeComision, precio.montoComision]
@@ -504,6 +668,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     );
   }
 
+  // Resuelve el label visible del servicio.
   getServicioLabel(codServicio: string): string {
     const servicio = this.servicios.find((item) => this.getServicioCodigo(item) === codServicio);
     if (!servicio) {
@@ -513,10 +678,24 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     return nombre || codServicio;
   }
 
+  // Navega al listado principal de listas de precios.
   volverAListas(): void {
     this.router.navigate(['/comercial/listas-precios']);
   }
 
+  // Lee descripcion desde query params o history state.
+  private hydrateDescripcion(): void {
+    const queryDescripcion = (this.route.snapshot.queryParamMap.get('desLstPrecio') || '').trim();
+    const navState = this.router.getCurrentNavigation()?.extras.state as { desLstPrecio?: string } | undefined;
+    const historyState = (history?.state ?? {}) as { desLstPrecio?: string };
+    const stateDescripcion = `${navState?.desLstPrecio ?? historyState?.desLstPrecio ?? ''}`.trim();
+    const descripcion = queryDescripcion || stateDescripcion;
+    if (descripcion) {
+      this.desLstPrecio = descripcion;
+    }
+  }
+
+  // Carga detalle de una regla especifica.
   private loadDetalle(reglaId: number): void {
     this.updateRegla(reglaId, (current) => ({ ...current, loadingDetalle: true }));
 
@@ -530,7 +709,10 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
       )
       .subscribe({
         next: (detalle) => {
-          this.updateRegla(reglaId, (current) => this.ensurePrecios(mergeDetalleIntoVm(current, detalle)));
+          const updated = this.updateRegla(reglaId, (current) => this.ensurePrecios(mergeDetalleIntoVm(current, detalle)));
+          if (updated) {
+            this.ensurePrecioForms(updated);
+          }
         },
         error: () => {
           this.updateRegla(reglaId, (current) => ({
@@ -541,6 +723,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
       });
   }
 
+  // Precarga detalle para reglas sin cargar.
   private preloadDetalles(reglas: ReglaPrecioVm[]): void {
     reglas.forEach((regla) => {
       if (!regla.detalleLoaded && !regla.loadingDetalle) {
@@ -549,6 +732,17 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     });
   }
 
+  // Elimina forms de reglas que ya no existen.
+  private prunePrecioForms(reglas: ReglaPrecioVm[]): void {
+    const ids = new Set(reglas.map((regla) => regla.id));
+    Array.from(this.precioForms.keys()).forEach((reglaId) => {
+      if (!ids.has(reglaId)) {
+        this.precioForms.delete(reglaId);
+      }
+    });
+  }
+
+  // Actualiza una regla dentro del state.
   private updateRegla(reglaId: number, updater: (current: ReglaPrecioVm) => ReglaPrecioVm): ReglaPrecioVm | null {
     let updated: ReglaPrecioVm | null = null;
     this.state = {
@@ -564,10 +758,12 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     return updated;
   }
 
+  // Busca una regla por id.
   private findRegla(reglaId: number): ReglaPrecioVm | undefined {
     return this.reglas.find((regla) => regla.id === reglaId);
   }
 
+  // Agenda guardado con debounce.
   private scheduleSave(reglaId: number): void {
     if (this.saveTimers[reglaId]) {
       clearTimeout(this.saveTimers[reglaId]);
@@ -575,6 +771,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     this.saveTimers[reglaId] = setTimeout(() => this.saveRegla(reglaId), 600);
   }
 
+  // Valida la regla y agrega errores de campos.
   private validateRegla(regla: ReglaPrecioVm): ReglaPrecioVm {
     const min = this.toNumber(regla.cantMinPax.value, 0);
     const max = this.toNumber(regla.cantMaxPax.value, 0);
@@ -596,6 +793,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     };
   }
 
+  // Valida rango horario.
   private validateHora(desde: string, hasta: string): string {
     if (!desde || !hasta) {
       return '';
@@ -611,10 +809,12 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     return '';
   }
 
+  // Determina si la regla tiene errores.
   private hasReglaErrors(regla: ReglaPrecioVm): boolean {
     return Boolean(regla.cantMinPax.error || regla.cantMaxPax.error || regla.horaDesde.error || regla.horaHasta.error);
   }
 
+  // Determina si la regla tiene cambios.
   private computeReglaDirty(regla: ReglaPrecioVm): boolean {
     return [
       regla.tipoTarifa,
@@ -628,6 +828,19 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     ].some((field) => field.dirty);
   }
 
+  private setFieldValue<T>(field: EditableField<T>, value: T, resetOriginal: boolean): EditableField<T> {
+    if (resetOriginal) {
+      return {
+        ...field,
+        value,
+        original: value,
+        dirty: false,
+        error: ''
+      };
+    }
+    return this.updateField(field, value);
+  }
+
   private updateField<T>(field: EditableField<T>, value: T): EditableField<T> {
     const dirty = !this.isEqual(value, field.original);
     return {
@@ -637,10 +850,12 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     };
   }
 
+  // Comparador simple de igualdad.
   private isEqual(a: unknown, b: unknown): boolean {
     return a === b;
   }
 
+  // Valida campos de precio individuales.
   private validatePrecio(precio: PrecioTipoPaxVm): PrecioTipoPaxVm {
     const precioError = precio.precio.value < 0 ? 'Precio >= 0.' : '';
     const paxExtraError = precio.paxExtra.value < 0 ? 'PaxExtra >= 0.' : '';
@@ -654,6 +869,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     };
   }
 
+  // Valida lista de precios y setea error global.
   private validatePrecios(regla: ReglaPrecioVm): ReglaPrecioVm {
     let hasError = false;
     const precios = regla.precios.map((precio) => {
@@ -674,6 +890,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     };
   }
 
+  // Resetea estado dirty al guardar regla.
   private markReglaSaved(regla: ReglaPrecioVm): ReglaPrecioVm {
     return {
       ...regla,
@@ -690,14 +907,15 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     };
   }
 
+  // Resetea estado dirty al guardar precios.
   private markPreciosSaved(regla: ReglaPrecioVm): ReglaPrecioVm {
     const precios = regla.precios.map((precio) => ({
       ...precio,
       precio: this.resetField(precio.precio),
       paxExtra: this.resetField(precio.paxExtra),
       cantPaxMax: this.resetField(precio.cantPaxMax),
-      porcentajeComision: precio.porcentajeComision ? this.resetField(precio.porcentajeComision) : undefined,
-      montoComision: precio.montoComision ? this.resetField(precio.montoComision) : undefined
+      porcentajeComision: this.resetField(precio.porcentajeComision),
+      montoComision: this.resetField(precio.montoComision)
     }));
     return {
       ...regla,
@@ -715,31 +933,51 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     };
   }
 
+  // Asegura precios para todos los tipos de pax.
   private ensurePrecios(regla: ReglaPrecioVm): ReglaPrecioVm {
     if (regla.precios.length === 0) {
       return {
         ...regla,
-        precios: DEFAULT_TIPO_PAX.map((tipo) => this.buildPrecioDefault(tipo))
+        precios: DEFAULT_TIPO_PAX.map((tipo) => this.normalizePrecio(this.buildPrecioDefault(tipo), true))
       };
     }
     const byTipo = new Map(regla.precios.map((item) => [item.tipoPax, item]));
-    const normalized = DEFAULT_TIPO_PAX.map((tipo) => byTipo.get(tipo) ?? this.buildPrecioDefault(tipo));
+    const normalized = DEFAULT_TIPO_PAX.map((tipo) => byTipo.get(tipo) ?? this.buildPrecioDefault(tipo)).map((precio) =>
+      this.normalizePrecio(precio, true)
+    );
     return {
       ...regla,
       precios: normalized
     };
   }
 
+  // Normaliza porcentaje y neto para un precio.
+  private normalizePrecio(precio: PrecioTipoPaxVm, resetOriginal: boolean): PrecioTipoPaxVm {
+    const porcentajeField = precio.porcentajeComision;
+    const porcentaje = this.normalizePercent(porcentajeField.value);
+    const montoField = precio.montoComision;
+    const neto = this.calculateNeto(precio.precio.value, porcentaje);
+    return {
+      ...precio,
+      porcentajeComision: this.setFieldValue(porcentajeField, porcentaje, resetOriginal),
+      montoComision: this.setFieldValue(montoField, neto, resetOriginal)
+    };
+  }
+
+  // Construye precio default por tipo de pax.
   private buildPrecioDefault(tipo: TipoPax): PrecioTipoPaxVm {
     return {
       tipoPax: tipo,
       tipoPaxCodigo: toBackendTipoPax(tipo),
       precio: createEditableField(0),
       paxExtra: createEditableField(0),
-      cantPaxMax: createEditableField(1)
+      cantPaxMax: createEditableField(1),
+      porcentajeComision: createEditableField(0),
+      montoComision: createEditableField(0)
     };
   }
 
+  // Construye precio desde defaults del backend.
   private buildPrecioFromDefaults(item: {
     TipoPax?: TipoPax | string;
     tipoPax?: string;
@@ -749,6 +987,10 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     paxExtra?: unknown;
     CantPaxMax?: unknown;
     cantPaxMax?: unknown;
+    PorcentajeComision?: unknown;
+    porcentajeComision?: unknown;
+    MontoComision?: unknown;
+    montoComision?: unknown;
   }): PrecioTipoPaxVm {
     const rawTipo = item.TipoPax ?? item.tipoPax ?? '';
     const normalized = normalizeTipoPax(rawTipo);
@@ -757,10 +999,13 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
       tipoPaxCodigo: `${rawTipo ?? ''}`.trim() || toBackendTipoPax(normalized),
       precio: createEditableField(this.toNumber(item.Precio ?? item.precio, 0)),
       paxExtra: createEditableField(this.toNumber(item.PaxExtra ?? item.paxExtra, 0)),
-      cantPaxMax: createEditableField(this.toNumber(item.CantPaxMax ?? item.cantPaxMax, 1))
+      cantPaxMax: createEditableField(this.toNumber(item.CantPaxMax ?? item.cantPaxMax, 1)),
+      porcentajeComision: createEditableField(this.toNumber(item.PorcentajeComision ?? item.porcentajeComision, 0)),
+      montoComision: createEditableField(this.toNumber(item.MontoComision ?? item.montoComision, 0))
     };
   }
 
+  // Mapea respuesta de crear regla a view model.
   private mapCreateResponse(
     response: ReglaPrecioDetalleDto | ReglaPrecioListItemDto,
     defaults: ReglaPrecioCreateDto
@@ -805,6 +1050,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     };
   }
 
+  // Extrae id de una respuesta generica.
   private extractId(value: unknown): number {
     if (!value || typeof value !== 'object') {
       return 0;
@@ -820,14 +1066,17 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     return 0;
   }
 
+  // Obtiene el codigo del servicio.
   private getServicioCodigo(servicio: ServicioResumenDto): string {
     return (servicio.CodServicio || servicio.CodReceta || '').trim();
   }
 
+  // Obtiene el usuario operador actual.
   private getOperador(): string {
     return this.auth.getCurrentUser()?.usuario ?? '';
   }
 
+  // Carga catalogo de tipos de pax.
   private loadTiposPax(): void {
     this.service
       .getTiposPax()
@@ -842,6 +1091,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
       });
   }
 
+  // Mapea dto de tipos pax a catalogo.
   private mapTiposPax(tipos: TipoPaxDto[]): TipoPaxCatalogItem[] {
     const sorted = [...(tipos ?? [])].sort((a, b) => (a.CR03_Orden ?? 0) - (b.CR03_Orden ?? 0));
     const mapped = sorted.map((item) => {
@@ -872,6 +1122,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     return Array.from(byTipo.values());
   }
 
+  // Devuelve tipos pax por defecto.
   private getTipoPaxDefaults(): TipoPaxCatalogItem[] {
     if (this.tipoPaxCatalog.length > 0) {
       return this.tipoPaxCatalog;
@@ -883,6 +1134,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     }));
   }
 
+  // Mapea servicio UI a resumen.
   private mapServicio(servicio: ServicioUI): ServicioResumenDto {
     const codigo = (servicio.codReceta || '').trim();
     return {
@@ -894,18 +1146,34 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     };
   }
 
+  // Convierte a numero con fallback.
   private toNumber(value: unknown, fallback: number): number {
     const n = typeof value === 'number' ? value : Number(value);
     return Number.isFinite(n) ? n : fallback;
   }
 
-  private toNullableNumber(value: unknown): number | null {
-    if (value === null || value === undefined || value === '') {
-      return null;
-    }
-    return this.toNumber(value, 0);
+  // Normaliza porcentaje a numero.
+  private normalizePercent(value: unknown): number {
+    return this.toNumber(value ?? 0, 0);
   }
 
+  // Calcula precio neto desde rack y porcentaje.
+  private calculateNeto(precioRack: number, porcentaje: number): number {
+    const rack = this.toNumber(precioRack, 0);
+    const percent = this.normalizePercent(porcentaje);
+    const neto = rack - (rack * percent) / 100;
+    return this.roundToTwo(neto);
+  }
+
+  // Redondea a dos decimales.
+  private roundToTwo(value: number): number {
+    if (!Number.isFinite(value)) {
+      return 0;
+    }
+    return Number(value.toFixed(2));
+  }
+
+  // Convierte HH:mm(:ss) a segundos.
   private parseTime(value: string): number | null {
     const parts = value.split(':').map((part) => Number(part));
     if (parts.length < 2 || parts.some((p) => Number.isNaN(p))) {
@@ -916,6 +1184,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
   }
 }
 
+// Campos editables de la regla usados por onFieldChange.
 type ReglaFieldKey =
   | 'cantMinPax'
   | 'cantMaxPax'
@@ -925,8 +1194,7 @@ type ReglaFieldKey =
   | 'observaciones'
   | 'activo';
 
-type PrecioFieldKey = 'precio' | 'paxExtra' | 'cantPaxMax' | 'porcentajeComision' | 'montoComision';
-
+// Catalogo local de tipos pax para UI.
 interface TipoPaxCatalogItem {
   code: string;
   label: string;

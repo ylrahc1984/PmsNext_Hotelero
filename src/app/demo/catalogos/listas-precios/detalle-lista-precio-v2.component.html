@@ -100,8 +100,12 @@
                 <div class="precio-chips" *ngIf="regla.precios?.length; else noPrecios">
                   <span class="precio-chip" *ngFor="let precio of regla.precios">
                     <span class="chip-label">{{ precio.tipoPax }}</span>
-                    <span class="chip-value">
-                      {{ precio.precio.value | number: '1.2-2' }}
+                    <span class="chip-line">
+                      <span class="chip-rack"><strong>R:</strong> {{ precio.precio.value | number: '1.2-2' }}</span>
+                      <span class="chip-sep">|</span>
+                      <span class="chip-neto">N: {{ precio.montoComision.value | number: '1.2-2' }}</span>
+                      <span class="chip-sep">|</span>
+                      <span class="chip-com">Com: {{ precio.porcentajeComision.value | number: '1.0-2' }}%</span>
                     </span>
                   </span>
                 </div>
@@ -276,20 +280,45 @@
                       <span class="tipo-pill">{{ precio.tipoPax }}</span>
                       <span class="tipo-subtitle">Editar valores</span>
                     </div>
-                    <div class="precio-fields">
-                      <label class="field">
-                        <span class="field-label">Precio</span>
+                    <div class="precio-fields" *ngIf="getPrecioFormGroup(regla.id, precio.tipoPax) as precioForm" [formGroup]="precioForm">
+                      <label class="field field-priority">
+                        <span class="field-label">Precio rack</span>
                         <input
                           type="number"
-                          class="form-control form-control-sm"
+                          class="form-control form-control-sm precio-rack-input"
                           min="0"
                           step="0.01"
                           [class.field-error]="precio.precio.error"
-                          [ngModel]="precio.precio.value"
-                          (ngModelChange)="onPrecioChange(regla.id, precio.tipoPax, 'precio', $event)"
-                          aria-label="Precio"
+                          formControlName="precio"
+                          aria-label="Precio rack"
                         />
                         <div class="field-error-text" *ngIf="precio.precio.error">{{ precio.precio.error }}</div>
+                      </label>
+                      <label class="field">
+                        <span class="field-label">% comisión</span>
+                        <input
+                          type="number"
+                          class="form-control form-control-sm precio-comision-input"
+                          min="0"
+                          step="0.01"
+                          formControlName="porcentajeComision"
+                          aria-label="Porcentaje comisión"
+                        />
+                      </label>
+                      <label class="field field-derived">
+                        <span class="field-label">Precio neto</span>
+                        <input
+                          type="number"
+                          class="form-control form-control-sm precio-neto-input"
+                          min="0"
+                          step="0.01"
+                          formControlName="montoComision"
+                          readonly
+                          tabindex="-1"
+                          aria-label="Precio neto"
+                          title="Calculado automaticamente"
+                        />
+                        <small class="field-hint">Calculado automaticamente.</small>
                       </label>
                       <label class="field">
                         <span class="field-label">Pax extra</span>
@@ -299,8 +328,7 @@
                           min="0"
                           step="0.01"
                           [class.field-error]="precio.paxExtra.error"
-                          [ngModel]="precio.paxExtra.value"
-                          (ngModelChange)="onPrecioChange(regla.id, precio.tipoPax, 'paxExtra', $event)"
+                          formControlName="paxExtra"
                           aria-label="Pax extra"
                         />
                         <div class="field-error-text" *ngIf="precio.paxExtra.error">{{ precio.paxExtra.error }}</div>
@@ -313,35 +341,10 @@
                           min="1"
                           step="1"
                           [class.field-error]="precio.cantPaxMax.error"
-                          [ngModel]="precio.cantPaxMax.value"
-                          (ngModelChange)="onPrecioChange(regla.id, precio.tipoPax, 'cantPaxMax', $event)"
+                          formControlName="cantPaxMax"
                           aria-label="Cantidad maxima pax"
                         />
                         <div class="field-error-text" *ngIf="precio.cantPaxMax.error">{{ precio.cantPaxMax.error }}</div>
-                      </label>
-                      <label class="field" *ngIf="precio.porcentajeComision">
-                        <span class="field-label">% Comision</span>
-                        <input
-                          type="number"
-                          class="form-control form-control-sm"
-                          min="0"
-                          step="0.01"
-                          [ngModel]="precio.porcentajeComision.value"
-                          (ngModelChange)="onPrecioChange(regla.id, precio.tipoPax, 'porcentajeComision', $event)"
-                          aria-label="Porcentaje comision"
-                        />
-                      </label>
-                      <label class="field" *ngIf="precio.montoComision">
-                        <span class="field-label">Monto comision</span>
-                        <input
-                          type="number"
-                          class="form-control form-control-sm"
-                          min="0"
-                          step="0.01"
-                          [ngModel]="precio.montoComision.value"
-                          (ngModelChange)="onPrecioChange(regla.id, precio.tipoPax, 'montoComision', $event)"
-                          aria-label="Monto comision"
-                        />
                       </label>
                     </div>
                   </div>

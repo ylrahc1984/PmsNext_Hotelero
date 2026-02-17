@@ -152,8 +152,15 @@ export class ListasPreciosComponent implements OnInit {
     this.router.navigate(['/comercial/listas-precios/asignaciones']);
   }
 
-  verDetalle(codigo: string) {
-    this.router.navigate(['/comercial/detalle-lista-precio-v2', codigo]);
+  verDetalle(lista: ListaPrecioUI) {
+    const codigo = (lista.codigo || '').trim();
+    if (!codigo) {
+      return;
+    }
+    const descripcion = (lista.descripcion || '').trim();
+    this.router.navigate(['/comercial/detalle-lista-precio-v2', codigo], {
+      queryParams: { desLstPrecio: descripcion }
+    });
   }
 
   eliminar(codigo: string) {

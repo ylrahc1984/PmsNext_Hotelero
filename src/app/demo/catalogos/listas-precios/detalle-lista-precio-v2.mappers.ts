@@ -68,6 +68,9 @@ const buildPrecioVm = (item: PrecioTipoPaxDto | Record<string, unknown>): Precio
     getPrecioValue(record, 'CantMaxPax', 'cantMaxPax');
   const rawPorcentaje = getPrecioValue(record, 'PorcentajeComision', 'porcentajeComision');
   const rawMonto = getPrecioValue(record, 'MontoComision', 'montoComision');
+  const porcentajeValue =
+    rawPorcentaje === null || rawPorcentaje === undefined ? 0 : coerceNumber(rawPorcentaje, 0);
+  const montoValue = rawMonto === null || rawMonto === undefined ? 0 : coerceNumber(rawMonto, 0);
 
   return {
     tipoPax: normalizeTipoPax(rawTipo),
@@ -75,9 +78,8 @@ const buildPrecioVm = (item: PrecioTipoPaxDto | Record<string, unknown>): Precio
     precio: createEditableField(coerceNumber(rawPrecio, 0)),
     paxExtra: createEditableField(coerceNumber(rawPaxExtra, 0)),
     cantPaxMax: createEditableField(coerceNumber(rawCantMax, 1)),
-    porcentajeComision:
-      rawPorcentaje !== undefined ? createEditableField(coerceNumber(rawPorcentaje, 0)) : undefined,
-    montoComision: rawMonto !== undefined ? createEditableField(coerceNumber(rawMonto, 0)) : undefined
+    porcentajeComision: createEditableField(porcentajeValue),
+    montoComision: createEditableField(montoValue)
   };
 };
 
@@ -179,8 +181,8 @@ export const mapVmToPreciosBody = (vm: ReglaPrecioVm, operador?: string): ReglaP
       precio: precio.precio.value,
       paxExtra: precio.paxExtra.value,
       cantPaxMax: precio.cantPaxMax.value,
-      porcentajeComision: precio.porcentajeComision?.value ?? undefined,
-      montoComision: precio.montoComision?.value ?? undefined
+      porcentajeComision: precio.porcentajeComision.value,
+      montoComision: precio.montoComision.value
     }))
   };
 };

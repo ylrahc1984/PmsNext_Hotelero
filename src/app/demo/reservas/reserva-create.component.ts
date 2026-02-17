@@ -3,7 +3,7 @@ import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subject, catchError, distinctUntilChanged, filter, firstValueFrom, map, of, switchMap, take } from 'rxjs';
+import { catchError, filter, firstValueFrom, map, take } from 'rxjs';
 import Swal from 'sweetalert2';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
@@ -47,7 +47,7 @@ import {
   safeString,
   toDateInputValue
 } from './reserva-create.utils';
-import { ReservaCreateTarifaService, ReglaTarifaPaxAplicada } from './reserva-create.tarifa.service';
+import { ReservaCreateTarifaService, ReglaTarifaPaxAplicada, ModoPrecio } from './reserva-create.tarifa.service';
 import { TipoPaxService, TipoPaxUI } from './tipo-pax.service';
 import { ReservaCreateClienteModalComponent } from './reserva-create-cliente-modal.component';
 import { ReservaCreateDetalleModalComponent } from './reserva-create-detalle-modal.component';
@@ -97,8 +97,6 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
   serviciosLoading = false;
   tarifaLocked = false;
   directoUpdating = false;
-
-  private planTarifaChanges$ = new Subject<number>();
 
   private reservasService = inject(ReservasService);
   private detalleService = inject(DetalleToursCompletoService);
@@ -150,10 +148,10 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
    * - Inicializa el flujo de creación/recuperación de reserva (borrador o edición por URL).
    */
   ngOnInit(): void {
-    this.setupPlanTarifaListener();
     this.cargarIdiomas();
     this.cargarFormasReservacion();
     this.cargarPlanesTarifas();
+    void this.cargarListasPrecios();
     this.cargarTiposPax();
     this.cargarMonedaReservaciones();
     this.cargarFormasPago();
@@ -162,44 +160,25 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     this.initReserva();
   }
 
-  private setupPlanTarifaListener(): void {
-    this.planTarifaChanges$
-      .pipe(
-        distinctUntilChanged(),
-        switchMap((planId) => {
-          if (!planId) {
-            return of<ListaPrecioUI[]>([]);
-          }
-          return this.listaPrecioService.getListasByPlanRate(planId, 1, 200).pipe(
-            map((res) => res.data ?? []),
-            catchError(() => of<ListaPrecioUI[]>([]))
-          );
-        }),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe((listas) => {
-        this.listaPrecios = listas ?? [];
-        if (!this.listaPrecios.length) {
-          this.form.codLstPrecio = '';
-          return;
-        }
+  private async cargarListasPrecios(): Promise<void> {
+    try {
+      const pageSize = 200;
+      let pageNumber = 1;
+      let totalPages = 1;
+      const all: ListaPrecioUI[] = [];
 
-        const preferred = (this.form.codLstPrecio || '').trim();
-        const preferredExists =
-          !!preferred && this.listaPrecios.some((item) => (item?.codigo || '').trim() === preferred);
-        const firstCode = (this.listaPrecios[0]?.codigo ?? '').trim();
+      do {
+        const res = await firstValueFrom(this.listaPrecioService.getListas({ pageNumber, pageSize }));
+        const data = res?.data ?? [];
+        all.push(...data);
+        totalPages = Number(res?.totalPages ?? 1) || 1;
+        pageNumber += 1;
+      } while (pageNumber <= totalPages);
 
-        this.form.codLstPrecio = preferredExists ? preferred : firstCode;
-        this.onListaPrecioChange();
-      });
-  }
-
-  private emitPlanTarifaChange(source: 'user' | 'system' = 'system'): void {
-    if (source === 'user' && this.tarifaLocked) {
-      return;
+      this.listaPrecios = all;
+    } catch {
+      this.listaPrecios = [];
     }
-    const planId = Number(this.form.codPlan ?? 0) || 0;
-    this.planTarifaChanges$.next(planId);
   }
 
   private actualizarEstadoTarifario(): void {
@@ -287,7 +266,6 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         if (!currentExists && this.planesTarifas.length > 0) {
           this.form.codPlan = String(this.planesTarifas[0].planId);
         }
-        this.emitPlanTarifaChange('system');
       },
       error: () => {
         this.planesTarifas = [];
@@ -491,7 +469,6 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         if (codPlanId != null) {
           this.resolveCodPlanFromId(codPlanId);
         }
-        this.emitPlanTarifaChange('system');
         if (this.form.codAgencia) {
           this.clienteService.getClienteByCodigo(this.form.codAgencia).subscribe({
             next: (cliente) => {
@@ -663,6 +640,14 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     const normalized = (code || '').toString().trim().toUpperCase();
     if (!normalized) return false;
     return normalized !== 'CHL';
+  }
+
+  private getModoPrecioPorPlan(): ModoPrecio {
+    const planId = Number(this.form.codPlan ?? 0) || 0;
+    if (!planId) return 'R';
+    const plan = (this.planesTarifas ?? []).find((item) => Number(item?.planId ?? 0) === planId);
+    const tipo = (plan?.tipoTarifa || '').toString().trim().toUpperCase();
+    return tipo === 'N' ? 'N' : 'R';
   }
 
   private pickLineaAdultos(paxItems: DetallePaxForm[]): DetallePaxForm | undefined {
@@ -1875,7 +1860,6 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     const exists = (this.planesTarifas ?? []).some((item) => Number(item?.planId ?? 0) === idCodPlan);
     if (exists) {
       this.form.codPlan = String(idCodPlan);
-      this.emitPlanTarifaChange('system');
       return;
     }
 
@@ -1884,7 +1868,6 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         if (!plan) return;
         this.planesTarifas = this.mergePlanesTarifas([plan, ...(this.planesTarifas ?? [])]);
         this.form.codPlan = String(plan.planId);
-        this.emitPlanTarifaChange('system');
       },
       error: () => {
         // ignore
@@ -2029,7 +2012,6 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     }
     this.allowManualPricing = false;
     this.reglaTarifaError = '';
-    this.emitPlanTarifaChange('user');
     if (this.showDetalleModal) {
       this.recalcularCosto();
     }
@@ -2059,13 +2041,15 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       return false;
     }
 
+    const modoPrecio = this.getModoPrecioPorPlan();
     const horaReferencia = (this.detalleForm.horaPickup || this.detalleForm.horaInicio || '').trim();
     const result = await this.tarifaService.applyReglaTarifaPorTipos({
       planId,
       codLstPrecio,
       codServicio,
       horaPickup: horaReferencia,
-      detallesPax
+      detallesPax,
+      modoPrecio
     });
 
     if (result.ok === false) {
@@ -2089,4 +2073,3 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
   }
 
 }
-

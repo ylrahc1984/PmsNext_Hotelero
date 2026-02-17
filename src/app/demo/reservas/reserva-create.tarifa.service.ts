@@ -32,6 +32,8 @@ export interface ReglaTarifaPaxAplicada {
   error?: string;
 }
 
+export type ModoPrecio = 'R' | 'N';
+
 export type ApplyReglaTarifaPorTiposResult =
   | { ok: true; detalles: ReglaTarifaPaxAplicada[]; montoServicio: number }
   | { ok: false; error: string; detalles: ReglaTarifaPaxAplicada[]; faltantes: string[] };
@@ -145,7 +147,9 @@ export class ReservaCreateTarifaService {
     ninos: number;
     horaPickup: string;
     tipoPaxAdulto: string;
+    modoPrecio?: ModoPrecio;
   }): Promise<ApplyReglaTarifaResult> {
+    const modoPrecio: ModoPrecio = options.modoPrecio === 'N' ? 'N' : 'R';
     const planId = Number(options.planId ?? 0) || 0;
     const codLstPrecio = (options.codLstPrecio || '').trim();
     const codServicio = (options.codServicio || '').trim();
@@ -203,18 +207,24 @@ export class ReservaCreateTarifaService {
     }
 
     const paxExtras = this.computePaxExtras(reglaAdultos, cantidad);
+    const precioAdultoBase = this.getPrecioBase(reglaAdultos, modoPrecio);
+    const precioNinoBase = this.getPrecioBase(reglaNinos, modoPrecio);
+
     const totalAdultos =
-      reglaAdultos?.precioTotalCalculado ??
-      (reglaAdultos ? reglaAdultos.precioBase + paxExtras * (reglaAdultos.precioPaxExtra ?? 0) : 0);
+      modoPrecio === 'R'
+        ? reglaAdultos?.precioTotalCalculado ?? (precioAdultoBase + paxExtras * (reglaAdultos?.precioPaxExtra ?? 0))
+        : (precioAdultoBase + paxExtras * (reglaAdultos?.precioPaxExtra ?? 0));
     const totalNinos =
-      reglaNinos?.precioTotalCalculado ?? (reglaNinos ? reglaNinos.precioBase * ninos : 0);
+      modoPrecio === 'R'
+        ? reglaNinos?.precioTotalCalculado ?? (precioNinoBase * ninos)
+        : (precioNinoBase * ninos);
 
     const montoServicio = totalAdultos + totalNinos;
 
     const regla: ReglaTarifaAplicada = {
       idReglaPrecio: reglaAdultos?.reglaPrecioId ?? reglaNinos?.reglaPrecioId ?? 0,
-      precioAdulto: reglaAdultos?.precioBase ?? 0,
-      precioNino: reglaNinos?.precioBase ?? 0,
+      precioAdulto: precioAdultoBase,
+      precioNino: precioNinoBase,
       precioPaxExtra: reglaAdultos?.precioPaxExtra ?? 0,
       paxExtras,
       montoServicio,
@@ -236,7 +246,9 @@ export class ReservaCreateTarifaService {
     codServicio: string;
     horaPickup: string;
     detallesPax: Array<{ tipoPax: string; cantidad: number }>;
+    modoPrecio?: ModoPrecio;
   }): Promise<ApplyReglaTarifaPorTiposResult> {
+    const modoPrecio: ModoPrecio = options.modoPrecio === 'N' ? 'N' : 'R';
     const planId = Number(options.planId ?? 0) || 0;
     const codLstPrecio = (options.codLstPrecio || '').trim();
     const codServicio = (options.codServicio || '').trim();
@@ -295,14 +307,18 @@ export class ReservaCreateTarifaService {
       }
 
       const paxExtras = this.computePaxExtras(regla, item.cantidad);
+      const precioBase = this.getPrecioBase(regla, modoPrecio);
       const calculado = Number(regla.precioTotalCalculado ?? 0) || 0;
-      const precioTotal = calculado > 0 ? calculado : (regla.precioBase + paxExtras * (regla.precioPaxExtra ?? 0));
+      const precioTotal =
+        modoPrecio === 'R'
+          ? (calculado > 0 ? calculado : (precioBase + paxExtras * (regla.precioPaxExtra ?? 0)))
+          : (precioBase + paxExtras * (regla.precioPaxExtra ?? 0));
 
       detalles.push({
         tipoPax: item.tipoPax,
         cantidad: item.cantidad,
         precioTotal,
-        precioUnitario: regla.precioBase ?? 0,
+        precioUnitario: precioBase,
         precioPaxExtra: regla.precioPaxExtra ?? 0,
         reglaPrecioId: regla.reglaPrecioId ?? 0
       });
@@ -360,6 +376,14 @@ export class ReservaCreateTarifaService {
       listaVigenteDesde: (apiData.ListaVigenteDesde || '').toString(),
       listaVigenteHasta: (apiData.ListaVigenteHasta || '').toString()
     };
+  }
+
+  private getPrecioBase(regla: MejorPrecioRegla | null, modo: ModoPrecio): number {
+    if (!regla) return 0;
+    if (modo === 'N') {
+      return Number(regla.montoComision ?? 0) || 0;
+    }
+    return Number(regla.precioBase ?? 0) || 0;
   }
 
   private computePaxExtras(regla: MejorPrecioRegla | null, cantidad: number): number {

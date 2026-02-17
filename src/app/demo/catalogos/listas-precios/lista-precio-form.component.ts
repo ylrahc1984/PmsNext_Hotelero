@@ -42,11 +42,11 @@ export class ListaPrecioFormComponent implements OnInit {
 
   private buildForm() {
     this.form = this.fb.group({
-      codLstPrecio: ['', [Validators.required]],
+      codLstPrecio: [{ value: '', disabled: true }],
       desLstPrecio: ['', [Validators.required]],
       moneda: ['', [Validators.required]],
       simbolo: [''],
-      planRate: [null, [Validators.required]],
+      planRate: [1, [Validators.required]],
       vigencia: ['S', [Validators.required]],
       fechaDesde: [null],
       fechaHasta: [null],
@@ -107,7 +107,6 @@ export class ListaPrecioFormComponent implements OnInit {
           fechaHasta: lista.fechaHasta || null,
           observaciones: lista.observaciones || ''
         });
-        this.form.get('codLstPrecio')?.disable();
         this.isLoading = false;
       },
       error: (error) => {
@@ -120,12 +119,6 @@ export class ListaPrecioFormComponent implements OnInit {
         this.isLoading = false;
       }
     });
-  }
-
-  onCodigoInput() {
-    const control = this.form.get('codLstPrecio');
-    const value = (control?.value || '').toUpperCase();
-    control?.setValue(value, { emitEvent: false });
   }
 
   onMonedaChange() {
@@ -148,7 +141,7 @@ export class ListaPrecioFormComponent implements OnInit {
 
     const raw = this.form.getRawValue();
     const uiPayload: ListaPrecioUI = {
-      codigo: raw.codLstPrecio,
+      codigo: this.isEditing ? raw.codLstPrecio : '',
       descripcion: raw.desLstPrecio,
       moneda: raw.moneda,
       simbolo: raw.simbolo || '',

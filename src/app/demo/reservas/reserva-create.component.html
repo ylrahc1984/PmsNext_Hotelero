@@ -119,14 +119,14 @@
                       name="codLstPrecio"
                       required
                       (ngModelChange)="onListaPrecioChange()"
-                      [disabled]="tarifaLocked || !form.codPlan"
+                      [disabled]="tarifaLocked"
                     >
                       <option value="">Seleccione lista de precios</option>
                       <option *ngFor="let lista of listaPrecios" [ngValue]="lista.codigo">
                         {{ lista.codigo }} - {{ lista.descripcion }}
                       </option>
                     </select>
-                    <small class="text-muted">Se cargará según el plan tarifario seleccionado</small>
+                    <small class="text-muted">Seleccione la lista de precios que desea aplicar</small>
                     <div class="text-danger small" *ngIf="reservaForm.submitted && reservaForm.controls.codLstPrecio?.invalid">
                       Lista de Precios es requerida.
                     </div>
