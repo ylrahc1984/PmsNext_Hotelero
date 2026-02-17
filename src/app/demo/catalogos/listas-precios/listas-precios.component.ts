@@ -142,14 +142,18 @@ export class ListasPreciosComponent implements OnInit {
 
   openForm(codigo?: string) {
     if (codigo) {
-      this.router.navigate(['/catalogos/listas-precios', codigo, 'editar']);
+      this.router.navigate(['/comercial/listas-precios', codigo, 'editar']);
     } else {
-      this.router.navigate(['/catalogos/listas-precios/nuevo']);
+      this.router.navigate(['/comercial/listas-precios/nuevo']);
     }
   }
 
+  openAsignaciones() {
+    this.router.navigate(['/comercial/listas-precios/asignaciones']);
+  }
+
   verDetalle(codigo: string) {
-    this.router.navigate(['/catalogos/detalle-lista-precio-v2', codigo]);
+    this.router.navigate(['/comercial/detalle-lista-precio-v2', codigo]);
   }
 
   eliminar(codigo: string) {

@@ -1,0 +1,7 @@
+.clientes-table tbody tr {
+  cursor: pointer;
+}
+
+.clientes-table tbody tr.table-active {
+  font-weight: 600;
+}

@@ -63,6 +63,22 @@ const routes: Routes = [
         loadComponent: () => import('./demo/ordenes/ordenes.component').then((c) => c.OrdenesComponent)
       },
       {
+        path: 'operacion-diaria',
+        loadComponent: () => import('./operaciones/operacion-diaria/operacion-diaria.component').then((c) => c.OperacionDiariaComponent)
+      },
+      {
+        path: 'lista-pickup',
+        loadComponent: () => import('./demo/catalogos/lista-pickup/lista-pickup.component').then((c) => c.ListaPickupComponent)
+      },
+      {
+        path: 'lista-pickup/nuevo',
+        loadComponent: () => import('./demo/catalogos/lista-pickup/lista-pickup-form.component').then((c) => c.ListaPickupFormComponent)
+      },
+      {
+        path: 'lista-pickup/:id/editar',
+        loadComponent: () => import('./demo/catalogos/lista-pickup/lista-pickup-form.component').then((c) => c.ListaPickupFormComponent)
+      },
+      {
         path: 'ordenes-trabajo/nueva',
         loadComponent: () => import('./demo/ordenes/orden-trabajo-form.component').then((c) => c.OrdenTrabajoFormComponent)
       },
@@ -114,6 +130,68 @@ const routes: Routes = [
     path: 'ordenes-trabajo/:id/detalle',
     redirectTo: 'operaciones/ordenes-trabajo/:id/detalle',
     pathMatch: 'full'
+  },
+  {
+    path: 'comercial',
+    component: AdminComponent,
+    canActivate: [AuthGuard],
+    canActivateChild: [AuthGuard],
+    children: [
+      {
+        path: 'servicios',
+        loadComponent: () => import('./demo/catalogos/servicios/servicios.component').then((c) => c.ServiciosComponent)
+      },
+      {
+        path: 'servicios/nuevo',
+        loadComponent: () => import('./demo/catalogos/servicios/servicio-form.component').then((c) => c.ServicioFormComponent)
+      },
+      {
+        path: 'servicios/editar/:codReceta',
+        loadComponent: () => import('./demo/catalogos/servicios/servicio-form.component').then((c) => c.ServicioFormComponent)
+      },
+      {
+        path: 'listas-precios',
+        loadComponent: () => import('./demo/catalogos/listas-precios/listas-precios.component').then((c) => c.ListasPreciosComponent)
+      },
+      {
+        path: 'listas-precios/asignaciones',
+        loadComponent: () =>
+          import('./demo/catalogos/listas-precios/listas-precios-asignaciones.component').then((c) => c.ListasPreciosAsignacionesComponent)
+      },
+      {
+        path: 'listas-precios/nuevo',
+        loadComponent: () => import('./demo/catalogos/listas-precios/lista-precio-form.component').then((c) => c.ListaPrecioFormComponent)
+      },
+      {
+        path: 'listas-precios/:id/editar',
+        loadComponent: () => import('./demo/catalogos/listas-precios/lista-precio-form.component').then((c) => c.ListaPrecioFormComponent)
+      },
+      {
+        path: 'listas-precios/:id/detalle',
+        loadComponent: () => import('./demo/catalogos/listas-precios/lista-precio-detalle.component').then((c) => c.ListaPrecioDetalleComponent)
+      },
+      {
+        path: 'detalle-lista-precio-v2/:codLstPrecio',
+        loadComponent: () => import('./demo/catalogos/listas-precios/detalle-lista-precio-v2.component').then((c) => c.DetalleListaPrecioV2Component)
+      },
+      {
+        path: 'agencias',
+        loadComponent: () => import('./demo/catalogos/agencias-comisionistas/agencias-comisionistas.component').then((c) => c.AgenciasComisionistasComponent)
+      },
+      {
+        path: 'agencias/nuevo',
+        loadComponent: () => import('./demo/catalogos/agencias-comisionistas/cliente-form.component').then((c) => c.ClienteFormComponent)
+      },
+      {
+        path: 'agencias/:codigo/editar',
+        loadComponent: () => import('./demo/catalogos/agencias-comisionistas/cliente-form.component').then((c) => c.ClienteFormComponent)
+      },
+      {
+        path: 'agencias/:codigo/detalle',
+        loadComponent: () => import('./demo/catalogos/agencias-comisionistas/cliente-form.component').then((c) => c.ClienteFormComponent),
+        data: { readOnly: true }
+      }
+    ]
   },
   {
     canActivate: [AuthGuard],
@@ -170,6 +248,34 @@ const routes: Routes = [
   {
     canActivate: [AuthGuard],
     canActivateChild: [AuthGuard],
+    path: 'finanzas',
+    component: AdminComponent,
+    children: [
+      {
+        path: 'cuentas-cobrar',
+        loadComponent: () => import('./demo/contabilidad/cuentas-cobrar/cuentas-cobrar.component').then((c) => c.CuentasCobrarComponent)
+      },
+      {
+        path: 'cuentas-pagar',
+        loadComponent: () => import('./demo/contabilidad/cuentas-pagar/cuentas-pagar.component').then((c) => c.CuentasPagarComponent)
+      },
+      {
+        path: 'facturas',
+        loadComponent: () => import('./demo/contabilidad/facturas/facturas.component').then((c) => c.FacturasComponent)
+      },
+      {
+        path: 'facturas/nueva',
+        loadComponent: () => import('./demo/contabilidad/facturas/factura-form.component').then((c) => c.FacturaFormComponent)
+      },
+      {
+        path: 'recibos',
+        loadComponent: () => import('./demo/contabilidad/recibos/recibos.component').then((c) => c.RecibosComponent)
+      }
+    ]
+  },
+  {
+    canActivate: [AuthGuard],
+    canActivateChild: [AuthGuard],
     path: 'servicios',
     component: AdminComponent,
     children: [
@@ -196,6 +302,11 @@ const routes: Routes = [
       {
         path: 'listas-precios',
         loadComponent: () => import('./demo/catalogos/listas-precios/listas-precios.component').then((c) => c.ListasPreciosComponent)
+      },
+      {
+        path: 'listas-precios/asignaciones',
+        loadComponent: () =>
+          import('./demo/catalogos/listas-precios/listas-precios-asignaciones.component').then((c) => c.ListasPreciosAsignacionesComponent)
       },
       {
         path: 'listas-precios/nuevo',
@@ -554,6 +665,18 @@ const routes: Routes = [
     component: AdminComponent,
     children: [
       {
+        path: 'operaciones',
+        loadComponent: () => import('./demo/reportes/reservas/reservas.component').then((c) => c.ReservasComponent)
+      },
+      {
+        path: 'finanzas',
+        loadComponent: () => import('./demo/reportes/ingresos/ingresos.component').then((c) => c.IngresosComponent)
+      },
+      {
+        path: 'comercial',
+        loadComponent: () => import('./demo/reportes/ventas/ventas.component').then((c) => c.VentasComponent)
+      },
+      {
         path: 'ventas',
         loadComponent: () => import('./demo/reportes/ventas/ventas.component').then((c) => c.VentasComponent)
       },
@@ -578,5 +701,3 @@ const routes: Routes = [
   exports: [RouterModule]
 })
 export class AppRoutingModule {}
-
-

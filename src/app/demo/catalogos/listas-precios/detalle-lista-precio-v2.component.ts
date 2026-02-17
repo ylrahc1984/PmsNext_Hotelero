@@ -514,7 +514,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
   }
 
   volverAListas(): void {
-    this.router.navigate(['/catalogos/listas-precios']);
+    this.router.navigate(['/comercial/listas-precios']);
   }
 
   private loadDetalle(reglaId: number): void {

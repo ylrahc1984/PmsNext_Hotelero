@@ -103,6 +103,6 @@ export class FacturaFormComponent {
   }
 
   cancelar() {
-    this.router.navigate(['/facturas']).catch(() => this.location.back());
+    this.router.navigate(['/finanzas/facturas']).catch(() => this.location.back());
   }
 }

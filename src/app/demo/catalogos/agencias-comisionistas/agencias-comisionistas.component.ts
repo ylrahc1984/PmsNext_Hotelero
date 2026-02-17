@@ -94,15 +94,15 @@ export class AgenciasComisionistasComponent implements OnInit {
   }
 
   openForm() {
-    this.router.navigate(['/catalogos/clientes/nuevo']);
+    this.router.navigate(['/comercial/agencias/nuevo']);
   }
 
   editar(cliente: ClienteUI) {
-    this.router.navigate(['/catalogos/clientes', cliente.codigo, 'editar']);
+    this.router.navigate(['/comercial/agencias', cliente.codigo, 'editar']);
   }
 
   verDetalle(cliente: ClienteUI) {
-    this.router.navigate(['/catalogos/clientes', cliente.codigo, 'detalle']);
+    this.router.navigate(['/comercial/agencias', cliente.codigo, 'detalle']);
   }
 
   eliminar(cliente: ClienteUI) {

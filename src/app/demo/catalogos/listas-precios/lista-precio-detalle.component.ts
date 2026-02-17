@@ -340,7 +340,7 @@ export class ListaPrecioDetalleComponent implements OnInit {
   }
 
   volverAListas() {
-    this.router.navigate(['/catalogos/listas-precios']);
+    this.router.navigate(['/comercial/listas-precios']);
   }
 
   getEstadoBadge(activa: boolean) {

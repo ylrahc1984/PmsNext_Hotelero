@@ -89,11 +89,11 @@ export class ListaPickupComponent implements OnInit, OnDestroy {
   }
 
   nuevoPickup(): void {
-    this.router.navigate(['/catalogos/lista-pickup/nuevo']);
+    this.router.navigate(['/operaciones/lista-pickup/nuevo']);
   }
 
   editarPickup(item: PickupListaItem): void {
-    this.router.navigate(['/catalogos/lista-pickup', item.CR11_ID, 'editar']);
+    this.router.navigate(['/operaciones/lista-pickup', item.CR11_ID, 'editar']);
   }
 
   eliminarPickup(item: PickupListaItem): void {

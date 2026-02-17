@@ -1,0 +1,225 @@
+<div class="operacion-diaria">
+  <div class="card filter-card">
+    <div class="card-body">
+      <form class="filters-grid" [formGroup]="form" (ngSubmit)="buscar()">
+        <div class="filter-item">
+          <label class="form-label">Fecha Inicio</label>
+          <input
+            type="date"
+            class="form-control"
+            formControlName="fechaInicio"
+            [class.is-invalid]="form.get('fechaInicio')?.invalid && form.get('fechaInicio')?.touched"
+          />
+          <div class="invalid-feedback">Requerido</div>
+        </div>
+
+        <div class="filter-item">
+          <label class="form-label">Fecha Fin</label>
+          <input
+            type="date"
+            class="form-control"
+            formControlName="fechaFin"
+            [class.is-invalid]="form.get('fechaFin')?.invalid && form.get('fechaFin')?.touched"
+          />
+          <div class="invalid-feedback">Requerido</div>
+        </div>
+
+        <div class="filter-item">
+          <label class="form-label">Busqueda</label>
+          <input type="text" class="form-control" formControlName="busqueda" placeholder="Reserva, cliente, servicio..." />
+        </div>
+
+        <div class="filter-item">
+          <label class="form-label">Agencia</label>
+          <input type="text" class="form-control" formControlName="agenciaId" placeholder="ID agencia" />
+        </div>
+
+        <div class="filter-item">
+          <label class="form-label">Chofer</label>
+          <input type="text" class="form-control" formControlName="choferId" placeholder="ID chofer" />
+        </div>
+
+        <div class="filter-actions">
+          <button type="submit" class="btn btn-primary">Buscar</button>
+          <button type="button" class="btn btn-outline-secondary" (click)="setHoy()">Hoy</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <ng-container *ngIf="vm$ | async as vm">
+    <div *ngIf="vm.loading" class="card status-card">
+      <div class="card-body d-flex align-items-center gap-2">
+        <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+        <span>Consultando operacion diaria...</span>
+      </div>
+    </div>
+
+    <div *ngIf="vm.error" class="alert alert-danger">{{ vm.error }}</div>
+
+    <div *ngIf="!vm.loading && !vm.error && (vm.data?.totalRegistros ?? 0) === 0" class="card status-card">
+      <div class="card-body text-center text-muted">No hay registros para los filtros seleccionados.</div>
+    </div>
+
+    <div *ngIf="!vm.loading && !vm.error && (vm.data?.totalRegistros ?? 0) > 0" class="hourly-grid">
+      <div class="card hour-card" *ngFor="let bloque of vm.data?.bloques; trackBy: trackByBloque">
+        <div class="card-header hour-card__header">
+          <div class="hour-title">{{ bloque.bloqueHora }}</div>
+          <div class="hour-metrics">
+            <div class="metric">
+              <span>Total</span>
+              <strong>{{ bloque.totalesHora.totalHora | number: '1.2-2' }}</strong>
+            </div>
+            <div class="metric">
+              <span>Pax</span>
+              <strong>{{ bloque.totalesHora.paxHora }}</strong>
+            </div>
+            <div class="metric">
+              <span>Servicios</span>
+              <strong>{{ bloque.totalesHora.cantidadServicios }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle">
+              <thead>
+                <tr>
+                  <th>Reserva</th>
+                  <th>Cliente</th>
+                  <th>Pickup</th>
+                  <th>Servicio</th>
+                  <th class="text-center">Pax</th>
+                  <th class="text-end">Total</th>
+                  <th>Estado</th>
+                  <th>Usuario</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let detalle of bloque.detalles; trackBy: trackByDetalle">
+                  <td>
+                    <div class="fw-semibold">#{{ detalle.prV02_CodReserva }}</div>
+                    <div class="text-muted small">{{ detalle.prV02_FecServicio | date:'dd/MM/yyyy' }}</div>
+                  </td>
+                  <td>
+                    <div class="fw-semibold">{{ detalle.cliente }}</div>
+                    <div class="text-muted small">{{ detalle.agencia }}</div>
+                  </td>
+                  <td>
+                    <div class="fw-semibold">{{ detalle.lugarPickup }}</div>
+                    <div class="text-muted small">{{ detalle.formaPago }}</div>
+                  </td>
+                  <td>
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                      <span class="service-chip" [ngClass]="getServiceColor(detalle.codServicio)">
+                        {{ detalle.nomServicio }}
+                      </span>
+                      <span class="text-muted small">{{ detalle.codServicio }}</span>
+                    </div>
+                    <div class="text-muted small">{{ detalle.planTarifa }} - {{ detalle.tipoTarifa }}</div>
+                  </td>
+                  <td class="text-center fw-semibold">{{ detalle.totalPax }}</td>
+                  <td class="text-end fw-semibold">{{ detalle.totalServicio | number: '1.2-2' }}</td>
+                  <td>
+                    <span class="badge estado-badge" [ngClass]="getEstadoBadge(detalle.estado)">
+                      {{ detalle.estado }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="fw-semibold">{{ detalle.usuario }}</div>
+                    <div class="indicator-row">
+                      <i
+                        *ngIf="detalle.procesado"
+                        class="feather icon-check-circle text-success"
+                        title="Procesado"
+                        aria-hidden="true"
+                      ></i>
+                      <i
+                        *ngIf="detalle.chofer"
+                        class="feather icon-truck text-primary"
+                        title="Con chofer"
+                        aria-hidden="true"
+                      ></i>
+                      <i
+                        *ngIf="detalle.observacion && detalle.observacion.trim().length"
+                        class="feather icon-alert-circle text-warning"
+                        [ngbPopover]="detalle.observacion"
+                        popoverTitle="Observacion"
+                        container="body"
+                        triggers="hover focus"
+                        title="Observacion"
+                        aria-label="Observacion"
+                        tabindex="0"
+                      ></i>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div *ngIf="getResumenPorHora(bloque.bloqueHora).length" class="resumen-actividad">
+            <div class="resumen-title">Resumen Actividad</div>
+            <div class="resumen-items">
+              <div class="resumen-item" *ngFor="let resumen of getResumenPorHora(bloque.bloqueHora); trackBy: trackByResumen">
+                <span class="service-chip" [ngClass]="getServiceColor(resumen.codServicio)">
+                  {{ resumen.nomServicio }}
+                </span>
+                <span class="resumen-meta">Pax: {{ resumen.paxActividadHora }}</span>
+                <span class="resumen-meta">Total: {{ resumen.totalActividadHora | number: '1.2-2' }}</span>
+                <span class="resumen-meta">Servicios: {{ resumen.cantidadServicios }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="!vm.loading && !vm.error && (vm.data?.totalRegistros ?? 0) > 0" class="pagination-bar">
+      <div class="pagination-summary">
+        Mostrando {{ pageStart }}-{{ pageEnd }} de {{ vm.data?.totalRegistros }}
+      </div>
+      <div class="page-size">
+        <label>Mostrar</label>
+        <select [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)" class="form-control">
+          <option *ngFor="let size of pageSizes" [value]="size">{{ size }}</option>
+        </select>
+        <span>por pagina</span>
+      </div>
+      <div class="pagination-controls">
+        <button class="btn btn-light" type="button" (click)="changePage(-1)" [disabled]="page === 1">
+          <i class="feather icon-chevron-left"></i>
+        </button>
+        <span>Pagina {{ page }} de {{ totalPaginas(vm.data?.totalRegistros ?? 0) }}</span>
+        <button
+          class="btn btn-light"
+          type="button"
+          (click)="changePage(1)"
+          [disabled]="page === totalPaginas(vm.data?.totalRegistros ?? 0)"
+        >
+          <i class="feather icon-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="vm.data?.totalesGenerales" class="card total-card">
+      <div class="card-body">
+        <div class="total-grid">
+          <div>
+            <div class="total-label">Total General</div>
+            <div class="total-value">{{ vm.data.totalesGenerales.totalGeneral | number: '1.2-2' }}</div>
+          </div>
+          <div>
+            <div class="total-label">Total Pax General</div>
+            <div class="total-value">{{ vm.data.totalesGenerales.totalPaxGeneral }}</div>
+          </div>
+          <div>
+            <div class="total-label">Total Servicios</div>
+            <div class="total-value">{{ vm.data.totalesGenerales.totalServicios }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>

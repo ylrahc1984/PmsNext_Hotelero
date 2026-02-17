@@ -1,0 +1,276 @@
+.operacion-diaria {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.filter-card {
+  border: 1px solid #e6eaf2;
+  background: linear-gradient(135deg, #f8faff 0%, #ffffff 55%, #f2f5fb 100%);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.filters-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: end;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: end;
+  justify-content: flex-end;
+}
+
+.status-card {
+  border: 1px dashed #dbe2ef;
+  background: #f8fafc;
+}
+
+.hourly-grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.hour-card {
+  border: 1px solid #e9edf5;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 14px 28px rgba(16, 24, 40, 0.08);
+}
+
+.hour-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(90deg, #f7f9ff 0%, #f1f5fb 100%);
+  border-bottom: 1px solid #e6eaf2;
+}
+
+.hour-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #1f2a44;
+}
+
+.hour-metrics {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.metric span {
+  display: block;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #7b879d;
+}
+
+.metric strong {
+  font-size: 1.05rem;
+  color: #1f2a44;
+}
+
+.table thead th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7690;
+  border-bottom: 1px solid #e6eaf2;
+}
+
+.table tbody tr {
+  border-bottom: 1px solid #eef1f6;
+}
+
+.table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.service-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.chip--tours {
+  background: #e7f0ff;
+  color: #1c5cd7;
+  border-color: #cfe0ff;
+}
+
+.chip--transporte {
+  background: #e7f8ef;
+  color: #1a7f3b;
+  border-color: #cdeedb;
+}
+
+.chip--extremo {
+  background: #fff2e0;
+  color: #c46a1b;
+  border-color: #ffd8b0;
+}
+
+.chip--otro {
+  background: #eef1f4;
+  color: #526070;
+  border-color: #dfe4ea;
+}
+
+.estado-badge {
+  padding: 0.35rem 0.6rem;
+  font-weight: 600;
+  border-radius: 999px;
+}
+
+.indicator-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+  font-size: 1rem;
+}
+
+.indicator-row .icon-alert-circle {
+  cursor: pointer;
+}
+
+.resumen-actividad {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #eef1f6;
+}
+
+.resumen-title {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #7b879d;
+  margin-bottom: 0.5rem;
+}
+
+.resumen-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+}
+
+.resumen-item {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.resumen-meta {
+  font-size: 0.75rem;
+  color: #5f6b81;
+  font-weight: 600;
+}
+
+.pagination-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: 1px solid #eef1f6;
+  background: #ffffff;
+}
+
+.pagination-summary {
+  font-size: 0.85rem;
+  color: #5f6b81;
+  font-weight: 600;
+}
+
+.page-size {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.total-card {
+  border: none;
+  color: #ffffff;
+  background: linear-gradient(135deg, #1f2a44 0%, #273c61 100%);
+}
+
+.total-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.total-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.total-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+@media (max-width: 1200px) {
+  .filters-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .filter-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 992px) {
+  .hour-card__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .hour-metrics {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 768px) {
+  .filters-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pagination-bar {
+    align-items: flex-start;
+  }
+
+  .hour-metrics {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .total-grid {
+    grid-template-columns: 1fr;
+  }
+}

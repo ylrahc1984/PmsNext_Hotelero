@@ -418,6 +418,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         const cod = extractCodReserva(res);
         if (!cod) {
           this.creandoBorrador = false;
+          console.warn('[ReservaCreate] Crear borrador sin codReserva. Response:', res);
           this.showAlert('Error', 'No se recibió el código de reserva al crear el borrador.', 'error');
           return;
         }
@@ -431,6 +432,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       },
       error: (err) => {
         this.creandoBorrador = false;
+        console.error('[ReservaCreate] Crear borrador error:', err);
         this.logHttpError('Crear borrador', err, { payload });
         this.showAlert('Error', 'No se pudo crear el borrador de la reserva.', 'error');
       }
@@ -788,7 +790,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     this.ensureDetallePaxDefaults();
     this.showDetalleModal = true;
     if (!this.servicios.length) {
-      this.cargarServicios();
+      this.cargarServicios('TRANS');
     }
   }
 
@@ -818,9 +820,11 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     this.actividadForm = buildInitialActividadDetalleForm();
     this.editingActividadId = null;
     this.showActividadModal = true;
+    /*
     if (!this.servicios.length) {
-      this.cargarServicios();
+      this.cargarServicios('TOURS');
     }
+      */
   }
 
   /**
@@ -1606,9 +1610,9 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
   /**
    * Carga catálogo de servicios para el selector del modal de detalle.
    */
-  cargarServicios(): void {
+  cargarServicios(CentroCosto:string ): void {
     this.serviciosLoading = true;
-    this.serviciosService.getServicios(1, 1, 200).subscribe({
+    this.serviciosService.getServicios(1, 1, 200, CentroCosto).subscribe({
       next: (res) => {
         this.servicios = res.data ?? [];
         this.serviciosLoading = false;

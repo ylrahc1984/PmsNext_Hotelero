@@ -1,0 +1,198 @@
+<div class="row">
+  <div class="col-12">
+    <app-card cardTitle="Asignacion de listas de precios por cliente">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div class="text-muted">
+          Selecciona un cliente para administrar sus listas de precios.
+        </div>
+        <a class="btn btn-outline-secondary" routerLink="/comercial/listas-precios">
+          <i class="feather icon-arrow-left"></i>
+          Volver a listas
+        </a>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-lg-5">
+          <div class="border rounded p-3 h-100">
+            <div class="mb-3">
+              <label class="form-label">Buscar cliente</label>
+              <input
+                type="text"
+                class="form-control"
+                [(ngModel)]="filterNombreCliente"
+                placeholder="Nombre o codigo"
+                (keyup.enter)="onBuscarClientes()"
+              >
+            </div>
+            <div class="d-flex justify-content-end mb-3">
+              <button class="btn btn-outline-secondary me-2" (click)="onLimpiarClientes()" [disabled]="isLoadingClientes">
+                Limpiar
+              </button>
+              <button class="btn btn-primary" (click)="onBuscarClientes()" [disabled]="isLoadingClientes">
+                Buscar
+              </button>
+            </div>
+
+            <div class="table-responsive clientes-table">
+              <table class="table table-hover mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>Codigo</th>
+                    <th>Nombre</th>
+                    <th>Tipo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    *ngFor="let cliente of filteredClientes"
+                    (click)="seleccionarCliente(cliente)"
+                    [class.table-active]="cliente.codigo === selectedCliente?.codigo"
+                  >
+                    <td><span class="badge bg-light text-dark">{{ cliente.codigo }}</span></td>
+                    <td>{{ cliente.nombre }}</td>
+                    <td>{{ getTipoLabel(cliente.tipoCli) }}</td>
+                  </tr>
+                  <tr *ngIf="!isLoadingClientes && filteredClientes.length === 0">
+                    <td colspan="3" class="text-center text-muted py-3">
+                      No se encontraron clientes.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="row mt-3 align-items-center" *ngIf="totalPages > 0">
+              <div class="col-md-6 text-muted">
+                Pagina {{ currentPage }} de {{ totalPages }} ({{ totalRegistros }} registros)
+              </div>
+              <div class="col-md-3 text-center">
+                <select
+                  class="form-select form-select-sm d-inline-block w-auto"
+                  [(ngModel)]="pageSize"
+                  (change)="onPageSizeChange()"
+                  [disabled]="isLoadingClientes"
+                >
+                  <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }} por pagina</option>
+                </select>
+              </div>
+              <div class="col-md-3 text-end">
+                <div class="btn-group" role="group">
+                  <button
+                    class="btn btn-outline-secondary btn-sm"
+                    [disabled]="currentPage === 1 || isLoadingClientes"
+                    (click)="goToPageRelative(-1)"
+                  >
+                    Prev
+                  </button>
+                  <button
+                    class="btn btn-outline-secondary btn-sm"
+                    [disabled]="currentPage === totalPages || isLoadingClientes"
+                    (click)="goToPageRelative(1)"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="isLoadingClientes" class="alert alert-light border mt-3">
+              <small class="text-muted">
+                <i class="feather icon-loader me-1"></i>
+                Cargando clientes...
+              </small>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-7">
+          <div class="border rounded p-3 h-100">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+              <div>
+                <div class="fw-semibold">Cliente seleccionado</div>
+                <div class="text-muted" *ngIf="selectedCliente; else sinCliente">
+                  {{ selectedCliente?.codigo }} - {{ selectedCliente?.nombre }}
+                </div>
+                <ng-template #sinCliente>
+                  <div class="text-muted">Seleccione un cliente en la tabla.</div>
+                </ng-template>
+              </div>
+              <button class="btn btn-outline-primary" (click)="loadAsignaciones()" [disabled]="!selectedCliente || isLoadingAsignaciones">
+                <i class="feather icon-refresh-ccw me-1"></i>
+                Recargar
+              </button>
+            </div>
+
+            <div class="row g-2 align-items-end mb-3">
+              <div class="col-md-8">
+                <label class="form-label">Lista de precios</label>
+                <select
+                  class="form-select"
+                  [(ngModel)]="selectedListaCodigo"
+                  [disabled]="!selectedCliente || isLoadingListas"
+                >
+                  <option value="">Seleccione una lista</option>
+                  <option *ngFor="let lista of listasPrecios" [value]="lista.codigo">
+                    {{ lista.codigo }} - {{ lista.descripcion }}
+                  </option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <button
+                  class="btn btn-success w-100"
+                  (click)="asignarLista()"
+                  [disabled]="!selectedCliente || !selectedListaCodigo || isLoadingAsignaciones"
+                >
+                  <i class="feather icon-check me-1"></i>
+                  Asignar
+                </button>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>Codigo Lista</th>
+                    <th>Descripcion</th>
+                    <th>Moneda</th>
+                    <th>Usuario</th>
+                    <th class="text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let asignacion of asignaciones">
+                    <td><span class="badge bg-light text-dark">{{ asignacion.codTari }}</span></td>
+                    <td>{{ getListaDescripcion(asignacion.codTari) }}</td>
+                    <td>{{ getListaMoneda(asignacion.codTari) }}</td>
+                    <td>{{ asignacion.usuario || '-' }}</td>
+                    <td class="text-center">
+                      <button
+                        class="btn btn-sm btn-outline-danger"
+                        (click)="quitarAsignacion(asignacion)"
+                        [disabled]="isLoadingAsignaciones"
+                      >
+                        <i class="feather icon-trash"></i>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="!isLoadingAsignaciones && asignaciones.length === 0">
+                    <td colspan="5" class="text-center text-muted py-3">
+                      No hay listas asignadas a este cliente.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div *ngIf="isLoadingAsignaciones" class="alert alert-light border mt-3">
+              <small class="text-muted">
+                <i class="feather icon-loader me-1"></i>
+                Cargando asignaciones...
+              </small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </app-card>
+  </div>
+</div>

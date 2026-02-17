@@ -63,7 +63,7 @@ export class ListaPickupFormComponent implements OnInit {
             icon: 'warning'
           });
           this.isLoading = false;
-          this.router.navigate(['/catalogos/lista-pickup']);
+          this.router.navigate(['/operaciones/lista-pickup']);
           return;
         }
 
@@ -123,7 +123,7 @@ export class ListaPickupFormComponent implements OnInit {
           text: message,
           icon: 'success'
         });
-        this.router.navigate(['/catalogos/lista-pickup']);
+        this.router.navigate(['/operaciones/lista-pickup']);
       },
       error: (error) => {
         const message = error?.message || 'No se pudo guardar el pickup.';
@@ -138,7 +138,7 @@ export class ListaPickupFormComponent implements OnInit {
   }
 
   cancelar(): void {
-    this.router.navigate(['/catalogos/lista-pickup']);
+    this.router.navigate(['/operaciones/lista-pickup']);
   }
 
   onEstadoToggle(checked: boolean): void {

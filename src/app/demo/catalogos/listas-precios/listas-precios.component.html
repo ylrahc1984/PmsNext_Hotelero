@@ -1,6 +1,13 @@
 <div class="row">
   <div class="col-12">
-    <app-card cardTitle="Listas de Precios">
+    <app-card cardTitle="Listas de Precios" [customHeader]="true">
+      <div class="app-card-header d-flex justify-content-between align-items-center w-100">
+        <h5 class="mb-0">Listas de Precios</h5>
+        <button class="btn btn-primary app-action-btn app-action-btn--primary" (click)="openForm()" [disabled]="isLoading">
+          <span class="app-action-btn__icon"><i class="feather icon-plus"></i></span>
+          Crear
+        </button>
+      </div>
       <div class="row mb-3 align-items-end">
         <div class="col-md-4">
           <label class="form-label">Descripcion</label>
@@ -35,9 +42,9 @@
           <button class="btn btn-primary me-2" (click)="onBuscar()" [disabled]="isLoading">
             Buscar
           </button>
-          <button class="btn btn-success" (click)="openForm()" [disabled]="isLoading">
-            <i class="feather icon-plus me-1"></i>
-            Crear
+          <button class="btn btn-outline-primary me-2" (click)="openAsignaciones()" [disabled]="isLoading">
+            <i class="feather icon-users me-1"></i>
+            Asignaciones
           </button>
         </div>
       </div>
