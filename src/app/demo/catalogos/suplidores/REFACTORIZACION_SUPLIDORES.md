@@ -244,7 +244,7 @@ Choferes del Suplidor: Transportes Express (SUP001)
 
 ### **Gestión de Vehículos**
 ```
-1. Usuario navega a /catalogos/suplidores
+1. Usuario navega a /comercial/suplidores
 2. Usuario ve listado de suplidores
 3. Usuario hace clic en botón [Vehículos] 🚐
    ↓
@@ -273,7 +273,7 @@ Choferes del Suplidor: Transportes Express (SUP001)
 
 ### **Gestión de Choferes**
 ```
-1. Usuario navega a /catalogos/suplidores
+1. Usuario navega a /comercial/suplidores
 2. Usuario hace clic en botón [Choferes] 👤
    ↓
 3. Se abre modal con choferes del suplidor

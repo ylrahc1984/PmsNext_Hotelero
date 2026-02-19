@@ -93,7 +93,7 @@ export class ListaPrecioFormComponent implements OnInit {
             icon: 'warning'
           });
           this.isLoading = false;
-          this.router.navigate(['/comercial/listas-precios']);
+          this.router.navigate(['/catalogos/listas-precios']);
           return;
         }
         this.form.patchValue({
@@ -163,7 +163,7 @@ export class ListaPrecioFormComponent implements OnInit {
             text: 'Lista de precios actualizada correctamente.',
             icon: 'success'
           });
-          this.router.navigate(['/comercial/listas-precios']);
+          this.router.navigate(['/catalogos/listas-precios']);
         },
         error: (error) => {
           console.error('Error al actualizar lista de precios:', error);
@@ -186,7 +186,7 @@ export class ListaPrecioFormComponent implements OnInit {
           text: 'Lista de precios creada correctamente.',
           icon: 'success'
         });
-        this.router.navigate(['/comercial/listas-precios']);
+        this.router.navigate(['/catalogos/listas-precios']);
       },
       error: (error) => {
         console.error('Error al crear lista de precios:', error);
@@ -201,7 +201,7 @@ export class ListaPrecioFormComponent implements OnInit {
   }
 
   cancelar() {
-    this.router.navigate(['/comercial/listas-precios']);
+    this.router.navigate(['/catalogos/listas-precios']);
   }
 
   get isVigente() {

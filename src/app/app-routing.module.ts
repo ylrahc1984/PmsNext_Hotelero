@@ -139,57 +139,80 @@ const routes: Routes = [
     children: [
       {
         path: 'servicios',
-        loadComponent: () => import('./demo/catalogos/servicios/servicios.component').then((c) => c.ServiciosComponent)
+        redirectTo: '/catalogos/servicios',
+        pathMatch: 'full'
       },
       {
         path: 'servicios/nuevo',
-        loadComponent: () => import('./demo/catalogos/servicios/servicio-form.component').then((c) => c.ServicioFormComponent)
+        redirectTo: '/catalogos/servicios/nuevo',
+        pathMatch: 'full'
       },
       {
         path: 'servicios/editar/:codReceta',
-        loadComponent: () => import('./demo/catalogos/servicios/servicio-form.component').then((c) => c.ServicioFormComponent)
+        redirectTo: '/catalogos/servicios/editar/:codReceta',
+        pathMatch: 'full'
       },
       {
         path: 'listas-precios',
-        loadComponent: () => import('./demo/catalogos/listas-precios/listas-precios.component').then((c) => c.ListasPreciosComponent)
+        redirectTo: '/catalogos/listas-precios',
+        pathMatch: 'full'
       },
       {
         path: 'listas-precios/asignaciones',
-        loadComponent: () =>
-          import('./demo/catalogos/listas-precios/listas-precios-asignaciones.component').then((c) => c.ListasPreciosAsignacionesComponent)
+        redirectTo: '/catalogos/listas-precios/asignaciones',
+        pathMatch: 'full'
       },
       {
         path: 'listas-precios/nuevo',
-        loadComponent: () => import('./demo/catalogos/listas-precios/lista-precio-form.component').then((c) => c.ListaPrecioFormComponent)
+        redirectTo: '/catalogos/listas-precios/nuevo',
+        pathMatch: 'full'
       },
       {
         path: 'listas-precios/:id/editar',
-        loadComponent: () => import('./demo/catalogos/listas-precios/lista-precio-form.component').then((c) => c.ListaPrecioFormComponent)
+        redirectTo: '/catalogos/listas-precios/:id/editar',
+        pathMatch: 'full'
       },
       {
         path: 'listas-precios/:id/detalle',
-        loadComponent: () => import('./demo/catalogos/listas-precios/lista-precio-detalle.component').then((c) => c.ListaPrecioDetalleComponent)
+        redirectTo: '/catalogos/listas-precios/:id/detalle',
+        pathMatch: 'full'
       },
       {
         path: 'detalle-lista-precio-v2/:codLstPrecio',
-        loadComponent: () => import('./demo/catalogos/listas-precios/detalle-lista-precio-v2.component').then((c) => c.DetalleListaPrecioV2Component)
+        redirectTo: '/catalogos/detalle-lista-precio-v2/:codLstPrecio',
+        pathMatch: 'full'
       },
       {
         path: 'agencias',
-        loadComponent: () => import('./demo/catalogos/agencias-comisionistas/agencias-comisionistas.component').then((c) => c.AgenciasComisionistasComponent)
+        redirectTo: '/catalogos/clientes',
+        pathMatch: 'full'
       },
       {
         path: 'agencias/nuevo',
-        loadComponent: () => import('./demo/catalogos/agencias-comisionistas/cliente-form.component').then((c) => c.ClienteFormComponent)
+        redirectTo: '/catalogos/clientes/nuevo',
+        pathMatch: 'full'
       },
       {
         path: 'agencias/:codigo/editar',
-        loadComponent: () => import('./demo/catalogos/agencias-comisionistas/cliente-form.component').then((c) => c.ClienteFormComponent)
+        redirectTo: '/catalogos/clientes/:codigo/editar',
+        pathMatch: 'full'
       },
       {
         path: 'agencias/:codigo/detalle',
-        loadComponent: () => import('./demo/catalogos/agencias-comisionistas/cliente-form.component').then((c) => c.ClienteFormComponent),
-        data: { readOnly: true }
+        redirectTo: '/catalogos/clientes/:codigo/detalle',
+        pathMatch: 'full'
+      },
+      {
+        path: 'suplidores',
+        loadComponent: () => import('./demo/catalogos/suplidores/suplidores.component').then((c) => c.SuplidoresComponent)
+      },
+      {
+        path: 'suplidores/nuevo',
+        loadComponent: () => import('./demo/catalogos/suplidores/suplidor-form.component').then((c) => c.SuplidorFormComponent)
+      },
+      {
+        path: 'suplidores/editar/:codSuplidor',
+        loadComponent: () => import('./demo/catalogos/suplidores/suplidor-form.component').then((c) => c.SuplidorFormComponent)
       }
     ]
   },
@@ -206,44 +229,24 @@ const routes: Routes = [
     ]
   },
   {
-    canActivate: [AuthGuard],
-    canActivateChild: [AuthGuard],
     path: 'cuentas-cobrar',
-    component: AdminComponent,
-    children: [
-      {
-        path: '',
-        loadComponent: () => import('./demo/contabilidad/cuentas-cobrar/cuentas-cobrar.component').then((c) => c.CuentasCobrarComponent)
-      }
-    ]
+    redirectTo: 'finanzas/cuentas-cobrar',
+    pathMatch: 'full'
   },
   {
-    canActivate: [AuthGuard],
-    canActivateChild: [AuthGuard],
     path: 'cuentas-pagar',
-    component: AdminComponent,
-    children: [
-      {
-        path: '',
-        loadComponent: () => import('./demo/contabilidad/cuentas-pagar/cuentas-pagar.component').then((c) => c.CuentasPagarComponent)
-      }
-    ]
+    redirectTo: 'finanzas/cuentas-pagar',
+    pathMatch: 'full'
   },
   {
-    canActivate: [AuthGuard],
-    canActivateChild: [AuthGuard],
     path: 'facturas',
-    component: AdminComponent,
-    children: [
-      {
-        path: '',
-        loadComponent: () => import('./demo/contabilidad/facturas/facturas.component').then((c) => c.FacturasComponent)
-      },
-      {
-        path: 'nueva',
-        loadComponent: () => import('./demo/contabilidad/facturas/factura-form.component').then((c) => c.FacturaFormComponent)
-      }
-    ]
+    redirectTo: 'finanzas/facturas',
+    pathMatch: 'full'
+  },
+  {
+    path: 'facturas/nueva',
+    redirectTo: 'finanzas/facturas/nueva',
+    pathMatch: 'full'
   },
   {
     canActivate: [AuthGuard],
@@ -274,24 +277,19 @@ const routes: Routes = [
     ]
   },
   {
-    canActivate: [AuthGuard],
-    canActivateChild: [AuthGuard],
     path: 'servicios',
-    component: AdminComponent,
-    children: [
-      {
-        path: '',
-        loadComponent: () => import('./demo/catalogos/servicios/servicios.component').then((c) => c.ServiciosComponent)
-      },
-      {
-        path: 'nuevo',
-        loadComponent: () => import('./demo/catalogos/servicios/servicio-form.component').then((c) => c.ServicioFormComponent)
-      },
-      {
-        path: 'editar/:codReceta',
-        loadComponent: () => import('./demo/catalogos/servicios/servicio-form.component').then((c) => c.ServicioFormComponent)
-      }
-    ]
+    redirectTo: 'catalogos/servicios',
+    pathMatch: 'full'
+  },
+  {
+    path: 'servicios/nuevo',
+    redirectTo: 'catalogos/servicios/nuevo',
+    pathMatch: 'full'
+  },
+  {
+    path: 'servicios/editar/:codReceta',
+    redirectTo: 'catalogos/servicios/editar/:codReceta',
+    pathMatch: 'full'
   },
   {
     canActivate: [AuthGuard],
@@ -299,6 +297,18 @@ const routes: Routes = [
     path: 'catalogos',
     component: AdminComponent,
     children: [
+      {
+        path: 'servicios',
+        loadComponent: () => import('./demo/catalogos/servicios/servicios.component').then((c) => c.ServiciosComponent)
+      },
+      {
+        path: 'servicios/nuevo',
+        loadComponent: () => import('./demo/catalogos/servicios/servicio-form.component').then((c) => c.ServicioFormComponent)
+      },
+      {
+        path: 'servicios/editar/:codReceta',
+        loadComponent: () => import('./demo/catalogos/servicios/servicio-form.component').then((c) => c.ServicioFormComponent)
+      },
       {
         path: 'listas-precios',
         loadComponent: () => import('./demo/catalogos/listas-precios/listas-precios.component').then((c) => c.ListasPreciosComponent)
@@ -352,18 +362,6 @@ const routes: Routes = [
       {
         path: 'lista-pickup/:id/editar',
         loadComponent: () => import('./demo/catalogos/lista-pickup/lista-pickup-form.component').then((c) => c.ListaPickupFormComponent)
-      },
-      {
-        path: 'suplidores',
-        loadComponent: () => import('./demo/catalogos/suplidores/suplidores.component').then((c) => c.SuplidoresComponent)
-      },
-      {
-        path: 'suplidores/nuevo',
-        loadComponent: () => import('./demo/catalogos/suplidores/suplidor-form.component').then((c) => c.SuplidorFormComponent)
-      },
-      {
-        path: 'suplidores/editar/:codSuplidor',
-        loadComponent: () => import('./demo/catalogos/suplidores/suplidor-form.component').then((c) => c.SuplidorFormComponent)
       }
     ]
   },
@@ -399,32 +397,32 @@ const routes: Routes = [
   },
   {
     path: 'suplidores',
-    redirectTo: 'compras/proveedores',
+    redirectTo: 'comercial/suplidores',
     pathMatch: 'full'
   },
   {
     path: 'suplidores/nuevo',
-    redirectTo: 'compras/proveedores/nuevo',
+    redirectTo: 'comercial/suplidores/nuevo',
     pathMatch: 'full'
   },
   {
-    path: 'suplidores/editar/:codProve',
-    redirectTo: 'compras/proveedores/editar/:codProve',
+    path: 'suplidores/editar/:codSuplidor',
+    redirectTo: 'comercial/suplidores/editar/:codSuplidor',
     pathMatch: 'full'
   },
   {
     path: 'catalogos/suplidores',
-    redirectTo: 'compras/proveedores',
+    redirectTo: 'comercial/suplidores',
     pathMatch: 'full'
   },
   {
     path: 'catalogos/suplidores/nuevo',
-    redirectTo: 'compras/proveedores/nuevo',
+    redirectTo: 'comercial/suplidores/nuevo',
     pathMatch: 'full'
   },
   {
-    path: 'catalogos/suplidores/editar/:codProve',
-    redirectTo: 'compras/proveedores/editar/:codProve',
+    path: 'catalogos/suplidores/editar/:codSuplidor',
+    redirectTo: 'comercial/suplidores/editar/:codSuplidor',
     pathMatch: 'full'
   },
   {
@@ -538,15 +536,8 @@ const routes: Routes = [
   },
   {
     path: 'recibos',
-    component: AdminComponent,
-    children: [
-      {
-        canActivate: [AuthGuard],
-        canActivateChild: [AuthGuard],
-        path: '',
-        loadComponent: () => import('./demo/contabilidad/recibos/recibos.component').then((c) => c.RecibosComponent)
-      }
-    ]
+    redirectTo: 'finanzas/recibos',
+    pathMatch: 'full'
   },
   {
     path: 'administracion',

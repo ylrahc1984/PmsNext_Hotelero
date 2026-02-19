@@ -680,7 +680,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
 
   // Navega al listado principal de listas de precios.
   volverAListas(): void {
-    this.router.navigate(['/comercial/listas-precios']);
+    this.router.navigate(['/catalogos/listas-precios']);
   }
 
   // Lee descripcion desde query params o history state.

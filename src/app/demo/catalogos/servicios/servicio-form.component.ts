@@ -172,7 +172,7 @@ export class ServicioFormComponent implements OnInit {
             icon: 'warning'
           });
           this.isLoading = false;
-          this.router.navigate(['/comercial/servicios']);
+          this.router.navigate(['/catalogos/servicios']);
           return;
         }
         this.applyServicio(servicio);
@@ -303,7 +303,7 @@ export class ServicioFormComponent implements OnInit {
           text: this.isEditing ? 'Servicio actualizado correctamente.' : 'Servicio creado correctamente.',
           icon: 'success'
         });
-        this.router.navigate(['/comercial/servicios']);
+        this.router.navigate(['/catalogos/servicios']);
       },
       error: (error) => {
         console.error('Error al guardar servicio:', error);
@@ -318,6 +318,6 @@ export class ServicioFormComponent implements OnInit {
   }
 
   cancel(): void {
-    this.router.navigate(['/comercial/servicios']);
+    this.router.navigate(['/catalogos/servicios']);
   }
 }

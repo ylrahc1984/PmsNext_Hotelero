@@ -86,7 +86,7 @@ export const NavigationItems: NavigationItem[] = [
             id: 'servicios',
             title: 'Servicios',
             type: 'item',
-            url: '/comercial/servicios',
+            url: '/catalogos/servicios',
             icon: 'feather icon-settings',
             classes: 'nav-item'
           },
@@ -94,7 +94,7 @@ export const NavigationItems: NavigationItem[] = [
             id: 'listas-precios',
             title: 'Listas de Precios',
             type: 'item',
-            url: '/comercial/listas-precios',
+            url: '/catalogos/listas-precios',
             icon: 'feather icon-tag',
             classes: 'nav-item'
           },
@@ -102,7 +102,7 @@ export const NavigationItems: NavigationItem[] = [
             id: 'agencias-comisionistas',
             title: 'Agencias / Comisionistas',
             type: 'item',
-            url: '/comercial/agencias',
+            url: '/catalogos/clientes',
             icon: 'feather icon-briefcase',
             classes: 'nav-item'
           },

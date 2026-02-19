@@ -5,7 +5,7 @@
       <div class="app-card-header">
         <h5>Catalogo de Servicios</h5>
         <div class="card-header-right">
-          <button class="btn btn-primary btn-nuevo-servicio" routerLink="/comercial/servicios/nuevo">
+          <button class="btn btn-primary btn-nuevo-servicio" routerLink="/catalogos/servicios/nuevo">
             <i class="feather icon-plus"></i> Nuevo Servicio
           </button>
         </div>
@@ -71,7 +71,7 @@
                 </span>
               </td>
               <td>
-                <button class="btn btn-sm btn-outline-info" routerLink="/comercial/servicios/editar/{{ servicio.codReceta }}" title="Editar">
+                <button class="btn btn-sm btn-outline-info" routerLink="/catalogos/servicios/editar/{{ servicio.codReceta }}" title="Editar">
                   <i class="feather icon-edit"></i>
                 </button>
                 <button class="btn btn-sm btn-outline-danger ml-2" (click)="deleteServicio(servicio)" title="Eliminar">

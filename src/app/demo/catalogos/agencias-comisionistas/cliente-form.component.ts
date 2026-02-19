@@ -392,7 +392,7 @@ export class ClienteFormComponent implements OnInit {
               text: 'No se encontro el cliente.',
               icon: 'warning'
             });
-            this.router.navigate(['/comercial/agencias']);
+            this.router.navigate(['/catalogos/clientes']);
             return of(null);
           }
           this.tipoIdentificacionOptions = this.mergeSelectedOption(tipoIdentificacion, cliente.tCliente);
@@ -474,7 +474,7 @@ export class ClienteFormComponent implements OnInit {
             text: this.isEditing ? 'Cliente actualizado correctamente.' : 'Cliente creado correctamente.',
             icon: 'success'
           });
-          this.router.navigate(['/comercial/agencias']);
+          this.router.navigate(['/catalogos/clientes']);
         },
         error: (error) => {
           console.error('Error al guardar cliente:', error);
@@ -488,7 +488,7 @@ export class ClienteFormComponent implements OnInit {
   }
 
   cancelForm(): void {
-    this.router.navigate(['/comercial/agencias']);
+    this.router.navigate(['/catalogos/clientes']);
   }
 
   setActividadPrincipal(actividad: { MPV32_CodigoAMH?: string } | null | undefined): void {
