@@ -4,7 +4,7 @@ import { BehaviorSubject, Observable, forkJoin, throwError, of } from 'rxjs';
 import { map, catchError, tap, switchMap } from 'rxjs/operators';
 
 import { environment } from 'src/environments/environment';
-import { ReservaDetalleDisponible } from '../reservas/reservas.service';
+import { ReservaDetalleDisponible } from '../reservas/services/reservas.service';
 
 export type EstadoOrden = 'PEN' | 'ASI' | 'PRO' | 'COM' | 'CAN';
 

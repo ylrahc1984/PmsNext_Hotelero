@@ -7,7 +7,7 @@ import { Subject, Subscription, debounceTime } from 'rxjs';
 import Swal from 'sweetalert2';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
-import { Reserva, ReservasService } from './reservas.service';
+import { Reserva, ReservasService } from '../services/reservas.service';
 import { environment } from 'src/environments/environment';
 
 @Component({
@@ -27,6 +27,8 @@ export class ReservasComponent implements OnInit, OnDestroy {
   currentPage = 1;
   loading = false;
   errorMsg = '';
+  private defaultFechaDesdeValue = '';
+  private defaultFechaHastaValue = '';
 
   private reservasService = inject(ReservasService);
   private router = inject(Router);
@@ -94,39 +96,43 @@ export class ReservasComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.errorMsg = '';
 
-    const fechaInicio = this.toApiDate(this.filtros.fechaDesde);
-    const fechaFin = this.toApiDate(this.filtros.fechaHasta);
     const parametroBusqueda = (this.filtros.termino ?? '').toString().trim();
+    const useConsulta = this.shouldUseConsulta();
 
-    this.reservasService
-      .consultarReservas({
-        fechaInicio,
-        fechaFin,
-        parametroBusqueda: parametroBusqueda || null,
-        pageNumber: this.currentPage,
-        pageSize: this.pageSize
-      })
-      .subscribe({
-        next: (res) => {
-          this.reservas = res.data;
-          this.totalReservas = res.total;
-          this.agencias = Array.from(new Set(this.reservas.map((r) => r.PRV01_CodAgencia).filter(Boolean)));
-          this.applyLocalFilters();
-          this.loading = false;
-        },
-        error: () => {
-          this.errorMsg = 'Error al cargar reservas';
-          this.reservas = [];
-          this.totalReservas = 0;
-          this.filteredReservas = [];
-          this.pagedReservas = [];
-          this.loading = false;
-        }
-      });
+    const request$ = useConsulta
+      ? this.reservasService.consultarReservas({
+          fechaInicio: this.toApiDate(this.filtros.fechaDesde),
+          fechaFin: this.toApiDate(this.filtros.fechaHasta),
+          parametroBusqueda: parametroBusqueda || null,
+          pageNumber: this.currentPage,
+          pageSize: this.pageSize
+        })
+      : this.reservasService.getReservas(this.currentPage, this.pageSize);
+
+    request$.subscribe({
+      next: (res) => {
+        this.reservas = res.data;
+        this.totalReservas = res.total;
+        this.agencias = Array.from(new Set(this.reservas.map((r) => r.PRV01_CodAgencia).filter(Boolean)));
+        this.applyLocalFilters();
+        this.loading = false;
+      },
+      error: () => {
+        this.errorMsg = 'Error al cargar reservas';
+        this.reservas = [];
+        this.totalReservas = 0;
+        this.filteredReservas = [];
+        this.pagedReservas = [];
+        this.loading = false;
+      }
+    });
   }
 
-  changePageSize(size: number): void {
-    this.pageSize = size;
+  changePageSize(size: number | string): void {
+    const next = Number(size);
+    if (Number.isFinite(next) && next > 0) {
+      this.pageSize = next;
+    }
     this.currentPage = 1;
     this.loadReservas();
   }
@@ -152,13 +158,14 @@ export class ReservasComponent implements OnInit, OnDestroy {
   }
 
   get pageStart(): number {
-    return this.totalReservas ? this.pageSize * (this.currentPage - 1) + 1 : 0;
+    if (!this.totalReservas || this.pagedReservas.length === 0) return 0;
+    return this.pageSize * (this.currentPage - 1) + 1;
   }
 
   get pageEnd(): number {
-    if (!this.totalReservas) return 0;
+    if (!this.totalReservas || this.pagedReservas.length === 0) return 0;
     const start = this.pageSize * (this.currentPage - 1);
-    return Math.min(start + this.reservas.length, this.totalReservas);
+    return Math.min(start + this.pagedReservas.length, this.totalReservas);
   }
 
   nuevaReserva(): void {
@@ -303,8 +310,10 @@ export class ReservasComponent implements OnInit, OnDestroy {
   }
 
   private setDefaultFechas(): void {
-    if (!this.filtros.fechaDesde) this.filtros.fechaDesde = this.defaultFechaDesde();
-    if (!this.filtros.fechaHasta) this.filtros.fechaHasta = this.defaultFechaHasta();
+    if (!this.defaultFechaDesdeValue) this.defaultFechaDesdeValue = this.defaultFechaDesde();
+    if (!this.defaultFechaHastaValue) this.defaultFechaHastaValue = this.defaultFechaHasta();
+    if (!this.filtros.fechaDesde) this.filtros.fechaDesde = this.defaultFechaDesdeValue;
+    if (!this.filtros.fechaHasta) this.filtros.fechaHasta = this.defaultFechaHastaValue;
   }
 
   private defaultFechaDesde(): string {
@@ -332,5 +341,14 @@ export class ReservasComponent implements OnInit, OnDestroy {
     const [yyyy, mm, dd] = parts;
     if (!yyyy || !mm || !dd) return null;
     return `${dd}/${mm}/${yyyy}`;
+  }
+
+  private shouldUseConsulta(): boolean {
+    const termino = (this.filtros.termino ?? '').toString().trim();
+    const fechaDesde = (this.filtros.fechaDesde ?? '').toString().trim();
+    const fechaHasta = (this.filtros.fechaHasta ?? '').toString().trim();
+    const fechasDefault = fechaDesde === this.defaultFechaDesdeValue && fechaHasta === this.defaultFechaHastaValue;
+    const hasFechaFilter = (!!fechaDesde || !!fechaHasta) && !fechasDefault;
+    return !!termino || hasFechaFilter;
   }
 }

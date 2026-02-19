@@ -6,7 +6,7 @@ import Swal from 'sweetalert2';
 
 import { AuthService } from 'src/app/core/services/auth.service';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
-import { GooglePlaceSelection, GooglePlacesAutocompleteDirective } from '../../reservas/google-places-autocomplete.directive';
+import { GooglePlaceSelection, GooglePlacesAutocompleteDirective } from '../../reservas/shared/google-places-autocomplete.directive';
 import { ListaPickupService } from './lista-pickup.service';
 
 @Component({

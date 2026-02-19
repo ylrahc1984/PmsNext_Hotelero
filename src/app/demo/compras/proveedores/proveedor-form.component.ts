@@ -6,6 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import Swal from 'sweetalert2';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { ProveedorService, ProveedorUI } from './proveedor.service';
+import { environment } from 'src/environments/environment';
 
 interface ProveedorFormData {
   codigo: string;
@@ -82,7 +83,8 @@ export class ProveedorFormComponent implements OnInit {
   }
 
   private loadTipCedula(): void {
-    const apiUrl = 'http://localhost:5000/api/tipoidentificacion';
+
+    const apiUrl = `${environment.apiUrl}/tipoidentificacion`;
     this.http.get<Array<{ CA24_Codigo: string; CA24_Tipo: string }> | null>(apiUrl).subscribe({
       next: (response) => {
         const data = response ?? [];
@@ -99,7 +101,7 @@ export class ProveedorFormComponent implements OnInit {
   }
 
   private loadTipoProveedor(): void {
-    const apiUrl = 'http://localhost:5000/api/tipoproveedor';
+    const apiUrl = `${environment.apiUrl}/tipoproveedor`;
     this.http.get<Array<{ CAC01_CodTipo: string; CAC01_TipoProve: string }> | null>(apiUrl).subscribe({
       next: (response) => {
         const data = response ?? [];

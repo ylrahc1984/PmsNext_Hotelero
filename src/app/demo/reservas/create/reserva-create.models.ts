@@ -63,6 +63,8 @@ export interface ActividadDetalle {
 }
 
 export interface ActividadDetalleForm {
+  codPlan?: string;
+  codLstPrecio?: string;
   codServicio: string;
   nomServicio: string;
   tipoServicio: string;
@@ -79,6 +81,8 @@ export interface ActividadDetalleForm {
 
 // No se usa DetalleForm para la API, pero se mantiene para el modal local
 export interface DetalleForm {
+  codPlan?: string;
+  codLstPrecio?: string;
   codServicio: string;
   nomServicio: string;
   tipoServicio: string;

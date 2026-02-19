@@ -1,6 +1,6 @@
 import { AfterViewInit, Directive, ElementRef, EventEmitter, Input, NgZone, OnDestroy, Output } from '@angular/core';
 
-import { GoogleMapsLoaderService } from './google-maps-loader.service';
+import { GoogleMapsLoaderService } from '../services/google-maps-loader.service';
 
 declare const window: any;
 

@@ -8,28 +8,28 @@ import Swal from 'sweetalert2';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { AuthService } from 'src/app/core/services/auth.service';
-import { ReservasService } from './reservas.service';
-import { ReservaDetalle } from './reserva-detalle.service';
-import { DetallePax, DetalleToursCompletoService } from './detalle-tours-completo.service';
+import { ReservasService } from '../services/reservas.service';
+import { ReservaDetalle } from '../services/reserva-detalle.service';
+import { DetallePax, DetalleToursCompletoService } from '../services/detalle-tours-completo.service';
 import { CanDeactivateReservaCreate } from 'src/app/core/guards/can-deactivate-reserva-create.guard';
-import { FormaPagoService } from '../administracion/forma-pago/forma-pago.service';
-import { FormaPago } from '../administracion/forma-pago/forma-pago.models';
-import { MonedaService, MonedaUI } from '../administracion/monedas/moneda.service';
+import { FormaPagoService } from '../../administracion/forma-pago/forma-pago.service';
+import { FormaPago } from '../../administracion/forma-pago/forma-pago.models';
+import { MonedaService, MonedaUI } from '../../administracion/monedas/moneda.service';
 
 // Tarifa
-import { ListaPrecioService } from '../catalogos/listas-precios/lista-precio.service';
-import { PlanesTarifasService, PlanTarifaUI } from '../catalogos/listas-precios/planes-tarifas.service';
+import { ListaPrecioService } from '../../catalogos/listas-precios/lista-precio.service';
+import { PlanesTarifasService, PlanTarifaUI } from '../../catalogos/listas-precios/planes-tarifas.service';
 
 // Tarifa models
-import { ListaPrecioUI } from '../catalogos/listas-precios/lista-precio.models';
+import { ListaPrecioUI } from '../../catalogos/listas-precios/lista-precio.models';
 
-import { ClienteService } from '../catalogos/agencias-comisionistas/cliente.service';
-import { ClienteUI } from '../catalogos/agencias-comisionistas/cliente.models';
-import { ServiciosService, ServicioUI } from '../catalogos/servicios/servicios.service';
-import { IdiomasService } from '../catalogos/idiomas/idiomas.service';
-import { IdiomaDto } from '../catalogos/idiomas/idiomas.models';
-import { FormaReservasService } from '../catalogos/forma-reservas/forma-reservas.service';
-import { FormaReservaDto } from '../catalogos/forma-reservas/forma-reservas.models';
+import { ClienteService } from '../../catalogos/agencias-comisionistas/cliente.service';
+import { ClienteUI } from '../../catalogos/agencias-comisionistas/cliente.models';
+import { ServiciosService, ServicioUI } from '../../catalogos/servicios/servicios.service';
+import { IdiomasService } from '../../catalogos/idiomas/idiomas.service';
+import { IdiomaDto } from '../../catalogos/idiomas/idiomas.models';
+import { FormaReservasService } from '../../catalogos/forma-reservas/forma-reservas.service';
+import { FormaReservaDto } from '../../catalogos/forma-reservas/forma-reservas.models';
 
 import { showAlertWithFocusRestore } from './reserva-create.alert';
 import { buildInitialActividadDetalleForm, buildInitialDetalleForm, buildInitialReservaCreateForm } from './reserva-create.builders';
@@ -48,7 +48,7 @@ import {
   toDateInputValue
 } from './reserva-create.utils';
 import { ReservaCreateTarifaService, ReglaTarifaPaxAplicada, ModoPrecio } from './reserva-create.tarifa.service';
-import { TipoPaxService, TipoPaxUI } from './tipo-pax.service';
+import { TipoPaxService, TipoPaxUI } from '../services/tipo-pax.service';
 import { ReservaCreateClienteModalComponent } from './reserva-create-cliente-modal.component';
 import { ReservaCreateDetalleModalComponent } from './reserva-create-detalle-modal.component';
 import { ActividadModalSavePayload, ReservaCreateActividadModalComponent } from './reserva-create-actividad-modal.component';
@@ -95,7 +95,6 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
   showClienteModal = false;
   selectedCliente: ClienteUI | null = null;
   serviciosLoading = false;
-  tarifaLocked = false;
   directoUpdating = false;
 
   private reservasService = inject(ReservasService);
@@ -114,6 +113,11 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
   private idiomasService = inject(IdiomasService);
   private formaReservasService = inject(FormaReservasService);
 
+  private lastDetalleCodPlan = '';
+  private lastDetalleCodLstPrecio = '';
+  private lastActividadCodPlan = '';
+  private lastActividadCodLstPrecio = '';
+
   private isLikelyPlaceId(value: unknown): boolean {
     const v = safeString(value).trim();
     if (!v) return false;
@@ -121,6 +125,27 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     if (/\s|,/.test(v)) return false;
     if (v.length < 10) return false;
     return v.startsWith('ChI') || v.startsWith('GhI') || v.startsWith('E') || v.startsWith('g');
+  }
+
+  private resolveDefaultPlanId(): string {
+    const plan = (this.planesTarifas ?? [])[0];
+    return plan ? String(plan.planId) : '';
+  }
+
+  private resolveDefaultListaPrecio(): string {
+    const lista = (this.listaPrecios ?? [])[0];
+    return lista ? String(lista.codigo) : '';
+  }
+
+  private updateHeaderTarifaSnapshot(codPlan: string, codLstPrecio: string): void {
+    const plan = (codPlan || '').toString().trim();
+    const lista = (codLstPrecio || '').toString().trim();
+    if (plan) {
+      this.form.codPlan = plan;
+    }
+    if (lista) {
+      this.form.codLstPrecio = lista;
+    }
   }
 
   
@@ -181,9 +206,6 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     }
   }
 
-  private actualizarEstadoTarifario(): void {
-    this.tarifaLocked = this.detalles.length > 0;
-  }
 
   /// Carga catálogo de formas de pago para reservaciones y establece un valor por defecto (priorizando el primer registro).
   private cargarFormasPago(): void {
@@ -504,7 +526,6 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
           ...item,
           detallesPax: (paxList ?? []).filter((pax) => Number(pax?.PRV03_PRV02_ID) === Number(item?.PRV02_ID))
         }));
-        this.actualizarEstadoTarifario();
         this.loading = false;
       },
       error: (err) => {
@@ -642,10 +663,10 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     return normalized !== 'CHL';
   }
 
-  private getModoPrecioPorPlan(): ModoPrecio {
-    const planId = Number(this.form.codPlan ?? 0) || 0;
-    if (!planId) return 'R';
-    const plan = (this.planesTarifas ?? []).find((item) => Number(item?.planId ?? 0) === planId);
+  private getModoPrecioPorPlan(planId: number): ModoPrecio {
+    const normalized = Number(planId ?? 0) || 0;
+    if (!normalized) return 'R';
+    const plan = (this.planesTarifas ?? []).find((item) => Number(item?.planId ?? 0) === normalized);
     const tipo = (plan?.tipoTarifa || '').toString().trim().toUpperCase();
     return tipo === 'N' ? 'N' : 'R';
   }
@@ -736,8 +757,13 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       const origenDireccionGoogle = origenGoogleText || (!this.isLikelyPlaceId(apiOrigenPlaceId) ? apiOrigenPlaceId : '');
       const destinoDireccionGoogle = destinoGoogleText || (!this.isLikelyPlaceId(apiDestinoPlaceId) ? apiDestinoPlaceId : '');
       const detallesPaxForm = this.mapDetallePaxFromApi(detalle.detallesPax ?? []);
+      const detalleListaPrecio = safeString((detalle as any).PRV02_CodLstPrecio);
+      const defaultPlan = this.lastDetalleCodPlan || this.form.codPlan || this.resolveDefaultPlanId();
+      const defaultLista = detalleListaPrecio || this.lastDetalleCodLstPrecio || this.form.codLstPrecio || this.resolveDefaultListaPrecio();
       this.detalleForm = {
         ...baseForm,
+        codPlan: defaultPlan,
+        codLstPrecio: defaultLista,
         codServicio: detalle.PRV02_CodServicio || '',
         nomServicio: detalle.PRV02_NomServicio || '',
         tipoServicio: detalle.PRV02_TipoServicio || '',
@@ -767,6 +793,8 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       this.editingDetalleId = detalle.PRV02_ID;
     } else {
       this.detalleForm = buildInitialDetalleForm();
+      this.detalleForm.codPlan = this.lastDetalleCodPlan || this.form.codPlan || this.resolveDefaultPlanId();
+      this.detalleForm.codLstPrecio = this.lastDetalleCodLstPrecio || this.form.codLstPrecio || this.resolveDefaultListaPrecio();
       this.editingDetalleId = null;
       // this.recalcularCosto(); // El cálculo se puede hacer al guardar
     }
@@ -803,6 +831,8 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     }
 
     this.actividadForm = buildInitialActividadDetalleForm();
+    this.actividadForm.codPlan = this.lastActividadCodPlan || this.form.codPlan || this.resolveDefaultPlanId();
+    this.actividadForm.codLstPrecio = this.lastActividadCodLstPrecio || this.form.codLstPrecio || this.resolveDefaultListaPrecio();
     this.editingActividadId = null;
     this.showActividadModal = true;
     /*
@@ -845,6 +875,17 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       this.crearBorrador();
       return;
     }
+
+    const codLstPrecio = (saveData?.codLstPrecio || '').toString().trim();
+    const codPlan = (saveData?.codPlan || '').toString().trim();
+    if (!codLstPrecio) {
+      this.showAlert('Atención', 'Seleccione una lista de precios en el encabezado del modal de actividades.', 'warning');
+      return;
+    }
+
+    this.lastActividadCodLstPrecio = codLstPrecio;
+    this.lastActividadCodPlan = codPlan;
+    this.updateHeaderTarifaSnapshot(codPlan, codLstPrecio);
 
     const payloadItems = (saveData?.payload ?? []).filter((item) => {
       const monto = Number(item?.montoServicio ?? 0) || 0;
@@ -905,7 +946,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
           adultos: Number(item.adultos ?? 0) || 0,
           ninos: Number(item.ninos ?? 0) || 0,
           totalPax,
-          codLstPrecio: this.form.codLstPrecio || '',
+          codLstPrecio,
           idReglaPrecio: Number(item.reglaPrecioID ?? 0) || 0,
           precioAdulto,
           precioNino,
@@ -995,6 +1036,21 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       return;
     }
 
+    const codPlan = (this.detalleForm.codPlan || '').toString().trim();
+    const codLstPrecio = (this.detalleForm.codLstPrecio || '').toString().trim();
+    if (!codPlan) {
+      this.showAlert('Atención', 'Seleccione un plan tarifario en el encabezado del modal.', 'warning');
+      return;
+    }
+    if (!codLstPrecio) {
+      this.showAlert('Atención', 'Seleccione una lista de precios en el encabezado del modal.', 'warning');
+      return;
+    }
+
+    this.lastDetalleCodPlan = codPlan;
+    this.lastDetalleCodLstPrecio = codLstPrecio;
+    this.updateHeaderTarifaSnapshot(codPlan, codLstPrecio);
+
     try {
       const reglaAplicada = await this.applyReglaTarifaToDetalleForm();
       if (!reglaAplicada && !this.allowManualPricing) {
@@ -1069,7 +1125,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       adultos,
       ninos,
       totalPax,
-      codLstPrecio: this.form.codLstPrecio || '',
+      codLstPrecio,
       idReglaPrecio,
       precioAdulto: precioAdulto || 0,
       precioNino: precioNino || 0,
@@ -1930,20 +1986,6 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     });
   }
 
-  /**
-   * Handler cuando cambia la lista de precios en el encabezado:
-   * - Limpia caché de reglas tarifarias.
-   * - Si el modal de detalle está abierto, recalcula costo con la nueva lista.
-   */
-  onListaPrecioChange(): void {
-    this.tarifaService.clearCache();
-    this.allowManualPricing = false;
-    this.reglaTarifaError = '';
-    if (this.showDetalleModal) {
-      this.recalcularCosto();
-    }
-  }
-
   onDirectoSwitchChange(event: Event): void {
     const input = event.target as HTMLInputElement | null;
     if (!input) return;
@@ -2003,13 +2045,9 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
   }
 
   /**
-   * Handler cuando cambia el plan tarifario:
-   * - Limpia errores y recalcula si el modal está abierto.
+   * Handler cuando cambia el contexto tarifario dentro del modal de detalle.
    */
-  onPlanTarifaChange(): void {
-    if (this.tarifaLocked) {
-      return;
-    }
+  onDetalleTarifaContextChange(): void {
     this.allowManualPricing = false;
     this.reglaTarifaError = '';
     if (this.showDetalleModal) {
@@ -2024,8 +2062,8 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
   private async applyReglaTarifaToDetalleForm(): Promise<boolean> {
     if (!this.showDetalleModal) return false;
 
-    const planId = Number(this.form.codPlan ?? 0) || 0;
-    const codLstPrecio = (this.form.codLstPrecio || '').trim();
+    const planId = Number(this.detalleForm.codPlan ?? 0) || 0;
+    const codLstPrecio = (this.detalleForm.codLstPrecio || '').trim();
     const codServicio = (this.detalleForm.codServicio || '').trim();
     const detallesPax = this.getDetallePaxItemsForTarifa();
 
@@ -2041,7 +2079,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       return false;
     }
 
-    const modoPrecio = this.getModoPrecioPorPlan();
+    const modoPrecio = this.getModoPrecioPorPlan(planId);
     const horaReferencia = (this.detalleForm.horaPickup || this.detalleForm.horaInicio || '').trim();
     const result = await this.tarifaService.applyReglaTarifaPorTipos({
       planId,

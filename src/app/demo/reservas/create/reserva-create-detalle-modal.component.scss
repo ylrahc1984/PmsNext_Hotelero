@@ -41,7 +41,7 @@
 
 .rsv-modal__body {
   background: var(--bs-body-bg);
-  padding: 12px 16px 14px;
+  padding: 10px 16px 12px;
   max-height: calc(100vh - 150px);
   overflow-y: auto;
 }
@@ -54,16 +54,8 @@
   background: #fff;
   border: 1px solid var(--bs-border-color);
   border-radius: 12px;
-  padding: 12px 14px 6px;
-  margin-bottom: 12px;
-}
-
-.rsv-section--map {
-  border-left: 3px solid rgba(var(--bs-primary-rgb), 0.35);
-}
-
-.rsv-section--summary {
-  background: #fff;
+  padding: 10px 14px 8px;
+  margin-bottom: 10px;
 }
 
 .rsv-section__header {
@@ -77,10 +69,40 @@
   justify-content: space-between;
 }
 
+.rsv-section__heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .rsv-section__title {
   margin: 0;
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.rsv-section__subtitle {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--bs-secondary-color);
+}
+
+.rsv-section__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 180px;
+}
+
+.rsv-section__meta .form-label {
+  font-size: 0.78rem;
+  margin-bottom: 0;
+  font-weight: 500;
+}
+
+.rsv-section__meta .form-control {
+  min-width: 180px;
 }
 
 .rsv-section__tag {
@@ -105,14 +127,14 @@
 }
 
 .rsv-detalle-modal .form-label {
-  font-weight: 600;
+  font-weight: 400;
 }
 
 .rsv-detalle-modal .form-control {
   background: #fff;
   border: 1px solid var(--bs-border-color);
   border-radius: 10px;
-  padding: 6px 10px;
+  padding: 5px 9px;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -141,18 +163,75 @@
   padding: 0.45rem 0.55rem;
 }
 
-.rsv-map-card {
-  background: #fff;
+.rsv-table__value {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.rsv-table__currency {
+  font-size: 0.72rem;
+  color: var(--bs-secondary-color);
+}
+
+.rsv-table__amount {
+  font-weight: 600;
+}
+
+.rsv-table__subtotal {
+  font-weight: 600;
+  background: rgba(var(--bs-primary-rgb), 0.06);
+  border-color: rgba(var(--bs-primary-rgb), 0.3);
 }
 
 .rsv-detalle-modal .rsv-map-input {
+  background: #f7f9fc;
+  border-color: #d7e3f8;
+}
+
+.rsv-detalle-modal .rsv-map-input:focus {
   background: #fff;
+  border-color: var(--bs-primary);
+  box-shadow: 0 0 0 3px rgba(var(--bs-primary-rgb), 0.18);
 }
 
 .rsv-map-preview {
   background: var(--bs-light);
   border-color: rgba(var(--bs-primary-rgb), 0.2);
   padding: 0.5rem;
+}
+
+.rsv-help-text {
+  color: var(--bs-secondary-color);
+  font-weight: 500;
+}
+
+.rsv-logistics-grid {
+  margin-top: 4px;
+}
+
+.rsv-logistics-card {
+  border: 1px solid var(--bs-border-color);
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px 12px 12px;
+  height: 100%;
+}
+
+.rsv-logistics-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.rsv-logistics-card__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
 }
 
 .rsv-modal__footer {
@@ -164,6 +243,9 @@
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
 }
 
 .rsv-modal__footer .rsv-action-btn--primary {
@@ -182,13 +264,53 @@
   flex-wrap: wrap;
 }
 
-.rsv-footer__summary .form-label {
-  font-weight: 600;
-  font-size: 0.85rem;
+.rsv-summary-card {
+  position: relative;
+  min-width: 220px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(var(--bs-primary-rgb), 0.2);
+  background: rgba(var(--bs-primary-rgb), 0.08);
 }
 
-.rsv-footer__summary .form-control {
-  width: 140px;
+.rsv-summary-card__label {
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--bs-primary);
+  font-weight: 600;
+}
+
+.rsv-summary-card__value {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin-top: 2px;
+}
+
+.rsv-summary-card__currency {
+  font-size: 0.9rem;
+  color: var(--bs-primary);
+}
+
+.rsv-summary-card__amount {
+  font-weight: 600;
+}
+
+.rsv-summary-card__code {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rsv-summary-card__input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
 }
 
 .rsv-footer__actions {
@@ -218,5 +340,20 @@
 
   .rsv-section {
     padding: 10px 12px 6px;
+  }
+
+  .rsv-section__header--service {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .rsv-section__meta {
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .rsv-section__meta .form-control {
+    width: 100%;
   }
 }

@@ -1,0 +1,277 @@
+<div class="modal rsv-actividad-modal" tabindex="-1" role="dialog" [ngClass]="{ show: open }" *ngIf="open" style="display: block;">
+  <div class="modal-dialog modal-lg rsv-modal" role="document">
+    <div class="modal-content rsv-modal__content">
+      <div class="modal-header rsv-modal__header">
+        <div class="d-flex align-items-center gap-2">
+          <h5 class="modal-title rsv-modal__title">Agregar Servicio</h5>
+          <span class="rsv-badge">Actividad</span>
+        </div>
+        <button type="button" class="btn-close" aria-label="Close" (click)="onClose()"></button>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="rsv-form">
+        <div class="rsv-modal__filters">
+          <div class="row g-2">
+            <div class="col-lg-5 col-md-6">
+              <label class="form-label">Plan Tarifario <span class="text-danger">*</span></label>
+              <select class="form-control form-control-sm" formControlName="codPlan">
+                <option value="">Seleccione plan tarifario</option>
+                <option *ngFor="let plan of planesTarifas" [value]="plan.planId">
+                  {{ plan.nombrePlan }} ({{ plan.tipoTarifaDescripcion }})
+                </option>
+              </select>
+              <div class="text-danger small mt-1" *ngIf="form.controls.codPlan.touched && form.controls.codPlan.invalid">
+                Plan Tarifario es requerido.
+              </div>
+            </div>
+            <div class="col-lg-7 col-md-6">
+              <label class="form-label">Lista de Precios <span class="text-danger">*</span></label>
+              <select class="form-control form-control-sm" formControlName="codLstPrecio">
+                <option value="">Seleccione lista de precios</option>
+                <option *ngFor="let lista of listaPrecios" [value]="lista.codigo">
+                  {{ lista.codigo }} - {{ lista.descripcion }}
+                </option>
+              </select>
+              <small class="text-muted">Seleccione la lista que aplicará a las actividades.</small>
+              <div class="text-danger small mt-1" *ngIf="form.controls.codLstPrecio.touched && form.controls.codLstPrecio.invalid">
+                Lista de Precios es requerida.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-body rsv-modal__body">
+          <section class="rsv-section rsv-section--compact">
+            <div class="rsv-section__header">
+              <h6 class="rsv-section__title">Datos del servicio</h6>
+              <span class="rsv-section__tag">Campos requeridos</span>
+            </div>
+            <div class="rsv-section__body">
+              <div class="row g-2">
+                <div class="col-lg-3 col-md-6 mb-1">
+                  <label class="form-label">Fecha del Servicio <span class="text-danger">*</span></label>
+                  <input type="date" class="form-control form-control-sm" formControlName="fechaServicio">
+                  <div class="text-danger small mt-1" *ngIf="form.controls.fechaServicio.touched && form.controls.fechaServicio.invalid">
+                    La fecha del servicio es obligatoria.
+                  </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-1">
+                  <label class="form-label">Hora Pick-Up <span class="text-danger">*</span></label>
+                  <input type="time" class="form-control form-control-sm" formControlName="horaPickup">
+                  <div class="text-danger small mt-1" *ngIf="form.controls.horaPickup.touched && form.controls.horaPickup.invalid">
+                    La hora pick-up es obligatoria.
+                  </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-1">
+                  <label class="form-label">Hora Inicio</label>
+                  <input type="time" class="form-control form-control-sm" formControlName="horaInicio">
+                </div>
+              </div>
+              <div class="rsv-inline-panel mt-2">
+                <div class="rsv-inline-panel__header">
+                  <h6 class="rsv-inline-panel__title">Pickups</h6>
+                </div>
+
+                <div formArrayName="pickups" class="rsv-pickup-grid">
+                  <div class="rsv-pickup-row" *ngFor="let pickup of pickupsArray.controls; let i = index; trackBy: trackByIndex" [formGroupName]="i">
+                    <div class="rsv-pickup-row__field">
+                      <input
+                        type="text"
+                        class="form-control form-control-sm"
+                        formControlName="direccion"
+                        placeholder="Buscar pickup por nombre"
+                        [ngbTypeahead]="searchPickup"
+                        [resultFormatter]="pickupResultFormatter"
+                        [inputFormatter]="pickupInputFormatter"
+                        (selectItem)="onPickupListaSelected(i, $event)"
+                        (input)="onPickupDireccionChange(i)"
+                        autocomplete="off"
+                      >
+                      <div class="text-danger rsv-pickup-row__error" *ngIf="pickup.controls.error.value">{{ pickup.controls.error.value }}</div>
+                      <div class="text-danger rsv-pickup-row__error" *ngIf="pickup.controls.direccion.touched && pickup.controls.direccion.invalid">
+                        El pickup es obligatorio.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <small class="form-text text-muted d-block mt-1">Escriba al menos 2 letras para buscar en la lista pickup.</small>
+                <small class="form-text text-muted d-block mt-1" *ngIf="pickupLookupLoading">Buscando pickups...</small>
+ 
+              </div>
+
+              <div class="alert alert-info py-2 mb-0" *ngIf="tarifasLoading">
+                Consultando servicios y tarifas...
+              </div>
+              <div class="alert alert-warning py-2 mb-0" *ngIf="tarifaError">{{ tarifaError }}</div>
+            </div>
+          </section>
+
+          <section class="rsv-section">
+            <div class="rsv-section__header">
+              <h6 class="rsv-section__title">Detalle general de servicios</h6>
+            </div>
+            <div class="rsv-section__body">
+              <div class="row g-3 rsv-actividades-grid">
+                <div class="col-lg-8">
+                  <div class="rsv-servicios-toolbar">
+                    <div class="rsv-servicios-toolbar__search">
+                      <label class="form-label mb-1">Buscar por nombre</label>
+                      <input
+                        type="text"
+                        class="form-control form-control-sm"
+                        [formControl]="servicioSearchControl"
+                        #servicioSearchInput
+                        placeholder="Ej: BUNGEE"
+                        autocomplete="off"
+                      >
+                    </div>
+                    <div class="rsv-servicios-toolbar__pagination">
+                      <small class="text-muted d-block">{{ serviciosRangeLabel }}</small>
+                      <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-secondary" (click)="goToPreviousServiciosPage()" [disabled]="tarifasLoading || serviciosPageNumber <= 1">
+                          Anterior
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" (click)="goToNextServiciosPage()" [disabled]="tarifasLoading || !serviciosPageHasNext">
+                          Siguiente
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <small class="text-muted d-block mb-2">Lista general paginada; expanda cada servicio y coloque cantidades por tarifa.</small>
+                  <div class="actividades-container">
+                    <div class="rsv-actividad-list" formArrayName="actividades">
+                      <div
+                        class="rsv-actividad-card"
+                        [ngClass]="{ 'actividad-activa': isActividadActiva(actividad) }"
+                        *ngFor="let actividad of actividadesArray.controls; let i = index; trackBy: trackByIndex"
+                        [formGroupName]="i"
+                      >
+                        <div class="rsv-actividad-card__header">
+                          <div>
+                            <div class="fw-semibold d-flex align-items-center flex-wrap">
+                              <span>{{ actividad.controls.nomServicio.value }}</span>
+                              <span class="badge-activa" *ngIf="isActividadActiva(actividad)">Agregado</span>
+                            </div>
+                            <small class="text-muted">{{ actividad.controls.codServicio.value }}</small>
+                          </div>
+                          <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-outline-secondary btn-sm rsv-icon-btn" (click)="toggleActividad(i)" title="Expandir/contraer">
+                              <i class="feather" [ngClass]="actividad.controls.expanded.value ? 'icon-chevron-up' : 'icon-chevron-down'"></i>
+                            </button>
+                          </div>
+                        </div>
+
+                        <div class="rsv-actividad-card__body" *ngIf="actividad.controls.expanded.value" formArrayName="tarifas">
+                          <div class="row g-2">
+                            <div class="col-md-4" *ngFor="let tarifa of actividad.controls.tarifas.controls; let j = index; trackBy: trackByIndex" [formGroupName]="j">
+                              <div class="rsv-tarifa-box">
+                                <div class="rsv-tarifa-box__label">{{ tarifa.controls.tipo.value }}</div>
+                                <div class="rsv-tarifa-box__row">
+                                  <span class="rsv-tarifa-box__caption">Cantidad</span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    class="form-control form-control-sm text-end rsv-tarifa-box__qty"
+                                    formControlName="cantidad"
+                                  >
+                                </div>
+                                <div class="rsv-tarifa-box__meta">
+                                  <span class="rsv-tarifa-box__unit">
+                                    Unit:
+                                    <span *ngIf="selectedListaPrecio?.simbolo">{{ selectedListaPrecio?.simbolo }}</span>
+                                    {{ tarifa.controls.precio.value | number:'1.2-2' }}
+                                  </span>
+                                  <span
+                                    class="rsv-tarifa-box__subtotal"
+                                    [ngClass]="{ 'subtotal-activo': tarifa.controls.total.value > 0 }"
+                                  >
+                                    Subtotal:
+                                    <span *ngIf="selectedListaPrecio?.simbolo">{{ selectedListaPrecio?.simbolo }}</span>
+                                    {{ tarifa.controls.total.value | number:'1.2-2' }}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="rsv-actividad-total">
+                            <span class="rsv-actividad-total__label">Total Actividad</span>
+                            <span class="rsv-actividad-total__value" [ngClass]="{ 'subtotal-activo': actividad.get('totalLinea')?.value > 0 }">
+                              <span *ngIf="selectedListaPrecio?.simbolo">{{ selectedListaPrecio?.simbolo }}</span>
+                              {{ actividad.get('totalLinea')?.value | number:'1.2-2' }}
+                              <span class="rsv-actividad-total__code">{{ selectedListaPrecio?.moneda || 'Moneda' }}</span>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="text-center text-muted py-3" *ngIf="actividadesArray.length === 0">
+                        No hay servicios disponibles para mostrar.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-lg-4">
+                  <div class="summary-panel">
+                    <div class="summary-panel__header">Resumen actividades</div>
+                    <div class="summary-panel__list" *ngIf="resumenActividades.length > 0; else resumenVacio">
+                      <div class="summary-item" *ngFor="let actividad of resumenActividades">
+                        <div class="summary-item__info">
+                          <div class="summary-item__name">{{ actividad.nomServicio }}</div>
+                          <div class="summary-item__meta">
+                            <span>{{ getActividadCantidadTotal(actividad) }} pax</span>
+                            <span class="summary-item__detail" *ngIf="getActividadCantidadDetalle(actividad) as detalle">({{ detalle }})</span>
+                          </div>
+                        </div>
+                        <div class="summary-item__actions">
+                          <span class="summary-item__value">
+                            <span *ngIf="selectedListaPrecio?.simbolo">{{ selectedListaPrecio?.simbolo }}</span>
+                            {{ actividad.totalLinea | number:'1.2-2' }}
+                          </span>
+                          <button
+                            type="button"
+                            class="btn btn-outline-secondary btn-sm rsv-icon-btn summary-item__remove"
+                            (click)="clearActividadFromResumen(actividad)"
+                            title="Quitar actividad"
+                          >
+                            <i class="feather icon-x"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <ng-template #resumenVacio>
+                      <div class="summary-panel__empty text-muted">Agregue cantidades para ver el resumen.</div>
+                    </ng-template>
+                    <div class="summary-panel__total">
+                      <div class="summary-panel__total-label">Total General</div>
+                      <div class="summary-panel__total-value total-general">
+                        <span *ngIf="selectedListaPrecio?.simbolo">{{ selectedListaPrecio?.simbolo }}</span>
+                        {{ form.get('totalGeneral')?.value | number:'1.2-2' }}
+                        <span class="summary-panel__total-code">{{ selectedListaPrecio?.moneda || 'Moneda' }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="modal-footer rsv-modal__footer">
+          <div class="rsv-footer__actions">
+            <button type="button" class="btn btn-outline-secondary rsv-action-btn rsv-action-btn--outline" (click)="onClose()">
+              <span class="rsv-action-btn__icon"><i class="feather icon-x"></i></span>
+              <span>Cancelar</span>
+            </button>
+            <button type="submit" class="btn btn-primary rsv-action-btn rsv-action-btn--primary" [disabled]="tarifasLoading">
+              <span class="rsv-action-btn__icon"><i class="feather icon-save"></i></span>
+              <span>Guardar Servicio</span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

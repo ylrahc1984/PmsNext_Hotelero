@@ -2,11 +2,13 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { GooglePlaceSelection, GooglePlacesAutocompleteDirective } from './google-places-autocomplete.directive';
+import { GooglePlaceSelection, GooglePlacesAutocompleteDirective } from '../shared/google-places-autocomplete.directive';
 import { DetalleForm } from './reserva-create.models';
 import { hasCoordinates, safeJsonStringify } from './reserva-create.utils';
-import { ServicioUI } from '../catalogos/servicios/servicios.service';
-import { TipoPaxUI } from './tipo-pax.service';
+import { ServicioUI } from '../../catalogos/servicios/servicios.service';
+import { TipoPaxUI } from '../services/tipo-pax.service';
+import { PlanTarifaUI } from '../../catalogos/listas-precios/planes-tarifas.service';
+import { ListaPrecioUI } from '../../catalogos/listas-precios/lista-precio.models';
 
 @Component({
   selector: 'app-reserva-create-detalle-modal',
@@ -23,12 +25,15 @@ export class ReservaCreateDetalleModalComponent implements OnChanges {
   @Input() serviciosLoading = false;
   @Input() reglaTarifaError = '';
   @Input() allowManualPricing = false;
+  @Input() planesTarifas: PlanTarifaUI[] = [];
+  @Input() listaPrecios: ListaPrecioUI[] = [];
   @Input() tiposPax: TipoPaxUI[] = [];
 
   @Output() close = new EventEmitter<void>();
   @Output() save = new EventEmitter<any>();
   @Output() serviceChange = new EventEmitter<string>();
   @Output() recalculate = new EventEmitter<void>();
+  @Output() tarifaContextChange = new EventEmitter<void>();
 
   origenAutocompleteMessage = '';
   destinoAutocompleteMessage = '';
@@ -36,6 +41,12 @@ export class ReservaCreateDetalleModalComponent implements OnChanges {
   copyError = '';
   copyErrorTarget: 'origen' | 'destino' | null = null;
   locationInfoTarget: 'origen' | 'destino' | null = null;
+
+  get selectedListaPrecio(): ListaPrecioUI | null {
+    const code = (this.detalleForm?.codLstPrecio ?? '').toString().trim();
+    if (!code) return null;
+    return (this.listaPrecios || []).find((item) => (item.codigo ?? '').toString().trim() === code) ?? null;
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     const openChange = changes['open'];
@@ -48,6 +59,10 @@ export class ReservaCreateDetalleModalComponent implements OnChanges {
     this.resetAutocompleteState();
     this.locationInfoTarget = null;
     this.close.emit();
+  }
+
+  onTarifaChange(): void {
+    this.tarifaContextChange.emit();
   }
 
   onSubmit(formRef: any): void {

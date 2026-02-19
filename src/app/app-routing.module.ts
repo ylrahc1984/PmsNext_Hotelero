@@ -56,7 +56,7 @@ const routes: Routes = [
     children: [
       {
         path: 'reservas',
-        loadComponent: () => import('./demo/reservas/reservas.component').then((c) => c.ReservasComponent)
+        loadComponent: () => import('./demo/reservas/list/reservas.component').then((c) => c.ReservasComponent)
       },
       {
         path: 'ordenes-trabajo',
@@ -93,16 +93,16 @@ const routes: Routes = [
       {
         path: 'reservas/nueva',
         canDeactivate: [CanDeactivateReservaCreateGuard],
-        loadComponent: () => import('./demo/reservas/reserva-create.component').then((c) => c.ReservaCreateComponent)
+        loadComponent: () => import('./demo/reservas/create/reserva-create.component').then((c) => c.ReservaCreateComponent)
       },
       {
         path: 'reservas/:id/editar',
         canDeactivate: [CanDeactivateReservaCreateGuard],
-        loadComponent: () => import('./demo/reservas/reserva-create.component').then((c) => c.ReservaCreateComponent)
+        loadComponent: () => import('./demo/reservas/create/reserva-create.component').then((c) => c.ReservaCreateComponent)
       },
       {
         path: 'reservas/:id/detalle',
-        loadComponent: () => import('./demo/reservas/reserva-detalle.component').then((c) => c.ReservaDetalleComponent)
+        loadComponent: () => import('./demo/reservas/detalle/reserva-detalle.component').then((c) => c.ReservaDetalleComponent)
       }
     ]
   },

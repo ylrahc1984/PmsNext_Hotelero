@@ -8,9 +8,9 @@ import Swal from 'sweetalert2';
 
 import { environment } from 'src/environments/environment';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
-import { ReservaDetalle, ReservaDetalleService } from './reserva-detalle.service';
-import { Reserva, ReservasService } from './reservas.service';
-import { extractGoogleDisplayText, hasCoordinates, normalizeReservaEstado } from './reserva-create.utils';
+import { ReservaDetalle, ReservaDetalleService } from '../services/reserva-detalle.service';
+import { Reserva, ReservasService } from '../services/reservas.service';
+import { extractGoogleDisplayText, hasCoordinates, normalizeReservaEstado } from '../create/reserva-create.utils';
 
 @Component({
   selector: 'app-reserva-detalle',

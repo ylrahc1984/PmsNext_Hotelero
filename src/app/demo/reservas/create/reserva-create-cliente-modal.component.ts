@@ -2,8 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { ClienteService } from '../catalogos/agencias-comisionistas/cliente.service';
-import { ClienteUI } from '../catalogos/agencias-comisionistas/cliente.models';
+import { ClienteService } from '../../catalogos/agencias-comisionistas/cliente.service';
+import { ClienteUI } from '../../catalogos/agencias-comisionistas/cliente.models';
 
 @Component({
   selector: 'app-reserva-create-cliente-modal',

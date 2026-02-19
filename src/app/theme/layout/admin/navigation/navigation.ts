@@ -105,6 +105,14 @@ export const NavigationItems: NavigationItem[] = [
             url: '/comercial/agencias',
             icon: 'feather icon-briefcase',
             classes: 'nav-item'
+          },
+          {
+            id: 'suplidores',
+            title: 'Suplidores',
+            type: 'item',
+            url: '/comercial/suplidores',
+            icon: 'feather icon-users',
+            classes: 'nav-item'
           }
         ]
       },

@@ -2,7 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
-import { ReservasService } from '../reservas/reservas.service';
+import { ReservasService } from '../reservas/services/reservas.service';
 import { OrdenesService } from '../ordenes/ordenes.service';
 
 @Component({

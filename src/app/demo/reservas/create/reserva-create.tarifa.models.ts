@@ -87,6 +87,7 @@ export interface DetallePrecioServicioApiItem {
     precioExtra?: number | null;
     maxPax?: number | null;
     comision?: number | null;
+    montoComision?: number | null;
     // Compatibilidad con variantes anteriores.
     tipo?: string | null;
     extra?: number | null;

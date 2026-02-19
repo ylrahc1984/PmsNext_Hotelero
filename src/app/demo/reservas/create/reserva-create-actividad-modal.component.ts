@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges, ViewChild } from '@angular/core';
 import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { OperatorFunction, Subject, Subscription, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, finalize, map, switchMap, takeUntil } from 'rxjs/operators';
@@ -7,12 +7,14 @@ import { NgbTypeaheadModule } from '@ng-bootstrap/ng-bootstrap';
 
 import { ActividadDetalleForm, ActividadPickupForm } from './reserva-create.models';
 import { safeJsonStringify } from './reserva-create.utils';
-import { ServicioUI } from '../catalogos/servicios/servicios.service';
-import { TipoPaxUI } from './tipo-pax.service';
+import { ServicioUI } from '../../catalogos/servicios/servicios.service';
+import { PlanTarifaUI } from '../../catalogos/listas-precios/planes-tarifas.service';
+import { ListaPrecioUI } from '../../catalogos/listas-precios/lista-precio.models';
+import { TipoPaxUI } from '../services/tipo-pax.service';
 import { ReservaCreateTarifaService } from './reserva-create.tarifa.service';
 import { DetallePrecioServicioApiItem } from './reserva-create.tarifa.models';
-import { ListaPickupService } from '../catalogos/lista-pickup/lista-pickup.service';
-import { PickupListaItem } from '../catalogos/lista-pickup/lista-pickup.models';
+import { ListaPickupService } from '../../catalogos/lista-pickup/lista-pickup.service';
+import { PickupListaItem } from '../../catalogos/lista-pickup/lista-pickup.models';
 
 export interface Tarifa {
   tipoPax?: string;
@@ -47,6 +49,8 @@ export interface ActividadDetallePayload {
 }
 
 export interface ActividadModalSavePayload {
+  codPlan: string;
+  codLstPrecio: string;
   fechaServicio: string;
   horaPickup: string;
   horaInicio: string;
@@ -85,6 +89,8 @@ type ActividadDetalleFormGroup = FormGroup<{
 }>;
 
 type ActividadModalFormGroup = FormGroup<{
+  codPlan: FormControl<string>;
+  codLstPrecio: FormControl<string>;
   fechaServicio: FormControl<string>;
   horaPickup: FormControl<string>;
   horaInicio: FormControl<string>;
@@ -101,13 +107,14 @@ type ActividadModalFormGroup = FormGroup<{
   templateUrl: './reserva-create-actividad-modal.component.html',
   styleUrls: ['./reserva-create-actividad-modal.component.scss']
 })
-export class ReservaCreateActividadModalComponent implements OnChanges, OnDestroy {
+export class ReservaCreateActividadModalComponent implements OnChanges, OnDestroy, AfterViewInit {
   @Input() open = false;
   @Input({ required: true }) actividadForm!: ActividadDetalleForm;
   @Input() servicios: ServicioUI[] = [];
   @Input() serviciosLoading = false;
   @Input() tiposPax: TipoPaxUI[] = [];
-  @Input() codLstPrecio = '';
+  @Input() planesTarifas: PlanTarifaUI[] = [];
+  @Input() listaPrecios: ListaPrecioUI[] = [];
 
   @Output() close = new EventEmitter<void>();
   @Output() save = new EventEmitter<ActividadModalSavePayload>();
@@ -115,12 +122,13 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
 
   readonly form: ActividadModalFormGroup;
   readonly servicioSearchControl: FormControl<string>;
+  @ViewChild('servicioSearchInput') servicioSearchInput?: ElementRef<HTMLInputElement>;
 
   tarifasLoading = false;
   tarifaError = '';
   pickupLookupLoading = false;
   serviciosPageNumber = 1;
-  readonly serviciosPageSize = 20;
+  readonly serviciosPageSize = 6;
   serviciosPageHasNext = false;
   serviciosPageItemsCount = 0;
 
@@ -135,6 +143,8 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
 
   constructor(private fb: FormBuilder, private tarifaService: ReservaCreateTarifaService, private listaPickupService: ListaPickupService) {
     this.form = this.fb.group({
+      codPlan: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
+      codLstPrecio: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
       fechaServicio: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
       horaPickup: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
       horaInicio: this.fb.control('', { nonNullable: true }),
@@ -157,6 +167,20 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
         this.serviciosPageNumber = 1;
         this.cargarServiciosDetalleGeneral();
       });
+
+    this.form.controls.codLstPrecio.valueChanges
+      .pipe(distinctUntilChanged(), takeUntil(this.destroy$))
+      .subscribe(() => {
+        if (!this.open) return;
+        this.onListaPrecioChange();
+      });
+
+    this.form.controls.codPlan.valueChanges
+      .pipe(distinctUntilChanged(), takeUntil(this.destroy$))
+      .subscribe(() => {
+        if (!this.open) return;
+        this.cargarServiciosDetalleGeneral();
+      });
   }
 
   get pickupsArray(): FormArray<PickupFormGroup> {
@@ -167,10 +191,73 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     return this.form.controls.actividades;
   }
 
+  get selectedListaPrecio(): ListaPrecioUI | null {
+    const code = (this.form.controls.codLstPrecio.value || '').toString().trim();
+    if (!code) return null;
+    return (this.listaPrecios || []).find((item) => (item.codigo ?? '').toString().trim() === code) ?? null;
+  }
+
+  get resumenActividades(): ActividadDetalle[] {
+    return Array.from(this.actividadesStateMap.values());
+  }
+
+  get serviciosRangeLabel(): string {
+    const count = Number(this.serviciosPageItemsCount ?? 0) || 0;
+    if (count <= 0) {
+      return 'Mostrando 0–0 de 0 actividades';
+    }
+    const start = (this.serviciosPageNumber - 1) * this.serviciosPageSize + 1;
+    const end = start + count - 1;
+    const totalLabel = this.serviciosPageHasNext ? `${end}+` : `${end}`;
+    return `Mostrando ${start}–${end} de ${totalLabel} actividades`;
+  }
+
+  isActividadActiva(actividad: ActividadDetalleFormGroup): boolean {
+    return actividad.controls.tarifas.controls.some((tarifa) => (Number(tarifa.controls.cantidad.value ?? 0) || 0) > 0);
+  }
+
+  getActividadCantidadTotal(actividad: ActividadDetalle): number {
+    return (actividad.tarifas ?? []).reduce((sum, tarifa) => sum + (Number(tarifa.cantidad ?? 0) || 0), 0);
+  }
+
+  getActividadCantidadDetalle(actividad: ActividadDetalle): string {
+    const counts = new Map<string, number>();
+    for (const tarifa of actividad.tarifas ?? []) {
+      const qty = Number(tarifa.cantidad ?? 0) || 0;
+      if (qty <= 0) continue;
+      const tipo = this.resolveTarifaTipoPax(tarifa);
+      counts.set(tipo, (counts.get(tipo) ?? 0) + qty);
+    }
+
+    const ordered = this.getOrderedTipoPaxCodes(Array.from(counts.keys()));
+    return ordered.filter((tipo) => counts.has(tipo)).map((tipo) => `${counts.get(tipo)} ${tipo}`).join(' · ');
+  }
+
+  clearActividadFromResumen(actividad: ActividadDetalle): void {
+    const key = this.buildActividadKey(actividad.codServicio);
+    if (!key) return;
+
+    this.actividadesStateMap.delete(key);
+
+    const index = this.actividadesArray.controls.findIndex((group) => this.buildActividadKey(group.controls.codServicio.value) === key);
+    if (index >= 0) {
+      const group = this.actividadesArray.at(index);
+      group.controls.tarifas.controls.forEach((tarifaGroup) => {
+        tarifaGroup.controls.cantidad.setValue(0, { emitEvent: false });
+        tarifaGroup.controls.total.setValue(0, { emitEvent: false });
+      });
+      group.controls.totalLinea.setValue(0, { emitEvent: false });
+    }
+
+    this.calcularTotales();
+    this.syncInputModel();
+  }
+
   ngOnChanges(changes: SimpleChanges): void {
     const openChange = changes['open'];
     if (openChange?.currentValue === true && openChange?.previousValue !== true) {
       this.hydrateFormFromInput();
+      this.focusSearchInput();
       return;
     }
 
@@ -179,7 +266,12 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
       return;
     }
 
-    if (this.open && (changes['codLstPrecio'] || changes['servicios'])) {
+    if (this.open && (changes['listaPrecios'] || changes['planesTarifas'])) {
+      this.ensureTarifaDefaults();
+      this.serviciosPageNumber = 1;
+      this.cargarServiciosDetalleGeneral();
+    }
+    if (this.open && changes['servicios']) {
       this.serviciosPageNumber = 1;
       this.cargarServiciosDetalleGeneral();
     }
@@ -189,6 +281,12 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     this.actividadesSubscriptions.unsubscribe();
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  ngAfterViewInit(): void {
+    if (this.open) {
+      this.focusSearchInput();
+    }
   }
 
   onClose(): void {
@@ -213,6 +311,8 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     const raw = this.form.getRawValue();
     const actividades = this.getAllActividadesValue();
     this.save.emit({
+      codPlan: raw.codPlan,
+      codLstPrecio: raw.codLstPrecio,
       fechaServicio: raw.fechaServicio,
       horaPickup: raw.horaPickup,
       horaInicio: raw.horaInicio,
@@ -253,7 +353,7 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
   };
 
   getTarifasServicio(codServicio: string, actividadActual?: ActividadDetalle) {
-    const codLstPrecio = (this.codLstPrecio || '').trim();
+    const codLstPrecio = (this.form.controls.codLstPrecio.value || '').trim();
 
     if (!codLstPrecio) {
       return of(this.buildActividadFallback(codServicio, actividadActual));
@@ -273,7 +373,7 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
   private cargarServiciosDetalleGeneral(): void {
     this.captureCurrentPageState();
 
-    const codLstPrecio = (this.codLstPrecio || '').trim();
+    const codLstPrecio = (this.form.controls.codLstPrecio.value || '').trim();
     if (!codLstPrecio) {
       this.tarifaError = 'Seleccione la lista de precios en el encabezado para mostrar tarifas reales por servicio.';
       this.serviciosPageItemsCount = this.actividadesArray.length;
@@ -482,6 +582,8 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     const today = new Date().toISOString().slice(0, 10);
     this.form.patchValue(
       {
+        codPlan: this.resolveDefaultCodPlan(),
+        codLstPrecio: this.resolveDefaultCodLstPrecio(),
         fechaServicio: (this.actividadForm?.fechaServicio || today).toString(),
         horaPickup: (this.actividadForm?.horaPickup || '').toString(),
         horaInicio: (this.actividadForm?.horaInicio || '').toString(),
@@ -502,14 +604,39 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     this.cargarServiciosDetalleGeneral();
   }
 
+  private ensureTarifaDefaults(): void {
+    if (!this.open) return;
+    const currentPlan = (this.form.controls.codPlan.value || '').toString().trim();
+    const currentLista = (this.form.controls.codLstPrecio.value || '').toString().trim();
+    const nextPlan = currentPlan || this.resolveDefaultCodPlan();
+    const nextLista = currentLista || this.resolveDefaultCodLstPrecio();
+    this.form.patchValue({ codPlan: nextPlan, codLstPrecio: nextLista }, { emitEvent: false });
+  }
+
+  private resolveDefaultCodPlan(): string {
+    const fromInput = (this.actividadForm?.codPlan || '').toString().trim();
+    if (fromInput) return fromInput;
+    const first = this.planesTarifas?.[0];
+    return first ? String(first.planId) : '';
+  }
+
+  private resolveDefaultCodLstPrecio(): string {
+    const fromInput = (this.actividadForm?.codLstPrecio || '').toString().trim();
+    if (fromInput) return fromInput;
+    const first = this.listaPrecios?.[0];
+    return first ? String(first.codigo) : '';
+  }
+
   private buildActividadFromApi(apiItem: DetallePrecioServicioApiItem, codServicioFallback: string): ActividadDetalle {
+    const modoPrecio = this.getModoPrecioPorPlan(this.form.controls.codPlan.value);
     const apiTarifas = (apiItem?.Precios ?? []).map((row, index) => {
       const tipoPax = this.normalizeTipoPaxCode(row?.tipoPax || row?.tipo || this.tarifaDefaults[index]?.tipoPax || '');
       const tipo = (row?.descripcion || this.mapTipoPaxToLabel(tipoPax) || tipoPax).toString().trim();
+      const precioBase = modoPrecio === 'N' ? row?.montoComision : row?.precio;
       return {
         tipoPax,
         tipo,
-        precio: Number(row?.precio ?? 0) || 0,
+        precio: Number(precioBase ?? 0) || 0,
         cantidad: 0,
         total: 0
       };
@@ -607,6 +734,13 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     if (fromLabel.startsWith('NAC')) return 'NAC';
     if (fromLabel.startsWith('PAX') || fromLabel.startsWith('ADUL')) return 'PAX';
     return fromLabel;
+  }
+
+  private getModoPrecioPorPlan(planId: string | number): 'R' | 'N' {
+    const normalized = Number(planId ?? 0) || 0;
+    const plan = (this.planesTarifas ?? []).find((item) => Number(item?.planId ?? 0) === normalized);
+    const tipo = (plan?.tipoTarifa || '').toString().trim().toUpperCase();
+    return tipo === 'N' ? 'N' : 'R';
   }
 
   private buildDefaultTarifas(): Tarifa[] {
@@ -832,6 +966,8 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     const raw = this.form.getRawValue();
     const actividades = this.getAllActividadesValue();
 
+    this.actividadForm.codPlan = (raw.codPlan || '').toString();
+    this.actividadForm.codLstPrecio = (raw.codLstPrecio || '').toString();
     this.actividadForm.fechaServicio = raw.fechaServicio;
     this.actividadForm.horaPickup = raw.horaPickup;
     this.actividadForm.horaInicio = raw.horaInicio;
@@ -845,6 +981,16 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     this.actividadForm.codServicio = first?.codServicio || '';
     this.actividadForm.nomServicio = first?.nomServicio || '';
     this.actividadForm.tipoServicio = '';
+  }
+
+  private onListaPrecioChange(): void {
+    this.tarifaError = '';
+    this.serviciosPageNumber = 1;
+    this.serviciosPageHasNext = false;
+    this.serviciosPageItemsCount = 0;
+    this.actividadesStateMap.clear();
+    this.setActividades([]);
+    this.cargarServiciosDetalleGeneral();
   }
 
   private captureCurrentPageState(): void {
@@ -880,5 +1026,11 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
 
   private buildActividadKey(codServicio: string): string {
     return (codServicio || '').toString().trim().toUpperCase();
+  }
+
+  private focusSearchInput(): void {
+    setTimeout(() => {
+      this.servicioSearchInput?.nativeElement?.focus();
+    }, 0);
   }
 }

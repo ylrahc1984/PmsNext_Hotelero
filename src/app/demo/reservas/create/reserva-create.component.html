@@ -99,40 +99,6 @@
                   </div>
                 </div>
                 <div class="row">
-                  <div class="col-12 col-md-4 mb-2">
-                    <label class="form-label">Plan Tarifario <span class="text-danger">*</span></label>
-                    <select class="form-control form-control-sm" [(ngModel)]="form.codPlan" name="codPlan" required (ngModelChange)="onPlanTarifaChange()" [disabled]="tarifaLocked">
-                      <option value="">Seleccione plan tarifario</option>
-                      <option *ngFor="let plan of planesTarifas" [ngValue]="plan.planId.toString()">
-                        {{ plan.nombrePlan }} ({{ plan.tipoTarifaDescripcion }})
-                      </option>
-                    </select>
-                    <div class="text-danger small" *ngIf="reservaForm.submitted && reservaForm.controls.codPlan?.invalid">
-                      Plan Tarifario es requerido.
-                    </div>
-                  </div>
-                  <div class="col-12 col-md-8 mb-2">
-                    <label class="form-label">Lista de Precios <span class="text-danger">*</span></label>
-                    <select
-                      class="form-control form-control-sm"
-                      [(ngModel)]="form.codLstPrecio"
-                      name="codLstPrecio"
-                      required
-                      (ngModelChange)="onListaPrecioChange()"
-                      [disabled]="tarifaLocked"
-                    >
-                      <option value="">Seleccione lista de precios</option>
-                      <option *ngFor="let lista of listaPrecios" [ngValue]="lista.codigo">
-                        {{ lista.codigo }} - {{ lista.descripcion }}
-                      </option>
-                    </select>
-                    <small class="text-muted">Seleccione la lista de precios que desea aplicar</small>
-                    <div class="text-danger small" *ngIf="reservaForm.submitted && reservaForm.controls.codLstPrecio?.invalid">
-                      Lista de Precios es requerida.
-                    </div>
-                  </div>
-                </div>
-                <div class="row">
                   <div class="col-12 mb-2">
                     <label class="form-label">Comentarios generales</label>
                     <textarea class="form-control form-control-sm" rows="1" [(ngModel)]="form.comentarios" name="comentarios" placeholder="Notas u observaciones"></textarea>
@@ -167,24 +133,6 @@
                     <div class="text-danger small" *ngIf="reservaForm.submitted && reservaForm.controls.moneda?.invalid">
                       Moneda es requerida.
                     </div>
-                  </div>
-                  <div class="col-12 mb-2">
-                    <label class="form-label">Impuestos</label>
-                    <div class="form-check form-switch">
-                      <input
-                        class="form-check-input"
-                        type="checkbox"
-                        id="directoSwitch"
-                        [checked]="directoSwitchChecked"
-                        [disabled]="directoSwitchDisabled"
-                        (change)="onDirectoSwitchChange($event)"
-                      >
-                      <label class="form-check-label" for="directoSwitch">No calcular impuesto</label>
-                    </div>
-                    <small class="text-muted d-block">
-                      Si está activo, la reserva no calcula impuestos.
-                    </small>
-                    <small class="text-muted d-block" *ngIf="directoUpdating">Actualizando...</small>
                   </div>
                 </div>
               </div>
@@ -298,7 +246,26 @@
               </table>
             </div>
 
-            <div class="d-flex justify-content-end mt-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-3">
+              <div class="rsv-total-impuestos">
+                <label class="form-label mb-1">Impuestos</label>
+                <div class="form-check form-switch">
+                  <input
+                    class="form-check-input"
+                    type="checkbox"
+                    id="directoSwitch"
+                    [checked]="directoSwitchChecked"
+                    [disabled]="directoSwitchDisabled"
+                    (change)="onDirectoSwitchChange($event)"
+                  >
+                  <label class="form-check-label" for="directoSwitch">No calcular impuesto</label>
+                </div>
+                <small class="text-muted d-block">
+                  Si está activo, la reserva no calcula impuestos.
+                </small>
+                <small class="text-muted d-block" *ngIf="directoUpdating">Actualizando...</small>
+              </div>
+
               <div class="rsv-total-reserva text-end" aria-label="Total Reserva">
                 <div class="d-flex align-items-center justify-content-between gap-2">
                   <div class="rsv-total-reserva__content">
@@ -372,11 +339,14 @@
   [serviciosLoading]="serviciosLoading"
   [reglaTarifaError]="reglaTarifaError"
   [allowManualPricing]="allowManualPricing"
+  [planesTarifas]="planesTarifas"
+  [listaPrecios]="listaPrecios"
   [tiposPax]="tiposPaxBase"
   (close)="cerrarModalDetalle()"
   (save)="guardarDetalle($event)"
   (serviceChange)="onServicioChange($event)"
   (recalculate)="recalcularCosto()"
+  (tarifaContextChange)="onDetalleTarifaContextChange()"
 ></app-reserva-create-detalle-modal>
 
 <!-- Modal actividad turística -->
@@ -385,7 +355,8 @@
   [actividadForm]="actividadForm"
   [servicios]="servicios"
   [serviciosLoading]="serviciosLoading"
-  [codLstPrecio]="form.codLstPrecio"
+  [planesTarifas]="planesTarifas"
+  [listaPrecios]="listaPrecios"
   [tiposPax]="tiposPaxBase"
   (close)="cerrarModalActividad()"
   (save)="guardarActividadDetalle($event)"

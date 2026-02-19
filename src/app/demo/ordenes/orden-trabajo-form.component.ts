@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import { environment } from 'src/environments/environment';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { EstadoOrden, EstadoOrdenOption, ESTADOS_OT, OrdenTrabajo, OrdenTrabajoDetalle, OrdenesService } from './ordenes.service';
-import { ReservaDetalleDisponible, ReservasService } from '../reservas/reservas.service';
+import { ReservaDetalleDisponible, ReservasService } from '../reservas/services/reservas.service';
 import { SuplidorDisponibilidadUI, SuplidorService } from '../catalogos/suplidores/suplidor.service';
 import { MonedaService, MonedaUI } from '../administracion/monedas/moneda.service';
 import { AuthService } from 'src/app/core/services/auth.service';

@@ -1,4 +1,4 @@
-import { ReglaTarifa } from '../catalogos/listas-precios/listas-precios.service';
+import { ReglaTarifa } from '../../catalogos/listas-precios/listas-precios.service';
 
 /**
  * Utilidades puras (sin dependencias de UI) para evaluar y calcular reglas tarifarias.
