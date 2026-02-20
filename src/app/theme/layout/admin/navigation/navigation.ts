@@ -167,19 +167,19 @@ export const NavigationItems: NavigationItem[] = [
             classes: 'nav-item'
           },
           {
-            id: 'facturas',
-            title: 'Facturas',
-            type: 'item',
-            url: '/finanzas/facturas',
-            icon: 'feather icon-file-text',
-            classes: 'nav-item'
-          },
-          {
             id: 'recibos',
             title: 'Recibos',
             type: 'item',
             url: '/finanzas/recibos',
             icon: 'feather icon-file-text',
+            classes: 'nav-item'
+          },
+          {
+            id: 'consulta-documentos',
+            title: 'Consulta Documentos',
+            type: 'item',
+            url: '/finanzas/consulta-documentos',
+            icon: 'feather icon-search',
             classes: 'nav-item'
           }
           // Futuro:

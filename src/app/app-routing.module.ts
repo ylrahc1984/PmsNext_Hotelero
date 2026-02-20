@@ -239,42 +239,10 @@ const routes: Routes = [
     pathMatch: 'full'
   },
   {
-    path: 'facturas',
-    redirectTo: 'finanzas/facturas',
-    pathMatch: 'full'
-  },
-  {
-    path: 'facturas/nueva',
-    redirectTo: 'finanzas/facturas/nueva',
-    pathMatch: 'full'
-  },
-  {
     canActivate: [AuthGuard],
     canActivateChild: [AuthGuard],
     path: 'finanzas',
-    component: AdminComponent,
-    children: [
-      {
-        path: 'cuentas-cobrar',
-        loadComponent: () => import('./demo/contabilidad/cuentas-cobrar/cuentas-cobrar.component').then((c) => c.CuentasCobrarComponent)
-      },
-      {
-        path: 'cuentas-pagar',
-        loadComponent: () => import('./demo/contabilidad/cuentas-pagar/cuentas-pagar.component').then((c) => c.CuentasPagarComponent)
-      },
-      {
-        path: 'facturas',
-        loadComponent: () => import('./demo/contabilidad/facturas/facturas.component').then((c) => c.FacturasComponent)
-      },
-      {
-        path: 'facturas/nueva',
-        loadComponent: () => import('./demo/contabilidad/facturas/factura-form.component').then((c) => c.FacturaFormComponent)
-      },
-      {
-        path: 'recibos',
-        loadComponent: () => import('./demo/contabilidad/recibos/recibos.component').then((c) => c.RecibosComponent)
-      }
-    ]
+    loadChildren: () => import('./finanzas/finanzas.module').then((m) => m.FinanzasModule)
   },
   {
     path: 'servicios',

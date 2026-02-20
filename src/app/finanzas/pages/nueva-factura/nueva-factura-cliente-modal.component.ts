@@ -1,21 +1,32 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  DestroyRef,
+  EventEmitter,
+  Input,
+  OnChanges,
+  OnDestroy,
+  Output,
+  SimpleChanges,
+  inject
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { of } from 'rxjs';
 import { catchError, finalize, timeout } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-import { ClienteService } from '../../catalogos/agencias-comisionistas/cliente.service';
-import { ClienteUI } from '../../catalogos/agencias-comisionistas/cliente.models';
+import { ClienteService } from 'src/app/demo/catalogos/agencias-comisionistas/cliente.service';
+import { ClienteUI } from 'src/app/demo/catalogos/agencias-comisionistas/cliente.models';
 
 @Component({
-  selector: 'app-reserva-create-cliente-modal',
+  selector: 'app-nueva-factura-cliente-modal',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  templateUrl: './reserva-create-cliente-modal.component.html',
-  styleUrls: ['./reserva-create-cliente-modal.component.scss']
+  templateUrl: './nueva-factura-cliente-modal.component.html',
+  styleUrls: ['./nueva-factura-cliente-modal.component.scss']
 })
-export class ReservaCreateClienteModalComponent implements OnChanges {
+export class NuevaFacturaClienteModalComponent implements OnChanges, OnDestroy {
   @Input() open = false;
   @Output() close = new EventEmitter<void>();
   @Output() clienteSelected = new EventEmitter<ClienteUI>();
@@ -31,7 +42,9 @@ export class ReservaCreateClienteModalComponent implements OnChanges {
 
   private clienteService = inject(ClienteService);
   private destroyRef = inject(DestroyRef);
+  private cdr = inject(ChangeDetectorRef);
   private requestId = 0;
+  private loadingTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   ngOnChanges(changes: SimpleChanges): void {
     const openChange = changes['open'];
@@ -40,18 +53,28 @@ export class ReservaCreateClienteModalComponent implements OnChanges {
       this.buscarClientes();
     }
     if (openChange?.currentValue === false) {
-      this.clientesLoading = false;
+      this.cancelPending();
     }
   }
 
   onClose(): void {
-    this.clientesLoading = false;
+    this.cancelPending();
     this.close.emit();
   }
 
   buscarClientes(): void {
     const currentRequest = ++this.requestId;
     this.clientesLoading = true;
+    this.cdr.markForCheck();
+    if (this.loadingTimeoutId) {
+      clearTimeout(this.loadingTimeoutId);
+    }
+    this.loadingTimeoutId = setTimeout(() => {
+      if (currentRequest === this.requestId) {
+        this.clientesLoading = false;
+        this.cdr.markForCheck();
+      }
+    }, 12000);
     this.clienteService
       .getClientes(this.clientePage, this.clientePageSize, this.clienteSearchTerm)
       .pipe(
@@ -68,6 +91,11 @@ export class ReservaCreateClienteModalComponent implements OnChanges {
         finalize(() => {
           if (currentRequest === this.requestId) {
             this.clientesLoading = false;
+            if (this.loadingTimeoutId) {
+              clearTimeout(this.loadingTimeoutId);
+              this.loadingTimeoutId = null;
+            }
+            this.cdr.markForCheck();
           }
         }),
         takeUntilDestroyed(this.destroyRef)
@@ -81,6 +109,7 @@ export class ReservaCreateClienteModalComponent implements OnChanges {
           this.clienteTotalRegistros = res.totalRegistros ?? 0;
           this.clienteTotalPages = res.totalPages ?? 1;
           this.clientesLoading = false;
+          this.cdr.markForCheck();
         },
         error: () => {
           if (currentRequest !== this.requestId) {
@@ -90,6 +119,7 @@ export class ReservaCreateClienteModalComponent implements OnChanges {
           this.clienteTotalRegistros = 0;
           this.clienteTotalPages = 1;
           this.clientesLoading = false;
+          this.cdr.markForCheck();
         }
       });
   }
@@ -118,5 +148,22 @@ export class ReservaCreateClienteModalComponent implements OnChanges {
       this.clientePage += 1;
       this.buscarClientes();
     }
+  }
+
+  ngOnDestroy(): void {
+    if (this.loadingTimeoutId) {
+      clearTimeout(this.loadingTimeoutId);
+      this.loadingTimeoutId = null;
+    }
+  }
+
+  private cancelPending(): void {
+    this.requestId += 1;
+    this.clientesLoading = false;
+    if (this.loadingTimeoutId) {
+      clearTimeout(this.loadingTimeoutId);
+      this.loadingTimeoutId = null;
+    }
+    this.cdr.markForCheck();
   }
 }

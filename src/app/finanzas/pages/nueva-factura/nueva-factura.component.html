@@ -1,0 +1,418 @@
+<div class="row">
+  <div class="col-12">
+    <app-card [customHeader]="true">
+      <div class="app-card-header">
+        <h5>Nueva Factura</h5>
+        <div class="card-header-right d-flex flex-wrap align-items-center gap-2">
+          <button class="btn btn-sm btn-outline-secondary" type="button" (click)="irConsulta()" [disabled]="isSubmitting">
+            <i class="feather icon-list me-1"></i>
+            Ir a consulta
+          </button>
+          <button class="btn btn-sm btn-primary nf-btn-primary" type="button" (click)="openConfirm()" [disabled]="!canConfirm">
+            <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+            <i class="feather icon-check me-1" *ngIf="!isSubmitting"></i>
+            Confirmar Factura
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="errorMessage" class="alert alert-danger mb-3">
+        <i class="feather icon-alert-triangle me-2"></i>
+        {{ errorMessage }}
+      </div>
+
+      <div *ngIf="successMessage" class="alert alert-success mb-3">
+        <i class="feather icon-check-circle me-2"></i>
+        {{ successMessage }}
+        <div class="mt-2 fw-semibold">
+          Número generado: {{ facturaSerie || 'N/D' }} - {{ facturaNumero || 'N/D' }}
+        </div>
+        <div class="mt-3 d-flex gap-2 flex-wrap">
+          <button class="btn btn-sm btn-outline-secondary" type="button" (click)="irConsulta()">
+            Ir a consulta
+          </button>
+          <button class="btn btn-sm btn-outline-primary" type="button" (click)="verDocumento()" [disabled]="!facturaNumero">
+            Ver documento
+          </button>
+        </div>
+      </div>
+
+      <form class="nueva-factura nueva-factura--bg" [formGroup]="form">
+        <div class="nf-hero">
+          <div class="nf-hero__title">Factura Electrónica</div>
+          <span class="badge bg-success nf-hero__badge">Confirmación inmediata</span>
+        </div>
+        <div class="nf-divider"></div>
+
+        <div class="card shadow-none border nf-section nf-section--header">
+          <div class="card-body nf-header">
+            <div class="row g-3 nf-header__top">
+              <div class="col-lg-5">
+                <div class="nf-emisor nf-emisor--compact">
+                  <div class="nf-emisor__name">Empresa</div>
+                  <div class="nf-emisor__meta">RUC: -</div>
+                  <div class="nf-emisor__meta">Punto de venta: -</div>
+                  <div class="nf-emisor__meta">Actividad económica: -</div>
+                </div>
+              </div>
+              <div class="col-lg-7 nf-header__config">
+                <div class="nf-doc-config nf-doc-config--compact">
+                  <div class="row g-2">
+                    <div class="col-md-6">
+                      <label class="form-label nf-label">Punto de venta</label>
+                      <div class="nf-input-wrap">
+                        <select class="form-control form-control-sm" formControlName="puntoVenta">
+                          <option *ngIf="puntosVentaLoading" value="" disabled>Cargando puntos de venta...</option>
+                          <option *ngIf="!puntosVentaLoading && puntosVenta.length === 0" value="" disabled>No hay puntos de venta</option>
+                          <option *ngFor="let pv of puntosVenta" [value]="pv.codigo">
+                            {{ pv.codigo }} - {{ pv.descripcion }}
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label nf-label">Tipo documento</label>
+                      <div class="nf-input-wrap">
+                        <select class="form-control form-control-sm" formControlName="tipDocu">
+                          <option *ngIf="tiposDocumentoLoading" value="" disabled>Cargando documentos...</option>
+                          <option *ngIf="!tiposDocumentoLoading && tiposDocumento.length === 0" value="" disabled>No hay documentos</option>
+                          <option *ngFor="let docu of tiposDocumento" [value]="docu.CA04_CodDocu">
+                            {{ docu.CA04_CodDocu }} - {{ docu.CA04_NomDocu }}
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label nf-label">Fecha</label>
+                      <div class="nf-input-wrap">
+                        <input type="date" class="form-control form-control-sm" formControlName="fechaDocu" readonly>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label nf-label">Condición venta</label>
+                      <div class="nf-input-wrap">
+                        <select class="form-control form-control-sm" formControlName="condicionVenta">
+                          <option value="01">01 - Contado</option>
+                          <option value="02">02 - Crédito</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label nf-label">Moneda</label>
+                      <div class="nf-input-wrap">
+                        <select class="form-control form-control-sm" formControlName="moneda">
+                          <option *ngIf="monedasLoading" value="" disabled>Cargando monedas...</option>
+                          <option *ngIf="!monedasLoading && monedas.length === 0" value="" disabled>No hay monedas</option>
+                          <option *ngFor="let moneda of monedas" [value]="moneda.codMoneda">
+                            {{ moneda.codMoneda }} - {{ moneda.moneda }}
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label nf-label">Tipo cambio</label>
+                      <div class="nf-input-wrap">
+                        <input type="number" class="form-control form-control-sm text-end" formControlName="tCambio" min="0" step="0.01">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="nf-client-card">
+              <div class="nf-client-card__header">
+                <div class="nf-client-card__title">Datos del Cliente</div>
+              </div>
+
+              <div class="row nf-client-row">
+                <div class="col-md-4">
+                  <label class="form-label nf-label">Código cliente</label>
+                  <div class="input-group input-group-sm nf-client-lookup">
+                    <input class="form-control" formControlName="codCliente" placeholder="Código cliente" [readonly]="locked">
+                    <button class="btn btn-outline-primary" type="button" (click)="abrirModalClientes()" [disabled]="locked" title="Buscar cliente">
+                      <i class="feather icon-search"></i>
+                    </button>
+                  </div>
+                  <small class="form-text text-muted" *ngIf="selectedCliente">
+                    {{ selectedCliente.codigo }} - {{ selectedCliente.nombre }}
+                  </small>
+                  <button type="button" class="btn btn-link p-0 small" *ngIf="selectedCliente" (click)="limpiarSeleccionCliente()">
+                    Limpiar selección
+                  </button>
+                </div>
+                <div class="col-md-8">
+                  <label class="form-label nf-label">Nombre</label>
+                  <div class="nf-input-wrap">
+                    <input class="form-control form-control-sm" formControlName="nomCliente" placeholder="Nombre del cliente">
+                  </div>
+                </div>
+              </div>
+              <div class="row nf-client-row">
+                <div class="col-md-4">
+                  <label class="form-label nf-label">RUC</label>
+                  <div class="nf-input-wrap">
+                    <input class="form-control form-control-sm" formControlName="rucCliente" placeholder="RUC">
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label nf-label">Correo electrónico</label>
+                  <div class="nf-input-wrap">
+                    <input class="form-control form-control-sm" formControlName="correoCliente" placeholder="correo@empresa.com">
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label nf-label">Código actividad comercial</label>
+                  <div class="nf-input-wrap">
+                    <input class="form-control form-control-sm" formControlName="codActividadComercial" placeholder="Código actividad">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card shadow-none border nf-section">
+          <div class="card-body p-3">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="d-flex align-items-center">
+                <i class="feather icon-grid text-muted me-2"></i>
+                <h6 class="mb-0">Detalle</h6>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered align-middle nueva-factura__table">
+                <colgroup>
+                  <col style="width: 12%">
+                  <col style="width: 30%">
+                  <col style="width: 10%">
+                  <col style="width: 12%">
+                  <col style="width: 8%">
+                  <col style="width: 12%">
+                  <col style="width: 12%">
+                  <col style="width: 4%">
+                </colgroup>
+                <thead class="table-light">
+                  <tr>
+                    <th>Código</th>
+                    <th>Descripción</th>
+                    <th class="text-end">Cantidad</th>
+                    <th class="text-end">Precio</th>
+                    <th class="text-end">%Desc</th>
+                    <th class="text-end">Impuesto</th>
+                    <th class="text-end total-col">Total</th>
+                    <th class="text-center">Eliminar</th>
+                  </tr>
+                </thead>
+                <tbody formArrayName="detalle">
+                  <tr *ngFor="let group of detalleArray.controls; let i = index; trackBy: trackByDetalle" [formGroupName]="i">
+                    <td>
+                      <input class="form-control form-control-sm" formControlName="codProdu" [readonly]="true" placeholder="Código">
+                    </td>
+                    <td>
+                      <input class="form-control form-control-sm" formControlName="descripcion" [readonly]="true" placeholder="Descripción">
+                    </td>
+                    <td>
+                      <input type="number" class="form-control form-control-sm text-end" formControlName="cantidad" min="0" step="0.01">
+                    </td>
+                    <td>
+                      <input type="number" class="form-control form-control-sm text-end" formControlName="pUndLst" min="0" step="0.01">
+                    </td>
+                    <td>
+                      <input type="number" class="form-control form-control-sm text-end" formControlName="porDescu" min="0" step="0.01">
+                    </td>
+                    <td class="text-end">
+                      {{ getLineaImpuesto(i) | number: '1.2-2' }}
+                    </td>
+                    <td class="text-end total-col">
+                      {{ getLineaTotal(i) | number: '1.2-2' }}
+                    </td>
+                    <td class="text-center">
+                      <button class="btn btn-sm btn-outline-danger" type="button" (click)="removeDetalle(i)" [disabled]="locked">
+                        <i class="feather icon-trash-2"></i>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="detalleArray.length === 0">
+                    <td colspan="8" class="text-center text-muted">Agrega al menos una línea de detalle.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="mt-2">
+              <button class="btn btn-sm btn-outline-primary nf-add-line" type="button" (click)="addDetalle()" [disabled]="locked">
+                <i class="feather icon-plus me-1"></i>
+                Agregar línea
+              </button>
+            </div>
+
+            <div class="text-danger small mt-2 nf-error" *ngIf="detalleArray.length === 0">
+              No se puede confirmar sin detalle.
+            </div>
+          </div>
+        </div>
+
+        <div class="row nf-footer-row">
+          <div class="col-12 col-lg-8 nf-col-pagos" *ngIf="mostrarPagos">
+            <details class="card shadow-none border nf-collapsible" open>
+              <summary class="nf-collapsible__summary">
+                <div class="d-flex align-items-center">
+                  <i class="feather icon-credit-card text-muted me-2"></i>
+                  <h6 class="mb-0">Pagos</h6>
+                </div>
+                <span class="text-muted small">Solo contado</span>
+              </summary>
+              <div class="card-body p-3 nf-collapsible__body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <div class="text-muted small">Detalle de pagos registrados</div>
+                  <button class="btn btn-sm btn-outline-primary" type="button" (click)="addPago()" [disabled]="locked">
+                    <i class="feather icon-plus me-1"></i>
+                    Agregar pago
+                  </button>
+                </div>
+
+                <div class="table-responsive">
+                  <table class="table table-sm table-bordered align-middle nueva-factura__table">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Forma Pago</th>
+                        <th class="text-end">Monto</th>
+                        <th>Moneda</th>
+                        <th>Referencia</th>
+                        <th>Tarjeta</th>
+                        <th>Vencimiento</th>
+                        <th class="text-center">Eliminar</th>
+                      </tr>
+                    </thead>
+                    <tbody formArrayName="pagos">
+                      <tr *ngFor="let group of pagosArray.controls; let i = index; trackBy: trackByPago" [formGroupName]="i">
+                        <td>
+                          <select class="form-control form-control-sm" formControlName="formaPago">
+                            <option *ngIf="formasPagoLoading" value="" disabled>Cargando formas de pago...</option>
+                            <option *ngIf="!formasPagoLoading && formasPago.length === 0" value="" disabled>No hay formas de pago</option>
+                            <option *ngFor="let fp of formasPago" [value]="fp.codigo">
+                              {{ fp.codigo }} - {{ fp.descripcion }}
+                            </option>
+                          </select>
+                        </td>
+                        <td>
+                          <input type="number" class="form-control form-control-sm text-end" formControlName="monto" min="0" step="0.01">
+                        </td>
+                        <td>
+                          <select class="form-control form-control-sm" formControlName="moneda">
+                            <option *ngIf="monedasLoading" value="" disabled>Cargando monedas...</option>
+                            <option *ngIf="!monedasLoading && monedas.length === 0" value="" disabled>No hay monedas</option>
+                            <option *ngFor="let moneda of monedas" [value]="moneda.codMoneda">
+                              {{ moneda.codMoneda }} - {{ moneda.moneda }}
+                            </option>
+                          </select>
+                        </td>
+                        <td>
+                          <input class="form-control form-control-sm" formControlName="referencia" placeholder="Referencia">
+                        </td>
+                        <td>
+                          <input class="form-control form-control-sm" formControlName="tarjeta" placeholder="Tarjeta">
+                        </td>
+                        <td>
+                          <input type="date" class="form-control form-control-sm" formControlName="vencimiento">
+                        </td>
+                        <td class="text-center">
+                          <button class="btn btn-sm btn-outline-danger" type="button" (click)="removePago(i)" [disabled]="locked">
+                            <i class="feather icon-trash-2"></i>
+                          </button>
+                        </td>
+                      </tr>
+                      <tr *ngIf="pagosArray.length === 0">
+                        <td colspan="7" class="text-center text-muted">Agrega pagos para confirmar al contado.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="nf-payments-summary">
+                  <div>
+                    <span class="text-muted">Total Pagos</span>
+                    <strong>₡ {{ pagosTotal | number:'1.2-2' }}</strong>
+                  </div>
+                  <div [class.text-danger]="!pagosValid">
+                    <span class="text-muted">Diferencia</span>
+                    <strong>₡ {{ (pagosTotal - resumen.total) | number:'1.2-2' }}</strong>
+                  </div>
+                </div>
+
+                <div class="text-danger small mt-2 nf-error" *ngIf="!pagosValid">
+                  Advertencia: el total de pagos no coincide con el total del documento.
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <div class="col-12 nf-col-totales" [ngClass]="{ 'col-lg-4': mostrarPagos, 'col-lg-12': !mostrarPagos }">
+            <div class="card shadow-none border nf-totales">
+              <div class="card-body p-3">
+                <div class="nf-totales__row">
+                  <span>Subtotal</span>
+                  <strong>₡ {{ resumen.subtotal | number:'1.2-2' }}</strong>
+                </div>
+                <div class="nf-totales__row">
+                  <span>Descuento</span>
+                  <strong>₡ {{ resumen.descuento | number:'1.2-2' }}</strong>
+                </div>
+                <div class="nf-totales__row">
+                  <span>Impuestos</span>
+                  <strong>₡ {{ resumen.impuesto | number:'1.2-2' }}</strong>
+                </div>
+                <div class="nf-totales__separator"></div>
+                <div class="nf-totales__total">
+                  <span>TOTAL DOCUMENTO</span>
+                  <strong>₡ {{ resumen.total | number:'1.2-2' }}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="nf-actions-bottom">
+          <button class="btn btn-primary nf-btn-primary nf-btn-primary--lg" type="button" (click)="openConfirm()" [disabled]="!canConfirm">
+            <i class="feather icon-check me-2"></i>
+            Confirmar Factura
+          </button>
+        </div>
+      </form>
+    </app-card>
+  </div>
+</div>
+
+<app-nueva-factura-cliente-modal
+  *ngIf="showClienteModal"
+  [open]="showClienteModal"
+  (close)="showClienteModal = false"
+  (clienteSelected)="onClienteSelected($event)"
+></app-nueva-factura-cliente-modal>
+
+<div class="modal-backdrop fade show" *ngIf="showConfirmModal"></div>
+<div class="modal fade show d-block" *ngIf="showConfirmModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirmar factura</h5>
+        <button type="button" class="btn-close" aria-label="Close" (click)="closeConfirm()"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0">
+          Esta acción generará el documento definitivo y no podrá modificarse. ¿Desea continuar?
+        </p>
+      </div>
+      <div class="modal-footer d-flex justify-content-between flex-wrap gap-2">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeConfirm()" [disabled]="isSubmitting">
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-primary" (click)="confirmSubmit()" [disabled]="isSubmitting">
+          Confirmar Factura
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
