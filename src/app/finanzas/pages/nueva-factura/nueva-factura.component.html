@@ -40,7 +40,10 @@
       <form class="nueva-factura nueva-factura--bg" [formGroup]="form">
         <div class="nf-hero">
           <div class="nf-hero__title">Factura Electrónica</div>
-          <span class="badge bg-success nf-hero__badge">Confirmación inmediata</span>
+          <div class="nf-hero__date">
+            <span class="nf-hero__date-label">Fecha</span>
+            <input type="date" class="form-control form-control-sm" formControlName="fechaDocu" readonly>
+          </div>
         </div>
         <div class="nf-divider"></div>
 
@@ -53,6 +56,9 @@
                   <div class="nf-emisor__meta">RUC: -</div>
                   <div class="nf-emisor__meta">Punto de venta: -</div>
                   <div class="nf-emisor__meta">Actividad económica: -</div>
+                  <div class="nf-emisor__meta">
+                    Tipo de cambio: <strong>{{ form.controls.tCambio.value | number:'1.2-2' }}</strong>
+                  </div>
                 </div>
               </div>
               <div class="col-lg-7 nf-header__config">
@@ -83,12 +89,6 @@
                       </div>
                     </div>
                     <div class="col-md-6">
-                      <label class="form-label nf-label">Fecha</label>
-                      <div class="nf-input-wrap">
-                        <input type="date" class="form-control form-control-sm" formControlName="fechaDocu" readonly>
-                      </div>
-                    </div>
-                    <div class="col-md-6">
                       <label class="form-label nf-label">Condición venta</label>
                       <div class="nf-input-wrap">
                         <select class="form-control form-control-sm" formControlName="condicionVenta">
@@ -110,9 +110,27 @@
                       </div>
                     </div>
                     <div class="col-md-6">
-                      <label class="form-label nf-label">Tipo cambio</label>
+                      <label class="form-label nf-label">Plan tarifario</label>
                       <div class="nf-input-wrap">
-                        <input type="number" class="form-control form-control-sm text-end" formControlName="tCambio" min="0" step="0.01">
+                        <select class="form-control form-control-sm" formControlName="planTarifario">
+                          <option *ngIf="planesTarifariosLoading" value="" disabled>Cargando planes tarifarios...</option>
+                          <option *ngIf="!planesTarifariosLoading && planesTarifarios.length === 0" value="" disabled>No hay planes tarifarios</option>
+                          <option *ngFor="let plan of planesTarifarios" [value]="plan.planId">
+                            {{ plan.nombrePlan }} - {{ plan.tipoTarifaDescripcion }}
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label nf-label">Lista de precios</label>
+                      <div class="nf-input-wrap">
+                        <select class="form-control form-control-sm" formControlName="listaPrecio">
+                          <option *ngIf="listasPrecioLoading" value="" disabled>Cargando listas de precios...</option>
+                          <option *ngIf="!listasPrecioLoading && listasPrecio.length === 0" value="" disabled>No hay listas de precios</option>
+                          <option *ngFor="let lista of listasPrecio" [value]="lista.codigo">
+                            {{ lista.codigo }} - {{ lista.descripcion }}
+                          </option>
+                        </select>
                       </div>
                     </div>
                   </div>
@@ -214,7 +232,7 @@
                       <input class="form-control form-control-sm" formControlName="descripcion" [readonly]="true" placeholder="Descripción">
                     </td>
                     <td>
-                      <input type="number" class="form-control form-control-sm text-end" formControlName="cantidad" min="0" step="0.01">
+                      <input #cantidadInput type="number" class="form-control form-control-sm text-end" formControlName="cantidad" min="0" step="0.01">
                     </td>
                     <td>
                       <input type="number" class="form-control form-control-sm text-end" formControlName="pUndLst" min="0" step="0.01">
@@ -235,16 +253,16 @@
                     </td>
                   </tr>
                   <tr *ngIf="detalleArray.length === 0">
-                    <td colspan="8" class="text-center text-muted">Agrega al menos una línea de detalle.</td>
+                    <td colspan="8" class="text-center text-muted">Agrega al menos un servicio.</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
             <div class="mt-2">
-              <button class="btn btn-sm btn-outline-primary nf-add-line" type="button" (click)="addDetalle()" [disabled]="locked">
+              <button class="btn btn-sm btn-outline-primary nf-add-line" type="button" (click)="abrirModalServicios()" [disabled]="locked">
                 <i class="feather icon-plus me-1"></i>
-                Agregar línea
+                Agregar servicio
               </button>
             </div>
 
@@ -391,6 +409,15 @@
   (close)="showClienteModal = false"
   (clienteSelected)="onClienteSelected($event)"
 ></app-nueva-factura-cliente-modal>
+
+<app-selector-servicios-modal
+  *ngIf="showServicioModal"
+  [open]="showServicioModal"
+  [codLista]="form.controls.listaPrecio.value"
+  [modoPrecio]="modoPrecioSeleccionado"
+  (close)="cerrarModalServicios()"
+  (servicioSelected)="onServicioSelected($event)"
+></app-selector-servicios-modal>
 
 <div class="modal-backdrop fade show" *ngIf="showConfirmModal"></div>
 <div class="modal fade show d-block" *ngIf="showConfirmModal" tabindex="-1" role="dialog">

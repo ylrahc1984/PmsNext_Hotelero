@@ -1,9 +1,19 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  DestroyRef,
+  ElementRef,
+  OnInit,
+  QueryList,
+  ViewChildren,
+  inject
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
-import { finalize, startWith } from 'rxjs/operators';
+import { distinctUntilChanged, finalize, startWith } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
@@ -16,8 +26,14 @@ import { UsuarioService } from 'src/app/demo/administracion/usuarios/usuario.ser
 import { PuntoVentaUI } from 'src/app/demo/administracion/usuarios/usuario.models';
 import { FormaPagoService } from 'src/app/demo/administracion/forma-pago/forma-pago.service';
 import { FormaPago } from 'src/app/demo/administracion/forma-pago/forma-pago.models';
+import { PlanesTarifasService, PlanTarifaUI } from 'src/app/demo/catalogos/listas-precios/planes-tarifas.service';
+import { ListaPrecioService } from 'src/app/demo/catalogos/listas-precios/lista-precio.service';
+import { ListaPrecioUI } from 'src/app/demo/catalogos/listas-precios/lista-precio.models';
+import { SelectorServiciosModalComponent } from './selector-servicios-modal.component';
+import { ModoPrecio, ServicioListaPrecioItem } from 'src/app/finanzas/services/servicios-lista-precio.service';
 
 type DetalleForm = {
+  reglaPrecioId: FormControl<number>;
   orden: FormControl<number>;
   codProdu: FormControl<string>;
   areaProdu: FormControl<string>;
@@ -58,6 +74,8 @@ type NuevaFacturaForm = {
   fechaDocu: FormControl<string>;
   condicionVenta: FormControl<string>;
   moneda: FormControl<string>;
+  planTarifario: FormControl<string>;
+  listaPrecio: FormControl<string>;
   tCambio: FormControl<number>;
   operador: FormControl<string>;
   detalle: FormArray<FormGroup<DetalleForm>>;
@@ -93,7 +111,7 @@ interface ConfirmarFacturaResponse {
 @Component({
   selector: 'app-nueva-factura',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, SharedModule, NuevaFacturaClienteModalComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, SharedModule, NuevaFacturaClienteModalComponent, SelectorServiciosModalComponent],
   templateUrl: './nueva-factura.component.html',
   styleUrls: ['./nueva-factura.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -107,6 +125,8 @@ export class NuevaFacturaComponent implements OnInit {
   private readonly monedaService = inject(MonedaService);
   private readonly usuarioService = inject(UsuarioService);
   private readonly formaPagoService = inject(FormaPagoService);
+  private readonly planesTarifasService = inject(PlanesTarifasService);
+  private readonly listaPrecioService = inject(ListaPrecioService);
 
   private readonly apiUrl = `${environment.apiUrl}/facturacion/confirmar`;
 
@@ -121,6 +141,8 @@ export class NuevaFacturaComponent implements OnInit {
     fechaDocu: this.fb.nonNullable.control(this.getTodayIsoDate()),
     condicionVenta: this.fb.nonNullable.control('01', { validators: [Validators.required] }),
     moneda: this.fb.nonNullable.control('CRC', { validators: [Validators.required] }),
+    planTarifario: this.fb.nonNullable.control(''),
+    listaPrecio: this.fb.nonNullable.control(''),
     tCambio: this.fb.nonNullable.control(1),
     operador: this.fb.nonNullable.control('admin'),
     detalle: this.fb.array<FormGroup<DetalleForm>>([], { validators: [Validators.required] }),
@@ -136,6 +158,12 @@ export class NuevaFacturaComponent implements OnInit {
 
   selectedCliente: ClienteUI | null = null;
   showClienteModal = false;
+  showServicioModal = false;
+
+  @ViewChildren('cantidadInput') cantidadInputs?: QueryList<ElementRef<HTMLInputElement>>;
+
+  private previousListaPrecio = '';
+  private suppressListaPrecioChange = false;
 
   monedas: MonedaUI[] = [];
   monedasLoading = false;
@@ -149,6 +177,12 @@ export class NuevaFacturaComponent implements OnInit {
   formasPago: FormaPago[] = [];
   formasPagoLoading = false;
 
+  planesTarifarios: PlanTarifaUI[] = [];
+  planesTarifariosLoading = false;
+
+  listasPrecio: ListaPrecioUI[] = [];
+  listasPrecioLoading = false;
+
   isSubmitting = false;
   showConfirmModal = false;
   errorMessage: string | null = null;
@@ -158,7 +192,6 @@ export class NuevaFacturaComponent implements OnInit {
   locked = false;
 
   constructor() {
-    this.addDetalle();
     this.addPago();
 
     this.form.controls.condicionVenta.valueChanges
@@ -184,6 +217,12 @@ export class NuevaFacturaComponent implements OnInit {
       this.cdr.markForCheck();
     });
 
+    this.form.controls.listaPrecio.valueChanges
+      .pipe(distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
+      .subscribe((value) => {
+        this.onListaPrecioChange((value || '').toString());
+      });
+
   }
 
   ngOnInit(): void {
@@ -191,6 +230,8 @@ export class NuevaFacturaComponent implements OnInit {
     this.cargarTiposDocumento();
     this.cargarPuntosVenta();
     this.cargarFormasPago();
+    this.cargarPlanesTarifarios();
+    this.cargarListasPrecio();
   }
 
   get detalleArray(): FormArray<FormGroup<DetalleForm>> {
@@ -209,13 +250,6 @@ export class NuevaFacturaComponent implements OnInit {
       this.detalleArray.length > 0 &&
       this.pagosValid
     );
-  }
-
-  addDetalle(): void {
-    if (this.locked) return;
-    const orden = this.detalleArray.length + 1;
-    this.detalleArray.push(this.createDetalleGroup(orden));
-    this.updateCalculos();
   }
 
   removeDetalle(index: number): void {
@@ -286,6 +320,28 @@ export class NuevaFacturaComponent implements OnInit {
     if (this.locked) return;
     this.showClienteModal = true;
     this.cdr.markForCheck();
+  }
+
+  public abrirModalServicios(): void {
+    if (this.locked) return;
+    const codLista = (this.form.controls.listaPrecio.value || '').toString().trim();
+    if (!codLista) {
+      window.alert('Seleccione la lista de precios antes de agregar servicios.');
+      return;
+    }
+    this.showServicioModal = true;
+    this.cdr.markForCheck();
+  }
+
+  public cerrarModalServicios(): void {
+    this.showServicioModal = false;
+    this.cdr.markForCheck();
+  }
+
+  public onServicioSelected(servicio: ServicioListaPrecioItem): void {
+    if (this.locked) return;
+    this.showServicioModal = false;
+    this.addDetalleFromServicio(servicio);
   }
 
   public onClienteSelected(cliente: ClienteUI): void {
@@ -360,6 +416,7 @@ export class NuevaFacturaComponent implements OnInit {
 
   private createDetalleGroup(orden: number): FormGroup<DetalleForm> {
     return this.fb.nonNullable.group({
+      reglaPrecioId: this.fb.nonNullable.control(0),
       orden: this.fb.nonNullable.control(orden),
       codProdu: this.fb.nonNullable.control(''),
       areaProdu: this.fb.nonNullable.control(''),
@@ -396,6 +453,28 @@ export class NuevaFacturaComponent implements OnInit {
     this.detalleArray.controls.forEach((group, index) => {
       group.controls.orden.setValue(index + 1, { emitEvent: false });
     });
+  }
+
+  private addDetalleFromServicio(servicio: ServicioListaPrecioItem): void {
+    const orden = this.detalleArray.length + 1;
+    const group = this.createDetalleGroup(orden);
+    group.patchValue(
+      {
+        reglaPrecioId: Number(servicio.reglaPrecioId ?? 0) || 0,
+        codProdu: (servicio.codigoServicio || '').toString(),
+        descripcion: (servicio.nombreServicio || '').toString(),
+        cantidad: 1,
+        pUndLst: Number(servicio.precioUnitario ?? 0) || 0,
+        uniSinImp: Number(servicio.precioUnitario ?? 0) || 0,
+        porDescu: 0,
+        porImp: 0
+      },
+      { emitEvent: false }
+    );
+    this.detalleArray.push(group);
+    this.updateCalculos();
+    this.cdr.markForCheck();
+    this.focusCantidadInput(orden - 1);
   }
 
   private updateCalculos(): void {
@@ -518,6 +597,121 @@ export class NuevaFacturaComponent implements OnInit {
           this.formasPago = [];
         }
       });
+  }
+
+  private cargarPlanesTarifarios(): void {
+    this.planesTarifariosLoading = true;
+    this.planesTarifasService
+      .getPlanesTarifas(1, 50)
+      .pipe(
+        finalize(() => {
+          this.planesTarifariosLoading = false;
+          this.cdr.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (res) => {
+          this.planesTarifarios = res ?? [];
+          const current = this.form.controls.planTarifario.value;
+          const exists = this.planesTarifarios.some((plan) => String(plan.planId) === String(current));
+          if (!current || !exists) {
+            const nextValue = this.planesTarifarios[0]?.planId;
+            if (nextValue !== undefined) {
+              this.form.controls.planTarifario.setValue(String(nextValue), { emitEvent: false });
+            }
+          }
+        },
+        error: () => {
+          this.planesTarifarios = [];
+        }
+      });
+  }
+
+  private cargarListasPrecio(): void {
+    this.listasPrecioLoading = true;
+    this.listaPrecioService
+      .getListas({ pageNumber: 1, pageSize: 10 })
+      .pipe(
+        finalize(() => {
+          this.listasPrecioLoading = false;
+          this.cdr.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (res) => {
+          this.listasPrecio = res?.data ?? [];
+          const current = this.form.controls.listaPrecio.value;
+          const exists = this.listasPrecio.some((lista) => String(lista.codigo) === String(current));
+          if (!current || !exists) {
+            const nextValue = this.listasPrecio[0]?.codigo ?? '';
+            if (nextValue) {
+              this.form.controls.listaPrecio.setValue(nextValue, { emitEvent: false });
+              this.previousListaPrecio = nextValue;
+            }
+          } else {
+            this.previousListaPrecio = (current || '').toString();
+          }
+        },
+        error: () => {
+          this.listasPrecio = [];
+        }
+      });
+  }
+
+  private onListaPrecioChange(nextValue: string): void {
+    if (this.suppressListaPrecioChange) {
+      this.suppressListaPrecioChange = false;
+      return;
+    }
+
+    const next = (nextValue || '').toString().trim();
+
+    if (!this.previousListaPrecio) {
+      this.previousListaPrecio = next;
+      return;
+    }
+
+    if (next === this.previousListaPrecio) {
+      return;
+    }
+
+    if (this.detalleArray.length > 0) {
+      const confirmed = window.confirm(
+        'Cambiar la lista de precios eliminará las líneas actuales. ¿Desea continuar?'
+      );
+      if (!confirmed) {
+        this.suppressListaPrecioChange = true;
+        this.form.controls.listaPrecio.setValue(this.previousListaPrecio, { emitEvent: false });
+        return;
+      }
+      this.clearDetalle();
+    }
+
+    this.previousListaPrecio = next;
+  }
+
+  private clearDetalle(): void {
+    this.detalleArray.clear();
+    this.lineasCalculo.splice(0, this.lineasCalculo.length);
+    this.updateCalculos();
+    this.cdr.markForCheck();
+  }
+
+  private focusCantidadInput(index: number): void {
+    setTimeout(() => {
+      const input = this.cantidadInputs?.get(index)?.nativeElement;
+      input?.focus();
+      input?.select();
+    }, 0);
+  }
+
+  get modoPrecioSeleccionado(): ModoPrecio {
+    const planId = Number(this.form.controls.planTarifario.value ?? 0) || 0;
+    const plan = (this.planesTarifarios ?? []).find((item) => Number(item?.planId ?? 0) === planId);
+    const tipo = (plan?.tipoTarifa || '').toString().trim().toUpperCase();
+    return tipo === 'N' ? 'N' : 'R';
   }
 
   private cargarTiposDocumento(): void {

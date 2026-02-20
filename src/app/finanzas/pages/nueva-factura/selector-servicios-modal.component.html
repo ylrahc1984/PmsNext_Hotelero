@@ -8,13 +8,13 @@
 >
   <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg" role="document">
     <div class="modal-content">
-      <div class="modal-header py-2">
+      <div class="modal-header">
         <div>
           <h5 class="modal-title mb-0">
-            <i class="feather icon-users me-1"></i>
-            Seleccionar Cliente
+            <i class="feather icon-package me-1"></i>
+            Seleccionar servicio
           </h5>
-          <small class="text-muted">Busca y selecciona el cliente para asociarlo a la factura.</small>
+          <small class="text-muted">Busca y selecciona un servicio de la lista de precios.</small>
         </div>
         <button type="button" class="btn-close" aria-label="Close" (click)="onClose()"></button>
       </div>
@@ -24,23 +24,23 @@
           <div class="input-group" style="min-width: 280px; flex: 1 1 360px;">
             <span class="input-group-text"><i class="feather icon-search"></i></span>
             <input
+              #searchInput
               type="text"
               class="form-control"
-              [(ngModel)]="clienteSearchTerm"
-              name="clienteSearchTerm"
+              [formControl]="searchControl"
               placeholder="Buscar por código o nombre..."
               autocomplete="off"
-              (keyup.enter)="buscarClientes()"
+              (keyup.enter)="onBuscar()"
             >
             <button
               type="button"
               class="btn btn-primary rsv-action-btn rsv-action-btn--primary"
-              (click)="buscarClientes()"
-              [disabled]="clientesLoading"
+              (click)="onBuscar()"
+              [disabled]="serviciosLoading"
             >
               <span class="rsv-action-btn__icon" aria-hidden="true">
-                <span *ngIf="clientesLoading" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                <i *ngIf="!clientesLoading" class="feather icon-search"></i>
+                <span *ngIf="serviciosLoading" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                <i *ngIf="!serviciosLoading" class="feather icon-search"></i>
               </span>
               <span>Buscar</span>
             </button>
@@ -48,8 +48,8 @@
           <button
             type="button"
             class="btn btn-outline-secondary rsv-action-btn rsv-action-btn--outline"
-            (click)="limpiarBusquedaClientes()"
-            [disabled]="clientesLoading && !clienteSearchTerm"
+            (click)="onLimpiar()"
+            [disabled]="serviciosLoading && !searchControl.value"
           >
             <span class="rsv-action-btn__icon" aria-hidden="true">
               <i class="feather icon-x"></i>
@@ -58,39 +58,49 @@
           </button>
         </div>
 
+        <div *ngIf="serviciosError" class="alert alert-danger mb-2">
+          <i class="feather icon-alert-triangle me-2"></i>
+          {{ serviciosError }}
+        </div>
+
         <div class="table-responsive">
           <table class="table table-hover align-middle mb-2">
             <thead class="table-light">
               <tr>
                 <th style="width: 140px;">Código</th>
                 <th>Nombre</th>
+                <th class="text-end" style="width: 140px;">Precio</th>
                 <th class="text-center" style="width: 140px;">Acción</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let cliente of clientes">
-                <td>{{ cliente.codigo }}</td>
-                <td>{{ cliente.nombre }}</td>
+              <tr *ngFor="let servicio of servicios">
+                <td>{{ servicio.codigoServicio }}</td>
+                <td>{{ servicio.nombreServicio }}</td>
+                <td class="text-end">
+                  {{ servicio.precioUnitario | number:'1.2-2' }}
+                  <small class="text-muted" *ngIf="servicio.moneda">{{ servicio.moneda }}</small>
+                </td>
                 <td class="text-center">
                   <button
                     class="btn btn-outline-primary btn-sm rsv-action-btn rsv-action-btn--outline rsv-action-btn--compact"
                     type="button"
-                    (click)="seleccionarCliente(cliente)"
-                    [disabled]="clientesLoading && clientes.length === 0"
-                    title="Seleccionar cliente"
+                    (click)="seleccionarServicio(servicio)"
+                    [disabled]="serviciosLoading"
+                    title="Agregar servicio"
                   >
                     <span class="rsv-action-btn__icon" aria-hidden="true">
-                      <i class="feather icon-check"></i>
+                      <i class="feather icon-plus"></i>
                     </span>
-                    <span>Elegir</span>
+                    <span>Agregar</span>
                   </button>
                 </td>
               </tr>
-              <tr *ngIf="clientes.length === 0 && !clientesLoading">
-                <td colspan="3" class="text-center text-muted">No hay resultados.</td>
+              <tr *ngIf="servicios.length === 0 && !serviciosLoading">
+                <td colspan="4" class="text-center text-muted">No hay resultados.</td>
               </tr>
-              <tr *ngIf="clientesLoading && clientes.length === 0">
-                <td colspan="3" class="text-center text-muted">
+              <tr *ngIf="serviciosLoading && servicios.length === 0">
+                <td colspan="4" class="text-center text-muted">
                   <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
                   Cargando...
                 </td>
@@ -100,13 +110,13 @@
         </div>
 
         <div class="d-flex justify-content-between align-items-center">
-          <small class="text-muted">Registros: {{ clienteTotalRegistros }} · Página {{ clientePage }} / {{ clienteTotalPages }}</small>
+          <small class="text-muted">{{ rangeLabel }} · Página {{ pageNumber }}</small>
           <div class="d-flex gap-2">
             <button
               class="btn btn-outline-secondary btn-sm rsv-action-btn rsv-action-btn--outline rsv-action-btn--compact"
               type="button"
-              (click)="paginaAnteriorClientes()"
-              [disabled]="clientePage <= 1 || clientesLoading"
+              (click)="paginaAnterior()"
+              [disabled]="pageNumber <= 1 || serviciosLoading"
             >
               <span class="rsv-action-btn__icon" aria-hidden="true">
                 <i class="feather icon-chevron-left"></i>
@@ -116,8 +126,8 @@
             <button
               class="btn btn-outline-secondary btn-sm rsv-action-btn rsv-action-btn--outline rsv-action-btn--compact"
               type="button"
-              (click)="paginaSiguienteClientes()"
-              [disabled]="clientePage >= clienteTotalPages || clientesLoading"
+              (click)="paginaSiguiente()"
+              [disabled]="!pageHasNext || serviciosLoading"
             >
               <span>Siguiente</span>
               <span class="rsv-action-btn__icon" aria-hidden="true">

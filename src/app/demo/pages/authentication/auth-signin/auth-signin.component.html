@@ -9,7 +9,8 @@
     <div class="card">
       <div class="card-body text-center">
         <img
-          src="assets/images/logo-empresa.JPG"
+          [src]="logoSrc"
+          (error)="onLogoError()"
           alt="Logo de la empresa"
           class="auth-logo mb-4"
         />

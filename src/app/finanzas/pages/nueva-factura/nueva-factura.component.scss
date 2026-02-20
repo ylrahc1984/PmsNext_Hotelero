@@ -48,6 +48,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 16px 20px;
   background: #fbfcfe;
@@ -66,6 +67,24 @@
   font-size: 0.75rem;
   font-weight: 600;
   padding: 6px 10px;
+}
+
+.nf-hero__date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nf-hero__date-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.nf-hero__date .form-control {
+  min-width: 160px;
 }
 
 .nf-divider {

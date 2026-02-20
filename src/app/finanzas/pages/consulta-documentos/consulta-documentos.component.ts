@@ -47,11 +47,12 @@ export class ConsultaDocumentosComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly pageSizeOptions = [10, 25, 50];
+  private readonly defaultDateRange = this.getDefaultDateRange();
 
   readonly filtrosForm: FormGroup<ConsultaDocumentosForm> = this.fb.group({
     tipoDocu: this.fb.control(''),
-    fechaDesde: this.fb.control('', { validators: [Validators.required] }),
-    fechaHasta: this.fb.control(''),
+    fechaDesde: this.fb.control(this.defaultDateRange.fechaDesde, { validators: [Validators.required] }),
+    fechaHasta: this.fb.control(this.defaultDateRange.fechaHasta),
     nombreCliente: this.fb.control(''),
     condicionVenta: this.fb.control(''),
     estadoDocu: this.fb.control('')
@@ -87,10 +88,11 @@ export class ConsultaDocumentosComponent {
   }
 
   onLimpiar(): void {
+    const { fechaDesde, fechaHasta } = this.getDefaultDateRange();
     this.filtrosForm.reset({
       tipoDocu: '',
-      fechaDesde: '',
-      fechaHasta: '',
+      fechaDesde,
+      fechaHasta,
       nombreCliente: '',
       condicionVenta: '',
       estadoDocu: ''
@@ -264,6 +266,22 @@ export class ConsultaDocumentosComponent {
       return value;
     }
     return `${day}/${month}/${year}`;
+  }
+
+  private getDefaultDateRange(): { fechaDesde: string; fechaHasta: string } {
+    const today = new Date();
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    return {
+      fechaDesde: this.formatDateToInput(firstDayOfMonth),
+      fechaHasta: this.formatDateToInput(today)
+    };
+  }
+
+  private formatDateToInput(date: Date): string {
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const day = `${date.getDate()}`.padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   private getErrorMessage(error: unknown): string {

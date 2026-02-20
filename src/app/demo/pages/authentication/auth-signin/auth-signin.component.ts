@@ -20,6 +20,9 @@ export class AuthSigninComponent implements OnInit {
   isLoading = false;
   errorMessage = '';
   showPassword = false;
+  logoSrc = 'assets/images/logo_empresa.jpg';
+  private logoFallbackSrc = 'assets/images/logo_empresa.JPG';
+  private logoTriedFallback = false;
 
   ngOnInit(): void {
     this.initializeForm();
@@ -70,6 +73,14 @@ export class AuthSigninComponent implements OnInit {
     this.showPassword = !this.showPassword;
   }
 
+  onLogoError(): void {
+    if (this.logoTriedFallback) {
+      return;
+    }
+    this.logoTriedFallback = true;
+    this.logoSrc = this.logoFallbackSrc;
+  }
+
   get usuario() {
     return this.loginForm.get('usuario');
   }
@@ -78,4 +89,3 @@ export class AuthSigninComponent implements OnInit {
     return this.loginForm.get('clave');
   }
 }
-
