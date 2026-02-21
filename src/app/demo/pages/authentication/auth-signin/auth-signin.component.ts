@@ -20,8 +20,8 @@ export class AuthSigninComponent implements OnInit {
   isLoading = false;
   errorMessage = '';
   showPassword = false;
-  logoSrc = 'assets/images/logo_empresa.jpg';
-  private logoFallbackSrc = 'assets/images/logo_empresa.JPG';
+  logoSrc = 'assets/images/logo-empresa.jpg';
+  private logoFallbackSrc = 'assets/images/logo_empresa_v2.jpg';
   private logoTriedFallback = false;
 
   ngOnInit(): void {
