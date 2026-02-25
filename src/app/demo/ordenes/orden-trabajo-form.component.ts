@@ -13,6 +13,7 @@ import { ReservaDetalleDisponible, ReservasService } from '../reservas/services/
 import { SuplidorDisponibilidadUI, SuplidorService } from '../catalogos/suplidores/suplidor.service';
 import { MonedaService, MonedaUI } from '../administracion/monedas/moneda.service';
 import { AuthService } from 'src/app/core/services/auth.service';
+import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
 
 @Component({
   selector: 'app-orden-trabajo-form',
@@ -30,9 +31,12 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
   private suplidorService = inject(SuplidorService);
   private monedaService = inject(MonedaService);
   private authService = inject(AuthService);
+  private empresaContext = inject(EmpresaContextService);
   private http = inject(HttpClient);
   private orden?: OrdenTrabajo;
   private subs = new Subscription();
+
+  readonly empresa = this.empresaContext.empresa;
 
   form = this.fb.group({
     numeroOrden: [{ value: '', disabled: true }],

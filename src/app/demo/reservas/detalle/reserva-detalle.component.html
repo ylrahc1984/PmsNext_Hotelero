@@ -8,6 +8,9 @@
             <span class="badge bg-light text-dark border" *ngIf="codReserva">#{{ codReserva }}</span>
             <span class="badge text-white" *ngIf="reserva" [ngClass]="estadoBadgeClass">{{ estadoLabel }}</span>
           </div>
+          <div class="text-muted small mb-1">
+            {{ empresa()?.MA04_Nombre || 'Empresa' }} · RUC: {{ empresa()?.MA04_Ruc || '-' }}
+          </div>
           <p class="text-muted mb-0 small">Resumen, totales y servicios</p>
         </div>
 

@@ -1,0 +1,336 @@
+<div class="row">
+  <div class="col-12">
+    <app-card cardTitle="Detalle de Factura">
+      <div class="d-flex justify-content-between align-items-center mb-0 doc-page-header">
+        <div>
+          <div class="d-flex align-items-center flex-wrap gap-1">
+            <h5 class="mb-0">Factura</h5>
+            <span class="badge bg-light text-dark border" *ngIf="documentoCodigo">#{{ documentoCodigo }}</span>
+            <span
+              class="badge text-white"
+              *ngIf="encabezado?.estadoDocu"
+              [ngClass]="estadoDocumentoClass(encabezado?.estadoDocu)"
+            >
+              {{ encabezado?.estadoDocu }}
+            </span>
+            <span
+              class="badge text-white"
+              *ngIf="encabezado?.estadoElectronico"
+              [ngClass]="estadoElectronicoClass(encabezado?.estadoElectronico)"
+            >
+              {{ encabezado?.estadoElectronico }}
+            </span>
+          </div>
+          <div class="text-muted small mb-1">
+            {{ empresa()?.MA04_Nombre || 'Empresa' }} · RUC: {{ empresa()?.MA04_Ruc || '-' }}
+          </div>
+          <p class="text-muted mb-0 small">Resumen, detalle y pagos</p>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+          <button
+            class="btn btn-outline-secondary rsv-action-btn rsv-action-btn--outline rsv-action-btn--compact"
+            routerLink="/finanzas/consulta-documentos"
+            title="Volver"
+            aria-label="Volver"
+          >
+            <span class="rsv-action-btn__icon"><i class="feather icon-chevron-left"></i></span>
+          </button>
+
+          <button
+            class="btn btn-outline-secondary rsv-action-btn rsv-action-btn--outline rsv-action-btn--compact"
+            type="button"
+            (click)="reload()"
+            [disabled]="loading"
+            title="Refrescar"
+            aria-label="Refrescar"
+          >
+            <span class="rsv-action-btn__icon"><i class="feather icon-rotate-ccw"></i></span>
+          </button>
+
+          <button
+            class="btn btn-outline-info rsv-action-btn rsv-action-btn--outline rsv-action-btn--compact"
+            type="button"
+            (click)="imprimirDocumento()"
+            [disabled]="loading || busyPdf || !encabezado?.numeroConsecutivo"
+            title="Imprimir documento"
+            aria-label="Imprimir documento"
+          >
+            <span class="rsv-action-btn__icon">
+              <span *ngIf="busyPdf" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+              <i *ngIf="!busyPdf" class="feather icon-printer"></i>
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="loading" class="alert alert-info d-flex align-items-center mt-3" role="alert">
+        <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+        <span>Cargando detalle del documento...</span>
+      </div>
+
+      <div *ngIf="errorMsg" class="alert alert-danger mt-3" role="alert">
+        {{ errorMsg }}
+      </div>
+
+      <div *ngIf="!loading && !encabezado && !errorMsg" class="alert alert-warning mt-3">
+        No se encontró información del documento.
+      </div>
+
+      <ng-container *ngIf="encabezado as h">
+        <div class="row g-3 mt-1">
+          <div class="col-lg-8">
+            <div class="card shadow-none border h-100">
+              <div class="card-body p-3">
+                <div class="d-flex align-items-center mb-2">
+                  <i class="feather icon-file-text text-muted me-2"></i>
+                  <h6 class="mb-0">Datos Generales</h6>
+                </div>
+
+                <div class="row">
+                  <div class="col-md-4 mb-2">
+                    <div class="text-muted small">Tipo documento</div>
+                    <div class="fw-semibold">{{ h.tipDocu || '—' }}</div>
+                  </div>
+                  <div class="col-md-4 mb-2">
+                    <div class="text-muted small">Serie / Número</div>
+                    <div class="fw-semibold">{{ documentoCodigo || '—' }}</div>
+                  </div>
+                  <div class="col-md-4 mb-2">
+                    <div class="text-muted small">Fecha documento</div>
+                    <div class="text-nowrap">{{ h.fechaDocu || '—' }}</div>
+                  </div>
+                  <div class="col-md-6 mb-2">
+                    <div class="text-muted small">Cliente</div>
+                    <div class="fw-semibold">{{ h.nomCliente || '—' }}</div>
+                    <div class="text-muted small" *ngIf="h.codCliente || h.rucCliente">
+                      {{ h.codCliente || '—' }} · {{ h.rucCliente || '—' }}
+                    </div>
+                  </div>
+                  <div class="col-md-3 mb-2">
+                    <div class="text-muted small">Condición venta</div>
+                    <div>{{ h.condicionVenta || '—' }}</div>
+                  </div>
+                  <div class="col-md-3 mb-2">
+                    <div class="text-muted small">Punto de venta</div>
+                    <div>{{ h.pntVenta || '—' }}</div>
+                  </div>
+                  <div class="col-md-3 mb-2">
+                    <div class="text-muted small">Moneda</div>
+                    <div>{{ h.moneda || '—' }}</div>
+                  </div>
+                  <div class="col-md-3 mb-2">
+                    <div class="text-muted small">Tipo cambio</div>
+                    <div>{{ h.tCambio | number:'1.2-2' }}</div>
+                  </div>
+                  <div class="col-md-3 mb-2">
+                    <div class="text-muted small">Vendedor</div>
+                    <div>{{ h.codVendedor || '—' }}</div>
+                  </div>
+                  <div class="col-md-3 mb-2">
+                    <div class="text-muted small">Actividad</div>
+                    <div>{{ h.codigoActividad || '—' }}</div>
+                  </div>
+                  <div class="col-md-3 mb-2">
+                    <div class="text-muted small">Mesa / Pax</div>
+                    <div>{{ h.numMesa || '—' }} · {{ h.numPax ?? 0 }}</div>
+                  </div>
+                  <div class="col-12" *ngIf="h.observacion">
+                    <div class="text-muted small">Observación</div>
+                    <div class="small">{{ h.observacion }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-4">
+            <div class="doc-total" aria-label="Totales del documento">
+              <div class="d-flex align-items-center justify-content-between gap-2">
+                <div class="doc-total__content">
+                  <div class="doc-total__label">Total Documento</div>
+                  <div class="doc-total__value">
+                    {{ resumen.total | number:'1.2-2' }}
+                    <span class="doc-total__currency" *ngIf="h.moneda">{{ h.moneda }}</span>
+                  </div>
+                  <div class="doc-total__hint small text-muted">
+                    Líneas: <strong>{{ detalle.length }}</strong> · Pagos: <strong>{{ pagos.length }}</strong>
+                  </div>
+                </div>
+                <div class="doc-total__icon" aria-hidden="true" title="Totales">
+                  <i class="feather icon-credit-card"></i>
+                </div>
+              </div>
+            </div>
+
+            <div class="card shadow-none border mt-3">
+              <div class="card-body p-3">
+                <div class="doc-summary-row">
+                  <span>Subtotal</span>
+                  <strong>{{ resumen.subtotal | number:'1.2-2' }}</strong>
+                </div>
+                <div class="doc-summary-row">
+                  <span>Descuento</span>
+                  <strong>{{ resumen.descuento | number:'1.2-2' }}</strong>
+                </div>
+                <div class="doc-summary-row">
+                  <span>Impuestos</span>
+                  <strong>{{ resumen.impuesto | number:'1.2-2' }}</strong>
+                </div>
+                <div class="doc-summary-row doc-summary-total">
+                  <span>Total</span>
+                  <strong>{{ resumen.total | number:'1.2-2' }}</strong>
+                </div>
+                <div class="doc-summary-row">
+                  <span>Total Pagos</span>
+                  <strong>{{ pagosTotal | number:'1.2-2' }}</strong>
+                </div>
+                <div class="doc-summary-row" [class.text-danger]="pagosTotal !== resumen.total">
+                  <span>Diferencia</span>
+                  <strong>{{ (pagosTotal - resumen.total) | number:'1.2-2' }}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card shadow-none border mt-3" *ngIf="hasReservaInfo">
+          <div class="card-body p-3">
+            <div class="d-flex align-items-center mb-2">
+              <i class="feather icon-calendar text-muted me-2"></i>
+              <h6 class="mb-0">Reserva / Estadia</h6>
+            </div>
+            <div class="row">
+              <div class="col-md-3 mb-2">
+                <div class="text-muted small">Código reserva</div>
+                <div class="fw-semibold">{{ h.codReserva || '—' }}</div>
+              </div>
+              <div class="col-md-3 mb-2">
+                <div class="text-muted small">Fecha inicio</div>
+                <div>{{ h.fechaInicio || '—' }}</div>
+              </div>
+              <div class="col-md-3 mb-2">
+                <div class="text-muted small">Fecha fin</div>
+                <div>{{ h.fechaFin || '—' }}</div>
+              </div>
+              <div class="col-md-3 mb-2">
+                <div class="text-muted small">Voucher</div>
+                <div>{{ h.voucherRsv || '—' }}</div>
+              </div>
+              <div class="col-md-3 mb-2">
+                <div class="text-muted small">Proveedor</div>
+                <div>{{ h.nProveedor || '—' }}</div>
+              </div>
+              <div class="col-md-3 mb-2">
+                <div class="text-muted small">Habitación</div>
+                <div>{{ h.habitacion || '—' }}</div>
+              </div>
+              <div class="col-md-3 mb-2">
+                <div class="text-muted small">Master</div>
+                <div>{{ h.master || '—' }}</div>
+              </div>
+              <div class="col-md-3 mb-2">
+                <div class="text-muted small">Mesa / Pax</div>
+                <div>{{ h.numMesa || '—' }} · {{ h.numPax ?? 0 }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card shadow-none border mt-3">
+          <div class="card-body p-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+              <div class="d-flex align-items-center">
+                <i class="feather icon-layers text-muted me-2"></i>
+                <h6 class="mb-0">Detalle</h6>
+                <span class="badge bg-light text-dark border ms-2">{{ detalle.length }}</span>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width: 70px;">Orden</th>
+                    <th>Código</th>
+                    <th>Descripción</th>
+                    <th class="text-end">Cantidad</th>
+                    <th class="text-end">Precio</th>
+                    <th class="text-end">%Desc</th>
+                    <th class="text-end">Impuesto</th>
+                    <th class="text-end">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let d of detalle; trackBy: trackByDetalle">
+                    <td class="text-nowrap">{{ d.orden ?? '—' }}</td>
+                    <td class="text-nowrap">{{ d.codProdu || '—' }}</td>
+                    <td style="min-width: 220px;">
+                      <div class="fw-semibold">{{ d.descripcion || '—' }}</div>
+                      <div class="text-muted small" *ngIf="d.fechaConsumo">
+                        Consumo: {{ d.fechaConsumo }}
+                      </div>
+                      <div class="text-muted small" *ngIf="d.lstPrecio">
+                        Lista: {{ d.lstPrecio }}
+                      </div>
+                    </td>
+                    <td class="text-end">{{ d.cantidad | number:'1.2-2' }}</td>
+                    <td class="text-end">{{ d.pUndLst | number:'1.2-2' }}</td>
+                    <td class="text-end">{{ d.porDescu | number:'1.2-2' }}</td>
+                    <td class="text-end">{{ getLineaImpuesto(d) | number:'1.2-2' }}</td>
+                    <td class="text-end">{{ getLineaTotal(d) | number:'1.2-2' }}</td>
+                  </tr>
+                  <tr *ngIf="detalle.length === 0">
+                    <td colspan="8" class="text-center text-muted py-3">No hay líneas registradas.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="card shadow-none border mt-3">
+          <div class="card-body p-3">
+            <div class="d-flex align-items-center mb-2">
+              <i class="feather icon-credit-card text-muted me-2"></i>
+              <h6 class="mb-0">Pagos</h6>
+              <span class="badge bg-light text-dark border ms-2">{{ pagos.length }}</span>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width: 70px;">Orden</th>
+                    <th>Forma Pago</th>
+                    <th>Tipo</th>
+                    <th>Moneda</th>
+                    <th class="text-end">Monto</th>
+                    <th>Referencia</th>
+                    <th>Tarjeta</th>
+                    <th>Vencimiento</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let p of pagos; trackBy: trackByPago">
+                    <td class="text-nowrap">{{ p.orden ?? '—' }}</td>
+                    <td class="text-nowrap">{{ p.frmPago || '—' }}</td>
+                    <td class="text-nowrap">{{ p.tipo || '—' }}</td>
+                    <td class="text-nowrap">{{ p.moneda || '—' }}</td>
+                    <td class="text-end">{{ p.monto | number:'1.2-2' }}</td>
+                    <td class="text-nowrap">{{ p.referencia || '—' }}</td>
+                    <td class="text-nowrap">{{ p.numTarjeta || '—' }}</td>
+                    <td class="text-nowrap">{{ p.vencimiento || '—' }}</td>
+                  </tr>
+                  <tr *ngIf="pagos.length === 0">
+                    <td colspan="8" class="text-center text-muted py-3">No hay pagos registrados.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+    </app-card>
+  </div>
+</div>

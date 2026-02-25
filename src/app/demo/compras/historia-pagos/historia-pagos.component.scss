@@ -1,0 +1,74 @@
+.compras-wrapper {
+  background: #f8f9fb;
+  padding: 1rem;
+  border-radius: 10px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  .title {
+    margin: 0;
+    font-weight: 700;
+  }
+
+  .subtitle {
+    margin: 0;
+    color: #6c757d;
+  }
+}
+
+.filters-card,
+.table-card {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.filters-card .small-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-bottom: 0.35rem;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+
+  .count-chip {
+    background: #eef2ff;
+    color: #4c51bf;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+}
+
+.table th {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6c757d;
+  border-top: none;
+}
+
+.table td {
+  vertical-align: middle;
+  font-size: 0.9rem;
+}
+
+.empty-state .empty-icon {
+  font-size: 2rem;
+  color: #adb5bd;
+}

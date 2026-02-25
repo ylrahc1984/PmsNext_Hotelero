@@ -80,7 +80,7 @@ export const NavigationItems: NavigationItem[] = [
         id: 'comercial',
         title: 'COMERCIAL',
         type: 'collapse',
-        icon: 'feather icon-tag',
+        icon: 'feather icon-shopping-cart',
         children: [
           {
             id: 'servicios',
@@ -113,6 +113,22 @@ export const NavigationItems: NavigationItem[] = [
             url: '/comercial/suplidores',
             icon: 'feather icon-users',
             classes: 'nav-item'
+          },
+          {
+            id: 'consulta-documentos-comercial',
+            title: 'Consulta Documentos',
+            type: 'item',
+            url: '/finanzas/consulta-documentos',
+            icon: 'feather icon-search',
+            classes: 'nav-item'
+          },
+          {
+            id: 'notas-credito-comercial',
+            title: 'Notas de Crédito',
+            type: 'item',
+            url: '/finanzas/notas-credito',
+            icon: 'feather icon-file-minus',
+            classes: 'nav-item'
           }
         ]
       },
@@ -124,7 +140,7 @@ export const NavigationItems: NavigationItem[] = [
         id: 'compras',
         title: 'COMPRAS E INVENTARIO',
         type: 'collapse',
-        icon: 'feather icon-shopping-cart',
+        icon: 'feather icon-package',
         children: [
           {
             id: 'proveedores',
@@ -132,6 +148,30 @@ export const NavigationItems: NavigationItem[] = [
             type: 'item',
             url: '/compras/proveedores',
             icon: 'feather icon-users',
+            classes: 'nav-item'
+          },
+          {
+            id: 'ordenes-compra',
+            title: 'Ordenes de Compra',
+            type: 'item',
+            url: '/compras/ordenes-compra',
+            icon: 'feather icon-clipboard',
+            classes: 'nav-item'
+          },
+          {
+            id: 'recepcion-facturas',
+            title: 'Recepcion de Facturas',
+            type: 'item',
+            url: '/compras/recepcion-facturas',
+            icon: 'feather icon-inbox',
+            classes: 'nav-item'
+          },
+          {
+            id: 'historia-pagos',
+            title: 'Historia de Pagos',
+            type: 'item',
+            url: '/compras/historia-pagos',
+            icon: 'feather icon-credit-card',
             classes: 'nav-item'
           }
           // Futuro:
@@ -180,6 +220,14 @@ export const NavigationItems: NavigationItem[] = [
             type: 'item',
             url: '/finanzas/consulta-documentos',
             icon: 'feather icon-search',
+            classes: 'nav-item'
+          },
+          {
+            id: 'notas-credito',
+            title: 'Notas de Crédito',
+            type: 'item',
+            url: '/finanzas/notas-credito',
+            icon: 'feather icon-file-minus',
             classes: 'nav-item'
           }
           // Futuro:

@@ -1,0 +1,373 @@
+:host {
+  display: block;
+  background: #f5f6f8;
+}
+
+:host ::ng-deep app-card > .card {
+  background: #f5f6f8;
+}
+
+:host ::ng-deep app-card > .card > .card-body {
+  background: #f5f6f8;
+}
+
+.nueva-nota-credito {
+  line-height: 1.5;
+}
+
+.nueva-nota-credito .card,
+.nueva-nota-credito .form-control,
+.nueva-nota-credito .form-select,
+.nueva-nota-credito .btn {
+  border-radius: 6px;
+}
+
+.nueva-nota-credito .btn {
+  transition: all 0.2s ease;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.nueva-nota-credito .btn:hover {
+  transform: translateY(-1px);
+}
+
+.nueva-nota-credito .form-control {
+  background-color: #ffffff;
+  border-color: #d9e2ec;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.nueva-nota-credito .form-control[readonly] {
+  background-color: #f7f9fb;
+  color: #64748b;
+  cursor: default;
+}
+
+.nueva-nota-credito .form-control:focus,
+.nueva-nota-credito .form-select:focus {
+  border-color: #4f83ff;
+  box-shadow: 0 0 0 0.15rem rgba(79, 131, 255, 0.2);
+}
+
+.nueva-nota-credito--bg {
+  background: #f7f8fa;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.nueva-nota-credito__table {
+  min-width: 1100px;
+}
+
+.nc-section {
+  border-radius: 0.75rem;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.nc-section--header {
+  background: #ffffff;
+}
+
+.nc-section__title {
+  gap: 0.5rem;
+}
+
+.nc-section__title h6 {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.nc-section__icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.nc-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+}
+
+.nc-emisor {
+  padding: 0.25rem 0;
+}
+
+.nc-emisor--card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+
+.nc-emisor__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #475569;
+  background: #e2e8f0;
+  margin-bottom: 0.5rem;
+}
+
+.nc-emisor__name {
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: #0f172a;
+}
+
+.nc-emisor__meta {
+  color: #94a3b8;
+  font-size: 0.82rem;
+}
+
+@media (min-width: 992px) {
+  .nc-header-divider {
+    border-left: 1px solid #e5e7eb;
+    padding-left: 1.25rem;
+  }
+}
+
+.nc-doc-grid {
+  align-items: stretch;
+}
+
+.nc-block {
+  background: #fbfcfe;
+  border: 1px solid #e6edf5;
+  border-radius: 10px;
+  padding: 12px;
+  height: 100%;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.nc-block__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.nc-block__title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+}
+
+.nc-doc-status {
+  display: flex;
+  align-items: center;
+}
+
+.nc-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+}
+
+.nc-status--ok {
+  background: #e9f9f1;
+  color: #137a4b;
+  border-color: rgba(19, 122, 75, 0.2);
+}
+
+.nc-status--warn {
+  background: #fff7ed;
+  color: #b45309;
+  border-color: rgba(180, 83, 9, 0.2);
+}
+
+.nc-btn-search {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  gap: 0.5rem;
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.2);
+}
+
+.nc-btn-search:hover {
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.25);
+}
+
+@media (min-width: 992px) {
+  .nc-block--client {
+    position: relative;
+    padding-left: 20px;
+  }
+
+  .nc-block--client::before {
+    content: '';
+    position: absolute;
+    top: 12px;
+    bottom: 12px;
+    left: 0;
+    width: 1px;
+    background: #e2e8f0;
+  }
+}
+
+.nc-detail-table {
+  th,
+  td {
+    vertical-align: middle;
+  }
+
+  thead th {
+    font-weight: 600;
+    font-size: 0.8125rem;
+    color: #475569;
+    background: #f8fafc;
+  }
+
+  .form-control {
+    min-width: 90px;
+  }
+}
+
+.nc-detail-table tbody tr {
+  transition: background 0.2s ease;
+}
+
+.nc-detail-table tbody tr:hover {
+  background: #f5f7fb;
+}
+
+.nc-col-num {
+  box-shadow: inset 1px 0 0 #eef2f7;
+  font-variant-numeric: tabular-nums;
+}
+
+.nc-col-total {
+  background: #f7f9fb;
+  font-weight: 600;
+}
+
+.nc-btn-danger-soft {
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.3);
+}
+
+.nc-btn-danger-soft:hover {
+  background: rgba(220, 38, 38, 0.08);
+  border-color: rgba(220, 38, 38, 0.5);
+}
+
+.nc-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px dashed #e2e8f0;
+  border-radius: 8px;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.nc-empty-state i {
+  font-size: 1.1rem;
+  color: #94a3b8;
+}
+
+.nc-footer {
+  align-items: stretch;
+}
+
+.nc-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.nc-btn-primary {
+  padding: 10px 18px;
+  font-size: 0.95rem;
+  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.25);
+}
+
+.nc-btn-primary:disabled {
+  box-shadow: none;
+  opacity: 0.65;
+}
+
+.nc-btn-secondary {
+  padding: 10px 16px;
+  color: #475569;
+}
+
+.nc-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+}
+
+.nc-summary-row + .nc-summary-row {
+  margin-top: 0.4rem;
+}
+
+.nc-summary {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+
+.nc-summary-label {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.nc-summary-value {
+  font-variant-numeric: tabular-nums;
+  color: #1f2937;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.nc-summary-divider {
+  margin: 0.75rem 0 0.5rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.nc-summary-total {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.nc-summary-label--total {
+  color: #1f2937;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.nc-summary-value--total {
+  font-size: 1.2rem;
+}

@@ -57,14 +57,26 @@
                 </div>
                 <div class="col-lg-3 col-md-6 mb-1">
                   <label class="form-label">Hora Pick-Up <span class="text-danger">*</span></label>
-                  <input type="time" class="form-control form-control-sm" formControlName="horaPickup">
+                  <input
+                    type="time"
+                    class="form-control form-control-sm"
+                    formControlName="horaPickup"
+                    lang="es-CR"
+                    step="60"
+                  >
                   <div class="text-danger small mt-1" *ngIf="form.controls.horaPickup.touched && form.controls.horaPickup.invalid">
                     La hora pick-up es obligatoria.
                   </div>
                 </div>
                 <div class="col-lg-3 col-md-6 mb-1">
                   <label class="form-label">Hora Inicio</label>
-                  <input type="time" class="form-control form-control-sm" formControlName="horaInicio">
+                  <input
+                    type="time"
+                    class="form-control form-control-sm"
+                    formControlName="horaInicio"
+                    lang="es-CR"
+                    step="60"
+                  >
                 </div>
               </div>
               <div class="rsv-inline-panel mt-2">

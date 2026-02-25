@@ -1,0 +1,159 @@
+<ng-container *ngIf="vm$ | async as vm">
+  <div class="row notas-credito">
+    <div class="col-12">
+      <app-card [customHeader]="true">
+        <div class="app-card-header">
+          <h5>Notas de Crédito</h5>
+          <div class="card-header-right d-flex flex-wrap align-items-center gap-2">
+            <div class="text-muted small">
+              Total: <strong>{{ vm.totalRegistros }}</strong>
+            </div>
+            <button
+              class="btn btn-primary app-action-btn app-action-btn--primary app-action-btn--compact"
+              type="button"
+              [routerLink]="['/finanzas/notas-credito/nueva']"
+            >
+              <span class="app-action-btn__icon" aria-hidden="true">
+                <i class="feather icon-plus"></i>
+              </span>
+              <span>Nueva Nota de Crédito</span>
+            </button>
+          </div>
+        </div>
+
+        <form class="card shadow-sm border-0 mb-3 notas-credito__filters" [formGroup]="filtrosForm" (ngSubmit)="onBuscar()">
+          <div class="card-body p-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
+              <div class="d-flex align-items-center">
+                <i class="feather icon-filter text-muted me-2"></i>
+                <h6 class="mb-0">Filtros</h6>
+              </div>
+            </div>
+
+            <div class="row align-items-end">
+              <div class="col-md-2 mb-2">
+                <label class="form-label small text-muted">Fecha desde *</label>
+                <input type="date" class="form-control form-control-sm" formControlName="fechaDesde">
+              </div>
+              <div class="col-md-2 mb-2">
+                <label class="form-label small text-muted">Fecha hasta *</label>
+                <input type="date" class="form-control form-control-sm" formControlName="fechaHasta">
+              </div>
+              <div class="col-md-6 mb-2">
+                <label class="form-label small text-muted">Buscar</label>
+                <input
+                  type="text"
+                  class="form-control form-control-sm"
+                  formControlName="buscar"
+                  placeholder="Cliente, número, documento..."
+                >
+              </div>
+              <div class="col-md-2 mb-2">
+                <button class="btn btn-sm btn-primary w-100" type="submit" [disabled]="vm.loading">
+                  <i class="feather icon-search me-1"></i>
+                  Buscar
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <div *ngIf="vm.error" class="alert alert-danger mb-3">
+          <i class="feather icon-alert-triangle me-2"></i>
+          {{ vm.error }}
+        </div>
+
+        <div class="notas-credito__loading" *ngIf="vm.loading">
+          <div class="spinner-border text-primary spinner-border-sm" role="status" aria-hidden="true"></div>
+          <span class="ms-2">Cargando notas de crédito...</span>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0 notas-credito__table">
+            <thead class="table-light">
+              <tr>
+                <th>Tipo</th>
+                <th>Serie</th>
+                <th>Número</th>
+                <th>Fecha</th>
+                <th>Cliente</th>
+                <th>RUC</th>
+                <th class="text-end">Subtotal</th>
+                <th class="text-end">Impuesto</th>
+                <th class="text-end">Total</th>
+                <th>Moneda</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let nota of vm.notas; trackBy: trackByNota">
+                <td class="text-nowrap">{{ nota.PFD07_TipNotaCredito }}</td>
+                <td class="text-nowrap">{{ nota.PFD07_SerieNotaCredito }}</td>
+                <td class="font-monospace">{{ nota.PFD07_NumNotaCredito }}</td>
+                <td class="text-nowrap">{{ nota.PFD07_FechaNotaCredito | date:'dd/MM/yyyy' }}</td>
+                <td>{{ nota.PFD07_NomCliente }}</td>
+                <td>{{ nota.MPV00_RucClien }}</td>
+                <td class="text-end">{{ nota.PFD07_SubTotal | number:'1.2-2' }}</td>
+                <td class="text-end">{{ nota.PFD07_Impuesto | number:'1.2-2' }}</td>
+                <td class="text-end">{{ nota.PFD07_Total | number:'1.2-2' }}</td>
+                <td>{{ nota.PFD07_Moneda }}</td>
+                <td>
+                  <div class="d-flex gap-2">
+                    <button
+                      class="btn btn-sm btn-outline-primary app-icon-btn"
+                      type="button"
+                      (click)="verPdf(nota)"
+                      title="Ver PDF"
+                      aria-label="Ver PDF"
+                    >
+                      <i class="feather icon-printer"></i>
+                    </button>
+                    <button
+                      class="btn btn-sm btn-outline-danger app-icon-btn"
+                      type="button"
+                      (click)="anularNota(nota)"
+                      title="Anular nota"
+                      aria-label="Anular nota"
+                    >
+                      <i class="feather icon-x-circle"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr *ngIf="!vm.loading && vm.hasSearched && vm.notas.length === 0">
+                <td colspan="11" class="text-center text-muted">No hay resultados para los filtros aplicados.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center mt-3">
+          <div class="form-inline mb-2">
+            <label class="me-2 mb-0">Mostrar</label>
+            <select class="form-control" [ngModel]="vm.pageSize" (ngModelChange)="onPageSizeChange($event)">
+              <option *ngFor="let size of pageSizeOptions" [ngValue]="size">{{ size }}</option>
+            </select>
+            <span class="ms-2">por página</span>
+          </div>
+          <div class="mb-2 text-muted">
+            Mostrando
+            <strong>{{ vm.pageStart }}</strong>
+            -
+            <strong>{{ vm.pageEnd }}</strong>
+            de
+            <strong>{{ vm.totalRegistros }}</strong>
+          </div>
+          <div class="btn-group mb-2" role="group">
+            <button class="btn btn-light" (click)="changePage(-1)" [disabled]="vm.pageNumber === 1 || vm.loading">
+              <i class="feather icon-chevron-left"></i>
+            </button>
+            <button class="btn btn-light" disabled>Página {{ vm.pageNumber }} / {{ vm.totalPages }}</button>
+            <button class="btn btn-light" (click)="changePage(1)" [disabled]="vm.pageNumber === vm.totalPages || vm.loading">
+              <i class="feather icon-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+      </app-card>
+    </div>
+  </div>
+</ng-container>

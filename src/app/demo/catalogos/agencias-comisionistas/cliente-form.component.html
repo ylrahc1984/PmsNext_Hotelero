@@ -31,14 +31,14 @@
         <div class="section-header">Informacion General</div>
         <div class="row g-3">
           <div class="col-md-4">
-            <label class="form-label">Tipo Identificacion</label>
+            <label class="form-label">Tipo Identificacion <span class="text-danger">*</span></label>
             <select class="form-control" formControlName="tCliente">
               <option value="">Seleccionar</option>
               <option *ngFor="let tipo of tipoIdentificacionOptions" [value]="tipo.value">{{ tipo.label }}</option>
             </select>
           </div>
           <div class="col-md-3">
-            <label class="form-label">Cedula</label>
+            <label class="form-label">Cedula <span class="text-danger">*</span></label>
             <input type="text" class="form-control" formControlName="ruc">
           </div>
           <div class="col-md-5">
@@ -87,7 +87,7 @@
             <input type="text" class="form-control" formControlName="pais">
           </div>
           <div class="col-md-6">
-            <label class="form-label">Direccion</label>
+            <label class="form-label">Direccion <span class="text-danger">*</span></label>
             <input type="text" class="form-control" formControlName="direccion">
           </div>
           <div class="col-md-6">
@@ -104,11 +104,11 @@
         <div class="section-header">Comunicacion</div>
         <div class="row g-3">
           <div class="col-md-6">
-            <label class="form-label">Email</label>
+            <label class="form-label">Email <span class="text-danger">*</span></label>
             <input type="email" class="form-control" formControlName="email">
           </div>
           <div class="col-md-3">
-            <label class="form-label">Telefono 1</label>
+            <label class="form-label">Telefono 1 <span class="text-danger">*</span></label>
             <input type="tel" class="form-control" formControlName="telefono1">
           </div>
           <div class="col-md-3">

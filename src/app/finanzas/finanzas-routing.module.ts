@@ -10,24 +10,49 @@ const routes: Routes = [
     children: [
       {
         path: 'cuentas-cobrar',
-        loadComponent: () => import('../demo/contabilidad/cuentas-cobrar/cuentas-cobrar.component').then((c) => c.CuentasCobrarComponent)
+        loadComponent: () => import('./cuentas-cobrar/cuentas-cobrar.component').then((c) => c.CuentasCobrarComponent)
       },
       {
         path: 'cuentas-pagar',
-        loadComponent: () => import('../demo/contabilidad/cuentas-pagar/cuentas-pagar.component').then((c) => c.CuentasPagarComponent)
+        loadComponent: () => import('./cuentas-pagar/cuentas-pagar.component').then((c) => c.CuentasPagarComponent)
       },
       {
         path: 'recibos',
-        loadComponent: () => import('../demo/contabilidad/recibos/recibos.component').then((c) => c.RecibosComponent)
+        loadComponent: () => import('./recibos/recibos.component').then((c) => c.RecibosComponent)
       },
       {
         path: 'consulta-documentos',
         loadComponent: () =>
-          import('./pages/consulta-documentos/consulta-documentos.component').then((c) => c.ConsultaDocumentosComponent)
+          import('./pages-factura/consulta-documentos/consulta-documentos.component').then((c) => c.ConsultaDocumentosComponent)
+      },
+      {
+        path: 'notas-credito/nueva',
+        loadComponent: () =>
+          import('./nota-credito/nueva-nota-credito/nueva-nota-credito.component').then(
+            (c) => c.NuevaNotaCreditoComponent
+          )
+      },
+      {
+        path: 'notas-credito',
+        loadComponent: () =>
+          import('./nota-credito/notas-credito-consulta/notas-credito-consulta.component').then(
+            (c) => c.NotasCreditoConsultaComponent
+          )
+      },
+      {
+        path: 'documento/:tipo/:serie/:numero',
+        loadComponent: () =>
+          import('./pages-factura/documento-detalle/documento-detalle.component').then((c) => c.DocumentoDetalleComponent)
+      },
+      {
+        path: 'documento/:tipo/:numero',
+        loadComponent: () =>
+          import('./pages-factura/documento-detalle/documento-detalle.component').then((c) => c.DocumentoDetalleComponent)
       },
       {
         path: 'nueva-factura',
-        loadComponent: () => import('./pages/nueva-factura/nueva-factura.component').then((c) => c.NuevaFacturaComponent)
+        loadComponent: () =>
+          import('./pages-factura/nueva-factura/nueva-factura/nueva-factura.component').then((c) => c.NuevaFacturaComponent)
       }
     ]
   }

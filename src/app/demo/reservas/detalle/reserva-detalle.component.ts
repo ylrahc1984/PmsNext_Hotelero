@@ -11,6 +11,7 @@ import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { ReservaDetalle, ReservaDetalleService } from '../services/reserva-detalle.service';
 import { Reserva, ReservasService } from '../services/reservas.service';
 import { extractGoogleDisplayText, hasCoordinates, normalizeReservaEstado } from '../create/reserva-create.utils';
+import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
 
 @Component({
   selector: 'app-reserva-detalle',
@@ -38,6 +39,9 @@ export class ReservaDetalleComponent implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   private reservasService = inject(ReservasService);
   private detalleService = inject(ReservaDetalleService);
+  private empresaContext = inject(EmpresaContextService);
+
+  readonly empresa = this.empresaContext.empresa;
 
   ngOnInit(): void {
     this.route.paramMap

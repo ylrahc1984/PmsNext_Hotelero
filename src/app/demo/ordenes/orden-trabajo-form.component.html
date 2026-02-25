@@ -18,6 +18,9 @@
         <div class="d-flex justify-content-between align-items-start mb-2">
           <div>
             <h5 class="mb-1">{{ titulo }}</h5>
+            <div class="text-muted small mb-1">
+              {{ empresa()?.MA04_Nombre || 'Empresa' }} · RUC: {{ empresa()?.MA04_Ruc || '-' }}
+            </div>
             <p class="text-muted mb-0 small">Asigne servicios a suplidores y genere la orden operativa</p>
           </div>
           <span class="badge badge-pill px-2 py-1" [ngClass]="getEstadoBadgeClass(form.get('estado')?.value)">

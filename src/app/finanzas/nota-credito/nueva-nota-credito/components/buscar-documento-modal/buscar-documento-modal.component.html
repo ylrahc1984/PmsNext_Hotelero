@@ -1,0 +1,154 @@
+<div
+  class="modal fade"
+  tabindex="-1"
+  role="dialog"
+  aria-modal="true"
+  [ngClass]="{ show: open, 'd-block': open }"
+  *ngIf="open"
+>
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl" role="document">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <div>
+          <h5 class="modal-title mb-0">
+            <i class="feather icon-search me-1"></i>
+            Buscar Documento
+          </h5>
+          <small class="text-muted">Selecciona el documento base para la nota de crédito.</small>
+        </div>
+        <button type="button" class="btn-close" aria-label="Close" (click)="onClose()"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="row g-2 align-items-end mb-3">
+          <div class="col-md-3">
+            <label class="form-label small text-muted">Fecha desde</label>
+            <input type="date" class="form-control form-control-sm" [(ngModel)]="fechaDesde">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small text-muted">Fecha hasta</label>
+            <input type="date" class="form-control form-control-sm" [(ngModel)]="fechaHasta">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small text-muted">Buscar</label>
+            <input
+              type="text"
+              class="form-control form-control-sm"
+              [(ngModel)]="searchTerm"
+              placeholder="Cliente, número, documento..."
+              (keyup.enter)="buscarDocumentos()"
+            >
+          </div>
+          <div class="col-md-2 d-grid">
+            <button
+              type="button"
+              class="btn btn-primary app-action-btn app-action-btn--primary app-action-btn--compact"
+              (click)="buscarDocumentos()"
+              [disabled]="documentosLoading"
+            >
+              <span class="app-action-btn__icon" aria-hidden="true">
+                <span *ngIf="documentosLoading" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                <i *ngIf="!documentosLoading" class="feather icon-search"></i>
+              </span>
+              <span>Buscar</span>
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="errorMsg" class="alert alert-danger mb-2">
+          <i class="feather icon-alert-triangle me-2"></i>
+          {{ errorMsg }}
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-2">
+            <thead class="table-light">
+              <tr>
+                <th>Tipo</th>
+                <th>Serie</th>
+                <th>Número</th>
+                <th>Fecha</th>
+                <th>Cliente</th>
+                <th class="text-end">Total</th>
+                <th>Moneda</th>
+                <th class="text-center">Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let documento of documentos">
+                <td>{{ documento.PPV00_TipoDocu }}</td>
+                <td>{{ documento.PPV00_Serie || '000' }}</td>
+                <td class="font-monospace">{{ documento.PPV00_NumDocu }}</td>
+                <td class="text-nowrap">{{ documento.PPV00_FechaDocu | date:'dd/MM/yyyy' }}</td>
+                <td>{{ documento.PPV00_NomCliente }}</td>
+                <td class="text-end">{{ documento.PPV00_TotalDocu | number:'1.2-2' }}</td>
+                <td>{{ documento.PPV00_Moneda }}</td>
+                <td class="text-center">
+                  <button
+                    class="btn btn-outline-primary btn-sm app-icon-btn"
+                    type="button"
+                    (click)="seleccionarDocumento(documento)"
+                    title="Seleccionar documento"
+                    aria-label="Seleccionar documento"
+                  >
+                    <i class="feather icon-check"></i>
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="documentos.length === 0 && !documentosLoading">
+                <td colspan="8" class="text-center text-muted">No hay resultados.</td>
+              </tr>
+              <tr *ngIf="documentosLoading && documentos.length === 0">
+                <td colspan="8" class="text-center text-muted">
+                  <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                  Cargando...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center">
+          <small class="text-muted">
+            Registros: {{ totalRegistros }} · Página {{ pageNumber }} / {{ totalPages }}
+          </small>
+          <div class="d-flex gap-2">
+            <button
+              class="btn btn-outline-secondary btn-sm app-action-btn app-action-btn--outline app-action-btn--compact"
+              type="button"
+              (click)="paginaAnterior()"
+              [disabled]="pageNumber <= 1 || documentosLoading"
+            >
+              <span class="app-action-btn__icon" aria-hidden="true">
+                <i class="feather icon-chevron-left"></i>
+              </span>
+              <span>Anterior</span>
+            </button>
+            <button
+              class="btn btn-outline-secondary btn-sm app-action-btn app-action-btn--outline app-action-btn--compact"
+              type="button"
+              (click)="paginaSiguiente()"
+              [disabled]="pageNumber >= totalPages || documentosLoading"
+            >
+              <span>Siguiente</span>
+              <span class="app-action-btn__icon" aria-hidden="true">
+                <i class="feather icon-chevron-right"></i>
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary app-action-btn app-action-btn--outline" (click)="onClose()">
+          <span class="app-action-btn__icon" aria-hidden="true">
+            <i class="feather icon-x"></i>
+          </span>
+          <span>Cerrar</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="open"></div>

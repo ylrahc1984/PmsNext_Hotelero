@@ -344,6 +344,21 @@ const routes: Routes = [
         loadComponent: () => import('./demo/compras/proveedores/proveedores.component').then((c) => c.ProveedoresComponent)
       },
       {
+        path: 'ordenes-compra',
+        loadComponent: () =>
+          import('./demo/compras/ordenes-compra/ordenes-compra.component').then((c) => c.OrdenesCompraComponent)
+      },
+      {
+        path: 'recepcion-facturas',
+        loadComponent: () =>
+          import('./demo/compras/recepcion-facturas/recepcion-facturas.component').then((c) => c.RecepcionFacturasComponent)
+      },
+      {
+        path: 'historia-pagos',
+        loadComponent: () =>
+          import('./demo/compras/historia-pagos/historia-pagos.component').then((c) => c.HistoriaPagosComponent)
+      },
+      {
         path: 'proveedores/nuevo',
         loadComponent: () => import('./demo/compras/proveedores/proveedor-form.component').then((c) => c.ProveedorFormComponent)
       },

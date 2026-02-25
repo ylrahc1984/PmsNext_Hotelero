@@ -100,11 +100,27 @@
                 </div>
                 <div class="col-lg-3 col-md-6">
                   <label class="form-label">Hora Pick-Up</label>
-                  <input type="time" class="form-control form-control-sm" [(ngModel)]="detalleForm.horaPickup" name="horaPickup" (ngModelChange)="recalculate.emit()">
+                  <input
+                    type="time"
+                    class="form-control form-control-sm"
+                    [(ngModel)]="detalleForm.horaPickup"
+                    name="horaPickup"
+                    lang="es-CR"
+                    step="60"
+                    (ngModelChange)="recalculate.emit()"
+                  >
                 </div>
                 <div class="col-lg-3 col-md-6">
                   <label class="form-label">Hora Inicio</label>
-                  <input type="time" class="form-control form-control-sm" [(ngModel)]="detalleForm.horaInicio" name="horaInicio" (ngModelChange)="recalculate.emit()">
+                  <input
+                    type="time"
+                    class="form-control form-control-sm"
+                    [(ngModel)]="detalleForm.horaInicio"
+                    name="horaInicio"
+                    lang="es-CR"
+                    step="60"
+                    (ngModelChange)="recalculate.emit()"
+                  >
                 </div>
               </div>
 

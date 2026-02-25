@@ -1,0 +1,84 @@
+<div class="compras-wrapper">
+  <div class="page-header">
+    <div>
+      <h4 class="title">Historia de Pagos</h4>
+      <p class="subtitle">Consulta pagos realizados a suplidores y su trazabilidad.</p>
+    </div>
+    <div>
+      <button class="btn btn-outline-primary" type="button" disabled>
+        <i class="feather icon-download"></i>
+        Exportar
+      </button>
+    </div>
+  </div>
+
+  <div class="filters-card">
+    <div class="row">
+      <div class="col-lg-4 col-md-6 mb-3">
+        <label class="small-label">Proveedor / Referencia</label>
+        <input class="form-control" [(ngModel)]="filtros.buscar" placeholder="Buscar por proveedor o referencia">
+      </div>
+      <div class="col-lg-3 col-md-6 mb-3">
+        <label class="small-label">Método de pago</label>
+        <select class="form-control" [(ngModel)]="filtros.metodo">
+          <option value="">Todos</option>
+          <option *ngFor="let metodo of metodos" [value]="metodo">{{ metodo }}</option>
+        </select>
+      </div>
+      <div class="col-lg-2 col-md-6 mb-3">
+        <label class="small-label">Desde</label>
+        <input type="date" class="form-control" [(ngModel)]="filtros.desde">
+      </div>
+      <div class="col-lg-2 col-md-6 mb-3">
+        <label class="small-label">Hasta</label>
+        <input type="date" class="form-control" [(ngModel)]="filtros.hasta">
+      </div>
+      <div class="col-lg-1 col-md-6 mb-3 d-flex align-items-end justify-content-end">
+        <button class="btn btn-outline-secondary w-100" type="button" (click)="limpiar()">Limpiar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <h6 class="m-0">
+        <i class="feather icon-credit-card"></i>
+        Pagos registrados
+      </h6>
+      <span class="count-chip">{{ totalRegistros }} registros</span>
+    </div>
+
+    <div class="table-responsive" *ngIf="pagos.length; else noData">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Referencia</th>
+            <th>Proveedor</th>
+            <th>Fecha</th>
+            <th>Método</th>
+            <th>Estado</th>
+            <th class="text-end">Monto</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let pago of pagos">
+            <td class="font-monospace">{{ pago.referencia }}</td>
+            <td>{{ pago.proveedor }}</td>
+            <td>{{ pago.fecha }}</td>
+            <td>{{ pago.metodo }}</td>
+            <td>{{ pago.estado }}</td>
+            <td class="text-end">{{ pago.monto | number:'1.2-2' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ng-template #noData>
+      <div class="empty-state text-center p-4">
+        <i class="feather icon-credit-card empty-icon"></i>
+        <p class="mb-2">No hay pagos registrados.</p>
+        <small class="text-muted">Este módulo está listo para futuras integraciones.</small>
+      </div>
+    </ng-template>
+  </div>
+</div>

@@ -87,3 +87,14 @@
 :host .rsv-total-reserva__hint {
   margin-top: 0.35rem;
 }
+
+@media (min-width: 992px) {
+  :host .rsv-general-row > .col-lg-4 {
+    border-left: 1px solid #e2e8f0;
+    padding-left: 1.5rem;
+  }
+
+  :host .rsv-general-row > .col-lg-8 {
+    padding-right: 1.5rem;
+  }
+}

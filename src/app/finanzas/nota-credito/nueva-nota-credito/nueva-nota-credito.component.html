@@ -1,0 +1,304 @@
+<div class="row">
+  <div class="col-12">
+    <app-card [customHeader]="true">
+      <div class="app-card-header">
+        <h5>Nueva Nota de Crédito</h5>
+        <div class="card-header-right d-flex flex-wrap align-items-center gap-2">
+          <button
+            class="btn btn-outline-secondary app-action-btn app-action-btn--outline app-action-btn--compact"
+            type="button"
+            (click)="cancelar()"
+            [disabled]="isSubmitting"
+          >
+            <span class="app-action-btn__icon" aria-hidden="true">
+              <i class="feather icon-chevron-left"></i>
+            </span>
+            <span>Volver</span>
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="errorMessage" class="alert alert-danger mb-3">
+        <i class="feather icon-alert-triangle me-2"></i>
+        {{ errorMessage }}
+      </div>
+
+      <form class="nueva-nota-credito nueva-nota-credito--bg" [formGroup]="form">
+        <div class="card shadow-none border nc-section nc-section--header mb-3">
+          <div class="card-body px-3 py-2">
+            <div class="d-flex align-items-center mb-2 nc-section__title">
+              <span class="nc-section__icon" aria-hidden="true">
+                <i class="feather icon-file-text"></i>
+              </span>
+              <h6 class="mb-0">Cabecera</h6>
+            </div>
+            <div class="row g-3 align-items-start">
+              <div class="col-lg-5">
+                <div class="nc-emisor nc-emisor--card">
+                  <span class="nc-emisor__badge">Emisor</span>
+                  <div class="nc-emisor__name">{{ empresa()?.MA04_Nombre || 'Empresa' }}</div>
+                  <div class="nc-emisor__meta">RUC: {{ empresa()?.MA04_Ruc || '-' }}</div>
+                  <div class="nc-emisor__meta">Sucursal: -</div>
+                  <div class="nc-emisor__meta">Punto de venta: -</div>
+                </div>
+              </div>
+              <div class="col-lg-7 nc-header-divider">
+                <div class="row g-2">
+                  <div class="col-md-6">
+                    <label class="form-label nc-label">Tipo NC</label>
+                    <select
+                      class="form-select form-select-sm"
+                      formControlName="tipNC"
+                    >
+                      <option value="">Seleccione...</option>
+                      <option *ngFor="let tipo of tiposNotaCredito; trackBy: trackByTipoNC" [value]="tipo.CA04_CodDocu">
+                        {{ tipo.CA04_CodDocu }} - {{ tipo.CA04_NomDocu }}
+                      </option>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label nc-label">Fecha</label>
+                    <input type="date" class="form-control form-control-sm" formControlName="fecha">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label nc-label">Motivo Anulación</label>
+                    <select
+                      class="form-select form-select-sm"
+                      formControlName="motivoAnulacion"
+                    >
+                      <option value="">Seleccione...</option>
+                      <option *ngFor="let motivo of motivosAnulacion; trackBy: trackByMotivo" [value]="motivo.CPV04_IDMotivo">
+                        {{ motivo.CPV04_Descripcion }}
+                      </option>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label nc-label">Observación</label>
+                    <input class="form-control form-control-sm" formControlName="observacion" placeholder="Observación">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card shadow-none border nc-section mb-3">
+          <div class="card-body p-3">
+            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2 nc-section__title">
+              <div class="d-flex align-items-center">
+                <span class="nc-section__icon" aria-hidden="true">
+                  <i class="feather icon-search"></i>
+                </span>
+                <h6 class="mb-0">Documento Origen y Cliente</h6>
+              </div>
+            </div>
+
+            <div *ngIf="loadingDocumento" class="alert alert-info d-flex align-items-center mb-2" role="alert">
+              <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+              <span>Cargando documento...</span>
+            </div>
+
+            <div class="row g-3 nc-doc-grid">
+              <div class="col-lg-6">
+                <div class="nc-block nc-block--doc">
+                  <div class="nc-block__header">
+                    <div class="nc-block__title">
+                      <i class="feather icon-file-text me-2 text-muted"></i>
+                      Documento Origen
+                    </div>
+                    <div class="nc-doc-status">
+                      <ng-container
+                        *ngIf="
+                          form.controls.tipDocCli.value ||
+                          form.controls.serieDocCli.value ||
+                          form.controls.numDocCli.value;
+                          else noDocumentoBadge
+                        "
+                      >
+                        <span class="nc-status nc-status--ok">Documento cargado</span>
+                      </ng-container>
+                      <ng-template #noDocumentoBadge>
+                        <span class="nc-status nc-status--warn">Sin documento</span>
+                      </ng-template>
+                    </div>
+                  </div>
+
+                  <button
+                    class="btn btn-primary app-action-btn app-action-btn--primary nc-btn-search"
+                    type="button"
+                    (click)="abrirBuscarDocumento()"
+                    [disabled]="loadingDocumento || isSubmitting"
+                  >
+                    <span class="app-action-btn__icon" aria-hidden="true">
+                      <i class="feather icon-search"></i>
+                    </span>
+                    <span>Buscar Documento</span>
+                  </button>
+
+                  <div class="row g-2 mt-2">
+                    <div class="col-md-3">
+                      <label class="form-label nc-label">Tipo Doc</label>
+                      <input class="form-control form-control-sm" formControlName="tipDocCli" readonly>
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label nc-label">Serie Doc</label>
+                      <input class="form-control form-control-sm" formControlName="serieDocCli" readonly>
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label nc-label">Número Doc</label>
+                      <input class="form-control form-control-sm" formControlName="numDocCli" readonly>
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label nc-label">Nº Electrónico</label>
+                      <input class="form-control form-control-sm" formControlName="nElectronico" readonly>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-lg-6">
+                <div class="nc-block nc-block--client">
+                  <div class="nc-block__header">
+                    <div class="nc-block__title">
+                      <i class="feather icon-user me-2 text-muted"></i>
+                      Cliente
+                    </div>
+                  </div>
+
+                  <div class="row g-2">
+                    <div class="col-md-3">
+                      <label class="form-label nc-label">Código</label>
+                      <input class="form-control form-control-sm" formControlName="codCliente" readonly>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label nc-label">Nombre</label>
+                      <input class="form-control form-control-sm" formControlName="nomCliente" readonly>
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label nc-label">RUC</label>
+                      <input class="form-control form-control-sm" [value]="rucCliente" readonly>
+                    </div>
+                  </div>
+
+                  <div class="row g-2 mt-1">
+                    <div class="col-md-3">
+                      <label class="form-label nc-label">Moneda</label>
+                      <input class="form-control form-control-sm" formControlName="moneda" readonly>
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label nc-label">Tipo Cambio</label>
+                      <input class="form-control form-control-sm" formControlName="tCambio" readonly>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card shadow-none border nc-section mb-3">
+          <div class="card-body p-3">
+            <div class="d-flex align-items-center mb-2 nc-section__title">
+              <span class="nc-section__icon" aria-hidden="true">
+                <i class="feather icon-layers"></i>
+              </span>
+              <h6 class="mb-0">Detalle</h6>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered align-middle nueva-nota-credito__table nc-detail-table">
+                <thead class="table-light">
+                  <tr>
+                    <th>Código</th>
+                    <th>Artículo</th>
+                    <th class="text-end nc-col-num">Cantidad</th>
+                    <th class="text-end nc-col-num">Precio</th>
+                    <th class="text-end nc-col-num">% Impuesto</th>
+                    <th class="text-end nc-col-num">Subtotal</th>
+                    <th class="text-end nc-col-num">Impuesto</th>
+                    <th class="text-end nc-col-num nc-col-total">Total</th>
+                    <th class="text-center">Eliminar</th>
+                  </tr>
+                </thead>
+                <tbody formArrayName="detalle">
+                  <tr *ngFor="let group of detalleArray.controls; let i = index; trackBy: trackByDetalle" [formGroupName]="i">
+                    <td>
+                      <input class="form-control form-control-sm" formControlName="pfD08_Codigo">
+                    </td>
+                    <td>
+                      <input class="form-control form-control-sm" formControlName="pfD08_Articulo">
+                    </td>
+                    <td class="nc-col-num">
+                      <input type="number" class="form-control form-control-sm text-end" formControlName="pfD08_Cantidad" min="0" step="0.01">
+                    </td>
+                    <td class="nc-col-num">
+                      <input type="number" class="form-control form-control-sm text-end" formControlName="pfD08_MtoIndi" min="0" step="0.01">
+                    </td>
+                    <td class="nc-col-num">
+                      <input type="number" class="form-control form-control-sm text-end" formControlName="pfD08_PorImpto" min="0" step="0.01">
+                    </td>
+                    <td class="text-end nc-col-num">{{ getLineaSubtotal(i) | number:'1.2-2' }}</td>
+                    <td class="text-end nc-col-num">{{ getLineaImpuesto(i) | number:'1.2-2' }}</td>
+                    <td class="text-end nc-col-num nc-col-total">{{ getLineaTotal(i) | number:'1.2-2' }}</td>
+                    <td class="text-center">
+                      <button class="btn btn-sm btn-outline-danger app-icon-btn nc-btn-danger-soft" type="button" (click)="removeDetalle(i)">
+                        <i class="feather icon-trash-2"></i>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="detalleArray.length === 0">
+                    <td colspan="9" class="text-center">
+                      <div class="nc-empty-state">
+                        <i class="feather icon-info" aria-hidden="true"></i>
+                        <div>Seleccione un documento para cargar el detalle de la Nota de Crédito.</div>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-3 align-items-stretch nc-footer">
+          <div class="col-lg-8">
+            <div class="nc-actions">
+              <button class="btn btn-outline-secondary nc-btn-secondary" type="button" (click)="cancelar()" [disabled]="isSubmitting">
+                Cancelar
+              </button>
+              <button class="btn btn-primary nc-btn-primary" type="button" (click)="guardarNotaCredito()" [disabled]="!canSave">
+                <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                Guardar Nota de Crédito
+              </button>
+            </div>
+          </div>
+          <div class="col-lg-4 ms-auto">
+            <div class="card shadow-none border nc-section nc-summary">
+              <div class="card-body p-5">
+                <div class="nc-summary-row">
+                  <span class="nc-summary-label">Subtotal</span>
+                  <strong class="nc-summary-value">{{ resumen.subtotal | number:'1.2-2' }}</strong>
+                </div>
+                <div class="nc-summary-row">
+                  <span class="nc-summary-label">Impuesto</span>
+                  <strong class="nc-summary-value">{{ resumen.impuesto | number:'1.2-2' }}</strong>
+                </div>
+                <div class="nc-summary-divider"></div>
+                <div class="nc-summary-row nc-summary-total">
+                  <span class="nc-summary-label nc-summary-label--total">TOTAL GENERAL</span>
+                  <strong class="nc-summary-value nc-summary-value--total text-primary">{{ resumen.total | number:'1.2-2' }}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+    </app-card>
+  </div>
+</div>
+
+<app-buscar-documento-modal
+  *ngIf="showDocumentoModal"
+  [open]="showDocumentoModal"
+  (close)="cerrarBuscarDocumento()"
+  (documentoSelected)="onDocumentoSelected($event)"
+></app-buscar-documento-modal>

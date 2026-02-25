@@ -4,7 +4,7 @@ import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
 import { environment } from 'src/environments/environment';
-import { ConsultaDocumentosFiltros, ConsultaDocumentosResponse } from '../pages/consulta-documentos/consulta-documentos.interface';
+import { ConsultaDocumentosFiltros, ConsultaDocumentosResponse } from '../pages-factura/consulta-documentos/consulta-documentos.interface';
 
 @Injectable({
   providedIn: 'root'

@@ -68,8 +68,18 @@ export class ErrorInterceptor implements HttpInterceptor {
   }
 
   private handleGenericError(error: HttpErrorResponse): void {
-    console.error('Error HTTP:', error.status, error.message);
-    const message = error.error?.message || `Error ${error.status}: ${error.statusText}`;
+    const backendMessage =
+      typeof error.error === 'string'
+        ? error.error
+        : error.error?.mensaje || error.error?.respuesta || error.error?.message || error.error?.error;
+    console.error('Error HTTP:', {
+      status: error.status,
+      statusText: error.statusText,
+      message: error.message,
+      url: error.url,
+      backend: error.error
+    });
+    const message = backendMessage || `Error ${error.status}: ${error.statusText}`;
     this.toastService.error(message);
   }
 

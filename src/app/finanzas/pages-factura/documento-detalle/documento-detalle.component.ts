@@ -1,0 +1,439 @@
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { Subscription } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+import { SharedModule } from 'src/app/theme/shared/shared.module';
+import { DocumentoDetalleService } from '../../services/documento-detalle.service';
+import {
+  DocumentoDetalleItem,
+  DocumentoDetalleResponse,
+  DocumentoEncabezado,
+  DocumentoPago
+} from './documento-detalle.interface';
+import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
+
+type DocumentoResumen = {
+  subtotal: number;
+  descuento: number;
+  impuesto: number;
+  total: number;
+};
+
+@Component({
+  selector: 'app-documento-detalle',
+  standalone: true,
+  imports: [CommonModule, SharedModule, RouterModule],
+  templateUrl: './documento-detalle.component.html',
+  styleUrls: ['./documento-detalle.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
+})
+export class DocumentoDetalleComponent implements OnInit {
+  tipoDocu = '';
+  serieDocu = '';
+  numeroDocu = '';
+
+  encabezado: DocumentoEncabezado | null = null;
+  detalle: DocumentoDetalleItem[] = [];
+  pagos: DocumentoPago[] = [];
+
+  resumen: DocumentoResumen = { subtotal: 0, descuento: 0, impuesto: 0, total: 0 };
+  pagosTotal = 0;
+
+  loading = false;
+  errorMsg: string | null = null;
+  busyPdf = false;
+
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly detalleService = inject(DocumentoDetalleService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly empresaContext = inject(EmpresaContextService);
+
+  readonly empresa = this.empresaContext.empresa;
+
+  private activeRequest?: Subscription;
+
+  ngOnInit(): void {
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      const tipo = (params.get('tipo') ?? '').toString().trim();
+      const serie = (params.get('serie') ?? '000').toString().trim();
+      const numero = (params.get('numero') ?? '').toString().trim();
+      if (!tipo || !numero) {
+        this.router.navigate(['/finanzas/consulta-documentos']);
+        return;
+      }
+      this.tipoDocu = tipo;
+      this.serieDocu = serie || '000';
+      this.numeroDocu = numero;
+      this.fetchDetalle();
+    });
+  }
+
+  get documentoCodigo(): string {
+    if (!this.encabezado) return this.numeroDocu;
+    const serie = (this.encabezado.serie ?? '').toString().trim();
+    const numero = (this.encabezado.numero ?? this.numeroDocu).toString();
+    const fallbackSerie = (this.serieDocu ?? '').toString().trim();
+    const serieValue = serie || fallbackSerie;
+    return serieValue ? `${serieValue}-${numero}` : numero;
+  }
+
+  get hasReservaInfo(): boolean {
+    const h = this.encabezado;
+    if (!h) return false;
+    const flags = [
+      h.codReserva,
+      h.fechaInicio,
+      h.fechaFin,
+      h.voucherRsv,
+      h.nProveedor,
+      h.habitacion,
+      h.master,
+      h.numMesa
+    ]
+      .map((value) => (value ?? '').toString().trim())
+      .some(Boolean);
+    return flags || Number.isFinite(h.numPax ?? NaN);
+  }
+
+  reload(): void {
+    this.fetchDetalle();
+  }
+
+  imprimirDocumento(): void {
+    if (this.busyPdf) return;
+    const consecutivo = (this.encabezado?.numeroConsecutivo ?? '').toString().trim();
+    if (!consecutivo) {
+      window.alert('No se encontró el número consecutivo para imprimir.');
+      return;
+    }
+
+    this.busyPdf = true;
+    this.detalleService
+      .getPdf(this.tipoDocu, this.serieDocu || '000', consecutivo)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (data) => {
+          this.openPdfBlob(data, `Factura_${this.tipoDocu}_${this.serieDocu || '000'}_${this.numeroDocu}.pdf`);
+          this.busyPdf = false;
+          this.cdr.markForCheck();
+        },
+        error: (error: unknown) => {
+          this.busyPdf = false;
+          this.cdr.markForCheck();
+          const message = this.getErrorMessage(error);
+          window.alert(message);
+        }
+      });
+  }
+
+  trackByDetalle(index: number, item: DocumentoDetalleItem): string {
+    return `${item.orden ?? index}-${item.codProdu ?? ''}-${index}`;
+  }
+
+  trackByPago(index: number, item: DocumentoPago): string {
+    return `${item.orden ?? index}-${item.frmPago ?? ''}-${index}`;
+  }
+
+  estadoDocumentoClass(estado: string | undefined): string {
+    const normalized = (estado ?? '').toUpperCase().trim();
+    if (normalized === 'C') return 'bg-success';
+    if (normalized === 'A') return 'bg-danger';
+    if (normalized === 'P') return 'bg-warning';
+    return 'bg-secondary';
+  }
+
+  estadoElectronicoClass(estado: string | undefined): string {
+    const normalized = (estado ?? '').toUpperCase().trim();
+    if (normalized === 'ACEPTADO') return 'bg-success';
+    if (normalized === 'RECHAZADO') return 'bg-danger';
+    if (normalized === 'PENDIENTE') return 'bg-warning text-dark';
+    return 'bg-secondary';
+  }
+
+  getLineaImpuesto(item: DocumentoDetalleItem): number {
+    const subtotal = this.getLineaSubtotal(item);
+    const descuento = this.getLineaDescuento(item, subtotal);
+    const base = subtotal - descuento;
+    return this.round(this.getLineaImpuestoValue(item, base));
+  }
+
+  getLineaTotal(item: DocumentoDetalleItem): number {
+    const subtotal = this.getLineaSubtotal(item);
+    const descuento = this.getLineaDescuento(item, subtotal);
+    const base = subtotal - descuento;
+    const impuesto = this.getLineaImpuestoValue(item, base);
+    const total = this.getLineaTotalValue(item, base, impuesto);
+    return this.round(total);
+  }
+
+  private fetchDetalle(): void {
+    if (!this.tipoDocu || !this.numeroDocu) return;
+
+    this.activeRequest?.unsubscribe();
+    this.loading = true;
+    this.errorMsg = null;
+    this.cdr.markForCheck();
+
+    this.activeRequest = this.detalleService
+      .getDetalle(this.tipoDocu, this.serieDocu || '000', this.numeroDocu)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          this.applyResponse(response);
+          this.loading = false;
+          this.cdr.markForCheck();
+        },
+        error: (error: unknown) => {
+          this.encabezado = null;
+          this.detalle = [];
+          this.pagos = [];
+          this.resumen = { subtotal: 0, descuento: 0, impuesto: 0, total: 0 };
+          this.pagosTotal = 0;
+          this.errorMsg = this.getErrorMessage(error);
+          this.loading = false;
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  private applyResponse(response: DocumentoDetalleResponse | null | undefined): void {
+    const normalized = this.normalizeResponse(response ?? {});
+    this.encabezado = this.mapEncabezado(normalized.encabezado ?? {});
+    this.detalle = (normalized.detalle ?? []).map((item) => this.mapDetalle(item));
+    this.pagos = (normalized.pagos ?? []).map((item) => this.mapPago(item));
+    this.updateResumen();
+  }
+
+  private normalizeResponse(response: DocumentoDetalleResponse): DocumentoDetalleResponse {
+    const data = (response as DocumentoDetalleResponse)?.data ?? (response as { datos?: DocumentoDetalleResponse })?.datos ?? response;
+    if (!data) return {};
+    return {
+      encabezado: (data as DocumentoDetalleResponse).encabezado ?? (data as any).cabecera ?? (data as any).header ?? data,
+      detalle: (data as DocumentoDetalleResponse).detalle ?? (data as any).detalles ?? (data as any).lineas ?? (data as any).items ?? [],
+      impuestos: (data as DocumentoDetalleResponse).impuestos ?? (data as any).impuesto ?? (data as any).taxes ?? [],
+      pagos: (data as DocumentoDetalleResponse).pagos ?? (data as any).formasPago ?? (data as any).pagosDetalle ?? [],
+      cobranzas: (data as DocumentoDetalleResponse).cobranzas ?? (data as any).cobros ?? [],
+      totales: (data as DocumentoDetalleResponse).totales ?? (data as any).totals ?? undefined
+    };
+  }
+
+  private mapEncabezado(raw: any): DocumentoEncabezado {
+    const subtotalRaw =
+      raw?.ppV00_SubTotal ??
+      raw?.ppV00_Subtotal ??
+      raw?.PPV00_SubTotal ??
+      raw?.PPV00_Subtotal ??
+      raw?.ppV00_Neto ??
+      raw?.PPV00_Neto;
+    return {
+      tipDocu: raw?.tipDocu ?? raw?.ppV00_TipoDocu ?? raw?.PPV00_TipoDocu ?? this.tipoDocu,
+      serie: raw?.serie ?? raw?.ppV00_Serie ?? raw?.PPV00_Serie ?? this.serieDocu,
+      numero: raw?.numero ?? raw?.ppV00_NumDocu ?? raw?.PPV00_NumDocu ?? this.numeroDocu,
+      numeroConsecutivo:
+        raw?.numeroConsecutivo ??
+        raw?.ppV15_NumeroConsecutivo ??
+        raw?.PPV15_NumeroConsecutivo ??
+        raw?.ppv15_NumeroConsecutivo ??
+        '',
+      clave: raw?.clave ?? raw?.ppV15_Clave ?? raw?.PPV15_Clave ?? '',
+      fechaDocu: this.formatDate(raw?.fechaDocu ?? raw?.ppV00_FechaDocu ?? raw?.PPV00_FechaDocu ?? ''),
+      condicionVenta: raw?.condicionVenta ?? raw?.ppV00_CondicionVenta ?? raw?.PPV00_CondicionVenta ?? '',
+      codCliente: raw?.codCliente ?? raw?.ppV00_CodCliente ?? raw?.PPV00_CodCliente ?? '',
+      rucCliente: raw?.rucCliente ?? raw?.ppV00_RucCliente ?? raw?.PPV00_RucCliente ?? '',
+      nomCliente: raw?.nomCliente ?? raw?.ppV00_NomCliente ?? raw?.PPV00_NomCliente ?? '',
+      moneda: raw?.moneda ?? raw?.ppV00_Moneda ?? raw?.PPV00_Moneda ?? '',
+      tCambio: this.toNumber(raw?.tCambio ?? raw?.ppV00_TCambio ?? raw?.PPV00_TCambio ?? raw?.tipoCambio),
+      pntVenta: raw?.pntVenta ?? raw?.ppV00_PntVenta ?? raw?.PPV00_PntVenta ?? raw?.puntoVenta ?? '',
+      numMesa: raw?.numMesa ?? raw?.ppV00_NumMesa ?? raw?.PPV00_NumMesa ?? '',
+      numPax: this.toOptionalNumber(raw?.numPax ?? raw?.ppV00_NumPax ?? raw?.PPV00_NumPax),
+      codVendedor: raw?.codVendedor ?? raw?.ppV00_CodVendedor ?? raw?.PPV00_CodVendedor ?? raw?.ppV00_UsuarioCreacion ?? '',
+      codigoActividad: raw?.codigoActividad ?? raw?.ppV00_CodigoActividad ?? raw?.PPV00_CodigoActividad ?? '',
+      observacion: raw?.observacion ?? raw?.ppV00_Observacion ?? raw?.PPV00_Observacion ?? '',
+      codReserva: raw?.codReserva ?? raw?.ppV00_CodReserva ?? raw?.PPV00_CodReserva ?? '',
+      fechaInicio: this.formatDate(raw?.fechaInicio ?? raw?.ppV00_FechaInicio ?? raw?.PPV00_FechaInicio ?? ''),
+      fechaFin: this.formatDate(raw?.fechaFin ?? raw?.ppV00_FechaFin ?? raw?.PPV00_FechaFin ?? ''),
+      voucherRsv: raw?.voucherRsv ?? raw?.ppV00_Voucher ?? raw?.PPV00_Voucher ?? '',
+      nProveedor: raw?.nProveedor ?? raw?.ppV00_Proveedor ?? raw?.PPV00_Proveedor ?? '',
+      habitacion: raw?.habitacion ?? raw?.ppV00_Habitacion ?? raw?.PPV00_Habitacion ?? '',
+      master: raw?.master ?? raw?.ppV00_Master ?? raw?.PPV00_Master ?? '',
+      subtotal: this.toOptionalNumber(raw?.subtotal ?? subtotalRaw),
+      descuento: this.toOptionalNumber(raw?.descuento ?? raw?.ppV00_Descuento ?? raw?.PPV00_Descuento),
+      impuesto: this.toOptionalNumber(raw?.impuesto ?? raw?.ppV00_Impuesto ?? raw?.PPV00_Impuesto),
+      totalDocu: this.toOptionalNumber(raw?.totalDocu ?? raw?.ppV00_TotalDocu ?? raw?.PPV00_TotalDocu ?? raw?.total),
+      totalPago: this.toOptionalNumber(raw?.totalPago ?? raw?.ppV00_TotalPago ?? raw?.PPV00_TotalPago),
+      estadoDocu: raw?.estadoDocu ?? raw?.ppV00_EstadoDocumento ?? raw?.PPV00_EstadoDocumento ?? '',
+      estadoElectronico: raw?.estadoElectronico ?? raw?.ppV15_EstadoElectronico ?? raw?.PPV15_EstadoElectronico ?? ''
+    };
+  }
+
+  private mapDetalle(raw: any): DocumentoDetalleItem {
+    return {
+      orden: this.toNumber(raw?.orden ?? raw?.ppV01_Orden ?? raw?.PPV01_Orden),
+      fechaConsumo: this.formatDate(raw?.fechaConsumo ?? raw?.ppV01_FechaConsumo ?? raw?.PPV01_FechaConsumo ?? ''),
+      lstPrecio: raw?.lstPrecio ?? raw?.ppV01_LstPrecio ?? raw?.PPV01_LstPrecio ?? '',
+      codProdu: raw?.codProdu ?? raw?.ppV01_CodProdu ?? raw?.PPV01_CodProdu ?? raw?.codigo ?? '',
+      areaProdu: raw?.areaProdu ?? raw?.ppV01_AreaProdu ?? raw?.PPV01_AreaProdu ?? '',
+      descripcion: raw?.descripcion ?? raw?.ppV01_Descripcion ?? raw?.PPV01_Descripcion ?? raw?.nombre ?? '',
+      cantidad: this.toNumber(raw?.cantidad ?? raw?.ppV01_Cantidad ?? raw?.PPV01_Cantidad),
+      uMedida: raw?.uMedida ?? raw?.ppV01_UMedida ?? raw?.PPV01_UMedida ?? '',
+      pUndLst: this.toNumber(
+        raw?.pUndLst ??
+          raw?.ppV01_PUndLst ??
+          raw?.PPV01_PUndLst ??
+          raw?.ppV01_PrecioUnit ??
+          raw?.PPV01_PrecioUnit ??
+          raw?.precio
+      ),
+      uniSinImp: this.toNumber(
+        raw?.uniSinImp ?? raw?.ppV01_UniSinImp ?? raw?.PPV01_UniSinImp ?? raw?.ppV01_PrecioSinImp ?? raw?.PPV01_PrecioSinImp
+      ),
+      porDescu: this.toNumber(raw?.porDescu ?? raw?.ppV01_PorDescu ?? raw?.PPV01_PorDescu ?? 0),
+      porImp: this.toNumber(raw?.porImp ?? raw?.ppV01_PorImp ?? raw?.PPV01_PorImp ?? 0),
+      porExonera: this.toNumber(raw?.porExonera ?? raw?.ppV01_PorExonera ?? raw?.PPV01_PorExonera ?? 0),
+      mtoImpVarios: this.toNumber(raw?.mtoImpVarios ?? raw?.ppV01_MtoImpVarios ?? raw?.PPV01_MtoImpVarios ?? 0),
+      almacen: raw?.almacen ?? raw?.ppV01_Almacen ?? raw?.PPV01_Almacen ?? '',
+      area: raw?.area ?? raw?.ppV01_Area ?? raw?.PPV01_Area ?? '',
+      tipComanda: raw?.tipComanda ?? raw?.ppV01_TipComanda ?? raw?.PPV01_TipComanda ?? '',
+      comanda: raw?.comanda ?? raw?.ppV01_Comanda ?? raw?.PPV01_Comanda ?? '',
+      pntVenta: raw?.pntVenta ?? raw?.ppV01_PntVenta ?? raw?.PPV01_PntVenta ?? '',
+      mozo: raw?.mozo ?? raw?.ppV01_Mozo ?? raw?.PPV01_Mozo ?? '',
+      numHabita: raw?.numHabita ?? raw?.ppV01_NumHabita ?? raw?.PPV01_NumHabita ?? '',
+      total: this.toNumber(raw?.total ?? raw?.ppV01_Precio ?? raw?.PPV01_Precio ?? raw?.ppV01_TotalNeto ?? raw?.PPV01_TotalNeto ?? raw?.monto),
+      impuesto: this.toNumber(raw?.impuesto ?? raw?.ppV01_Impuestos ?? raw?.PPV01_Impuestos ?? 0)
+    };
+  }
+
+  private mapPago(raw: any): DocumentoPago {
+    return {
+      orden: this.toNumber(raw?.orden ?? raw?.ppV03_Orden ?? raw?.PPV03_Orden),
+      frmPago: raw?.frmPago ?? raw?.ppV03_FrmPago ?? raw?.PPV03_FrmPago ?? raw?.formaPago ?? '',
+      tipo: raw?.tipo ?? raw?.ppV03_Tipo ?? raw?.PPV03_Tipo ?? '',
+      moneda: raw?.moneda ?? raw?.ppV03_Moneda ?? raw?.PPV03_Moneda ?? '',
+      monto: this.toNumber(raw?.monto ?? raw?.ppV03_Monto ?? raw?.PPV03_Monto ?? 0),
+      tCambio: this.toNumber(raw?.tCambio ?? raw?.ppV03_TCambio ?? raw?.PPV03_TCambio ?? 0),
+      referencia: raw?.referencia ?? raw?.ppV03_Referencia ?? raw?.PPV03_Referencia ?? '',
+      numTarjeta: raw?.numTarjeta ?? raw?.ppV03_NumTarjeta ?? raw?.PPV03_NumTarjeta ?? '',
+      vencimiento: this.formatDate(raw?.vencimiento ?? raw?.ppV03_Vencimiento ?? raw?.PPV03_Vencimiento ?? '')
+    };
+  }
+
+  private updateResumen(): void {
+    const resumen = this.detalle.reduce<DocumentoResumen>(
+      (acc, item) => {
+        const subtotal = this.getLineaSubtotal(item);
+        const descuento = this.getLineaDescuento(item, subtotal);
+        const base = subtotal - descuento;
+        const impuesto = this.getLineaImpuestoValue(item, base);
+        const total = this.getLineaTotalValue(item, base, impuesto);
+
+        acc.subtotal += subtotal;
+        acc.descuento += descuento;
+        acc.impuesto += impuesto;
+        acc.total += total;
+        return acc;
+      },
+      { subtotal: 0, descuento: 0, impuesto: 0, total: 0 }
+    );
+
+    const header = this.encabezado;
+    this.resumen = {
+      subtotal: this.round(this.coalesceNumber(header?.subtotal, resumen.subtotal)),
+      descuento: this.round(this.coalesceNumber(header?.descuento, resumen.descuento)),
+      impuesto: this.round(this.coalesceNumber(header?.impuesto, resumen.impuesto)),
+      total: this.round(this.coalesceNumber(header?.totalDocu, resumen.total))
+    };
+
+    this.pagosTotal = this.round(
+      this.pagos.reduce((sum, item) => sum + this.toNumber(item.monto), 0)
+    );
+  }
+
+  private getLineaSubtotal(item: DocumentoDetalleItem): number {
+    return this.toNumber(item.cantidad) * this.toNumber(item.pUndLst);
+  }
+
+  private getLineaDescuento(item: DocumentoDetalleItem, subtotal: number): number {
+    const porDescu = this.toNumber(item.porDescu);
+    return subtotal * (porDescu / 100);
+  }
+
+  private getLineaImpuestoValue(item: DocumentoDetalleItem, base: number): number {
+    const impuesto = this.toNumber(item.impuesto);
+    if (impuesto) return impuesto;
+    const porImp = this.toNumber(item.porImp);
+    return base * (porImp / 100);
+  }
+
+  private getLineaTotalValue(item: DocumentoDetalleItem, base: number, impuesto: number): number {
+    const total = this.toNumber(item.total);
+    if (total) return total;
+    const extra = this.toNumber(item.mtoImpVarios);
+    return base + impuesto + extra;
+  }
+
+  private toNumber(value: unknown): number {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private toOptionalNumber(value: unknown): number | undefined {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  private round(value: number): number {
+    return Math.round(value * 100) / 100;
+  }
+
+  private coalesceNumber(value: number | undefined, fallback: number): number {
+    return Number.isFinite(value) ? (value as number) : fallback;
+  }
+
+  private formatDate(value: string | undefined): string {
+    const trimmed = (value ?? '').toString().trim();
+    if (!trimmed) return '';
+    const raw = trimmed.includes('T') ? trimmed.split('T')[0] : trimmed.split(' ')[0];
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(raw)) return raw;
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+    if (match) {
+      return `${match[3]}/${match[2]}/${match[1]}`;
+    }
+    return trimmed;
+  }
+
+  private getErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+      return error.message;
+    }
+    if (typeof error === 'string') {
+      return error;
+    }
+    return 'No se pudo cargar el detalle del documento.';
+  }
+
+  private openPdfBlob(blob: Blob, filename: string): void {
+    try {
+      const pdfBlob = new Blob([blob], { type: 'application/pdf' });
+      const objectUrl = URL.createObjectURL(pdfBlob);
+      const opened = window.open(objectUrl, '_blank', 'noopener');
+
+      if (!opened) {
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = filename;
+        link.rel = 'noopener';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      }
+
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+    } catch (err) {
+      console.error('Error abriendo PDF', err);
+    }
+  }
+}

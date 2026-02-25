@@ -1,0 +1,18 @@
+.notas-credito__loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px dashed rgba(0, 0, 0, 0.1);
+  border-radius: 0.5rem;
+  background: #f8f9fa;
+  margin-bottom: 1rem;
+}
+
+.notas-credito__table {
+  min-width: 1100px;
+}
+
+.notas-credito__filters {
+  border-radius: 0.75rem;
+}

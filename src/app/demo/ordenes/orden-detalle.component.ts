@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
 import { environment } from 'src/environments/environment';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { OrdenTrabajo, OrdenTrabajoDetalle, OrdenesService, ESTADOS_OT } from './ordenes.service';
+import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
 
 @Component({
   selector: 'app-orden-detalle',
@@ -33,6 +34,9 @@ export class OrdenDetalleComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private http = inject(HttpClient);
   private ordenesService = inject(OrdenesService);
+  private empresaContext = inject(EmpresaContextService);
+
+  readonly empresa = this.empresaContext.empresa;
 
   ngOnInit(): void {
     this.route.paramMap

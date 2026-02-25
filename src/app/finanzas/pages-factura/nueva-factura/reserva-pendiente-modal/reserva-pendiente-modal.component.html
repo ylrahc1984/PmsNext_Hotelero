@@ -1,0 +1,147 @@
+<div
+  class="modal fade"
+  tabindex="-1"
+  role="dialog"
+  aria-modal="true"
+  [ngClass]="{ show: open, 'd-block': open }"
+  *ngIf="open"
+>
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl" role="document">
+    <div class="modal-content rsv-modal">
+      <div class="modal-header rsv-modal__header">
+        <div>
+          <h5 class="modal-title mb-0">
+            <i class="feather icon-clipboard me-1"></i>
+            Reservas Pendientes para Facturar
+          </h5>
+          <small class="text-muted">Filtra por fecha y selecciona la reserva a facturar.</small>
+        </div>
+        <button type="button" class="btn-close" aria-label="Close" (click)="onClose()"></button>
+      </div>
+
+      <div class="modal-body">
+        <form class="rsv-filters" [formGroup]="form">
+          <div class="row g-2 align-items-end">
+            <div class="col-sm-6 col-lg-3">
+              <label class="form-label rsv-label">Fecha inicio</label>
+              <input type="date" class="form-control form-control-sm" formControlName="fechaInicio">
+            </div>
+            <div class="col-sm-6 col-lg-3">
+              <label class="form-label rsv-label">Fecha fin</label>
+              <input type="date" class="form-control form-control-sm" formControlName="fechaFin">
+            </div>
+            <div class="col-lg-6 d-flex flex-wrap gap-2">
+              <button
+                type="button"
+                class="btn btn-primary rsv-action-btn rsv-action-btn--primary"
+                (click)="buscarReservas(true)"
+                [disabled]="reservasLoading"
+              >
+                <span class="rsv-action-btn__icon" aria-hidden="true">
+                  <span *ngIf="reservasLoading" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                  <i *ngIf="!reservasLoading" class="feather icon-search"></i>
+                </span>
+                <span>Buscar</span>
+              </button>
+              <div class="rsv-status" *ngIf="reservasLoading">
+                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                Consultando reservas...
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <div class="alert alert-warning py-2 mt-3" *ngIf="errorMessage">
+          <i class="feather icon-alert-circle me-1"></i>
+          {{ errorMessage }}
+        </div>
+
+        <div class="table-responsive mt-3">
+          <table class="table table-hover align-middle rsv-table">
+            <thead class="table-light">
+              <tr>
+                <th>Codigo Reserva</th>
+                <th>Fecha</th>
+                <th>Agencia</th>
+                <th>Cliente</th>
+                <th class="text-end">Pax Pendiente</th>
+                <th class="text-end">Servicios Pendientes</th>
+                <th class="text-center">Seleccionar</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let reserva of reservas">
+                <td class="fw-semibold">{{ reserva.codReserva }}</td>
+                <td>{{ reserva.fecha ? (reserva.fecha | date:'dd/MM/yyyy') : '-' }}</td>
+                <td>{{ reserva.agencia || '-' }}</td>
+                <td>{{ reserva.cliente || '-' }}</td>
+                <td class="text-end">{{ reserva.paxPendiente | number: '1.0-0' }}</td>
+                <td class="text-end">{{ reserva.serviciosPendientes | number: '1.0-0' }}</td>
+                <td class="text-center">
+                  <button
+                    class="btn btn-sm btn-success rsv-select-btn"
+                    type="button"
+                    (click)="seleccionarReserva(reserva)"
+                    [disabled]="reservasLoading"
+                    title="Seleccionar reserva"
+                  >
+                    <i class="feather icon-check"></i>
+                    Seleccionar
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="reservas.length === 0 && !reservasLoading">
+                <td colspan="7" class="text-center text-muted">No hay reservas pendientes en el rango seleccionado.</td>
+              </tr>
+              <tr *ngIf="reservasLoading && reservas.length === 0">
+                <td colspan="7" class="text-center text-muted">
+                  <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                  Cargando reservas...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center rsv-pagination">
+          <small class="text-muted">Registros: {{ totalRegistros }} · Pagina {{ page }} / {{ totalPages }}</small>
+          <div class="d-flex gap-2">
+            <button
+              class="btn btn-outline-secondary btn-sm rsv-action-btn rsv-action-btn--outline rsv-action-btn--compact"
+              type="button"
+              (click)="paginaAnterior()"
+              [disabled]="page <= 1 || reservasLoading"
+            >
+              <span class="rsv-action-btn__icon" aria-hidden="true">
+                <i class="feather icon-chevron-left"></i>
+              </span>
+              <span>Anterior</span>
+            </button>
+            <button
+              class="btn btn-outline-secondary btn-sm rsv-action-btn rsv-action-btn--outline rsv-action-btn--compact"
+              type="button"
+              (click)="paginaSiguiente()"
+              [disabled]="page >= totalPages || reservasLoading"
+            >
+              <span>Siguiente</span>
+              <span class="rsv-action-btn__icon" aria-hidden="true">
+                <i class="feather icon-chevron-right"></i>
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary rsv-action-btn rsv-action-btn--outline" (click)="onClose()">
+          <span class="rsv-action-btn__icon" aria-hidden="true">
+            <i class="feather icon-x"></i>
+          </span>
+          <span>Cerrar</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="open"></div>

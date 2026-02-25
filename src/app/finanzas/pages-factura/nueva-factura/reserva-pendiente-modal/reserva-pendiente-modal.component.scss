@@ -1,0 +1,49 @@
+.rsv-modal__header {
+  background: #e8f1ff;
+  border-bottom: 1px solid #d6e4ff;
+}
+
+.rsv-modal__header .modal-title {
+  color: #0b3a5b;
+  font-weight: 600;
+}
+
+.rsv-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #4b5563;
+}
+
+.rsv-filters {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.rsv-status {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.85rem;
+  color: #2563eb;
+}
+
+.rsv-table thead th {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #475569;
+}
+
+.rsv-table tbody tr:hover {
+  background: #f0f6ff;
+}
+
+.rsv-select-btn {
+  font-weight: 600;
+}
+
+.rsv-pagination {
+  padding-top: 8px;
+}

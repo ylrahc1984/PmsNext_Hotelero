@@ -1,0 +1,88 @@
+<div class="compras-wrapper">
+  <div class="page-header">
+    <div>
+      <h4 class="title">Recepción de Facturas</h4>
+      <p class="subtitle">Controla facturas recibidas y su estado de revisión.</p>
+    </div>
+    <div>
+      <button class="btn btn-primary" type="button" disabled>
+        <i class="feather icon-plus"></i>
+        Nueva recepción
+      </button>
+    </div>
+  </div>
+
+  <div class="filters-card">
+    <div class="row">
+      <div class="col-lg-4 col-md-6 mb-3">
+        <label class="small-label">Proveedor / Factura</label>
+        <input class="form-control" [(ngModel)]="filtros.buscar" placeholder="Buscar por proveedor o factura">
+      </div>
+      <div class="col-lg-3 col-md-6 mb-3">
+        <label class="small-label">Estado</label>
+        <select class="form-control" [(ngModel)]="filtros.estado">
+          <option value="">Todos</option>
+          <option *ngFor="let estado of estados" [value]="estado">{{ estado }}</option>
+        </select>
+      </div>
+      <div class="col-lg-2 col-md-6 mb-3">
+        <label class="small-label">Desde</label>
+        <input type="date" class="form-control" [(ngModel)]="filtros.desde">
+      </div>
+      <div class="col-lg-2 col-md-6 mb-3">
+        <label class="small-label">Hasta</label>
+        <input type="date" class="form-control" [(ngModel)]="filtros.hasta">
+      </div>
+      <div class="col-lg-1 col-md-6 mb-3 d-flex align-items-end justify-content-end">
+        <button class="btn btn-outline-secondary w-100" type="button" (click)="limpiar()">Limpiar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <h6 class="m-0">
+        <i class="feather icon-inbox"></i>
+        Facturas recibidas
+      </h6>
+      <span class="count-chip">{{ totalRegistros }} registros</span>
+    </div>
+
+    <div class="table-responsive" *ngIf="facturas.length; else noData">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Factura</th>
+            <th>Proveedor</th>
+            <th>Fecha</th>
+            <th>Estado</th>
+            <th class="text-end">Monto</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let factura of facturas">
+            <td class="font-monospace">{{ factura.factura }}</td>
+            <td>{{ factura.proveedor }}</td>
+            <td>{{ factura.fecha }}</td>
+            <td>{{ factura.estado }}</td>
+            <td class="text-end">{{ factura.monto | number:'1.2-2' }}</td>
+            <td class="text-center">
+              <button class="btn btn-sm btn-outline-secondary" type="button">
+                <i class="feather icon-eye"></i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ng-template #noData>
+      <div class="empty-state text-center p-4">
+        <i class="feather icon-inbox empty-icon"></i>
+        <p class="mb-2">No hay facturas registradas.</p>
+        <small class="text-muted">Este módulo está listo para futuras integraciones.</small>
+      </div>
+    </ng-template>
+  </div>
+</div>
