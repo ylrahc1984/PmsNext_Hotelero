@@ -317,13 +317,13 @@ export class ReservasComponent implements OnInit, OnDestroy {
   }
 
   private defaultFechaDesde(): string {
-    const today = new Date();
-    const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    return this.toDateInput(firstOfMonth);
+     return this.toDateInput(new Date());
   }
 
   private defaultFechaHasta(): string {
-    return this.toDateInput(new Date());
+    const today = new Date();
+    const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    return this.toDateInput(lastDayOfMonth);
   }
 
   private toDateInput(d: Date): string {
