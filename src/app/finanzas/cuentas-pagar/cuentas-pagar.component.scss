@@ -2,7 +2,7 @@
 
 .consulta-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1rem;
@@ -31,6 +31,18 @@
   gap: 0.75rem;
   margin-left: auto;
   justify-content: flex-end;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.selected-info {
+  font-size: 0.85rem;
+  color: #6b7280;
 }
 
 .filters-header {
@@ -147,6 +159,11 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
+.consulta-table th:first-child,
+.consulta-table td:first-child {
+  width: 56px;
+}
+
 .consulta-table td {
   vertical-align: middle;
 }
@@ -254,6 +271,11 @@
 
   .header-stats {
     width: 100%;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .table-footer {

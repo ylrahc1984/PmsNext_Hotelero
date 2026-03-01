@@ -15,6 +15,20 @@
             <strong class="stat-value">{{ records().length }}</strong>
           </div>
         </div>
+        <div class="header-actions">
+          <button
+            class="btn btn-primary"
+            type="button"
+            (click)="registrarCobranza()"
+            [disabled]="selectedCount() === 0"
+          >
+            <i class="feather icon-check-circle me-1"></i>
+            Registrar Cobranza
+          </button>
+          <span class="selected-info" *ngIf="selectedCount() > 0">
+            {{ selectedCount() }} documentos seleccionados
+          </span>
+        </div>
       </div>
 
       <div class="filters-header" *ngIf="selectedCliente as cliente">
@@ -101,6 +115,7 @@
           <table class="table table-striped table-hover consulta-table">
             <thead>
               <tr>
+                <th class="text-center">Sel</th>
                 <th>Tipo</th>
                 <th>Número</th>
                 <th>Fecha</th>
@@ -114,6 +129,14 @@
             </thead>
             <tbody>
               <tr *ngFor="let item of records(); trackBy: trackByRow">
+                <td class="text-center">
+                  <input
+                    type="checkbox"
+                    [checked]="isDocumentoSeleccionado(item)"
+                    [disabled]="!isDocumentoSeleccionable(item)"
+                    (change)="toggleDocumentoSeleccion(item, $event.target.checked)"
+                  >
+                </td>
                 <td>{{ item.tipoDocu }}</td>
                 <td>{{ item.numDocu }}</td>
                 <td>{{ item.fechaDocu | date:'dd/MM/yyyy' }}</td>

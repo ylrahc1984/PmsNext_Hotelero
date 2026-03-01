@@ -1,0 +1,307 @@
+<div class="form-header">
+  <div class="title-block">
+    <span class="title-pill">Bancos</span>
+    <h4 class="page-title">{{ idOperacion ? (readonlyMode ? 'Detalle de Retiro' : 'Editar Retiro') : 'Nuevo Retiro de Cuentas por Pagar' }}</h4>
+    <p class="subtitle">Gestión de retiros a proveedores</p>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-outline-secondary" type="button" (click)="cancelar()">
+      <i class="feather icon-arrow-left"></i>
+      Volver
+    </button>
+    <button class="btn btn-primary" type="button" (click)="guardar()" [disabled]="saving || readonlyMode">
+      <span *ngIf="saving" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+      Guardar
+    </button>
+  </div>
+</div>
+
+<form class="retiro-form" [formGroup]="retiroForm">
+  <div class="row">
+    <div class="col-12">
+      <div class="form-layout">
+        <div class="form-main">
+        <app-card cardTitle="Información Bancaria" @fadeSlideIn>
+          <div class="bank-card">
+            <div class="card-grid bank-fields">
+              <div class="floating-field form-floating">
+                <select class="form-select" formControlName="codBanco" [class.is-invalid]="isInvalid(retiroForm.controls.codBanco)">
+                  <option value="">Selecciona un banco</option>
+                  <option *ngFor="let banco of bancos" [value]="banco.codBanco">
+                    {{ banco.descripcion }}
+                  </option>
+                </select>
+                <label><i class="feather icon-briefcase"></i>Banco</label>
+              </div>
+              <div class="floating-field form-floating">
+                <select
+                  class="form-select"
+                  formControlName="ctaBanco"
+                  [disabled]="cuentasLoading || !retiroForm.controls.codBanco.value"
+                  [class.is-invalid]="isInvalid(retiroForm.controls.ctaBanco)"
+                >
+                  <option value="">Selecciona una cuenta</option>
+                  <option *ngFor="let cuenta of cuentas" [value]="cuenta.value">
+                    {{ cuenta.label }}
+                  </option>
+                </select>
+                <label><i class="feather icon-credit-card"></i>Cuenta bancaria</label>
+              </div>
+              <div class="floating-field form-floating">
+                <input type="date" class="form-control" placeholder=" " formControlName="fecha" [class.is-invalid]="isInvalid(retiroForm.controls.fecha)">
+                <label><i class="feather icon-calendar"></i>Fecha</label>
+              </div>
+              <div class="floating-field form-floating">
+                <input type="text" class="form-control" placeholder=" " formControlName="numOperacion" [class.is-invalid]="isInvalid(retiroForm.controls.numOperacion)">
+                <label><i class="feather icon-hash"></i>Número operación</label>
+              </div>
+              <div class="floating-field form-floating">
+                <select class="form-select" formControlName="tipoOperacion" [class.is-invalid]="isInvalid(retiroForm.controls.tipoOperacion)">
+                  <option value="">Selecciona tipo</option>
+                  <option *ngFor="let tipo of tipoOperacionOptions" [value]="tipo">{{ tipo }}</option>
+                </select>
+                <label><i class="feather icon-repeat"></i>Tipo operación</label>
+              </div>
+              <div class="floating-field form-floating">
+                <select class="form-select" formControlName="moneda" [class.is-invalid]="isInvalid(retiroForm.controls.moneda)">
+                  <option value="">Selecciona moneda</option>
+                  <option *ngFor="let moneda of monedaOptions" [value]="moneda">{{ moneda }}</option>
+                </select>
+                <label><i class="feather icon-dollar-sign"></i>Moneda</label>
+              </div>
+              <div class="beneficiary-row full">
+                <div class="beneficiary-title">
+                  <i class="feather icon-user"></i>
+                  Beneficiario
+                  <span class="lock-pill" *ngIf="providerLocked">Desde CxP</span>
+                </div>
+                <div class="beneficiary-fields">
+                  <div class="autocomplete" (focusout)="ocultarProveedores()">
+                    <div class="floating-field form-floating">
+                      <input
+                        type="text"
+                        class="form-control"
+                        placeholder=" "
+                        formControlName="codProve"
+                        [readonly]="providerLocked"
+                        [class.is-invalid]="isInvalid(retiroForm.controls.codProve)"
+                        (input)="showProveedorDropdown = true"
+                        (blur)="cargarProveedorPorCodigo()"
+                      >
+                      <label><i class="feather icon-hash"></i>Código proveedor</label>
+                    </div>
+                    <div class="dropdown-panel" *ngIf="showProveedorDropdown && !providerLocked">
+                      <button class="dropdown-item" type="button" *ngFor="let proveedor of proveedorSuggestions" (click)="seleccionarProveedor(proveedor)">
+                        <div class="item-title">{{ proveedor.descripcion }}</div>
+                        <div class="item-sub">{{ proveedor.codigo }}</div>
+                      </button>
+                      <div class="dropdown-item" *ngIf="proveedorLoading">
+                        Buscando proveedor...
+                      </div>
+                    </div>
+                    <span class="loading-hint" *ngIf="proveedorLoading">Buscando proveedor...</span>
+                  </div>
+                  <div class="floating-field form-floating">
+                    <input
+                      type="text"
+                      class="form-control"
+                      placeholder=" "
+                      formControlName="nomProve"
+                      [readonly]="providerLocked"
+                      [class.is-invalid]="isInvalid(retiroForm.controls.nomProve)"
+                    >
+                    <label><i class="feather icon-user"></i>Nombre proveedor</label>
+                  </div>
+                </div>
+              </div>
+          </div>
+          <div class="bank-divider" aria-hidden="true"></div>
+          <div class="bank-summary">
+            <div class="summary-title">
+                <i class="feather icon-pie-chart"></i>
+                Resumen del Retiro
+              </div>
+              <div class="info-field">
+                <span class="info-label">Tipo cambio</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  class="form-control form-control-sm"
+                  formControlName="tipoCambio"
+                  [class.is-invalid]="isInvalid(retiroForm.controls.tipoCambio)"
+                >
+              </div>
+              <div class="summary-item">
+                <span>Total facturas</span>
+                <strong>{{ totalFacturas | number:'1.2-2' }} {{ monedaResumen }}</strong>
+              </div>
+              <div class="summary-item">
+                <span>Total aplicado</span>
+                <strong>{{ totalAplicado | number:'1.2-2' }} {{ monedaResumen }}</strong>
+              </div>
+              <div class="summary-item">
+                <span>Diferencia</span>
+                <strong
+                  [ngClass]="{
+                    'diff-ok': diferencia === 0,
+                    'diff-positive': diferencia > 0,
+                    'diff-negative': diferencia < 0
+                  }"
+                >
+                  {{ diferencia | number:'1.2-2' }} {{ monedaResumen }}
+                </strong>
+              </div>
+              <div class="summary-hint">
+                Ajusta los montos para que la diferencia quede en cero.
+              </div>
+            </div>
+          </div>
+        </app-card>
+
+          <app-card cardTitle="Facturas Aplicadas" @fadeSlideIn>
+            <div class="table-wrapper">
+              <div class="table-responsive">
+                <table class="table table-hover facturas-table">
+                  <thead>
+                    <tr>
+                      <th>Tipo</th>
+                      <th>Serie</th>
+                      <th>Número</th>
+                      <th class="text-end">Total</th>
+                      <th class="text-end">Saldo</th>
+                      <th class="text-end">Monto a pagar</th>
+                      <th class="text-end">Saldo restante</th>
+                      <th>Estado</th>
+                      <th class="text-end" *ngIf="!readonlyMode">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let factura of facturasArray.controls; let i = index; trackBy: trackByIndex">
+                      <td>{{ factura.controls.tipDocPrv.value }}</td>
+                      <td>{{ factura.controls.serie.value }}</td>
+                      <td>{{ factura.controls.numFactura.value }}</td>
+                      <td class="text-end">{{ factura.controls.totalDocu.value | number:'1.2-2' }}</td>
+                      <td class="text-end">{{ factura.controls.saldo.value | number:'1.2-2' }}</td>
+                      <td class="text-end">
+                        <input
+                          type="number"
+                          step="0.01"
+                          class="form-control form-control-sm text-end pago-input"
+                          [formControl]="factura.controls.montoPagar"
+                          [readonly]="readonlyMode"
+                          [class.is-invalid]="isInvalid(factura.controls.montoPagar)"
+                        >
+                        <div class="invalid-feedback" *ngIf="factura.controls.montoPagar.hasError('maxSaldo')">
+                          Excede el saldo pendiente.
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <span class="saldo-pill" [ngClass]="saldoEstadoClass(i)">
+                          {{ saldoRestante(i) | number:'1.2-2' }}
+                        </span>
+                      </td>
+                      <td>{{ factura.controls.estado.value }}</td>
+                      <td class="text-end" *ngIf="!readonlyMode">
+                        <button class="btn btn-sm btn-outline-danger" type="button" (click)="eliminarFactura(i)">
+                          <i class="feather icon-trash-2"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colspan="4">Totales</td>
+                      <td class="text-end">{{ totalFacturas | number:'1.2-2' }}</td>
+                      <td class="text-end">{{ totalAplicado | number:'1.2-2' }}</td>
+                      <td class="text-end">{{ diferencia | number:'1.2-2' }}</td>
+                      <td colspan="2"></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          </app-card>
+
+        <app-card cardTitle="Detalle Contable" @fadeSlideIn *ngIf="false">
+            <div class="detail-actions">
+              <button class="btn btn-outline-primary" type="button" (click)="agregarDetalle()" [disabled]="readonlyMode">
+                <i class="feather icon-plus"></i>
+                Agregar detalle
+              </button>
+            </div>
+            <div class="table-wrapper">
+              <div class="table-responsive">
+                <table class="table table-hover detalle-table">
+                  <thead>
+                    <tr>
+                      <th>Concepto</th>
+                      <th>Descripción</th>
+                      <th>Moneda</th>
+                      <th class="text-end">Monto</th>
+                      <th class="text-end">TCambio</th>
+                      <th class="text-end" *ngIf="!readonlyMode">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let detalle of detallesArray.controls; let i = index; trackBy: trackByIndex">
+                      <td>
+                        <input type="text" class="form-control form-control-sm" [formControl]="detalle.controls.concepto" [readonly]="readonlyMode"
+                          [class.is-invalid]="isInvalid(detalle.controls.concepto)">
+                      </td>
+                      <td>
+                        <input type="text" class="form-control form-control-sm" [formControl]="detalle.controls.descripcion" [readonly]="readonlyMode">
+                      </td>
+                      <td>
+                        <input type="text" class="form-control form-control-sm" [formControl]="detalle.controls.moneda" [readonly]="readonlyMode"
+                          [class.is-invalid]="isInvalid(detalle.controls.moneda)">
+                      </td>
+                      <td>
+                        <input type="number" step="0.01" class="form-control form-control-sm text-end" [formControl]="detalle.controls.monto" [readonly]="readonlyMode"
+                          [class.is-invalid]="isInvalid(detalle.controls.monto)">
+                      </td>
+                      <td>
+                        <input type="number" step="0.01" class="form-control form-control-sm text-end" [formControl]="detalle.controls.tCambio" [readonly]="readonlyMode"
+                          [class.is-invalid]="isInvalid(detalle.controls.tCambio)">
+                      </td>
+                      <td class="text-end" *ngIf="!readonlyMode">
+                        <button class="btn btn-sm btn-outline-danger" type="button" (click)="eliminarDetalle(i)">
+                          <i class="feather icon-trash-2"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div class="empty-state" *ngIf="!detallesArray.length">
+                  <i class="feather icon-inbox"></i>
+                  <p>Agrega el detalle contable para completar el retiro.</p>
+                </div>
+              </div>
+            </div>
+          </app-card>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <div class="concepto-inline floating-field form-floating">
+      <textarea class="form-control" rows="1" placeholder=" " formControlName="concepto" [class.is-invalid]="isInvalid(retiroForm.controls.concepto)"></textarea>
+      <label><i class="feather icon-file-text"></i>Oservaciones/Comentarios</label>
+    </div>
+    <div class="actions-right">
+      <button class="btn btn-outline-secondary" type="button" (click)="cancelar()">Cancelar</button>
+      <button class="btn btn-primary" type="button" (click)="guardar()" [disabled]="saving || readonlyMode">
+        <span *ngIf="saving" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+        Guardar
+      </button>
+    </div>
+  </div>
+</form>
+
+<div class="overlay" *ngIf="saving || loading">
+  <div class="overlay-card">
+    <span class="spinner-border" aria-hidden="true"></span>
+    <p>{{ loading ? 'Cargando retiro...' : 'Guardando retiro...' }}</p>
+  </div>
+</div>

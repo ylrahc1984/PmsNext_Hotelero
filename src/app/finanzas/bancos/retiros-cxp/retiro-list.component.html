@@ -1,0 +1,188 @@
+<div class="row">
+  <div class="col-12">
+    <app-card>
+      <div class="retiro-header">
+        <div>
+          <p class="eyebrow">Bancos</p>
+          <h4>Retiros Bancarios</h4>
+          <p class="subtitle">{{ headerSubtitle }}</p>
+        </div>
+        <div class="header-actions">
+          <div class="stat">
+            <span class="stat-label">Registros</span>
+            <strong class="stat-value">{{ totalRegistros }}</strong>
+          </div>
+          <button class="btn btn-primary" type="button" (click)="nuevoRetiro()">
+            <i class="feather icon-plus me-1"></i>
+            Nuevo Retiro
+          </button>
+        </div>
+      </div>
+
+      <form class="filters-grid" [formGroup]="filtersForm">
+        <div class="filter-group">
+          <label>Banco</label>
+          <select class="form-control" formControlName="codBanco">
+            <option value="">Todos</option>
+            <option *ngFor="let banco of bancos" [value]="banco.codBanco">
+              {{ banco.descripcion }}
+            </option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Cuenta bancaria</label>
+          <select
+            class="form-control"
+            formControlName="ctaBanco"
+            [disabled]="cuentasLoading || !filtersForm.controls.codBanco.value"
+          >
+            <option value="">Todas</option>
+            <option *ngFor="let cuenta of cuentaOptions" [value]="cuenta.value">
+              {{ cuenta.label }}
+            </option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Fecha inicio</label>
+          <input type="date" class="form-control" formControlName="fechaInicio">
+        </div>
+        <div class="filter-group">
+          <label>Fecha fin</label>
+          <input type="date" class="form-control" formControlName="fechaFin">
+        </div>
+        <div class="filter-actions">
+          <button class="btn btn-primary" type="button" (click)="buscar()">
+            <i class="feather icon-filter"></i>
+            Buscar
+          </button>
+          <button class="btn btn-light" type="button" (click)="resetFiltros()">
+            <i class="feather icon-rotate-ccw"></i>
+            Limpiar
+          </button>
+        </div>
+      </form>
+
+      <div class="table-wrapper">
+        <div class="table-responsive">
+          <table class="table table-hover retiro-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Operación</th>
+                <th>Cuenta</th>
+                <th>Proveedor</th>
+                <th class="text-end">Monto</th>
+                <th>Moneda</th>
+                <th>Conciliado</th>
+                <th class="text-end">Acciones</th>
+              </tr>
+            </thead>
+            <tbody *ngIf="loading">
+              <tr *ngFor="let _ of skeletonRows">
+                <td colspan="8">
+                  <div class="skeleton-row">
+                    <span class="skeleton-cell"></span>
+                    <span class="skeleton-cell"></span>
+                    <span class="skeleton-cell"></span>
+                    <span class="skeleton-cell"></span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+            <tbody *ngIf="!loading">
+              <tr *ngFor="let retiro of dataSource; trackBy: trackByRetiro">
+                <td>{{ formatFecha(retiro.fecha) }}</td>
+                <td>
+                  <div class="cell-main">{{ retiro.tipoOperacion }}</div>
+                  <div class="cell-sub">{{ retiro.numOperacion }}</div>
+                </td>
+                <td>
+                  <div class="cell-main">{{ retiro.ctaBanco }}</div>
+                  <div class="cell-sub">{{ retiro.codBanco }}</div>
+                </td>
+                <td>
+                  <div class="cell-main">{{ retiro.nomProve }}</div>
+                  <div class="cell-sub">{{ retiro.codProve }}</div>
+                </td>
+                <td class="text-end">{{ retiro.montoTotal | number:'1.2-2' }}</td>
+                <td>
+                  <span class="badge-soft badge-neutral">{{ monedaLabel(retiro) }}</span>
+                </td>
+                <td>
+                  <span class="badge-soft" [ngClass]="movConClass(retiro)">
+                    {{ movConLabel(retiro) }}
+                  </span>
+                </td>
+                <td class="text-end">
+                  <div class="row-actions">
+                    <button class="btn btn-sm btn-outline-primary" type="button" title="Editar" (click)="editar(retiro)">
+                      <i class="feather icon-edit-2"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" type="button" title="Ver detalle" (click)="verDetalle(retiro)">
+                      <i class="feather icon-eye"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" type="button" title="Eliminar" (click)="solicitarEliminar(retiro)">
+                      <i class="feather icon-trash-2"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div *ngIf="showEmptyState" class="empty-state">
+          <i class="feather icon-inbox"></i>
+          <p>Sin retiros para los filtros aplicados.</p>
+        </div>
+      </div>
+
+      <div class="table-footer">
+        <div class="page-size">
+          <label>Mostrar</label>
+          <select [value]="pageSize" (change)="onPageSizeChange($event.target.value)" class="form-control">
+            <option *ngFor="let size of pageSizes" [value]="size">{{ size }}</option>
+          </select>
+          <span>por página</span>
+        </div>
+
+        <div class="pagination-controls">
+          <button class="btn btn-light" type="button" (click)="changePage(-1)" [disabled]="!canPrev">
+            <i class="feather icon-chevron-left"></i>
+          </button>
+          <span>Página {{ pageNumber }} de {{ totalPages }}</span>
+          <button class="btn btn-light" type="button" (click)="changePage(1)" [disabled]="!canNext">
+            <i class="feather icon-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+    </app-card>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="showDeleteModal"></div>
+<div class="modal fade show d-block" *ngIf="showDeleteModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Eliminar retiro</h5>
+        <button type="button" class="btn-close" aria-label="Close" (click)="cancelarEliminar()" [disabled]="deleting"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0">
+          ¿Desea eliminar el retiro
+          <strong>{{ retiroToDelete?.numOperacion || retiroToDelete?.idOperacion }}</strong>?
+        </p>
+      </div>
+      <div class="modal-footer d-flex justify-content-between flex-wrap gap-2">
+        <button type="button" class="btn btn-outline-secondary" (click)="cancelarEliminar()" [disabled]="deleting">
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-danger" (click)="confirmarEliminar()" [disabled]="deleting">
+          <span *ngIf="deleting" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+          Eliminar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

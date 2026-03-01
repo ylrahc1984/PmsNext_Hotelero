@@ -239,6 +239,46 @@ const routes: Routes = [
     pathMatch: 'full'
   },
   {
+    path: 'bancos/retiros-cxp',
+    redirectTo: 'finanzas/bancos/retiros-cxp',
+    pathMatch: 'full'
+  },
+  {
+    path: 'bancos/depositos-cxc',
+    redirectTo: 'finanzas/bancos/depositos-cxc',
+    pathMatch: 'full'
+  },
+  {
+    path: 'bancos/retiros-cxp/nuevo',
+    redirectTo: 'finanzas/bancos/retiros-cxp/nuevo',
+    pathMatch: 'full'
+  },
+  {
+    path: 'bancos/depositos-cxc/nuevo',
+    redirectTo: 'finanzas/bancos/depositos-cxc/nuevo',
+    pathMatch: 'full'
+  },
+  {
+    path: 'bancos/retiros-cxp/:idOperacion/editar',
+    redirectTo: 'finanzas/bancos/retiros-cxp/:idOperacion/editar',
+    pathMatch: 'full'
+  },
+  {
+    path: 'bancos/depositos-cxc/:idOperacion/editar',
+    redirectTo: 'finanzas/bancos/depositos-cxc/:idOperacion/editar',
+    pathMatch: 'full'
+  },
+  {
+    path: 'bancos/retiros-cxp/:idOperacion',
+    redirectTo: 'finanzas/bancos/retiros-cxp/:idOperacion',
+    pathMatch: 'full'
+  },
+  {
+    path: 'bancos/depositos-cxc/:idOperacion',
+    redirectTo: 'finanzas/bancos/depositos-cxc/:idOperacion',
+    pathMatch: 'full'
+  },
+  {
     canActivate: [AuthGuard],
     canActivateChild: [AuthGuard],
     path: 'finanzas',

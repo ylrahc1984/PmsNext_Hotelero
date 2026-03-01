@@ -231,6 +231,22 @@ export const NavigationItems: NavigationItem[] = [
             classes: 'nav-item'
           },
           {
+            id: 'depositos',
+            title: 'Depósitos Bancarios',
+            type: 'item',
+            url: '/finanzas/bancos/depositos-cxc',
+            icon: 'feather icon-download',
+            classes: 'nav-item'
+          },
+          {
+            id: 'retiros',
+            title: 'Retiros Bancarios',
+            type: 'item',
+            url: '/finanzas/bancos/retiros-cxp',
+            icon: 'feather icon-upload',
+            classes: 'nav-item'
+          },
+          {
             id: 'recibos',
             title: 'Recibos',
             type: 'item',

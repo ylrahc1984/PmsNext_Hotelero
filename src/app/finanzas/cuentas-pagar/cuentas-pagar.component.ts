@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
+import { Router } from '@angular/router';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { ToastService } from 'src/app/core/services/toast.service';
@@ -26,6 +27,21 @@ type EstadoCuentaProveedorView = EstadoCuentaProveedorItem & {
   estadoClase: string;
 };
 
+type FacturaSeleccionada = {
+  tipDocPrv: string;
+  serie: string;
+  numFactura: string;
+  fecFactu: string;
+  fecVen: string;
+  codProve: string;
+  nomProve: string;
+  totalDocu: number;
+  saldo: number;
+  moneda: string;
+  estado: string;
+  tCambio: number;
+};
+
 const DEFAULT_PAGE_SIZE = 20;
 
 @Component({
@@ -39,6 +55,7 @@ export class CuentasPagarComponent implements OnInit {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly estadoCuentaService = inject(EstadoCuentaProveedorService);
   private readonly toast = inject(ToastService);
+  private readonly router = inject(Router);
 
   readonly filtrosForm: FormGroup<FiltrosForm> = this.fb.group({
     fechaInicial: this.fb.control('', { validators: [Validators.required] }),
@@ -69,6 +86,8 @@ export class CuentasPagarComponent implements OnInit {
   showEmptyState = false;
   canPrev = false;
   canNext = false;
+
+  private selectedFacturas = new Set<string>();
 
   ngOnInit(): void {
     const range = this.getDefaultDateRange();
@@ -151,6 +170,43 @@ export class CuentasPagarComponent implements OnInit {
     console.log('Exportar a Excel', this.dataSource);
   }
 
+  get selectedCount(): number {
+    return this.selectedFacturas.size;
+  }
+
+  isFacturaSeleccionable(cuenta: EstadoCuentaProveedorView): boolean {
+    const saldo = this.normalizeNumber(cuenta.saldo);
+    const estado = this.normalize(cuenta.estado).toLowerCase();
+    return saldo > 0 && !estado.includes('pag');
+  }
+
+  isFacturaSeleccionada(cuenta: EstadoCuentaProveedorView): boolean {
+    return this.selectedFacturas.has(this.getFacturaKey(cuenta));
+  }
+
+  toggleFacturaSeleccion(cuenta: EstadoCuentaProveedorView, checked: boolean): void {
+    if (!this.isFacturaSeleccionable(cuenta)) {
+      return;
+    }
+    const key = this.getFacturaKey(cuenta);
+    if (checked) {
+      this.selectedFacturas.add(key);
+    } else {
+      this.selectedFacturas.delete(key);
+    }
+  }
+
+  aplicarPago(): void {
+    const facturasSeleccionadas = this.getFacturasSeleccionadas();
+    if (!facturasSeleccionadas.length) {
+      this.toast.warning('Selecciona al menos una factura pendiente para aplicar el pago.');
+      return;
+    }
+    this.router.navigate(['/bancos/retiros-cxp/nuevo'], {
+      state: { facturasSeleccionadas }
+    });
+  }
+
   private async loadEstadoCuenta(resetRecords = true): Promise<void> {
     const filtros = this.getFiltros();
     const query: EstadoCuentaProveedorFilters = {
@@ -164,6 +220,7 @@ export class CuentasPagarComponent implements OnInit {
 
     this.loading = true;
     this.showEmptyState = false;
+    this.selectedFacturas.clear();
     if (resetRecords) {
       this.dataSource = [];
     }
@@ -252,6 +309,29 @@ export class CuentasPagarComponent implements OnInit {
       return parsed;
     }
     return 0;
+  }
+
+  private getFacturasSeleccionadas(): FacturaSeleccionada[] {
+    return this.dataSource
+      .filter((cuenta) => this.isFacturaSeleccionable(cuenta) && this.isFacturaSeleccionada(cuenta))
+      .map((cuenta) => ({
+        tipDocPrv: this.normalize(cuenta.tipDocPrv),
+        serie: this.normalize(cuenta.serie),
+        numFactura: this.normalize(cuenta.numFactura),
+        fecFactu: this.normalize(cuenta.fecFactu),
+        fecVen: this.normalize(cuenta.fecVen),
+        codProve: this.normalize(cuenta.codProve),
+        nomProve: this.normalize(cuenta.nomProve),
+        totalDocu: this.normalizeNumber(cuenta.totalDocu),
+        saldo: this.normalizeNumber(cuenta.saldo),
+        moneda: this.normalize(cuenta.moneda),
+        estado: this.normalize(cuenta.estado),
+        tCambio: this.normalizeNumber(cuenta.tCambio)
+      }));
+  }
+
+  private getFacturaKey(cuenta: EstadoCuentaProveedorView): string {
+    return `${this.normalize(cuenta.codProve)}-${this.normalize(cuenta.tipDocPrv)}-${this.normalize(cuenta.serie)}-${this.normalize(cuenta.numFactura)}`;
   }
 
   private getDefaultDateRange(): { fechaInicial: string; fechaFinal: string } {

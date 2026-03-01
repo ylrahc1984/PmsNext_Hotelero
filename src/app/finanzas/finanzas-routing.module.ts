@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 
 import { AdminComponent } from '../theme/layout/admin/admin.component';
+import { CanDeactivateReservaCreateGuard } from 'src/app/core/guards/can-deactivate-reserva-create.guard';
 
 const routes: Routes = [
   {
@@ -12,6 +13,42 @@ const routes: Routes = [
         path: 'configuracion',
         loadComponent: () =>
           import('./configuracion/configuracion.component').then((c) => c.ConfiguracionFinanzasComponent)
+      },
+      {
+        path: 'bancos/retiros-cxp',
+        loadComponent: () => import('./bancos/retiros-cxp/retiro-list.component').then((c) => c.RetiroListComponent)
+      },
+      {
+        path: 'bancos/depositos-cxc',
+        loadComponent: () => import('./bancos/depositos-cxc/deposito-list.component').then((c) => c.DepositoListComponent)
+      },
+      {
+        path: 'bancos/retiros-cxp/nuevo',
+        loadComponent: () => import('./bancos/retiros-cxp/retiro-form.component').then((c) => c.RetiroFormComponent)
+      },
+      {
+        path: 'bancos/depositos-cxc/nuevo',
+        loadComponent: () => import('./bancos/depositos-cxc/deposito-form.component').then((c) => c.DepositoFormComponent),
+        canDeactivate: [CanDeactivateReservaCreateGuard]
+      },
+      {
+        path: 'bancos/retiros-cxp/:idOperacion/editar',
+        loadComponent: () => import('./bancos/retiros-cxp/retiro-form.component').then((c) => c.RetiroFormComponent)
+      },
+      {
+        path: 'bancos/depositos-cxc/:idOperacion/editar',
+        loadComponent: () => import('./bancos/depositos-cxc/deposito-form.component').then((c) => c.DepositoFormComponent),
+        canDeactivate: [CanDeactivateReservaCreateGuard]
+      },
+      {
+        path: 'bancos/retiros-cxp/:idOperacion',
+        loadComponent: () => import('./bancos/retiros-cxp/retiro-form.component').then((c) => c.RetiroFormComponent),
+        data: { readOnly: true }
+      },
+      {
+        path: 'bancos/depositos-cxc/:idOperacion',
+        loadComponent: () => import('./bancos/depositos-cxc/deposito-form.component').then((c) => c.DepositoFormComponent),
+        data: { readOnly: true }
       },
       {
         path: 'bancos',

@@ -14,6 +14,15 @@
             </strong>
           </div>
         </div>
+        <div class="header-actions">
+          <button class="btn btn-primary" type="button" (click)="aplicarPago()" [disabled]="selectedCount === 0">
+            <i class="feather icon-check-circle me-1"></i>
+            Aplicar Pago
+          </button>
+          <span class="selected-info" *ngIf="selectedCount > 0">
+            {{ selectedCount }} facturas seleccionadas
+          </span>
+        </div>
       </div>
 
       <div class="filters-header" *ngIf="selectedProveedor as proveedor">
@@ -83,6 +92,7 @@
           <table class="table table-striped table-hover consulta-table">
             <thead>
               <tr>
+                <th class="text-center">Sel</th>
                 <th>Tipo Doc</th>
                 <th>Factura</th>
                 <th>Fecha</th>
@@ -98,6 +108,13 @@
             </thead>
             <tbody>
               <tr *ngFor="let cuenta of dataSource">
+                <td class="text-center">
+                  <input
+                    type="checkbox"
+                    [checked]="isFacturaSeleccionada(cuenta)"
+                    [disabled]="!isFacturaSeleccionable(cuenta)"
+                    (change)="toggleFacturaSeleccion(cuenta, $event.target.checked)">
+                </td>
                 <td>{{ cuenta.tipDocPrv }}</td>
                 <td>{{ cuenta.numFactura }}</td>
                 <td>{{ cuenta.fecFactu | date:'dd/MM/yyyy' }}</td>
