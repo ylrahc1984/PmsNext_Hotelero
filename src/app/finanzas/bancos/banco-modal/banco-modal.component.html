@@ -1,0 +1,77 @@
+<div class="modal fade show d-block" *ngIf="open" tabindex="-1" role="dialog" aria-modal="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content banco-modal">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title mb-0">
+            <i class="feather icon-credit-card me-1"></i>
+            {{ modalTitle }}
+          </h5>
+          <small class="text-muted">{{ modalSubtitle }}</small>
+        </div>
+        <button type="button" class="btn-close" aria-label="Close" (click)="onClose()" [disabled]="busy"></button>
+      </div>
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label for="codBanco" class="form-label">Código <span class="text-danger">*</span></label>
+              <input
+                id="codBanco"
+                type="text"
+                class="form-control code-input"
+                formControlName="codBanco"
+                [disabled]="codBancoInputDisabled"
+                autocomplete="off"
+              >
+              <div class="invalid-feedback d-block" *ngIf="codBancoError">
+                <small>{{ codBancoError }}</small>
+              </div>
+            </div>
+            <div class="col-12">
+              <label for="descripcion" class="form-label">Descripción <span class="text-danger">*</span></label>
+              <input
+                id="descripcion"
+                type="text"
+                class="form-control"
+                formControlName="descripcion"
+                [disabled]="descripcionInputDisabled"
+                autocomplete="off"
+              >
+              <div class="invalid-feedback d-block" *ngIf="descripcionError">
+                <small>{{ descripcionError }}</small>
+              </div>
+            </div>
+            <div class="col-12">
+              <label for="operador" class="form-label">Operador <span class="text-danger">*</span></label>
+              <input
+                id="operador"
+                type="text"
+                class="form-control"
+                formControlName="operador"
+                [disabled]="operadorInputDisabled"
+                autocomplete="off"
+              >
+              <div class="invalid-feedback d-block" *ngIf="operadorError">
+                <small>{{ operadorError }}</small>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer d-flex justify-content-between flex-wrap gap-2">
+          <button type="button" class="btn btn-outline-secondary" (click)="onClose()" [disabled]="busy">
+            <i class="feather icon-x me-1"></i>
+            Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary" [disabled]="submitDisabled">
+            <span *ngIf="showSpinner" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+            <i *ngIf="showSaveIcon" class="feather icon-save me-1"></i>
+            {{ submitLabel }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="open"></div>

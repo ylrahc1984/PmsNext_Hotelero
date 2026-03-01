@@ -9,6 +9,23 @@ const routes: Routes = [
     component: AdminComponent,
     children: [
       {
+        path: 'configuracion',
+        loadComponent: () =>
+          import('./configuracion/configuracion.component').then((c) => c.ConfiguracionFinanzasComponent)
+      },
+      {
+        path: 'bancos',
+        loadComponent: () => import('./bancos/bancos.component').then((c) => c.BancosComponent)
+      },
+      {
+        path: 'cuenta-banco',
+        loadComponent: () => import('./cuenta-banco/cuenta-banco.component').then((c) => c.CuentaBancoComponent)
+      },
+      {
+        path: 'conceptos',
+        loadComponent: () => import('./conceptos/conceptos.component').then((c) => c.ConceptosComponent)
+      },
+      {
         path: 'cuentas-cobrar',
         loadComponent: () => import('./cuentas-cobrar/cuentas-cobrar.component').then((c) => c.CuentasCobrarComponent)
       },
@@ -63,3 +80,4 @@ const routes: Routes = [
   exports: [RouterModule]
 })
 export class FinanzasRoutingModule {}
+

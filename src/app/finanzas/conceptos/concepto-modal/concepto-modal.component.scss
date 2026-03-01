@@ -1,0 +1,35 @@
+.concepto-modal {
+  border-radius: 16px;
+  border: 0;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.18);
+}
+
+.concepto-modal .modal-header {
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.concepto-modal .modal-title {
+  font-weight: 700;
+}
+
+.concepto-modal .modal-body {
+  background: #ffffff;
+}
+
+.concepto-modal .modal-footer {
+  border-top: 1px solid #e5e7eb;
+}
+
+.form-label {
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.code-input {
+  text-transform: uppercase;
+}
+
+.invalid-feedback {
+  font-size: 0.8rem;
+}

@@ -1,0 +1,159 @@
+<div class="compras-wrapper">
+  <div class="page-header mb-3">
+    <ul class="breadcrumb mb-2">
+      <li class="breadcrumb-item">
+        <a routerLink="/dashboard"><i class="feather icon-home"></i></a>
+      </li>
+      <li class="breadcrumb-item">
+        <a>Compras</a>
+      </li>
+      <li class="breadcrumb-item">
+        <a routerLink="/compras/configuracion">Configuracion</a>
+      </li>
+      <li class="breadcrumb-item">
+        <a>Categorias de Producto</a>
+      </li>
+    </ul>
+    <div class="page-title-row">
+      <div class="page-title-text">
+        <h4 class="title">Categorias de Producto</h4>
+        <p class="subtitle">Gestiona las categorias asociadas a cada linea.</p>
+      </div>
+      <button class="btn btn-primary" (click)="abrirModalCrear()" [disabled]="!canCreate">
+        <i class="feather icon-plus"></i> Nueva Categoria
+      </button>
+    </div>
+  </div>
+
+  <div class="filters-card">
+    <div *ngIf="errorMessage" class="alert alert-danger mb-3" role="alert">
+      {{ errorMessage }}
+    </div>
+    <form [formGroup]="lineaForm">
+      <div class="row align-items-end">
+        <div class="col-md-6 mb-3">
+          <label class="small-label">Linea</label>
+          <select class="form-control" formControlName="linea">
+            <option value="">Seleccionar linea</option>
+            <option *ngFor="let linea of lineas" [value]="linea.CAC02_CodLinea">
+              {{ linea.CAC02_CodLinea }} - {{ linea.CAC02_LineaProdu }}
+            </option>
+          </select>
+        </div>
+        <div class="col-md-6 mb-3 text-end">
+          <button type="button" class="btn btn-outline-secondary" (click)="onLimpiarLinea()" [disabled]="isLoading">
+            Limpiar
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <h6 class="m-0"><i class="feather icon-list"></i> Categorias registradas</h6>
+      <div class="table-header-meta">
+        <span class="count-chip">{{ categorias.length }} registros</span>
+        <span *ngIf="isLoading" class="loading-chip">
+          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+          Cargando
+        </span>
+      </div>
+    </div>
+
+    <div class="table-responsive" *ngIf="categorias.length; else noData">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Codigo</th>
+            <th>Categoria</th>
+            <th>Operador</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let categoria of categorias">
+            <td class="font-monospace">{{ categoria.CAC03_CodCate }}</td>
+            <td>{{ categoria.CAC03_Categoria }}</td>
+            <td>{{ categoria.CAC03_Operador || 'N/D' }}</td>
+            <td class="text-center">
+              <div class="action-buttons">
+                <button class="btn btn-sm btn-outline-primary" (click)="abrirModalEditar(categoria)" [disabled]="isLoading" title="Editar">
+                  <i class="feather icon-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger ms-1" (click)="eliminarCategoria(categoria)" [disabled]="isDeleting" title="Eliminar">
+                  <i class="feather icon-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <ng-template #noData>
+      <div class="empty-state text-center p-4">
+        <i class="feather icon-archive empty-icon"></i>
+        <p class="mb-2">{{ emptyMessage }}</p>
+      </div>
+    </ng-template>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="showModal" (click)="cerrarModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h6 class="m-0">{{ modalTitle }}</h6>
+      <button type="button" class="btn btn-sm btn-light" (click)="cerrarModal()" [disabled]="isSaving">
+        <i class="feather icon-x"></i>
+      </button>
+    </div>
+
+    <form [formGroup]="modalForm" (ngSubmit)="guardarCategoria()" class="modal-body">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Linea <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" formControlName="codLinea" disabled>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Codigo <span class="text-danger">*</span></label>
+          <input
+            type="text"
+            class="form-control"
+            formControlName="codCate"
+            maxlength="3"
+            [class.is-invalid]="isFieldInvalid('codCate')"
+          >
+          <div class="invalid-feedback">Campo requerido (max 3 caracteres)</div>
+        </div>
+        <div class="col-md-8">
+          <label class="form-label">Categoria <span class="text-danger">*</span></label>
+          <input
+            type="text"
+            class="form-control"
+            formControlName="categoria"
+            [class.is-invalid]="isFieldInvalid('categoria')"
+          >
+          <div class="invalid-feedback">Campo requerido</div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Operador <span class="text-danger">*</span></label>
+          <input
+            type="text"
+            class="form-control"
+            formControlName="operador"
+            [class.is-invalid]="isFieldInvalid('operador')"
+          >
+          <div class="invalid-feedback">Campo requerido</div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light me-2" (click)="cerrarModal()" [disabled]="isSaving">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving">
+          <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+          Guardar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

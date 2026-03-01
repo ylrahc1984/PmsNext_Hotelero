@@ -151,6 +151,22 @@ export const NavigationItems: NavigationItem[] = [
             classes: 'nav-item'
           },
           {
+            id: 'producto-list',
+            title: 'Productos',
+            type: 'item',
+            url: '/compras/producto-list',
+            icon: 'feather icon-box',
+            classes: 'nav-item'
+          },
+          {
+            id: 'servicios-compras',
+            title: 'Servicios',
+            type: 'item',
+            url: '/compras/servicios',
+            icon: 'feather icon-briefcase',
+            classes: 'nav-item'
+          },
+          {
             id: 'ordenes-compra',
             title: 'Ordenes de Compra',
             type: 'item',
@@ -172,6 +188,14 @@ export const NavigationItems: NavigationItem[] = [
             type: 'item',
             url: '/compras/historia-pagos',
             icon: 'feather icon-credit-card',
+            classes: 'nav-item'
+          },
+          {
+            id: 'configuracion-compras',
+            title: 'Configuracion',
+            type: 'item',
+            url: '/compras/configuracion',
+            icon: 'feather icon-settings',
             classes: 'nav-item'
           }
           // Futuro:
@@ -228,6 +252,14 @@ export const NavigationItems: NavigationItem[] = [
             type: 'item',
             url: '/finanzas/notas-credito',
             icon: 'feather icon-file-minus',
+            classes: 'nav-item'
+          },
+          {
+            id: 'configuracion-finanzas',
+            title: 'Configuracion',
+            type: 'item',
+            url: '/finanzas/configuracion',
+            icon: 'feather icon-settings',
             classes: 'nav-item'
           }
           // Futuro:

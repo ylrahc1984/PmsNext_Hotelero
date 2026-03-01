@@ -1,0 +1,52 @@
+<div class="finanzas-wrapper">
+  <div class="page-header">
+    <div>
+      <h4 class="title">Configuracion de Finanzas</h4>
+      <p class="subtitle">Accesos rapidos a bancos y catalogos financieros.</p>
+    </div>
+  </div>
+
+  <div class="config-panel">
+    <div class="config-header">
+      <div>
+        <h5 class="mb-1">
+          <i class="feather icon-settings me-2"></i>
+          Panel de configuracion
+        </h5>
+        <p class="text-muted mb-0">Selecciona una opcion para administrar los catalogos.</p>
+      </div>
+      <span class="count-chip">{{ getTotalConfigOptions() }} opciones</span>
+    </div>
+
+    @for (group of configGroups; track group.title) {
+      <div class="config-group">
+        <div class="group-title">
+          <h6 class="m-0">
+            <i class="feather icon-folder me-2"></i>
+            {{ group.title }}
+          </h6>
+          <span class="group-divider"></span>
+        </div>
+
+        <div class="row g-3">
+          @for (card of group.cards; track card.id) {
+            <div class="col-lg-4 col-md-6">
+              <button type="button" class="config-card" (click)="navigateTo(card.route)">
+                <div class="config-icon">
+                  <i class="feather {{ card.icon }} {{ card.iconColor }}"></i>
+                </div>
+                <div class="config-content">
+                  <h6 class="mb-1">{{ card.title }}</h6>
+                  <p class="text-muted mb-0">{{ card.description }}</p>
+                </div>
+                <div class="config-arrow">
+                  <i class="feather icon-arrow-right"></i>
+                </div>
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>

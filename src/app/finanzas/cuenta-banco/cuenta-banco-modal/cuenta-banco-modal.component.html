@@ -1,0 +1,179 @@
+<div class="modal fade show d-block" *ngIf="open" tabindex="-1" role="dialog" aria-modal="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl" role="document">
+    <div class="modal-content cuenta-banco-modal">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title mb-0">
+            <i class="feather icon-credit-card me-1"></i>
+            {{ modalTitle }}
+          </h5>
+          <small class="text-muted">{{ modalSubtitle }}</small>
+        </div>
+        <button type="button" class="btn-close" aria-label="Close" (click)="onClose()" [disabled]="busy"></button>
+      </div>
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="codBanco" class="form-label">Banco <span class="text-danger">*</span></label>
+              <input
+                id="codBanco"
+                type="text"
+                class="form-control code-input"
+                formControlName="codBanco"
+                [disabled]="codBancoInputDisabled"
+                autocomplete="off"
+              >
+              <div class="invalid-feedback d-block" *ngIf="codBancoError">
+                <small>{{ codBancoError }}</small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label for="ctaBanco" class="form-label">Código Cuenta <span class="text-danger">*</span></label>
+              <input
+                id="ctaBanco"
+                type="text"
+                class="form-control code-input"
+                formControlName="ctaBanco"
+                [disabled]="ctaBancoInputDisabled"
+                autocomplete="off"
+              >
+              <div class="invalid-feedback d-block" *ngIf="ctaBancoError">
+                <small>{{ ctaBancoError }}</small>
+              </div>
+            </div>
+            <div class="col-12">
+              <label for="nombreCta" class="form-label">Nombre <span class="text-danger">*</span></label>
+              <input
+                id="nombreCta"
+                type="text"
+                class="form-control"
+                formControlName="nombreCta"
+                [disabled]="nombreCtaInputDisabled"
+                autocomplete="off"
+              >
+              <div class="invalid-feedback d-block" *ngIf="nombreCtaError">
+                <small>{{ nombreCtaError }}</small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label for="numeroCta" class="form-label">Número Cuenta</label>
+              <input
+                id="numeroCta"
+                type="text"
+                class="form-control"
+                formControlName="numeroCta"
+                [disabled]="optionalInputsDisabled"
+                autocomplete="off"
+              >
+            </div>
+            <div class="col-md-6">
+              <label for="moneda" class="form-label">Moneda <span class="text-danger">*</span></label>
+              <input
+                id="moneda"
+                type="text"
+                class="form-control"
+                formControlName="moneda"
+                [disabled]="monedaInputDisabled"
+                autocomplete="off"
+              >
+              <div class="invalid-feedback d-block" *ngIf="monedaError">
+                <small>{{ monedaError }}</small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label for="ctaContable" class="form-label">Cuenta Contable</label>
+              <input
+                id="ctaContable"
+                type="text"
+                class="form-control"
+                formControlName="ctaContable"
+                [disabled]="optionalInputsDisabled"
+                autocomplete="off"
+              >
+            </div>
+            <div class="col-md-6">
+              <label for="numCheque" class="form-label">Número Cheque</label>
+              <input
+                id="numCheque"
+                type="text"
+                class="form-control"
+                formControlName="numCheque"
+                [disabled]="optionalInputsDisabled"
+                autocomplete="off"
+              >
+            </div>
+            <div class="col-md-4">
+              <label for="saldo" class="form-label">Saldo Sistema</label>
+              <input
+                id="saldo"
+                type="number"
+                class="form-control"
+                formControlName="saldo"
+                [disabled]="optionalInputsDisabled"
+                min="0"
+              >
+              <div class="invalid-feedback d-block" *ngIf="saldoError">
+                <small>{{ saldoError }}</small>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <label for="fechaApe" class="form-label">Fecha Apertura</label>
+              <input
+                id="fechaApe"
+                type="date"
+                class="form-control"
+                formControlName="fechaApe"
+                [disabled]="optionalInputsDisabled"
+              >
+              <div class="invalid-feedback d-block" *ngIf="fechaApeError">
+                <small>{{ fechaApeError }}</small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label for="empresa" class="form-label">Empresa <span class="text-danger">*</span></label>
+              <input
+                id="empresa"
+                type="text"
+                class="form-control"
+                formControlName="empresa"
+                [disabled]="empresaInputDisabled"
+                autocomplete="off"
+              >
+              <div class="invalid-feedback d-block" *ngIf="empresaError">
+                <small>{{ empresaError }}</small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label for="operador" class="form-label">Operador <span class="text-danger">*</span></label>
+              <input
+                id="operador"
+                type="text"
+                class="form-control"
+                formControlName="operador"
+                [disabled]="operadorInputDisabled"
+                autocomplete="off"
+              >
+              <div class="invalid-feedback d-block" *ngIf="operadorError">
+                <small>{{ operadorError }}</small>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer d-flex justify-content-between flex-wrap gap-2">
+          <button type="button" class="btn btn-outline-secondary" (click)="onClose()" [disabled]="busy">
+            <i class="feather icon-x me-1"></i>
+            Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary" [disabled]="submitDisabled">
+            <span *ngIf="showSpinner" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+            <i *ngIf="showSaveIcon" class="feather icon-save me-1"></i>
+            {{ submitLabel }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="open"></div>

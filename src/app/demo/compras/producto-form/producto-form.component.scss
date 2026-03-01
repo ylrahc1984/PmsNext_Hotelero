@@ -1,0 +1,54 @@
+.producto-form input,
+.producto-form select,
+.producto-form textarea {
+  font-size: 0.9rem;
+  padding: 0.55rem 0.75rem;
+}
+
+.section-card {
+  background: #ffffff;
+  border: 1px solid #e6e8ed;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+}
+
+.section-card + .section-card {
+  margin-top: 1.25rem;
+}
+
+.section-header {
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #5b6472;
+  margin-bottom: 0.75rem;
+}
+
+.form-actions {
+  padding-top: 0.75rem;
+  border-top: 1px solid #e6e8ed;
+}
+
+.form-check {
+  margin-top: 0.4rem;
+}
+
+.breadcrumb {
+  background: transparent;
+  padding: 0;
+  margin-bottom: 0;
+}
+
+.breadcrumb .breadcrumb-item + .breadcrumb-item::before {
+  content: '>';
+}
+
+.page-header .title {
+  font-weight: 700;
+}
+
+.page-header .subtitle {
+  color: #6c757d;
+}

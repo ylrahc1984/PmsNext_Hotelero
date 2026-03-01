@@ -1,0 +1,149 @@
+<div class="compras-wrapper">
+  <div class="page-header">
+    <div>
+      <h4 class="title">Productos</h4>
+      <p class="subtitle">Consulta y administra el catalogo de productos.</p>
+    </div>
+    <div>
+      <button class="btn btn-primary" routerLink="/compras/producto-form" [disabled]="isLoading">
+        <i class="feather icon-plus"></i> Nuevo Producto
+      </button>
+    </div>
+  </div>
+
+  <div class="filters-card">
+    <form [formGroup]="filtrosForm" (ngSubmit)="onBuscar()">
+      <div class="row">
+        <div class="col-lg-3 col-md-6 mb-3">
+          <label class="small-label">Linea</label>
+          <select class="form-control" formControlName="linea">
+            <option value="">Todas</option>
+            <option *ngFor="let linea of lineas" [value]="linea.CAC02_CodLinea">
+              {{ linea.CAC02_CodLinea }} - {{ linea.CAC02_LineaProdu }}
+            </option>
+          </select>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+          <label class="small-label">Categoria</label>
+          <select class="form-control" formControlName="categoria">
+            <option value="">Todas</option>
+            <option *ngFor="let categoria of categorias" [value]="categoria.CAC03_CodCate">
+              {{ categoria.CAC03_CodCate }} - {{ categoria.CAC03_Categoria }}
+            </option>
+          </select>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+          <label class="small-label">Nombre de producto</label>
+          <input class="form-control" formControlName="nomProducto" placeholder="Buscar por nombre">
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+          <label class="small-label">Codigo de barra</label>
+          <input class="form-control" formControlName="codigoBarra" placeholder="Buscar por codigo de barra">
+        </div>
+      </div>
+      <div class="row align-items-end">
+        <div class="col-12 text-end">
+          <button class="btn btn-outline-secondary me-2" type="button" (click)="onLimpiar()" [disabled]="isLoading">
+            Limpiar
+          </button>
+          <button class="btn btn-primary" type="submit" [disabled]="isLoading">
+            Buscar
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <h6 class="m-0">
+        <i class="feather icon-box"></i>
+        Listado de productos
+      </h6>
+      <div class="table-header-meta">
+        <span class="count-chip">{{ totalRegistros }} registros</span>
+        <span *ngIf="isLoading" class="loading-chip">
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          Cargando
+        </span>
+      </div>
+    </div>
+
+    <div class="table-responsive" *ngIf="productos.length; else noData">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Codigo</th>
+            <th>Nombre</th>
+            <th>Linea</th>
+            <th>Categoria</th>
+            <th>Unidad</th>
+            <th class="text-end">Costo</th>
+            <th class="text-end">Impuesto %</th>
+            <th class="text-end">Stock</th>
+            <th class="text-center">Estado</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let producto of productos; trackBy: trackByProducto">
+            <td class="font-monospace">{{ producto.MAC02_CodProducto }}</td>
+            <td>
+              <div class="producto-nombre">{{ producto.MAC02_NomProducto }}</div>
+            </td>
+            <td>
+              <span class="badge badge-soft badge-linea">{{ producto.MAC02_Linea }}</span>
+            </td>
+            <td>
+              <span class="badge badge-soft badge-categoria">{{ producto.MAC02_Categoria }}</span>
+            </td>
+            <td>{{ producto.MAC02_UnmProdu }}</td>
+            <td class="text-end">{{ producto.MAC02_CostoPro | currency:'USD':'symbol':'1.2-2' }}</td>
+            <td class="text-end">{{ producto.MAC02_PorImpto | number:'1.0-2' }}</td>
+            <td class="text-end">{{ producto.Stock | number:'1.0-0' }}</td>
+            <td class="text-center">
+              <span class="badge rounded-pill estado-badge" [ngClass]="getEstadoBadgeClass(producto)">
+                {{ getEstadoLabel(producto) }}
+              </span>
+            </td>
+            <td class="text-center">
+              <div class="action-buttons">
+                <button class="btn btn-sm btn-outline-primary" (click)="editarProducto(producto)" [disabled]="isLoading" title="Editar">
+                  <i class="feather icon-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger ms-1" (click)="eliminarProducto(producto)" [disabled]="isLoading" title="Eliminar">
+                  <i class="feather icon-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ng-template #noData>
+      <div class="empty-state text-center p-4">
+        <i class="feather icon-archive empty-icon"></i>
+        <p class="mb-2">{{ emptyStateMessage }}</p>
+        <small class="text-muted" *ngIf="!hasSearched && !isLoading">Aplica filtros y presiona Buscar.</small>
+      </div>
+    </ng-template>
+
+    <div class="row mt-3 align-items-center" *ngIf="hasSearched">
+      <div class="col-md-4 text-muted">
+        Mostrando {{ pageStart }}-{{ pageEnd }} de {{ totalRegistros }} registros
+      </div>
+      <div class="col-md-4 text-center">
+        <select class="form-select form-select-sm d-inline-block w-auto" #pageSizeSelect [value]="pageSize" (change)="onPageSizeChange(pageSizeSelect.value)" [disabled]="isLoading">
+          <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }} por pagina</option>
+        </select>
+      </div>
+      <div class="col-md-4 text-end">
+        <div class="btn-group" role="group">
+          <button class="btn btn-outline-secondary btn-sm" [disabled]="pageNumber === 1 || isLoading" (click)="goToPageRelative(-1)">Prev</button>
+          <button class="btn btn-outline-secondary btn-sm" [disabled]="pageNumber === totalPages || isLoading" (click)="goToPageRelative(1)">Next</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

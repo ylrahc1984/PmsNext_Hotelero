@@ -1,0 +1,83 @@
+<div class="modal fade show d-block" *ngIf="open" tabindex="-1" role="dialog" aria-modal="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content proveedor-modal">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title mb-0">
+            <i class="feather icon-truck me-1"></i>
+            Seleccionar proveedor
+          </h5>
+          <small class="text-muted">Busca por nombre, RUC o código para seleccionar el proveedor.</small>
+        </div>
+        <button type="button" class="btn-close" aria-label="Close" (click)="onClose()"></button>
+      </div>
+
+      <div class="modal-body">
+        <form [formGroup]="searchForm" (ngSubmit)="buscar()" class="mb-3">
+          <div class="input-group">
+            <span class="input-group-text">
+              <i class="feather icon-search"></i>
+            </span>
+            <input
+              type="text"
+              class="form-control"
+              formControlName="search"
+              placeholder="Buscar proveedor por nombre, RUC o código..."
+              autocomplete="off"
+            >
+            <button class="btn btn-primary" type="submit" [disabled]="loading">
+              <span *ngIf="loading" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+              <span *ngIf="!loading">Buscar</span>
+            </button>
+            <button class="btn btn-outline-secondary" type="button" (click)="limpiarBusqueda()" [disabled]="loading">
+              Limpiar
+            </button>
+          </div>
+        </form>
+
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th style="width: 140px;">Código</th>
+                <th style="width: 160px;">RUC</th>
+                <th>Proveedor</th>
+                <th class="text-end" style="width: 120px;">Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let proveedor of filteredProveedores">
+                <td class="font-monospace">{{ proveedor.codigo }}</td>
+                <td>{{ proveedor.ruc }}</td>
+                <td>{{ proveedor.descripcion }}</td>
+                <td class="text-end">
+                  <button class="btn btn-sm btn-outline-primary" type="button" (click)="seleccionar(proveedor)">
+                    Seleccionar
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="filteredProveedores.length === 0 && !loading">
+                <td colspan="4" class="text-center text-muted">{{ emptyLabel }}</td>
+              </tr>
+              <tr *ngIf="loading">
+                <td colspan="4" class="text-center text-muted">
+                  <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                  Cargando proveedores...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="onClose()">
+          <i class="feather icon-x me-1"></i>
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="open"></div>

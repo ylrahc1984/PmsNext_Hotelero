@@ -1,0 +1,29 @@
+export interface ProductoRequest {
+  proceso: number;
+  codProducto: string;
+  nomProducto: string;
+  nomCorto: string;
+  linea: string;
+  categoria: string;
+  unmProdu: string;
+  medida: string;
+  modelo: string;
+  peso: number;
+  invMin: number;
+  invMax: number;
+  costoPro: number;
+  grabado: string;
+  porImpo: number;
+  activo: string;
+  localizacion: string;
+  descripcion: string;
+  ultimoCsto: number;
+  url: string;
+  cabys: string;
+  operador: string;
+  sinCABYS: boolean;
+  codigoBarras: string;
+  pageNumber: number;
+  pageSize: number;
+  respuesta: string;
+}

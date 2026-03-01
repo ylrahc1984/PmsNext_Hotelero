@@ -1,0 +1,149 @@
+<div class="row">
+  <div class="col-12">
+    <app-card>
+      <div class="cuenta-banco-header">
+        <div>
+          <p class="eyebrow">Mantenimiento</p>
+          <h4>Cuentas Bancarias</h4>
+          <p class="subtitle">{{ headerSubtitle }}</p>
+        </div>
+        <div class="header-right">
+          <div class="stat">
+            <span class="stat-label">Registros</span>
+            <strong class="stat-value">{{ recordCount }}</strong>
+          </div>
+          <button class="btn btn-primary" type="button" (click)="openCreate()" [disabled]="createDisabled">
+            <i class="feather icon-plus me-1"></i>
+            Nueva Cuenta
+          </button>
+        </div>
+      </div>
+
+      <div class="filters-grid" [formGroup]="filterForm">
+        <div class="filter-group">
+          <label for="codBanco">Banco <span class="text-danger">*</span></label>
+          <div class="input-icon">
+            <i class="feather icon-credit-card"></i>
+            <select id="codBanco" class="form-control" formControlName="codBanco" [disabled]="filterDisabled">
+              <option value="">Selecciona un banco</option>
+              <option *ngFor="let banco of bancos" [value]="banco.codBanco">
+                {{ banco.descripcion }} ({{ banco.codBanco }})
+              </option>
+            </select>
+          </div>
+          <small class="text-muted" *ngIf="bancosLoading">{{ bancosLoadingLabel }}</small>
+        </div>
+      </div>
+
+      <div class="selection-hint" *ngIf="showSelectionHint">
+        <i class="feather icon-info"></i>
+        <div>
+          <h6>{{ selectionTitle }}</h6>
+          <p>{{ selectionMessage }}</p>
+        </div>
+      </div>
+
+      <div class="table-wrapper" *ngIf="showTable">
+        <div class="table-responsive">
+          <table class="table table-hover cuenta-table">
+            <thead>
+              <tr>
+                <th style="width: 140px;">Código Cuenta</th>
+                <th>Nombre</th>
+                <th>Número Cuenta</th>
+                <th>Moneda</th>
+                <th>Cuenta Contable</th>
+                <th class="text-end">Saldo Sistema</th>
+                <th class="text-end">Saldo Banco</th>
+                <th>Empresa</th>
+                <th class="text-end" style="width: 140px;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let cuenta of cuentas">
+                <td>
+                  <span class="code-pill">{{ cuenta.ctaBanco }}</span>
+                </td>
+                <td>
+                  <span class="desc">{{ cuenta.nombreCta }}</span>
+                </td>
+                <td>{{ cuenta.numeroCta }}</td>
+                <td>{{ cuenta.moneda }}</td>
+                <td>{{ cuenta.ctaContable }}</td>
+                <td class="text-end">{{ cuenta.saldo | number:'1.2-2' }}</td>
+                <td class="text-end">{{ cuenta.saldoBanco | number:'1.2-2' }}</td>
+                <td>{{ cuenta.empresa }}</td>
+                <td class="text-end">
+                  <div class="row-actions">
+                    <button
+                      class="btn btn-sm btn-outline-primary"
+                      type="button"
+                      title="Editar"
+                      (click)="openEdit(cuenta)"
+                      [disabled]="actionsDisabled"
+                    >
+                      <i class="feather icon-edit-2"></i>
+                    </button>
+                    <button
+                      class="btn btn-sm btn-outline-danger"
+                      type="button"
+                      title="Eliminar"
+                      (click)="requestDelete(cuenta)"
+                      [disabled]="actionsDisabled"
+                    >
+                      <i class="feather icon-trash-2"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-state" *ngIf="showLoadingState">
+          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+          <span>{{ loadingLabel }}</span>
+        </div>
+
+        <div class="table-state empty" *ngIf="showEmptyState">
+          <i class="feather icon-inbox"></i>
+          <p>{{ emptyLabel }}</p>
+        </div>
+      </div>
+    </app-card>
+  </div>
+</div>
+
+<app-cuenta-banco-modal
+  *ngIf="showModal"
+  [open]="showModal"
+  [cuenta]="selectedCuenta"
+  [defaultCodBanco]="defaultCodBanco"
+  [busy]="saving"
+  (close)="closeModal()"
+  (save)="saveCuenta($event)"
+></app-cuenta-banco-modal>
+
+<div class="modal-backdrop fade show" *ngIf="showDeleteModal"></div>
+<div class="modal fade show d-block" *ngIf="showDeleteModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ deleteTitle }}</h5>
+        <button type="button" class="btn-close" aria-label="Close" (click)="cancelDelete()" [disabled]="saving"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0">{{ deleteMessage }}</p>
+      </div>
+      <div class="modal-footer d-flex justify-content-between flex-wrap gap-2">
+        <button type="button" class="btn btn-outline-secondary" (click)="cancelDelete()" [disabled]="saving">
+          {{ deleteCancelLabel }}
+        </button>
+        <button type="button" class="btn btn-danger" (click)="confirmDelete()" [disabled]="saving">
+          <span *ngIf="showDeleteSpinner" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+          {{ deleteConfirmLabel }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

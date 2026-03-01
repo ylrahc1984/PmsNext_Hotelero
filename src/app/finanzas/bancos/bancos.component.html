@@ -1,0 +1,117 @@
+<div class="row">
+  <div class="col-12">
+    <app-card>
+      <div class="bancos-header">
+        <div>
+          <p class="eyebrow">Mantenimiento</p>
+          <h4>Bancos</h4>
+          <p class="subtitle">{{ headerSubtitle }}</p>
+        </div>
+        <div class="header-right">
+          <div class="stat">
+            <span class="stat-label">Registros</span>
+            <strong class="stat-value">{{ recordCount }}</strong>
+          </div>
+          <button class="btn btn-primary" type="button" (click)="openCreate()" [disabled]="actionsDisabled">
+            <i class="feather icon-plus me-1"></i>
+            Nuevo Banco
+          </button>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <div class="table-responsive">
+          <table class="table table-hover bancos-table">
+            <thead>
+              <tr>
+                <th style="width: 140px;">Código</th>
+                <th>Descripción</th>
+                <th>Operador</th>
+                <th class="text-end" style="width: 140px;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let banco of bancos">
+                <td>
+                  <span class="code-pill">{{ banco.codBanco }}</span>
+                </td>
+                <td>
+                  <span class="desc">{{ banco.descripcion }}</span>
+                </td>
+                <td>
+                  <span class="operador">{{ banco.operador }}</span>
+                </td>
+                <td class="text-end">
+                  <div class="row-actions">
+                    <button
+                      class="btn btn-sm btn-outline-primary"
+                      type="button"
+                      title="Editar"
+                      (click)="openEdit(banco)"
+                      [disabled]="actionsDisabled"
+                    >
+                      <i class="feather icon-edit-2"></i>
+                    </button>
+                    <button
+                      class="btn btn-sm btn-outline-danger"
+                      type="button"
+                      title="Eliminar"
+                      (click)="requestDelete(banco)"
+                      [disabled]="actionsDisabled"
+                    >
+                      <i class="feather icon-trash-2"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-state" *ngIf="showLoadingState">
+          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+          <span>{{ loadingLabel }}</span>
+        </div>
+
+        <div class="table-state empty" *ngIf="showEmptyState">
+          <i class="feather icon-inbox"></i>
+          <p>{{ emptyLabel }}</p>
+        </div>
+      </div>
+    </app-card>
+  </div>
+</div>
+
+<app-banco-modal
+  *ngIf="showModal"
+  [open]="showModal"
+  [banco]="selectedBanco"
+  [busy]="saving"
+  (close)="closeModal()"
+  (save)="saveBanco($event)"
+></app-banco-modal>
+
+<div class="modal-backdrop fade show" *ngIf="showDeleteModal"></div>
+<div class="modal fade show d-block" *ngIf="showDeleteModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ deleteTitle }}</h5>
+        <button type="button" class="btn-close" aria-label="Close" (click)="cancelDelete()" [disabled]="saving"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0">{{ deleteMessage }}</p>
+      </div>
+      <div class="modal-footer d-flex justify-content-between flex-wrap gap-2">
+        <button type="button" class="btn btn-outline-secondary" (click)="cancelDelete()" [disabled]="saving">
+          {{ deleteCancelLabel }}
+        </button>
+        <button type="button" class="btn btn-danger" (click)="confirmDelete()" [disabled]="saving">
+          <span *ngIf="showDeleteSpinner" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+          {{ deleteConfirmLabel }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+

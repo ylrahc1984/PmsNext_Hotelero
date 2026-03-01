@@ -1,73 +1,99 @@
 <div class="row">
   <div class="col-12">
-    <app-card>
+    <app-card cardTitle="Cuentas por Cobrar">
       <div class="consulta-header">
         <div>
-          <p class="eyebrow">Consulta</p>
-          <h4>Cuentas por Cobrar</h4>
-          <p class="subtitle">Filtra por cliente, estado o rango de fechas y accede a opciones rapidas.</p>
+          <h4>Estado de Cuenta Clientes</h4>
         </div>
         <div class="header-stats">
           <div class="stat">
             <span class="stat-label">Registros</span>
-            <strong class="stat-value">{{ filteredCuentas().length }}</strong>
+            <strong class="stat-value">{{ totalRecords() }}</strong>
           </div>
           <div class="stat">
-            <span class="stat-label">Total filtrado</span>
-            <strong class="stat-value">
-              {{ getTotalFiltrado() | currency:'USD':'symbol':'1.0-0' }}
-            </strong>
+            <span class="stat-label">Mostrando</span>
+            <strong class="stat-value">{{ records().length }}</strong>
           </div>
         </div>
       </div>
 
-      <div class="filters-grid">
-        <div class="filter-group">
-          <label>Cliente o referencia</label>
-          <div class="input-icon">
-            <i class="feather icon-search"></i>
+      <div class="filters-header" *ngIf="selectedCliente as cliente">
+        <span class="filters-header__label">Cliente:</span>
+        <span class="filters-header__value">{{ cliente.nombre }}</span>
+      </div>
+
+      <form [formGroup]="filtrosForm" (ngSubmit)="onBuscar()">
+        <div class="filters-grid">
+          <div class="filter-group">
+            <label for="codCliente">Código cliente</label>
+            <div class="input-button">
+              <div class="input-icon">
+                <i class="feather icon-search"></i>
+                <input
+                  id="codCliente"
+                  type="text"
+                  class="form-control"
+                  placeholder="Ej: CL-0001"
+                  formControlName="codCliente"
+                  [disabled]="loading()">
+              </div>
+              <button
+                class="btn btn-outline-secondary btn-client"
+                type="button"
+                (click)="openClienteModal()"
+                [disabled]="loading()"
+              >
+                <i class="feather icon-user"></i>
+              </button>
+            </div>
+          </div>
+          <div class="filter-group">
+            <label for="fechaInicial">Desde</label>
             <input
-              type="text"
+              id="fechaInicial"
+              type="date"
               class="form-control"
-              placeholder="Busca por nombre o referencia"
-              [(ngModel)]="filtros.buscar"
-              (ngModelChange)="resetPagina()">
+              formControlName="fechaInicial"
+              [disabled]="loading()">
+          </div>
+          <div class="filter-group">
+            <label for="fechaFinal">Hasta</label>
+            <input
+              id="fechaFinal"
+              type="date"
+              class="form-control"
+              formControlName="fechaFinal"
+              [disabled]="loading()">
+          </div>
+          <div class="filter-group">
+            <label for="estadoDocumento">Estado Documento</label>
+            <select
+              id="estadoDocumento"
+              class="form-control"
+              formControlName="estadoDocumento"
+              [disabled]="loading()">
+              <option *ngFor="let option of estadoOptions" [value]="option.value">
+                {{ option.label }}
+              </option>
+            </select>
+          </div>
+          <div class="filter-actions">
+            <button class="btn btn-primary" type="submit" [disabled]="loading()">
+              <span *ngIf="loading()" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              <i *ngIf="!loading()" class="feather icon-filter"></i>
+              Buscar
+            </button>
+            <button class="btn btn-light" type="button" (click)="onLimpiar()" [disabled]="loading()">
+              <i class="feather icon-rotate-ccw"></i>
+              Limpiar
+            </button>
           </div>
         </div>
-        <div class="filter-group">
-          <label>Estado</label>
-          <select
-            class="form-control"
-            [(ngModel)]="filtros.estado"
-            (ngModelChange)="resetPagina()">
-            <option value="todos">Todos</option>
-            <option value="pendiente">Pendiente</option>
-            <option value="pagada">Pagada</option>
-            <option value="vencida">Vencida</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <label>Desde</label>
-          <input
-            type="date"
-            class="form-control"
-            [(ngModel)]="filtros.desde"
-            (change)="resetPagina()">
-        </div>
-        <div class="filter-group">
-          <label>Hasta</label>
-          <input
-            type="date"
-            class="form-control"
-            [(ngModel)]="filtros.hasta"
-            (change)="resetPagina()">
-        </div>
-        <div class="filter-actions">
-          <button class="btn btn-light" type="button" (click)="resetFiltros()">
-            <i class="feather icon-rotate-ccw"></i>
-            Limpiar
-          </button>
-        </div>
+      </form>
+
+      <div *ngIf="loading()" class="table-status">
+        <div class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
+        <span>Cargando estado de cuenta...</span>
       </div>
 
       <div class="table-wrapper">
@@ -75,75 +101,76 @@
           <table class="table table-striped table-hover consulta-table">
             <thead>
               <tr>
-                <th>Cliente</th>
-                <th>Monto</th>
+                <th>Tipo</th>
+                <th>Número</th>
                 <th>Fecha</th>
+                <th>Cliente</th>
+                <th class="text-end">Total Documento</th>
+                <th class="text-end">Total Pagado</th>
+                <th class="text-end">Saldo</th>
+                <th>Moneda</th>
                 <th>Estado</th>
-                <th class="text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let cuenta of pagedCuentas()">
+              <tr *ngFor="let item of records(); trackBy: trackByRow">
+                <td>{{ item.tipoDocu }}</td>
+                <td>{{ item.numDocu }}</td>
+                <td>{{ item.fechaDocu | date:'dd/MM/yyyy' }}</td>
                 <td>
                   <div class="cliente-cell">
-                    <span class="cliente-nombre">{{ cuenta.cliente }}</span>
-                    <span class="cliente-referencia">Ref: {{ cuenta.fecha }}</span>
+                    <span class="cliente-nombre">{{ item.nomCliente }}</span>
+                    <span class="cliente-codigo">Código: {{ item.codCliente }}</span>
                   </div>
                 </td>
+                <td class="text-end">{{ item.totalDocu | number:'1.2-2' }}</td>
+                <td class="text-end">{{ item.totalPago | number:'1.2-2' }}</td>
+                <td class="text-end">{{ item.saldo | number:'1.2-2' }}</td>
+                <td>{{ item.moneda }}</td>
                 <td>
-                  <span class="monto">{{ cuenta.monto | currency:'USD':'symbol':'1.0-0' }}</span>
-                </td>
-                <td>{{ cuenta.fecha | date:'yyyy-MM-dd' }}</td>
-                <td>
-                  <span class="estado-pill" [ngClass]="getEstadoClase(cuenta.estado)">
-                    {{ cuenta.estado | titlecase }}
+                  <span class="estado-badge" [ngClass]="getEstadoClase(item.estadoElectronico)">
+                    {{ item.estadoElectronico || 'N/D' }}
                   </span>
-                </td>
-                <td class="text-right">
-                  <div class="row-actions">
-                    <button class="btn btn-sm btn-outline-primary" type="button">
-                      <i class="feather icon-eye"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-secondary" type="button">
-                      <i class="feather icon-send"></i>
-                    </button>
-                  </div>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
-        <div *ngIf="filteredCuentas().length === 0" class="empty-state">
+        <div *ngIf="!loading() && records().length === 0" class="empty-state">
           <i class="feather icon-inbox"></i>
-          <p>Sin resultados para los filtros aplicados.</p>
+          <p>No hay registros.</p>
         </div>
       </div>
 
       <div class="table-footer">
         <div class="page-size">
           <label>Mostrar</label>
-          <select [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)" class="form-control">
+          <select
+            class="form-control"
+            [value]="pageSize()"
+            (change)="onPageSizeChange($any($event.target).value)"
+            [disabled]="loading()">
             <option *ngFor="let size of pageSizes" [value]="size">{{ size }}</option>
           </select>
           <span>por pagina</span>
         </div>
 
         <div class="pagination-controls">
-          <button class="btn btn-light" type="button" (click)="changePage(-1)" [disabled]="page === 1">
+          <button class="btn btn-light" type="button" (click)="changePage(-1)" [disabled]="!canPrev() || loading()">
             <i class="feather icon-chevron-left"></i>
           </button>
-          <span>Pagina {{ page }} de {{ totalPaginas() }}</span>
-          <button class="btn btn-light" type="button" (click)="changePage(1)" [disabled]="page === totalPaginas()">
+          <span>Pagina {{ pageNumber() }} de {{ totalPages() }}</span>
+          <button class="btn btn-light" type="button" (click)="changePage(1)" [disabled]="!canNext() || loading()">
             <i class="feather icon-chevron-right"></i>
           </button>
         </div>
 
         <div class="footer-actions">
-          <button class="btn btn-outline-secondary" type="button" (click)="imprimir()">
+          <button class="btn btn-outline-secondary" type="button">
             <i class="feather icon-printer"></i>
             Imprimir
           </button>
-          <button class="btn btn-outline-primary" type="button" (click)="exportarExcel()">
+          <button class="btn btn-outline-primary" type="button">
             <i class="feather icon-download"></i>
             Exportar Excel
           </button>
@@ -152,3 +179,10 @@
     </app-card>
   </div>
 </div>
+
+<app-nueva-factura-cliente-modal
+  *ngIf="showClienteModal"
+  [open]="showClienteModal"
+  (close)="closeClienteModal()"
+  (clienteSelected)="onClienteSelected($event)"
+></app-nueva-factura-cliente-modal>

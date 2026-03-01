@@ -1,0 +1,416 @@
+<div class="row">
+  <div class="col-12">
+    <app-card [customHeader]="true">
+      <div class="app-card-header header-hero">
+        <div>
+          <h5 class="header-hero__main">Nueva Compra de Servicios</h5>
+          <p class="header-hero__subtitle">Registro de factura de servicios</p>
+        </div>
+        <div class="header-hero__actions">
+          <button class="btn btn-sm btn-outline-secondary" type="button" (click)="cancel()" [disabled]="isSaving">
+            <i class="feather icon-arrow-left me-1"></i>
+            Cancelar
+          </button>
+          <button class="btn btn-sm btn-primary nf-btn-primary" type="button" (click)="submit()" [disabled]="!canSubmit">
+            <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+            <i class="feather icon-check me-1" *ngIf="!isSaving"></i>
+            Guardar
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="errorMessage" class="alert alert-danger mb-3">
+        <i class="feather icon-alert-triangle me-2"></i>
+        {{ errorMessage }}
+      </div>
+
+      <form class="nueva-servicio" [formGroup]="form">
+        <div class="card section-card info-card">
+          <div class="card-body section-card__body">
+            <div class="row g-4">
+              <div class="col-lg-8">
+                <div class="info-card__header">
+                  <div class="section-card__title mb-0">Proveedor</div>
+                </div>
+
+                <div class="row g-3">
+                  <div class="col-lg-4 col-md-6">
+                    <label class="form-label nf-label">Codigo proveedor <span class="text-danger">*</span></label>
+                    <div class="input-group input-group-sm nf-input-group">
+                      <input class="form-control form-control-sm" formControlName="codProve" [class.is-invalid]="isFieldInvalid('codProve')">
+                      <button class="btn btn-outline-primary nf-icon-btn" type="button" aria-label="Buscar proveedor" (click)="openProveedorModal()">
+                        <i class="feather icon-search"></i>
+                      </button>
+                    </div>
+                    <div class="invalid-feedback">Codigo requerido.</div>
+                  </div>
+                  <div class="col-lg-8 col-md-6">
+                    <label class="form-label nf-label">Nombre proveedor <span class="text-danger">*</span></label>
+                    <input class="form-control form-control-sm" formControlName="nomProve" [class.is-invalid]="isFieldInvalid('nomProve')">
+                    <div class="invalid-feedback">Nombre requerido.</div>
+                  </div>
+                  <div class="col-xl-4 col-lg-5 col-md-6">
+                    <label class="form-label nf-label">Tipo documento <span class="text-danger">*</span></label>
+                    <select class="form-control form-control-sm" formControlName="tipDocu" [class.is-invalid]="isFieldInvalid('tipDocu')">
+                      <option *ngFor="let tipo of tiposDocumento" [value]="tipo.value">{{ tipo.label }}</option>
+                    </select>
+                    <div class="invalid-feedback">Seleccione un tipo de documento.</div>
+                  </div>
+                  <div class="col-xl-4 col-lg-5 col-md-6">
+                    <label class="form-label nf-label">Numero de documento <span class="text-danger">*</span></label>
+                    <input class="form-control form-control-sm" formControlName="numFactura" [class.is-invalid]="isFieldInvalid('numFactura')" placeholder="Numero">
+                    <div class="invalid-feedback">Numero requerido.</div>
+                  </div>
+                  <div class="w-100"></div>
+                  <div class="col-lg-4 col-md-6">
+                    <label class="form-label nf-label">Forma de pago <span class="text-danger">*</span></label>
+                    <select class="form-control form-control-sm" formControlName="frmPago" [class.is-invalid]="isFieldInvalid('frmPago')">
+                      <option *ngIf="formasPagoLoading" value="" disabled>Cargando formas de pago...</option>
+                      <option *ngFor="let forma of formasPago" [value]="forma.codigo">{{ forma.codigo }} - {{ forma.descripcion }}</option>
+                    </select>
+                    <div class="invalid-feedback">Seleccione forma de pago.</div>
+                  </div>
+                  <div class="col-lg-4 col-md-6">
+                    <label class="form-label nf-label">Moneda <span class="text-danger">*</span></label>
+                    <select class="form-control form-control-sm" formControlName="moneda" [class.is-invalid]="isFieldInvalid('moneda')">
+                      <option *ngIf="monedasLoading" value="" disabled>Cargando monedas...</option>
+                      <option *ngFor="let moneda of monedas" [value]="moneda.codMoneda">{{ moneda.codMoneda }} - {{ moneda.moneda }}</option>
+                    </select>
+                    <div class="invalid-feedback">Seleccione moneda.</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-lg-4">
+                <div class="info-card__aside">
+                  <div class="section-card__title">Fechas</div>
+                  <div class="row g-3">
+                    <div class="col-md-6 col-12">
+                      <label class="form-label nf-label">Fecha ingreso <span class="text-danger">*</span></label>
+                      <input type="date" class="form-control form-control-sm" formControlName="fechaIngreso" [class.is-invalid]="isFieldInvalid('fechaIngreso')">
+                      <div class="invalid-feedback">Fecha requerida.</div>
+                    </div>
+                    <div class="w-100"></div>
+                    <div class="col-md-6 col-12">
+                      <label class="form-label nf-label">Fecha factura <span class="text-danger">*</span></label>
+                      <input type="date" class="form-control form-control-sm" formControlName="fechaFactura" [class.is-invalid]="isFieldInvalid('fechaFactura')">
+                      <div class="invalid-feedback">Fecha requerida.</div>
+                    </div>
+                    <div class="col-md-6 col-12">
+                      <label class="form-label nf-label">Fecha vencimiento <span class="text-danger">*</span></label>
+                      <input
+                        type="date"
+                        class="form-control form-control-sm"
+                        formControlName="fechaVenci"
+                        [class.is-invalid]="isFieldInvalid('fechaVenci') || hasFechaRangoError()"
+                      >
+                      <div class="invalid-feedback">Verifique la fecha de vencimiento.</div>
+                    </div>
+                    <div class="w-100"></div>
+                    <div class="col-12 col-md-6">
+                      <label class="form-label nf-label">Tipo cambio <span class="text-danger">*</span></label>
+                      <input
+                        type="number"
+                        class="form-control form-control-sm"
+                        formControlName="tCambio"
+                        min="0.0001"
+                        step="0.0001"
+                        [class.is-invalid]="isTipoCambioInvalid()"
+                      >
+                      <div class="invalid-feedback">Tipo de cambio requerido.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card section-card detail-card">
+          <div class="card-body section-card__body">
+            <div class="detail-card__header">
+              <div class="detail-card__title">
+                <i class="feather icon-grid text-muted me-2"></i>
+                <div>
+                  <h6 class="mb-0">Detalle de servicios</h6>
+                  <div class="detail-card__meta">Agrega cada servicio con su impuesto correspondiente.</div>
+                </div>
+              </div>
+              <button class="btn btn-primary detail-card__action" type="button" (click)="addDetalle()">
+                <i class="feather icon-plus me-1"></i>
+                Agregar linea
+              </button>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered align-middle detail-table">
+                <thead class="table-light">
+                  <tr>
+                    <th>Codigo</th>
+                    <th>Servicio</th>
+                    <th class="text-end">Cantidad</th>
+                    <th class="text-end">SubTotal</th>
+                    <th class="text-end">% Imp</th>
+                    <th class="text-end">Impuesto</th>
+                    <th class="text-end total-col">Total</th>
+                    <th class="text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody formArrayName="detalle">
+                  <tr *ngFor="let group of detalleArray.controls; let i = index; trackBy: trackByDetalle" [formGroupName]="i">
+                    <td>
+                      <input class="form-control form-control-sm" formControlName="codigo" [class.is-invalid]="isDetalleInvalid(i, 'codigo')">
+                      <div class="text-danger small mt-1" *ngIf="isDetalleInvalid(i, 'codigo')">Requerido</div>
+                    </td>
+                    <td>
+                      <input class="form-control form-control-sm" formControlName="servicio" [class.is-invalid]="isDetalleInvalid(i, 'servicio')">
+                      <div class="text-danger small mt-1" *ngIf="isDetalleInvalid(i, 'servicio')">Requerido</div>
+                    </td>
+                    <td>
+                      <input type="number" class="form-control form-control-sm text-end" formControlName="cantidad" min="0.01" step="0.01">
+                    </td>
+                    <td>
+                      <input type="number" class="form-control form-control-sm text-end" formControlName="subTotal" min="0" step="0.01">
+                    </td>
+                    <td>
+                      <input type="number" class="form-control form-control-sm text-end" formControlName="porImp" min="0" max="100" step="0.01">
+                    </td>
+                    <td class="text-end">
+                      {{ group.controls.impuesto.value | number:'1.2-2' }}
+                    </td>
+                    <td class="text-end total-col">
+                      {{ group.controls.total.value | number:'1.2-2' }}
+                    </td>
+                    <td class="text-center">
+                      <button class="btn btn-sm btn-outline-danger" type="button" (click)="removeDetalle(i)" [disabled]="detalleArray.length === 1">
+                        <i class="feather icon-trash-2"></i>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="detalleArray.length === 0">
+                    <td colspan="10" class="text-center text-muted">Agrega al menos una linea.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="text-danger small mt-2" *ngIf="detalleArray.length === 0">
+              Debe agregar al menos una linea.
+            </div>
+          </div>
+        </div>
+
+        <div class="row totals-row justify-content-end">
+          <div class="col-12 col-lg-4">
+            <div class="card section-card totals-card">
+              <div class="card-body section-card__body totals-card__body">
+                <div class="totals-row__item">
+                  <span>SubTotal</span>
+                  <strong>{{ getMonedaSimbolo() }} {{ form.controls.totDeta.value | number:'1.2-2' }}</strong>
+                </div>
+                <div class="totals-row__item">
+                  <span>Descuento</span>
+                  <strong>{{ getMonedaSimbolo() }} {{ (form.controls.totDeta.value - form.controls.totNeto.value) | number:'1.2-2' }}</strong>
+                </div>
+                <div class="totals-row__item">
+                  <span>Neto</span>
+                  <strong>{{ getMonedaSimbolo() }} {{ form.controls.totNeto.value | number:'1.2-2' }}</strong>
+                </div>
+                <div class="totals-row__item">
+                  <span>Impuesto</span>
+                  <strong>{{ getMonedaSimbolo() }} {{ form.controls.totImpu.value | number:'1.2-2' }}</strong>
+                </div>
+                <div class="totals-divider"></div>
+                <div class="totals-total">
+                  <span>Total documento</span>
+                  <strong>{{ getMonedaSimbolo() }} {{ form.controls.totalDocu.value | number:'1.2-2' }}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card section-card">
+          <div class="card-body section-card__body">
+            <div class="section-card__title">Observaciones</div>
+            <textarea class="form-control" formControlName="observaciones" rows="4" placeholder="Notas adicionales"></textarea>
+          </div>
+        </div>
+      </form>
+    </app-card>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="showProveedorModal" (click)="closeProveedorModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h6 class="m-0">Seleccionar proveedor</h6>
+      <button type="button" class="btn btn-sm btn-light" (click)="closeProveedorModal()">
+        <i class="feather icon-x"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <form [formGroup]="proveedorSearchForm" (ngSubmit)="buscarProveedores()">
+        <div class="row align-items-end">
+          <div class="col-md-4 mb-3">
+            <label class="small-label">Codigo</label>
+            <input class="form-control" formControlName="codigo" placeholder="Buscar por codigo">
+          </div>
+          <div class="col-md-5 mb-3">
+            <label class="small-label">Nombre / Razon Social</label>
+            <input class="form-control" formControlName="descripcion" placeholder="Buscar por nombre o razon social">
+          </div>
+          <div class="col-md-3 mb-3 text-end">
+            <button class="btn btn-outline-secondary me-2" type="button" (click)="limpiarBusquedaProveedores()">Limpiar</button>
+            <button class="btn btn-primary" type="submit" [disabled]="proveedoresLoading">Buscar</button>
+          </div>
+        </div>
+      </form>
+
+      <div class="table-responsive" *ngIf="proveedores.length; else noProveedor">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Codigo</th>
+              <th>Proveedor</th>
+              <th>RUC</th>
+              <th class="text-center">Accion</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let proveedor of proveedores">
+              <td class="font-monospace">{{ proveedor.codigo }}</td>
+              <td>{{ proveedor.descripcion }}</td>
+              <td>{{ proveedor.ruc }}</td>
+              <td class="text-center">
+                <button class="btn btn-sm btn-outline-primary" type="button" (click)="seleccionarProveedor(proveedor)">
+                  Seleccionar
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #noProveedor>
+        <div class="text-center text-muted p-4">
+          <span *ngIf="!proveedoresLoading">No hay proveedores para mostrar.</span>
+          <span *ngIf="proveedoresLoading">Cargando...</span>
+        </div>
+      </ng-template>
+
+      <div class="row mt-3 align-items-center" *ngIf="proveedorTotalPages > 0">
+        <div class="col-md-4 text-muted">
+          Pagina {{ proveedorPage }} de {{ proveedorTotalPages }} ({{ proveedorTotalRegistros }} registros)
+        </div>
+        <div class="col-md-4 text-center">
+          <select
+            class="form-select form-select-sm d-inline-block w-auto"
+            [value]="proveedorPageSize"
+            (change)="onProveedorPageSizeChange($any($event.target).value)"
+            [disabled]="proveedoresLoading"
+          >
+            <option *ngFor="let size of proveedorPageSizeOptions" [value]="size">{{ size }} por pagina</option>
+          </select>
+        </div>
+        <div class="col-md-4 text-end">
+          <div class="btn-group" role="group">
+            <button class="btn btn-outline-secondary btn-sm" [disabled]="proveedorPage === 1 || proveedoresLoading" (click)="goToProveedorPageRelative(-1)">
+              Prev
+            </button>
+            <button
+              class="btn btn-outline-secondary btn-sm"
+              [disabled]="proveedorPage === proveedorTotalPages || proveedoresLoading"
+              (click)="goToProveedorPageRelative(1)"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="showServicioModal" (click)="closeServicioModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h6 class="m-0">Seleccionar servicio</h6>
+      <button type="button" class="btn btn-sm btn-light" (click)="closeServicioModal()">
+        <i class="feather icon-x"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <form [formGroup]="servicioSearchForm" (ngSubmit)="buscarServicios()">
+        <div class="row align-items-end">
+          <div class="col-md-9 mb-3">
+            <label class="small-label">Buscar servicio</label>
+            <input class="form-control" formControlName="search" placeholder="Codigo o descripcion">
+          </div>
+          <div class="col-md-3 mb-3 text-end">
+            <button class="btn btn-outline-secondary me-2" type="button" (click)="limpiarBusquedaServicios()">Limpiar</button>
+            <button class="btn btn-primary" type="submit" [disabled]="serviciosLoading">Buscar</button>
+          </div>
+        </div>
+      </form>
+
+      <div class="table-responsive" *ngIf="paginatedServicios.length; else noServicios">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Codigo</th>
+              <th>Servicio</th>
+              <th class="text-center">Accion</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let servicio of paginatedServicios">
+              <td class="font-monospace">{{ servicio.codServicio }}</td>
+              <td>{{ servicio.servicio }}</td>
+              <td class="text-center">
+                <button class="btn btn-sm btn-outline-primary" type="button" (click)="seleccionarServicio(servicio)">
+                  Seleccionar
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #noServicios>
+        <div class="text-center text-muted p-4">
+          <span *ngIf="!serviciosLoading">No hay servicios para mostrar.</span>
+          <span *ngIf="serviciosLoading">Cargando...</span>
+        </div>
+      </ng-template>
+
+      <div class="row mt-3 align-items-center" *ngIf="serviciosFiltered.length > 0">
+        <div class="col-md-4 text-muted">
+          Pagina {{ servicioPage }} de {{ servicioTotalPages }} ({{ serviciosFiltered.length }} registros)
+        </div>
+        <div class="col-md-4 text-center">
+          <select
+            class="form-select form-select-sm d-inline-block w-auto"
+            [value]="servicioPageSize"
+            (change)="onServicioPageSizeChange($any($event.target).value)"
+            [disabled]="serviciosLoading"
+          >
+            <option *ngFor="let size of servicioPageSizeOptions" [value]="size">{{ size }} por pagina</option>
+          </select>
+        </div>
+        <div class="col-md-4 text-end">
+          <div class="btn-group" role="group">
+            <button class="btn btn-outline-secondary btn-sm" [disabled]="servicioPage === 1 || serviciosLoading" (click)="goToServicioPageRelative(-1)">
+              Prev
+            </button>
+            <button
+              class="btn btn-outline-secondary btn-sm"
+              [disabled]="servicioPage === servicioTotalPages || serviciosLoading"
+              (click)="goToServicioPageRelative(1)"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

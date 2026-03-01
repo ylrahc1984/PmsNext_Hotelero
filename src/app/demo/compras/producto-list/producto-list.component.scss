@@ -1,0 +1,130 @@
+.compras-wrapper {
+  background: #f8f9fb;
+  padding: 1rem;
+  border-radius: 10px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  .title {
+    margin: 0;
+    font-weight: 700;
+  }
+
+  .subtitle {
+    margin: 0;
+    color: #6c757d;
+  }
+}
+
+.filters-card,
+.table-card {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.filters-card .small-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-bottom: 0.35rem;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+
+  .count-chip {
+    background: #eef2ff;
+    color: #4c51bf;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+}
+
+.table-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.loading-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+}
+
+.table th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6c757d;
+  border-top: none;
+}
+
+.table td {
+  vertical-align: middle;
+  font-size: 0.9rem;
+}
+
+.action-buttons .btn {
+  padding: 0.25rem 0.45rem;
+}
+
+.producto-nombre {
+  font-weight: 600;
+}
+
+.badge-soft {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.badge-linea {
+  background: #eef2ff;
+  color: #4c51bf;
+  border-color: #c7d2fe;
+}
+
+.badge-categoria {
+  background: #ecfeff;
+  color: #0e7490;
+  border-color: #a5f3fc;
+}
+
+.estado-badge {
+  font-size: 0.75rem;
+  padding: 0.35rem 0.7rem;
+}
+
+.empty-state .empty-icon {
+  font-size: 2rem;
+  color: #adb5bd;
+  margin-bottom: 0.35rem;
+}

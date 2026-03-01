@@ -1,0 +1,29 @@
+export interface CompraArticuloDetalle {
+  codProdu: string;
+  producto: string;
+  almacen: string;
+  cantidad: number;
+  undMedida: string;
+  exento: number;
+  subTotal: number;
+  unitSImp: number;
+  porDesc: number;
+  mtoDesc: number;
+  mtoNeto: number;
+  porImpto: number;
+  mtoImpto: number;
+  porExonera: number;
+  mtoExonera: number;
+  unitCImp: number;
+  total: number;
+  ultCosto: number;
+  observaciones: string;
+  imponible: number;
+  fleteInd: number;
+  fleteTot: number;
+  moneda: string;
+  tcambio: number;
+  orden: number;
+  codProduProv: string;
+  productoProv: string;
+}

@@ -4,73 +4,148 @@
       <h4 class="title">Recepción de Facturas</h4>
       <p class="subtitle">Controla facturas recibidas y su estado de revisión.</p>
     </div>
-    <div>
-      <button class="btn btn-primary" type="button" disabled>
+    <div class="btn-group" ngbDropdown>
+      <button class="btn btn-primary" ngbDropdownToggle type="button">
         <i class="feather icon-plus"></i>
-        Nueva recepción
+        Nuevo
       </button>
+      <div class="dropdown-menu dropdown-menu-end" ngbDropdownMenu>
+        <button class="dropdown-item" type="button" (click)="nuevaCompra('COM')">Nueva Compra de Artículos</button>
+        <button class="dropdown-item" type="button" (click)="nuevaCompra('SRV')">Nueva Compra de Servicios</button>
+      </div>
     </div>
   </div>
 
   <div class="filters-card">
-    <div class="row">
-      <div class="col-lg-4 col-md-6 mb-3">
-        <label class="small-label">Proveedor / Factura</label>
-        <input class="form-control" [(ngModel)]="filtros.buscar" placeholder="Buscar por proveedor o factura">
+    <form [formGroup]="filtrosForm" (ngSubmit)="applyFilters()">
+      <div class="row">
+        <div class="col-lg-3 col-md-6 mb-3">
+          <label class="small-label">Proveedor</label>
+          <input class="form-control" formControlName="proveedor" placeholder="Buscar por proveedor">
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+          <label class="small-label">Número Factura</label>
+          <input class="form-control" formControlName="numeroFactura" placeholder="Ej. 000123">
+        </div>
+        <div class="col-lg-2 col-md-6 mb-3">
+          <label class="small-label">Tipo Documento</label>
+          <select class="form-control" formControlName="tipoDocumento">
+            <option *ngFor="let tipo of tiposDocumento" [value]="tipo.value">{{ tipo.label }}</option>
+          </select>
+        </div>
+        <div class="col-lg-2 col-md-6 mb-3">
+          <label class="small-label">Desde</label>
+          <input type="date" class="form-control" formControlName="fechaInicio">
+        </div>
+        <div class="col-lg-2 col-md-6 mb-3">
+          <label class="small-label">Hasta</label>
+          <input type="date" class="form-control" formControlName="fechaFinal">
+        </div>
       </div>
-      <div class="col-lg-3 col-md-6 mb-3">
-        <label class="small-label">Estado</label>
-        <select class="form-control" [(ngModel)]="filtros.estado">
-          <option value="">Todos</option>
-          <option *ngFor="let estado of estados" [value]="estado">{{ estado }}</option>
-        </select>
+      <div class="row align-items-end">
+        <div class="col-12 text-end">
+          <button class="btn btn-outline-secondary me-2" type="button" (click)="resetFilters()" [disabled]="isLoading">
+            Limpiar
+          </button>
+          <button class="btn btn-primary" type="submit" [disabled]="isLoading">
+            Buscar
+          </button>
+        </div>
       </div>
-      <div class="col-lg-2 col-md-6 mb-3">
-        <label class="small-label">Desde</label>
-        <input type="date" class="form-control" [(ngModel)]="filtros.desde">
-      </div>
-      <div class="col-lg-2 col-md-6 mb-3">
-        <label class="small-label">Hasta</label>
-        <input type="date" class="form-control" [(ngModel)]="filtros.hasta">
-      </div>
-      <div class="col-lg-1 col-md-6 mb-3 d-flex align-items-end justify-content-end">
-        <button class="btn btn-outline-secondary w-100" type="button" (click)="limpiar()">Limpiar</button>
-      </div>
-    </div>
+    </form>
   </div>
 
   <div class="table-card">
+    <div *ngIf="errorMessage" class="alert alert-danger mb-3" role="alert">
+      {{ errorMessage }}
+    </div>
+
     <div class="table-header">
       <h6 class="m-0">
         <i class="feather icon-inbox"></i>
         Facturas recibidas
       </h6>
-      <span class="count-chip">{{ totalRegistros }} registros</span>
+      <div class="table-header-meta">
+        <span class="count-chip">{{ totalRecords }} registros</span>
+        <span *ngIf="isLoading" class="loading-chip">
+          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+          Cargando
+        </span>
+      </div>
     </div>
 
     <div class="table-responsive" *ngIf="facturas.length; else noData">
       <table class="table table-hover mb-0">
         <thead>
           <tr>
-            <th>Factura</th>
+            <th>Tipo</th>
+            <th>Número Documento</th>
             <th>Proveedor</th>
-            <th>Fecha</th>
+            <th>RUC</th>
+            <th>Fecha Factura</th>
+            <th>Fecha Vencimiento</th>
+            <th>Moneda</th>
+            <th class="text-end">Total</th>
+            <th class="text-end">Total Pagado</th>
             <th>Estado</th>
-            <th class="text-end">Monto</th>
+            <th>Forma Pago</th>
             <th class="text-center">Acciones</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let factura of facturas">
-            <td class="font-monospace">{{ factura.factura }}</td>
+            <td>
+              <span class="badge rounded-pill" [ngClass]="getTipoBadgeClass(factura)">
+                {{ getTipoLabel(factura) }}
+              </span>
+            </td>
+            <td class="font-monospace">{{ factura.numDocu }}</td>
             <td>{{ factura.proveedor }}</td>
-            <td>{{ factura.fecha }}</td>
-            <td>{{ factura.estado }}</td>
-            <td class="text-end">{{ factura.monto | number:'1.2-2' }}</td>
+            <td>{{ factura.rucProveedor }}</td>
+            <td>{{ factura.fechaFactura | date:'dd/MM/yyyy' }}</td>
+            <td>{{ factura.fechaVencimiento | date:'dd/MM/yyyy' }}</td>
+            <td>{{ factura.moneda }}</td>
+            <td class="text-end">{{ factura.total | number:'1.2-2' }}</td>
+            <td class="text-end">{{ factura.totalPagado | number:'1.2-2' }}</td>
+            <td>
+              <span class="badge rounded-pill" [ngClass]="getEstadoBadgeClass(factura)">
+                {{ getEstadoLabel(factura) }}
+              </span>
+            </td>
+            <td>{{ factura.formaPago || 'N/D' }}</td>
             <td class="text-center">
-              <button class="btn btn-sm btn-outline-secondary" type="button">
-                <i class="feather icon-eye"></i>
-              </button>
+              <div class="action-buttons">
+                <button class="btn btn-sm btn-outline-secondary" type="button" (click)="verDetalle(factura)" title="Ver detalle">
+                  <i class="feather icon-eye"></i>
+                </button>
+                <button
+                  class="btn btn-sm btn-outline-primary ms-1"
+                  type="button"
+                  (click)="editarFactura(factura)"
+                  [disabled]="!canEdit(factura)"
+                  title="Editar"
+                >
+                  <i class="feather icon-edit"></i>
+                </button>
+                <button
+                  class="btn btn-sm btn-outline-danger ms-1"
+                  type="button"
+                  (click)="eliminarFactura(factura)"
+                  [disabled]="!canDelete(factura) || isDeleting"
+                  title="Eliminar"
+                >
+                  <i class="feather icon-trash"></i>
+                </button>
+                <button
+                  class="btn btn-sm btn-outline-success ms-1"
+                  type="button"
+                  (click)="registrarPago(factura)"
+                  [disabled]="!canRegisterPayment(factura)"
+                  title="Registrar pago"
+                >
+                  <i class="feather icon-credit-card"></i>
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -80,9 +155,36 @@
     <ng-template #noData>
       <div class="empty-state text-center p-4">
         <i class="feather icon-inbox empty-icon"></i>
-        <p class="mb-2">No hay facturas registradas.</p>
-        <small class="text-muted">Este módulo está listo para futuras integraciones.</small>
+        <p class="mb-2">{{ emptyMessage }}</p>
+        <small class="text-muted" *ngIf="!isLoading">Ajusta los filtros para iniciar la búsqueda.</small>
       </div>
     </ng-template>
+
+    <div class="row mt-3 align-items-center" *ngIf="totalRecords > 0">
+      <div class="col-md-4 text-muted">
+        Mostrando {{ pageStart }}-{{ pageEnd }} de {{ totalRecords }} registros
+      </div>
+      <div class="col-md-4 text-center">
+        <select
+          class="form-select form-select-sm d-inline-block w-auto"
+          #pageSizeSelect
+          [value]="pageSize"
+          (change)="onPageSizeChange(pageSizeSelect.value)"
+          [disabled]="isLoading"
+        >
+          <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }} por pagina</option>
+        </select>
+      </div>
+      <div class="col-md-4 text-end">
+        <div class="btn-group" role="group">
+          <button class="btn btn-outline-secondary btn-sm" [disabled]="pageNumber === 1 || isLoading" (click)="goToPageRelative(-1)">
+            Prev
+          </button>
+          <button class="btn btn-outline-secondary btn-sm" [disabled]="pageNumber === totalPages || isLoading" (click)="goToPageRelative(1)">
+            Next
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>

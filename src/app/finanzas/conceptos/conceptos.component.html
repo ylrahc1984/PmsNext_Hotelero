@@ -1,0 +1,182 @@
+<div class="row">
+  <div class="col-12">
+    <app-card>
+      <div class="conceptos-header">
+        <div>
+          <p class="eyebrow">Mantenimiento</p>
+          <h4>Conceptos Bancarios</h4>
+          <p class="subtitle">{{ headerSubtitle }}</p>
+        </div>
+        <div class="header-right">
+          <div class="stat">
+            <span class="stat-label">Registros</span>
+            <strong class="stat-value">{{ totalRegistros }}</strong>
+          </div>
+          <button class="btn btn-primary" type="button" (click)="openCreate()" [disabled]="actionsDisabled">
+            <i class="feather icon-plus me-1"></i>
+            Nuevo Concepto
+          </button>
+        </div>
+      </div>
+
+      <div class="filters-grid" [formGroup]="filterForm">
+        <div class="filter-group">
+          <label for="concepto">Concepto</label>
+          <div class="input-icon">
+            <i class="feather icon-search"></i>
+            <input
+              id="concepto"
+              type="text"
+              class="form-control"
+              placeholder="Buscar por concepto..."
+              formControlName="concepto"
+              [disabled]="actionsDisabled"
+              autocomplete="off"
+            >
+          </div>
+        </div>
+        <div class="filter-group">
+          <label for="tipMov">Tipo de movimiento</label>
+          <select id="tipMov" class="form-control" formControlName="tipMov" [disabled]="actionsDisabled">
+            <option *ngFor="let option of tipMovOptions" [value]="option.value">{{ option.label }}</option>
+          </select>
+        </div>
+        <div class="filter-actions">
+          <button class="btn btn-primary" type="button" (click)="onBuscar()" [disabled]="actionsDisabled">
+            <i class="feather icon-filter me-1"></i>
+            Buscar
+          </button>
+          <button class="btn btn-light" type="button" (click)="onLimpiar()" [disabled]="actionsDisabled">
+            <i class="feather icon-rotate-ccw me-1"></i>
+            Limpiar
+          </button>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <div class="table-responsive">
+          <table class="table table-hover conceptos-table">
+            <thead>
+              <tr>
+                <th style="width: 140px;">Código</th>
+                <th>Concepto</th>
+                <th>Tipo Movimiento</th>
+                <th>Cuenta</th>
+                <th>Descripción</th>
+                <th>Empresa</th>
+                <th>Operador</th>
+                <th class="text-end" style="width: 140px;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let concepto of conceptos">
+                <td>
+                  <span class="code-pill">{{ concepto.codConcepto }}</span>
+                </td>
+                <td>
+                  <span class="desc">{{ concepto.concepto }}</span>
+                </td>
+                <td>
+                  <span class="tip-mov">{{ concepto.tipMov }}</span>
+                </td>
+                <td>{{ concepto.cuenta }}</td>
+                <td>{{ concepto.descripcion }}</td>
+                <td>{{ concepto.empresa }}</td>
+                <td>{{ concepto.operador }}</td>
+                <td class="text-end">
+                  <div class="row-actions">
+                    <button
+                      class="btn btn-sm btn-outline-primary"
+                      type="button"
+                      title="Editar"
+                      (click)="openEdit(concepto)"
+                      [disabled]="actionsDisabled"
+                    >
+                      <i class="feather icon-edit-2"></i>
+                    </button>
+                    <button
+                      class="btn btn-sm btn-outline-danger"
+                      type="button"
+                      title="Eliminar"
+                      (click)="requestDelete(concepto)"
+                      [disabled]="actionsDisabled"
+                    >
+                      <i class="feather icon-trash-2"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-state" *ngIf="showLoadingState">
+          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+          <span>{{ loadingLabel }}</span>
+        </div>
+
+        <div class="table-state empty" *ngIf="showEmptyState">
+          <i class="feather icon-inbox"></i>
+          <p>{{ emptyLabel }}</p>
+        </div>
+      </div>
+
+      <div class="table-footer">
+        <div class="page-size">
+          <label>Mostrar</label>
+          <select [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)" class="form-control" [disabled]="actionsDisabled">
+            <option *ngFor="let size of pageSizes" [value]="size">{{ size }}</option>
+          </select>
+          <span>por página</span>
+        </div>
+
+        <div class="pagination-controls">
+          <button class="btn btn-light" type="button" (click)="changePage(-1)" [disabled]="!canPrev || actionsDisabled">
+            <i class="feather icon-chevron-left"></i>
+          </button>
+          <span>{{ paginationSummary }}</span>
+          <button class="btn btn-light" type="button" (click)="changePage(1)" [disabled]="!canNext || actionsDisabled">
+            <i class="feather icon-chevron-right"></i>
+          </button>
+        </div>
+
+        <div class="footer-summary">
+          <span>{{ footerSummary }}</span>
+        </div>
+      </div>
+    </app-card>
+  </div>
+</div>
+
+<app-concepto-modal
+  *ngIf="showModal"
+  [open]="showModal"
+  [concepto]="selectedConcepto"
+  [busy]="saving"
+  (close)="closeModal()"
+  (save)="saveConcepto($event)"
+></app-concepto-modal>
+
+<div class="modal-backdrop fade show" *ngIf="showDeleteModal"></div>
+<div class="modal fade show d-block" *ngIf="showDeleteModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ deleteTitle }}</h5>
+        <button type="button" class="btn-close" aria-label="Close" (click)="cancelDelete()" [disabled]="saving"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0">{{ deleteMessage }}</p>
+      </div>
+      <div class="modal-footer d-flex justify-content-between flex-wrap gap-2">
+        <button type="button" class="btn btn-outline-secondary" (click)="cancelDelete()" [disabled]="saving">
+          {{ deleteCancelLabel }}
+        </button>
+        <button type="button" class="btn btn-danger" (click)="confirmDelete()" [disabled]="saving">
+          <span *ngIf="showDeleteSpinner" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+          {{ deleteConfirmLabel }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

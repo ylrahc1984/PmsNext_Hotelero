@@ -1,0 +1,524 @@
+<div class="row">
+  <div class="col-12">
+    <app-card [customHeader]="true">
+      <div class="app-card-header header-hero">
+        <div class="header-hero__title">
+          <h5 class="header-hero__main">Nueva Compra - Artículos</h5>
+          <p class="header-hero__subtitle">Registro de factura COM</p>
+        </div>
+        <div class="header-hero__actions">
+          <button class="btn btn-sm btn-outline-secondary" type="button" (click)="cancel()" [disabled]="isSaving">
+            <i class="feather icon-arrow-left me-1"></i>
+            Cancelar
+          </button>
+          <button class="btn btn-sm btn-outline-primary" type="button" (click)="submitAndNew()" [disabled]="!canSubmit">
+            <i class="feather icon-save me-1"></i>
+            Guardar y nuevo
+          </button>
+          <button class="btn btn-sm btn-primary nf-btn-primary" type="button" (click)="submit()" [disabled]="!canSubmit">
+            <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+            <i class="feather icon-check me-1" *ngIf="!isSaving"></i>
+            Guardar
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="errorMessage" class="alert alert-danger mb-3">
+        <i class="feather icon-alert-triangle me-2"></i>
+        {{ errorMessage }}
+      </div>
+
+      <form class="nueva-factura nueva-factura--bg" [formGroup]="form">
+        <div class="split-layout">
+          <div class="split-main">
+
+        <div class="card section-card">
+          <div class="card-body section-card__body">
+            <div class="row g-0 provider-doc-grid">
+              <div class="col-lg-8 provider-doc-col">
+                <div class="provider-header">
+                  <div class="section-card__title">Proveedor</div>
+                  <div class="provider-header__order">
+                    <label class="form-label nf-label">Orden de compra</label>
+                    <div class="input-group input-group-sm">
+                      <input class="form-control" formControlName="numOrdenCmp" placeholder="Referencia">
+                      <button class="btn btn-outline-primary" type="button" title="Buscar orden de compra">
+                        <i class="feather icon-search"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="provider-top-row">
+                  <div class="field">
+                    <label class="form-label nf-label">Código proveedor <span class="text-danger">*</span></label>
+                    <div class="provider-code">
+                      <div class="input-group input-group-sm">
+                        <input class="form-control" formControlName="codProve" placeholder="Código" readonly [class.is-invalid]="isFieldInvalid('codProve')">
+                      </div>
+                      <button class="btn btn-outline-primary btn-sm provider-code__btn" type="button" (click)="openProveedorModal()">
+                        <i class="feather icon-search"></i>
+                      </button>
+                    </div>
+                    <div class="invalid-feedback">Seleccione un proveedor</div>
+                  </div>
+                  <div class="field field--full">
+                    <label class="form-label nf-label">Nombre proveedor <span class="text-danger">*</span></label>
+                    <input class="form-control form-control-lg" formControlName="nomProve" [class.is-invalid]="isFieldInvalid('nomProve')" readonly>
+                    <div class="invalid-feedback">Seleccione un proveedor.</div>
+                    <div class="d-flex justify-content-end mt-1" *ngIf="form.controls.codProve.value">
+                      <button type="button" class="btn btn-link p-0 small" (click)="limpiarProveedor()">
+                        Limpiar proveedor
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="row g-3 section-grid"> 
+                  <div class="col-lg-6 col-md-6 field">
+                    <label class="form-label nf-label">Tipo de documento</label>
+                    <select class="form-control form-control-sm" formControlName="tipDocu" [disabled]="documentosCompraLoading">
+                      <option *ngIf="documentosCompraLoading" value="" disabled>Cargando documentos...</option>
+                      <option *ngIf="!documentosCompraLoading && documentosCompra.length === 0" value="" disabled>No hay documentos</option>
+                      <option *ngFor="let doc of documentosCompra" [value]="doc.CA04_CodDocu">
+                        {{ doc.CA04_CodDocu }} - {{ doc.CA04_NomDocu }}
+                      </option>
+                    </select>
+                  </div>
+                  <div class="col-lg-6 col-md-6 field">
+                    <label class="form-label nf-label">Número de documento <span class="text-danger">*</span></label>
+                    <input
+                      class="form-control form-control-sm"
+                      formControlName="numFactura"
+                      placeholder="Número"
+                      [class.is-invalid]="isFieldInvalid('numFactura')"
+                    >
+                    <input type="hidden" formControlName="serie">
+                    <div class="invalid-feedback">Número requerido</div>
+                  </div>
+                </div>
+                <div class="row g-3 section-grid"> 
+                  <div class="col-lg-6 col-md-6 field">
+                    <label class="form-label nf-label">Forma de pago <span class="text-danger">*</span></label>
+                    <select class="form-control form-control-sm" formControlName="frmPago" [class.is-invalid]="isFieldInvalid('frmPago')">
+                      <option *ngIf="formasPagoLoading" value="" disabled>Cargando formas de pago...</option>
+                      <option *ngFor="let forma of formasPago" [value]="forma.codigo">
+                        {{ forma.codigo }} - {{ forma.descripcion }}
+                      </option>
+                    </select>
+                    <div class="invalid-feedback">Seleccione forma de pago</div>
+                  </div>
+                  <div class="col-lg-6 col-md-6 field">
+                    <label class="form-label nf-label">Moneda <span class="text-danger">*</span></label>
+                    <select class="form-control form-control-sm" formControlName="moneda" [class.is-invalid]="isFieldInvalid('moneda')">
+                      <option *ngIf="monedasLoading" value="" disabled>Cargando monedas...</option>
+                      <option *ngFor="let moneda of monedas" [value]="moneda.codMoneda">
+                        {{ moneda.codMoneda }} - {{ moneda.moneda }}
+                      </option>
+                    </select>
+                    <div class="invalid-feedback">Seleccione moneda</div>
+                  </div>
+                </div>
+                <input type="hidden" formControlName="rucProve">
+                <input type="hidden" formControlName="tipDocProve">
+              </div>
+              <div class="col-lg-4 provider-doc-col provider-doc-col--divider">
+                <div class="section-card__title">Fechas</div>
+                <div class="row g-3 section-grid">
+                  <div class="row g-3 section-grid">
+                    <div class="col-6 field-full">
+                      <label class="form-label nf-label">Fecha ingreso</label>
+                      <input type="date" class="form-control form-control-sm" formControlName="fechaIngreso">
+                    </div>
+                  </div>
+                  <div class="row g-3 section-grid">
+                    <div class="col-6 field-full">
+                      <label class="form-label nf-label">Fecha factura <span class="text-danger">*</span></label>
+                      <input type="date" class="form-control form-control-sm" formControlName="fechaFactura" [class.is-invalid]="isFieldInvalid('fechaFactura')">
+                      <div class="invalid-feedback">Campo requerido</div>
+                    </div>
+                    <div class="col-lg-6 col-md-6 field">
+                      <label class="form-label nf-label">Fecha vencimiento <span class="text-danger">*</span></label>
+                      <input type="date" class="form-control form-control-sm" formControlName="fechaVenci" [class.is-invalid]="isFieldInvalid('fechaVenci') || hasFechaRangoError()">
+                      <div class="invalid-feedback">Verifique la fecha de vencimiento</div>
+                    </div>
+                  </div>
+                  <div class="col-6 field-full">
+                    <label class="form-label nf-label">Tipo de cambio <span class="text-danger">*</span></label>
+                    <input
+                      type="number"
+                      class="form-control form-control-sm"
+                      formControlName="tCambio"
+                      min="0.0001"
+                      step="0.0001"
+                      [class.is-invalid]="isTipoCambioInvalid()"
+                    >
+                    <div class="invalid-feedback">Tipo de cambio requerido</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card section-card section-card--subtle is-hidden">
+          <div class="card-body section-card__body">
+            <div class="section-card__title section-card__title--small">Cargos adicionales</div>
+            <div class="row g-3 section-grid">
+              <div class="col-lg-6">
+                <div class="stack-fields">
+                  <div class="field">
+                    <label class="form-label nf-label">Documento flete</label>
+                    <input class="form-control form-control-sm" formControlName="docFlete">
+                  </div>
+                  <div class="field">
+                    <label class="form-label nf-label">Monto flete</label>
+                    <input type="number" class="form-control form-control-sm" formControlName="montoFlete" min="0" step="0.01">
+                  </div>
+                </div>
+              </div>
+              <div class="col-lg-6">
+                <div class="stack-fields">
+                  <div class="field">
+                    <label class="form-label nf-label">Documento percepción</label>
+                    <input class="form-control form-control-sm" formControlName="docPercep">
+                  </div>
+                  <div class="field">
+                    <label class="form-label nf-label">Monto percepción</label>
+                    <input type="number" class="form-control form-control-sm" formControlName="montoPercep" min="0" step="0.01">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card section-card detail-card">
+          <div class="card-body section-card__body">
+            <div class="detail-card__header detail-card__toolbar">
+              <div class="detail-card__title">
+                <i class="feather icon-grid text-muted me-2"></i>
+                <div>
+                  <h6 class="mb-0">Detalle de artículos</h6>
+                  <div class="detail-card__meta">Almacén: PRINCIP</div>
+                </div>
+              </div>
+              <button class="btn btn-primary detail-card__action" type="button" (click)="addDetalleAndOpenProducto()">
+                <i class="feather icon-plus me-1"></i>
+                Agregar línea
+              </button>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered align-middle nueva-factura__table detail-table">
+                <colgroup>
+                  <col style="width: 10%">
+                  <col style="width: 26%">
+                  <col style="width: 0%">
+                  <col style="width: 10%">
+                  <col style="width: 9%">
+                  <col style="width: 12%">
+                  <col style="width: 8%">
+                  <col style="width: 8%">
+                  <col style="width: 8%">
+                  <col style="width: 9%">
+                  <col style="width: 10%">
+                </colgroup>
+                <thead class="table-light">
+                  <tr>
+                    <th>Código</th>
+                    <th>Producto</th>
+                    <th class="col-almacen">Almacén</th>
+                    <th class="text-end">Cantidad</th>
+                    <th>Unidad</th>
+                    <th class="text-end">Unit S/Imp</th>
+                    <th class="text-end">%Desc</th>
+                    <th class="text-end">%Imp</th>
+                    <th class="text-end">%Exon</th>
+                    <th class="text-end total-col">Total</th>
+                    <th class="text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody formArrayName="detalle">
+                  <tr *ngFor="let group of detalleArray.controls; let i = index; trackBy: trackByDetalle" [formGroupName]="i">
+                    <td>
+                      <div class="input-group input-group-sm codigo-group">
+                        <input class="form-control" formControlName="codProdu" readonly>
+                      </div>
+                      <div class="text-danger small mt-1" *ngIf="isDetalleInvalid(i, 'codProdu')">Requerido</div>
+                      <div class="almacen-code">Alm: {{ group.controls.almacen.value || '—' }}</div>
+                    </td>
+                    <td>
+                      <input class="form-control form-control-sm" formControlName="producto" readonly>
+                    </td>
+                    <td class="col-almacen">
+                      <span class="almacen-value">{{ group.controls.almacen.value || '—' }}</span>
+                    </td>
+                    <td>
+                      <input type="number" class="form-control form-control-sm text-end" formControlName="cantidad" min="0.01" step="0.01">
+                    </td>
+                    <td>
+                      <input class="form-control form-control-sm" formControlName="undMedida" readonly>
+                    </td>
+                    <td>
+                      <input type="number" class="form-control form-control-sm text-end" formControlName="unitSImp" min="0" step="0.01">
+                    </td>
+                    <td>
+                      <input type="number" class="form-control form-control-sm text-end" formControlName="porDesc" min="0" max="100" step="0.01">
+                    </td>
+                    <td>
+                      <input type="number" class="form-control form-control-sm text-end" formControlName="porImpto" min="0" max="100" step="0.01">
+                    </td>
+                    <td>
+                      <input type="number" class="form-control form-control-sm text-end" formControlName="porExonera" min="0" max="100" step="0.01">
+                    </td>
+           
+                    <td class="text-end total-col">
+                      {{ group.controls.total.value | number:'1.2-2' }}
+                    </td>
+                    <td class="text-center">
+                      <div class="detail-actions">
+                        <button
+                          class="btn btn-sm btn-outline-secondary action-btn action-btn--almacen"
+                          type="button"
+                          title="Editar almacén"
+                          (click)="openAlmacenModal(i)"
+                        >
+                          <i class="feather icon-edit-2"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger action-btn" type="button" (click)="removeDetalleRow(i)" [disabled]="detalleArray.length === 1">
+                          <i class="feather icon-trash-2"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr *ngIf="detalleArray.length === 0">
+                    <td colspan="13" class="text-center text-muted">Agrega al menos un artículo.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="text-danger small mt-2 nf-error" *ngIf="detalleArray.length === 0">
+              Debe agregar al menos una línea.
+            </div>
+          </div>
+        </div>
+
+            <div class="card section-card">
+              <div class="card-body section-card__body">
+                <div class="section-card__title">Observaciones por línea</div>
+                <p class="text-muted small mb-0">Puedes registrar observaciones adicionales dentro de cada línea si aplica.</p>
+              </div>
+            </div>
+
+            <div class="row totals-row justify-content-end">
+              <div class="col-12 col-lg-4">
+                <div class="card section-card totals-card">
+                  <div class="card-body section-card__body totals-card__body">
+                    <div class="nf-totales__row">
+                      <span>Sub Total</span>
+                      <strong>{{ getMonedaSimbolo() }} {{ form.controls.totDeta.value | number:'1.2-2' }}</strong>
+                    </div>
+                    <div class="nf-totales__row">
+                      <span>Descuento</span>
+                      <strong>
+                        {{ getMonedaSimbolo() }}
+                        {{ (form.controls.totDeta.value - form.controls.totNeto.value) | number:'1.2-2' }}
+                      </strong>
+                    </div>
+                    <div class="nf-totales__row">
+                      <span>Neto</span>
+                      <strong>{{ getMonedaSimbolo() }} {{ form.controls.totNeto.value | number:'1.2-2' }}</strong>
+                    </div>
+                    <div class="nf-totales__row">
+                      <span>Impuesto</span>
+                      <strong>{{ getMonedaSimbolo() }} {{ form.controls.totImpu.value | number:'1.2-2' }}</strong>
+                    </div>
+                    <div class="nf-totales__row">
+                      <span>Exoneración</span>
+                      <strong>{{ getMonedaSimbolo() }} {{ form.controls.exonera.value | number:'1.2-2' }}</strong>
+                    </div>
+                    <div class="nf-totales__separator"></div>
+                    <div class="nf-totales__total">
+                      <span>TOTAL DOCUMENTO</span>
+                      <strong>{{ getMonedaSimbolo() }} {{ form.controls.totalDocu.value | number:'1.2-2' }}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+    </app-card>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="showProveedorModal" (click)="closeProveedorModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h6 class="m-0">Seleccionar proveedor</h6>
+      <button type="button" class="btn btn-sm btn-light" (click)="closeProveedorModal()">
+        <i class="feather icon-x"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <form [formGroup]="proveedorSearchForm" (ngSubmit)="buscarProveedores()">
+        <div class="row align-items-end">
+          <div class="col-md-9 mb-3">
+            <label class="small-label">Buscar proveedor</label>
+            <input class="form-control" formControlName="search" placeholder="Nombre o código">
+          </div>
+          <div class="col-md-3 mb-3 text-end">
+            <button class="btn btn-outline-secondary me-2" type="button" (click)="limpiarBusquedaProveedores()">Limpiar</button>
+            <button class="btn btn-primary" type="submit">Buscar</button>
+          </div>
+        </div>
+      </form>
+
+      <div class="table-responsive" *ngIf="proveedores.length; else noProveedor">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Proveedor</th>
+              <th>RUC</th>
+              <th class="text-center">Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let proveedor of proveedores">
+              <td class="font-monospace">{{ proveedor.codigo }}</td>
+              <td>{{ proveedor.descripcion }}</td>
+              <td>{{ proveedor.ruc }}</td>
+              <td class="text-center">
+                <button class="btn btn-sm btn-outline-primary" type="button" (click)="seleccionarProveedor(proveedor)">Seleccionar</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #noProveedor>
+        <div class="text-center text-muted p-4">No hay proveedores para mostrar.</div>
+      </ng-template>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="showAlmacenModal" (click)="closeAlmacenModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h6 class="m-0">Seleccionar almacén</h6>
+      <button type="button" class="btn btn-sm btn-light" (click)="closeAlmacenModal()">
+        <i class="feather icon-x"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <form [formGroup]="almacenSearchForm" (ngSubmit)="buscarAlmacenes()">
+        <div class="row align-items-end">
+          <div class="col-md-9 mb-3">
+            <label class="small-label">Buscar almacén</label>
+            <input class="form-control" formControlName="search" placeholder="Código o nombre">
+          </div>
+          <div class="col-md-3 mb-3 text-end">
+            <button class="btn btn-outline-secondary me-2" type="button" (click)="limpiarBusquedaAlmacenes()">Limpiar</button>
+            <button class="btn btn-primary" type="submit">Buscar</button>
+          </div>
+        </div>
+      </form>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Almacén</th>
+              <th class="text-center">Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="almacenesLoading">
+              <td colspan="3" class="text-center text-muted">Cargando...</td>
+            </tr>
+            <tr *ngIf="!almacenesLoading && almacenesFiltered.length === 0">
+              <td colspan="3" class="text-center text-muted">No hay almacenes disponibles.</td>
+            </tr>
+            <tr *ngFor="let almacen of paginatedAlmacenes">
+              <td class="font-monospace">{{ almacen.CAC05_CodAlmacen }}</td>
+              <td>{{ almacen.CAC05_NomAlmacen }}</td>
+              <td class="text-center">
+                <button class="btn btn-sm btn-outline-primary" type="button" (click)="seleccionarAlmacen(almacen)">
+                  Seleccionar
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="d-flex align-items-center justify-content-between mt-2">
+        <div class="text-muted small">
+          Página {{ almacenPage }} de {{ almacenTotalPages }}
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-sm btn-outline-secondary" type="button" (click)="prevAlmacenPage()" [disabled]="almacenPage === 1">
+            Anterior
+          </button>
+          <button class="btn btn-sm btn-outline-secondary" type="button" (click)="nextAlmacenPage()" [disabled]="almacenPage === almacenTotalPages">
+            Siguiente
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="showProductoModal" (click)="closeProductoModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h6 class="m-0">Seleccionar producto</h6>
+      <button type="button" class="btn btn-sm btn-light" (click)="closeProductoModal()">
+        <i class="feather icon-x"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <form [formGroup]="productoSearchForm" (ngSubmit)="buscarProductos()">
+        <div class="row align-items-end">
+          <div class="col-md-9 mb-3">
+            <label class="small-label">Buscar producto</label>
+            <input class="form-control" formControlName="search" placeholder="Nombre del producto">
+          </div>
+          <div class="col-md-3 mb-3 text-end">
+            <button class="btn btn-outline-secondary me-2" type="button" (click)="limpiarBusquedaProductos()">Limpiar</button>
+            <button class="btn btn-primary" type="submit">Buscar</button>
+          </div>
+        </div>
+      </form>
+
+      <div class="table-responsive" *ngIf="productos.length; else noProductos">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Producto</th>
+              <th>Unidad</th>
+              <th class="text-end">Costo</th>
+              <th class="text-center">Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let producto of productos">
+              <td class="font-monospace">{{ producto.MAC02_CodProducto }}</td>
+              <td>{{ producto.MAC02_NomProducto }}</td>
+              <td>{{ producto.MAC02_UnmProdu }}</td>
+              <td class="text-end">{{ producto.MAC02_CostoPro | number:'1.2-2' }}</td>
+              <td class="text-center">
+                <button class="btn btn-sm btn-outline-primary" type="button" (click)="seleccionarProducto(producto)">Seleccionar</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #noProductos>
+        <div class="text-center text-muted p-4">No hay productos para mostrar.</div>
+      </ng-template>
+    </div>
+  </div>
+</div>

@@ -12,13 +12,14 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-size: 0.75rem;
-  color: #6c757d;
+  color: #6b7280;
   margin-bottom: 0.25rem;
 }
 
 .consulta-header h4 {
   margin: 0 0 0.25rem;
   font-weight: 700;
+  color: #111827;
 }
 
 .consulta-header .subtitle {
@@ -29,6 +30,27 @@
 .header-stats {
   display: flex;
   gap: 0.75rem;
+  margin-left: auto;
+  justify-content: flex-end;
+}
+
+.filters-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.25rem 0 0.75rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.filters-header__label {
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.filters-header__value {
+  font-weight: 600;
+  color: #111827;
 }
 
 .stat {
@@ -71,6 +93,7 @@
 .filter-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 0.5rem;
 }
 
 .input-icon {
@@ -90,6 +113,39 @@
   padding-left: 2rem;
 }
 
+.input-button {
+  display: flex;
+  align-items: stretch;
+}
+
+.input-button .input-icon {
+  flex: 1;
+}
+
+.input-button .input-icon input {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.input-button .btn-client {
+  margin-top: 0.25rem;
+  padding: 0 0.6rem;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+}
+
+.table-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #6b7280;
+  padding-bottom: 0.75rem;
+}
+
 .table-wrapper {
   border: 1px solid #e5e7eb;
   border-radius: 12px;
@@ -99,10 +155,13 @@
 .consulta-table th {
   background: #f9fafb;
   border-bottom: 1px solid #e5e7eb;
+  font-weight: 600;
+  color: #374151;
 }
 
 .consulta-table td {
   vertical-align: middle;
+  color: #111827;
 }
 
 .cliente-cell {
@@ -115,58 +174,39 @@
   color: #111827;
 }
 
-.cliente-referencia {
+.cliente-codigo {
   font-size: 0.85rem;
   color: #6b7280;
 }
 
-.monto {
-  font-weight: 700;
-  color: #0d6efd;
-}
-
-.estado-pill {
+.estado-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.3rem 0.65rem;
+  padding: 0.25rem 0.6rem;
   border-radius: 999px;
+  font-size: 0.82rem;
   font-weight: 600;
-  font-size: 0.85rem;
 }
 
-.estado-pendiente {
-  background: rgba(255, 193, 7, 0.15);
-  color: #b7791f;
+.estado-cancelado {
+  background: rgba(16, 185, 129, 0.16);
+  color: #047857;
 }
 
-.estado-pagada {
-  background: rgba(25, 135, 84, 0.15);
-  color: #198754;
+.estado-abierto {
+  background: rgba(245, 158, 11, 0.2);
+  color: #b45309;
 }
 
-.estado-vencida {
-  background: rgba(220, 53, 69, 0.15);
-  color: #c53030;
+.estado-neutral {
+  background: #e5e7eb;
+  color: #374151;
 }
 
-.row-actions {
-  display: inline-flex;
-  gap: 0.35rem;
-}
-
-.row-actions .btn {
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.row-actions .btn i {
-  font-size: 1rem;
-  line-height: 1;
+.empty-state {
+  text-align: center;
+  padding: 1rem;
+  color: #6b7280;
 }
 
 .table-footer {
@@ -192,12 +232,6 @@
 .footer-actions {
   display: inline-flex;
   gap: 0.5rem;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 1rem;
-  color: #6b7280;
 }
 
 @media (max-width: 768px) {

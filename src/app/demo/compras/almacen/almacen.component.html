@@ -1,0 +1,206 @@
+<div class="compras-wrapper">
+  <div class="page-header mb-3">
+    <ul class="breadcrumb mb-2">
+      <li class="breadcrumb-item">
+        <a routerLink="/dashboard"><i class="feather icon-home"></i></a>
+      </li>
+      <li class="breadcrumb-item">
+        <a>Compras</a>
+      </li>
+      <li class="breadcrumb-item">
+        <a routerLink="/compras/configuracion">Configuracion</a>
+      </li>
+      <li class="breadcrumb-item">
+        <a>Almacenes</a>
+      </li>
+    </ul>
+    <div class="page-title-row">
+      <div class="page-title-text">
+        <h4 class="title">Almacenes</h4>
+        <p class="subtitle">Administra los almacenes disponibles para inventarios.</p>
+      </div>
+      <button class="btn btn-primary" (click)="abrirModalCrear()" [disabled]="isLoading">
+        <i class="feather icon-plus"></i> Nuevo Almacen
+      </button>
+    </div>
+  </div>
+
+  <div class="filters-card">
+    <form [formGroup]="filtroForm" (ngSubmit)="onBuscar()">
+      <div class="row align-items-end">
+        <div class="col-md-6 mb-3">
+          <label class="small-label">Buscar por nombre</label>
+          <input type="text" class="form-control" formControlName="nomAlma" placeholder="Ej. Limpieza">
+        </div>
+        <div class="col-md-6 mb-3 text-end">
+          <button type="button" class="btn btn-outline-secondary me-2" (click)="onLimpiar()" [disabled]="isLoading">Limpiar</button>
+          <button type="submit" class="btn btn-primary" [disabled]="isLoading">Buscar</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="table-card">
+    <div *ngIf="errorMessage" class="alert alert-danger mb-3" role="alert">
+      {{ errorMessage }}
+    </div>
+
+    <div class="table-header">
+      <h6 class="m-0"><i class="feather icon-archive"></i> Almacenes registrados</h6>
+      <div class="table-header-meta">
+        <span class="count-chip">{{ totalRegistros }} registros</span>
+        <span *ngIf="isLoading" class="loading-chip">
+          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+          Cargando
+        </span>
+      </div>
+    </div>
+
+    <div class="table-responsive" *ngIf="visibleAlmacenes.length; else noData">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Codigo</th>
+            <th>Nombre</th>
+            <th>Tipo</th>
+            <th>Principal</th>
+            <th>Orden</th>
+            <th>Operador</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let almacen of visibleAlmacenes">
+            <td class="font-monospace">{{ almacen.CAC05_CodAlmacen }}</td>
+            <td>{{ almacen.CAC05_NomAlmacen }}</td>
+            <td>
+              <span class="badge bg-light text-dark">{{ almacen.CAC05_TipAlmacen }}</span>
+            </td>
+            <td>
+              <span class="badge rounded-pill" [ngClass]="principalBadgeClass(almacen.CAC05_Principal)">
+                {{ principalLabel(almacen.CAC05_Principal) }}
+              </span>
+            </td>
+            <td>{{ almacen.CAC05_Orden }}</td>
+            <td>{{ almacen.CAC05_Operador || 'N/D' }}</td>
+            <td class="text-center">
+              <div class="action-buttons">
+                <button class="btn btn-sm btn-outline-primary" (click)="abrirModalEditar(almacen)" [disabled]="isLoading" title="Editar">
+                  <i class="feather icon-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger ms-1" (click)="eliminarAlmacen(almacen)" [disabled]="isDeleting" title="Eliminar">
+                  <i class="feather icon-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <ng-template #noData>
+      <div class="empty-state text-center p-4">
+        <i class="feather icon-archive empty-icon"></i>
+        <p class="mb-2">{{ emptyMessage }}</p>
+      </div>
+    </ng-template>
+
+    <div class="row mt-3 align-items-center" *ngIf="totalRegistros > 0">
+      <div class="col-md-4 text-muted">
+        Mostrando {{ pageStart }}-{{ pageEnd }} de {{ totalRegistros }} registros
+      </div>
+      <div class="col-md-4 text-center">
+        <select class="form-select form-select-sm d-inline-block w-auto" #pageSizeSelect [value]="pageSize" (change)="onPageSizeChange(pageSizeSelect.value)" [disabled]="isLoading">
+          <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }} por pagina</option>
+        </select>
+      </div>
+      <div class="col-md-4 text-end">
+        <div class="btn-group" role="group">
+          <button class="btn btn-outline-secondary btn-sm" [disabled]="currentPage === 1 || isLoading" (click)="goToPageRelative(-1)">Prev</button>
+          <button class="btn btn-outline-secondary btn-sm" [disabled]="currentPage === totalPages || isLoading" (click)="goToPageRelative(1)">Next</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="showModal" (click)="cerrarModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h6 class="m-0">{{ modalTitle }}</h6>
+      <button type="button" class="btn btn-sm btn-light" (click)="cerrarModal()" [disabled]="isSaving">
+        <i class="feather icon-x"></i>
+      </button>
+    </div>
+
+    <form [formGroup]="modalForm" (ngSubmit)="guardarAlmacen()" class="modal-body">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Codigo <span class="text-danger">*</span></label>
+          <input
+            type="text"
+            class="form-control"
+            formControlName="codAlma"
+            [class.is-invalid]="isFieldInvalid('codAlma')"
+          >
+          <div class="invalid-feedback">Campo requerido (sin espacios)</div>
+        </div>
+        <div class="col-md-8">
+          <label class="form-label">Nombre <span class="text-danger">*</span></label>
+          <input
+            type="text"
+            class="form-control"
+            formControlName="nomAlma"
+            [class.is-invalid]="isFieldInvalid('nomAlma')"
+          >
+          <div class="invalid-feedback">Campo requerido</div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Tipo <span class="text-danger">*</span></label>
+          <input
+            type="text"
+            class="form-control"
+            formControlName="tipAlma"
+            [class.is-invalid]="isFieldInvalid('tipAlma')"
+          >
+          <div class="invalid-feedback">Campo requerido</div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Orden</label>
+          <input
+            type="number"
+            min="0"
+            class="form-control"
+            formControlName="orden"
+            [class.is-invalid]="isFieldInvalid('orden')"
+          >
+          <div class="invalid-feedback">Ingrese un orden valido</div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Principal</label>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" formControlName="principal">
+            <label class="form-check-label">{{ modalForm.controls.principal.value ? 'Principal' : 'Secundario' }}</label>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Operador <span class="text-danger">*</span></label>
+          <input
+            type="text"
+            class="form-control"
+            formControlName="operador"
+            [class.is-invalid]="isFieldInvalid('operador')"
+          >
+          <div class="invalid-feedback">Campo requerido</div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light me-2" (click)="cerrarModal()" [disabled]="isSaving">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving">
+          <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+          Guardar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

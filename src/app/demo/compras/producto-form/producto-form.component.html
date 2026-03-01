@@ -1,0 +1,241 @@
+<div class="page-header mb-3">
+  <ul class="breadcrumb mb-2">
+    <li class="breadcrumb-item">
+      <a routerLink="/dashboard"><i class="feather icon-home"></i></a>
+    </li>
+    <li class="breadcrumb-item">
+      <a>Compras</a>
+    </li>
+    <li class="breadcrumb-item">
+      <a routerLink="/compras/producto-list">Productos</a>
+    </li>
+    <li class="breadcrumb-item">
+      <a>{{ pageTitle }}</a>
+    </li>
+  </ul>
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h4 class="title mb-1">{{ pageTitle }}</h4>
+      <p class="subtitle mb-0">Completa la informacion para guardar el producto.</p>
+    </div>
+    <div>
+      <button type="button" class="btn btn-outline-secondary" (click)="cancel()" [disabled]="isBusy">Volver</button>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="errorMessage" class="alert alert-danger" role="alert">
+  {{ errorMessage }}
+</div>
+
+<div *ngIf="loadingProducto" class="alert alert-info d-flex align-items-center" role="alert">
+  <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+  Cargando informacion del producto...
+</div>
+
+<form [formGroup]="form" (ngSubmit)="onSubmit()" class="producto-form">
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="section-card">
+        <div class="section-header">Informacion General</div>
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">Nombre <span class="text-danger">*</span></label>
+            <input
+              type="text"
+              class="form-control"
+              formControlName="nomProducto"
+              maxlength="100"
+              [class.is-invalid]="isFieldInvalid('nomProducto')"
+            />
+            <div class="invalid-feedback">Campo requerido</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Codigo de barras</label>
+            <input type="text" class="form-control" formControlName="codigoBarras" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Linea <span class="text-danger">*</span></label>
+            <select
+              class="form-control"
+              formControlName="linea"
+              [class.is-invalid]="isFieldInvalid('linea')"
+              [disabled]="lineasLoading"
+            >
+              <option value="">Seleccionar</option>
+              <option *ngFor="let linea of lineas" [value]="linea.CAC02_CodLinea">
+                {{ linea.CAC02_CodLinea }} - {{ linea.CAC02_LineaProdu }}
+              </option>
+            </select>
+            <div class="invalid-feedback">Seleccione una linea</div>
+            <small class="text-muted" *ngIf="lineasLoading">Cargando lineas...</small>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Categoria <span class="text-danger">*</span></label>
+            <select
+              class="form-control"
+              formControlName="categoria"
+              [class.is-invalid]="isFieldInvalid('categoria')"
+            >
+              <option value="">Seleccionar</option>
+              <option *ngFor="let categoria of categorias" [value]="categoria.CAC03_CodCate">
+                {{ categoria.CAC03_CodCate }} - {{ categoria.CAC03_Categoria }}
+              </option>
+            </select>
+            <div class="invalid-feedback">Seleccione una categoria</div>
+            <small class="text-muted" *ngIf="categoriasLoading">Cargando categorias...</small>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Unidad <span class="text-danger">*</span></label>
+            <select
+              class="form-control"
+              formControlName="unmProdu"
+              [class.is-invalid]="isFieldInvalid('unmProdu')"
+              [disabled]="unidadesLoading"
+            >
+              <option value="">Seleccionar</option>
+              <option *ngFor="let unidad of unidades" [value]="unidad.CAC04_UnmMed">
+                {{ unidad.CAC04_UnmMed }} - {{ unidad.CAC04_Descripcion }}
+              </option>
+            </select>
+            <div class="invalid-feedback">Seleccione una unidad</div>
+            <small class="text-muted" *ngIf="unidadesLoading">Cargando unidades...</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-header">Informacion Comercial</div>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Costo <span class="text-danger">*</span></label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              class="form-control"
+              formControlName="costoPro"
+              [class.is-invalid]="isFieldInvalid('costoPro')"
+            />
+            <div class="invalid-feedback">Ingrese un costo valido</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Ultimo costo</label>
+            <input type="number" min="0" step="0.01" class="form-control" formControlName="ultimoCsto" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Impuesto <span class="text-danger">*</span></label>
+            <select
+              class="form-control"
+              formControlName="porImpo"
+              [class.is-invalid]="isFieldInvalid('porImpo')"
+              [disabled]="impuestosLoading"
+            >
+              <option [ngValue]="0">Seleccionar</option>
+              <option *ngFor="let impuesto of impuestos" [ngValue]="impuesto.CA14_Valor">
+                {{ impuesto.CA14_Descripcion }} ({{ impuesto.CA14_Valor }}%)
+              </option>
+            </select>
+            <div class="invalid-feedback">Seleccione un impuesto</div>
+            <small class="text-muted" *ngIf="impuestosLoading">Cargando impuestos...</small>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Grabado</label>
+            <select class="form-control" formControlName="grabado">
+              <option value="S">Si</option>
+              <option value="N">No</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Localizacion</label>
+            <input type="text" class="form-control" formControlName="localizacion" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Activo</label>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" formControlName="activo" />
+              <label class="form-check-label">{{ activoLabel }}</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-header">Control Inventario</div>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Inv Min</label>
+            <input type="number" min="0" class="form-control" formControlName="invMin" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Inv Max</label>
+            <input type="number" min="0" class="form-control" formControlName="invMax" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Peso</label>
+            <input type="number" min="0" step="0.01" class="form-control" formControlName="peso" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Modelo</label>
+            <input type="text" class="form-control" formControlName="modelo" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Medida</label>
+            <input type="text" class="form-control" formControlName="medida" />
+          </div>
+        </div>
+        <div class="invalid-feedback d-block" *ngIf="isInventarioInvalid()">
+          El inventario minimo no puede ser mayor que el inventario maximo.
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="section-card">
+        <div class="section-header">Informacion Fiscal</div>
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">CABYS</label>
+            <input type="text" class="form-control" formControlName="cabys" />
+          </div>
+          <div class="col-12">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" formControlName="sinCABYS" id="sinCabys" />
+              <label class="form-check-label" for="sinCabys">Sin CABYS</label>
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label">URL</label>
+            <input type="text" class="form-control" formControlName="url" />
+          </div>
+          <div class="col-12">
+            <label class="form-label">Operador</label>
+            <input type="text" class="form-control" formControlName="operador" />
+          </div>
+          <div class="col-12">
+            <label class="form-label">Descripcion</label>
+            <textarea rows="4" class="form-control" formControlName="descripcion"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-actions d-flex justify-content-end mt-3">
+    <button type="button" class="btn btn-light me-2" (click)="cancel()" [disabled]="isBusy">Cancelar</button>
+    <button
+      *ngIf="isEditing"
+      type="button"
+      class="btn btn-outline-danger me-2"
+      (click)="onDelete()"
+      [disabled]="isBusy"
+    >
+      <span *ngIf="isDeleting" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+      Eliminar
+    </button>
+    <button type="submit" class="btn btn-primary" [disabled]="isBusy">
+      <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+      {{ submitLabel }}
+    </button>
+  </div>
+</form>

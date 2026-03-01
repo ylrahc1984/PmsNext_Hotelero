@@ -29,6 +29,27 @@
 .header-stats {
   display: flex;
   gap: 0.75rem;
+  margin-left: auto;
+  justify-content: flex-end;
+}
+
+.filters-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.25rem 0 0.75rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.filters-header__label {
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.filters-header__value {
+  font-weight: 600;
+  color: #111827;
 }
 
 .stat {
@@ -88,6 +109,31 @@
 
 .input-icon input {
   padding-left: 2rem;
+}
+
+.input-button {
+  display: flex;
+  align-items: stretch;
+}
+
+.input-button .input-icon {
+  flex: 1;
+}
+
+.input-button .input-icon input {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.input-button .btn-provider {
+  margin-top: 0.25rem;
+  padding: 0 0.6rem;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
 }
 
 .table-wrapper {

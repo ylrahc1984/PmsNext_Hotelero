@@ -339,19 +339,65 @@ const routes: Routes = [
     canActivate: [AuthGuard],
     canActivateChild: [AuthGuard],
     children: [
-      {
-        path: 'proveedores',
-        loadComponent: () => import('./demo/compras/proveedores/proveedores.component').then((c) => c.ProveedoresComponent)
-      },
-      {
-        path: 'ordenes-compra',
-        loadComponent: () =>
-          import('./demo/compras/ordenes-compra/ordenes-compra.component').then((c) => c.OrdenesCompraComponent)
-      },
+        {
+          path: 'proveedores',
+          loadComponent: () => import('./demo/compras/proveedores/proveedores.component').then((c) => c.ProveedoresComponent)
+        },
+        {
+          path: 'producto-list',
+          loadComponent: () => import('./demo/compras/producto-list/producto-list.component').then((c) => c.ProductoListComponent)
+        },
+        {
+          path: 'servicios',
+          loadComponent: () => import('./demo/compras/servicios/servicios.component').then((c) => c.ServiciosComprasComponent)
+        },
+        {
+          path: 'producto-form',
+          loadComponent: () => import('./demo/compras/producto-form/producto-form.component').then((c) => c.ProductoFormComponent)
+        },
+        {
+          path: 'producto-form/:codProducto',
+          loadComponent: () => import('./demo/compras/producto-form/producto-form.component').then((c) => c.ProductoFormComponent)
+        },
+        {
+          path: 'configuracion',
+          loadComponent: () => import('./demo/compras/configuracion/configuracion.component').then((c) => c.ConfiguracionComprasComponent)
+        },
+        {
+          path: 'linea-producto',
+          loadComponent: () => import('./demo/compras/linea-producto/linea-producto.component').then((c) => c.LineaProductoComponent)
+        },
+        {
+          path: 'categoria-producto',
+          loadComponent: () => import('./demo/compras/categoria-producto/categoria-producto.component').then((c) => c.CategoriaProductoComponent)
+        },
+        {
+          path: 'almacen',
+          loadComponent: () => import('./demo/compras/almacen/almacen.component').then((c) => c.AlmacenComponent)
+        },
+        {
+          path: 'ordenes-compra',
+          loadComponent: () =>
+            import('./demo/compras/ordenes-compra/ordenes-compra.component').then((c) => c.OrdenesCompraComponent)
+        },
       {
         path: 'recepcion-facturas',
         loadComponent: () =>
           import('./demo/compras/recepcion-facturas/recepcion-facturas.component').then((c) => c.RecepcionFacturasComponent)
+      },
+      {
+        path: 'recepcion-facturas/nueva-compra-articulos',
+        loadComponent: () =>
+          import('./demo/compras/recepcion-facturas/nueva-compra-articulos/nueva-compra-articulos.component').then(
+            (c) => c.NuevaCompraArticulosComponent
+          )
+      },
+      {
+        path: 'recepcion-facturas/nueva-compra-servicios',
+        loadComponent: () =>
+          import('./demo/compras/recepcion-facturas/nueva-compra-servicios/nueva-compra-servicios.component').then(
+            (c) => c.NuevaCompraServiciosComponent
+          )
       },
       {
         path: 'historia-pagos',

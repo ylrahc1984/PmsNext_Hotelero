@@ -1,57 +1,50 @@
 <div class="row">
   <div class="col-12">
-    <app-card>
+    <app-card cardTitle="Cuentas por Pagar">
       <div class="consulta-header">
-        <div>
-          <p class="eyebrow">Consulta</p>
-          <h4>Cuentas por Pagar</h4>
-          <p class="subtitle">Filtra por suplidor, estado o rango de fechas y accede a opciones rapidas.</p>
-        </div>
         <div class="header-stats">
           <div class="stat">
             <span class="stat-label">Registros</span>
-            <strong class="stat-value">{{ filteredCuentas().length }}</strong>
+            <strong class="stat-value">{{ totalRegistros }}</strong>
           </div>
           <div class="stat">
             <span class="stat-label">Total filtrado</span>
             <strong class="stat-value">
-              {{ getTotalFiltrado() | currency:'USD':'symbol':'1.0-0' }}
+              {{ totalFiltrado | currency:monedaTotal:'symbol':'1.0-0' }}
             </strong>
           </div>
         </div>
       </div>
 
-      <div class="filters-grid">
+      <div class="filters-header" *ngIf="selectedProveedor as proveedor">
+        <span class="filters-header__label">Proveedor:</span>
+        <span class="filters-header__value">{{ proveedor.descripcion }}</span>
+      </div>
+
+      <div class="filters-grid" [formGroup]="filtrosForm">
         <div class="filter-group">
-          <label>Suplidor o referencia</label>
-          <div class="input-icon">
-            <i class="feather icon-search"></i>
-            <input
-              type="text"
-              class="form-control"
-              placeholder="Busca por suplidor o referencia"
-              [(ngModel)]="filtros.buscar"
-              (ngModelChange)="resetPagina()">
+          <label>Código proveedor</label>
+          <div class="input-button">
+            <div class="input-icon">
+              <i class="feather icon-search"></i>
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Busca por código de proveedor"
+                formControlName="codProve"
+                (input)="resetPagina()">
+            </div>
+            <button class="btn btn-outline-secondary btn-provider" type="button" (click)="openProveedorModal()">
+              <i class="feather icon-user"></i>
+            </button>
           </div>
-        </div>
-        <div class="filter-group">
-          <label>Estado</label>
-          <select
-            class="form-control"
-            [(ngModel)]="filtros.estado"
-            (ngModelChange)="resetPagina()">
-            <option value="todos">Todos</option>
-            <option value="pendiente">Pendiente</option>
-            <option value="pagada">Pagada</option>
-            <option value="vencida">Vencida</option>
-          </select>
         </div>
         <div class="filter-group">
           <label>Desde</label>
           <input
             type="date"
             class="form-control"
-            [(ngModel)]="filtros.desde"
+            formControlName="fechaInicial"
             (change)="resetPagina()">
         </div>
         <div class="filter-group">
@@ -59,10 +52,25 @@
           <input
             type="date"
             class="form-control"
-            [(ngModel)]="filtros.hasta"
+            formControlName="fechaFinal"
             (change)="resetPagina()">
         </div>
+        <div class="filter-group">
+          <label>Tipo Documento</label>
+          <select
+            class="form-control"
+            formControlName="tipDocPrv"
+            (change)="resetPagina()">
+            <option *ngFor="let option of tipDocOptions" [value]="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </div>
         <div class="filter-actions">
+          <button class="btn btn-primary" type="button" (click)="buscar()">
+            <i class="feather icon-filter"></i>
+            Buscar
+          </button>
           <button class="btn btn-light" type="button" (click)="resetFiltros()">
             <i class="feather icon-rotate-ccw"></i>
             Limpiar
@@ -75,28 +83,33 @@
           <table class="table table-striped table-hover consulta-table">
             <thead>
               <tr>
-                <th>Suplidor</th>
-                <th>Monto</th>
+                <th>Tipo Doc</th>
+                <th>Factura</th>
                 <th>Fecha</th>
+                <th>Vence</th>
+                <th>Proveedor</th>
+                <th class="text-right">Total</th>
+                <th class="text-right">Pagado</th>
+                <th class="text-right">Saldo</th>
+                <th>Moneda</th>
                 <th>Estado</th>
                 <th class="text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let cuenta of pagedCuentas()">
+              <tr *ngFor="let cuenta of dataSource">
+                <td>{{ cuenta.tipDocPrv }}</td>
+                <td>{{ cuenta.numFactura }}</td>
+                <td>{{ cuenta.fecFactu | date:'dd/MM/yyyy' }}</td>
+                <td>{{ cuenta.fecVen | date:'dd/MM/yyyy' }}</td>
+                <td>{{ cuenta.nomProve }}</td>
+                <td class="text-right">{{ cuenta.totalDocu | number:'1.2-2' }}</td>
+                <td class="text-right">{{ cuenta.totPagado | number:'1.2-2' }}</td>
+                <td class="text-right">{{ cuenta.saldo | number:'1.2-2' }}</td>
+                <td>{{ cuenta.moneda }}</td>
                 <td>
-                  <div class="cliente-cell">
-                    <span class="cliente-nombre">{{ cuenta.suplidor }}</span>
-                    <span class="cliente-referencia">Ref: {{ cuenta.fecha }}</span>
-                  </div>
-                </td>
-                <td>
-                  <span class="monto">{{ cuenta.monto | currency:'USD':'symbol':'1.0-0' }}</span>
-                </td>
-                <td>{{ cuenta.fecha | date:'yyyy-MM-dd' }}</td>
-                <td>
-                  <span class="estado-pill" [ngClass]="getEstadoClase(cuenta.estado)">
-                    {{ cuenta.estado | titlecase }}
+                  <span class="estado-pill" [ngClass]="cuenta.estadoClase">
+                    {{ cuenta.estado }}
                   </span>
                 </td>
                 <td class="text-right">
@@ -113,7 +126,7 @@
             </tbody>
           </table>
         </div>
-        <div *ngIf="filteredCuentas().length === 0" class="empty-state">
+        <div *ngIf="showEmptyState" class="empty-state">
           <i class="feather icon-inbox"></i>
           <p>Sin resultados para los filtros aplicados.</p>
         </div>
@@ -122,18 +135,18 @@
       <div class="table-footer">
         <div class="page-size">
           <label>Mostrar</label>
-          <select [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)" class="form-control">
+          <select [value]="pageSize" (change)="onPageSizeChange($event.target.value)" class="form-control">
             <option *ngFor="let size of pageSizes" [value]="size">{{ size }}</option>
           </select>
           <span>por pagina</span>
         </div>
 
         <div class="pagination-controls">
-          <button class="btn btn-light" type="button" (click)="changePage(-1)" [disabled]="page === 1">
+          <button class="btn btn-light" type="button" (click)="changePage(-1)" [disabled]="!canPrev">
             <i class="feather icon-chevron-left"></i>
           </button>
-          <span>Pagina {{ page }} de {{ totalPaginas() }}</span>
-          <button class="btn btn-light" type="button" (click)="changePage(1)" [disabled]="page === totalPaginas()">
+          <span>Pagina {{ pageNumber }} de {{ totalPages }}</span>
+          <button class="btn btn-light" type="button" (click)="changePage(1)" [disabled]="!canNext">
             <i class="feather icon-chevron-right"></i>
           </button>
         </div>
@@ -152,3 +165,10 @@
     </app-card>
   </div>
 </div>
+
+<app-proveedor-modal
+  *ngIf="showProveedorModal"
+  [open]="showProveedorModal"
+  (close)="closeProveedorModal()"
+  (selected)="onProveedorSelected($event)"
+></app-proveedor-modal>

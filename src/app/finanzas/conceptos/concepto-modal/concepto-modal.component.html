@@ -1,0 +1,105 @@
+<div class="modal fade show d-block" *ngIf="open" tabindex="-1" role="dialog" aria-modal="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content concepto-modal">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title mb-0">
+            <i class="feather icon-book me-1"></i>
+            {{ modalTitle }}
+          </h5>
+          <small class="text-muted">{{ modalSubtitle }}</small>
+        </div>
+        <button type="button" class="btn-close" aria-label="Close" (click)="onClose()" [disabled]="busy"></button>
+      </div>
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="codConcepto" class="form-label">Código <span class="text-danger">*</span></label>
+              <input
+                id="codConcepto"
+                type="text"
+                class="form-control code-input"
+                formControlName="codConcepto"
+                [disabled]="codConceptoInputDisabled"
+                autocomplete="off"
+              >
+              <div class="invalid-feedback d-block" *ngIf="codConceptoError">
+                <small>{{ codConceptoError }}</small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label for="tipMov" class="form-label">Tipo Movimiento <span class="text-danger">*</span></label>
+              <select
+                id="tipMov"
+                class="form-control"
+                formControlName="tipMov"
+                [disabled]="tipMovInputDisabled"
+              >
+                <option *ngFor="let option of tipMovOptions" [value]="option.value">{{ option.label }}</option>
+              </select>
+              <div class="invalid-feedback d-block" *ngIf="tipMovError">
+                <small>{{ tipMovError }}</small>
+              </div>
+            </div>
+            <div class="col-12">
+              <label for="concepto" class="form-label">Concepto <span class="text-danger">*</span></label>
+              <input
+                id="concepto"
+                type="text"
+                class="form-control"
+                formControlName="concepto"
+                [disabled]="conceptoInputDisabled"
+                autocomplete="off"
+              >
+              <div class="invalid-feedback d-block" *ngIf="conceptoError">
+                <small>{{ conceptoError }}</small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label for="empresa" class="form-label">Empresa <span class="text-danger">*</span></label>
+              <input
+                id="empresa"
+                type="text"
+                class="form-control"
+                formControlName="empresa"
+                [disabled]="empresaInputDisabled"
+                autocomplete="off"
+              >
+              <div class="invalid-feedback d-block" *ngIf="empresaError">
+                <small>{{ empresaError }}</small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label for="operador" class="form-label">Operador <span class="text-danger">*</span></label>
+              <input
+                id="operador"
+                type="text"
+                class="form-control"
+                formControlName="operador"
+                [disabled]="operadorInputDisabled"
+                autocomplete="off"
+              >
+              <div class="invalid-feedback d-block" *ngIf="operadorError">
+                <small>{{ operadorError }}</small>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer d-flex justify-content-between flex-wrap gap-2">
+          <button type="button" class="btn btn-outline-secondary" (click)="onClose()" [disabled]="busy">
+            <i class="feather icon-x me-1"></i>
+            Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary" [disabled]="submitDisabled">
+            <span *ngIf="showSpinner" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+            <i *ngIf="showSaveIcon" class="feather icon-save me-1"></i>
+            {{ submitLabel }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="open"></div>
