@@ -32,7 +32,7 @@ export class ListaPrecioFormComponent implements OnInit {
   ngOnInit() {
     this.buildForm();
     this.loadMonedas();
-    this.loadPlanesTarifas();
+    
     const codigo = this.route.snapshot.paramMap.get('id');
     if (codigo) {
       this.isEditing = true;
@@ -46,7 +46,7 @@ export class ListaPrecioFormComponent implements OnInit {
       desLstPrecio: ['', [Validators.required]],
       moneda: ['', [Validators.required]],
       simbolo: [''],
-      planRate: [1, [Validators.required]],
+      planRate: [1],
       vigencia: ['S', [Validators.required]],
       fechaDesde: [null],
       fechaHasta: [null],
@@ -61,23 +61,6 @@ export class ListaPrecioFormComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error al cargar monedas:', error);
-      }
-    });
-  }
-
-  private loadPlanesTarifas() {
-    this.planesTarifasService.getPlanesTarifas().subscribe({
-      next: (planes) => {
-        this.planesTarifas = planes ?? [];
-        console.log('Planes de tarifas cargados:', this.planesTarifas);
-      },
-      error: (error) => {
-        console.error('Error al cargar planes de tarifas:', error);
-        Swal.fire({
-          title: 'Advertencia',
-          text: 'No se pudieron cargar los planes de tarifas.',
-          icon: 'warning'
-        });
       }
     });
   }
@@ -101,7 +84,7 @@ export class ListaPrecioFormComponent implements OnInit {
           desLstPrecio: lista.descripcion,
           moneda: lista.moneda,
           simbolo: lista.simbolo,
-          planRate: lista.planRate || null,
+          planRate: lista.planRate || 1,
           vigencia: lista.vigente || 'S',
           fechaDesde: lista.fechaDesde || null,
           fechaHasta: lista.fechaHasta || null,
@@ -145,7 +128,7 @@ export class ListaPrecioFormComponent implements OnInit {
       descripcion: raw.desLstPrecio,
       moneda: raw.moneda,
       simbolo: raw.simbolo || '',
-      planRate: raw.planRate || 0,
+      planRate: '1',
       vigente: raw.vigencia || 'S',
       fechaDesde: raw.fechaDesde || '',
       fechaHasta: raw.fechaHasta || '',

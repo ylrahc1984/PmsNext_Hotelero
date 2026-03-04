@@ -87,6 +87,15 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
   // Catalogos y seleccion actual.
   servicios: ServicioResumenDto[] = [];
   selectedServicio = '';
+  reglaSearch = '';
+  showServicioModal = false;
+  servicioModalSearch = '';
+  servicioModalPage = 1;
+  servicioModalPageSize = 8;
+  servicioModalPageSizeOptions = [8, 12, 20];
+  serviciosLoading = false;
+  serviciosError = '';
+  selectedReglaId: number | null = null;
   tipoPaxCatalog: TipoPaxCatalogItem[] = [];
 
   // Opciones de pagina para el selector.
@@ -108,6 +117,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     }
 
     this.hydrateDescripcion();
+    
     this.codLstPrecio = codLstPrecio;
     this.filtros = {
       ...this.filtros,
@@ -116,7 +126,6 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     };
 
     this.loadTiposPax();
-    this.loadServicios();
     this.loadReglas();
   }
 
@@ -128,6 +137,47 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
   // Expose reglas actuales para la plantilla.
   get reglas(): ReglaPrecioVm[] {
     return this.state.reglas;
+  }
+
+  // Filtra reglas por nombre o codigo de servicio en cliente.
+  get reglasFiltradas(): ReglaPrecioVm[] {
+    const term = this.reglaSearch.trim().toLowerCase();
+    if (!term) {
+      return this.reglas;
+    }
+    return this.reglas.filter((regla) => {
+      const codigo = (regla.codServicio || '').toLowerCase();
+      const nombre = (regla.nomReceta || this.getServicioLabel(regla.codServicio)).toLowerCase();
+      return codigo.includes(term) || nombre.includes(term);
+    });
+  }
+
+  // Filtra servicios para el modal.
+  get serviciosFiltrados(): ServicioResumenDto[] {
+    const term = this.servicioModalSearch.trim().toLowerCase();
+    if (!term) {
+      return this.servicios;
+    }
+    return this.servicios.filter((servicio) => {
+      const codigo = this.getServicioCodigoFromItem(servicio).toLowerCase();
+      const nombre = this.getServicioNombreFromItem(servicio).toLowerCase();
+      return codigo.includes(term) || nombre.includes(term);
+    });
+  }
+
+  // Total de paginas en el modal de servicios.
+  get totalServicioPages(): number {
+    const total = this.serviciosFiltrados.length;
+    const size = this.toNumber(this.servicioModalPageSize, 1);
+    return Math.max(1, Math.ceil(total / size));
+  }
+
+  // Servicios paginados en modal.
+  get serviciosPaginados(): ServicioResumenDto[] {
+    const size = this.toNumber(this.servicioModalPageSize, 1);
+    const page = Math.min(Math.max(this.toNumber(this.servicioModalPage, 1), 1), this.totalServicioPages);
+    const start = (page - 1) * size;
+    return this.serviciosFiltrados.slice(start, start + size);
   }
 
   // Expose paginacion actual.
@@ -224,21 +274,26 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
 
   // Carga catalogo de servicios activos.
   loadServicios(): void {
+    this.serviciosLoading = true;
+    this.serviciosError = '';
     this.serviciosService
       .getServiciosActivosAll()
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => {
-          if (!this.selectedServicio && this.servicios.length > 0) {
-            this.selectedServicio = this.getServicioCodigo(this.servicios[0]);
-          }
+          this.serviciosLoading = false;
         })
       )
       .subscribe({
         next: (servicios) => {
+          this.serviciosLoading = false;
+          this.serviciosError = '';
           this.servicios = (servicios ?? []).map((item) => this.mapServicio(item));
+          console.log('[DetalleListaPrecioV2] loadServicios', { servicios: this.servicios });
         },
         error: () => {
+          this.serviciosLoading = false;
+          this.serviciosError = 'No se pudieron cargar los servicios.';
           this.servicios = [];
         }
       });
@@ -254,6 +309,56 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
       };
     }
   }
+
+  // Abre el modal de servicios.
+  openServicioModal(): void {
+    this.showServicioModal = true;
+    this.servicioModalPage = 1;
+    this.servicioModalSearch = '';
+    this.servicios = [];
+    this.loadServicios();
+  }
+
+  // Cierra el modal de servicios.
+  closeServicioModal(): void {
+    this.showServicioModal = false;
+  }
+
+  // Resetea pagina al buscar.
+  onServicioModalSearchChange(): void {
+    this.servicioModalPage = 1;
+  }
+
+  // Resetea pagina al cambiar page size.
+  onServicioModalPageSizeChange(): void {
+    this.servicioModalPageSize = this.toNumber(this.servicioModalPageSize, 8);
+    this.servicioModalPage = 1;
+  }
+
+  // Navega entre paginas del modal.
+  goToServicioModalPage(delta: number): void {
+    const next = this.toNumber(this.servicioModalPage, 1) + delta;
+    if (next < 1 || next > this.totalServicioPages) {
+      return;
+    }
+    this.servicioModalPage = next;
+  }
+
+  // Selecciona servicio desde modal y agrega la regla.
+  selectServicio(servicio: ServicioResumenDto): void {
+    const codigo = this.getServicioCodigoFromItem(servicio);
+    if (!codigo || this.isCreating) {
+      return;
+    }
+    this.selectedServicio = codigo;
+    this.closeServicioModal();
+    this.addRegla();
+  }
+
+  // TrackBy para servicios.
+  trackByServicio = (_: number, servicio: ServicioResumenDto): string => {
+    return this.getServicioCodigoFromItem(servicio) || this.getServicioNombreFromItem(servicio);
+  };
 
   // Crea una nueva regla con precios por defecto.
   addRegla(): void {
@@ -306,6 +411,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
             error: ''
           };
           this.ensurePrecioForms(withDefaults);
+          this.selectedReglaId = withDefaults.id;
         },
         error: () => {
           this.state = {
@@ -685,11 +791,22 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
 
   // Lee descripcion desde query params o history state.
   private hydrateDescripcion(): void {
-    const queryDescripcion = (this.route.snapshot.queryParamMap.get('desLstPrecio') || '').trim();
-    const navState = this.router.getCurrentNavigation()?.extras.state as { desLstPrecio?: string } | undefined;
-    const historyState = (history?.state ?? {}) as { desLstPrecio?: string };
-    const stateDescripcion = `${navState?.desLstPrecio ?? historyState?.desLstPrecio ?? ''}`.trim();
+    const queryDescripcion = (
+      this.route.snapshot.queryParamMap.get('desLstPrecio') ||
+      this.route.snapshot.queryParamMap.get('codigodes') ||
+      ''
+    ).trim();
+    const navState = this.router.getCurrentNavigation()?.extras.state as
+      | { desLstPrecio?: string; codigodes?: string }
+      | undefined;
+    const historyState = (history?.state ?? {}) as { desLstPrecio?: string; codigodes?: string };
+    const stateDescripcion = `${navState?.desLstPrecio ?? navState?.codigodes ?? historyState?.desLstPrecio ?? historyState?.codigodes ?? ''}`.trim();
     const descripcion = queryDescripcion || stateDescripcion;
+    console.log('[DetalleListaPrecioV2] hydrateDescripcion', {
+      queryDescripcion,
+      stateDescripcion,
+      descripcion
+    });
     if (descripcion) {
       this.desLstPrecio = descripcion;
     }
@@ -1028,6 +1145,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
       CodLstPrecio: `${defaults.codLstPrecio ?? ''}`,
       DesLstPrecio: this.desLstPrecio,
       CodServicio: `${defaults.codServicio ?? ''}`,
+      NomReceta: this.getServicioLabel(defaults.codServicio ?? ''),
       TipoTarifa: `${defaults.tipoTarifa ?? DEFAULT_TIPO_TARIFA}`,
       CantMinPax: this.toNumber(defaults.cantMinPax, 1),
       CantMaxPax: this.toNumber(defaults.cantMaxPax, 1),
@@ -1068,7 +1186,29 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
 
   // Obtiene el codigo del servicio.
   private getServicioCodigo(servicio: ServicioResumenDto): string {
-    return (servicio.CodServicio || servicio.CodReceta || '').trim();
+    return this.getServicioCodigoFromItem(servicio);
+  }
+
+  getServicioCodigoFromItem(servicio: ServicioResumenDto & { codReceta?: string; codServicio?: string }): string {
+    return (
+      servicio.CodServicio ||
+      servicio.CodReceta ||
+      servicio.codReceta ||
+      servicio.codServicio ||
+      ''
+    ).trim();
+  }
+
+  getServicioNombreFromItem(servicio: ServicioResumenDto & { nomReceta?: string; descripcion?: string }): string {
+    return (
+      servicio.NomServicio ||
+      servicio.NomReceta ||
+      servicio.DesServicio ||
+      servicio.Descripcion ||
+      servicio.nomReceta ||
+      servicio.descripcion ||
+      ''
+    ).trim();
   }
 
   // Obtiene el usuario operador actual.
@@ -1162,15 +1302,15 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     const rack = this.toNumber(precioRack, 0);
     const percent = this.normalizePercent(porcentaje);
     const neto = rack - (rack * percent) / 100;
-    return this.roundToTwo(neto);
+    return this.roundToZero(neto);
   }
 
-  // Redondea a dos decimales.
-  private roundToTwo(value: number): number {
+  // Redondea sin decimales.
+  private roundToZero(value: number): number {
     if (!Number.isFinite(value)) {
       return 0;
     }
-    return Number(value.toFixed(2));
+    return Math.round(value);
   }
 
   // Convierte HH:mm(:ss) a segundos.

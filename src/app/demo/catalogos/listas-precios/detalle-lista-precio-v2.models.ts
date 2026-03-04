@@ -7,6 +7,7 @@ export interface ReglaPrecioListItemDto {
   CodLstPrecio: string;
   DesLstPrecio: string;
   CodServicio: string;
+  NomReceta?: string;
   TipoTarifa: string | number;
   CantMinPax: number;
   CantMaxPax: number;
@@ -111,6 +112,7 @@ export interface ReglaPrecioVm {
   codLstPrecio: string;
   desLstPrecio: string;
   codServicio: string;
+  nomReceta: string;
   tipoTarifa: EditableField<string>;
   cantMinPax: EditableField<number>;
   cantMaxPax: EditableField<number>;

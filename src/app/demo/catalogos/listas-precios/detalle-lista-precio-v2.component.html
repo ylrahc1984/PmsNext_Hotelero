@@ -4,7 +4,7 @@
       <div class="title-block">
         <h3>Detalle Lista de Precios (V2)</h3>
         <div class="meta">
-          <span class="meta-item" *ngIf="desLstPrecio"><strong>Descripcion:</strong> {{ desLstPrecio }}</span>
+          <span class="meta-item"><strong>Descripcion:</strong> {{ desLstPrecio }}</span>
         </div>
       </div>
       <div class="filters">
@@ -24,19 +24,18 @@
   </div>
 
   <div class="action-bar">
-    <div class="action-field">
-      <label>Servicio</label>
-      <select class="form-control" [(ngModel)]="selectedServicio" (ngModelChange)="onServicioFilterChange($event)">
-        <option value="">Seleccione un servicio</option>
-        <option *ngFor="let servicio of servicios" [value]="servicio.CodServicio || servicio.CodReceta">
-          {{ servicio.CodServicio || servicio.CodReceta }} -
-          {{ servicio.NomServicio || servicio.NomReceta || servicio.DesServicio || servicio.Descripcion || '' }}
-        </option>
-      </select>
+    <div class="action-field regla-search">
+      <label>Buscar en Detalle de Lista de precios</label>
+      <input
+        type="text"
+        class="form-control regla-search-input"
+        placeholder="Nombre o codigo"
+        [(ngModel)]="reglaSearch"
+      />
     </div>
     <div class="action-buttons">
-      <button class="btn btn-primary" (click)="addRegla()" [disabled]="isCreating || !selectedServicio">
-        Agregar Regla
+      <button class="btn btn-primary" (click)="openServicioModal()" [disabled]="isCreating">
+        Agregar Servicio
         <span *ngIf="isCreating" class="spinner-border spinner-border-sm ms-2" role="status" aria-label="Creando"></span>
       </button>
       <button class="btn btn-outline-secondary" (click)="volverAListas()">Volver</button>
@@ -64,12 +63,17 @@
         </tr>
       </thead>
       <tbody>
-        <ng-container *ngFor="let regla of reglas; trackBy: trackByReglaId">
-          <tr class="rule-row" [class.is-dirty]="regla.dirty" [class.is-expanded]="regla.expanded">
+        <ng-container *ngFor="let regla of reglasFiltradas; trackBy: trackByReglaId">
+          <tr
+            class="rule-row"
+            [class.is-dirty]="regla.dirty"
+            [class.is-expanded]="regla.expanded"
+            [class.is-selected]="regla.id === selectedReglaId"
+          >
             <td class="service-cell">
               <div class="servicio-cell">
                 <span class="service-code">{{ regla.codServicio }}</span>
-                <span class="servicio-name">{{ getServicioLabel(regla.codServicio) }}</span>
+                <span class="servicio-name">{{ regla.nomReceta || getServicioLabel(regla.codServicio) }}</span>
               </div>
             </td>
             <td class="pax-cell">
@@ -103,7 +107,7 @@
                     <span class="chip-line">
                       <span class="chip-rack"><strong>R:</strong> {{ precio.precio.value | number: '1.2-2' }}</span>
                       <span class="chip-sep">|</span>
-                      <span class="chip-neto">N: {{ precio.montoComision.value | number: '1.2-2' }}</span>
+                      <span class="chip-neto">N: {{ precio.montoComision.value | number: '1.0-0' }}</span>
                       <span class="chip-sep">|</span>
                       <span class="chip-com">Com: {{ precio.porcentajeComision.value | number: '1.0-2' }}%</span>
                     </span>
@@ -287,7 +291,7 @@
                           type="number"
                           class="form-control form-control-sm precio-rack-input"
                           min="0"
-                          step="0.01"
+                          step="1"
                           [class.field-error]="precio.precio.error"
                           formControlName="precio"
                           aria-label="Precio rack"
@@ -356,7 +360,7 @@
       </tbody>
     </table>
 
-    <div class="empty-state" *ngIf="reglas.length === 0">
+    <div class="empty-state" *ngIf="reglasFiltradas.length === 0">
       No hay reglas para mostrar.
     </div>
 
@@ -368,6 +372,94 @@
       <button class="btn btn-outline-secondary btn-sm" (click)="goToPage(1)" [disabled]="paginacion.paginaActual >= totalPages">
         Siguiente
       </button>
+    </div>
+  </div>
+
+  <div class="servicio-modal-overlay" *ngIf="showServicioModal" (click)="closeServicioModal()">
+    <div class="servicio-modal" (click)="$event.stopPropagation()">
+      <div class="servicio-modal-header">
+        <div>
+          <h5>Agregar regla</h5>
+          <p>Seleccione el servicio para crear la regla y editarla en el detalle.</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" (click)="closeServicioModal()" aria-label="Cerrar">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="servicio-modal-filters">
+        <label class="field field-inline servicio-search">
+          <span class="field-label">Buscar servicio</span>
+          <input
+            type="text"
+            class="form-control servicio-search-input"
+            placeholder="Nombre o codigo"
+            [(ngModel)]="servicioModalSearch"
+            (ngModelChange)="onServicioModalSearchChange()"
+          />
+        </label>
+        <div class="servicio-count">
+          {{ serviciosFiltrados.length }} servicios
+        </div>
+      </div>
+      <div class="servicio-modal-body">
+        <div class="servicio-table-wrapper">
+          <table class="table table-hover servicio-table">
+            <thead>
+              <tr>
+                <th>Codigo</th>
+                <th>Descripcion</th>
+                <th class="text-end">Accion</th>
+              </tr>
+            </thead>
+            <tbody *ngIf="serviciosPaginados.length; else noServicios">
+              <tr *ngFor="let servicio of serviciosPaginados; trackBy: trackByServicio">
+                <td class="service-code">{{ getServicioCodigoFromItem(servicio) }}</td>
+                <td class="servicio-name">{{ getServicioNombreFromItem(servicio) }}</td>
+                <td class="text-end">
+                  <button class="btn btn-primary btn-sm" (click)="selectServicio(servicio)" [disabled]="isCreating">
+                    Agregar
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <ng-template #noServicios>
+            <div class="empty-state">
+              No hay servicios para mostrar.
+            </div>
+          </ng-template>
+        </div>
+      </div>
+      <div class="servicio-modal-footer">
+        <div class="modal-pagination">
+          <label class="field field-inline">
+            <span class="field-label">Page size</span>
+            <select
+              class="form-control form-control-sm"
+              [(ngModel)]="servicioModalPageSize"
+              (change)="onServicioModalPageSizeChange()"
+            >
+              <option *ngFor="let size of servicioModalPageSizeOptions" [value]="size">{{ size }}</option>
+            </select>
+          </label>
+          <button
+            class="btn btn-outline-secondary btn-sm"
+            (click)="goToServicioModalPage(-1)"
+            [disabled]="servicioModalPage <= 1"
+          >
+            Anterior
+          </button>
+          <span>Pagina {{ servicioModalPage }} de {{ totalServicioPages }}</span>
+          <button
+            class="btn btn-outline-secondary btn-sm"
+            (click)="goToServicioModalPage(1)"
+            [disabled]="servicioModalPage >= totalServicioPages"
+          >
+            Siguiente
+          </button>
+        </div>
+        <button class="btn btn-outline-secondary btn-sm" (click)="closeServicioModal()">Cerrar</button>
+      </div>
     </div>
   </div>
 </div>

@@ -153,13 +153,15 @@ export class ListasPreciosComponent implements OnInit {
   }
 
   verDetalle(lista: ListaPrecioUI) {
+    console.log('[ListasPrecios] verDetalle lista', lista);
     const codigo = (lista.codigo || '').trim();
     if (!codigo) {
       return;
     }
-    const descripcion = (lista.descripcion || '').trim();
-    this.router.navigate(['/comercial/detalle-lista-precio-v2', codigo], {
-      queryParams: { desLstPrecio: descripcion }
+    const descripcion = (lista.descripcion || lista.codigo || '').trim();
+    console.log('[ListasPrecios] verDetalle params', { codigo, descripcion });
+    this.router.navigate(['/catalogos/detalle-lista-precio-v2', codigo], {
+      queryParams: { desLstPrecio: descripcion, codigodes: descripcion }
     });
   }
 
