@@ -53,7 +53,6 @@
                       {{ lista.codigo }} - {{ lista.descripcion }}
                     </option>
                   </select>
-                  <small class="text-muted">Seleccione la lista que aplicará al servicio.</small>
                   <div class="text-danger small" *ngIf="detalleFormRef.submitted && detalleFormRef.controls.codLstPrecio?.invalid">
                     Lista de Precios es requerida.
                   </div>
@@ -83,23 +82,27 @@
               <div class="row g-2">
                 <div class="col-lg-6 col-md-6">
                   <label class="form-label">Servicio <span class="text-danger">*</span></label>
-                  <select
+                  <input
+                    type="text"
                     class="form-control form-control-sm"
-                    [(ngModel)]="detalleForm.codServicio"
-                    name="codServicio"
-                    required
-                    (ngModelChange)="serviceChange.emit($event)"
+                    placeholder="Buscar servicio"
+                    autocomplete="off"
+                    [ngbTypeahead]="searchServicios"
+                    [inputFormatter]="servicioInputFormatter"
+                    [resultFormatter]="servicioResultFormatter"
+                    [openOnFocus]="true"
+                    [editable]="true"
+                    [(ngModel)]="servicioSearchValue"
+                    [ngModelOptions]="{ standalone: true }"
+                    (selectItem)="onServicioSelected($event)"
+                    (ngModelChange)="onServicioInputChange($event)"
                   >
-                    <option value="">Seleccione servicio</option>
-                    <option *ngIf="serviciosLoading" value="" disabled>Cargando servicios...</option>
-                    <option *ngFor="let servicio of servicios" [ngValue]="servicio.codReceta">
-                      {{ servicio.codReceta }} - {{ servicio.nomReceta }}
-                    </option>
-                  </select>
+                  <input type="hidden" [(ngModel)]="detalleForm.codServicio" name="codServicio" required>
+                  <small class="form-text text-muted" *ngIf="serviciosLoading">Cargando servicios...</small>
                   <small class="form-text text-muted" *ngIf="!serviciosLoading && servicios.length === 0">No hay servicios disponibles.</small>
                 </div>
                 <div class="col-lg-3 col-md-6">
-                  <label class="form-label">Hora Pick-Up</label>
+                  <label class="form-label">Hora Pick-Up <span class="text-danger">*</span></label>
                   <input
                     type="time"
                     class="form-control form-control-sm"
@@ -107,11 +110,15 @@
                     name="horaPickup"
                     lang="es-CR"
                     step="60"
+                    required
                     (ngModelChange)="recalculate.emit()"
                   >
+                  <div class="text-danger small" *ngIf="detalleFormRef.submitted && detalleFormRef.controls.horaPickup?.invalid">
+                    Hora Pick-Up es requerida.
+                  </div>
                 </div>
                 <div class="col-lg-3 col-md-6">
-                  <label class="form-label">Hora Inicio</label>
+                  <label class="form-label">Hora Inicio <span class="text-danger">*</span></label>
                   <input
                     type="time"
                     class="form-control form-control-sm"
@@ -119,8 +126,12 @@
                     name="horaInicio"
                     lang="es-CR"
                     step="60"
+                    required
                     (ngModelChange)="recalculate.emit()"
                   >
+                  <div class="text-danger small" *ngIf="detalleFormRef.submitted && detalleFormRef.controls.horaInicio?.invalid">
+                    Hora Inicio es requerida.
+                  </div>
                 </div>
               </div>
 

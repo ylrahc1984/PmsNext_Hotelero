@@ -106,3 +106,39 @@ export interface DetallePrecioServicioQuery {
   pageNumber?: number;
   pageSize?: number;
 }
+
+export interface ServicioPrecioApiItem {
+  ReglaPrecioID: number;
+  CodLstPrecio?: string;
+  DesLstPrecio?: string;
+  CodServicio: string;
+  NomServicio: string;
+  TipoTarifa?: string;
+  CantMinPax?: number;
+  CantMaxPax?: number;
+  HoraDesde?: string;
+  HoraHasta?: string;
+  Moneda?: string;
+  Observaciones?: string;
+  Activo?: boolean;
+  Operador?: string;
+  FechaRegistro?: string;
+  TotalRegistros?: number;
+}
+
+export interface ServicioPrecioApiResponse {
+  datos?: ServicioPrecioApiItem[];
+  paginacion?: {
+    totalRegistros: number;
+    paginaActual: number;
+    pageSize: number;
+  };
+}
+
+export interface ServicioPrecioQuery {
+  codLstPrecio: string;
+  soloActivos?: boolean;
+  nombreServicio?: string;
+  pageNumber?: number;
+  pageSize?: number;
+}

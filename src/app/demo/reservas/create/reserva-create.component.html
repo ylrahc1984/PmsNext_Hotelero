@@ -335,8 +335,8 @@
   [open]="showDetalleModal"
   [editingDetalleId]="editingDetalleId"
   [detalleForm]="detalleForm"
-  [servicios]="servicios"
-  [serviciosLoading]="serviciosLoading"
+  [servicios]="serviciosPrecio"
+  [serviciosLoading]="serviciosPrecioLoading"
   [reglaTarifaError]="reglaTarifaError"
   [allowManualPricing]="allowManualPricing"
   [planesTarifas]="planesTarifas"
@@ -347,6 +347,7 @@
   (serviceChange)="onServicioChange($event)"
   (recalculate)="recalcularCosto()"
   (tarifaContextChange)="onDetalleTarifaContextChange()"
+  (servicioSearch)="onDetalleServicioSearch($event)"
 ></app-reserva-create-detalle-modal>
 
 <!-- Modal actividad turística -->

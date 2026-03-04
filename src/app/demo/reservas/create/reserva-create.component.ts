@@ -48,6 +48,7 @@ import {
   toDateInputValue
 } from './reserva-create.utils';
 import { ReservaCreateTarifaService, ReglaTarifaPaxAplicada, ModoPrecio } from './reserva-create.tarifa.service';
+import { ServicioPrecioApiItem } from './reserva-create.tarifa.models';
 import { TipoPaxService, TipoPaxUI } from '../services/tipo-pax.service';
 import { ReservaCreateClienteModalComponent } from './reserva-create-cliente-modal.component';
 import { ReservaCreateDetalleModalComponent } from './reserva-create-detalle-modal.component';
@@ -87,6 +88,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
   planesTarifas: PlanTarifaUI[] = [];
   monedas: MonedaUI[] = [];
   servicios: ServicioUI[] = [];
+  serviciosPrecio: ServicioPrecioApiItem[] = [];
   tiposPax: TipoPaxUI[] = [];
 
   reglaTarifaError = '';
@@ -95,6 +97,8 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
   showClienteModal = false;
   selectedCliente: ClienteUI | null = null;
   serviciosLoading = false;
+  serviciosPrecioLoading = false;
+  detalleServicioSearch = '';
   directoUpdating = false;
 
   private reservasService = inject(ReservasService);
@@ -805,6 +809,8 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     if (!this.servicios.length) {
       this.cargarServicios('TRANS');
     }
+    this.detalleServicioSearch = '';
+    this.cargarServiciosPrecio();
   }
 
   /**
@@ -1666,12 +1672,53 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
   }
 
   /**
-   * Aplica la selección de un servicio desde el catálogo al formulario del modal.
+   * Carga servicios segun lista de precios y tipo de tarifa para el modal de detalle.
    */
-  seleccionarServicio(servicio: ServicioUI): void {
-    this.detalleForm.codServicio = servicio.codReceta;
-    this.detalleForm.nomServicio = servicio.nomReceta;
-    this.detalleForm.tipoServicio = servicio.codGrupo || servicio.codCateg || '';
+  private cargarServiciosPrecio(nombreServicio?: string, validateSelection: boolean = true): void {
+    const codLstPrecio = (this.detalleForm.codLstPrecio || '').toString().trim();
+    const search = (nombreServicio ?? this.detalleServicioSearch).toString().trim();
+    if (nombreServicio !== undefined) {
+      this.detalleServicioSearch = search;
+    }
+
+    if (!codLstPrecio) {
+      this.serviciosPrecio = [];
+      this.serviciosPrecioLoading = false;
+      if (validateSelection) {
+        this.ensureDetalleServicioSeleccionado();
+      }
+      return;
+    }
+
+    this.serviciosPrecioLoading = true;
+    this.tarifaService
+      .getServiciosPorListaPrecio({
+        codLstPrecio,
+        soloActivos: true,
+        nombreServicio: search,
+        pageNumber: 1,
+        pageSize: 50
+      })
+      .subscribe({
+        next: (items) => {
+          this.serviciosPrecio = items ?? [];
+          this.serviciosPrecioLoading = false;
+          if (validateSelection) {
+            this.ensureDetalleServicioSeleccionado();
+          }
+        },
+        error: () => {
+          this.serviciosPrecio = [];
+          this.serviciosPrecioLoading = false;
+          if (validateSelection) {
+            this.ensureDetalleServicioSeleccionado();
+          }
+        }
+      });
+  }
+
+  onDetalleServicioSearch(term: string): void {
+    this.cargarServiciosPrecio(term, false);
   }
 
   /**
@@ -1680,9 +1727,12 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
    * - Dispara recálculo de costo (reglas tarifarias).
    */
   onServicioChange(codServicio: string): void {
-    const servicio = this.servicios.find((item) => item.codReceta === codServicio);
-    if (servicio) {
-      this.seleccionarServicio(servicio);
+    const servicioPrecio = this.serviciosPrecio.find((item) => item.CodServicio === codServicio);
+    if (servicioPrecio) {
+      const servicioCatalogo = this.servicios.find((item) => item.codReceta === codServicio);
+      this.detalleForm.codServicio = servicioPrecio.CodServicio;
+      this.detalleForm.nomServicio = servicioPrecio.NomServicio;
+      this.detalleForm.tipoServicio = servicioCatalogo?.codGrupo || servicioCatalogo?.codCateg || '';
       this.allowManualPricing = false;
       this.reglaTarifaError = '';
       this.detalleForm.detallesPax = (this.detalleForm.detallesPax ?? []).map((item) => ({
@@ -1697,6 +1747,16 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     this.detalleForm.tipoServicio = '';
     this.reglaTarifaError = '';
     this.allowManualPricing = false;
+  }
+
+  private ensureDetalleServicioSeleccionado(): void {
+    const selected = (this.detalleForm.codServicio || '').toString().trim();
+    if (!selected) return;
+    const exists = this.serviciosPrecio.some((item) => item.CodServicio === selected);
+    if (!exists) {
+      this.detalleForm.codServicio = '';
+      this.onServicioChange('');
+    }
   }
 
   /**
@@ -2050,6 +2110,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
   onDetalleTarifaContextChange(): void {
     this.allowManualPricing = false;
     this.reglaTarifaError = '';
+    this.cargarServiciosPrecio();
     if (this.showDetalleModal) {
       this.recalcularCosto();
     }

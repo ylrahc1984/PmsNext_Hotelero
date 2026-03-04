@@ -1,19 +1,22 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { NgbTypeaheadModule, NgbTypeaheadSelectItemEvent } from '@ng-bootstrap/ng-bootstrap';
+import { OperatorFunction, Subject, merge } from 'rxjs';
+import { debounceTime, distinctUntilChanged, map, tap } from 'rxjs/operators';
 
 import { GooglePlaceSelection, GooglePlacesAutocompleteDirective } from '../shared/google-places-autocomplete.directive';
 import { DetalleForm } from './reserva-create.models';
 import { hasCoordinates, safeJsonStringify } from './reserva-create.utils';
-import { ServicioUI } from '../../catalogos/servicios/servicios.service';
 import { TipoPaxUI } from '../services/tipo-pax.service';
 import { PlanTarifaUI } from '../../catalogos/listas-precios/planes-tarifas.service';
 import { ListaPrecioUI } from '../../catalogos/listas-precios/lista-precio.models';
+import { ServicioPrecioApiItem } from './reserva-create.tarifa.models';
 
 @Component({
   selector: 'app-reserva-create-detalle-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, GooglePlacesAutocompleteDirective],
+  imports: [CommonModule, FormsModule, NgbTypeaheadModule, GooglePlacesAutocompleteDirective],
   templateUrl: './reserva-create-detalle-modal.component.html',
   styleUrls: ['./reserva-create-detalle-modal.component.scss']
 })
@@ -21,7 +24,7 @@ export class ReservaCreateDetalleModalComponent implements OnChanges {
   @Input() open = false;
   @Input() editingDetalleId: number | null = null;
   @Input({ required: true }) detalleForm!: DetalleForm;
-  @Input() servicios: ServicioUI[] = [];
+  @Input() servicios: ServicioPrecioApiItem[] = [];
   @Input() serviciosLoading = false;
   @Input() reglaTarifaError = '';
   @Input() allowManualPricing = false;
@@ -34,6 +37,7 @@ export class ReservaCreateDetalleModalComponent implements OnChanges {
   @Output() serviceChange = new EventEmitter<string>();
   @Output() recalculate = new EventEmitter<void>();
   @Output() tarifaContextChange = new EventEmitter<void>();
+  @Output() servicioSearch = new EventEmitter<string>();
 
   origenAutocompleteMessage = '';
   destinoAutocompleteMessage = '';
@@ -41,6 +45,27 @@ export class ReservaCreateDetalleModalComponent implements OnChanges {
   copyError = '';
   copyErrorTarget: 'origen' | 'destino' | null = null;
   locationInfoTarget: 'origen' | 'destino' | null = null;
+  servicioSearchValue: ServicioPrecioApiItem | string = '';
+  private servicioSearchTouched = false;
+  private lastServicioTerm = '';
+  private readonly serviciosRefresh$ = new Subject<string>();
+
+  readonly searchServicios: OperatorFunction<string, readonly ServicioPrecioApiItem[]> = (text$) => {
+    const userInput$ = text$.pipe(
+      map((value) => (value ?? '').toString()),
+      debounceTime(300),
+      distinctUntilChanged(),
+      tap((term) => {
+        this.lastServicioTerm = term;
+        this.servicioSearchTouched = true;
+        this.servicioSearch.emit(term.trim());
+      })
+    );
+
+    return merge(userInput$, this.serviciosRefresh$).pipe(
+      map((term) => this.filterServicios(term))
+    );
+  };
 
   get selectedListaPrecio(): ListaPrecioUI | null {
     const code = (this.detalleForm?.codLstPrecio ?? '').toString().trim();
@@ -52,6 +77,17 @@ export class ReservaCreateDetalleModalComponent implements OnChanges {
     const openChange = changes['open'];
     if (openChange?.currentValue === true && openChange?.previousValue !== true) {
       this.resetAutocompleteState();
+      this.resetServicioSearch();
+      this.syncServicioSearchSelection();
+    }
+
+    if (this.open && changes['detalleForm']) {
+      this.servicioSearchTouched = false;
+      this.syncServicioSearchSelection();
+    }
+
+    if (this.open && changes['servicios']) {
+      this.syncServicioSearchSelection();
     }
   }
 
@@ -63,6 +99,29 @@ export class ReservaCreateDetalleModalComponent implements OnChanges {
 
   onTarifaChange(): void {
     this.tarifaContextChange.emit();
+  }
+
+  onServicioSelected(event: NgbTypeaheadSelectItemEvent): void {
+    const item = event.item as ServicioPrecioApiItem;
+    if (!item) return;
+    this.servicioSearchTouched = false;
+    this.servicioSearchValue = item;
+    this.detalleForm.codServicio = item.CodServicio;
+    this.serviceChange.emit(item.CodServicio);
+  }
+
+  onServicioInputChange(value: ServicioPrecioApiItem | string): void {
+    if (typeof value !== 'string') return;
+    const term = value.trim();
+    if (!term) {
+      this.detalleForm.codServicio = '';
+      this.serviceChange.emit('');
+      return;
+    }
+    if (this.detalleForm.codServicio) {
+      this.detalleForm.codServicio = '';
+      this.serviceChange.emit('');
+    }
   }
 
   onSubmit(formRef: any): void {
@@ -251,5 +310,42 @@ export class ReservaCreateDetalleModalComponent implements OnChanges {
     this.copiedLink = null;
     this.copyError = '';
     this.copyErrorTarget = null;
+  }
+
+  private resetServicioSearch(): void {
+    this.servicioSearchTouched = false;
+    this.lastServicioTerm = '';
+    this.servicioSearchValue = '';
+  }
+
+  private syncServicioSearchSelection(): void {
+    if (this.servicioSearchTouched) return;
+    const cod = (this.detalleForm?.codServicio || '').toString().trim();
+    if (!cod) {
+      this.servicioSearchValue = '';
+      return;
+    }
+    const match = (this.servicios || []).find((item) => item.CodServicio === cod);
+    this.servicioSearchValue = match ?? cod;
+  }
+
+  private filterServicios(term: string): ServicioPrecioApiItem[] {
+    const query = (term ?? '').toString().trim().toLowerCase();
+    const list = this.servicios ?? [];
+    if (!query) return list;
+    return list.filter((item) => {
+      const cod = (item?.CodServicio || '').toString().toLowerCase();
+      const nom = (item?.NomServicio || '').toString().toLowerCase();
+      return cod.includes(query) || nom.includes(query);
+    });
+  }
+
+  servicioResultFormatter = (item: ServicioPrecioApiItem): string =>
+    `${item?.CodServicio || ''} - ${item?.NomServicio || ''}`.trim();
+
+  servicioInputFormatter = (value: ServicioPrecioApiItem | string | null): string => {
+    if (!value) return '';
+    if (typeof value === 'string') return value;
+    return this.servicioResultFormatter(value);
   }
 }

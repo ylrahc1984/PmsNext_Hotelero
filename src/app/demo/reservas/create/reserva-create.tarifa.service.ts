@@ -8,6 +8,9 @@ import {
   DetallePrecioServicioQuery,
   DetallePrecioServicioApiItem,
   DetallePrecioServicioApiResponse,
+  ServicioPrecioApiItem,
+  ServicioPrecioApiResponse,
+  ServicioPrecioQuery,
   MejorPrecioRegla,
   MejorPrecioReglaDto,
   ReglaTarifaAplicada
@@ -81,6 +84,27 @@ export class ReservaCreateTarifaService {
 
     return this.http
       .get<DetallePrecioServicioApiResponse>(`${this.detalleListaPrecioApiUrl}/servicios/detalle-precios`, { params: requestParams })
+      .pipe(map((res) => res?.datos ?? []));
+  }
+
+  getServiciosPorListaPrecio(params: ServicioPrecioQuery): Observable<ServicioPrecioApiItem[]> {
+    const codLstPrecio = (params.codLstPrecio || '').trim();
+    const nombreServicio = (params.nombreServicio || '').trim();
+    const pageNumber = Number(params.pageNumber ?? 1) || 1;
+    const pageSize = Number(params.pageSize ?? 50) || 50;
+
+    let requestParams = new HttpParams()
+      .set('codLstPrecio', codLstPrecio)
+      // En este endpoint, el backend usa `tipoTarifa` como campo de busqueda por nombre de servicio.
+      .set('tipoTarifa', nombreServicio)
+      .set('pageNumber', String(pageNumber))
+      .set('pageSize', String(pageSize));
+
+    if (typeof params.soloActivos === 'boolean') {
+      requestParams = requestParams.set('soloActivos', String(params.soloActivos));
+    }
+    return this.http
+      .get<ServicioPrecioApiResponse>(`${this.detalleListaPrecioApiUrl}/servicio-precio`, { params: requestParams })
       .pipe(map((res) => res?.datos ?? []));
   }
 
@@ -309,10 +333,14 @@ export class ReservaCreateTarifaService {
       const paxExtras = this.computePaxExtras(regla, item.cantidad);
       const precioBase = this.getPrecioBase(regla, modoPrecio);
       const calculado = Number(regla.precioTotalCalculado ?? 0) || 0;
-      const precioTotal =
-        modoPrecio === 'R'
-          ? (calculado > 0 ? calculado : (precioBase + paxExtras * (regla.precioPaxExtra ?? 0)))
-          : (precioBase + paxExtras * (regla.precioPaxExtra ?? 0));
+      const maxPax = Number(regla.cantMaxPax ?? 0) || 0;
+      const precioPaxExtra = Number(regla.precioPaxExtra ?? 0) || 0;
+      const shouldMultiply = maxPax === 1 && precioPaxExtra <= 0;
+      const precioTotal = shouldMultiply
+        ? (precioBase * item.cantidad)
+        : (modoPrecio === 'R'
+          ? (calculado > 0 ? calculado : (precioBase + paxExtras * precioPaxExtra))
+          : (precioBase + paxExtras * precioPaxExtra));
 
       detalles.push({
         tipoPax: item.tipoPax,
