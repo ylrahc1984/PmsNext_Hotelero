@@ -85,6 +85,17 @@ export interface CentroCostoDto {
   Impuesto: number;
 }
 
+export interface CentroCostoPagination {
+  totalRegistros: number;
+  paginaActual: number;
+  totalPaginas: number;
+}
+
+export interface CentroCostoListResponse {
+  datos?: CentroCostoDto[];
+  paginacion?: CentroCostoPagination;
+}
+
 export interface CentroCostoOption {
   codigo: string;
   nombre: string;
@@ -165,7 +176,9 @@ export class ServiciosService {
     nomReceta: string,
     visible: number | undefined,
     pageNumber = 1,
-    pageSize = 20
+    pageSize = 20,
+    codGrupo?: string,
+    codCateg?: string
   ): Observable<{
     data: ServicioUI[];
     totalRegistros: number;
@@ -176,6 +189,12 @@ export class ServiciosService {
     let params = new HttpParams().set('nomReceta', nomReceta).set('pageNumber', String(pageNumber)).set('pageSize', String(pageSize));
     if (typeof visible === 'number') {
       params = params.set('visible', String(visible));
+    }
+    if (codGrupo) {
+      params = params.set('codGrupo', codGrupo);
+    }
+    if (codCateg) {
+      params = params.set('codCateg', codCateg);
     }
     return this.http.get<{ datos?: ServicioDto[]; paginacion?: any }>(`${this.apiUrl}/buscar`, { params }).pipe(
       map((response) => {
@@ -217,7 +236,7 @@ export class ServiciosService {
 
   getCentroCostoOptions(pageNumber = 1, pageSize = 100): Observable<CentroCostoOption[]> {
     const params = new HttpParams().set('pageNumber', String(pageNumber)).set('pageSize', String(pageSize));
-    return this.http.get<{ datos?: CentroCostoDto[] }>(this.centroCostoUrl, { params }).pipe(
+    return this.http.get<CentroCostoListResponse>(this.centroCostoUrl, { params }).pipe(
       map((response) => {
         const uniqueByCodigo = new Map<string, CentroCostoOption>();
         (response?.datos ?? []).forEach((item) => {
@@ -225,7 +244,7 @@ export class ServiciosService {
           if (!codigo) {
             return;
           }
-          uniqueByCodigo.set(item.CA10_CodCCto, {
+          uniqueByCodigo.set(codigo, {
             codigo,
             nombre: (item.CA10_CentroCosto || '').trim() || codigo
           });

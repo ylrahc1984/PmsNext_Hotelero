@@ -12,36 +12,58 @@
       </div>
 
       <div class="filters-card mb-3">
-        <div class="row">
+        <div class="row filters-row">
           <div class="col-lg-3 col-md-6 mb-3">
             <label class="small-label">Nombre</label>
-            <input type="text" class="form-control" [(ngModel)]="filterNombre" placeholder="Buscar por nombre">
+            <input
+              type="search"
+              class="form-control"
+              [(ngModel)]="filterNombre"
+              placeholder="Buscar por nombre"
+              (keyup.enter)="onBuscar()"
+            >
           </div>
           <div class="col-lg-3 col-md-6 mb-3">
             <label class="small-label">Categoria</label>
             <select class="form-control" [(ngModel)]="filterCategoria">
               <option value="">Todas</option>
-              <option *ngFor="let categoria of categoriaOptions" [value]="categoria">{{ categoria }}</option>
+              <option *ngFor="let categoria of categoriaOptions" [value]="categoria.codigo">
+                {{ categoria.codigo }} - {{ categoria.nombre }}
+              </option>
             </select>
           </div>
           <div class="col-lg-3 col-md-6 mb-3">
             <label class="small-label">Grupo</label>
             <select class="form-control" [(ngModel)]="filterGrupo">
               <option value="">Todos</option>
-              <option *ngFor="let grupo of grupoOptions" [value]="grupo">{{ grupo }}</option>
+              <option *ngFor="let grupo of grupoOptions" [value]="grupo.codigo">
+                {{ grupo.codigo }} - {{ grupo.nombre }}
+              </option>
             </select>
           </div>
-          <div class="col-lg-3 col-md-6 mb-3">
-            <label class="small-label">Visible</label>
-            <select class="form-control" [(ngModel)]="filterVisible">
-              <option value="">Todos</option>
-              <option value="1">Si</option>
-              <option value="0">No</option>
-            </select>
+          <div class="col-lg-3 col-md-6 mb-3 visible-col">
+            <div class="visible-inline">
+              <span class="small-label">Visible</span>
+              <label
+                class="visible-filter"
+                [attr.data-state]="filterVisible === '1' ? 'yes' : 'no'"
+              >
+                <input
+                  type="checkbox"
+                  [checked]="filterVisible === '1'"
+                  (change)="toggleVisibleFilter($event.target.checked)"
+                  aria-label="Filtro visible"
+                >
+                <span class="visible-track"></span>
+                <span class="visible-text">
+                  {{ filterVisible === '1' ? 'Si' : 'No' }}
+                </span>
+              </label>
+            </div>
           </div>
         </div>
         <div class="row align-items-end">
-          <div class="col-12 text-right">
+          <div class="col-12">
             <button class="btn btn-outline-secondary mr-2" (click)="onLimpiar()" [disabled]="isLoading">Limpiar</button>
             <button class="btn btn-primary" (click)="onBuscar()" [disabled]="isLoading">Buscar</button>
           </div>

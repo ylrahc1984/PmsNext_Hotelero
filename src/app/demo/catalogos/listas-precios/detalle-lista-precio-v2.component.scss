@@ -138,6 +138,16 @@
   vertical-align: middle;
 }
 
+.table thead th.moneda-col,
+.table thead th.activo-col,
+.table thead th.acciones-col {
+  width: 1%;
+  white-space: nowrap;
+  text-align: center;
+  padding-left: 0.4rem;
+  padding-right: 0.4rem;
+}
+
 .table tbody td {
   padding: 0.5rem 0.75rem;
   vertical-align: middle;
@@ -272,6 +282,15 @@
   letter-spacing: 0.04em;
 }
 
+.moneda-cell,
+.activo-cell {
+  width: 1%;
+  white-space: nowrap;
+  text-align: center;
+  padding-left: 0.4rem;
+  padding-right: 0.4rem;
+}
+
 .field-error {
   border-color: #dc3545;
 }
@@ -287,7 +306,7 @@
   gap: 0.15rem;
   justify-content: flex-end;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   padding: 0.2rem;
   border-radius: 999px;
   border: 1px solid #e5e7eb;
@@ -295,8 +314,11 @@
 }
 
 .acciones-cell {
-  min-width: 220px;
+  width: 1%;
+  white-space: nowrap;
   text-align: right;
+  padding-left: 0.4rem;
+  padding-right: 0.4rem;
 }
 
 .btn-icon {

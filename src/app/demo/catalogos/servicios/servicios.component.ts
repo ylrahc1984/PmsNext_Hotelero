@@ -5,7 +5,7 @@ import { RouterModule } from '@angular/router';
 import Swal from 'sweetalert2';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
-import { ServiciosService, ServicioUI } from './servicios.service';
+import { ServiciosService, ServicioUI, CentroCostoOption, CategoriaOption } from './servicios.service';
 
 @Component({
   selector: 'app-servicios',
@@ -21,10 +21,10 @@ export class ServiciosComponent implements OnInit {
   filterNombre = '';
   filterCategoria = '';
   filterGrupo = '';
-  filterVisible = '';
+  filterVisible = '1';
 
-  categoriaOptions: string[] = [];
-  grupoOptions: string[] = [];
+  categoriaOptions: CategoriaOption[] = [];
+  grupoOptions: CentroCostoOption[] = [];
 
   currentPage = 1;
   pageSize = 20;
@@ -35,18 +35,20 @@ export class ServiciosComponent implements OnInit {
   private serviciosService = inject(ServiciosService);
 
   ngOnInit() {
+    this.loadCategoriaOptions();
+    this.loadGrupoOptions();
     this.loadServicios();
   }
 
   loadServicios(): void {
     this.isLoading = true;
-    const visible = this.filterVisible === '' ? undefined : Number(this.filterVisible);
+    const visible = Number(this.filterVisible);
     const codGrupo = this.filterGrupo.trim() || undefined;
     const codCateg = this.filterCategoria.trim() || undefined;
-    const nombre = this.filterNombre.trim();
+    const nombre = this.normalizeNombre(this.filterNombre);
 
     const request = nombre
-      ? this.serviciosService.buscarServicios(nombre, visible, this.currentPage, this.pageSize)
+      ? this.serviciosService.buscarServicios(nombre, visible, this.currentPage, this.pageSize, codGrupo, codCateg)
       : this.serviciosService.getServicios(visible, this.currentPage, this.pageSize, codGrupo, codCateg);
 
     request.subscribe({
@@ -56,7 +58,6 @@ export class ServiciosComponent implements OnInit {
         this.currentPage = Number(result.paginaActual ?? this.currentPage) || this.currentPage;
         this.pageSize = Number(result.pageSize ?? this.pageSize) || this.pageSize;
         this.totalPages = Number(result.totalPages ?? 1) || 1;
-        this.updateFilterOptions();
         this.applyLocalFilters();
         this.isLoading = false;
       },
@@ -72,27 +73,61 @@ export class ServiciosComponent implements OnInit {
     });
   }
 
-  private updateFilterOptions(): void {
-    const categorias = new Set(this.servicios.map((item) => item.codCateg).filter(Boolean));
-    const grupos = new Set(this.servicios.map((item) => item.codGrupo).filter(Boolean));
-    this.categoriaOptions = Array.from(categorias).sort();
-    this.grupoOptions = Array.from(grupos).sort();
+  private loadCategoriaOptions(): void {
+    this.serviciosService.getCategoriaOptions().subscribe({
+      next: (options) => {
+        const selected = this.filterCategoria.trim().toUpperCase();
+        const normalizedOptions = options.map((item) => ({
+          codigo: (item.codigo || '').trim().toUpperCase(),
+          nombre: (item.nombre || '').trim() || (item.codigo || '').trim().toUpperCase()
+        }));
+        const merged = selected && !normalizedOptions.some((item) => item.codigo === selected)
+          ? [...normalizedOptions, { codigo: selected, nombre: selected }]
+          : normalizedOptions;
+        this.categoriaOptions = merged.sort((a, b) => a.codigo.localeCompare(b.codigo));
+      },
+      error: (error) => {
+        console.error('Error al cargar categorias:', error);
+        this.categoriaOptions = [];
+      }
+    });
+  }
+
+  private loadGrupoOptions(): void {
+    this.serviciosService.getCentroCostoOptions(1, 50).subscribe({
+      next: (options) => {
+        const selected = this.filterGrupo.trim().toUpperCase();
+        const normalizedOptions = options.map((item) => ({
+          codigo: (item.codigo || '').trim().toUpperCase(),
+          nombre: (item.nombre || '').trim() || (item.codigo || '').trim().toUpperCase()
+        }));
+        const merged = selected && !normalizedOptions.some((item) => item.codigo === selected)
+          ? [...normalizedOptions, { codigo: selected, nombre: selected }]
+          : normalizedOptions;
+        this.grupoOptions = merged.sort((a, b) => a.codigo.localeCompare(b.codigo));
+      },
+      error: (error) => {
+        console.error('Error al cargar grupos:', error);
+        this.grupoOptions = [];
+      }
+    });
   }
 
   applyLocalFilters(): void {
     const categoria = this.filterCategoria.trim();
     const grupo = this.filterGrupo.trim();
-    const visible = this.filterVisible === '' ? null : Number(this.filterVisible);
+    const visible = Number(this.filterVisible);
 
     this.filteredServicios = this.servicios.filter((item) => {
       const matchesCategoria = !categoria || item.codCateg === categoria;
       const matchesGrupo = !grupo || item.codGrupo === grupo;
-      const matchesVisible = visible === null || item.visible === visible;
+      const matchesVisible = item.visible === visible;
       return matchesCategoria && matchesGrupo && matchesVisible;
     });
   }
 
   onBuscar(): void {
+    this.filterNombre = this.normalizeNombre(this.filterNombre);
     this.currentPage = 1;
     this.loadServicios();
   }
@@ -101,7 +136,7 @@ export class ServiciosComponent implements OnInit {
     this.filterNombre = '';
     this.filterCategoria = '';
     this.filterGrupo = '';
-    this.filterVisible = '';
+    this.filterVisible = '1';
     this.currentPage = 1;
     this.loadServicios();
   }
@@ -119,6 +154,14 @@ export class ServiciosComponent implements OnInit {
     }
     this.currentPage = nextPage;
     this.loadServicios();
+  }
+
+  toggleVisibleFilter(checked: boolean): void {
+    this.filterVisible = checked ? '1' : '0';
+  }
+
+  private normalizeNombre(value: string): string {
+    return (value || '').trim().replace(/\s+/g, ' ');
   }
 
   deleteServicio(servicio: ServicioUI): void {

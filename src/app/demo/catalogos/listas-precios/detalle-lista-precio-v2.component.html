@@ -57,9 +57,9 @@
           <th>Pax</th>
           <th>Hora</th>
           <th>Precios</th>
-          <th>Moneda</th>
-          <th>Activo</th>
-          <th class="text-end">Acciones</th>
+          <th class="moneda-col">Moneda</th>
+          <th class="activo-col">Activo</th>
+          <th class="text-end acciones-col">Acciones</th>
         </tr>
       </thead>
       <tbody>
@@ -88,9 +88,9 @@
             </td>
             <td class="hora-cell">
               <div class="range-pill">
-                <span>{{ regla.horaDesde.value }}</span>
+                <span>{{ regla.horaDesde.value | slice: 0:5 }}</span>
                 <span class="range-sep">–</span>
-                <span>{{ regla.horaHasta.value }}</span>
+                <span>{{ regla.horaHasta.value | slice: 0:5 }}</span>
               </div>
               <div class="field-error-text" *ngIf="regla.horaDesde.error || regla.horaHasta.error">
                 {{ regla.horaDesde.error || regla.horaHasta.error }}
@@ -239,7 +239,7 @@
                       <span class="field-label">Hora desde</span>
                       <input
                         type="time"
-                        step="1"
+                        step="60"
                         class="form-control form-control-sm"
                         [class.field-error]="regla.horaDesde.error"
                         [ngModel]="regla.horaDesde.value"
@@ -252,7 +252,7 @@
                       <span class="field-label">Hora hasta</span>
                       <input
                         type="time"
-                        step="1"
+                        step="60"
                         class="form-control form-control-sm"
                         [class.field-error]="regla.horaHasta.error"
                         [ngModel]="regla.horaHasta.value"
