@@ -92,8 +92,14 @@
                       <i class="feather icon-hash"></i>
                       CABYS
                     </label>
-                    <input type="text" class="form-control form-control-lg" [(ngModel)]="formData.cabys" name="cabys"
-                           placeholder="Codigo CABYS">
+                    <div class="cabys-input-group">
+                      <input type="text" class="form-control form-control-lg" [(ngModel)]="formData.cabys" name="cabys"
+                             placeholder="Codigo CABYS">
+                      <button type="button" class="btn btn-outline-primary" (click)="openCabysModal()" [disabled]="isLoading">
+                        <i class="feather icon-search"></i>
+                      </button>
+                    </div>
+                    <small class="text-muted">Consulta el codigo CABYS en Hacienda.</small>
                   </div>
                 </div>
                 <div class="col-md-6">
@@ -189,5 +195,118 @@
         </div>
       </div>
     </app-card>
+  </div>
+</div>
+
+<div class="cabys-modal-overlay" *ngIf="showCabysModal" (click)="closeCabysModal()">
+  <div class="cabys-modal" (click)="$event.stopPropagation()">
+    <div class="cabys-modal-header">
+      <div>
+        <h6 class="m-0">Consulta de CABYS</h6>
+        <small class="text-muted">Ministerio de Hacienda</small>
+      </div>
+      <button type="button" class="btn btn-sm btn-light" (click)="closeCabysModal()" [disabled]="cabysLoading">
+        <i class="feather icon-x"></i>
+      </button>
+    </div>
+
+    <div class="cabys-modal-body">
+      <form class="cabys-search" (ngSubmit)="onCabysSearch()">
+        <div class="row align-items-end">
+          <div class="col-md-8">
+            <label class="form-label">Buscar por descripcion</label>
+            <input
+              type="text"
+              class="form-control"
+              [(ngModel)]="cabysQuery"
+              name="cabysQuery"
+              placeholder="Ej. jugo de tomate"
+            >
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Top</label>
+            <input
+              type="number"
+              min="1"
+              max="50"
+              class="form-control"
+              [(ngModel)]="cabysTop"
+              name="cabysTop"
+            >
+          </div>
+          <div class="col-md-2 d-grid">
+            <button type="submit" class="btn btn-primary" [disabled]="cabysLoading">
+              <span *ngIf="cabysLoading" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+              Buscar
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <div class="cabys-status" *ngIf="cabysError">
+        <div class="alert alert-danger mb-0" role="alert">
+          {{ cabysError }}
+        </div>
+      </div>
+
+      <div class="cabys-status" *ngIf="cabysLoading && !cabysError">
+        <span class="loading-chip">
+          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+          Consultando CABYS...
+        </span>
+      </div>
+
+      <div class="cabys-results" *ngIf="!cabysLoading">
+        <div class="cabys-summary" *ngIf="cabysResults.length">
+          <span class="count-chip">{{ cabysResults.length }} resultados de {{ cabysTotal }}</span>
+        </div>
+
+        <div class="cabys-table-wrap" *ngIf="cabysResults.length; else cabysEmpty">
+          <div class="table-responsive cabys-table-responsive">
+            <table class="table table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>Codigo</th>
+                  <th>Descripcion</th>
+                  <th>Impuesto</th>
+                  <th>Categorias</th>
+                  <th class="text-end">Accion</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of cabysResults">
+                  <td class="font-monospace">{{ item.codigo }}</td>
+                  <td>
+                    <div class="cell-stack">
+                      <span class="cell-title">{{ item.descripcion }}</span>
+                      <span class="cell-subtitle">{{ item.categorias?.[item.categorias.length - 1] || 'Sin categoria' }}</span>
+                    </div>
+                  </td>
+                  <td>{{ item.impuesto }}%</td>
+                  <td>
+                    <div class="cabys-categories">
+                      <span class="category-chip" *ngFor="let categoria of item.categorias">{{ categoria }}</span>
+                    </div>
+                  </td>
+                  <td class="text-end">
+                    <button type="button" class="btn btn-sm btn-outline-primary" (click)="selectCabys(item)">
+                      Seleccionar
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <ng-template #cabysEmpty>
+          <div class="empty-state text-center p-4">
+            <i class="feather icon-search empty-icon"></i>
+            <p class="mb-1">Sin resultados</p>
+            <small class="text-muted">Intenta con otra descripcion.</small>
+          </div>
+        </ng-template>
+      </div>
+    </div>
   </div>
 </div>

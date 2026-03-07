@@ -36,7 +36,7 @@ export interface OperacionDetalle {
   tipoTarifa: string;
   totalServicio: number;
   estado: string;
-  procesado: boolean;
+  procesado: number | boolean | null;
   totalPax: number;
   codServicio: string;
   nomServicio: string;

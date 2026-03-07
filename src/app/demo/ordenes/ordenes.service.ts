@@ -227,6 +227,9 @@ export interface OrdenTrabajoDetalle {
   
   // Observaciones
   observaciones?: string;       // Observaciones del servicio
+
+  // Marca UI para indicar que proviene de un tramo pendiente
+  esRemanente?: boolean;
 }
 
 export interface OrdenTrabajo {
@@ -651,7 +654,10 @@ export class OrdenesService {
       moneda: disponible.moneda,
       
       // Observaciones
-      observaciones: disponible.observacion
+      observaciones: disponible.observacion,
+
+      // UI
+      esRemanente: (disponible as { esRemanente?: boolean })?.esRemanente ?? false
     };
   }
 

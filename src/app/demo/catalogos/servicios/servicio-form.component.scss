@@ -53,3 +53,150 @@
   padding-top: 0.75rem;
   border-top: 1px solid #e6e8ed;
 }
+
+.cabys-input-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+
+  .form-control {
+    flex: 1;
+  }
+}
+
+.cabys-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1050;
+}
+
+.cabys-modal {
+  background: #ffffff;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 980px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+}
+
+.cabys-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #e6e8ed;
+}
+
+.cabys-modal-body {
+  padding: 1rem 1.25rem 1.25rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.cabys-search {
+  margin-bottom: 1rem;
+}
+
+.cabys-status {
+  margin-bottom: 0.75rem;
+}
+
+.cabys-summary {
+  margin-bottom: 0.5rem;
+}
+
+.count-chip {
+  background: #eef2ff;
+  color: #4338ca;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.loading-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+}
+
+.cabys-modal .table th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6c757d;
+  border-top: none;
+}
+
+.cabys-modal .table td {
+  vertical-align: top;
+  font-size: 0.88rem;
+}
+
+.cabys-table-wrap {
+  overflow-x: auto;
+}
+
+.cabys-table-responsive {
+  overflow-x: visible;
+}
+
+.cell-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.cell-title {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.cell-subtitle {
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.cabys-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  max-height: 5.5rem;
+  overflow: auto;
+}
+
+.category-chip {
+  background: #f1f5f9;
+  color: #334155;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  line-height: 1.2;
+}
+
+.empty-state .empty-icon {
+  font-size: 2rem;
+  color: #94a3b8;
+}
+
+@media (max-width: 767px) {
+  .cabys-modal {
+    max-height: 94vh;
+  }
+
+  .cabys-modal-body {
+    padding: 0.9rem 1rem 1.1rem;
+  }
+}

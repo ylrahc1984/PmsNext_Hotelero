@@ -8,7 +8,6 @@
             <span *ngIf="codReservaActual" class="badge bg-light text-dark border">#{{ codReservaActual }}</span>
             <span *ngIf="codReservaActual" class="badge text-white" [ngClass]="estadoBadgeClass">{{ estadoLabel }}</span>
           </div>
-          <p class="text-muted mb-0 small">Información general y servicios</p>
         </div>
         <button class="btn btn-outline-secondary rsv-action-btn rsv-action-btn--outline rsv-action-btn--compact" (click)="cancelar()">
           <span class="rsv-action-btn__icon">

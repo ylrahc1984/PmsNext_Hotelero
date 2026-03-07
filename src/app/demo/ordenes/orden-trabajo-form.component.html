@@ -19,7 +19,7 @@
           <div>
             <h5 class="mb-1">{{ titulo }}</h5>
             <div class="text-muted small mb-1">
-              {{ empresa()?.MA04_Nombre || 'Empresa' }} · RUC: {{ empresa()?.MA04_Ruc || '-' }}
+              {{ empresa()?.MA04_Nombre || 'Empresa' }} · Cédula: {{ empresa()?.MA04_Ruc || '-' }}
             </div>
             <p class="text-muted mb-0 small">Asigne servicios a suplidores y genere la orden operativa</p>
           </div>
@@ -271,8 +271,7 @@
                 <div class="chofer-item" 
                      *ngFor="let chofer of suplidor.choferes"
                      [class.selected]="selectedChoferId === chofer.codigo"
-                     [class.disabled]="chofer.asignado"
-                     (click)="!chofer.asignado && selectChofer(chofer.codigo); $event.stopPropagation()">
+                     (click)="selectChofer(chofer.codigo); $event.stopPropagation()">
                   <div class="d-flex justify-content-between align-items-center">
                     <div>
                       <strong class="small">{{ chofer.nombre }}</strong>
@@ -305,7 +304,7 @@
             <div class="d-flex justify-content-between align-items-center">
               <div>
                 <h6 class="mb-0">Servicios pendientes</h6>
-                <small class="text-muted">Mostrando {{ detallesDisponibles.length }} servicios</small>
+                <small class="text-muted">Mostrando {{ detallesDisponiblesFiltrados.length }} servicios</small>
               </div>
               <button 
                 class="btn btn-outline-primary btn-sm" 
@@ -322,10 +321,10 @@
             </div>
 
             <div *ngIf="!selectedSupplierId && form.get('fechaServicio')?.value" class="alert alert-warning">
-              <i class="feather icon-alert-triangle"></i> Seleccione un suplidor para asignar servicios
+              <i class="feather icon-alert-triangle"></i> Seleccione un Transporte para asignar servicios
             </div>
 
-            <div class="table-responsive" *ngIf="detallesDisponibles.length">
+            <div class="table-responsive" *ngIf="detallesDisponiblesFiltrados.length">
               <table class="table table-hover table-sm mb-0">
                 <thead>
                   <tr>
@@ -340,7 +339,7 @@
                 </thead>
                 <tbody>
                   <tr 
-                    *ngFor="let det of detallesDisponibles"
+                    *ngFor="let det of detallesDisponiblesFiltrados"
                     [class.row-selected]="detallesSeleccionados.has(det.key)">
                     <td (click)="$event.stopPropagation()">
                       <input
@@ -414,7 +413,7 @@
               </table>
             </div>
 
-            <div *ngIf="!detallesDisponibles.length && form.get('fechaServicio')?.value" class="text-center text-muted py-4">
+            <div *ngIf="!detallesDisponiblesFiltrados.length && form.get('fechaServicio')?.value" class="text-center text-muted py-4">
               <i class="feather icon-calendar" style="font-size: 2rem; opacity: 0.3;"></i>
               <p class="mb-0 mt-2">No hay servicios para los filtros aplicados</p>
             </div>

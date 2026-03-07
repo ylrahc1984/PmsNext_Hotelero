@@ -15,6 +15,10 @@ import { MonedaService, MonedaUI } from '../administracion/monedas/moneda.servic
 import { AuthService } from 'src/app/core/services/auth.service';
 import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
 
+interface DetalleDisponibleUI extends ReservaDetalleDisponible {
+  esRemanente?: boolean;
+}
+
 @Component({
   selector: 'app-orden-trabajo-form',
   standalone: true,
@@ -59,7 +63,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     operador: [{ value: '', disabled: true }] // Usuario que crea la OT
   });
 
-  detallesDisponibles: ReservaDetalleDisponible[] = [];
+  detallesDisponibles: DetalleDisponibleUI[] = [];
   detallesSeleccionados = new Set<string>();
   detallesOrden: OrdenTrabajoDetalle[] = [];
   detallesOriginales: OrdenTrabajoDetalle[] = []; // Snapshot de detalles al cargar la orden
@@ -77,10 +81,12 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
   showConfigOT = false; // Controla el acordeón de configuración
   loadingSuplidores = false;
   loadingServicios = false;
+  remanentesPendientes: DetalleDisponibleUI[] = [];
+  private readonly remanentesStorageKey = 'ot_remanentes_pendientes';
   
   // Datos reales de suplidores con disponibilidad
   suplidoresDisponibles: SuplidorDisponibilidadUI[] = [];
-  horariosDisponibles = ['06:00', '08:00', '11:00', '11:30', '14:00', '16:00', '18:00'];
+  horariosDisponibles: string[] = [];
 
   // Catálogos para selectores
   tiposOT = [
@@ -97,6 +103,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
   origenDestinoEditados = new Map<string, { origenOT: string; destinoOT: string }>();
 
   ngOnInit(): void {
+    this.loadRemanentesFromStorage();
     // Cargar catálogo de monedas
     this.loadMonedas();
     
@@ -177,6 +184,14 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     return this.detallesOrden.reduce((sum, d) => sum + d.pax * 20, 0);
   }
 
+  get detallesDisponiblesFiltrados(): DetalleDisponibleUI[] {
+    const filtroHora = this.normalizeHora(this.selectedTime);
+    if (!filtroHora) {
+      return this.detallesDisponibles;
+    }
+    return this.detallesDisponibles.filter((detalle) => this.normalizeHora(detalle.hora) === filtroHora);
+  }
+
   get estadosDisponibles(): EstadoOrdenOption[] {
     return ESTADOS_OT;
   }
@@ -199,7 +214,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     return estado?.badge || 'badge-secondary';
   }
 
-  toggleSeleccion(detalle: ReservaDetalleDisponible, checked: boolean): void {
+  toggleSeleccion(detalle: DetalleDisponibleUI, checked: boolean): void {
     if (checked) {
       this.detallesSeleccionados.add(detalle.key);
     } else {
@@ -258,8 +273,11 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     this.procesarAgregarSeleccionados(seleccionados);
   }
 
-  private procesarAgregarSeleccionados(seleccionados: ReservaDetalleDisponible[]): void {
+  private procesarAgregarSeleccionados(seleccionados: DetalleDisponibleUI[]): void {
     let nextId = this.getNextDetalleId();
+    const nuevosRemanentes: DetalleDisponibleUI[] = [];
+    const remanentesEliminados = new Set<string>();
+
     seleccionados.forEach(det => {
       // Obtener origen/destino editados o usar los originales
       const editados = this.origenDestinoEditados.get(det.key);
@@ -268,7 +286,31 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
       
       const detalleOrden = this.ordenesService.mapDisponibleADetalle(det, nextId++, origenOT, destinoOT);
       this.detallesOrden.push(detalleOrden);
+
+      if (det.esRemanente) {
+        remanentesEliminados.add(det.key);
+      }
+
+      const remanente = this.buildRemanente(det, destinoOT);
+      if (remanente) {
+        nuevosRemanentes.push(remanente);
+      }
     });
+
+    if (remanentesEliminados.size > 0) {
+      this.remanentesPendientes = this.remanentesPendientes.filter(item => !remanentesEliminados.has(item.key));
+    }
+
+    nuevosRemanentes.forEach((remanente) => {
+      const existe = this.remanentesPendientes.some((item) => this.isSameRemanente(item, remanente));
+      if (!existe) {
+        this.remanentesPendientes.push(remanente);
+      }
+    });
+
+    if (remanentesEliminados.size > 0 || nuevosRemanentes.length > 0) {
+      this.persistRemanentes();
+    }
     
     // Limpiar selección y ediciones temporales
     this.detallesSeleccionados.clear();
@@ -282,6 +324,30 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     if (this.estadoBloqueado) {
       return;
     }
+    let remanentesActualizados = false;
+
+    if (detalle.esRemanente) {
+      const remanente = this.buildRemanenteFromOrdenDetalle(detalle);
+      if (remanente) {
+        const existe = this.remanentesPendientes.some((item) => this.isSameRemanente(item, remanente));
+        if (!existe) {
+          this.remanentesPendientes.push(remanente);
+          remanentesActualizados = true;
+        }
+      }
+    } else if (this.normalizeTexto(detalle.destinoOT) !== this.normalizeTexto(detalle.destinoReserva)) {
+      remanentesActualizados = this.removeRemanenteSegment(
+        detalle.detalleReservaId,
+        detalle.destinoOT,
+        detalle.destinoReserva,
+        detalle.hora
+      );
+    }
+
+    if (remanentesActualizados) {
+      this.persistRemanentes();
+    }
+
     this.detallesOrden = this.detallesOrden.filter(d => d.id !== detalle.id);
     this.recalcularTotales();
     this.refreshDisponibles();
@@ -558,7 +624,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
    * Actualiza el origen de la OT para un detalle seleccionado.
    * El cambio se almacena temporalmente hasta que se ejecute "Agregar Seleccionados".
    */
-  updateOrigenOT(detalle: ReservaDetalleDisponible, nuevoOrigen: string): void {
+  updateOrigenOT(detalle: DetalleDisponibleUI, nuevoOrigen: string): void {
     if (!this.origenDestinoEditados.has(detalle.key)) {
       // Primera edición, inicializar con valores originales
       this.origenDestinoEditados.set(detalle.key, {
@@ -574,7 +640,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
    * Actualiza el destino de la OT para un detalle seleccionado.
    * El cambio se almacena temporalmente hasta que se ejecute "Agregar Seleccionados".
    */
-  updateDestinoOT(detalle: ReservaDetalleDisponible, nuevoDestino: string): void {
+  updateDestinoOT(detalle: DetalleDisponibleUI, nuevoDestino: string): void {
     if (!this.origenDestinoEditados.has(detalle.key)) {
       // Primera edición, inicializar con valores originales
       this.origenDestinoEditados.set(detalle.key, {
@@ -589,14 +655,14 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
   /**
    * Obtiene el origen de la OT (editado o original) para mostrar en el input.
    */
-  getOrigenOT(detalle: ReservaDetalleDisponible): string {
+  getOrigenOT(detalle: DetalleDisponibleUI): string {
     return this.origenDestinoEditados.get(detalle.key)?.origenOT || detalle.origen;
   }
 
   /**
    * Obtiene el destino de la OT (editado o original) para mostrar en el input.
    */
-  getDestinoOT(detalle: ReservaDetalleDisponible): string {
+  getDestinoOT(detalle: DetalleDisponibleUI): string {
     return this.origenDestinoEditados.get(detalle.key)?.destinoOT || detalle.destino;
   }
 
@@ -675,6 +741,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     this.detallesOrden = [...orden.detalles];
     // Guardar snapshot de detalles originales para diff posterior
     this.detallesOriginales = JSON.parse(JSON.stringify(orden.detalles));
+    this.pruneRemanentesAsignados();
     this.estadoBloqueado = orden.estado === 'COM';
     
     // Cargar suplidor, vehículo y chofer si existen
@@ -721,6 +788,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     this.isEdit = true;
     this.titulo = `Editar Orden #${orden.numeroOrden}`;
     this.detallesOrden = [...orden.detalles];
+    this.pruneRemanentesAsignados();
     this.estadoBloqueado = orden.estado === 'COM';
     
     // Cargar suplidor, vehículo y chofer si existen
@@ -930,15 +998,275 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
         next: (detalles) => {
           // Filtrar los que ya están en la orden actual
           const idsAsignados = new Set(this.detallesOrden.map(d => d.detalleReservaId));
-          this.detallesDisponibles = detalles.filter(d => !idsAsignados.has(d.id));
+          const baseDisponibles = detalles
+            .filter(d => !idsAsignados.has(d.id))
+            .map(det => ({ ...det, esRemanente: false } as DetalleDisponibleUI));
+
+          const remanentesFecha = this.getRemanentesParaFecha(fecha)
+            .filter(rem => !this.isRemanenteAsignado(rem));
+
+          this.detallesDisponibles = [...baseDisponibles, ...remanentesFecha];
+          this.updateHorariosDisponibles(this.detallesDisponibles);
           this.loadingServicios = false;
         },
         error: (err) => {
           console.error('Error al cargar servicios disponibles:', err);
-          this.detallesDisponibles = [];
+          const remanentesFecha = this.getRemanentesParaFecha(fecha)
+            .filter(rem => !this.isRemanenteAsignado(rem));
+          this.detallesDisponibles = remanentesFecha;
+          this.updateHorariosDisponibles(this.detallesDisponibles);
           this.loadingServicios = false;
         }
       })
     );
+  }
+
+  private updateHorariosDisponibles(detalles: DetalleDisponibleUI[]): void {
+    const horariosUnicos = new Set<string>();
+    detalles.forEach((detalle) => {
+      const normalizado = this.normalizeHora(detalle.hora);
+      if (normalizado) {
+        horariosUnicos.add(normalizado);
+      }
+    });
+    this.horariosDisponibles = Array.from(horariosUnicos).sort((a, b) => a.localeCompare(b));
+    if (this.selectedTime && !horariosUnicos.has(this.selectedTime)) {
+      this.selectedTime = null;
+    }
+  }
+
+  private buildRemanente(detalle: DetalleDisponibleUI, destinoOT: string): DetalleDisponibleUI | null {
+    const destinoBase = detalle.destino || '';
+    const destinoNormalizado = this.normalizeTexto(destinoOT);
+    const baseNormalizado = this.normalizeTexto(destinoBase);
+
+    if (!destinoNormalizado || destinoNormalizado === baseNormalizado) {
+      return null;
+    }
+
+    return {
+      ...detalle,
+      key: this.buildRemanenteKey(detalle, destinoOT, destinoBase),
+      origen: destinoOT,
+      destino: destinoBase,
+      zonaOrigen: '',
+      origenPlaceId: '',
+      origenLat: 0,
+      origenLng: 0,
+      esRemanente: true
+    };
+  }
+
+  private buildRemanenteFromOrdenDetalle(detalle: OrdenTrabajoDetalle): DetalleDisponibleUI | null {
+    if (!detalle.detalleReservaId) {
+      return null;
+    }
+
+    const origen = detalle.origenOT || '';
+    const destino = detalle.destinoOT || '';
+
+    if (!origen || !destino) {
+      return null;
+    }
+
+    return {
+      key: this.buildRemanenteKeyFromValues(detalle.detalleReservaId, detalle.hora, origen, destino),
+      id: detalle.detalleReservaId,
+      codReserva: detalle.reservaId,
+      linea: 0,
+      cliente: detalle.clienteFinal,
+      telefono: detalle.telefonoCliente || '',
+      email: detalle.emailCliente || '',
+      agencia: detalle.agencia,
+      nombreAgencia: detalle.agencia,
+      estadoReserva: '',
+      folio: detalle.boleta || '',
+      tipoServicio: '',
+      codServicio: detalle.servicioId || '',
+      servicio: detalle.servicio,
+      observacion: detalle.observaciones || '',
+      fechaServicio: detalle.fechaServicio,
+      hora: detalle.hora,
+      origen,
+      zonaOrigen: '',
+      origenPlaceId: detalle.origenPlaceId || '',
+      origenLat: detalle.origenLat || 0,
+      origenLng: detalle.origenLng || 0,
+      destino,
+      zonaDestino: '',
+      destinoPlaceId: detalle.destinoPlaceId || '',
+      destinoLat: detalle.destinoLat || 0,
+      destinoLng: detalle.destinoLng || 0,
+      adultos: detalle.adultos || 0,
+      ninos: detalle.ninos || 0,
+      pax: detalle.pax,
+      precioAdulto: 0,
+      precioNino: 0,
+      montoServicio: detalle.montoServicio || 0,
+      moneda: detalle.moneda || '',
+      distanciaKm: 0,
+      tiempoEstimadoMin: 0,
+      asignadoOT: false,
+      codOrdenTrabajo: null,
+      esRemanente: true
+    };
+  }
+
+  private buildRemanenteKey(detalle: DetalleDisponibleUI, origen: string, destino: string): string {
+    return this.buildRemanenteKeyFromValues(detalle.id, detalle.hora, origen, destino);
+  }
+
+  private buildRemanenteKeyFromValues(detalleId: number, hora: string, origen: string, destino: string): string {
+    const origenKey = this.slugify(origen);
+    const destinoKey = this.slugify(destino);
+    const horaKey = this.normalizeHora(hora) || 'sin-hora';
+    return `rem-${detalleId}-${horaKey}-${origenKey}-${destinoKey}`;
+  }
+
+  private slugify(value: string): string {
+    const normalized = this.normalizeTexto(value);
+    return normalized ? normalized.replace(/\s+/g, '-').slice(0, 80) : 'sin-texto';
+  }
+
+  private isSameRemanente(a: DetalleDisponibleUI, b: DetalleDisponibleUI): boolean {
+    return (
+      a.id === b.id &&
+      this.normalizeHora(a.hora) === this.normalizeHora(b.hora) &&
+      this.normalizeTexto(a.origen) === this.normalizeTexto(b.origen) &&
+      this.normalizeTexto(a.destino) === this.normalizeTexto(b.destino)
+    );
+  }
+
+  private removeRemanenteSegment(
+    detalleReservaId: number | undefined,
+    origen: string,
+    destino: string,
+    hora: string
+  ): boolean {
+    if (!detalleReservaId) {
+      return false;
+    }
+    const before = this.remanentesPendientes.length;
+    this.remanentesPendientes = this.remanentesPendientes.filter(
+      (remanente) =>
+        !(
+          remanente.id === detalleReservaId &&
+          this.normalizeHora(remanente.hora) === this.normalizeHora(hora) &&
+          this.normalizeTexto(remanente.origen) === this.normalizeTexto(origen) &&
+          this.normalizeTexto(remanente.destino) === this.normalizeTexto(destino)
+        )
+    );
+    return this.remanentesPendientes.length !== before;
+  }
+
+  private isRemanenteAsignado(remanente: DetalleDisponibleUI): boolean {
+    return this.detallesOrden.some((detalle) => this.isSameSegment(remanente, detalle));
+  }
+
+  private isSameSegment(remanente: DetalleDisponibleUI, detalle: OrdenTrabajoDetalle): boolean {
+    if (!detalle.detalleReservaId) {
+      return false;
+    }
+    if (remanente.id !== detalle.detalleReservaId) {
+      return false;
+    }
+    return (
+      this.normalizeTexto(remanente.origen) === this.normalizeTexto(detalle.origenOT) &&
+      this.normalizeTexto(remanente.destino) === this.normalizeTexto(detalle.destinoOT)
+    );
+  }
+
+  private pruneRemanentesAsignados(): void {
+    if (!this.remanentesPendientes.length || !this.detallesOrden.length) {
+      return;
+    }
+    this.remanentesPendientes = this.remanentesPendientes.filter(
+      (remanente) => !this.isRemanenteAsignado(remanente)
+    );
+    this.persistRemanentes();
+  }
+
+  private getRemanentesParaFecha(fecha: string): DetalleDisponibleUI[] {
+    const normalized = this.normalizeFecha(fecha);
+    if (!normalized) {
+      return [];
+    }
+    return this.remanentesPendientes.filter(
+      (remanente) => this.normalizeFecha(remanente.fechaServicio) === normalized
+    );
+  }
+
+  private loadRemanentesFromStorage(): void {
+    try {
+      if (typeof localStorage === 'undefined') {
+        this.remanentesPendientes = [];
+        return;
+      }
+      const raw = localStorage.getItem(this.remanentesStorageKey);
+      if (!raw) {
+        this.remanentesPendientes = [];
+        return;
+      }
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) {
+        this.remanentesPendientes = [];
+        return;
+      }
+      this.remanentesPendientes = parsed.map((item) => ({ ...item, esRemanente: true })) as DetalleDisponibleUI[];
+    } catch (error) {
+      console.error('Error cargando remanentes locales:', error);
+      this.remanentesPendientes = [];
+    }
+  }
+
+  private persistRemanentes(): void {
+    try {
+      if (typeof localStorage === 'undefined') {
+        return;
+      }
+      if (!this.remanentesPendientes.length) {
+        localStorage.removeItem(this.remanentesStorageKey);
+        return;
+      }
+      const payload = this.remanentesPendientes.map(({ esRemanente, ...rest }) => rest);
+      localStorage.setItem(this.remanentesStorageKey, JSON.stringify(payload));
+    } catch (error) {
+      console.error('Error guardando remanentes locales:', error);
+    }
+  }
+
+  private normalizeFecha(value: string | null | undefined): string {
+    const trimmed = (value ?? '').trim();
+    if (!trimmed) {
+      return '';
+    }
+    const datePart = trimmed.split('T')[0];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+      return datePart;
+    }
+    const slashMatch = datePart.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (slashMatch) {
+      const [, day, month, year] = slashMatch;
+      return `${year}-${month}-${day}`;
+    }
+    return datePart;
+  }
+
+  private normalizeTexto(value: string | null | undefined): string {
+    return (value ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+  }
+
+  private normalizeHora(value: string | null | undefined): string {
+    const trimmed = (value ?? '').trim();
+    if (!trimmed) {
+      return '';
+    }
+    const match = trimmed.match(/^(\d{1,2}):(\d{2})/);
+    if (!match) {
+      return trimmed;
+    }
+    const horas = match[1].padStart(2, '0');
+    const minutos = match[2];
+    return `${horas}:${minutos}`;
   }
 }

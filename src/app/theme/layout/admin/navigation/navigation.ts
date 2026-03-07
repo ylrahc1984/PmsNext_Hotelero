@@ -108,7 +108,7 @@ export const NavigationItems: NavigationItem[] = [
           },
           {
             id: 'suplidores',
-            title: 'Suplidores',
+            title: 'Transportistas',
             type: 'item',
             url: '/comercial/suplidores',
             icon: 'feather icon-users',

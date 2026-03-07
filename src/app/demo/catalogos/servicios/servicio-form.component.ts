@@ -3,9 +3,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, NgForm } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { RouterModule } from '@angular/router';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import Swal from 'sweetalert2';
 import { forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, finalize } from 'rxjs/operators';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import {
@@ -37,6 +38,21 @@ interface ServicioFormData {
   compuesto: string;
 }
 
+interface CabysItem {
+  codigo: string;
+  descripcion: string;
+  categorias: string[];
+  impuesto: number;
+  uri: string;
+  estado: string;
+}
+
+interface CabysResponse {
+  total: number;
+  cantidad: number;
+  cabys: CabysItem[];
+}
+
 @Component({
   selector: 'app-servicio-form',
   imports: [CommonModule, SharedModule, FormsModule, RouterModule],
@@ -56,6 +72,15 @@ export class ServicioFormComponent implements OnInit {
   private serviciosService = inject(ServiciosService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private http = inject(HttpClient);
+
+  showCabysModal = false;
+  cabysQuery = '';
+  cabysTop = 10;
+  cabysResults: CabysItem[] = [];
+  cabysTotal = 0;
+  cabysLoading = false;
+  cabysError = '';
 
   ngOnInit() {
     const codReceta = this.route.snapshot.paramMap.get('codReceta') ?? '';
@@ -76,7 +101,7 @@ export class ServicioFormComponent implements OnInit {
       nomCorto: '',
       codCateg: '',
       codGrupo: '',
-      uMedida: 'UND',
+      uMedida: 'Unid',
       numPorciones: 1,
       ctoReceta: 0,
       ctoProduccion: 0,
@@ -198,7 +223,7 @@ export class ServicioFormComponent implements OnInit {
       nomCorto: servicio.nomCorto,
       codCateg: servicio.codCateg,
       codGrupo: servicio.codGrupo,
-      uMedida: servicio.uMedida || 'UND',
+      uMedida: servicio.uMedida || 'Unid',
       numPorciones: Number(servicio.numPorciones || 0),
       ctoReceta: Number(servicio.ctoReceta || 0),
       ctoProduccion: Number(servicio.ctoProduccion || 0),
@@ -319,5 +344,57 @@ export class ServicioFormComponent implements OnInit {
 
   cancel(): void {
     this.router.navigate(['/catalogos/servicios']);
+  }
+
+  openCabysModal(): void {
+    this.showCabysModal = true;
+    if (!this.cabysQuery) {
+      this.cabysQuery = this.formData.nomReceta?.trim() || '';
+    }
+  }
+
+  closeCabysModal(): void {
+    if (this.cabysLoading) {
+      return;
+    }
+    this.showCabysModal = false;
+  }
+
+  onCabysSearch(): void {
+    const query = this.cabysQuery?.trim();
+    if (!query) {
+      this.cabysResults = [];
+      this.cabysTotal = 0;
+      this.cabysError = 'Ingrese un texto para buscar.';
+      return;
+    }
+
+    const top = Math.min(50, Math.max(1, Number(this.cabysTop) || 10));
+    this.cabysTop = top;
+    this.cabysLoading = true;
+    this.cabysError = '';
+
+    const params = new HttpParams().set('q', query).set('top', String(top));
+    this.http
+      .get<CabysResponse>('https://api.hacienda.go.cr/fe/cabys', { params })
+      .pipe(
+        catchError((error) => {
+          console.error('Error al consultar CABYS:', error);
+          this.cabysError = 'No se pudo consultar CABYS.';
+          return of({ total: 0, cantidad: 0, cabys: [] } as CabysResponse);
+        }),
+        finalize(() => {
+          this.cabysLoading = false;
+        })
+      )
+      .subscribe((response) => {
+        this.cabysTotal = Number(response?.total ?? 0);
+        this.cabysResults = response?.cabys ?? [];
+      });
+  }
+
+  selectCabys(item: CabysItem): void {
+    this.formData.cabys = item?.codigo ?? '';
+    this.showCabysModal = false;
   }
 }

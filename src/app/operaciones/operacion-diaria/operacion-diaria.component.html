@@ -93,7 +93,9 @@
                   <th class="text-center">Pax</th>
                   <th class="text-end">Total</th>
                   <th>Estado</th>
+                  <th>Transporte</th>
                   <th>Usuario</th>
+                  <th class="text-end">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -127,10 +129,15 @@
                     </span>
                   </td>
                   <td>
+                    <span class="badge" [ngClass]="getTransporteBadge(detalle)">
+                      {{ getEstadoTransporte(detalle) }}
+                    </span>
+                  </td>
+                  <td>
                     <div class="fw-semibold">{{ detalle.usuario }}</div>
                     <div class="indicator-row">
                       <i
-                        *ngIf="detalle.procesado"
+                        *ngIf="isTransporteAsignado(detalle)"
                         class="feather icon-check-circle text-success"
                         title="Procesado"
                         aria-hidden="true"
@@ -152,6 +159,33 @@
                         aria-label="Observacion"
                         tabindex="0"
                       ></i>
+                    </div>
+                  </td>
+                  <td class="text-end action-cell">
+                    <div ngbDropdown container="body" placement="bottom-end" class="action-menu">
+                      <button type="button" ngbDropdownToggle class="action-toggle" aria-label="Abrir acciones">
+                        <i class="feather icon-chevron-down" aria-hidden="true"></i>
+                      </button>
+                      <div ngbDropdownMenu class="dropdown-menu">
+                        <button
+                          type="button"
+                          ngbDropdownItem
+                          class="dropdown-item"
+                          (click)="onCheckIn(detalle)"
+                          [disabled]="isCheckingIn(detalle) || isCheckInRealizado(detalle)"
+                        >
+                          <i class="feather icon-log-in" aria-hidden="true"></i>
+                          Check In
+                        </button>
+                        <button type="button" ngbDropdownItem class="dropdown-item">
+                          <i class="feather icon-printer" aria-hidden="true"></i>
+                          Imprimir Voucher
+                        </button>
+                        <button type="button" ngbDropdownItem class="dropdown-item">
+                          <i class="feather icon-file-text" aria-hidden="true"></i>
+                          Facturar Reserva
+                        </button>
+                      </div>
                     </div>
                   </td>
                 </tr>

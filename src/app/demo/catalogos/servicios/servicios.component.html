@@ -77,6 +77,7 @@
               <th>Nombre</th>
               <th>Categoria</th>
               <th>Grupo</th>
+              <th>Cabys</th>
               <th>Visible</th>
               <th>Acciones</th>
             </tr>
@@ -87,6 +88,7 @@
               <td>{{ servicio.nomReceta }}</td>
               <td>{{ servicio.codCateg }}</td>
               <td>{{ servicio.codGrupo }}</td>
+              <td>{{ servicio.cabys }}</td>
               <td>
                 <span class="badge {{ getVisibleBadge(servicio.visible) }}">
                   {{ servicio.visible === 1 ? 'Si' : 'No' }}

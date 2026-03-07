@@ -1,10 +1,13 @@
 import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Observable, Subject, catchError, debounceTime, filter, map, merge, of, shareReplay, startWith, switchMap } from 'rxjs';
+import { Observable, Subject, catchError, debounceTime, filter, finalize, map, merge, of, shareReplay, startWith, switchMap } from 'rxjs';
+import Swal from 'sweetalert2';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { OperacionDiariaService, OperacionDiariaParams } from './operacion-diaria.service';
+import { AuthService } from 'src/app/core/services/auth.service';
 import {
   BloqueHora,
   OperacionDetalle,
@@ -29,6 +32,8 @@ interface OperacionDiariaViewState {
 export class OperacionDiariaComponent {
   private readonly fb = inject(FormBuilder);
   private readonly operacionDiariaService = inject(OperacionDiariaService);
+  private readonly http = inject(HttpClient);
+  private readonly authService = inject(AuthService);
 
   readonly today = this.toDateInput(new Date());
 
@@ -45,6 +50,7 @@ export class OperacionDiariaComponent {
   page = 1;
   pageSize = 50;
   totalRegistros = 0;
+  checkingIn = new Set<number | string>();
 
   private readonly manualRefresh$ = new Subject<void>();
   private readonly autoRefresh$ = this.form.valueChanges.pipe(
@@ -137,10 +143,88 @@ export class OperacionDiariaComponent {
 
   getEstadoBadge(estado: string): string {
     const code = (estado ?? '').toString().trim().toUpperCase();
+    if (code === 'CHK') return 'bg-info';
     if (code === 'CON') return 'bg-success';
     if (code === 'PEN') return 'bg-warning text-dark';
     if (code === 'CAN') return 'bg-danger';
     return 'bg-secondary';
+  }
+
+  isTransporteAsignado(detalle: OperacionDetalle): boolean {
+    const raw = (detalle?.procesado ?? 0) as unknown;
+    if (raw === true) return true;
+    if (raw === false || raw === null || raw === undefined) return false;
+    return Number(raw) === 1;
+  }
+
+  getEstadoTransporte(detalle: OperacionDetalle): string {
+    return this.isTransporteAsignado(detalle) ? 'Asignado' : 'Sin asignar';
+  }
+
+  getTransporteBadge(detalle: OperacionDetalle): string {
+    return this.isTransporteAsignado(detalle) ? 'bg-success' : 'bg-secondary';
+  }
+
+  isCheckInRealizado(detalle: OperacionDetalle): boolean {
+    const estado = (detalle?.estado ?? '').toString().trim().toUpperCase();
+    return estado === 'CHK';
+  }
+
+  isCheckingIn(detalle: OperacionDetalle): boolean {
+    return this.checkingIn.has(this.getDetalleKey(detalle));
+  }
+
+  onCheckIn(detalle: OperacionDetalle): void {
+    if (!detalle?.prV02_CodReserva || this.isCheckInRealizado(detalle)) {
+      return;
+    }
+    Swal.fire({
+      title: 'Confirmar Check In',
+      text: `Desea marcar la reserva ${detalle.prV02_CodReserva} como Check In?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Si, continuar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (!result.isConfirmed) {
+        return;
+      }
+      this.executeCheckIn(detalle);
+    });
+  }
+
+  private executeCheckIn(detalle: OperacionDetalle): void {
+    const key = this.getDetalleKey(detalle);
+    const operador = this.getOperador();
+
+    this.checkingIn.add(key);
+    this.http
+      .post('http://localhost:5000/api/reserva/checkin', {
+        codReserva: detalle.prV02_CodReserva,
+        operador
+      })
+      .pipe(finalize(() => this.checkingIn.delete(key)))
+      .subscribe({
+        next: () => {
+          detalle.estado = 'CHK';
+          Swal.fire({
+            title: 'Check In realizado',
+            text: `Reserva ${detalle.prV02_CodReserva} actualizada.`,
+            icon: 'success',
+            timer: 1800,
+            showConfirmButton: false
+          });
+          this.buscar();
+        },
+        error: (error) => {
+          console.error('Error haciendo check in:', error);
+          Swal.fire({
+            title: 'Error',
+            text: 'No se pudo hacer Check In de la reserva.',
+            icon: 'error'
+          });
+        }
+      });
   }
 
   getServiceColor(codServicio: string): string {
@@ -161,6 +245,15 @@ export class OperacionDiariaComponent {
 
   trackByResumen(index: number, resumen: ResumenActividadHora): string {
     return `${resumen.bloqueHora}-${resumen.codServicio}-${index}`;
+  }
+
+  private getDetalleKey(detalle: OperacionDetalle): number | string {
+    return detalle.prV02_ID ?? detalle.prV02_CodReserva ?? 'detalle';
+  }
+
+  private getOperador(): string {
+    const user = this.authService.getCurrentUser();
+    return user?.usuario || user?.nombre || 'Admin';
   }
 
   private buildParams(): OperacionDiariaParams {

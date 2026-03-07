@@ -45,13 +45,13 @@
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  padding: 1rem 1.25rem;
+  padding: 0.65rem 1rem;
   background: linear-gradient(90deg, #f7f9ff 0%, #f1f5fb 100%);
   border-bottom: 1px solid #e6eaf2;
 }
 
 .hour-title {
-  font-size: 1.35rem;
+  font-size: 1.1rem;
   font-weight: 700;
   letter-spacing: 0.03em;
   color: #1f2a44;
@@ -59,23 +59,23 @@
 
 .hour-metrics {
   display: flex;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .metric span {
   display: block;
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: #7b879d;
 }
 
 .metric strong {
-  font-size: 1.05rem;
+  font-size: 0.92rem;
   color: #1f2a44;
 }
 
-.table thead th {
+.hour-card .table thead th {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -83,20 +83,26 @@
   border-bottom: 1px solid #e6eaf2;
 }
 
-.table tbody tr {
+.hour-card .table tbody tr {
   border-bottom: 1px solid #eef1f6;
 }
 
-.table tbody tr:hover {
+.hour-card .table tbody tr:hover {
   background: #f8fafc;
+}
+
+.hour-card .table tbody td {
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+  font-size: 0.82rem;
 }
 
 .service-chip {
   display: inline-flex;
   align-items: center;
-  padding: 0.2rem 0.65rem;
+  padding: 0.15rem 0.55rem;
   border-radius: 999px;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 600;
   border: 1px solid transparent;
   white-space: nowrap;
@@ -127,7 +133,7 @@
 }
 
 .estado-badge {
-  padding: 0.35rem 0.6rem;
+  padding: 0.2rem 0.5rem;
   font-weight: 600;
   border-radius: 999px;
 }
@@ -136,12 +142,68 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  margin-top: 0.35rem;
-  font-size: 1rem;
+  margin-top: 0.2rem;
+  font-size: 0.9rem;
 }
 
 .indicator-row .icon-alert-circle {
   cursor: pointer;
+}
+
+.action-cell {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.action-menu .action-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #1f2a44;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+}
+
+.action-menu .action-toggle:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.action-menu .dropdown-menu {
+  min-width: 12rem;
+  padding: 0.35rem;
+  border-radius: 12px;
+  border: 1px solid #e6eaf2;
+  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.18);
+}
+
+.action-menu .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 10px;
+  font-weight: 600;
+  color: #1f2a44;
+  font-size: 0.85rem;
+}
+
+.action-menu .dropdown-item i {
+  font-size: 1rem;
+  color: #4f5d78;
+}
+
+.action-menu .dropdown-item:hover,
+.action-menu .dropdown-item:focus {
+  background: #f1f5fb;
+  color: #1f2a44;
 }
 
 .resumen-actividad {
