@@ -33,7 +33,7 @@
   margin: 0;
   font-weight: 700;
   color: #0f172a;
-  font-size: 1.35rem;
+  font-size: 1.20rem;
   line-height: 1.2;
 }
 
@@ -122,6 +122,26 @@
   grid-template-columns: minmax(0, 1fr) 1px 260px;
   gap: 0.9rem;
   align-items: start;
+  font-size: 0.9rem;
+}
+
+.bank-card .form-control,
+.bank-card .form-select {
+  font-size: 0.80rem;
+}
+
+.bank-card .floating-field label {
+  font-size: 0.78rem;
+}
+
+.bank-card .summary-title,
+.bank-card .depositante-title,
+.bank-card .summary-item {
+  font-size: 0.82rem;
+}
+
+.bank-card .summary-hint {
+  font-size: 0.76rem;
 }
 
 .bank-fields {

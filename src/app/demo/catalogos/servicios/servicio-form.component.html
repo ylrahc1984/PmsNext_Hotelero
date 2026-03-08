@@ -108,8 +108,35 @@
                       <i class="feather icon-image"></i>
                       Imagen (URL)
                     </label>
-                    <input type="url" class="form-control form-control-lg" [(ngModel)]="formData.urlImagen" name="urlImagen"
-                           placeholder="https://">
+                    <div class="image-field">
+                      <div
+                        class="image-preview"
+                        [class.has-image]="!!formData.urlImagen"
+                        [ngStyle]="{ 'background-image': formData.urlImagen ? 'url(' + formData.urlImagen + ')' : 'none' }"
+                      >
+                        <div class="image-placeholder">
+                          <i class="feather icon-image"></i>
+                          <span>Sin imagen</span>
+                        </div>
+                      </div>
+                      <div class="image-actions">
+                        <div class="image-url-row">
+                          <input
+                            type="url"
+                            class="form-control form-control-lg image-url-input"
+                            [(ngModel)]="formData.urlImagen"
+                            name="urlImagen"
+                            placeholder="https://"
+                          >
+                          <label class="btn btn-outline-primary btn-sm image-upload-btn">
+                            <input type="file" class="image-file-input" accept="image/*">
+                            <i class="feather icon-upload"></i>
+                            Subir
+                          </label>
+                        </div>
+                        <small class="text-muted">La subida a Cloudinary se habilitará pronto. Por ahora pega la URL.</small>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -93,6 +93,7 @@
                   <th class="text-center">Pax</th>
                   <th class="text-end">Total</th>
                   <th>Estado</th>
+                  <th>Facturado</th>
                   <th>Transporte</th>
                   <th>Usuario</th>
                   <th class="text-end">Acciones</th>
@@ -126,6 +127,11 @@
                   <td>
                     <span class="badge estado-badge" [ngClass]="getEstadoBadge(detalle.estado)">
                       {{ detalle.estado }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge" [ngClass]="detalle.facturado === 1 ? 'bg-success' : 'bg-warning text-dark'">
+                      {{ detalle.facturado === 1 ? 'Facturado' : 'Pendiente' }}
                     </span>
                   </td>
                   <td>
@@ -177,11 +183,23 @@
                           <i class="feather icon-log-in" aria-hidden="true"></i>
                           Check In
                         </button>
-                        <button type="button" ngbDropdownItem class="dropdown-item">
+                        <button
+                          type="button"
+                          ngbDropdownItem
+                          class="dropdown-item"
+                          (click)="onPrintVoucher(detalle)"
+                          [disabled]="isPrintingVoucher(detalle)"
+                        >
                           <i class="feather icon-printer" aria-hidden="true"></i>
-                          Imprimir Voucher
+                          {{ isPrintingVoucher(detalle) ? 'Imprimiendo...' : 'Imprimir Voucher' }}
                         </button>
-                        <button type="button" ngbDropdownItem class="dropdown-item">
+                        <button
+                          type="button"
+                          ngbDropdownItem
+                          class="dropdown-item"
+                          (click)="onFacturarReserva(detalle)"
+                          [disabled]="!detalle.prV02_CodReserva || !detalle.codAgencia"
+                        >
                           <i class="feather icon-file-text" aria-hidden="true"></i>
                           Facturar Reserva
                         </button>

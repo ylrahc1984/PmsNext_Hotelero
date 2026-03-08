@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { forkJoin } from 'rxjs';
 import { distinctUntilChanged, finalize, startWith } from 'rxjs/operators';
@@ -40,6 +40,7 @@ import {
   ReservaPendienteDetalle,
   ReservasFacturacionService
 } from 'src/app/finanzas/services/reservas-facturacion.service';
+import { ReservasService } from 'src/app/demo/reservas/services/reservas.service';
 import type {
   ConfirmarFacturaPayload,
   ConfirmarFacturaResponse,
@@ -70,6 +71,7 @@ export class NuevaFacturaComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly monedaService = inject(MonedaService);
@@ -81,6 +83,7 @@ export class NuevaFacturaComponent implements OnInit {
   private readonly planesTarifasService = inject(PlanesTarifasService);
   private readonly listaPrecioService = inject(ListaPrecioService);
   private readonly reservasFacturacionService = inject(ReservasFacturacionService);
+  private readonly reservasService = inject(ReservasService);
 
   private readonly apiUrl = `${environment.apiUrl}/facturacion/confirmar`;
 
@@ -212,6 +215,7 @@ export class NuevaFacturaComponent implements OnInit {
     this.cargarFormasPago();
     this.cargarPlanesTarifarios();
     this.cargarListasPrecio();
+    this.initReservaFromQuery();
   }
 
   get detalleArray(): FormArray<FormGroup<DetalleForm>> {
@@ -783,6 +787,56 @@ export class NuevaFacturaComponent implements OnInit {
           this.cdr.markForCheck();
         }
       });
+  }
+
+  private initReservaFromQuery(): void {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      const codReserva = (params.get('codReserva') ?? '').toString().trim();
+      const codAgencia = (params.get('codAgencia') ?? '').toString().trim();
+
+      if (!codReserva || this.locked) {
+        return;
+      }
+
+      if (this.modoReserva && this.reservaActual === codReserva) {
+        return;
+      }
+
+      if (codAgencia) {
+        this.cargarReservaDesdeSeleccion({ codReserva, codAgencia });
+        return;
+      }
+
+      this.reservaLoading = true;
+      this.reservaErrorMessage = null;
+      this.cdr.markForCheck();
+
+      this.reservasService
+        .getReservaByCod(codReserva)
+        .pipe(
+          finalize(() => {
+            this.reservaLoading = false;
+            this.cdr.markForCheck();
+          }),
+          takeUntilDestroyed(this.destroyRef)
+        )
+        .subscribe({
+          next: (reserva) => {
+            const agencia = (reserva?.PRV01_CodAgencia ?? '').toString().trim();
+            if (!agencia) {
+              this.reservaErrorMessage = 'No se pudo determinar el código de agencia para facturar.';
+              this.cdr.markForCheck();
+              return;
+            }
+            this.cargarReservaDesdeSeleccion({ codReserva, codAgencia: agencia });
+          },
+          error: (error: unknown) => {
+            this.reservaErrorMessage =
+              error instanceof Error ? error.message : 'No se pudo cargar la reserva seleccionada.';
+            this.cdr.markForCheck();
+          }
+        });
+    });
   }
 
   private aplicarClienteReserva(cliente: ClienteUI | null, codAgencia: string): void {

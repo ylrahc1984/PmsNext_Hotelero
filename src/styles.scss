@@ -139,3 +139,10 @@ gmpx-place-autocomplete.places-autocomplete-themed {
 .rsv-icon-btn i {
   font-size: 16px;
 }
+
+/* Tablas: padding vertical compacto reutilizable */
+.table-compact th,
+.table-compact td {
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+}

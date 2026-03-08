@@ -3,7 +3,6 @@
     <app-card cardTitle="Ordenes de Trabajo">
       <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
         <div>
-          <h5 class="mb-1">Ordenes de Trabajo</h5>
           <p class="mb-0 text-muted">Listado general de ordenes generadas desde las reservas y asignadas a proveedores.</p>
         </div>
         <button class="btn btn-primary" (click)="nuevaOrden()" [disabled]="isLoading">
@@ -51,7 +50,7 @@
       </div>
 
       <div class="table-responsive">
-        <table class="table table-hover mb-0">
+        <table class="table table-hover mb-0 table-compact">
           <thead>
             <tr>
               <th>Código OT</th>

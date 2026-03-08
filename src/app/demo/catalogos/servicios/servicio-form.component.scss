@@ -40,6 +40,74 @@
   margin-bottom: 1.25rem;
 }
 
+.image-field {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.image-preview {
+  position: relative;
+  width: 140px;
+  height: 110px;
+  border-radius: 12px;
+  border: 1px dashed #cbd5f5;
+  background: linear-gradient(135deg, #f8fafc, #eef2ff);
+  background-size: cover;
+  background-position: center;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.image-preview.has-image {
+  border-style: solid;
+}
+
+.image-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  color: #64748b;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.image-preview.has-image .image-placeholder {
+  opacity: 0;
+}
+
+.image-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.image-url-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.image-url-input {
+  flex: 1;
+}
+
+.image-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 10px;
+  padding: 0.4rem 0.75rem;
+  white-space: nowrap;
+}
+
+.image-file-input {
+  display: none;
+}
+
 .section-title {
   font-weight: 600;
   font-size: 0.95rem;
@@ -198,5 +266,18 @@
 
   .cabys-modal-body {
     padding: 0.9rem 1rem 1.1rem;
+  }
+
+  .image-field {
+    grid-template-columns: 1fr;
+  }
+
+  .image-preview {
+    width: 100%;
+  }
+
+  .image-url-row {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

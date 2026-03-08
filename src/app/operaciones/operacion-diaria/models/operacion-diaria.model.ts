@@ -28,6 +28,7 @@ export interface OperacionDetalle {
   prV02_CodReserva: string;
   prV02_FecServicio: string;
   prV02_HoraServicio: string;
+  codAgencia: string;
   agencia: string;
   cliente: string;
   lugarPickup: string;
@@ -37,6 +38,7 @@ export interface OperacionDetalle {
   totalServicio: number;
   estado: string;
   procesado: number | boolean | null;
+  facturado: 0 | 1;
   totalPax: number;
   codServicio: string;
   nomServicio: string;
