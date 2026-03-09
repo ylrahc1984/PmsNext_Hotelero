@@ -1,0 +1,235 @@
+<div class="detail-page">
+  <div class="detail-page__header">
+    <div class="detail-page__title-block" *ngIf="encabezado as header">
+      <div class="detail-page__title-row">
+        <h2 class="detail-page__title">Factura</h2>
+        <span class="doc-chip doc-chip--number">#{{ header.numDocu }}</span>
+        <span class="doc-chip doc-chip--type">{{ header.tipDocu }}</span>
+        <span class="doc-chip doc-chip--status">{{ header.estado || 'N/D' }}</span>
+      </div>
+      <div class="detail-page__meta">{{ header.proveedor }} · RUC: {{ header.rucProveedor || 'N/D' }}</div>
+      <div class="detail-page__submeta">Resumen, detalle y pagos</div>
+    </div>
+
+    <div class="detail-page__actions">
+      <button class="icon-action" type="button" (click)="volver()" aria-label="Volver">
+        <i class="feather icon-chevron-left"></i>
+      </button>
+      <button class="icon-action" type="button" disabled aria-label="Actualizar">
+        <i class="feather icon-rotate-ccw"></i>
+      </button>
+      <button class="icon-action icon-action--primary" type="button" disabled aria-label="Imprimir">
+        <i class="feather icon-printer"></i>
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert alert-danger mb-4">
+    <i class="feather icon-alert-triangle me-2"></i>
+    {{ errorMessage }}
+  </div>
+
+  <div *ngIf="loading" class="loading-panel">
+    <span class="spinner-border" aria-hidden="true"></span>
+    <p class="mb-0">Cargando detalle de compra...</p>
+  </div>
+
+  <ng-container *ngIf="!loading && encabezado as header">
+    <div class="detail-top-grid">
+      <section class="panel panel--general">
+        <div class="panel__header">
+          <div class="panel__title">
+            <i class="feather icon-file-text"></i>
+            <span>Datos Generales</span>
+          </div>
+        </div>
+
+        <div class="general-grid">
+          <div class="general-field">
+            <span class="general-field__label">Tipo documento</span>
+            <strong>{{ header.tipDocu }}</strong>
+          </div>
+          <div class="general-field">
+            <span class="general-field__label">Serie / Número</span>
+            <strong>{{ header.serie }}-{{ header.numFactura }}</strong>
+          </div>
+          <div class="general-field">
+            <span class="general-field__label">Fecha documento</span>
+            <strong>{{ formatDate(header.fechaFactura) }}</strong>
+          </div>
+
+          <div class="general-field general-field--wide">
+            <span class="general-field__label">Proveedor</span>
+            <strong>{{ header.proveedor }}</strong>
+            <small>{{ header.codProveedor }} · {{ header.rucProveedor || 'N/D' }}</small>
+          </div>
+          <div class="general-field">
+            <span class="general-field__label">Forma pago</span>
+            <strong>{{ header.formaPago || '—' }}</strong>
+          </div>
+          <div class="general-field">
+            <span class="general-field__label">Tipo doc. proveedor</span>
+            <strong>{{ header.tipDocProveedor || '—' }}</strong>
+          </div>
+
+          <div class="general-field">
+            <span class="general-field__label">Moneda</span>
+            <strong>{{ header.moneda }}</strong>
+          </div>
+          <div class="general-field">
+            <span class="general-field__label">Tipo cambio</span>
+            <strong>{{ formatMoney(header.tipoCambio) }}</strong>
+          </div>
+          <div class="general-field">
+            <span class="general-field__label">Operador</span>
+            <strong>{{ header.operador || 'N/D' }}</strong>
+          </div>
+          <div class="general-field">
+            <span class="general-field__label">Orden compra</span>
+            <strong>{{ header.numOrden || '—' }}</strong>
+          </div>
+
+          <div class="general-field">
+            <span class="general-field__label">Concepto</span>
+            <strong>{{ header.concepto || '—' }}</strong>
+          </div>
+        </div>
+      </section>
+
+      <aside class="summary-stack">
+        <section class="summary-card">
+          <div class="summary-card__head">
+            <span>Total documento</span>
+          </div>
+          <div class="summary-card__body">
+            <div class="summary-card__amount">
+              {{ formatMoney(header.total) }}
+              <span class="summary-card__currency">{{ header.moneda }}</span>
+            </div>
+            <button class="summary-card__icon" type="button" disabled aria-label="Documento">
+              <i class="feather icon-credit-card"></i>
+            </button>
+          </div>
+          <div class="summary-card__foot">Líneas: {{ detalleLineas.length }} · Pagos: {{ pagos.length }}</div>
+        </section>
+
+        <section class="panel panel--totals">
+          <div class="totals-list">
+            <div class="totals-row">
+              <span>Subtotal</span>
+              <strong>{{ formatMoney(header.subTotal) }}</strong>
+            </div>
+            <div class="totals-row">
+              <span>Descuento</span>
+              <strong>{{ formatMoney(0) }}</strong>
+            </div>
+            <div class="totals-row">
+              <span>Impuestos</span>
+              <strong>{{ formatMoney(header.impuesto) }}</strong>
+            </div>
+            <div class="totals-divider"></div>
+            <div class="totals-row totals-row--strong">
+              <span>Total</span>
+              <strong>{{ formatMoney(header.total) }}</strong>
+            </div>
+            <div class="totals-row">
+              <span>Total Pagos</span>
+              <strong>{{ formatMoney(header.totalPagado) }}</strong>
+            </div>
+            <div class="totals-row totals-row--danger">
+              <span>Diferencia</span>
+              <strong>{{ formatMoney(header.totalPagado - header.total) }}</strong>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </div>
+
+    <section class="panel panel--table mt-4">
+      <div class="panel__header">
+        <div class="panel__title">
+          <i class="feather icon-layers"></i>
+          <span>Detalle</span>
+          <span class="count-badge">{{ detalleLineas.length }}</span>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-compact detail-table mb-0">
+          <thead>
+            <tr>
+              <th>Orden</th>
+              <th>Código</th>
+              <th>Descripción</th>
+              <th>Almacén</th>
+              <th class="text-end">Cantidad</th>
+              <th>Unidad</th>
+              <th class="text-end">Costo</th>
+              <th class="text-end">Impuesto</th>
+              <th class="text-end">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let linea of detalleLineas; trackBy: trackByLinea">
+              <td>{{ linea.orden }}</td>
+              <td class="font-monospace">{{ linea.codProducto }}</td>
+              <td class="detail-table__desc">{{ linea.producto }}</td>
+              <td>{{ linea.almacen || '—' }}</td>
+              <td class="text-end">{{ formatMoney(linea.cantidad) }}</td>
+              <td>{{ linea.undMedida || '—' }}</td>
+              <td class="text-end">{{ formatMoney(linea.costoReal) }}</td>
+              <td class="text-end">{{ formatMoney(linea.mtoImpto) }}</td>
+              <td class="text-end detail-table__total">{{ formatMoney(linea.total) }}</td>
+            </tr>
+            <tr *ngIf="!detalleLineas.length">
+              <td colspan="9" class="text-center text-muted py-4">No hay líneas de detalle para mostrar.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel panel--table mt-4">
+      <div class="panel__header">
+        <div class="panel__title">
+          <i class="feather icon-credit-card"></i>
+          <span>Pagos</span>
+          <span class="count-badge">{{ pagos.length }}</span>
+        </div>
+      </div>
+
+      <div class="table-responsive" *ngIf="pagos.length; else noPagos">
+        <table class="table table-compact payments-table mb-0">
+          <thead>
+            <tr>
+              <th>Orden</th>
+              <th>Forma Pago</th>
+              <th>Tipo</th>
+              <th>Moneda</th>
+              <th class="text-end">Monto</th>
+              <th>Referencia</th>
+              <th>Tarjeta</th>
+              <th>Vencimiento</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let pago of pagos; trackBy: trackByPago">
+              <td>{{ pago.NumInterno }}</td>
+              <td>{{ pago.TipoPago || 'N/D' }}</td>
+              <td>{{ pago.TipoDocPrv || 'N/D' }}</td>
+              <td>{{ pago.Moneda || 'N/D' }}</td>
+              <td class="text-end">{{ formatMoney(pago.Monto) }}</td>
+              <td>{{ pago.NumFacturaPrv || pago.Descripcion || 'N/D' }}</td>
+              <td>{{ pago.SerieDocPrv || '—' }}</td>
+              <td>{{ formatDateTime(pago.Fecha, pago.Hora) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ng-template #noPagos>
+        <div class="empty-table-state">No hay pagos registrados.</div>
+      </ng-template>
+    </section>
+  </ng-container>
+</div>

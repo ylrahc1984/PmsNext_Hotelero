@@ -20,10 +20,9 @@ export class DepositoCxcService {
 
   getDepositosPaged(filters: DepositoCxcFilters): Observable<DepositoCxcResponse> {
     let params = new HttpParams()
-      .set('pageNumber', String(filters.pageNumber))
-      .set('pageSize', String(filters.pageSize));
+      .set('pagina', String(filters.pageNumber))
+      .set('registros', String(filters.pageSize));
 
-    params = this.appendIfPresent(params, 'codBanco', filters.codBanco);
     params = this.appendIfPresent(params, 'codCtaBanco', filters.codCtaBanco);
     params = this.appendIfPresent(params, 'fechaInicio', this.formatDate(filters.fechaInicio));
     params = this.appendIfPresent(params, 'fechaFin', this.formatDate(filters.fechaFin));
@@ -43,6 +42,7 @@ export class DepositoCxcService {
   }
 
   createDeposito(payload: DepositoCxc): Observable<DepositoCxc> {
+    this.logPayload('POST', this.apiUrl, payload);
     return this.http.post<DepositoCxc>(this.apiUrl, payload).pipe(
       catchError((error) => this.handleError(error, 'No se pudo registrar el depósito.'))
     );
@@ -50,6 +50,7 @@ export class DepositoCxcService {
 
   updateDeposito(idOperacion: string, payload: DepositoCxc): Observable<DepositoCxc> {
     const url = `${this.apiUrl}/${encodeURIComponent(idOperacion)}`;
+    this.logPayload('PUT', url, payload);
     return this.http.put<DepositoCxc>(url, payload).pipe(
       catchError((error) => this.handleError(error, 'No se pudo actualizar el depósito.'))
     );
@@ -64,16 +65,43 @@ export class DepositoCxcService {
 
   private normalizeListResponse(response: unknown, filters: DepositoCxcFilters): DepositoCxcResponse {
     const payload = this.unwrapResponse(response);
-    const list = Array.isArray(payload)
-      ? payload
-      : (payload?.detalle ?? payload?.datos ?? payload?.data ?? payload?.items ?? []);
-    const pagination = (response as any)?.paginacion ?? (response as any)?.pagination ?? (response as any)?.meta ?? {};
+    const list = this.getFirstArray(payload, ['data', 'datos', 'detalle', 'items']);
+    const pagination =
+      payload?.paginacion ??
+      payload?.pagination ??
+      payload?.meta ??
+      (response as any)?.paginacion ??
+      (response as any)?.pagination ??
+      (response as any)?.meta ??
+      {};
 
     const totalRegistros =
-      pagination?.totalRegistros ?? (response as any)?.totalRegistros ?? (response as any)?.total ?? list.length;
+      payload?.totalRegistros ??
+      payload?.total ??
+      pagination?.totalRegistros ??
+      pagination?.total ??
+      (response as any)?.totalRegistros ??
+      (response as any)?.total ??
+      list.length;
     const pageNumber =
-      pagination?.paginaActual ?? (response as any)?.pageNumber ?? (response as any)?.paginaActual ?? filters.pageNumber;
-    const pageSize = pagination?.pageSize ?? (response as any)?.pageSize ?? filters.pageSize;
+      payload?.pageNumber ??
+      payload?.paginaActual ??
+      payload?.pagina ??
+      pagination?.paginaActual ??
+      pagination?.pageNumber ??
+      pagination?.pagina ??
+      (response as any)?.pageNumber ??
+      (response as any)?.paginaActual ??
+      (response as any)?.pagina ??
+      filters.pageNumber;
+    const pageSize =
+      payload?.pageSize ??
+      payload?.registros ??
+      pagination?.pageSize ??
+      pagination?.registros ??
+      (response as any)?.pageSize ??
+      (response as any)?.registros ??
+      filters.pageSize;
 
     return {
       datos: (list as DepositoCxcListItem[]).map((item) => this.mapListItem(item)),
@@ -110,13 +138,35 @@ export class DepositoCxcService {
       idOperacion: this.normalize(raw.idOperacion ?? raw.id ?? raw.operacion),
       codBanco: this.normalize(raw.codBanco ?? raw.banco),
       codCtaBanco: this.normalize(raw.codCtaBanco ?? raw.ctaBanco ?? raw.cuentaBanco),
-      fecha: this.normalize(raw.fecha ?? raw.fecOper ?? raw.fechaOperacion),
-      numOpera: this.normalize(raw.numOpera ?? raw.numOperacion ?? raw.referencia),
+      fecha: this.normalize(raw.fecha ?? raw.fechaDepo ?? raw.fecOper ?? raw.fechaOperacion),
+      numOpera: this.normalize(raw.numOpera ?? raw.numOperacion ?? raw.numAsiento ?? raw.referencia ?? raw.idOperacion),
       depositante: this.normalize(raw.depositante ?? raw.cliente ?? raw.nombreCliente),
       monto: this.normalizeNumber(raw.monto ?? raw.total),
       moneda: this.normalize(raw.moneda ?? raw.codMoneda),
       movCon: raw.movCon ?? raw.conciliado ?? raw.movConciliado ?? 0
     };
+  }
+
+  private getFirstArray(payload: any, keys: string[]): any[] {
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+
+    for (const key of keys) {
+      const value = payload?.[key];
+      if (Array.isArray(value) && value.length > 0) {
+        return value;
+      }
+    }
+
+    for (const key of keys) {
+      const value = payload?.[key];
+      if (Array.isArray(value)) {
+        return value;
+      }
+    }
+
+    return [];
   }
 
   private appendIfPresent(params: HttpParams, key: string, value?: string): HttpParams {
@@ -150,6 +200,15 @@ export class DepositoCxcService {
   private normalizeNumber(value: number | string | null | undefined): number {
     const parsed = typeof value === 'number' ? value : Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private logPayload(method: 'POST' | 'PUT', url: string, payload: DepositoCxc): void {
+    console.groupCollapsed(`[DepositoCxc] ${method} ${url}`);
+    console.log('payload', payload);
+    console.log('payload.json', JSON.stringify(payload, null, 2));
+    console.log('detalle', payload.detalle);
+    console.log('cobranzas', payload.cobranzas);
+    console.groupEnd();
   }
 
   private handleError(error: HttpErrorResponse, fallback: string): Observable<never> {

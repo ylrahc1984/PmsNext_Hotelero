@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { FormArray, FormControl, FormGroup, NonNullableFormBuilder, ValidatorFn, Validators } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { forkJoin, merge, of, firstValueFrom } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -15,12 +15,14 @@ import { MonedaService, MonedaUI } from 'src/app/demo/administracion/monedas/mon
 import { FormaPagoService } from 'src/app/demo/administracion/forma-pago/forma-pago.service';
 import { FormaPago } from 'src/app/demo/administracion/forma-pago/forma-pago.models';
 import { ComprasServiciosService } from './compras-servicios.service';
+import { environment } from 'src/environments/environment';
+import { CompraServicioDetalleData } from '../interfaces/compra-servicio-detalle.interface';
 
 interface CompraServicioDetalleForm {
   codigo: FormControl<string>;
   servicio: FormControl<string>;
   cantidad: FormControl<number>;
-  grabado: FormControl<boolean>;
+  grabado: FormControl<string>;
   exento: FormControl<boolean>;
   subTotal: FormControl<number>;
   porImp: FormControl<number>;
@@ -33,7 +35,7 @@ interface CompraServicioDetalleFormModel {
   codigo: string;
   servicio: string;
   cantidad: number;
-  grabado: boolean;
+  grabado: string;
   exento: boolean;
   subTotal: number;
   porImp: number;
@@ -73,15 +75,16 @@ interface CompraServicioForm {
 }
 
 interface CompraServicioDetalle {
-  codigo: string;
-  servicio: string;
+  codProdu: string;
+  producto: string;
   cantidad: number;
-  grabado: number;
+  grabado: string;
   exento: number;
   subTotal: number;
   porImp: number;
   impuesto: number;
   total: number;
+  tcambio: number;
   orden: number;
 }
 
@@ -153,8 +156,10 @@ interface CompraServicioRequest {
   styleUrls: ['./nueva-compra-servicios.component.scss']
 })
 export class NuevaCompraServiciosComponent implements OnInit {
+  private static readonly TIPO_DOCUMENTO_SERVICIO = 'SRV';
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly authService = inject(AuthService);
   private readonly proveedorService = inject(ProveedorService);
   private readonly monedaService = inject(MonedaService);
@@ -165,7 +170,7 @@ export class NuevaCompraServiciosComponent implements OnInit {
 
   readonly form: FormGroup<CompraServicioForm> = this.fb.group(
     {
-      tipDocu: this.fb.control('SRV', { validators: [Validators.required] }),
+      tipDocu: this.fb.control('', { validators: [Validators.required] }),
       fechaIngreso: this.fb.control(this.todayIso(), { validators: [Validators.required] }),
       moneda: this.fb.control('', { validators: [Validators.required] }),
       tCambio: this.fb.control(1, { validators: [Validators.required, Validators.min(0.0001)] }),
@@ -220,7 +225,11 @@ export class NuevaCompraServiciosComponent implements OnInit {
   formasPagoLoading = false;
   serviciosLoading = false;
   isSaving = false;
+  isEditMode = false;
+  loadingDocument = false;
   errorMessage = '';
+  editingTipDocu = '';
+  editingNumDocu = '';
 
   showProveedorModal = false;
   showServicioModal = false;
@@ -235,14 +244,20 @@ export class NuevaCompraServiciosComponent implements OnInit {
   readonly servicioPageSizeOptions = [8, 15, 25];
 
   baseMoneda = 'CRC';
-  private readonly documentoCompraUrl = 'http://localhost:5000/api/documento/compra/1';
-  private readonly serviciosUrl = 'http://localhost:5000/api/Servicios';
+  private readonly documentoCompraUrl = `${environment.apiUrl}/documento/compra/1`;
+  private readonly serviciosUrl = `${environment.apiUrl}/Servicios`;
 
   ngOnInit(): void {
     this.form.controls.operador.setValue(this.getOperador(), { emitEvent: false });
+    this.editingTipDocu = this.sanitizeString(this.route.snapshot.paramMap.get('tipDocu'));
+    this.editingNumDocu = this.sanitizeString(this.route.snapshot.paramMap.get('numDocu'));
+    this.isEditMode = this.editingTipDocu === NuevaCompraServiciosComponent.TIPO_DOCUMENTO_SERVICIO && !!this.editingNumDocu;
     this.loadCatalogs();
     this.loadDocumentosCompra();
     this.registerHeaderSubscriptions();
+    if (this.isEditMode) {
+      void this.loadCompraServicioForEdit(this.editingTipDocu, this.editingNumDocu);
+    }
   }
 
   get detalleArray(): FormArray<FormGroup<CompraServicioDetalleForm>> {
@@ -250,7 +265,19 @@ export class NuevaCompraServiciosComponent implements OnInit {
   }
 
   get canSubmit(): boolean {
-    return this.form.valid && this.detalleArray.length > 0 && !this.isSaving;
+    return this.form.valid && this.detalleArray.length > 0 && !this.isSaving && !this.loadingDocument;
+  }
+
+  get pageTitle(): string {
+    return this.isEditMode ? 'Editar Compra de Servicios' : 'Nueva Compra de Servicios';
+  }
+
+  get pageSubtitle(): string {
+    return this.isEditMode ? 'Actualiza la factura de servicios registrada.' : 'Registro de factura de servicios';
+  }
+
+  get submitLabel(): string {
+    return this.isEditMode ? 'Actualizar' : 'Guardar';
   }
 
   addDetalle(): void {
@@ -270,15 +297,33 @@ export class NuevaCompraServiciosComponent implements OnInit {
       return;
     }
 
+    const confirmation = await Swal.fire({
+      title: this.isEditMode ? 'Actualizar compra' : 'Registrar compra',
+      text: this.isEditMode ? '¿Desea actualizar la compra de servicios?' : '¿Desea registrar la compra de servicios?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: this.isEditMode ? 'Sí, actualizar' : 'Sí, registrar',
+      cancelButtonText: 'No'
+    });
+
+    if (!confirmation.isConfirmed) {
+      return;
+    }
+
     const payload = this.buildDto();
     this.isSaving = true;
     this.errorMessage = '';
 
     try {
-      await firstValueFrom(this.comprasServiciosService.crearCompraServicio(payload));
+      const request = this.isEditMode
+        ? this.comprasServiciosService.actualizarCompraServicio(this.editingTipDocu, this.editingNumDocu, payload)
+        : this.comprasServiciosService.crearCompraServicio(payload);
+      await firstValueFrom(request);
       await Swal.fire({
         title: 'Exito',
-        text: 'Compra de servicios registrada correctamente.',
+        text: this.isEditMode
+          ? 'Compra de servicios actualizada correctamente.'
+          : 'Compra de servicios registrada correctamente.',
         icon: 'success'
       });
       this.cancel();
@@ -356,8 +401,7 @@ export class NuevaCompraServiciosComponent implements OnInit {
       {
         codProve: proveedor.codigo,
         nomProve: proveedor.descripcion,
-        rucProve: proveedor.ruc,
-        tipDocProve: proveedor.tipCedula
+        rucProve: proveedor.ruc
       },
       { emitEvent: false }
     );
@@ -481,7 +525,7 @@ export class NuevaCompraServiciosComponent implements OnInit {
       codigo: this.fb.control('', { validators: [Validators.required] }),
       servicio: this.fb.control('', { validators: [Validators.required] }),
       cantidad: this.fb.control(1, { validators: [Validators.required, Validators.min(0.01)] }),
-      grabado: this.fb.control(true),
+      grabado: this.fb.control('1'),
       exento: this.fb.control(false),
       subTotal: this.fb.control(0, { validators: [Validators.required, Validators.min(0)] }),
       porImp: this.fb.control(0, { validators: [Validators.required, Validators.min(0), Validators.max(100)] }),
@@ -491,8 +535,8 @@ export class NuevaCompraServiciosComponent implements OnInit {
     });
   }
 
-  private recalcImpuesto(subTotal: number, porImp: number, grabado: boolean, exento: boolean): number {
-    if (!grabado || exento) {
+  private recalcImpuesto(subTotal: number, porImp: number, grabado: string, exento: boolean): number {
+    if (grabado !== '1' || exento) {
       return 0;
     }
     return subTotal * (porImp / 100);
@@ -524,6 +568,85 @@ export class NuevaCompraServiciosComponent implements OnInit {
       { emitEvent: false }
     );
 
+    this.recalcularTotales();
+  }
+
+  private async loadCompraServicioForEdit(tipDocu: string, numDocu: string): Promise<void> {
+    this.loadingDocument = true;
+    this.errorMessage = '';
+
+    try {
+      const data = await firstValueFrom(this.comprasServiciosService.getCompraServicioDetalle(tipDocu, numDocu));
+      if (!data?.encabezado) {
+        this.errorMessage = 'No se encontró la compra de servicios solicitada para edición.';
+        return;
+      }
+      this.applyCompraServicioData(data);
+    } catch (error) {
+      this.handleError('No se pudo cargar la compra de servicios para edición.', error);
+    } finally {
+      this.loadingDocument = false;
+    }
+  }
+
+  private applyCompraServicioData(data: CompraServicioDetalleData): void {
+    const header = data.encabezado;
+
+    this.form.patchValue(
+      {
+        tipDocu: this.resolveTipoDocumentoCode(header.PAC00_TipDocu),
+        fechaIngreso: this.formatDateToInput(header.PAC00_Fecha),
+        moneda: this.sanitizeString(header.PAC00_Moneda),
+        tCambio: this.toNumber(header.PAC00_TCambio),
+        codProve: this.sanitizeString(header.PAC00_CodProve),
+        rucProve: this.sanitizeString(header.PAC00_RucProve),
+        nomProve: this.sanitizeString(header.PAC00_NomProve),
+        tipDocProve: this.resolveTipoDocumentoCode(header.PAC00_TipDocu),
+        serie: this.sanitizeString(header.PAC00_Serie),
+        numFactura: this.sanitizeString(header.PAC00_NumFactura),
+        fechaFactura: this.formatDateToInput(header.PAC00_FecFactu),
+        fechaVenci: this.formatDateToInput(header.PAC00_FecVen),
+        frmPago: this.sanitizeString(header.PAC00_FrmPago),
+        numOrdenCmp: this.sanitizeString(header.PAC00_NumOrden),
+        operador: this.sanitizeString(header.PAC00_Operador) || this.getOperador(),
+        totDeta: this.toNumber(header.PAC00_TotDeta),
+        totNeto: this.toNumber(header.PAC00_Neto),
+        exonera: this.toNumber(header.PAC00_Exento),
+        subTotal: this.toNumber(header.PAC00_SubTotal),
+        totImpu: this.toNumber(header.PAC00_Impuesto),
+        totalDocu: this.toNumber(header.PAC00_TotalDocu),
+        totPago: this.toNumber(header.PAC00_TotPagado),
+        observaciones: this.sanitizeString(header.PAC00_Concepto),
+        montoFlete: this.toNumber(header.PAC00_MontoFlete),
+        docPercep: this.sanitizeString(header.PAC00_DocPercep),
+        montoPercep: this.toNumber(header.PAC00_MontoPercep)
+      },
+      { emitEvent: false }
+    );
+
+    this.detalleArray.clear();
+    (data.detalle || []).forEach((item) => {
+      const group = this.createDetalleGroup();
+      group.patchValue(
+        {
+          codigo: this.sanitizeString(item.PAC02_CodProdu),
+          servicio: this.sanitizeString(item.PAC02_Producto),
+          cantidad: this.toNumber(item.PAC02_Cantidad),
+          grabado: this.sanitizeString(item.PAC02_Grabado) === '1' ? '1' : '0',
+          exento: this.toNumber(item.PAC02_Exento) > 0,
+          subTotal: this.toNumber(item.PAC02_SubTotal),
+          porImp: this.toNumber(item.PAC02_PorImp),
+          impuesto: this.toNumber(item.PAC02_Impuesto),
+          total: this.toNumber(item.PAC02_Total),
+          orden: this.toNumber(item.PAC02_Orden)
+        },
+        { emitEvent: false }
+      );
+      this.detalleArray.push(group);
+      this.registerRowSubscriptions(group);
+    });
+
+    this.updateOrdenes();
     this.recalcularTotales();
   }
 
@@ -565,6 +688,11 @@ export class NuevaCompraServiciosComponent implements OnInit {
     this.form.controls.moneda.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.updateTipoCambioValidators();
     });
+
+    this.form.controls.tipDocu.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((value) => {
+      const tipDocu = this.resolveTipoDocumentoCode(value);
+      this.form.controls.tipDocProve.setValue(tipDocu, { emitEvent: false });
+    });
   }
 
   private loadDocumentosCompra(): void {
@@ -586,14 +714,14 @@ export class NuevaCompraServiciosComponent implements OnInit {
           label: `${doc.CA04_CodDocu} - ${doc.CA04_NomDocu}`
         }));
 
-        const current = this.form.controls.tipDocu.value;
-        const exists = !!current && this.documentosCompra.some((doc) => doc.CA04_CodDocu === current);
-        if (!exists) {
-          const next = this.documentosCompra[0]?.CA04_CodDocu ?? '';
-          if (next) {
-            this.form.controls.tipDocu.setValue(next, { emitEvent: false });
-          }
-        }
+        const selectedDoc =
+          this.documentosCompra.find((doc) => doc.CA04_CodDocu === NuevaCompraServiciosComponent.TIPO_DOCUMENTO_SERVICIO) ??
+          this.documentosCompra.find((doc) => doc.CA04_CodDocu === this.form.controls.tipDocu.value) ??
+          this.documentosCompra[0];
+
+        const selectedCode = this.resolveTipoDocumentoCode(selectedDoc?.CA04_CodDocu);
+        this.form.controls.tipDocu.setValue(selectedCode, { emitEvent: false });
+        this.form.controls.tipDocProve.setValue(selectedCode, { emitEvent: false });
       });
   }
 
@@ -671,33 +799,33 @@ export class NuevaCompraServiciosComponent implements OnInit {
   private buildDto(): CompraServicioRequest {
     const raw = this.form.getRawValue();
     const detalle = this.detalleArray.getRawValue().map((item, index) => this.mapDetalle(item, index + 1));
-    const numDocu = this.buildNumDocu(raw.serie, raw.numFactura);
+    const tCambio = this.roundNumber(this.toNumber(raw.tCambio), 4);
 
     return {
-      tipDocu: this.sanitizeString(raw.tipDocu),
-      numDocu: this.sanitizeString(numDocu),
-      fechaIngreso: this.sanitizeString(raw.fechaIngreso),
+      tipDocu: 'SRV',
+      numDocu: this.isEditMode ? this.editingNumDocu : '',
+      fechaIngreso: this.formatDateForApi(raw.fechaIngreso),
       moneda: this.sanitizeString(raw.moneda),
-      tCambio: this.toNumber(raw.tCambio),
+      tCambio,
       codProve: this.sanitizeString(raw.codProve),
       rucProve: this.sanitizeString(raw.rucProve),
       nomProve: this.sanitizeString(raw.nomProve),
-      tipDocProve: this.sanitizeString(raw.tipDocProve),
+      tipDocProve: this.resolveTipoDocumentoCode(raw.tipDocu),
       serie: this.sanitizeString(raw.serie),
       numFactura: this.sanitizeString(raw.numFactura),
-      fechaFactura: this.sanitizeString(raw.fechaFactura),
-      fechaVenci: this.sanitizeString(raw.fechaVenci),
-      totDeta: this.toNumber(raw.totDeta),
-      totNeto: this.toNumber(raw.totNeto),
-      exonera: this.toNumber(raw.exonera),
-      subTotal: this.toNumber(raw.subTotal),
-      totImpu: this.toNumber(raw.totImpu),
-      totalDocu: this.toNumber(raw.totalDocu),
-      totPago: this.toNumber(raw.totPago),
+      fechaFactura: this.formatDateForApi(raw.fechaFactura),
+      fechaVenci: this.formatDateForApi(raw.fechaVenci),
+      totDeta: this.roundNumber(this.toNumber(raw.totDeta)),
+      totNeto: this.roundNumber(this.toNumber(raw.totNeto)),
+      exonera: this.roundNumber(this.toNumber(raw.exonera)),
+      subTotal: this.roundNumber(this.toNumber(raw.subTotal)),
+      totImpu: this.roundNumber(this.toNumber(raw.totImpu)),
+      totalDocu: this.roundNumber(this.toNumber(raw.totalDocu)),
+      totPago: 0,
       observaciones: this.sanitizeString(raw.observaciones),
-      montoFlete: this.toNumber(raw.montoFlete),
+      montoFlete: this.roundNumber(this.toNumber(raw.montoFlete)),
       docPercep: this.sanitizeString(raw.docPercep),
-      montoPercep: this.toNumber(raw.montoPercep),
+      montoPercep: this.roundNumber(this.toNumber(raw.montoPercep)),
       frmPago: this.sanitizeString(raw.frmPago),
       numOrdenCmp: this.sanitizeString(raw.numOrdenCmp),
       operador: this.sanitizeString(raw.operador),
@@ -706,16 +834,18 @@ export class NuevaCompraServiciosComponent implements OnInit {
   }
 
   private mapDetalle(item: CompraServicioDetalleFormModel, orden: number): CompraServicioDetalle {
+    const tCambio = this.roundNumber(this.toNumber(this.form.controls.tCambio.value), 4);
     return {
-      codigo: this.sanitizeString(item.codigo),
-      servicio: this.sanitizeString(item.servicio),
-      cantidad: this.toNumber(item.cantidad),
-      grabado: item.grabado ? 1 : 0,
+      codProdu: this.sanitizeString(item.codigo),
+      producto: this.sanitizeString(item.servicio),
+      cantidad: this.roundNumber(this.toNumber(item.cantidad)),
+      grabado: item.grabado === '1' ? '1' : '0',
       exento: item.exento ? 1 : 0,
-      subTotal: this.toNumber(item.subTotal),
-      porImp: this.toNumber(item.porImp),
-      impuesto: this.toNumber(item.impuesto),
-      total: this.toNumber(item.total),
+      subTotal: this.roundNumber(this.toNumber(item.subTotal)),
+      porImp: this.roundNumber(this.toNumber(item.porImp)),
+      impuesto: this.roundNumber(this.toNumber(item.impuesto)),
+      total: this.roundNumber(this.toNumber(item.total)),
+      tcambio: tCambio,
       orden
     };
   }
@@ -760,8 +890,68 @@ export class NuevaCompraServiciosComponent implements OnInit {
     return Number.isFinite(numeric) ? numeric : 0;
   }
 
+  private roundNumber(value: number, decimals = 2): number {
+    const factor = Math.pow(10, decimals);
+    return Math.round(value * factor) / factor;
+  }
+
+  private resolveTipoDocumentoCode(value?: string | null): string {
+    const requestedCode = this.sanitizeString(value);
+    const matchedDoc = requestedCode
+      ? this.documentosCompra.find((doc) => this.sanitizeString(doc.CA04_CodDocu) === requestedCode)
+      : undefined;
+    const fallbackDoc =
+      this.documentosCompra.find((doc) => this.sanitizeString(doc.CA04_CodDocu) === NuevaCompraServiciosComponent.TIPO_DOCUMENTO_SERVICIO) ??
+      this.documentosCompra[0];
+
+    return this.sanitizeString(matchedDoc?.CA04_CodDocu ?? fallbackDoc?.CA04_CodDocu ?? requestedCode);
+  }
+
   private sanitizeString(value: string | null | undefined): string {
     return (value ?? '').toString().trim();
+  }
+
+  private formatDateForApi(value: string | null | undefined): string {
+    const trimmed = this.sanitizeString(value);
+    if (!trimmed) {
+      return '';
+    }
+    if (trimmed.includes('/')) {
+      return trimmed;
+    }
+    const parts = trimmed.split('-');
+    if (parts.length !== 3) {
+      return trimmed;
+    }
+    const [year, month, day] = parts;
+    if (!year || !month || !day) {
+      return trimmed;
+    }
+    return `${day}/${month}/${year}`;
+  }
+
+  private formatDateToInput(value: string | null | undefined): string {
+    const trimmed = this.sanitizeString(value);
+    if (!trimmed) {
+      return '';
+    }
+    const date = new Date(trimmed);
+    if (!Number.isNaN(date.getTime())) {
+      const year = date.getFullYear();
+      const month = `${date.getMonth() + 1}`.padStart(2, '0');
+      const day = `${date.getDate()}`.padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    if (trimmed.includes('/')) {
+      const parts = trimmed.split('/');
+      if (parts.length === 3) {
+        const [day, month, year] = parts;
+        if (year && month && day) {
+          return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        }
+      }
+    }
+    return trimmed;
   }
 
   private todayIso(): string {

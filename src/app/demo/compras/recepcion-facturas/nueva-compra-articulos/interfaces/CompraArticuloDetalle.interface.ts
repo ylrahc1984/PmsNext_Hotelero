@@ -18,7 +18,7 @@ export interface CompraArticuloDetalle {
   total: number;
   ultCosto: number;
   observaciones: string;
-  imponible: number;
+  imponible: string;
   fleteInd: number;
   fleteTot: number;
   moneda: string;

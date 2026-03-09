@@ -2,8 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { FormArray, FormControl, FormGroup, NonNullableFormBuilder, ValidatorFn, Validators } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
-import { forkJoin, merge, of } from 'rxjs';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { firstValueFrom, forkJoin, merge, of } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import Swal from 'sweetalert2';
@@ -22,6 +22,8 @@ import { ComprasService } from '../compras.service';
 import { CompraArticuloRequest } from './interfaces/CompraArticuloRequest.interface';
 import { CompraArticuloDetalle } from './interfaces/CompraArticuloDetalle.interface';
 import { CompraArticuloDetalleFormModel } from './interfaces/CompraArticuloFormModel.interface';
+import { environment } from 'src/environments/environment';
+import { CompraArticuloDetalleData } from '../interfaces/compra-articulo-detalle.interface';
 
 interface CompraArticuloDetalleForm {
   codProdu: FormControl<string>;
@@ -110,7 +112,9 @@ interface CompraArticuloForm {
   styleUrls: ['./nueva-compra-articulos.component.scss']
 })
 export class NuevaCompraArticulosComponent implements OnInit {
+  private static readonly TIPO_DOCUMENTO_COMPRA = 'CMP';
   private readonly fb = inject(NonNullableFormBuilder);
+  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
   private readonly proveedorService = inject(ProveedorService);
@@ -124,7 +128,7 @@ export class NuevaCompraArticulosComponent implements OnInit {
 
   readonly form: FormGroup<CompraArticuloForm> = this.fb.group(
     {
-      tipDocu: this.fb.control('COM', { validators: [Validators.required] }),
+      tipDocu: this.fb.control(NuevaCompraArticulosComponent.TIPO_DOCUMENTO_COMPRA, { validators: [Validators.required] }),
       fechaIngreso: this.fb.control(this.todayIso()),
       moneda: this.fb.control('', { validators: [Validators.required] }),
       tCambio: this.fb.control(1, { validators: [Validators.required, Validators.min(0.0001)] }),
@@ -182,6 +186,10 @@ export class NuevaCompraArticulosComponent implements OnInit {
   productosLoading = false;
   isSaving = false;
   documentosCompraLoading = false;
+  loadingDocument = false;
+  isEditMode = false;
+  editingTipDocu = '';
+  editingNumDocu = '';
 
   errorMessage = '';
 
@@ -196,13 +204,19 @@ export class NuevaCompraArticulosComponent implements OnInit {
   almacenPageSize = 8;
 
   baseMoneda = 'CRC';
-  private readonly documentoCompraUrl = 'http://localhost:5000/api/documento/compra/1';
+  private readonly documentoCompraUrl = `${environment.apiUrl}/documento/compra/1`;
 
   ngOnInit(): void {
     this.form.controls.operador.setValue(this.getOperador(), { emitEvent: false });
+    this.editingTipDocu = this.sanitizeString(this.route.snapshot.paramMap.get('tipDocu'));
+    this.editingNumDocu = this.sanitizeString(this.route.snapshot.paramMap.get('numDocu'));
+    this.isEditMode = this.editingTipDocu === NuevaCompraArticulosComponent.TIPO_DOCUMENTO_COMPRA && !!this.editingNumDocu;
     this.loadCatalogs();
     this.loadDocumentosCompra();
     this.registerHeaderSubscriptions();
+    if (this.isEditMode) {
+      void this.loadCompraArticuloForEdit(this.editingTipDocu, this.editingNumDocu);
+    }
   }
 
   get detalleArray(): FormArray<FormGroup<CompraArticuloDetalleForm>> {
@@ -210,7 +224,19 @@ export class NuevaCompraArticulosComponent implements OnInit {
   }
 
   get canSubmit(): boolean {
-    return this.form.valid && this.detalleArray.length > 0 && !this.isSaving;
+    return this.form.valid && this.detalleArray.length > 0 && !this.isSaving && !this.loadingDocument;
+  }
+
+  get pageTitle(): string {
+    return this.isEditMode ? 'Editar Compra - Artículos' : 'Nueva Compra - Artículos';
+  }
+
+  get pageSubtitle(): string {
+    return this.isEditMode ? 'Actualización de factura CMP' : 'Registro de factura CMP';
+  }
+
+  get submitLabel(): string {
+    return this.isEditMode ? 'Actualizar' : 'Guardar';
   }
 
   openProveedorModal(): void {
@@ -252,8 +278,7 @@ export class NuevaCompraArticulosComponent implements OnInit {
       {
         codProve: proveedor.codigo,
         nomProve: proveedor.descripcion,
-        rucProve: proveedor.ruc,
-        tipDocProve: proveedor.tipCedula
+        rucProve: proveedor.ruc
       },
       { emitEvent: false }
     );
@@ -266,7 +291,7 @@ export class NuevaCompraArticulosComponent implements OnInit {
         codProve: '',
         nomProve: '',
         rucProve: '',
-        tipDocProve: ''
+        tipDocProve: this.resolveTipoDocumentoCode(this.form.controls.tipDocu.value)
       },
       { emitEvent: false }
     );
@@ -414,7 +439,15 @@ export class NuevaCompraArticulosComponent implements OnInit {
   }
 
   addDetalleRow(): void {
-    const group = this.fb.group({
+    const group = this.createDetalleGroup();
+
+    this.detalleArray.push(group);
+    this.registerRowSubscriptions(group);
+    this.recalculateRow(this.detalleArray.length - 1);
+  }
+
+  private createDetalleGroup(): FormGroup<CompraArticuloDetalleForm> {
+    return this.fb.group({
       codProdu: this.fb.control('', { validators: [Validators.required] }),
       producto: this.fb.control('', { validators: [Validators.required] }),
       almacen: this.fb.control('PRINCIP', { validators: [Validators.required] }),
@@ -443,10 +476,6 @@ export class NuevaCompraArticulosComponent implements OnInit {
       codProduProv: this.fb.control(''),
       productoProv: this.fb.control('')
     });
-
-    this.detalleArray.push(group);
-    this.registerRowSubscriptions(group);
-    this.recalculateRow(this.detalleArray.length - 1);
   }
 
   addDetalleAndOpenProducto(): void {
@@ -522,12 +551,12 @@ export class NuevaCompraArticulosComponent implements OnInit {
     );
   }
 
-  submit(): void {
-    this.save(false);
+  async submit(): Promise<void> {
+    await this.save(false);
   }
 
-  submitAndNew(): void {
-    this.save(true);
+  async submitAndNew(): Promise<void> {
+    await this.save(true);
   }
 
   cancel(): void {
@@ -561,7 +590,7 @@ export class NuevaCompraArticulosComponent implements OnInit {
     return index;
   }
 
-  private save(resetAfter: boolean): void {
+  private async save(resetAfter: boolean): Promise<void> {
     if (this.form.invalid || this.detalleArray.length === 0) {
       this.form.markAllAsTouched();
       this.detalleArray.controls.forEach((group) => group.markAllAsTouched());
@@ -569,46 +598,45 @@ export class NuevaCompraArticulosComponent implements OnInit {
     }
 
     const payload = this.buildDto();
+    console.log('Compra articulo payload', payload);
+    console.log('Compra articulo payload.json', JSON.stringify(payload, null, 2));
     this.isSaving = true;
     this.errorMessage = '';
 
-    this.comprasService
-      .crearCompraArticulo(payload)
-      .pipe(
-        catchError((error) => {
-          this.handleError('No se pudo guardar la compra.', error);
-          return of({ respuesta: 'ERROR' });
-        }),
-        finalize(() => {
-          this.isSaving = false;
-        }),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe(() => {
-        Swal.fire({
-          title: 'Éxito',
-          text: 'Compra registrada correctamente.',
-          icon: 'success'
-        });
-        if (resetAfter) {
-          this.resetForm();
-        } else {
-          this.cancel();
-        }
+    try {
+      const request = this.isEditMode
+        ? this.comprasService.actualizarCompraArticulo(this.editingTipDocu, this.editingNumDocu, payload)
+        : this.comprasService.crearCompraArticulo(payload);
+      await firstValueFrom(request);
+      await Swal.fire({
+        title: 'Éxito',
+        text: this.isEditMode ? 'Compra actualizada correctamente.' : 'Compra registrada correctamente.',
+        icon: 'success'
       });
+      if (this.isEditMode || !resetAfter) {
+        this.cancel();
+      } else {
+        this.resetForm();
+      }
+    } catch (error) {
+      this.handleError(this.isEditMode ? 'No se pudo actualizar la compra.' : 'No se pudo guardar la compra.', error);
+    } finally {
+      this.isSaving = false;
+    }
   }
 
   private resetForm(): void {
+    const tipDocu = this.resolveTipoDocumentoCode(NuevaCompraArticulosComponent.TIPO_DOCUMENTO_COMPRA);
     this.form.reset(
       {
-        tipDocu: this.documentosCompra[0]?.CA04_CodDocu ?? 'COM',
+        tipDocu: tipDocu,
         fechaIngreso: this.todayIso(),
         moneda: this.baseMoneda,
         tCambio: 1,
         codProve: '',
         rucProve: '',
         nomProve: '',
-        tipDocProve: '',
+        tipDocProve: tipDocu,
         serie: '000',
         numFactura: '',
         fechaFactura: '',
@@ -636,32 +664,33 @@ export class NuevaCompraArticulosComponent implements OnInit {
   private buildDto(): CompraArticuloRequest {
     const raw = this.form.getRawValue();
     const detalle = this.detalleArray.getRawValue().map((item, index) => this.mapDetalle(item, index + 1));
+    const tCambio = this.roundNumber(this.toNumber(raw.tCambio), 4);
 
     return {
-      proceso: 0,
-      tipDocu: this.sanitizeString(raw.tipDocu),
-      fechaIngreso: this.sanitizeString(raw.fechaIngreso),
+      proceso: 1,
+      tipDocu: 'CMP',
+      fechaIngreso: this.formatDateForApi(raw.fechaIngreso),
       moneda: this.sanitizeString(raw.moneda),
-      tCambio: this.toNumber(raw.tCambio),
+      tCambio,
       codProve: this.sanitizeString(raw.codProve),
       rucProve: this.sanitizeString(raw.rucProve),
       nomProve: this.sanitizeString(raw.nomProve),
-      tipDocProve: this.sanitizeString(raw.tipDocProve),
+      tipDocProve: this.resolveTipoDocumentoCode(raw.tipDocu),
       serie: this.sanitizeString(raw.serie),
       numFactura: this.sanitizeString(raw.numFactura),
-      fechaFactura: this.sanitizeString(raw.fechaFactura),
-      fechaVenci: this.sanitizeString(raw.fechaVenci),
-      totDeta: this.toNumber(raw.totDeta),
-      totNeto: this.toNumber(raw.totNeto),
-      exonera: this.toNumber(raw.exonera),
-      subTotal: this.toNumber(raw.subTotal),
-      totImpu: this.toNumber(raw.totImpu),
-      totalDocu: this.toNumber(raw.totalDocu),
-      totPago: this.toNumber(raw.totPago),
+      fechaFactura: this.formatDateForApi(raw.fechaFactura),
+      fechaVenci: this.formatDateForApi(raw.fechaVenci),
+      totDeta: this.roundNumber(this.toNumber(raw.totDeta)),
+      totNeto: this.roundNumber(this.toNumber(raw.totNeto)),
+      exonera: this.roundNumber(this.toNumber(raw.exonera)),
+      subTotal: this.roundNumber(this.toNumber(raw.subTotal)),
+      totImpu: this.roundNumber(this.toNumber(raw.totImpu)),
+      totalDocu: this.roundNumber(this.toNumber(raw.totalDocu)),
+      totPago: 0,
       docFlete: this.sanitizeString(raw.docFlete),
-      montoFlete: this.toNumber(raw.montoFlete),
+      montoFlete: this.roundNumber(this.toNumber(raw.montoFlete)),
       docPercep: this.sanitizeString(raw.docPercep),
-      montoPercep: this.toNumber(raw.montoPercep),
+      montoPercep: this.roundNumber(this.toNumber(raw.montoPercep)),
       frmPago: this.sanitizeString(raw.frmPago),
       numOrdenCmp: this.sanitizeString(raw.numOrdenCmp),
       operador: this.sanitizeString(raw.operador),
@@ -669,32 +698,131 @@ export class NuevaCompraArticulosComponent implements OnInit {
     };
   }
 
+  private async loadCompraArticuloForEdit(tipDocu: string, numDocu: string): Promise<void> {
+    this.loadingDocument = true;
+    this.errorMessage = '';
+
+    try {
+      const data = await firstValueFrom(this.comprasService.getCompraArticuloDetalle(tipDocu, numDocu));
+      if (!data?.encabezado) {
+        this.errorMessage = 'No se encontró información de la compra seleccionada.';
+        return;
+      }
+      this.applyCompraArticuloData(data);
+    } catch (error) {
+      console.error('No se pudo cargar la compra de artículos para edición.', error);
+      this.errorMessage = 'No se pudo cargar la compra de artículos para edición.';
+    } finally {
+      this.loadingDocument = false;
+    }
+  }
+
+  private applyCompraArticuloData(data: CompraArticuloDetalleData): void {
+    const header = data.encabezado;
+    const tipDocu = this.resolveTipoDocumentoCode(header.tipDocu);
+
+    this.form.patchValue(
+      {
+        tipDocu,
+        fechaIngreso: this.formatDateToInput(header.fechaIngreso),
+        moneda: this.sanitizeString(header.moneda),
+        tCambio: this.toNumber(header.tipoCambio),
+        codProve: this.sanitizeString(header.codProveedor),
+        rucProve: this.sanitizeString(header.rucProveedor),
+        nomProve: this.sanitizeString(header.proveedor),
+        tipDocProve: tipDocu,
+        serie: this.sanitizeString(header.serie),
+        numFactura: this.sanitizeString(header.numFactura),
+        fechaFactura: this.formatDateToInput(header.fechaFactura),
+        fechaVenci: this.formatDateToInput(header.fechaVencimiento),
+        frmPago: this.sanitizeString(header.formaPago),
+        numOrdenCmp: this.sanitizeString(header.numOrden),
+        docFlete: '',
+        montoFlete: 0,
+        docPercep: '',
+        montoPercep: 0,
+        operador: this.sanitizeString(header.operador),
+        totDeta: this.roundNumber(this.toNumber(header.totalDetalle)),
+        totNeto: this.roundNumber(this.toNumber(header.neto)),
+        exonera: this.roundNumber(this.toNumber(header.exento)),
+        subTotal: this.roundNumber(this.toNumber(header.subTotal)),
+        totImpu: this.roundNumber(this.toNumber(header.impuesto)),
+        totalDocu: this.roundNumber(this.toNumber(header.total)),
+        totPago: this.roundNumber(this.toNumber(header.totalPagado))
+      },
+      { emitEvent: false }
+    );
+
+    this.detalleArray.clear();
+    (data.detalle || []).forEach((item) => {
+      const group = this.createDetalleGroup();
+      group.patchValue(
+        {
+          codProdu: this.sanitizeString(item.codProducto),
+          producto: this.sanitizeString(item.producto),
+          almacen: this.sanitizeString(item.almacen),
+          cantidad: this.roundNumber(this.toNumber(item.cantidad)),
+          undMedida: this.sanitizeString(item.undMedida),
+          exento: this.toNumber(item.exento) > 0,
+          subTotal: this.roundNumber(this.toNumber(item.mtoTotal)),
+          unitSImp: this.roundNumber(this.toNumber(item.costoReal)),
+          porDesc: this.roundNumber(this.toNumber(item.porDesc)),
+          mtoDesc: this.roundNumber(this.toNumber(item.mtoDesc)),
+          mtoNeto: this.roundNumber(this.toNumber(item.neto)),
+          porImpto: this.roundNumber(this.toNumber(item.porImpto)),
+          mtoImpto: this.roundNumber(this.toNumber(item.mtoImpto)),
+          porExonera: this.roundNumber(this.toNumber(item.porExo)),
+          mtoExonera: this.roundNumber(this.toNumber(item.mtoExo)),
+          unitCImp: this.roundNumber(this.toNumber(item.costo)),
+          total: this.roundNumber(this.toNumber(item.total)),
+          ultCosto: this.roundNumber(this.toNumber(item.costoReal)),
+          observaciones: this.sanitizeString(item.observaciones),
+          imponible: this.toNumber(item.imponible) > 0 ? 1 : 0,
+          fleteInd: this.roundNumber(this.toNumber(item.fleteInd)),
+          fleteTot: this.roundNumber(this.toNumber(item.fleteTot)),
+          moneda: this.sanitizeString(item.moneda),
+          tcambio: this.roundNumber(this.toNumber(item.tcambio), 4),
+          orden: this.toNumber(item.orden),
+          codProduProv: this.sanitizeString(item.codProducto),
+          productoProv: this.sanitizeString(item.producto)
+        },
+        { emitEvent: false }
+      );
+      this.detalleArray.push(group);
+      this.registerRowSubscriptions(group);
+    });
+
+    this.updateOrdenes();
+    this.recalculateTotals();
+  }
+
   private mapDetalle(item: CompraArticuloDetalleFormModel, orden: number): CompraArticuloDetalle {
+    const tCambio = this.roundNumber(this.toNumber(this.form.controls.tCambio.value), 4);
     return {
       codProdu: this.sanitizeString(item.codProdu),
       producto: this.sanitizeString(item.producto),
       almacen: this.sanitizeString(item.almacen),
-      cantidad: this.toNumber(item.cantidad),
+      cantidad: this.roundNumber(this.toNumber(item.cantidad)),
       undMedida: this.sanitizeString(item.undMedida),
       exento: item.exento ? 1 : 0,
-      subTotal: this.toNumber(item.subTotal),
-      unitSImp: this.toNumber(item.unitSImp),
-      porDesc: this.toNumber(item.porDesc),
-      mtoDesc: this.toNumber(item.mtoDesc),
-      mtoNeto: this.toNumber(item.mtoNeto),
-      porImpto: this.toNumber(item.porImpto),
-      mtoImpto: this.toNumber(item.mtoImpto),
-      porExonera: this.toNumber(item.porExonera),
-      mtoExonera: this.toNumber(item.mtoExonera),
-      unitCImp: this.toNumber(item.unitCImp),
-      total: this.toNumber(item.total),
-      ultCosto: this.toNumber(item.ultCosto),
+      subTotal: this.roundNumber(this.toNumber(item.subTotal)),
+      unitSImp: this.roundNumber(this.toNumber(item.unitSImp)),
+      porDesc: this.roundNumber(this.toNumber(item.porDesc)),
+      mtoDesc: this.roundNumber(this.toNumber(item.mtoDesc)),
+      mtoNeto: this.roundNumber(this.toNumber(item.mtoNeto)),
+      porImpto: this.roundNumber(this.toNumber(item.porImpto)),
+      mtoImpto: this.roundNumber(this.toNumber(item.mtoImpto)),
+      porExonera: this.roundNumber(this.toNumber(item.porExonera)),
+      mtoExonera: this.roundNumber(this.toNumber(item.mtoExonera)),
+      unitCImp: this.roundNumber(this.toNumber(item.unitCImp)),
+      total: this.roundNumber(this.toNumber(item.total)),
+      ultCosto: this.roundNumber(this.toNumber(item.ultCosto)),
       observaciones: this.sanitizeString(item.observaciones),
-      imponible: this.toNumber(item.imponible),
-      fleteInd: this.toNumber(item.fleteInd),
-      fleteTot: this.toNumber(item.fleteTot),
+      imponible: this.toNumber(item.imponible) > 0 ? '1' : '0',
+      fleteInd: this.roundNumber(this.toNumber(item.fleteInd)),
+      fleteTot: this.roundNumber(this.toNumber(item.fleteTot)),
       moneda: this.sanitizeString(item.moneda),
-      tcambio: this.toNumber(item.tcambio),
+      tcambio: tCambio,
       orden,
       codProduProv: this.sanitizeString(item.codProduProv),
       productoProv: this.sanitizeString(item.productoProv)
@@ -747,6 +875,10 @@ export class NuevaCompraArticulosComponent implements OnInit {
       this.syncDetalleMoneda();
     });
 
+    this.form.controls.tipDocu.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((value) => {
+      this.form.controls.tipDocProve.setValue(this.resolveTipoDocumentoCode(value), { emitEvent: false });
+    });
+
     this.form.controls.tCambio.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.syncDetalleMoneda();
     });
@@ -790,14 +922,16 @@ export class NuevaCompraArticulosComponent implements OnInit {
       .subscribe((response) => {
         const items = Array.isArray(response) ? response : response ? [response] : [];
         this.documentosCompra = items;
-        const current = this.form.controls.tipDocu.value;
-        const exists = !!current && this.documentosCompra.some((doc) => doc.CA04_CodDocu === current);
-        if (!exists) {
-          const next = this.documentosCompra[0]?.CA04_CodDocu ?? '';
-          if (next) {
-            this.form.controls.tipDocu.setValue(next, { emitEvent: false });
-          }
-        }
+        const selectedDoc =
+          this.documentosCompra.find(
+            (doc) => this.sanitizeString(doc.CA04_CodDocu) === NuevaCompraArticulosComponent.TIPO_DOCUMENTO_COMPRA
+          ) ??
+          this.documentosCompra.find((doc) => this.sanitizeString(doc.CA04_CodDocu) === this.form.controls.tipDocu.value) ??
+          this.documentosCompra[0];
+
+        const selectedCode = this.resolveTipoDocumentoCode(selectedDoc?.CA04_CodDocu);
+        this.form.controls.tipDocu.setValue(selectedCode, { emitEvent: false });
+        this.form.controls.tipDocProve.setValue(selectedCode, { emitEvent: false });
       });
   }
 
@@ -858,8 +992,67 @@ export class NuevaCompraArticulosComponent implements OnInit {
     return Number.isFinite(numeric) ? numeric : 0;
   }
 
+  private roundNumber(value: number, decimals = 2): number {
+    const factor = Math.pow(10, decimals);
+    return Math.round(value * factor) / factor;
+  }
+
+  private resolveTipoDocumentoCode(value?: string | null): string {
+    const requestedCode = this.sanitizeString(value);
+    const matchedDoc = requestedCode
+      ? this.documentosCompra.find((doc) => this.sanitizeString(doc.CA04_CodDocu) === requestedCode)
+      : undefined;
+    const fallbackDoc =
+      this.documentosCompra.find(
+        (doc) => this.sanitizeString(doc.CA04_CodDocu) === NuevaCompraArticulosComponent.TIPO_DOCUMENTO_COMPRA
+      ) ?? this.documentosCompra[0];
+
+    return this.sanitizeString(matchedDoc?.CA04_CodDocu ?? fallbackDoc?.CA04_CodDocu ?? requestedCode);
+  }
+
   private sanitizeString(value: string | null | undefined): string {
     return (value ?? '').toString().trim();
+  }
+
+  private formatDateForApi(value: string | null | undefined): string {
+    const trimmed = this.sanitizeString(value);
+    if (!trimmed) {
+      return '';
+    }
+    if (trimmed.includes('/')) {
+      return trimmed;
+    }
+    const parts = trimmed.split('-');
+    if (parts.length !== 3) {
+      return trimmed;
+    }
+    const [year, month, day] = parts;
+    if (!year || !month || !day) {
+      return trimmed;
+    }
+    return `${day}/${month}/${year}`;
+  }
+
+  private formatDateToInput(value: string | null | undefined): string {
+    const trimmed = this.sanitizeString(value);
+    if (!trimmed) {
+      return '';
+    }
+    const date = new Date(trimmed);
+    if (!Number.isNaN(date.getTime())) {
+      const year = date.getFullYear();
+      const month = `${date.getMonth() + 1}`.padStart(2, '0');
+      const day = `${date.getDate()}`.padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    if (trimmed.includes('/')) {
+      const parts = trimmed.split('/');
+      if (parts.length === 3) {
+        const [day, month, year] = parts;
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      }
+    }
+    return trimmed;
   }
 
   private todayIso(): string {

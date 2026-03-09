@@ -83,7 +83,7 @@ export class RetiroListComponent implements OnInit {
     this.filtersForm.controls.codBanco.valueChanges.subscribe((value) => this.onBancoChange(value));
     this.updatePagination();
     void this.loadBancos();
-    void this.buscar();
+  
   }
 
   buscar(): void {
@@ -127,7 +127,7 @@ export class RetiroListComponent implements OnInit {
   }
 
   nuevoRetiro(): void {
-    this.router.navigate(['/finanzas/bancos/retiros-cxp/nuevo']);
+
   }
 
   editar(retiro: RetiroCxpListItem): void {

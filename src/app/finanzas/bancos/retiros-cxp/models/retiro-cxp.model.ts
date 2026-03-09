@@ -15,6 +15,7 @@ export interface RetiroCxpFactura {
 }
 
 export interface RetiroCxpDetalleContable {
+  codConcepto: string;
   concepto: string;
   descripcion: string;
   moneda: string;

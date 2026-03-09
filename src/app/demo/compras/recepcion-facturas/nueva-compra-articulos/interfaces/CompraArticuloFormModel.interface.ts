@@ -1,7 +1,8 @@
 import { CompraArticuloDetalle } from './CompraArticuloDetalle.interface';
 
-export interface CompraArticuloDetalleFormModel extends Omit<CompraArticuloDetalle, 'exento'> {
+export interface CompraArticuloDetalleFormModel extends Omit<CompraArticuloDetalle, 'exento' | 'imponible'> {
   exento: boolean;
+  imponible: number;
 }
 
 export interface CompraArticuloFormModel {

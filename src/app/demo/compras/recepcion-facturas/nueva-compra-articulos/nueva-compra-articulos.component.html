@@ -3,22 +3,22 @@
     <app-card [customHeader]="true">
       <div class="app-card-header header-hero">
         <div class="header-hero__title">
-          <h5 class="header-hero__main">Nueva Compra - Artículos</h5>
-          <p class="header-hero__subtitle">Registro de factura COM</p>
+          <h5 class="header-hero__main">{{ pageTitle }}</h5>
+          <p class="header-hero__subtitle">{{ pageSubtitle }}</p>
         </div>
         <div class="header-hero__actions">
           <button class="btn btn-sm btn-outline-secondary" type="button" (click)="cancel()" [disabled]="isSaving">
             <i class="feather icon-arrow-left me-1"></i>
             Cancelar
           </button>
-          <button class="btn btn-sm btn-outline-primary" type="button" (click)="submitAndNew()" [disabled]="!canSubmit">
+          <button *ngIf="!isEditMode" class="btn btn-sm btn-outline-primary" type="button" (click)="submitAndNew()" [disabled]="!canSubmit">
             <i class="feather icon-save me-1"></i>
             Guardar y nuevo
           </button>
           <button class="btn btn-sm btn-primary nf-btn-primary" type="button" (click)="submit()" [disabled]="!canSubmit">
             <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
             <i class="feather icon-check me-1" *ngIf="!isSaving"></i>
-            Guardar
+            {{ submitLabel }}
           </button>
         </div>
       </div>

@@ -80,6 +80,12 @@ interface CuentaBancoOption {
   moneda?: string;
 }
 
+const DETALLE_CONTABLE_DEFAULTS = {
+  codConcepto: 'COCLI',
+  descripcion: 'COBRANZA AH CLIENTES',
+} as const;
+
+
 @Component({
   selector: 'app-deposito-form',
   standalone: true,
@@ -168,9 +174,13 @@ export class DepositoFormComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.recalcularTotales());
 
-    this.detalleArray.valueChanges
+    this.depositoForm.controls.tCambio.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.recalcularDetalle());
+      .subscribe(() => this.syncDetalleContable());
+
+    this.depositoForm.controls.moneda.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.syncDetalleContable());
 
     this.depositoForm.controls.depositante.valueChanges
       .pipe(
@@ -232,6 +242,8 @@ export class DepositoFormComponent implements OnInit {
       const current = this.depositoForm.controls.codCtaBanco.value;
       if (current && !this.cuentas.some((item) => item.value === current)) {
         this.depositoForm.controls.codCtaBanco.setValue('');
+      } else if (current) {
+        this.onCuentaChange(current);
       }
     } catch (error) {
       console.error('Error al cargar cuentas bancarias:', error);
@@ -244,9 +256,10 @@ export class DepositoFormComponent implements OnInit {
 
   onCuentaChange(codCtaBanco: string): void {
     const selected = this.cuentas.find((item) => item.value === codCtaBanco);
-    if (selected?.moneda && !this.depositoForm.controls.moneda.value) {
+    if (selected?.moneda) {
       this.depositoForm.controls.moneda.setValue(selected.moneda);
     }
+    this.syncDetalleContable();
   }
 
   seleccionarCliente(cliente: ClienteUI): void {
@@ -287,15 +300,18 @@ export class DepositoFormComponent implements OnInit {
     if (this.readonlyMode) {
       return;
     }
-    this.detalleArray.push(this.createDetalleForm());
+    this.syncDetalleContable();
   }
 
   eliminarDetalle(index: number): void {
     if (this.readonlyMode) {
       return;
     }
+    if (index <= 0) {
+      this.syncDetalleContable();
+      return;
+    }
     this.detalleArray.removeAt(index);
-    this.detalleArray.markAsDirty();
   }
 
   eliminarCobranza(index: number): void {
@@ -310,11 +326,7 @@ export class DepositoFormComponent implements OnInit {
     if (this.readonlyMode) {
       return;
     }
-    if (this.depositoForm.invalid) {
-      this.depositoForm.markAllAsTouched();
-      this.toast.warning('Completa los campos obligatorios antes de guardar.');
-      return;
-    }
+ 
     if (!this.cobranzasArray.length) {
       this.toast.warning('Debes agregar al menos un documento para aplicar la cobranza.');
       return;
@@ -345,9 +357,13 @@ export class DepositoFormComponent implements OnInit {
     firstValueFrom(request)
       .then(() => {
         this.toast.success(this.idOperacion ? 'Depósito actualizado correctamente.' : 'Depósito registrado correctamente.');
-        this.router.navigate(['/finanzas/bancos/depositos-cxc']);
+        this.router.navigate(['/finanzas/cuentas-cobrar']);
       })
       .catch((error) => {
+        console.error('[DepositoCxc] Error al guardar depósito', {
+          payload,
+          error
+        });
         this.toast.error(this.getErrorMessage(error, 'No se pudo guardar el depósito.'));
       })
       .finally(() => {
@@ -359,7 +375,7 @@ export class DepositoFormComponent implements OnInit {
     if (!this.canDeactivate()) {
       return;
     }
-    this.router.navigate(['/finanzas/bancos/depositos-cxc']);
+    this.router.navigate(['/finanzas/cuentas-cobrar']);
   }
 
   trackByIndex(index: number): number {
@@ -387,7 +403,7 @@ export class DepositoFormComponent implements OnInit {
   }
 
   get totalDetalle(): number {
-    return this.detalleArray.getRawValue().reduce((sum, item) => sum + this.normalizeNumber(item.monto), 0);
+    return this.totalCobranza;
   }
 
   get diferenciaDetalle(): number {
@@ -489,7 +505,7 @@ export class DepositoFormComponent implements OnInit {
     });
 
     this.detalleArray.clear();
-    (deposito.detalle || []).forEach((detalle) => this.detalleArray.push(this.createDetalleForm(detalle)));
+    this.syncDetalleContable(deposito.detalle?.[0]);
 
     this.recalcularTotales();
     this.recalcularDetalle();
@@ -534,7 +550,7 @@ export class DepositoFormComponent implements OnInit {
           montoPago: this.normalizeNumber(item.saldo),
           estado: 'PENDIENTE',
           referencia: this.normalize(this.depositoForm.controls.numOpera.value),
-          frmPago: this.normalize(this.depositoForm.controls.frmPago.value),
+          frmPago: 'CONTA',
           descripcion: item.estadoElectronico || '',
           tCambio: this.normalizeNumber(item.tCambio || 1),
           tipo: item.tipoDocu
@@ -559,7 +575,7 @@ export class DepositoFormComponent implements OnInit {
       }),
       estado: this.fb.control(this.normalize(cobranza?.estado) || 'PENDIENTE'),
       referencia: this.fb.control(this.normalize(cobranza?.referencia)),
-      frmPago: this.fb.control(this.normalize(cobranza?.frmPago)),
+      frmPago: 'CONTA',
       descripcion: this.fb.control(this.normalize(cobranza?.descripcion)),
       tCambio: this.fb.control(this.normalizeNumber(cobranza?.tCambio || 1)),
       tipo: this.fb.control(this.normalize(cobranza?.tipo))
@@ -567,13 +583,22 @@ export class DepositoFormComponent implements OnInit {
   }
 
   private createDetalleForm(detalle?: Partial<DepositoCxcDetalle>): FormGroup<DetalleForm> {
-    return this.fb.group({
-      codConcepto: this.fb.control(this.normalize(detalle?.codConcepto), { validators: [Validators.required] }),
-      descripcion: this.fb.control(this.normalize(detalle?.descripcion), { validators: [Validators.required] }),
-      moneda: this.fb.control(this.normalize(detalle?.moneda), { validators: [Validators.required] }),
-      monto: this.fb.control(this.normalizeNumber(detalle?.monto), { validators: [Validators.required, Validators.min(0.01)] }),
-      tCambio: this.fb.control(this.normalizeNumber(detalle?.tCambio || 1), { validators: [Validators.required, Validators.min(0)] })
+    const defaults = this.getDetalleContableValue(detalle);
+    const group = this.fb.group({
+      codConcepto: this.fb.control<string>(defaults.codConcepto, { validators: [Validators.required] }),
+      descripcion: this.fb.control<string>(defaults.descripcion, { validators: [Validators.required] }),
+      moneda: this.fb.control<string>(defaults.moneda, { validators: [Validators.required] }),
+      monto: this.fb.control<number>(defaults.monto, { validators: [Validators.required, Validators.min(0.01)] }),
+      tCambio: this.fb.control<number>(defaults.tCambio, { validators: [Validators.required, Validators.min(0)] })
     });
+    group.disable({ emitEvent: false });
+    return group;
+  }
+
+  private getCuentaMoneda():string {
+    const codCtaBanco = this.depositoForm.controls.codCtaBanco.value;
+    const cuenta = this.cuentas.find((item) => item.value === codCtaBanco);
+    return cuenta?.moneda || '';
   }
 
   private maxSaldoValidator(saldo: number) {
@@ -596,10 +621,39 @@ export class DepositoFormComponent implements OnInit {
     });
     const total = this.roundNumber(this.totalCobranza);
     this.depositoForm.controls.monto.setValue(total, { emitEvent: false });
+    this.syncDetalleContable();
   }
 
   private recalcularDetalle(): void {
-    // No-op: se recalcula vía getters, pero se mantiene para disparar change detection.
+    this.syncDetalleContable();
+  }
+
+  private syncDetalleContable(base?: Partial<DepositoCxcDetalle>): void {
+    const detalle = this.getDetalleContableValue(base);
+
+    while (this.detalleArray.length > 1) {
+      this.detalleArray.removeAt(this.detalleArray.length - 1);
+    }
+
+    if (!this.detalleArray.length) {
+      this.detalleArray.push(this.createDetalleForm(detalle));
+      return;
+    }
+
+    const detalleGroup = this.detalleArray.at(0);
+    detalleGroup.patchValue(detalle, { emitEvent: false });
+    detalleGroup.disable({ emitEvent: false });
+  }
+
+  private getDetalleContableValue(base?: Partial<DepositoCxcDetalle>): DepositoCxcDetalle {
+    const tipoCambio = this.normalizeNumber(this.depositoForm.controls.tCambio.value || base?.tCambio || 1);
+    return {
+      codConcepto: DETALLE_CONTABLE_DEFAULTS.codConcepto,
+      descripcion: DETALLE_CONTABLE_DEFAULTS.descripcion,
+      moneda: this.getCuentaMoneda() || this.normalize(base?.moneda) || this.normalize(this.depositoForm.controls.moneda.value),
+      monto: this.roundNumber(this.totalCobranza),
+      tCambio: tipoCambio
+    };
   }
 
   private buildPayload(): DepositoCxc {

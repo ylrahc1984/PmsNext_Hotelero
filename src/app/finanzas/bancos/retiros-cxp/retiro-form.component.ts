@@ -46,6 +46,7 @@ type FacturaForm = {
 };
 
 type DetalleForm = {
+  codConcepto: FormControl<string>;
   concepto: FormControl<string>;
   descripcion: FormControl<string>;
   moneda: FormControl<string>;
@@ -73,6 +74,12 @@ interface CuentaBancoOption {
   label: string;
   moneda?: string;
 }
+
+const DETALLE_CONTABLE_DEFAULTS = {
+  codConcepto: 'PAPRO',
+  concepto: 'PAGO A PROVEEDORES',
+  descripcion: 'Cuenta por pagar a proveedores'
+} as const;
 
 @Component({
   selector: 'app-retiro-form',
@@ -156,6 +163,14 @@ export class RetiroFormComponent implements OnInit {
 
     this.facturasArray.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.recalcularTotales());
 
+    this.retiroForm.controls.tipoCambio.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.syncDetalleContable());
+
+    this.retiroForm.controls.moneda.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.syncDetalleContable());
+
     this.retiroForm.controls.codProve.valueChanges
       .pipe(
         takeUntilDestroyed(this.destroyRef),
@@ -205,6 +220,8 @@ export class RetiroFormComponent implements OnInit {
       const current = this.retiroForm.controls.ctaBanco.value;
       if (current && !this.cuentas.some((item) => item.value === current)) {
         this.retiroForm.controls.ctaBanco.setValue('');
+      } else if (current) {
+        this.onCuentaChange(current);
       }
     } catch (error) {
       console.error('Error al cargar cuentas bancarias:', error);
@@ -217,9 +234,10 @@ export class RetiroFormComponent implements OnInit {
 
   onCuentaChange(ctaBanco: string): void {
     const selected = this.cuentas.find((item) => item.value === ctaBanco);
-    if (selected?.moneda && !this.retiroForm.controls.moneda.value) {
+    if (selected?.moneda) {
       this.retiroForm.controls.moneda.setValue(selected.moneda);
     }
+    this.syncDetalleContable();
   }
 
   seleccionarProveedor(proveedor: ProveedorUI): void {
@@ -258,15 +276,18 @@ export class RetiroFormComponent implements OnInit {
     if (this.readonlyMode) {
       return;
     }
-    this.detallesArray.push(this.createDetalleForm());
+    this.syncDetalleContable();
   }
 
   eliminarDetalle(index: number): void {
     if (this.readonlyMode) {
       return;
     }
+    if (index <= 0) {
+      this.syncDetalleContable();
+      return;
+    }
     this.detallesArray.removeAt(index);
-    this.detallesArray.markAsDirty();
   }
 
   eliminarFactura(index: number): void {
@@ -312,7 +333,7 @@ export class RetiroFormComponent implements OnInit {
     firstValueFrom(request)
       .then(() => {
         this.toast.success(this.idOperacion ? 'Retiro actualizado correctamente.' : 'Retiro registrado correctamente.');
-        this.router.navigate(['/finanzas/bancos/retiros-cxp']);
+        this.router.navigate(['/finanzas/cuentas-pagar']);
       })
       .catch((error) => {
         this.toast.error(this.getErrorMessage(error, 'No se pudo guardar el retiro.'));
@@ -323,7 +344,7 @@ export class RetiroFormComponent implements OnInit {
   }
 
   cancelar(): void {
-    this.router.navigate(['/finanzas/bancos/retiros-cxp']);
+    this.router.navigate(['/finanzas/cuentas-pagar']);
   }
 
   trackByIndex(index: number): number {
@@ -418,7 +439,7 @@ export class RetiroFormComponent implements OnInit {
     (retiro.facturas || []).forEach((factura) => this.facturasArray.push(this.createFacturaForm(factura)));
 
     this.detallesArray.clear();
-    (retiro.detalles || []).forEach((detalle) => this.detallesArray.push(this.createDetalleForm(detalle)));
+    this.syncDetalleContable(retiro.detalles?.[0]);
 
     this.recalcularTotales();
   }
@@ -491,13 +512,17 @@ export class RetiroFormComponent implements OnInit {
   }
 
   private createDetalleForm(detalle?: Partial<RetiroCxpDetalleContable>): FormGroup<DetalleForm> {
-    return this.fb.group({
-      concepto: this.fb.control(this.normalize(detalle?.concepto), { validators: [Validators.required] }),
-      descripcion: this.fb.control(this.normalize(detalle?.descripcion)),
-      moneda: this.fb.control(this.normalize(detalle?.moneda), { validators: [Validators.required] }),
-      monto: this.fb.control(this.normalizeNumber(detalle?.monto), { validators: [Validators.required, Validators.min(0.01)] }),
-      tCambio: this.fb.control(this.normalizeNumber(detalle?.tCambio || 1), { validators: [Validators.required, Validators.min(0)] })
+    const defaults = this.getDetalleContableValue(detalle);
+    const group = this.fb.group({
+      codConcepto: this.fb.control(defaults.codConcepto, { validators: [Validators.required] }),
+      concepto: this.fb.control(defaults.concepto, { validators: [Validators.required] }),
+      descripcion: this.fb.control(defaults.descripcion, { validators: [Validators.required] }),
+      moneda: this.fb.control(defaults.moneda, { validators: [Validators.required] }),
+      monto: this.fb.control(defaults.monto, { validators: [Validators.required, Validators.min(0.01)] }),
+      tCambio: this.fb.control(defaults.tCambio, { validators: [Validators.required, Validators.min(0)] })
     });
+    group.disable({ emitEvent: false });
+    return group;
   }
 
   private maxSaldoValidator(saldo: number) {
@@ -513,6 +538,43 @@ export class RetiroFormComponent implements OnInit {
   private recalcularTotales(): void {
     const total = this.roundNumber(this.totalAplicado);
     this.retiroForm.controls.montoTotal.setValue(total, { emitEvent: false });
+    this.syncDetalleContable();
+  }
+
+  private syncDetalleContable(base?: Partial<RetiroCxpDetalleContable>): void {
+    const detalle = this.getDetalleContableValue(base);
+
+    while (this.detallesArray.length > 1) {
+      this.detallesArray.removeAt(this.detallesArray.length - 1);
+    }
+
+    if (!this.detallesArray.length) {
+      this.detallesArray.push(this.createDetalleForm(detalle));
+      return;
+    }
+
+    const detalleGroup = this.detallesArray.at(0);
+    detalleGroup.patchValue(detalle, { emitEvent: false });
+    detalleGroup.disable({ emitEvent: false });
+  }
+
+  private getDetalleContableValue(base?: Partial<RetiroCxpDetalleContable>): RetiroCxpDetalleContable {
+    const monedaCuenta = this.getCuentaMoneda();
+    const tipoCambio = this.normalizeNumber(this.retiroForm.controls.tipoCambio.value);
+    return {
+      codConcepto: DETALLE_CONTABLE_DEFAULTS.codConcepto,
+      concepto: DETALLE_CONTABLE_DEFAULTS.concepto,
+      descripcion: DETALLE_CONTABLE_DEFAULTS.descripcion,
+      moneda: monedaCuenta || this.normalize(base?.moneda) || this.normalize(this.retiroForm.controls.moneda.value),
+      monto: this.roundNumber(this.totalAplicado),
+      tCambio: tipoCambio
+    };
+  }
+
+  private getCuentaMoneda(): string {
+    const cuentaSeleccionada = this.normalize(this.retiroForm.controls.ctaBanco.value);
+    const cuenta = this.cuentas.find((item) => item.value === cuentaSeleccionada);
+    return this.normalize(cuenta?.moneda);
   }
 
   private buildPayload(): RetiroCxp {
@@ -536,7 +598,8 @@ export class RetiroFormComponent implements OnInit {
         saldo: this.normalizeNumber(factura.saldo),
         montoPagar: this.normalizeNumber(factura.montoPagar)
       })),
-      detalles: raw.detalles.map((detalle) => ({
+      detalles: raw.detalles.map((detalle) => ({    
+        codConcepto: this.normalize(detalle.codConcepto),
         ...detalle,
         monto: this.normalizeNumber(detalle.monto),
         tCambio: this.normalizeNumber(detalle.tCambio)

@@ -1,0 +1,368 @@
+.detail-page {
+  padding: 1.5rem;
+  background: #f3f4f6;
+  min-height: 100%;
+}
+
+.detail-page__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.detail-page__title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 0.2rem;
+}
+
+.detail-page__title {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.detail-page__meta,
+.detail-page__submeta {
+  color: #475569;
+  font-size: 1.05rem;
+}
+
+.detail-page__submeta {
+  margin-top: 0.25rem;
+}
+
+.detail-page__actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.icon-action {
+  width: 4.6rem;
+  height: 3.7rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #94a3b8;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.72);
+  color: #94a3b8;
+  font-size: 1.35rem;
+}
+
+.icon-action--primary {
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+.doc-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.85rem;
+  padding: 0.15rem 0.7rem;
+  border-radius: 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.doc-chip--number {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #0f172a;
+}
+
+.doc-chip--type {
+  background: #1f9d61;
+  color: #fff;
+}
+
+.doc-chip--status {
+  background: #64748b;
+  color: #fff;
+}
+
+.loading-panel,
+.empty-table-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 9rem;
+  border: 1px solid #d1d5db;
+  background: rgba(255, 255, 255, 0.72);
+  color: #64748b;
+}
+
+.detail-top-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2.05fr) minmax(20rem, 1fr);
+  gap: 1.5rem;
+}
+
+.summary-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.panel {
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid #cbd5e1;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.35rem 1.5rem 0;
+}
+
+.panel__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  color: #0f172a;
+  font-size: 1.15rem;
+  font-weight: 500;
+}
+
+.panel__title i {
+  color: #475569;
+  font-size: 1.05rem;
+}
+
+.general-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem 2rem;
+  padding: 1rem 1.5rem 1.6rem;
+}
+
+.general-field {
+  min-width: 0;
+}
+
+.general-field--wide {
+  grid-column: span 1;
+}
+
+.general-field__label {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: #475569;
+  font-size: 0.95rem;
+}
+
+.general-field strong {
+  display: block;
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.general-field small {
+  display: block;
+  margin-top: 0.25rem;
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.summary-card {
+  border: 1px solid #bfdbfe;
+  border-left: 0.45rem solid #2563eb;
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 1rem 1.2rem;
+}
+
+.summary-card__head {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.78rem;
+  color: #334155;
+}
+
+.summary-card__body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.45rem;
+}
+
+.summary-card__amount {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-left: auto;
+  color: #1d4ed8;
+  font-size: 2.8rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.summary-card__currency {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.6rem;
+  min-height: 1.9rem;
+  padding: 0 0.7rem;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  color: #334155;
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.summary-card__icon {
+  width: 4rem;
+  height: 4rem;
+  border: 0;
+  border-radius: 1.2rem;
+  background: #dbeafe;
+  color: #2563eb;
+  font-size: 1.45rem;
+}
+
+.summary-card__foot {
+  margin-top: 0.45rem;
+  color: #475569;
+  font-size: 0.95rem;
+}
+
+.panel--totals {
+  padding: 1rem 1.45rem;
+}
+
+.totals-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.totals-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+.totals-row strong {
+  font-weight: 500;
+}
+
+.totals-divider {
+  border-top: 1px dashed #cbd5e1;
+  margin: 0.15rem 0 0.1rem;
+}
+
+.totals-row--strong span,
+.totals-row--strong strong {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.totals-row--danger,
+.totals-row--danger strong {
+  color: #ef4444;
+}
+
+.count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.55rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.8);
+  color: #334155;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.detail-table,
+.payments-table {
+  margin-top: 0.8rem;
+}
+
+.detail-table thead th,
+.payments-table thead th {
+  background: rgba(241, 245, 249, 0.95);
+  border-bottom: 1px solid #cbd5e1;
+  color: #0f172a;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.detail-table td,
+.payments-table td {
+  vertical-align: middle;
+  border-bottom: 1px solid #dbe3ec;
+  color: #0f172a;
+  font-size: 0.96rem;
+}
+
+.detail-table__desc {
+  font-weight: 700;
+}
+
+.detail-table__total {
+  font-weight: 700;
+}
+
+@media (max-width: 1199.98px) {
+  .detail-top-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .detail-page {
+    padding: 1rem;
+  }
+
+  .detail-page__header {
+    flex-direction: column;
+  }
+
+  .detail-page__actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .general-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .detail-page__title {
+    font-size: 1.55rem;
+  }
+
+  .summary-card__amount {
+    font-size: 2.1rem;
+  }
+
+  .general-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .icon-action {
+    width: 3.8rem;
+    height: 3.2rem;
+  }
+}

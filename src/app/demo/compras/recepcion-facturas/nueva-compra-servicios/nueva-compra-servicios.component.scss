@@ -226,6 +226,25 @@
   box-shadow: 0 16px 30px rgba(15, 23, 42, 0.1);
 }
 
+.totals-row {
+  align-items: stretch;
+}
+
+.totals-row .section-card {
+  height: 100%;
+}
+
+.observaciones-card__body {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.observaciones-card__input {
+  flex: 1 1 auto;
+  min-height: 168px;
+}
+
 .totals-card__body {
   padding: 24px;
 }
@@ -323,5 +342,9 @@
 
   .section-card {
     margin-bottom: 20px;
+  }
+
+  .observaciones-card__input {
+    min-height: 132px;
   }
 }

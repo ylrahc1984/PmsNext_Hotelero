@@ -3,8 +3,8 @@
     <app-card [customHeader]="true">
       <div class="app-card-header header-hero">
         <div>
-          <h5 class="header-hero__main">Nueva Compra de Servicios</h5>
-          <p class="header-hero__subtitle">Registro de factura de servicios</p>
+          <h5 class="header-hero__main">{{ pageTitle }}</h5>
+          <p class="header-hero__subtitle">{{ pageSubtitle }}</p>
         </div>
         <div class="header-hero__actions">
           <button class="btn btn-sm btn-outline-secondary" type="button" (click)="cancel()" [disabled]="isSaving">
@@ -14,7 +14,7 @@
           <button class="btn btn-sm btn-primary nf-btn-primary" type="button" (click)="submit()" [disabled]="!canSubmit">
             <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
             <i class="feather icon-check me-1" *ngIf="!isSaving"></i>
-            Guardar
+            {{ submitLabel }}
           </button>
         </div>
       </div>
@@ -51,7 +51,7 @@
                   </div>
                   <div class="col-xl-4 col-lg-5 col-md-6">
                     <label class="form-label nf-label">Tipo documento <span class="text-danger">*</span></label>
-                    <select class="form-control form-control-sm" formControlName="tipDocu" [class.is-invalid]="isFieldInvalid('tipDocu')">
+                    <select class="form-control form-control-sm" formControlName="tipDocu" [class.is-invalid]="isFieldInvalid('tipDocu')" [disabled]="true">
                       <option *ngFor="let tipo of tiposDocumento" [value]="tipo.value">{{ tipo.label }}</option>
                     </select>
                     <div class="invalid-feedback">Seleccione un tipo de documento.</div>
@@ -200,7 +200,15 @@
           </div>
         </div>
 
-        <div class="row totals-row justify-content-end">
+        <div class="row totals-row">
+          <div class="col-12 col-lg-8">
+            <div class="card section-card observaciones-card">
+              <div class="card-body section-card__body observaciones-card__body">
+                <div class="section-card__title">Observaciones</div>
+                <textarea class="form-control observaciones-card__input" formControlName="observaciones" rows="4" placeholder="Notas adicionales"></textarea>
+              </div>
+            </div>
+          </div>
           <div class="col-12 col-lg-4">
             <div class="card section-card totals-card">
               <div class="card-body section-card__body totals-card__body">
@@ -227,13 +235,6 @@
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        <div class="card section-card">
-          <div class="card-body section-card__body">
-            <div class="section-card__title">Observaciones</div>
-            <textarea class="form-control" formControlName="observaciones" rows="4" placeholder="Notas adicionales"></textarea>
           </div>
         </div>
       </form>

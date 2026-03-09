@@ -41,6 +41,7 @@ export class DepositoListComponent implements OnInit {
   private readonly bancosService = inject(BancosService);
   private readonly cuentaService = inject(CuentaBancoService);
   private readonly toast = inject(ToastService);
+  private readonly headerTitle = 'Depósitos de Cobranza a Clientes';
 
   readonly filtersForm: FormGroup<DepositoFiltersForm> = this.fb.group({
     codBanco: this.fb.control(''),
@@ -83,7 +84,7 @@ export class DepositoListComponent implements OnInit {
     this.filtersForm.controls.codBanco.valueChanges.subscribe((value) => this.onBancoChange(value));
     this.updatePagination();
     void this.loadBancos();
-    void this.buscar();
+    
   }
 
   buscar(): void {
@@ -127,7 +128,7 @@ export class DepositoListComponent implements OnInit {
   }
 
   nuevoDeposito(): void {
-    this.router.navigate(['/finanzas/bancos/depositos-cxc/nuevo']);
+    
   }
 
   editar(deposito: DepositoCxcListItem): void {

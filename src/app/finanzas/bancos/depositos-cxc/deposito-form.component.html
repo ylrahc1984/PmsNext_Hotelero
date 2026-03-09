@@ -167,7 +167,6 @@
                       <th class="text-end">Monto pago</th>
                       <th>Estado</th>
                       <th>Referencia</th>
-                      <th>Forma pago</th>
                       <th class="text-end" *ngIf="!readonlyMode">Acciones</th>
                     </tr>
                   </thead>
@@ -201,11 +200,6 @@
                       </td>
                       <td>
                         <input type="text" class="form-control form-control-sm" [formControl]="cobranza.controls.referencia" [readonly]="readonlyMode">
-                      </td>
-                      <td>
-                        <select class="form-select form-select-sm" [formControl]="cobranza.controls.frmPago" [disabled]="readonlyMode">
-                          <option *ngFor="let frm of frmPagoOptions" [value]="frm">{{ frm }}</option>
-                        </select>
                       </td>
                       <td class="text-end" *ngIf="!readonlyMode">
                         <button class="btn btn-sm btn-outline-danger" type="button" (click)="eliminarCobranza(i)">

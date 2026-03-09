@@ -440,6 +440,34 @@ const routes: Routes = [
           )
       },
       {
+        path: 'recepcion-facturas/editar/:tipDocu/:numDocu',
+        loadComponent: () =>
+          import('./demo/compras/recepcion-facturas/nueva-compra-servicios/nueva-compra-servicios.component').then(
+            (c) => c.NuevaCompraServiciosComponent
+          )
+      },
+      {
+        path: 'recepcion-facturas/editar-articulo/:tipDocu/:numDocu',
+        loadComponent: () =>
+          import('./demo/compras/recepcion-facturas/nueva-compra-articulos/nueva-compra-articulos.component').then(
+            (c) => c.NuevaCompraArticulosComponent
+          )
+      },
+      {
+        path: 'recepcion-facturas/detalle/:tipDocu/:numDocu',
+        loadComponent: () =>
+          import('./demo/compras/recepcion-facturas/compra-servicio-detalle/compra-servicio-detalle.component').then(
+            (c) => c.CompraServicioDetalleComponent
+          )
+      },
+      {
+        path: 'recepcion-facturas/detalle-articulo/:tipDocu/:numDocu',
+        loadComponent: () =>
+          import('./demo/compras/recepcion-facturas/compra-articulo-detalle/compra-articulo-detalle.component').then(
+            (c) => c.CompraArticuloDetalleComponent
+          )
+      },
+      {
         path: 'historia-pagos',
         loadComponent: () =>
           import('./demo/compras/historia-pagos/historia-pagos.component').then((c) => c.HistoriaPagosComponent)

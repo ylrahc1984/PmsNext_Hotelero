@@ -3,14 +3,17 @@ import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { FormControl, FormGroup, NonNullableFormBuilder } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { catchError, finalize } from 'rxjs/operators';
-import { of } from 'rxjs';
+import { firstValueFrom, of } from 'rxjs';
 import Swal from 'sweetalert2';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
+import { AuthService } from 'src/app/core/services/auth.service';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { RecepcionFacturasService } from './recepcion-facturas.service';
 import { CompraFactura } from './interfaces/CompraFactura.interface';
 import { CompraFacturaResponse } from './interfaces/CompraFacturaResponse.interface';
+import { ComprasServiciosService } from './nueva-compra-servicios/compras-servicios.service';
+import { ComprasService } from './compras.service';
 
 interface RecepcionFacturasFiltroForm {
   fechaInicio: FormControl<string>;
@@ -20,7 +23,7 @@ interface RecepcionFacturasFiltroForm {
   tipoDocumento: FormControl<string>;
 }
 
-type TipoDocumento = 'COM' | 'SRV';
+type TipoDocumento = 'CMP' | 'SRV';
 
 @Component({
   selector: 'app-recepcion-facturas',
@@ -30,7 +33,10 @@ type TipoDocumento = 'COM' | 'SRV';
 })
 export class RecepcionFacturasComponent implements OnInit {
   private readonly fb = inject(NonNullableFormBuilder);
+  private readonly authService = inject(AuthService);
   private readonly facturasService = inject(RecepcionFacturasService);
+  private readonly comprasServiciosService = inject(ComprasServiciosService);
+  private readonly comprasService = inject(ComprasService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -44,7 +50,7 @@ export class RecepcionFacturasComponent implements OnInit {
 
   readonly tiposDocumento = [
     { value: '', label: 'Todos' },
-    { value: 'COM', label: 'Compra Artículos' },
+    { value: 'CMP', label: 'Compra Artículos' },
     { value: 'SRV', label: 'Compra Servicios' }
   ];
 
@@ -98,7 +104,7 @@ export class RecepcionFacturasComponent implements OnInit {
   }
 
   nuevaCompra(tipo: TipoDocumento): void {
-    if (tipo === 'COM') {
+    if (tipo === 'CMP') {
       this.router.navigate(['/compras/recepcion-facturas/nueva-compra-articulos']);
       return;
     }
@@ -106,42 +112,86 @@ export class RecepcionFacturasComponent implements OnInit {
   }
 
   verDetalle(factura: CompraFactura): void {
+    const tipDocu = this.normalizeTipo(factura.tipDocu);
+    if (tipDocu === 'SRV') {
+      this.router.navigate(['/compras/recepcion-facturas/detalle', tipDocu, factura.numDocu]);
+      return;
+    }
+    if (tipDocu === 'CMP') {
+      this.router.navigate(['/compras/recepcion-facturas/detalle-articulo', tipDocu, factura.numDocu]);
+      return;
+    }
+
     Swal.fire({
       title: 'Detalle',
-      text: `Detalle pendiente para documento ${factura.numDocu}.`,
+      text: `El detalle para el tipo ${tipDocu || 'N/D'} aún no está implementado.`,
       icon: 'info'
     });
   }
 
   editarFactura(factura: CompraFactura): void {
+    const tipDocu = this.normalizeTipo(factura.tipDocu);
+    if (tipDocu === 'SRV') {
+      this.router.navigate(['/compras/recepcion-facturas/editar', tipDocu, factura.numDocu]);
+      return;
+    }
+    if (tipDocu === 'CMP') {
+      this.router.navigate(['/compras/recepcion-facturas/editar-articulo', tipDocu, factura.numDocu]);
+      return;
+    }
+
     Swal.fire({
-      title: 'Edicion',
-      text: `Edicion pendiente para documento ${factura.numDocu}.`,
+      title: 'Edición',
+      text: `La edición para el tipo ${tipDocu || 'N/D'} aún no está implementada.`,
       icon: 'info'
     });
   }
 
-  eliminarFactura(factura: CompraFactura): void {
-    Swal.fire({
+  async eliminarFactura(factura: CompraFactura): Promise<void> {
+    const result = await Swal.fire({
       title: 'Eliminar factura',
-      text: `Desea eliminar la factura ${factura.numDocu}?`,
+      text: `¿Está seguro de eliminar la factura ${factura.numDocu}?`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Si, eliminar',
       cancelButtonText: 'Cancelar'
-    }).then((result) => {
-      if (!result.isConfirmed) {
-        return;
-      }
-      this.isDeleting = true;
-      Swal.fire({
-        title: 'Pendiente',
-        text: 'La eliminacion sera integrada con el backend en una siguiente fase.',
-        icon: 'info'
-      }).finally(() => {
-        this.isDeleting = false;
-      });
     });
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
+    const tipDocu = this.normalizeTipo(factura.tipDocu);
+    if (tipDocu !== 'SRV' && tipDocu !== 'CMP') {
+      await Swal.fire({
+        title: 'Eliminar factura',
+        text: `La eliminación para el tipo ${tipDocu || 'N/D'} aún no está implementada.`,
+        icon: 'info'
+      });
+      return;
+    }
+
+    this.isDeleting = true;
+    try {
+      if (tipDocu === 'SRV') {
+        await firstValueFrom(this.comprasServiciosService.eliminarCompraServicio(tipDocu, factura.numDocu, this.getOperador()));
+      } else {
+        await firstValueFrom(this.comprasService.eliminarCompraArticulo(tipDocu, factura.numDocu, this.getOperador()));
+      }
+      await Swal.fire({
+        title: 'Eliminada',
+        text: tipDocu === 'SRV' ? 'La compra de servicios fue eliminada correctamente.' : 'La compra de artículos fue eliminada correctamente.',
+        icon: 'success'
+      });
+      this.loadFacturas();
+    } catch (error) {
+      this.handleError(
+        tipDocu === 'SRV' ? 'No se pudo eliminar la compra de servicios.' : 'No se pudo eliminar la compra de artículos.',
+        error
+      );
+    } finally {
+      this.isDeleting = false;
+    }
   }
 
   registrarPago(factura: CompraFactura): void {
@@ -153,7 +203,7 @@ export class RecepcionFacturasComponent implements OnInit {
   }
 
   canEdit(factura: CompraFactura): boolean {
-    return this.normalizeEstado(factura.estado) === 'ABI';
+    return this.toNumber(factura.totalPagado) === 0;
   }
 
   canDelete(factura: CompraFactura): boolean {
@@ -166,7 +216,7 @@ export class RecepcionFacturasComponent implements OnInit {
 
   getTipoLabel(factura: CompraFactura): string {
     const tipo = this.normalizeTipo(factura.tipDocu);
-    if (tipo === 'COM') {
+    if (tipo === 'COM' || tipo === 'CMP') {
       return 'Compra Artículos';
     }
     if (tipo === 'SRV') {
@@ -177,7 +227,7 @@ export class RecepcionFacturasComponent implements OnInit {
 
   getTipoBadgeClass(factura: CompraFactura): string {
     const tipo = this.normalizeTipo(factura.tipDocu);
-    if (tipo === 'COM') {
+    if (tipo === 'COM' || tipo === 'CMP') {
       return 'badge-tipo badge-tipo-com';
     }
     if (tipo === 'SRV') {
@@ -253,6 +303,7 @@ export class RecepcionFacturasComponent implements OnInit {
   }
 
   private buildFilters(): {
+    Modo: number;
     fechaInicio?: string;
     fechaFinal?: string;
     proveedor?: string;
@@ -263,6 +314,7 @@ export class RecepcionFacturasComponent implements OnInit {
   } {
     const raw = this.filtrosForm.getRawValue();
     return {
+      Modo: 1,
       fechaInicio: this.normalizeValue(raw.fechaInicio),
       fechaFinal: this.normalizeValue(raw.fechaFinal),
       proveedor: this.normalizeValue(raw.proveedor),
@@ -297,6 +349,14 @@ export class RecepcionFacturasComponent implements OnInit {
 
   private normalizeEstado(value?: string): string {
     return (value || '').trim().toUpperCase();
+  }
+
+  private toNumber(value?: number | null): number {
+    return Number.isFinite(value as number) ? Number(value) : 0;
+  }
+
+  private getOperador(): string {
+    return this.authService.getCurrentUser()?.usuario ?? '';
   }
 
   private handleError(message: string, error: unknown): void {
