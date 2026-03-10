@@ -66,7 +66,7 @@ export class CompraArticuloDetalleComponent implements OnInit {
   }
 
   trackByPago(index: number, item: CompraArticuloPago): number | string {
-    return item.NumInterno || `${item.TipDocu}-${item.NumDocu}-${index}`;
+    return item.numInterno || `${item.tipDocu}-${item.numDocu}-${index}`;
   }
 
   formatDate(value?: string): string {

@@ -9,6 +9,8 @@ import { firstValueFrom } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
+import { AuthService } from 'src/app/core/services/auth.service';
+import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
 import { ToastService } from 'src/app/core/services/toast.service';
 import { BancosService } from '../bancos.service';
 import { CuentaBancoService } from '../../cuenta-banco/cuenta-banco.service';
@@ -18,53 +20,66 @@ import { RetiroCxp, RetiroCxpDetalleContable, RetiroCxpFactura } from './models/
 
 type RetiroForm = {
   codBanco: FormControl<string>;
-  ctaBanco: FormControl<string>;
+  codCtaBanco: FormControl<string>;
   fecha: FormControl<string>;
   numOperacion: FormControl<string>;
   tipoOperacion: FormControl<string>;
   moneda: FormControl<string>;
-  tipoCambio: FormControl<number>;
-  codProve: FormControl<string>;
-  nomProve: FormControl<string>;
+  tCambio: FormControl<number>;
+  numBeneficiario: FormControl<string>;
+  beneficiario: FormControl<string>;
   concepto: FormControl<string>;
-  montoTotal: FormControl<number>;
-  facturas: FormArray<FormGroup<FacturaForm>>;
-  detalles: FormArray<FormGroup<DetalleForm>>;
+  monto: FormControl<number>;
+  pagos: FormArray<FormGroup<FacturaForm>>;
+  detalle: FormArray<FormGroup<DetalleForm>>;
 };
 
 type FacturaForm = {
+  tipoDocu: FormControl<string>;
+  numDocu: FormControl<string>;
   tipDocPrv: FormControl<string>;
-  serie: FormControl<string>;
-  numFactura: FormControl<string>;
-  fecFactu: FormControl<string>;
-  fecVen: FormControl<string>;
+  serieDocPrv: FormControl<string>;
+  numFacPrv: FormControl<string>;
+  fechaCobra: FormControl<string>;
+  fechaVen: FormControl<string>;
+  tipoPago: FormControl<string>;
   totalDocu: FormControl<number>;
   saldo: FormControl<number>;
-  montoPagar: FormControl<number>;
-  estado: FormControl<string>;
   moneda: FormControl<string>;
+  montoPago: FormControl<number>;
+  tCambio: FormControl<number>;
+  estado: FormControl<string>;
+  descripcion: FormControl<string>;
+  tipoOpe: FormControl<string>;
 };
 
 type DetalleForm = {
   codConcepto: FormControl<string>;
   concepto: FormControl<string>;
-  descripcion: FormControl<string>;
   moneda: FormControl<string>;
   monto: FormControl<number>;
   tCambio: FormControl<number>;
+  numAsientoObs: FormControl<string>;
+  operador: FormControl<string>;
 };
 
 interface FacturaSeleccionada {
+  tipoDocu: string;
+  numDocu: string;
   tipDocPrv: string;
-  serie: string;
-  numFactura: string;
-  fecFactu?: string;
-  fecVen?: string;
+  serieDocPrv?: string;
+  numFacPrv?: string;
+  fechaCobra?: string;
+  fechaVen?: string;
+  tipoPago?: string;
   totalDocu: number;
   saldo: number;
   moneda: string;
+  montoPago?: number;
   estado: string;
   tCambio?: number;
+  descripcion?: string;
+  tipoOpe?: string;
   codProve: string;
   nomProve: string;
 }
@@ -78,7 +93,8 @@ interface CuentaBancoOption {
 const DETALLE_CONTABLE_DEFAULTS = {
   codConcepto: 'PAPRO',
   concepto: 'PAGO A PROVEEDORES',
-  descripcion: 'Cuenta por pagar a proveedores'
+  numAsientoObs: '',
+  operador: ''
 } as const;
 
 @Component({
@@ -101,29 +117,31 @@ export class RetiroFormComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly authService = inject(AuthService);
+  private readonly empresaContext = inject(EmpresaContextService);
   private readonly retiroService = inject(RetiroCxpService);
   private readonly bancosService = inject(BancosService);
   private readonly cuentaService = inject(CuentaBancoService);
   private readonly proveedorService = inject(ProveedorService);
   private readonly toast = inject(ToastService);
 
-  readonly tipoOperacionOptions = ['CHQ', 'Transferencia', 'Débito', 'Efectivo', 'Otro'];
-  readonly monedaOptions = ['USD', 'CRC', 'EUR'];
+  //readonly tipoOperacionOptions = ['CHQ', 'Transferencia', 'Débito', 'Efectivo', 'Otro'];
+  readonly monedaOptions = ['USD', 'COL', 'EUR'];
 
   readonly retiroForm: FormGroup<RetiroForm> = this.fb.group({
     codBanco: this.fb.control('', { validators: [Validators.required] }),
-    ctaBanco: this.fb.control('', { validators: [Validators.required] }),
+    codCtaBanco: this.fb.control('', { validators: [Validators.required] }),
     fecha: this.fb.control(this.formatDateToInput(new Date()), { validators: [Validators.required] }),
     numOperacion: this.fb.control('', { validators: [Validators.required] }),
-    tipoOperacion: this.fb.control('', { validators: [Validators.required] }),
+    tipoOperacion: this.fb.control('CXP', { validators: [Validators.required] }),
     moneda: this.fb.control('', { validators: [Validators.required] }),
-    tipoCambio: this.fb.control(1, { validators: [Validators.required, Validators.min(0)] }),
-    codProve: this.fb.control('', { validators: [Validators.required] }),
-    nomProve: this.fb.control('', { validators: [Validators.required] }),
-    concepto: this.fb.control('', { validators: [Validators.required] }),
-    montoTotal: this.fb.control({ value: 0, disabled: true }),
-    facturas: this.fb.array<FormGroup<FacturaForm>>([]),
-    detalles: this.fb.array<FormGroup<DetalleForm>>([])
+    tCambio: this.fb.control(1, { validators: [Validators.required, Validators.min(0)] }),
+    numBeneficiario: this.fb.control('', { validators: [Validators.required] }),
+    beneficiario: this.fb.control('', { validators: [Validators.required] }),
+    concepto: this.fb.control('PAGO A PROVEEDORES', { validators: [Validators.required] }),
+    monto: this.fb.control({ value: 0, disabled: true }),
+    pagos: this.fb.array<FormGroup<FacturaForm>>([]),
+    detalle: this.fb.array<FormGroup<DetalleForm>>([])
   });
 
   bancos: Array<{ codBanco: string; descripcion: string }> = [];
@@ -140,30 +158,39 @@ export class RetiroFormComponent implements OnInit {
   providerLocked = false;
   readonlyMode = false;
   idOperacion: string | null = null;
+  private retiroMeta = {
+    operador: '',
+    empresa: '',
+    movCon: 0 as number | string | boolean,
+    fechaCon: '',
+    operCon: ''
+  };
 
   get facturasArray(): FormArray<FormGroup<FacturaForm>> {
-    return this.retiroForm.controls.facturas;
+    return this.retiroForm.controls.pagos;
   }
 
   get detallesArray(): FormArray<FormGroup<DetalleForm>> {
-    return this.retiroForm.controls.detalles;
+    return this.retiroForm.controls.detalle;
   }
 
   ngOnInit(): void {
     this.readonlyMode = this.route.snapshot.data['readOnly'] === true;
     this.idOperacion = this.route.snapshot.paramMap.get('idOperacion');
+    this.empresaContext.restaurarDesdeStorage();
+    this.empresaContext.cargarEmpresaPrincipal();
 
     this.retiroForm.controls.codBanco.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((value) => this.onBancoChange(value));
 
-    this.retiroForm.controls.ctaBanco.valueChanges
+    this.retiroForm.controls.codCtaBanco.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((value) => this.onCuentaChange(value));
 
     this.facturasArray.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.recalcularTotales());
 
-    this.retiroForm.controls.tipoCambio.valueChanges
+    this.retiroForm.controls.tCambio.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.syncDetalleContable());
 
@@ -171,7 +198,7 @@ export class RetiroFormComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.syncDetalleContable());
 
-    this.retiroForm.controls.codProve.valueChanges
+    this.retiroForm.controls.numBeneficiario.valueChanges
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         debounceTime(300),
@@ -206,7 +233,7 @@ export class RetiroFormComponent implements OnInit {
     const normalized = this.normalize(codBanco);
     if (!normalized) {
       this.cuentas = [];
-      this.retiroForm.controls.ctaBanco.setValue('');
+      this.retiroForm.controls.codCtaBanco.setValue('');
       return;
     }
     this.cuentasLoading = true;
@@ -217,9 +244,9 @@ export class RetiroFormComponent implements OnInit {
         label: `${cuenta.nombreCta} (${cuenta.ctaBanco})`,
         moneda: cuenta.moneda
       }));
-      const current = this.retiroForm.controls.ctaBanco.value;
+      const current = this.retiroForm.controls.codCtaBanco.value;
       if (current && !this.cuentas.some((item) => item.value === current)) {
-        this.retiroForm.controls.ctaBanco.setValue('');
+        this.retiroForm.controls.codCtaBanco.setValue('');
       } else if (current) {
         this.onCuentaChange(current);
       }
@@ -241,8 +268,8 @@ export class RetiroFormComponent implements OnInit {
   }
 
   seleccionarProveedor(proveedor: ProveedorUI): void {
-    this.retiroForm.controls.codProve.setValue(proveedor.codigo);
-    this.retiroForm.controls.nomProve.setValue(proveedor.descripcion);
+    this.retiroForm.controls.numBeneficiario.setValue(proveedor.codigo);
+    this.retiroForm.controls.beneficiario.setValue(proveedor.descripcion);
     this.showProveedorDropdown = false;
   }
 
@@ -256,16 +283,16 @@ export class RetiroFormComponent implements OnInit {
     if (this.providerLocked) {
       return;
     }
-    const cod = this.normalize(this.retiroForm.controls.codProve.value);
+    const cod = this.normalize(this.retiroForm.controls.numBeneficiario.value);
     if (!cod) {
-      this.retiroForm.controls.nomProve.setValue('');
+      this.retiroForm.controls.beneficiario.setValue('');
       return;
     }
     try {
       const proveedor = await firstValueFrom(this.proveedorService.getProveedorByCodigo(cod));
       if (proveedor) {
-        this.retiroForm.controls.codProve.setValue(proveedor.codigo);
-        this.retiroForm.controls.nomProve.setValue(proveedor.descripcion);
+        this.retiroForm.controls.numBeneficiario.setValue(proveedor.codigo);
+        this.retiroForm.controls.beneficiario.setValue(proveedor.descripcion);
       }
     } catch (error) {
       console.error('Error al cargar proveedor:', error);
@@ -319,11 +346,12 @@ export class RetiroFormComponent implements OnInit {
       this.toast.warning('Revisa los montos aplicados en las facturas.');
       return;
     }
+    /*
     if (this.detallesArray.controls.some((ctrl) => ctrl.invalid)) {
       this.toast.warning('Revisa el detalle contable antes de guardar.');
       return;
     }
-
+   */
     const payload = this.buildPayload();
     this.saving = true;
     const request = this.idOperacion
@@ -353,7 +381,7 @@ export class RetiroFormComponent implements OnInit {
 
   saldoRestante(index: number): number {
     const factura = this.facturasArray.at(index).getRawValue();
-    return this.roundNumber(factura.saldo - factura.montoPagar);
+    return this.roundNumber(factura.saldo - factura.montoPago);
   }
 
   saldoEstadoClass(index: number): string {
@@ -372,7 +400,7 @@ export class RetiroFormComponent implements OnInit {
   }
 
   get totalAplicado(): number {
-    return this.facturasArray.getRawValue().reduce((sum, item) => sum + this.normalizeNumber(item.montoPagar), 0);
+    return this.facturasArray.getRawValue().reduce((sum, item) => sum + this.normalizeNumber(item.montoPago), 0);
   }
 
   get diferencia(): number {
@@ -422,24 +450,31 @@ export class RetiroFormComponent implements OnInit {
   private setRetiro(retiro: RetiroCxp): void {
     this.retiroForm.patchValue({
       codBanco: this.normalize(retiro.codBanco),
-      ctaBanco: this.normalize(retiro.ctaBanco),
+      codCtaBanco: this.normalize(retiro.codCtaBanco),
       fecha: this.formatDateFromApi(this.normalize(retiro.fecha)),
       numOperacion: this.normalize(retiro.numOperacion),
       tipoOperacion: this.normalize(retiro.tipoOperacion),
       moneda: this.normalize(retiro.moneda),
-      tipoCambio: this.normalizeNumber(retiro.tipoCambio),
-      codProve: this.normalize(retiro.codProve),
-      nomProve: this.normalize(retiro.nomProve),
+      tCambio: this.normalizeNumber(retiro.tCambio),
+      numBeneficiario: this.normalize(retiro.numBeneficiario),
+      beneficiario: this.normalize(retiro.beneficiario),
       concepto: this.normalize(retiro.concepto),
-      montoTotal: this.normalizeNumber(retiro.montoTotal)
+      monto: this.normalizeNumber(retiro.monto)
     });
+    this.retiroMeta = {
+      operador: this.normalize(retiro.operador),
+      empresa: this.normalize(retiro.empresa),
+      movCon: retiro.movCon ?? 0,
+      fechaCon: this.formatDateForApi(this.normalize(retiro.fechaCon)),
+      operCon: this.normalize(retiro.operCon)
+    };
 
     this.providerLocked = true;
     this.facturasArray.clear();
-    (retiro.facturas || []).forEach((factura) => this.facturasArray.push(this.createFacturaForm(factura)));
+    (retiro.pagos || []).forEach((factura) => this.facturasArray.push(this.createFacturaForm(factura)));
 
     this.detallesArray.clear();
-    this.syncDetalleContable(retiro.detalles?.[0]);
+    this.syncDetalleContable(retiro.detalle?.[0]);
 
     this.recalcularTotales();
   }
@@ -457,8 +492,8 @@ export class RetiroFormComponent implements OnInit {
     }
 
     const proveedorNombre = facturasFiltradas[0].nomProve;
-    this.retiroForm.controls.codProve.setValue(proveedorBase);
-    this.retiroForm.controls.nomProve.setValue(proveedorNombre);
+    this.retiroForm.controls.numBeneficiario.setValue(proveedorBase);
+    this.retiroForm.controls.beneficiario.setValue(proveedorNombre);
     this.providerLocked = true;
     this.showProveedorDropdown = false;
 
@@ -468,23 +503,36 @@ export class RetiroFormComponent implements OnInit {
     }
     const tipoCambio = this.normalizeNumber(facturasFiltradas[0].tCambio || 1);
     if (tipoCambio > 0) {
-      this.retiroForm.controls.tipoCambio.setValue(tipoCambio);
+      this.retiroForm.controls.tCambio.setValue(tipoCambio);
     }
 
     this.facturasArray.clear();
     facturasFiltradas.forEach((item) => {
+      const raw = item as FacturaSeleccionada & {
+        serie?: string;
+        numFactura?: string;
+        fecFactu?: string;
+        fecVen?: string;
+        montoPagar?: number;
+      };
       this.facturasArray.push(
         this.createFacturaForm({
+          tipoDocu: this.normalize(raw.tipoDocu),
+          numDocu: this.normalize(raw.numDocu),
           tipDocPrv: item.tipDocPrv,
-          serie: item.serie,
-          numFactura: item.numFactura,
-          fecFactu: item.fecFactu || '',
-          fecVen: item.fecVen || '',
+          serieDocPrv: this.normalize(raw.serieDocPrv) || this.normalize(raw.serie),
+          numFacPrv: this.normalize(raw.numFacPrv) || this.normalize(raw.numFactura),
+          fechaCobra: this.formatDateForApi(this.normalize(raw.fechaCobra) || this.normalize(raw.fecFactu)),
+          fechaVen: this.formatDateForApi(this.normalize(raw.fechaVen) || this.normalize(raw.fecVen)),
+          tipoPago: this.normalize(raw.tipoPago),
           totalDocu: this.normalizeNumber(item.totalDocu),
           saldo: this.normalizeNumber(item.saldo),
-          montoPagar: this.normalizeNumber(item.saldo),
+          montoPago: this.normalizeNumber(raw.montoPago ?? raw.montoPagar ?? item.saldo),
           estado: item.estado || '',
-          moneda: item.moneda
+          moneda: item.moneda,
+          tCambio: this.normalizeNumber(item.tCambio),
+          descripcion: this.normalize(raw.descripcion),
+          tipoOpe: this.normalize(raw.tipoOpe)
         })
       );
     });
@@ -492,21 +540,34 @@ export class RetiroFormComponent implements OnInit {
   }
 
   private createFacturaForm(factura?: Partial<RetiroCxpFactura>): FormGroup<FacturaForm> {
-    const saldo = this.normalizeNumber(factura?.saldo);
-    const montoPagar = this.normalizeNumber(factura?.montoPagar ?? saldo);
+    const raw = (factura ?? {}) as Partial<RetiroCxpFactura> & {
+      serie?: string;
+      numFactura?: string;
+      fecFactu?: string;
+      fecVen?: string;
+      montoPagar?: number;
+    };
+    const saldo = this.normalizeNumber(raw.saldo ?? raw.montoPago ?? raw.montoPagar ?? raw.totalDocu);
+    const montoPago = this.normalizeNumber(raw.montoPago ?? raw.montoPagar ?? saldo);
     const group = this.fb.group({
-      tipDocPrv: this.fb.control(this.normalize(factura?.tipDocPrv)),
-      serie: this.fb.control(this.normalize(factura?.serie)),
-      numFactura: this.fb.control(this.normalize(factura?.numFactura)),
-      fecFactu: this.fb.control(this.normalize(factura?.fecFactu)),
-      fecVen: this.fb.control(this.normalize(factura?.fecVen)),
-      totalDocu: this.fb.control(this.normalizeNumber(factura?.totalDocu)),
+      tipoDocu: this.fb.control(this.normalize(raw.tipoDocu)),
+      numDocu: this.fb.control(this.normalize(raw.numDocu)),
+      tipDocPrv: this.fb.control(this.normalize(raw.tipDocPrv)),
+      serieDocPrv: this.fb.control(this.normalize(raw.serieDocPrv) || this.normalize(raw.serie)),
+      numFacPrv: this.fb.control(this.normalize(raw.numFacPrv) || this.normalize(raw.numFactura)),
+      fechaCobra: this.fb.control(this.formatDateForApi(this.normalize(raw.fechaCobra) || this.normalize(raw.fecFactu))),
+      fechaVen: this.fb.control(this.formatDateForApi(this.normalize(raw.fechaVen) || this.normalize(raw.fecVen))),
+      tipoPago: this.fb.control(this.normalize(raw.tipoPago)),
+      totalDocu: this.fb.control(this.normalizeNumber(raw.totalDocu)),
       saldo: this.fb.control(saldo),
-      montoPagar: this.fb.control(montoPagar, {
+      moneda: this.fb.control(this.normalize(raw.moneda)),
+      montoPago: this.fb.control(montoPago, {
         validators: [Validators.required, Validators.min(0), this.maxSaldoValidator(saldo)]
       }),
-      estado: this.fb.control(this.normalize(factura?.estado)),
-      moneda: this.fb.control(this.normalize(factura?.moneda))
+      tCambio: this.fb.control(this.normalizeNumber(raw.tCambio)),
+      estado: this.fb.control(this.normalize(raw.estado)),
+      descripcion: this.fb.control(this.normalize(raw.descripcion)),
+      tipoOpe: this.fb.control(this.normalize(raw.tipoOpe))
     });
     return group;
   }
@@ -516,10 +577,11 @@ export class RetiroFormComponent implements OnInit {
     const group = this.fb.group({
       codConcepto: this.fb.control(defaults.codConcepto, { validators: [Validators.required] }),
       concepto: this.fb.control(defaults.concepto, { validators: [Validators.required] }),
-      descripcion: this.fb.control(defaults.descripcion, { validators: [Validators.required] }),
       moneda: this.fb.control(defaults.moneda, { validators: [Validators.required] }),
       monto: this.fb.control(defaults.monto, { validators: [Validators.required, Validators.min(0.01)] }),
-      tCambio: this.fb.control(defaults.tCambio, { validators: [Validators.required, Validators.min(0)] })
+      tCambio: this.fb.control(defaults.tCambio, { validators: [Validators.required, Validators.min(0)] }),
+      numAsientoObs: this.fb.control(this.normalize(defaults.numAsientoObs)),
+      operador: this.fb.control(this.normalize(defaults.operador))
     });
     group.disable({ emitEvent: false });
     return group;
@@ -537,7 +599,7 @@ export class RetiroFormComponent implements OnInit {
 
   private recalcularTotales(): void {
     const total = this.roundNumber(this.totalAplicado);
-    this.retiroForm.controls.montoTotal.setValue(total, { emitEvent: false });
+    this.retiroForm.controls.monto.setValue(total, { emitEvent: false });
     this.syncDetalleContable();
   }
 
@@ -560,49 +622,73 @@ export class RetiroFormComponent implements OnInit {
 
   private getDetalleContableValue(base?: Partial<RetiroCxpDetalleContable>): RetiroCxpDetalleContable {
     const monedaCuenta = this.getCuentaMoneda();
-    const tipoCambio = this.normalizeNumber(this.retiroForm.controls.tipoCambio.value);
+    const tipoCambio = this.normalizeNumber(this.retiroForm.controls.tCambio.value);
     return {
       codConcepto: DETALLE_CONTABLE_DEFAULTS.codConcepto,
       concepto: DETALLE_CONTABLE_DEFAULTS.concepto,
-      descripcion: DETALLE_CONTABLE_DEFAULTS.descripcion,
       moneda: monedaCuenta || this.normalize(base?.moneda) || this.normalize(this.retiroForm.controls.moneda.value),
       monto: this.roundNumber(this.totalAplicado),
-      tCambio: tipoCambio
+      tCambio: tipoCambio,
+      numAsientoObs: this.normalize(base?.numAsientoObs) || DETALLE_CONTABLE_DEFAULTS.numAsientoObs,
+      operador: this.normalize(base?.operador) || DETALLE_CONTABLE_DEFAULTS.operador
     };
   }
 
   private getCuentaMoneda(): string {
-    const cuentaSeleccionada = this.normalize(this.retiroForm.controls.ctaBanco.value);
+    const cuentaSeleccionada = this.normalize(this.retiroForm.controls.codCtaBanco.value);
     const cuenta = this.cuentas.find((item) => item.value === cuentaSeleccionada);
     return this.normalize(cuenta?.moneda);
   }
 
   private buildPayload(): RetiroCxp {
     const raw = this.retiroForm.getRawValue();
+    const fechaOperacion = this.formatDateForApi(raw.fecha);
+    const operador = this.retiroMeta.operador || this.getOperador();
+    const empresa = this.retiroMeta.empresa || this.getEmpresa();
+    const fechaCon = this.formatDateForApi(this.normalize(this.retiroMeta.fechaCon) || raw.fecha);
     return {
       idOperacion: this.idOperacion || undefined,
       codBanco: this.normalize(raw.codBanco),
-      ctaBanco: this.normalize(raw.ctaBanco),
-      fecha: this.formatDateForApi(this.normalize(raw.fecha)),
+      codCtaBanco: this.normalize(raw.codCtaBanco),
+      fecha: fechaOperacion,
+      numBeneficiario: this.normalize(raw.numBeneficiario),
+      beneficiario: this.normalize(raw.beneficiario),
+      concepto: this.normalize(raw.concepto),
       numOperacion: this.normalize(raw.numOperacion),
       tipoOperacion: this.normalize(raw.tipoOperacion),
       moneda: this.normalize(raw.moneda),
-      tipoCambio: this.normalizeNumber(raw.tipoCambio),
-      codProve: this.normalize(raw.codProve),
-      nomProve: this.normalize(raw.nomProve),
-      concepto: this.normalize(raw.concepto),
-      montoTotal: this.normalizeNumber(raw.montoTotal),
-      facturas: raw.facturas.map((factura) => ({
-        ...factura,
+      monto: this.normalizeNumber(raw.monto),
+      tCambio: this.normalizeNumber(raw.tCambio),
+      operador,
+      empresa,
+      movCon: this.retiroMeta.movCon ?? 0,
+      fechaCon,
+      operCon: this.normalize(this.retiroMeta.operCon),
+      pagos: raw.pagos.map((factura) => ({
+        tipoOpe: this.normalize(factura.tipoOpe),
+        tipoDocu: this.normalize(factura.tipoDocu),
+        numDocu: this.normalize(factura.numDocu),
+        tipDocPrv: this.normalize(factura.tipDocPrv),
+        serieDocPrv: this.normalize(factura.serieDocPrv),
+        numFacPrv: this.normalize(factura.numFacPrv),
+        fechaCobra: this.formatDateForApi(factura.fechaCobra || raw.fecha),
+        fechaVen: this.formatDateForApi(factura.fechaVen || raw.fecha),
+        tipoPago: this.normalize(factura.tipoPago),
+        moneda: this.normalize(factura.moneda),
         totalDocu: this.normalizeNumber(factura.totalDocu),
-        saldo: this.normalizeNumber(factura.saldo),
-        montoPagar: this.normalizeNumber(factura.montoPagar)
+        montoPago: this.normalizeNumber(factura.montoPago),
+        tCambio: this.normalizeNumber(factura.tCambio),
+        estado: this.normalize(factura.estado),
+        descripcion: this.normalize(factura.descripcion)
       })),
-      detalles: raw.detalles.map((detalle) => ({    
+      detalle: raw.detalle.map((detalle) => ({
         codConcepto: this.normalize(detalle.codConcepto),
-        ...detalle,
+        concepto: this.normalize(detalle.concepto),
+        moneda: this.normalize(detalle.moneda),
         monto: this.normalizeNumber(detalle.monto),
-        tCambio: this.normalizeNumber(detalle.tCambio)
+        tCambio: this.normalizeNumber(detalle.tCambio),
+        numAsientoObs: this.normalize(detalle.numAsientoObs),
+        operador: this.normalize(detalle.operador)
       }))
     };
   }
@@ -659,6 +745,9 @@ export class RetiroFormComponent implements OnInit {
     if (!trimmed) {
       return '';
     }
+    if (trimmed.includes('-') && trimmed.includes('T')) {
+      return trimmed.split('T')[0];
+    }
     if (trimmed.includes('-')) {
       return trimmed;
     }
@@ -680,17 +769,41 @@ export class RetiroFormComponent implements OnInit {
       return '';
     }
     if (trimmed.includes('/')) {
+      const parts = trimmed.split('/');
+      if (parts.length === 3) {
+        const [day, month, year] = parts;
+        if (day && month && year) {
+          return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year.slice(0, 4)}`;
+        }
+      }
       return trimmed;
     }
-    const parts = trimmed.split('-');
-    if (parts.length !== 3) {
-      return trimmed;
+    const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      const [, year, month, day] = isoMatch;
+      return `${day}/${month}/${year}`;
     }
-    const [year, month, day] = parts;
-    if (!year || !month || !day) {
-      return trimmed;
+    const compactMatch = trimmed.match(/^(\d{4})(\d{2})(\d{2})$/);
+    if (compactMatch) {
+      const [, year, month, day] = compactMatch;
+      return `${day}/${month}/${year}`;
     }
-    return `${day}/${month}/${year}`;
+    const parsed = new Date(trimmed);
+    if (!Number.isNaN(parsed.getTime())) {
+      const year = parsed.getFullYear();
+      const month = `${parsed.getMonth() + 1}`.padStart(2, '0');
+      const day = `${parsed.getDate()}`.padStart(2, '0');
+      return `${day}/${month}/${year}`;
+    }
+    return trimmed;
+  }
+
+  private getOperador(): string {
+    return this.authService.getCurrentUser()?.usuario ?? '';
+  }
+
+  private getEmpresa(): string {
+    return this.empresaContext.getSnapshot()?.MA04_Unidad ?? '';
   }
 
   private getErrorMessage(error: unknown, fallback: string): string {

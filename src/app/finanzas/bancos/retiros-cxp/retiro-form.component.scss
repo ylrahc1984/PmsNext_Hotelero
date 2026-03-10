@@ -433,6 +433,10 @@
   margin-top: 0.1rem;
 }
 
+.beneficiary-row.full {
+  grid-column: 1 / -1;
+}
+
 .beneficiary-title {
   display: inline-flex;
   align-items: center;

@@ -59,23 +59,23 @@ export interface CompraArticuloDetalleLinea {
 }
 
 export interface CompraArticuloPago {
-  NumInterno: number;
-  IdOperacion: string;
-  TipDocu: string;
-  NumDocu: string;
-  TipoDocPrv: string;
-  SerieDocPrv: string;
-  NumFacturaPrv: string;
-  Fecha: string;
-  Hora?: string | null;
-  TipoPago: string;
-  Moneda: string;
-  Monto: number;
-  TCambio: number;
-  Estado: string;
-  Descripcion: string;
-  Asiento: string;
-  Operador: string;
+  numInterno: number;
+  idOperacion: string;
+  tipDocu: string;
+  numDocu: string;
+  tipoDocPrv: string;
+  serieDocPrv: string;
+  numFacturaPrv: string;
+  fecha: string;
+  hora?: string | null;
+  tipoPago: string;
+  moneda: string;
+  monto: number;
+  tCambio: number;
+  estado: string;
+  descripcion: string;
+  asiento: string;
+  operador: string;
 }
 
 export interface CompraArticuloDetalleData {

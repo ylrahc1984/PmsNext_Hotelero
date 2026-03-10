@@ -1,9 +1,10 @@
 <div class="modal rsv-detalle-modal" tabindex="-1" role="dialog" [ngClass]="{ show: open }" *ngIf="open" style="display: block;">
   <div class="modal-dialog modal-lg rsv-modal" role="document">
     <div class="modal-content rsv-modal__content">
+      <div class="rsv-modal__blocking-layer" *ngIf="isSubmitting" aria-hidden="true"></div>
       <div class="modal-header rsv-modal__header">
         <h5 class="modal-title rsv-modal__title">{{ editingDetalleId ? 'Editar Servicio' : 'Agregar Servicio' }}</h5>
-        <button type="button" class="btn-close" aria-label="Close" (click)="onClose()"></button>
+        <button type="button" class="btn-close" aria-label="Close" (click)="onClose()" [disabled]="isSubmitting"></button>
       </div>
 
       <form #detalleFormRef="ngForm" (ngSubmit)="onSubmit(detalleFormRef)" class="rsv-form">
@@ -399,6 +400,10 @@
         </div>
 
         <div class="modal-footer rsv-modal__footer">
+          <div class="rsv-footer__status" *ngIf="isSubmitting">
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+            <span>Guardando servicio. Espere...</span>
+          </div>
           <div class="rsv-footer__summary">
             <div class="rsv-summary-card">
               <div class="rsv-summary-card__label">Total Servicio</div>
@@ -417,13 +422,16 @@
             </div>
           </div>
           <div class="rsv-footer__actions">
-            <button type="button" class="btn btn-outline-secondary rsv-action-btn rsv-action-btn--outline" (click)="onClose()">
+            <button type="button" class="btn btn-outline-secondary rsv-action-btn rsv-action-btn--outline" (click)="onClose()" [disabled]="isSubmitting">
               <span class="rsv-action-btn__icon"><i class="feather icon-x"></i></span>
               <span>Cancelar</span>
             </button>
-            <button type="submit" class="btn btn-primary rsv-action-btn rsv-action-btn--primary">
-              <span class="rsv-action-btn__icon"><i class="feather icon-save"></i></span>
-              <span>Guardar Servicio</span>
+            <button type="submit" class="btn btn-primary rsv-action-btn rsv-action-btn--primary" [disabled]="isSubmitting">
+              <span class="rsv-action-btn__icon">
+                <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                <i *ngIf="!isSubmitting" class="feather icon-save"></i>
+              </span>
+              <span>{{ isSubmitting ? 'Guardando...' : 'Guardar Servicio' }}</span>
             </button>
           </div>
         </div>

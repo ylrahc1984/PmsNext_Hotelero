@@ -98,6 +98,8 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
   selectedCliente: ClienteUI | null = null;
   serviciosLoading = false;
   serviciosPrecioLoading = false;
+  guardandoDetalle = false;
+  guardandoActividad = false;
   detalleServicioSearch = '';
   directoUpdating = false;
 
@@ -530,6 +532,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
           ...item,
           detallesPax: (paxList ?? []).filter((pax) => Number(pax?.PRV03_PRV02_ID) === Number(item?.PRV02_ID))
         }));
+        this.syncTotalReservaFromDetalles();
         this.loading = false;
       },
       error: (err) => {
@@ -538,6 +541,10 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         this.loading = false;
       }
     });
+  }
+
+  private syncTotalReservaFromDetalles(): void {
+    this.form.totalRsv = this.totalRack;
   }
 
   private getDefaultTipoPaxCode(): string {
@@ -875,6 +882,10 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
    * Guarda actividades dinámicas usando el endpoint existente de detalle de tours.
    */
   async guardarActividadDetalle(saveData: ActividadModalSavePayload): Promise<void> {
+    if (this.guardandoActividad) {
+      return;
+    }
+
     const codReserva = (this.codReservaActual ?? '').toString().trim();
     if (!codReserva) {
       this.showAlert('Atención', 'Espere la creación del borrador para agregar servicios.', 'warning');
@@ -912,6 +923,8 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       return value > max ? value : max;
     }, 0);
     const baseLinea = currentMaxLinea + 1;
+
+    this.guardandoActividad = true;
 
     try {
       console.groupCollapsed(
@@ -989,6 +1002,8 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     } catch (err) {
       this.logHttpError('Guardar actividad', err, { saveData });
       this.showAlert('Error', 'No se pudieron guardar las actividades.', 'error');
+    } finally {
+      this.guardandoActividad = false;
     }
   }
 
@@ -1019,6 +1034,10 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
    * - Construye el payload esperado por `DetalleToursCompletoController`.
    */
   async guardarDetalle(detalleFormRef: any): Promise<void> {
+    if (this.guardandoDetalle) {
+      return;
+    }
+
     if (detalleFormRef?.invalid) {
       detalleFormRef.control?.markAllAsTouched?.();
       return;
@@ -1057,111 +1076,114 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     this.lastDetalleCodLstPrecio = codLstPrecio;
     this.updateHeaderTarifaSnapshot(codPlan, codLstPrecio);
 
+    this.guardandoDetalle = true;
+    let payload: any = null;
+
     try {
-      const reglaAplicada = await this.applyReglaTarifaToDetalleForm();
-      if (!reglaAplicada && !this.allowManualPricing) {
-        this.showAlert(
-          'Atención',
-          this.reglaTarifaError ||
-            'No se encontró una regla tarifaria que aplique para la lista de precios, servicio, pax y hora Pick-Up seleccionados.',
-          'warning'
-        );
+      try {
+        const reglaAplicada = await this.applyReglaTarifaToDetalleForm();
+        if (!reglaAplicada && !this.allowManualPricing) {
+          this.showAlert(
+            'Atención',
+            this.reglaTarifaError ||
+              'No se encontró una regla tarifaria que aplique para la lista de precios, servicio, pax y hora Pick-Up seleccionados.',
+            'warning'
+          );
+          return;
+        }
+      } catch {
+        this.showAlert('Error', 'Ocurrió un error al aplicar la regla tarifaria antes de guardar el detalle.', 'error');
         return;
       }
-    } catch {
-      this.showAlert('Error', 'Ocurrió un error al aplicar la regla tarifaria antes de guardar el detalle.', 'error');
-      return;
-    }
 
-    const invalidPrice = paxItems.some((item) => Number(item.precioTotal ?? 0) <= 0);
-    if (invalidPrice) {
-      this.showAlert('Atención', 'Ingrese el precio total para cada tipo de pax.', 'warning');
-      return;
-    }
+      const invalidPrice = paxItems.some((item) => Number(item.precioTotal ?? 0) <= 0);
+      if (invalidPrice) {
+        this.showAlert('Atención', 'Ingrese el precio total para cada tipo de pax.', 'warning');
+        return;
+      }
 
-    const totalPax = paxItems.reduce((sum, item) => sum + (Number(item.cantidad ?? 0) || 0), 0);
-    const adultos = paxItems
-      .filter((item) => this.isAdultoTipoPax(item.tipoPax))
-      .reduce((sum, item) => sum + (Number(item.cantidad ?? 0) || 0), 0);
-    const ninos = paxItems
-      .filter((item) => this.isNinoTipoPax(item.tipoPax))
-      .reduce((sum, item) => sum + (Number(item.cantidad ?? 0) || 0), 0);
-    const montoServicio = this.sumPaxPrecioTotal(paxItems);
-    this.detalleForm.montoServicio = montoServicio;
+      const totalPax = paxItems.reduce((sum, item) => sum + (Number(item.cantidad ?? 0) || 0), 0);
+      const adultos = paxItems
+        .filter((item) => this.isAdultoTipoPax(item.tipoPax))
+        .reduce((sum, item) => sum + (Number(item.cantidad ?? 0) || 0), 0);
+      const ninos = paxItems
+        .filter((item) => this.isNinoTipoPax(item.tipoPax))
+        .reduce((sum, item) => sum + (Number(item.cantidad ?? 0) || 0), 0);
+      const montoServicio = this.sumPaxPrecioTotal(paxItems);
+      this.detalleForm.montoServicio = montoServicio;
 
-    const existing = this.editingDetalleId ? this.detalles.find((d) => d.PRV02_ID === this.editingDetalleId) : null;
-    const linea = existing?.PRV02_Linea ?? (this.detalles.length + 1);
+      const existing = this.editingDetalleId ? this.detalles.find((d) => d.PRV02_ID === this.editingDetalleId) : null;
+      const linea = existing?.PRV02_Linea ?? (this.detalles.length + 1);
 
-    const adultosLine = this.pickLineaAdultos(paxItems);
-    const ninosLine = paxItems.find((item) => this.isNinoTipoPax(item.tipoPax));
-    const idReglaPrecio = adultosLine?.reglaPrecioId ?? ninosLine?.reglaPrecioId ?? 0;
-    const precioAdulto = adultosLine?.precioUnitario ?? this.getPrecioUnitarioFallback(adultosLine);
-    const precioNino = ninosLine?.precioUnitario ?? this.getPrecioUnitarioFallback(ninosLine);
-    const precioPaxExtra = adultosLine?.precioPaxExtra ?? 0;
+      const adultosLine = this.pickLineaAdultos(paxItems);
+      const ninosLine = paxItems.find((item) => this.isNinoTipoPax(item.tipoPax));
+      const idReglaPrecio = adultosLine?.reglaPrecioId ?? ninosLine?.reglaPrecioId ?? 0;
+      const precioAdulto = adultosLine?.precioUnitario ?? this.getPrecioUnitarioFallback(adultosLine);
+      const precioNino = ninosLine?.precioUnitario ?? this.getPrecioUnitarioFallback(ninosLine);
+      const precioPaxExtra = adultosLine?.precioPaxExtra ?? 0;
 
-    const detallesPaxPayload = paxItems.map((item) => ({
-      tipoPax: item.tipoPax,
-      cantidad: item.cantidad,
-      precioNeto: Number(item.precioTotal ?? 0) || 0
-    }));
+      const detallesPaxPayload = paxItems.map((item) => ({
+        tipoPax: item.tipoPax,
+        cantidad: item.cantidad,
+        precioNeto: Number(item.precioTotal ?? 0) || 0
+      }));
 
-      const payload = {
+      payload = {
         id: this.editingDetalleId ?? 0,
         codReserva,
-      linea,
-      tipoServicio: this.detalleForm.tipoServicio || '',
-      codServicio: this.detalleForm.codServicio || '',
-      nomServicio: this.detalleForm.nomServicio || '',
-      fecServicio: this.detalleForm.fechaServicio,
-      // Por negocio, la referencia principal es la hora Pick-Up.
-      horaServicio: this.detalleForm.horaPickup || this.detalleForm.horaInicio || '',
-      origenTexto: this.detalleForm.origenLugar || '',
-      destinoTexto: this.detalleForm.destinoLugar || '',
-      origenZona: this.detalleForm.origenZona || '',
-      destinoZona: this.detalleForm.destinoZona || '',
-      // Google metadata + Place ID
-      origenGoogle: (this.detalleForm.origenGoogle || '').toString(),
-      destinoGoogle: (this.detalleForm.destinoGoogle || '').toString(),
-      origenPlaceId: (this.detalleForm.origenPlaceId || '').toString(),
-      destinoPlaceId: (this.detalleForm.destinoPlaceId || '').toString(),
-      origenLat: this.detalleForm.origenLat || 0,
-      origenLng: this.detalleForm.origenLng || 0,
-      destinoLat: this.detalleForm.destinoLat || 0,
-      destinoLng: this.detalleForm.destinoLng || 0,
-      adultos,
-      ninos,
-      totalPax,
-      codLstPrecio,
-      idReglaPrecio,
-      precioAdulto: precioAdulto || 0,
-      precioNino: precioNino || 0,
-      precioPaxExtra: precioPaxExtra || 0,
-      montoServicio,
-      codSuplidor: '',
-      estado: (this.detalleForm.estado || 'PEN').toString(),
-      observacion: this.detalleForm.observaciones || '',
-      detallesPax: detallesPaxPayload,
-      detallesPaxJson: safeJsonStringify(detallesPaxPayload),
-      operador: this.getOperador(),
-      respuesta: ''
-    };
+        linea,
+        tipoServicio: this.detalleForm.tipoServicio || '',
+        codServicio: this.detalleForm.codServicio || '',
+        nomServicio: this.detalleForm.nomServicio || '',
+        fecServicio: this.detalleForm.fechaServicio,
+        // Por negocio, la referencia principal es la hora Pick-Up.
+        horaServicio: this.detalleForm.horaPickup || this.detalleForm.horaInicio || '',
+        origenTexto: this.detalleForm.origenLugar || '',
+        destinoTexto: this.detalleForm.destinoLugar || '',
+        origenZona: this.detalleForm.origenZona || '',
+        destinoZona: this.detalleForm.destinoZona || '',
+        // Google metadata + Place ID
+        origenGoogle: (this.detalleForm.origenGoogle || '').toString(),
+        destinoGoogle: (this.detalleForm.destinoGoogle || '').toString(),
+        origenPlaceId: (this.detalleForm.origenPlaceId || '').toString(),
+        destinoPlaceId: (this.detalleForm.destinoPlaceId || '').toString(),
+        origenLat: this.detalleForm.origenLat || 0,
+        origenLng: this.detalleForm.origenLng || 0,
+        destinoLat: this.detalleForm.destinoLat || 0,
+        destinoLng: this.detalleForm.destinoLng || 0,
+        adultos,
+        ninos,
+        totalPax,
+        codLstPrecio,
+        idReglaPrecio,
+        precioAdulto: precioAdulto || 0,
+        precioNino: precioNino || 0,
+        precioPaxExtra: precioPaxExtra || 0,
+        montoServicio,
+        codSuplidor: '',
+        estado: (this.detalleForm.estado || 'PEN').toString(),
+        observacion: this.detalleForm.observaciones || '',
+        detallesPax: detallesPaxPayload,
+        detallesPaxJson: safeJsonStringify(detallesPaxPayload),
+        operador: this.getOperador(),
+        respuesta: ''
+      };
 
-    console.log('[ReservaCreate] Payload DetalleToursCompleto', payload);
+      console.log('[ReservaCreate] Payload DetalleToursCompleto', payload);
 
-    const request$ = this.editingDetalleId
-      ? this.detalleService.actualizarDetalle(this.editingDetalleId, payload)
-      : this.detalleService.crearDetalle(payload);
+      const request$ = this.editingDetalleId
+        ? this.detalleService.actualizarDetalle(this.editingDetalleId, payload)
+        : this.detalleService.crearDetalle(payload);
 
-    request$.subscribe({
-      next: () => {
-        this.cargarDetalle(this.codReservaActual!);
-        this.cerrarModalDetalle();
-      },
-      error: (err) => {
-        this.logHttpError('Guardar detalle', err, { payload });
-        this.showAlert('Error', 'No se pudo guardar el detalle.', 'error');
-      }
-    });
+      await firstValueFrom(request$);
+      this.cargarDetalle(this.codReservaActual!);
+      this.cerrarModalDetalle();
+    } catch (err) {
+      this.logHttpError('Guardar detalle', err, { payload });
+      this.showAlert('Error', 'No se pudo guardar el detalle.', 'error');
+    } finally {
+      this.guardandoDetalle = false;
+    }
   }
 
   /**
@@ -1845,7 +1867,8 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       title,
       text,
       icon,
-      shouldRestoreFocus: () => this.showDetalleModal || this.showClienteModal || this.showCancelDecisionModal
+      shouldRestoreFocus: () =>
+        this.showDetalleModal || this.showActividadModal || this.showClienteModal || this.showCancelDecisionModal
     });
   }
 
@@ -2090,7 +2113,8 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       this.reservasService.cambiarEstadoDirecto(codReserva, nextValue).pipe(take(1)).subscribe({
         next: () => {
           this.directoUpdating = false;
-          this.cargarEncabezado(codReserva);
+          // El cambio de "directo" recalcula montos en backend, pero no debe sobrescribir
+          // cambios locales aún no guardados del encabezado.
           this.cargarDetalle(codReserva);
         },
         error: (err) => {

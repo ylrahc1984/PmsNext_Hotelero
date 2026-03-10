@@ -214,14 +214,14 @@
           </thead>
           <tbody>
             <tr *ngFor="let pago of pagos; trackBy: trackByPago">
-              <td>{{ pago.NumInterno }}</td>
-              <td>{{ pago.TipoPago || 'N/D' }}</td>
-              <td>{{ pago.TipoDocPrv || 'N/D' }}</td>
-              <td>{{ pago.Moneda || 'N/D' }}</td>
-              <td class="text-end">{{ formatMoney(pago.Monto) }}</td>
-              <td>{{ pago.NumFacturaPrv || pago.Descripcion || 'N/D' }}</td>
-              <td>{{ pago.SerieDocPrv || '—' }}</td>
-              <td>{{ formatDateTime(pago.Fecha, pago.Hora) }}</td>
+              <td>{{ pago.numInterno }}</td>
+              <td>{{ pago.tipoPago || 'N/D' }}</td>
+              <td>{{ pago.tipoDocPrv || 'N/D' }}</td>
+              <td>{{ pago.moneda || 'N/D' }}</td>
+              <td class="text-end">{{ formatMoney(pago.monto) }}</td>
+              <td>{{ pago.numFacturaPrv || pago.descripcion || 'N/D' }}</td>
+              <td>{{ pago.serieDocPrv || '—' }}</td>
+              <td>{{ formatDateTime(pago.fecha, pago.hora) }}</td>
             </tr>
           </tbody>
         </table>

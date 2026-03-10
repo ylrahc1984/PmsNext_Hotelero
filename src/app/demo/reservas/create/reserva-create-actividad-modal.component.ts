@@ -109,6 +109,7 @@ type ActividadModalFormGroup = FormGroup<{
 })
 export class ReservaCreateActividadModalComponent implements OnChanges, OnDestroy, AfterViewInit {
   @Input() open = false;
+  @Input() saving = false;
   @Input({ required: true }) actividadForm!: ActividadDetalleForm;
   @Input() servicios: ServicioUI[] = [];
   @Input() serviciosLoading = false;
@@ -131,6 +132,7 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
   readonly serviciosPageSize = 6;
   serviciosPageHasNext = false;
   serviciosPageItemsCount = 0;
+  submitLocked = false;
 
   private destroy$ = new Subject<void>();
   private actividadesSubscriptions = new Subscription();
@@ -201,6 +203,10 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     return Array.from(this.actividadesStateMap.values());
   }
 
+  get isSubmitting(): boolean {
+    return this.submitLocked || this.saving;
+  }
+
   get serviciosRangeLabel(): string {
     const count = Number(this.serviciosPageItemsCount ?? 0) || 0;
     if (count <= 0) {
@@ -255,7 +261,16 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
 
   ngOnChanges(changes: SimpleChanges): void {
     const openChange = changes['open'];
+    if (openChange?.currentValue !== true) {
+      this.submitLocked = false;
+    }
+
+    if (changes['saving'] && changes['saving'].currentValue !== true) {
+      this.submitLocked = false;
+    }
+
     if (openChange?.currentValue === true && openChange?.previousValue !== true) {
+      this.submitLocked = false;
       this.hydrateFormFromInput();
       this.focusSearchInput();
       return;
@@ -290,10 +305,17 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
   }
 
   onClose(): void {
+    if (this.isSubmitting) {
+      return;
+    }
     this.close.emit();
   }
 
   onSubmit(): void {
+    if (this.isSubmitting) {
+      return;
+    }
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -307,6 +329,7 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     }
 
     this.syncInputModel();
+    this.submitLocked = true;
 
     const raw = this.form.getRawValue();
     const actividades = this.getAllActividadesValue();

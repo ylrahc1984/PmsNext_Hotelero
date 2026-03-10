@@ -212,10 +212,12 @@ export class OperacionDiariaComponent {
   private executeCheckIn(detalle: OperacionDetalle): void {
     const key = this.getDetalleKey(detalle);
     const operador = this.getOperador();
+    const baseApiUrl = (environment.apiUrl ?? '').toString().replace(/\/+$/, '');
+    const url = `${baseApiUrl}/reserva/checkin`;
 
     this.checkingIn.add(key);
     this.http
-      .post('http://localhost:5000/api/reserva/checkin', {
+      .post(url, {
         codReserva: detalle.prV02_CodReserva,
         operador
       })

@@ -14,7 +14,7 @@ import { RetiroCxpFilters, RetiroCxpListItem, RetiroCxpResponse } from './models
 
 type RetiroFiltersForm = {
   codBanco: FormControl<string>;
-  ctaBanco: FormControl<string>;
+  codCtaBanco: FormControl<string>;
   fechaInicio: FormControl<string>;
   fechaFin: FormControl<string>;
 };
@@ -25,7 +25,7 @@ interface CuentaBancoOption {
   moneda?: string;
 }
 
-const DEFAULT_PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 20;
 
 @Component({
   selector: 'app-retiro-list',
@@ -44,7 +44,7 @@ export class RetiroListComponent implements OnInit {
 
   readonly filtersForm: FormGroup<RetiroFiltersForm> = this.fb.group({
     codBanco: this.fb.control(''),
-    ctaBanco: this.fb.control(''),
+    codCtaBanco: this.fb.control(''),
     fechaInicio: this.fb.control('', { validators: [Validators.required] }),
     fechaFin: this.fb.control('', { validators: [Validators.required] })
   });
@@ -76,7 +76,7 @@ export class RetiroListComponent implements OnInit {
     const range = this.getDefaultDateRange();
     this.filtersForm.reset({
       codBanco: '',
-      ctaBanco: '',
+      codCtaBanco: '',
       fechaInicio: range.fechaInicio,
       fechaFin: range.fechaFin
     });
@@ -99,7 +99,7 @@ export class RetiroListComponent implements OnInit {
     const range = this.getDefaultDateRange();
     this.filtersForm.reset({
       codBanco: '',
-      ctaBanco: '',
+      codCtaBanco: '',
       fechaInicio: range.fechaInicio,
       fechaFin: range.fechaFin
     });
@@ -210,8 +210,7 @@ export class RetiroListComponent implements OnInit {
     const query: RetiroCxpFilters = {
       pageNumber: this.pageNumber,
       pageSize: this.pageSize,
-      codBanco: filtros.codBanco,
-      ctaBanco: filtros.ctaBanco,
+      codCtaBanco: filtros.codCtaBanco,
       fechaInicio: filtros.fechaInicio,
       fechaFin: filtros.fechaFin
     };
@@ -266,7 +265,7 @@ export class RetiroListComponent implements OnInit {
     if (!normalized) {
       this.cuentasLoading = false;
       this.cuentaOptions = [];
-      this.filtersForm.controls.ctaBanco.setValue('');
+      this.filtersForm.controls.codCtaBanco.setValue('');
       return;
     }
     this.cuentasLoading = true;
@@ -277,9 +276,9 @@ export class RetiroListComponent implements OnInit {
         label: `${cuenta.nombreCta} (${cuenta.ctaBanco})`,
         moneda: cuenta.moneda
       }));
-      const current = this.filtersForm.controls.ctaBanco.value;
+      const current = this.filtersForm.controls.codCtaBanco.value;
       if (current && !this.cuentaOptions.some((item) => item.value === current)) {
-        this.filtersForm.controls.ctaBanco.setValue('');
+        this.filtersForm.controls.codCtaBanco.setValue('');
       }
     } catch (error) {
       console.error('Error al cargar cuentas bancarias:', error);
@@ -290,11 +289,11 @@ export class RetiroListComponent implements OnInit {
     }
   }
 
-  private getFiltros(): { codBanco: string; ctaBanco: string; fechaInicio: string; fechaFin: string } {
+  private getFiltros(): { codBanco: string; codCtaBanco: string; fechaInicio: string; fechaFin: string } {
     const value = this.filtersForm.getRawValue();
     return {
       codBanco: this.normalize(value.codBanco),
-      ctaBanco: this.normalize(value.ctaBanco),
+      codCtaBanco: this.normalize(value.codCtaBanco),
       fechaInicio: this.normalize(value.fechaInicio),
       fechaFin: this.normalize(value.fechaFin)
     };

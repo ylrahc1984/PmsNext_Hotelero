@@ -28,6 +28,8 @@ type EstadoCuentaProveedorView = EstadoCuentaProveedorItem & {
 };
 
 type FacturaSeleccionada = {
+  tipoDocu: string;
+  numDocu: string;
   tipDocPrv: string;
   serie: string;
   numFactura: string;
@@ -269,8 +271,11 @@ export class CuentasPagarComponent implements OnInit {
 
   private mapItem(item: EstadoCuentaProveedorItem): EstadoCuentaProveedorView {
     const estado = this.normalize(item.estado);
+    const raw = item as EstadoCuentaProveedorItem & { tipoDocu?: string };
     return {
       ...item,
+      tipDocu: this.normalize(item.tipDocu) || this.normalize(raw.tipoDocu),
+      numDocu: this.normalize(item.numDocu),
       totalDocu: this.normalizeNumber(item.totalDocu),
       totPagado: this.normalizeNumber(item.totPagado),
       saldo: this.normalizeNumber(item.saldo),
@@ -315,6 +320,8 @@ export class CuentasPagarComponent implements OnInit {
     return this.dataSource
       .filter((cuenta) => this.isFacturaSeleccionable(cuenta) && this.isFacturaSeleccionada(cuenta))
       .map((cuenta) => ({
+        tipoDocu: this.normalize(cuenta.tipDocu),
+        numDocu: this.normalize(cuenta.numDocu),
         tipDocPrv: this.normalize(cuenta.tipDocPrv),
         serie: this.normalize(cuenta.serie),
         numFactura: this.normalize(cuenta.numFactura),

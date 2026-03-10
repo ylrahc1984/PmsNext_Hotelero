@@ -22,6 +22,7 @@ import { ServicioPrecioApiItem } from './reserva-create.tarifa.models';
 })
 export class ReservaCreateDetalleModalComponent implements OnChanges {
   @Input() open = false;
+  @Input() saving = false;
   @Input() editingDetalleId: number | null = null;
   @Input({ required: true }) detalleForm!: DetalleForm;
   @Input() servicios: ServicioPrecioApiItem[] = [];
@@ -46,6 +47,7 @@ export class ReservaCreateDetalleModalComponent implements OnChanges {
   copyErrorTarget: 'origen' | 'destino' | null = null;
   locationInfoTarget: 'origen' | 'destino' | null = null;
   servicioSearchValue: ServicioPrecioApiItem | string = '';
+  submitLocked = false;
   private servicioSearchTouched = false;
   private lastServicioTerm = '';
   private readonly serviciosRefresh$ = new Subject<string>();
@@ -73,9 +75,22 @@ export class ReservaCreateDetalleModalComponent implements OnChanges {
     return (this.listaPrecios || []).find((item) => (item.codigo ?? '').toString().trim() === code) ?? null;
   }
 
+  get isSubmitting(): boolean {
+    return this.submitLocked || this.saving;
+  }
+
   ngOnChanges(changes: SimpleChanges): void {
     const openChange = changes['open'];
+    if (openChange?.currentValue !== true) {
+      this.submitLocked = false;
+    }
+
+    if (changes['saving'] && changes['saving'].currentValue !== true) {
+      this.submitLocked = false;
+    }
+
     if (openChange?.currentValue === true && openChange?.previousValue !== true) {
+      this.submitLocked = false;
       this.resetAutocompleteState();
       this.resetServicioSearch();
       this.syncServicioSearchSelection();
@@ -92,6 +107,9 @@ export class ReservaCreateDetalleModalComponent implements OnChanges {
   }
 
   onClose(): void {
+    if (this.isSubmitting) {
+      return;
+    }
     this.resetAutocompleteState();
     this.locationInfoTarget = null;
     this.close.emit();
@@ -125,6 +143,10 @@ export class ReservaCreateDetalleModalComponent implements OnChanges {
   }
 
   onSubmit(formRef: any): void {
+    if (this.isSubmitting) {
+      return;
+    }
+    this.submitLocked = true;
     this.save.emit(formRef);
   }
 

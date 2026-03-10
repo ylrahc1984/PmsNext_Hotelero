@@ -270,7 +270,7 @@
                   <div class="rsv-total-reserva__content">
                     <div class="rsv-total-reserva__label">Total Reserva</div>
                     <div class="rsv-total-reserva__value">
-                      {{ (form.totalRsv || totalRack) | number:'1.2-2' }}
+                      {{ totalRack | number:'1.2-2' }}
                       <span class="rsv-total-reserva__currency" *ngIf="form.moneda">{{ form.moneda }}</span>
                     </div>
                   </div>
@@ -332,6 +332,7 @@
 <!-- Modal detalle servicio -->
 <app-reserva-create-detalle-modal
   [open]="showDetalleModal"
+  [saving]="guardandoDetalle"
   [editingDetalleId]="editingDetalleId"
   [detalleForm]="detalleForm"
   [servicios]="serviciosPrecio"
@@ -352,6 +353,7 @@
 <!-- Modal actividad turística -->
 <app-reserva-create-actividad-modal
   [open]="showActividadModal"
+  [saving]="guardandoActividad"
   [actividadForm]="actividadForm"
   [servicios]="servicios"
   [serviciosLoading]="serviciosLoading"

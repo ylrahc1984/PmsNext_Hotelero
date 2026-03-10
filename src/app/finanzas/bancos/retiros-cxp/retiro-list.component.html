@@ -33,7 +33,7 @@
           <label>Cuenta bancaria</label>
           <select
             class="form-control"
-            formControlName="ctaBanco"
+            formControlName="codCtaBanco"
             [disabled]="cuentasLoading || !filtersForm.controls.codBanco.value"
           >
             <option value="">Todas</option>
@@ -69,8 +69,8 @@
               <tr>
                 <th>Fecha</th>
                 <th>Operación</th>
-                <th>Cuenta</th>
                 <th>Proveedor</th>
+                <th>Concepto</th>
                 <th class="text-end">Monto</th>
                 <th>Moneda</th>
                 <th>Conciliado</th>
@@ -97,12 +97,11 @@
                   <div class="cell-sub">{{ retiro.numOperacion }}</div>
                 </td>
                 <td>
-                  <div class="cell-main">{{ retiro.ctaBanco }}</div>
-                  <div class="cell-sub">{{ retiro.codBanco }}</div>
-                </td>
-                <td>
                   <div class="cell-main">{{ retiro.nomProve }}</div>
                   <div class="cell-sub">{{ retiro.codProve }}</div>
+                </td>
+                <td>
+                  <div class="cell-main">{{ retiro.concepto }}</div>
                 </td>
                 <td class="text-end">{{ retiro.montoTotal | number:'1.2-2' }}</td>
                 <td>
