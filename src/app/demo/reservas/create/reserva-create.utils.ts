@@ -36,6 +36,28 @@ export function safeString(value: unknown): string {
   return '';
 }
 
+export function formatDateToApiDate(value: unknown): string {
+  const inputValue = toDateInputValue(value);
+  if (inputValue) {
+    const [yyyy, mm, dd] = inputValue.split('-');
+    if (yyyy && mm && dd) {
+      return `${dd}/${mm}/${yyyy}`;
+    }
+  }
+
+  const raw = safeString(value).trim();
+  if (!raw) {
+    return '';
+  }
+
+  const dmy = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (dmy) {
+    return `${dmy[1]}/${dmy[2]}/${dmy[3]}`;
+  }
+
+  return raw;
+}
+
 export function safeNumber(value: unknown): number {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
@@ -61,7 +83,15 @@ export function normalizeReservaEstado(estado: string): ReservaEstado {
 
 export function extractCodReserva(res: any): string | null {
   // La API puede devolver PRV01_CodReserva o { datos: [{ CodReserva: '...' }] }
-  return res?.PRV01_CodReserva || res?.CodReserva || res?.datos?.[0]?.CodReserva || res?.datos?.[0]?.PRV01_CodReserva || null;
+  return (
+    res?.codReserva ||
+    res?.PRV01_CodReserva ||
+    res?.CodReserva ||
+    res?.datos?.[0]?.codReserva ||
+    res?.datos?.[0]?.CodReserva ||
+    res?.datos?.[0]?.PRV01_CodReserva ||
+    null
+  );
 }
 
 export function parseCodigoValue(value: unknown): string | null {
@@ -103,6 +133,22 @@ export function safeJsonParse<T = any>(value: unknown): T | null {
   } catch {
     return null;
   }
+}
+
+export function normalizeTimeInputValue(value: unknown, options?: { zeroAsEmpty?: boolean }): string {
+  const raw = safeString(value).trim();
+  if (!raw) return '';
+
+  const match = raw.match(/^(\d{2}):(\d{2})(?::(\d{2}))?$/);
+  if (!match) return '';
+
+  const hh = match[1];
+  const mm = match[2];
+  const normalized = `${hh}:${mm}`;
+  if (options?.zeroAsEmpty && normalized === '00:00') {
+    return '';
+  }
+  return normalized;
 }
 
 export function extractGoogleFormattedAddress(value: unknown): string {

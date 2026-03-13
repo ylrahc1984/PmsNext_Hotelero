@@ -1,0 +1,50 @@
+<div
+  class="modal fade show rsv-contacto-modal"
+  *ngIf="open"
+  tabindex="-1"
+  role="dialog"
+  aria-modal="true"
+  style="display: block;"
+>
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content rsv-contacto-modal__content">
+      <div class="modal-header rsv-contacto-modal__header">
+        <div>
+          <h5 class="modal-title mb-1">Nuevo contacto</h5>
+          <small class="text-muted">Crea un contacto mínimo y asígnalo a la reserva actual.</small>
+        </div>
+        <button type="button" class="btn-close" aria-label="Close" (click)="onClose()" [disabled]="saving"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Agencia</label>
+          <input type="text" class="form-control" [ngModel]="codAgencia" name="codAgencia" readonly>
+        </div>
+
+        <div class="mb-0">
+          <label class="form-label">Nombre del contacto <span class="text-danger">*</span></label>
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="nomContacto"
+            name="nomContacto"
+            placeholder="Ej. Raul"
+            [disabled]="saving"
+            (keyup.enter)="onSave()"
+          >
+        </div>
+      </div>
+
+      <div class="modal-footer rsv-contacto-modal__footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="onClose()" [disabled]="saving">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="onSave()" [disabled]="saving || !nomContacto.trim()">
+          <span *ngIf="saving" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+          Crear contacto
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="open"></div>

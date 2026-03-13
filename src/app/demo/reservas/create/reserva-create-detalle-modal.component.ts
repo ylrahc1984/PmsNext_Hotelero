@@ -79,6 +79,13 @@ export class ReservaCreateDetalleModalComponent implements OnChanges {
     return this.submitLocked || this.saving;
   }
 
+  private resolvePlanTarifario(codPlan: string): string {
+    const normalized = (codPlan || '').toString().trim();
+    if (!normalized) return '';
+    const match = (this.planesTarifas || []).find((item) => (item?.planId ?? '').toString().trim() === normalized);
+    return match ? String(match.planId) : normalized;
+  }
+
   ngOnChanges(changes: SimpleChanges): void {
     const openChange = changes['open'];
     if (openChange?.currentValue !== true) {
@@ -99,10 +106,15 @@ export class ReservaCreateDetalleModalComponent implements OnChanges {
     if (this.open && changes['detalleForm']) {
       this.servicioSearchTouched = false;
       this.syncServicioSearchSelection();
+      this.detalleForm.planTarifa = this.resolvePlanTarifario(this.detalleForm?.codPlan || '');
     }
 
     if (this.open && changes['servicios']) {
       this.syncServicioSearchSelection();
+    }
+
+    if (this.open && changes['planesTarifas'] && this.detalleForm) {
+      this.detalleForm.planTarifa = this.resolvePlanTarifario(this.detalleForm?.codPlan || '');
     }
   }
 
@@ -116,7 +128,46 @@ export class ReservaCreateDetalleModalComponent implements OnChanges {
   }
 
   onTarifaChange(): void {
+    this.detalleForm.planTarifa = this.resolvePlanTarifario(this.detalleForm?.codPlan || '');
     this.tarifaContextChange.emit();
+  }
+
+  onCodPlanChange(value: string): void {
+    this.detalleForm.codPlan = (value ?? '').toString();
+    this.onTarifaChange();
+  }
+
+  onCodLstPrecioChange(value: string): void {
+    this.detalleForm.codLstPrecio = (value ?? '').toString();
+    this.onTarifaChange();
+  }
+
+  onHoraPickupChange(value: string): void {
+    this.detalleForm.horaPickup = (value ?? '').toString();
+    this.recalculate.emit();
+  }
+
+  onHoraInicioChange(value: string): void {
+    this.detalleForm.horaInicio = (value ?? '').toString();
+    this.recalculate.emit();
+  }
+
+  onTipoPaxChange(index: number, value: string): void {
+    const list = [...(this.detalleForm.detallesPax ?? [])];
+    const row = list[index];
+    if (!row) return;
+    row.tipoPax = (value ?? '').toString();
+    this.detalleForm.detallesPax = list;
+    this.recalculate.emit();
+  }
+
+  onCantidadChange(index: number, value: number | string): void {
+    const list = [...(this.detalleForm.detallesPax ?? [])];
+    const row = list[index];
+    if (!row) return;
+    row.cantidad = Number(value ?? 0) || 0;
+    this.detalleForm.detallesPax = list;
+    this.recalculate.emit();
   }
 
   onServicioSelected(event: NgbTypeaheadSelectItemEvent): void {

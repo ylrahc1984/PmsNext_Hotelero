@@ -3,6 +3,8 @@ export type ReservaEstado = 'PEN' | 'CON' | 'CAN';
 export interface ReservaCreateForm {
   fecha: string;
   codAgencia: string;
+  idContacto: number;
+  nomContactoAgencia: string;
   nomCliente: string;
   telCliente: string;
   emailCliente: string;
@@ -57,6 +59,7 @@ export interface Tarifa {
 export interface ActividadDetalle {
   codServicio: string;
   nomServicio: string;
+  tipoServicio?: string;
   reglaPrecioID: number;
   tarifas: Tarifa[];
   totalLinea: number;
@@ -64,6 +67,7 @@ export interface ActividadDetalle {
 
 export interface ActividadDetalleForm {
   codPlan?: string;
+  planTarifa?: string;
   codLstPrecio?: string;
   codServicio: string;
   nomServicio: string;
@@ -81,30 +85,31 @@ export interface ActividadDetalleForm {
 
 // No se usa DetalleForm para la API, pero se mantiene para el modal local
 export interface DetalleForm {
-  codPlan?: string;
-  codLstPrecio?: string;
-  codServicio: string;
-  nomServicio: string;
-  tipoServicio: string;
-  fechaServicio: string;
-  horaPickup: string;
-  horaInicio: string;
-  origenLugar: string;
-  origenZona: string;
-  origenDireccionGoogle: string;
-  origenGoogle: string;
-  origenLat: number;
-  origenLng: number;
-  origenPlaceId: string;
-  destinoLugar: string;
-  destinoZona: string;
-  destinoDireccionGoogle: string;
-  destinoGoogle: string;
-  destinoLat: number;
-  destinoLng: number;
-  destinoPlaceId: string;
-  montoServicio: number;
-  detallesPax: DetallePaxForm[];
-  estado: string;
-  observaciones?: string;
+  codPlan                 ?: string;
+  planTarifa              ?: string;
+  codLstPrecio            ?: string;
+  codServicio             : string;
+  nomServicio             : string;
+  tipoServicio            : string;
+  fechaServicio           : string;
+  horaPickup              : string;
+  horaInicio              : string;
+  origenLugar             : string;
+  origenZona              : string;
+  origenDireccionGoogle   : string;
+  origenGoogle            : string;
+  origenLat               : number;
+  origenLng               : number;
+  origenPlaceId           : string;
+  destinoLugar            : string;
+  destinoZona             : string;
+  destinoDireccionGoogle  : string;
+  destinoGoogle           : string;
+  destinoLat              : number;
+  destinoLng              : number;
+  destinoPlaceId          : string;
+  montoServicio           : number;
+  detallesPax             : DetallePaxForm[];
+  estado                  : string;
+  observaciones           ?: string;
 }

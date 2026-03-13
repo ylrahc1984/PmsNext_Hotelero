@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -39,6 +39,7 @@ import {
   extractCodReserva,
   extractGoogleDisplayText,
   hasCoordinates,
+  normalizeTimeInputValue,
   normalizeReservaEstado,
   parseCodigoValue,
   parseNumericId,
@@ -106,6 +107,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
   private reservasService = inject(ReservasService);
   private detalleService = inject(DetalleToursCompletoService);
   private router = inject(Router);
+  private location = inject(Location);
   private destroyRef = inject(DestroyRef);
   private formaPagoService = inject(FormaPagoService);
   private monedaService = inject(MonedaService);
@@ -124,6 +126,18 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
   private lastActividadCodPlan = '';
   private lastActividadCodLstPrecio = '';
 
+  private resolveTipoServicioValue(value: unknown, fallback = ''): string {
+    const normalized = safeString(value || fallback).trim().toUpperCase();
+    if (!normalized) return '';
+    if (normalized === 'TRF' || normalized === 'TRANSFER' || normalized === 'TRASLADO' || normalized === 'TRASLADOS') {
+      return 'TRANS';
+    }
+    if (normalized === 'ACT' || normalized === 'ACTIVIDAD' || normalized === 'ACTIVIDADES' || normalized === 'TOURS') {
+      return 'TOUR';
+    }
+    return normalized;
+  }
+
   private isLikelyPlaceId(value: unknown): boolean {
     const v = safeString(value).trim();
     if (!v) return false;
@@ -141,6 +155,13 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
   private resolveDefaultListaPrecio(): string {
     const lista = (this.listaPrecios ?? [])[0];
     return lista ? String(lista.codigo) : '';
+  }
+
+  private resolvePlanTarifarioNombre(codPlan: unknown): string {
+    const normalized = safeString(codPlan).trim();
+    if (!normalized) return '';
+    const match = (this.planesTarifas ?? []).find((item) => safeString(item?.planId).trim() === normalized);
+    return match ? safeString(match.planId) : normalized;
   }
 
   private updateHeaderTarifaSnapshot(codPlan: string, codLstPrecio: string): void {
@@ -172,6 +193,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
   private pendingExitPromise: Promise<boolean> | null = null;
   private pendingExitMode: 'toListado' | 'allowNext' | 'toUrl' | null = null;
   private pendingExitUrl: string | null = null;
+  private draftCreationPromise: Promise<string | null> | null = null;
 
   /**
    * Punto de entrada del componente.
@@ -324,7 +346,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
    * Inicializa el contexto de la reserva en tres escenarios:
    * 1) Si la URL trae un código (editar/detalle), carga encabezado y detalle.
    * 2) Si existe un borrador en sessionStorage, lo retoma.
-   * 3) Si no hay nada, crea un borrador automáticamente (PEN) apenas haya usuario/operador.
+   * 3) Si no hay nada, queda en modo local hasta que una acción requiera persistencia.
    */
   private initReserva(): void {
     // Si viene codReserva por ruta, cargar para edición
@@ -342,26 +364,12 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     const storedDraft = getReservaCreateDraftCod();
     if (storedDraft) {
       this.resumeDraft(storedDraft);
-      return;
     }
-
-    // Nuevo flujo: crear automáticamente un borrador (PEN) al iniciar.
-    // Esperamos al usuario autenticado si aún no está en memoria (evita operador vacío).
-    const operador = this.getOperador();
-    if (operador && operador !== 'Sistema') {
-      this.crearBorrador();
-      return;
-    }
-
-    this.authService.currentUser$.pipe(filter((u) => !!u), take(1)).subscribe(() => this.crearBorrador());
-
-    // Fallback: no bloqueamos la operación si por alguna razón el user no llega (e.g. user_data no persistido).
-    setTimeout(() => this.crearBorrador(), 1200);
   }
 
   /**
    * Retoma un borrador existente (estado PEN).
-   * - Si el backend indica que ya no es PEN, descarta el draft local y crea uno nuevo.
+   * - Si el backend indica que ya no es PEN, descarta el draft local y deja el formulario en modo local.
    * - Si es válido, estabiliza la URL (nueva -> /editar) y carga encabezado/detalle.
    */
   private resumeDraft(codReserva: string): void {
@@ -372,11 +380,9 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       next: (res) => {
         const estado = normalizeReservaEstado((res.PRV01_Estado as any) ?? 'PEN');
         if (estado !== 'PEN') {
-          // Ya no es borrador: no lo reutilizamos.
           clearReservaCreateDraftCod();
           this.codReservaActual = null;
           this.loading = false;
-          this.crearBorrador();
           return;
         }
 
@@ -389,26 +395,24 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         this.loading = false;
       },
       error: () => {
-        // Borrador inválido/ya no existe: limpiamos y creamos uno nuevo.
         clearReservaCreateDraftCod();
         this.codReservaActual = null;
         this.loading = false;
-        this.crearBorrador();
       }
     });
   }
 
   /**
-   * Crea automáticamente un borrador en backend (estado PEN) si aún no existe `codReservaActual`.
-   * Guarda el código en sessionStorage para sobrevivir refresh y estabiliza la URL a /editar.
+   * Crea un borrador en backend solo cuando una acción necesita persistencia.
    */
-  private crearBorrador(): void {
-    if (this.creandoBorrador || this.codReservaActual) {
-      return;
+  private async crearBorrador(): Promise<string | null> {
+    if (this.codReservaActual) {
+      return this.codReservaActual;
     }
-    this.creandoBorrador = true;
 
-    // En el borrador, el backend debe generar el CodReserva. Enviamos un payload mínimo.
+    this.creandoBorrador = true;
+    const operador = await this.resolveDraftOperador();
+
     const payload = {
       estado: 'PEN',
       directo: (this.form.directo || '0').toString(),
@@ -416,33 +420,62 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       totDias: 0,
       cntHabitaciones: 0,
       fecCreacion: this.form.fecha,
-      operador: this.getOperador()
+      operador
     };
 
-    this.reservasService.crearReserva(payload).subscribe({
-      next: (res) => {
-        const cod = extractCodReserva(res);
-        if (!cod) {
-          this.creandoBorrador = false;
-          console.warn('[ReservaCreate] Crear borrador sin codReserva. Response:', res);
-          this.showAlert('Error', 'No se recibió el código de reserva al crear el borrador.', 'error');
-          return;
-        }
-        this.codReservaActual = cod;
-        setReservaCreateDraftCod(cod);
-        // URL estable para sobrevivir refresh (evita crear otro borrador).
-        this.navigateInternal(['/operaciones/reservas', cod, 'editar'], { replaceUrl: true });
-        this.form.estado = 'PEN';
-        this.guardado = true;
-        this.creandoBorrador = false;
-      },
-      error: (err) => {
-        this.creandoBorrador = false;
-        console.error('[ReservaCreate] Crear borrador error:', err);
-        this.logHttpError('Crear borrador', err, { payload });
-        this.showAlert('Error', 'No se pudo crear el borrador de la reserva.', 'error');
+    try {
+      const res = await firstValueFrom(this.reservasService.crearReserva(payload).pipe(take(1)));
+      const cod = extractCodReserva(res);
+      if (!cod) {
+        console.warn('[ReservaCreate] Crear borrador sin codReserva. Response:', res);
+        this.showAlert('Error', 'No se recibió el código de reserva al crear el borrador.', 'error');
+        return null;
       }
-    });
+
+      this.codReservaActual = cod;
+      setReservaCreateDraftCod(cod);
+      this.navigateInternal(['/operaciones/reservas', cod, 'editar'], { replaceUrl: true });
+      this.form.estado = 'PEN';
+      this.guardado = true;
+      return cod;
+    } catch (err) {
+      console.error('[ReservaCreate] Crear borrador error:', err);
+      this.logHttpError('Crear borrador', err, { payload });
+      this.showAlert('Error', 'No se pudo crear el borrador de la reserva.', 'error');
+      return null;
+    } finally {
+      this.creandoBorrador = false;
+    }
+  }
+
+  private async ensureDraftCreated(): Promise<string | null> {
+    if (this.codReservaActual) {
+      return this.codReservaActual;
+    }
+
+    if (!this.draftCreationPromise) {
+      this.draftCreationPromise = this.crearBorrador();
+    }
+
+    try {
+      return await this.draftCreationPromise;
+    } finally {
+      this.draftCreationPromise = null;
+    }
+  }
+
+  private async resolveDraftOperador(): Promise<string> {
+    const current = (this.getOperador() || '').trim();
+    if (current) {
+      return current;
+    }
+
+    const waitedUser = await Promise.race([
+      firstValueFrom(this.authService.currentUser$.pipe(filter((u) => !!u), take(1))),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 1200))
+    ]).catch(() => null);
+
+    return (waitedUser as { usuario?: string } | null)?.usuario?.trim() || current || 'Sistema';
   }
 
   /**
@@ -471,6 +504,8 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         this.form = {
           fecha: toDateInputValue(res.PRV01_FecCreacion) || this.form.fecha || '',
           codAgencia: safeString((res as any).PRV01_CodAgencia),
+          idContacto: safeNumber((res as any).PRV01_IdContacto),
+          nomContactoAgencia: safeString((res as any).PRV01_NomContactoAgencia),
           nomCliente: safeString((res as any).PRV01_NomCliente),
           telCliente: safeString((res as any).PRV01_TelCliente),
           emailCliente: safeString((res as any).PRV01_EmailCliente),
@@ -742,17 +777,17 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
    * - Si no recibe detalle, inicializa un `DetalleForm` nuevo.
    * - Protege el flujo cuando la reserva no existe o está CON/CAN.
    */
-  abrirModalDetalle(detalle?: ReservaDetalleCompleto): void {
-    const codReserva = (this.codReservaActual ?? '').toString().trim();
-    if (!codReserva) {
-      this.showAlert('Atención', 'Espere la creación del borrador para agregar servicios.', 'warning');
-      this.crearBorrador();
-      return;
-    }
-    
+  async abrirModalDetalle(detalle?: ReservaDetalleCompleto): Promise<void> {
     if (this.form.estado === 'CAN') {
       this.showAlert('Atención', 'No se pueden modificar servicios en una reserva anulada.', 'warning');
       return;
+    }
+
+    if (!detalle) {
+      const codReserva = await this.ensureDraftCreated();
+      if (!codReserva) {
+        return;
+      }
     }
 
     if (detalle) {
@@ -771,16 +806,21 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       const detalleListaPrecio = safeString((detalle as any).PRV02_CodLstPrecio);
       const defaultPlan = this.lastDetalleCodPlan || this.form.codPlan || this.resolveDefaultPlanId();
       const defaultLista = detalleListaPrecio || this.lastDetalleCodLstPrecio || this.form.codLstPrecio || this.resolveDefaultListaPrecio();
+      const detallePlanTarifa = safeString((detalle as any).PRV02_PlanTarifario).trim();
+      const selectedPlan = detallePlanTarifa || defaultPlan;
+      const horaPickup = normalizeTimeInputValue((detalle as any).PRV02_HoraPickup, { zeroAsEmpty: true });
+      const horaInicio = normalizeTimeInputValue(detalle.PRV02_HoraServicio, { zeroAsEmpty: true }) || horaPickup;
       this.detalleForm = {
         ...baseForm,
-        codPlan: defaultPlan,
+        codPlan: selectedPlan,
+        planTarifa: selectedPlan || this.resolvePlanTarifarioNombre(selectedPlan),
         codLstPrecio: defaultLista,
         codServicio: detalle.PRV02_CodServicio || '',
         nomServicio: detalle.PRV02_NomServicio || '',
-        tipoServicio: detalle.PRV02_TipoServicio || '',
+        tipoServicio: this.resolveTipoServicioValue(detalle.PRV02_TipoServicio),
         fechaServicio: toDateInputValue(detalle.PRV02_FecServicio) || baseForm.fechaServicio || '',
-        horaPickup: detalle.PRV02_HoraServicio || '',
-        horaInicio: detalle.PRV02_HoraServicio || '',
+        horaPickup,
+        horaInicio,
         origenLugar: detalle.PRV02_OrigenTexto || '',
         origenZona: detalle.PRV02_ZonaOrigen || '',
         origenDireccionGoogle,
@@ -805,6 +845,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     } else {
       this.detalleForm = buildInitialDetalleForm();
       this.detalleForm.codPlan = this.lastDetalleCodPlan || this.form.codPlan || this.resolveDefaultPlanId();
+      this.detalleForm.planTarifa = this.resolvePlanTarifarioNombre(this.detalleForm.codPlan);
       this.detalleForm.codLstPrecio = this.lastDetalleCodLstPrecio || this.form.codLstPrecio || this.resolveDefaultListaPrecio();
       this.editingDetalleId = null;
       // this.recalcularCosto(); // El cálculo se puede hacer al guardar
@@ -830,11 +871,9 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
   /**
    * Abre el modal de actividad turística (nuevo flujo).
    */
-  abrirModalActividad(): void {
-    const codReserva = (this.codReservaActual ?? '').toString().trim();
+  async abrirModalActividad(): Promise<void> {
+    const codReserva = await this.ensureDraftCreated();
     if (!codReserva) {
-      this.showAlert('Atención', 'Espere la creación del borrador para agregar servicios.', 'warning');
-      this.crearBorrador();
       return;
     }
 
@@ -845,6 +884,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
 
     this.actividadForm = buildInitialActividadDetalleForm();
     this.actividadForm.codPlan = this.lastActividadCodPlan || this.form.codPlan || this.resolveDefaultPlanId();
+    this.actividadForm.planTarifa = this.resolvePlanTarifarioNombre(this.actividadForm.codPlan);
     this.actividadForm.codLstPrecio = this.lastActividadCodLstPrecio || this.form.codLstPrecio || this.resolveDefaultListaPrecio();
     this.editingActividadId = null;
     this.showActividadModal = true;
@@ -870,7 +910,10 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     if (servicio) {
       this.actividadForm.codServicio = servicio.codReceta;
       this.actividadForm.nomServicio = servicio.nomReceta;
-      this.actividadForm.tipoServicio = servicio.codGrupo || servicio.codCateg || '';
+      this.actividadForm.tipoServicio = this.resolveTipoServicioValue(
+        this.actividadForm.tipoServicio,
+        servicio.codGrupo || servicio.codCateg || ''
+      );
       return;
     }
     this.actividadForm.codServicio = codServicio || '';
@@ -886,10 +929,8 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       return;
     }
 
-    const codReserva = (this.codReservaActual ?? '').toString().trim();
+    const codReserva = (await this.ensureDraftCreated()) ?? '';
     if (!codReserva) {
-      this.showAlert('Atención', 'Espere la creación del borrador para agregar servicios.', 'warning');
-      this.crearBorrador();
       return;
     }
 
@@ -914,9 +955,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       return;
     }
 
-    const pickupOrigen = saveData?.pickups?.[0] ?? null;
-    const pickupDestino = saveData?.pickups?.[1] ?? null;
-    const firstPickupGoogle = safeJsonStringify(saveData?.pickups ?? []);
+    const pickup = saveData?.pickups?.[0] ?? null;
 
     const currentMaxLinea = this.detalles.reduce((max, item) => {
       const value = Number(item?.PRV02_Linea ?? 0) || 0;
@@ -949,22 +988,24 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
           codServicio: item.codServicio || '',
           nomServicio: item.nomServicio || '',
           fecServicio: item.fecServicio,
-          horaServicio: item.horaServicio || '',
-          origenTexto: pickupOrigen?.direccion || '',
-          destinoTexto: pickupDestino?.direccion || '',
-          origenZona: pickupOrigen?.zona || '',
-          destinoZona: pickupDestino?.zona || '',
-          origenGoogle: pickupOrigen?.google || firstPickupGoogle,
-          destinoGoogle: pickupDestino?.google || '',
-          origenPlaceId: pickupOrigen?.placeId || '',
-          destinoPlaceId: pickupDestino?.placeId || '',
-          origenLat: pickupOrigen?.lat || 0,
-          origenLng: pickupOrigen?.lng || 0,
-          destinoLat: pickupDestino?.lat || 0,
-          destinoLng: pickupDestino?.lng || 0,
+          horaServicio: item.horaServicio || saveData?.horaInicio || '',
+          horaPickup: item.horaPickup || saveData?.horaPickup || '',
+          origenTexto: pickup?.direccion || '',
+          destinoTexto: '',
+          origenZona: pickup?.zona || '',
+          destinoZona: '',
+          origenGoogle: pickup?.google || '',
+          destinoGoogle: '',
+          origenPlaceId: pickup?.placeId || '',
+          destinoPlaceId: '',
+          origenLat: pickup?.lat || 0,
+          origenLng: pickup?.lng || 0,
+          destinoLat: 0,
+          destinoLng: 0,
           adultos: Number(item.adultos ?? 0) || 0,
           ninos: Number(item.ninos ?? 0) || 0,
           totalPax,
+          planTarifario: saveData?.planTarifario || this.resolvePlanTarifarioNombre(codPlan),
           codLstPrecio,
           idReglaPrecio: Number(item.reglaPrecioID ?? 0) || 0,
           precioAdulto,
@@ -1042,10 +1083,8 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       detalleFormRef.control?.markAllAsTouched?.();
       return;
     }
-    const codReserva = (this.codReservaActual ?? '').toString().trim();
+    const codReserva = (await this.ensureDraftCreated()) ?? '';
     if (!codReserva) {
-      this.showAlert('Atención', 'Espere la creación del borrador para agregar servicios.', 'warning');
-      this.crearBorrador();
       return;
     }
 
@@ -1136,8 +1175,8 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         codServicio: this.detalleForm.codServicio || '',
         nomServicio: this.detalleForm.nomServicio || '',
         fecServicio: this.detalleForm.fechaServicio,
-        // Por negocio, la referencia principal es la hora Pick-Up.
-        horaServicio: this.detalleForm.horaPickup || this.detalleForm.horaInicio || '',
+        horaServicio: this.detalleForm.horaInicio || this.detalleForm.horaPickup || '',
+        horaPickup: this.detalleForm.horaPickup || '',
         origenTexto: this.detalleForm.origenLugar || '',
         destinoTexto: this.detalleForm.destinoLugar || '',
         origenZona: this.detalleForm.origenZona || '',
@@ -1154,6 +1193,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         adultos,
         ninos,
         totalPax,
+        planTarifa: this.detalleForm.planTarifa || this.resolvePlanTarifarioNombre(codPlan),
         codLstPrecio,
         idReglaPrecio,
         precioAdulto: precioAdulto || 0,
@@ -1232,7 +1272,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
    * - CON: guarda encabezado (sin reconfirmar) y vuelve al listado.
    * - PEN: confirma con modal (guardar + confirmar).
    */
-  guardarReserva(formRef?: any): void {
+  async guardarReserva(formRef?: any): Promise<void> {
     // PEN: guardar + confirmar (flujo actual).
     // CON: solo guardar cambios del encabezado (no reconfirma).
     // CAN: no permite cambios.
@@ -1244,9 +1284,8 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       this.showValidationErrors(formRef);
       return;
     }
-    if (!this.codReservaActual) {
-      this.showAlert('Atención', 'Espere la creación del borrador para guardar.', 'warning');
-      this.crearBorrador();
+    const codReserva = (await this.ensureDraftCreated()) ?? '';
+    if (!codReserva) {
       return;
     }
 
@@ -1254,7 +1293,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
         this.confirmando = true;
         const payload = this.buildEncabezadoPayload('CON');
         console.log('[ReservaCreate] Guardar cambios (CON) payload', payload);
-        this.reservasService.actualizarReserva(this.codReservaActual, payload).subscribe({
+        this.reservasService.actualizarReserva(codReserva, payload).subscribe({
           next: () => {
             this.confirmando = false;
           this.showAlert('Éxito', 'Cambios guardados correctamente.', 'success');
@@ -1277,7 +1316,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       cancelButtonText: 'Cancelar'
     }).then((result) => {
       if (!result.isConfirmed) return;
-      this.confirmarReserva(formRef);
+      void this.confirmarReserva(formRef);
     });
   }
 
@@ -1286,7 +1325,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
    * - Primero guarda el encabezado actual (estado PEN) para confirmar con datos actualizados.
    * - Luego llama al endpoint de confirmación y cambia estado a CON.
    */
-  confirmarReserva(formRef?: any): void {
+  async confirmarReserva(formRef?: any): Promise<void> {
     if (this.form.estado === 'CON') {
       this.showAlert('Información', 'La reserva ya está confirmada.', 'info');
       return;
@@ -1299,8 +1338,8 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       this.showValidationErrors(formRef);
       return;
     }
-    if (!this.codReservaActual) {
-      this.showAlert('Atención', 'No hay una reserva creada para confirmar.', 'warning');
+    const codReserva = (await this.ensureDraftCreated()) ?? '';
+    if (!codReserva) {
       return;
     }
 
@@ -1309,9 +1348,9 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       // Primero guardamos el encabezado para asegurar que el backend confirme con datos actuales.
       const payload = this.buildEncabezadoPayload('PEN');
       console.log('[ReservaCreate] Guardar encabezado (PEN) antes de confirmar payload', payload);
-      this.reservasService.actualizarReserva(this.codReservaActual, payload).subscribe({
+      this.reservasService.actualizarReserva(codReserva, payload).subscribe({
       next: () => {
-        this.reservasService.confirmarReserva(this.codReservaActual!).subscribe({
+        this.reservasService.confirmarReserva(codReserva).subscribe({
           next: () => {
             this.form.estado = 'CON';
             clearReservaCreateDraftCod();
@@ -1366,9 +1405,16 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
 
   /**
    * Navegación interna del componente que no debe disparar el flujo CanDeactivate.
-   * Se usa para "estabilizar" la URL (nueva -> /editar) sin warnings/loops.
+   * Se usa para "estabilizar" la URL (nueva -> /editar) sin reconstruir el componente.
    */
   private navigateInternal(commands: any[], extras?: any): void {
+    const { replaceUrl, ...navigationExtras } = extras ?? {};
+    if (replaceUrl) {
+      const tree = this.router.createUrlTree(commands, navigationExtras);
+      this.location.replaceState(this.router.serializeUrl(tree));
+      return;
+    }
+
     this.internalNavigation = true;
     void this.router.navigate(commands, extras).finally(() => {
       this.internalNavigation = false;
@@ -1754,7 +1800,10 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
       const servicioCatalogo = this.servicios.find((item) => item.codReceta === codServicio);
       this.detalleForm.codServicio = servicioPrecio.CodServicio;
       this.detalleForm.nomServicio = servicioPrecio.NomServicio;
-      this.detalleForm.tipoServicio = servicioCatalogo?.codGrupo || servicioCatalogo?.codCateg || '';
+      this.detalleForm.tipoServicio = this.resolveTipoServicioValue(
+        servicioPrecio.TipoServicio,
+        servicioCatalogo?.codGrupo || servicioCatalogo?.codCateg || ''
+      );
       this.allowManualPricing = false;
       this.reglaTarifaError = '';
       this.detalleForm.detallesPax = (this.detalleForm.detallesPax ?? []).map((item) => ({
@@ -2165,7 +2214,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
     }
 
     const modoPrecio = this.getModoPrecioPorPlan(planId);
-    const horaReferencia = (this.detalleForm.horaPickup || this.detalleForm.horaInicio || '').trim();
+    const horaReferencia = normalizeTimeInputValue(this.detalleForm.horaPickup, { zeroAsEmpty: true });
     const result = await this.tarifaService.applyReglaTarifaPorTipos({
       planId,
       codLstPrecio,

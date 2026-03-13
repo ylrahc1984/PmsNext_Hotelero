@@ -9,6 +9,8 @@ export function buildInitialReservaCreateForm(now: Date = new Date()): ReservaCr
   return {
     fecha: today,
     codAgencia: '',
+    idContacto: 0,
+    nomContactoAgencia: '',
     nomCliente: '',
     telCliente: '',
     emailCliente: '',
@@ -29,6 +31,7 @@ export function buildInitialDetalleForm(now: Date = new Date()): DetalleForm {
   const today = getTodayDateInputValue(now);
   return {
     codPlan: '',
+    planTarifa: '',
     codLstPrecio: '',
     codServicio: '',
     nomServicio: '',
@@ -67,6 +70,7 @@ export function buildInitialActividadDetalleForm(now: Date = new Date()): Activi
   const today = getTodayDateInputValue(now);
   return {
     codPlan: '',
+    planTarifa: '',
     codLstPrecio: '',
     codServicio: '',
     nomServicio: '',

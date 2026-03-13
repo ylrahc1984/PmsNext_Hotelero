@@ -1,0 +1,16 @@
+.rsv-contacto-modal__content {
+  border: 0;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
+}
+
+.rsv-contacto-modal__header {
+  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.rsv-contacto-modal__footer {
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
+  background: #f8fafc;
+}

@@ -68,6 +68,36 @@
   font-size: 0.9rem;
 }
 
+.entity-name,
+.contact-name {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.entity-meta {
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin-top: 0.15rem;
+}
+
+.contact-count-chip {
+  display: inline-flex;
+  min-width: 2rem;
+  justify-content: center;
+  align-items: center;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  background: #e8f7ef;
+  color: #0f766e;
+  font-weight: 700;
+  font-size: 0.78rem;
+}
+
+.contact-count-chip.is-single {
+  background: #eef2ff;
+  color: #4338ca;
+}
+
 .action-buttons .btn {
   padding: 0.25rem 0.45rem;
 }

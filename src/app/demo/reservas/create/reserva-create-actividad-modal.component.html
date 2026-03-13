@@ -57,20 +57,7 @@
                   </div>
                 </div>
                 <div class="col-lg-3 col-md-6 mb-1">
-                  <label class="form-label">Hora Pick-Up <span class="text-danger">*</span></label>
-                  <input
-                    type="time"
-                    class="form-control form-control-sm"
-                    formControlName="horaPickup"
-                    lang="es-CR"
-                    step="60"
-                  >
-                  <div class="text-danger small mt-1" *ngIf="form.controls.horaPickup.touched && form.controls.horaPickup.invalid">
-                    La hora pick-up es obligatoria.
-                  </div>
-                </div>
-                <div class="col-lg-3 col-md-6 mb-1">
-                  <label class="form-label">Hora Inicio</label>
+                  <label class="form-label">Hora Inicio <span class="text-danger">*</span></label>
                   <input
                     type="time"
                     class="form-control form-control-sm"
@@ -78,32 +65,50 @@
                     lang="es-CR"
                     step="60"
                   >
+                  <div class="text-danger small mt-1" *ngIf="form.controls.horaInicio.touched && form.controls.horaInicio.invalid">
+                    La hora de inicio es obligatoria.
+                  </div>
                 </div>
               </div>
               <div class="rsv-inline-panel mt-2">
                 <div class="rsv-inline-panel__header">
-                  <h6 class="rsv-inline-panel__title">Pickups</h6>
+                  <h6 class="rsv-inline-panel__title">Pickups - Hora</h6>
                 </div>
 
-                <div formArrayName="pickups" class="rsv-pickup-grid">
-                  <div class="rsv-pickup-row" *ngFor="let pickup of pickupsArray.controls; let i = index; trackBy: trackByIndex" [formGroupName]="i">
-                    <div class="rsv-pickup-row__field">
-                      <input
-                        type="text"
-                        class="form-control form-control-sm"
-                        formControlName="direccion"
-                        placeholder="Buscar pickup por nombre"
-                        [ngbTypeahead]="searchPickup"
-                        [resultFormatter]="pickupResultFormatter"
-                        [inputFormatter]="pickupInputFormatter"
-                        (selectItem)="onPickupListaSelected(i, $event)"
-                        (input)="onPickupDireccionChange(i)"
-                        autocomplete="off"
-                      >
-                      <div class="text-danger rsv-pickup-row__error" *ngIf="pickup.controls.error.value">{{ pickup.controls.error.value }}</div>
-                      <div class="text-danger rsv-pickup-row__error" *ngIf="pickup.controls.direccion.touched && pickup.controls.direccion.invalid">
-                        El pickup es obligatorio.
+                <div class="rsv-pickup-layout">
+                  <div class="rsv-pickup-grid" *ngIf="pickupGroup as pickup">
+                    <div class="rsv-pickup-row" [formGroup]="pickup">
+                      <div class="rsv-pickup-row__field">
+                        <input
+                          type="text"
+                          class="form-control form-control-sm"
+                          formControlName="direccion"
+                          placeholder="Buscar pickup por nombre"
+                          [ngbTypeahead]="searchPickup"
+                          [resultFormatter]="pickupResultFormatter"
+                          [inputFormatter]="pickupInputFormatter"
+                          (selectItem)="onPickupListaSelected($event)"
+                          (input)="onPickupDireccionChange()"
+                          autocomplete="off"
+                        >
+                        <div class="text-danger rsv-pickup-row__error" *ngIf="pickup.controls.error.value">{{ pickup.controls.error.value }}</div>
+                        <div class="text-danger rsv-pickup-row__error" *ngIf="pickup.controls.direccion.touched && pickup.controls.direccion.invalid">
+                          El pickup es obligatorio.
+                        </div>
                       </div>
+                    </div>
+                  </div>
+
+                  <div class="rsv-pickup-layout__time">
+                    <input
+                      type="time"
+                      class="form-control form-control-sm"
+                      [formControl]="form.controls.horaPickup"
+                      lang="es-CR"
+                      step="60"
+                    >
+                    <div class="text-danger small mt-1" *ngIf="form.controls.horaPickup.touched && form.controls.horaPickup.invalid">
+                      La hora pick-up es obligatoria.
                     </div>
                   </div>
                 </div>

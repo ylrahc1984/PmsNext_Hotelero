@@ -1,6 +1,6 @@
 import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpClientModule } from '@angular/common/http';
 import Swal from 'sweetalert2';
@@ -9,7 +9,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { catchError, finalize, map, switchMap, tap } from 'rxjs/operators';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { ClienteService } from './cliente.service';
-import { ClienteUI } from './cliente.models';
+import { ClienteContactoUI, ClienteUI } from './cliente.models';
 import { ActividadComercialComponent } from './actividad-comercial/actividad-comercial.component';
 
 @Component({
@@ -30,6 +30,7 @@ export class ClienteFormComponent implements OnInit {
   isLoading = false;
   readOnly = false;
   private codigoCliente = '';
+  private deletedContactos: ClienteContactoUI[] = [];
 
   tipoClienteOptions: Array<{ value: string; label: string }> = [];
 
@@ -40,6 +41,14 @@ export class ClienteFormComponent implements OnInit {
   isLoadingCantones = false;
   distritoOptions: Array<{ value: string; label: string }> = [];
   isLoadingDistritos = false;
+
+  get contactosArray(): FormArray {
+    return this.form.get('contactos') as FormArray;
+  }
+
+  get contactosControls(): FormGroup[] {
+    return this.contactosArray.controls as FormGroup[];
+  }
 
   ngOnInit(): void {
     this.buildForm();
@@ -208,8 +217,134 @@ export class ClienteFormComponent implements OnInit {
       idCanton: [''],
       idDistrito: [''],
       tCliente: [''],
-      enviarCorreo: [false]
+      enviarCorreo: [false],
+      contactos: this.fb.array([])
     });
+    this.ensureDefaultContacto();
+  }
+
+  private createContactoGroup(contacto?: Partial<ClienteContactoUI>): FormGroup {
+    return this.fb.group({
+      id: [Number(contacto?.id ?? 0)],
+      nomContacto: [contacto?.nomContacto ?? '', [Validators.required]],
+      cargo: [contacto?.cargo ?? ''],
+      email: [contacto?.email ?? '', [Validators.email]],
+      telefono1: [contacto?.telefono1 ?? ''],
+      telefono2: [contacto?.telefono2 ?? ''],
+      movil: [contacto?.movil ?? ''],
+      ext: [contacto?.ext ?? ''],
+      principal: [contacto?.principal ?? false],
+      activo: [contacto?.activo ?? true],
+      observacion: [contacto?.observacion ?? ''],
+      accion: [contacto?.accion ?? ''],
+      operador: [contacto?.operador ?? ''],
+      fechaRegistro: [contacto?.fechaRegistro ?? null]
+    });
+  }
+
+  private replaceContactos(contactos: ClienteContactoUI[]): void {
+    this.deletedContactos = [];
+    this.contactosArray.clear();
+    contactos.forEach((contacto) => this.contactosArray.push(this.createContactoGroup(contacto)));
+    if (!this.readOnly) {
+      this.ensureDefaultContacto();
+    }
+    this.ensureSinglePrincipal();
+  }
+
+  addContacto(contacto?: Partial<ClienteContactoUI>): void {
+    this.contactosArray.push(
+      this.createContactoGroup({
+        activo: true,
+        principal: this.contactosArray.length === 0,
+        ...contacto
+      })
+    );
+    this.ensureSinglePrincipal();
+    this.syncContactSummary();
+  }
+
+  removeContacto(index: number): void {
+    const group = this.contactosArray.at(index) as FormGroup | null;
+    if (!group) {
+      return;
+    }
+    const raw = group.getRawValue() as ClienteContactoUI;
+    if (raw.id > 0) {
+      this.deletedContactos.push({
+        ...raw,
+        accion: 'D',
+        principal: false
+      });
+    }
+    this.contactosArray.removeAt(index);
+    this.ensureDefaultContacto();
+    this.ensureSinglePrincipal();
+    this.syncContactSummary();
+  }
+
+  setPrincipalContacto(index: number): void {
+    this.contactosControls.forEach((group, currentIndex) => {
+      group.get('principal')?.setValue(currentIndex === index, { emitEvent: false });
+    });
+    this.syncContactSummary();
+  }
+
+  private ensureDefaultContacto(): void {
+    if (!this.contactosArray.length) {
+      this.contactosArray.push(
+        this.createContactoGroup({
+          activo: true,
+          principal: true
+        })
+      );
+    }
+  }
+
+  private ensureSinglePrincipal(): void {
+    const controls = this.contactosControls;
+    if (!controls.length) {
+      return;
+    }
+    let principalIndex = controls.findIndex((group) => !!group.get('principal')?.value);
+    if (principalIndex < 0) {
+      principalIndex = 0;
+    }
+    controls.forEach((group, index) => {
+      group.get('principal')?.setValue(index === principalIndex, { emitEvent: false });
+    });
+  }
+
+  private getPrincipalContactoValue(): ClienteContactoUI | null {
+    const contactos = this.contactosArray.getRawValue() as ClienteContactoUI[];
+    return contactos.find((item) => item.principal) ?? contactos[0] ?? null;
+  }
+
+  private syncContactSummary(): void {
+    const principal = this.getPrincipalContactoValue();
+    this.form.patchValue(
+      {
+        contacto: principal?.nomContacto ?? ''
+      },
+      { emitEvent: false }
+    );
+  }
+
+  private buildContactosForSubmit(): ClienteContactoUI[] {
+    const contactos = (this.contactosArray.getRawValue() as ClienteContactoUI[]).map((contacto, index) => ({
+      ...contacto,
+      accion: (contacto.accion ?? '').trim().toUpperCase() || (Number(contacto.id) > 0 ? 'U' : 'I'),
+      principal: !!contacto.principal || index === 0,
+      activo: contacto.activo ?? true
+    }));
+
+    const principalIndex = contactos.findIndex((item) => item.principal && item.activo !== false);
+    const fallbackIndex = contactos.findIndex((item) => item.activo !== false);
+    contactos.forEach((item, index) => {
+      item.principal = index === (principalIndex >= 0 ? principalIndex : (fallbackIndex >= 0 ? fallbackIndex : 0));
+    });
+
+    return [...contactos, ...this.deletedContactos];
   }
 
   private applyState(cliente?: ClienteUI, emitEvent = true): void {
@@ -236,10 +371,12 @@ export class ClienteFormComponent implements OnInit {
         tCliente: this.normalizeSelectValue(cliente.tCliente),
         enviarCorreo: cliente.enviarCorreo ?? false
       }, { emitEvent });
+      this.replaceContactos(cliente.contactos ?? []);
       this.tipoIdentificacionOptions = this.mergeSelectedOption(this.tipoIdentificacionOptions, cliente.tCliente);
       this.tipoClienteOptions = this.mergeSelectedOption(this.tipoClienteOptions, cliente.tipoCli);
       this.zonaOptions = this.mergeSelectedOption(this.zonaOptions, cliente.zona);
     } else {
+      this.deletedContactos = [];
       this.form.reset({
         codigo: '',
         nombreCli: '',
@@ -262,9 +399,11 @@ export class ClienteFormComponent implements OnInit {
         tCliente: '',
         enviarCorreo: false
       }, { emitEvent });
+      this.replaceContactos([]);
       this.cantonOptions = [];
       this.distritoOptions = [];
     }
+    this.syncContactSummary();
     this.toggleReadOnly();
     if (this.isEditing && !this.readOnly) {
       this.form.get('codigo')?.disable({ emitEvent: false });
@@ -430,14 +569,34 @@ export class ClienteFormComponent implements OnInit {
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      this.contactosArray.markAllAsTouched();
       return;
     }
+    this.ensureSinglePrincipal();
+    this.syncContactSummary();
+    const contactos = this.buildContactosForSubmit();
+    const contactosActivos = contactos.filter((item) => item.accion !== 'D' && item.activo !== false);
+    if (!contactosActivos.length) {
+      Swal.fire({
+        title: 'Contactos requeridos',
+        text: 'Debe registrar al menos un contacto activo para el cliente.',
+        icon: 'warning'
+      });
+      return;
+    }
+
+    const principal = contactosActivos.find((item) => item.principal) ?? contactosActivos[0];
     const raw = this.form.getRawValue();
     const payload: ClienteUI = {
       codigo: raw.codigo || '',
       nombre: raw.nombreCli || '',
       ruc: raw.ruc || '',
-      contacto: raw.contacto || '',
+      contacto: principal?.nomContacto || raw.contacto || '',
+      nombreContacto: principal?.nomContacto || raw.contacto || '',
+      contactoPrincipal: principal?.nomContacto || '',
+      emailPrincipal: principal?.email || '',
+      telefonoPrincipal: principal?.telefono1 || principal?.movil || '',
+      cargoPrincipal: principal?.cargo || '',
       direccion: raw.direccion || '',
       provincia: raw.provincia || '',
       ciudad: raw.ciudad || '',
@@ -453,7 +612,9 @@ export class ClienteFormComponent implements OnInit {
       idCanton: raw.idCanton || '',
       idDistrito: raw.idDistrito || '',
       tCliente: raw.tCliente || '',
-      enviarCorreo: !!raw.enviarCorreo
+      enviarCorreo: !!raw.enviarCorreo,
+      totalContactos: contactosActivos.length,
+      contactos
     };
 
     const request = this.isEditing
@@ -496,5 +657,14 @@ export class ClienteFormComponent implements OnInit {
     if (codigo) {
       this.form.patchValue({ tCliente: codigo });
     }
+  }
+
+  getContactosActivosCount(): number {
+    return this.contactosControls.filter((group) => group.get('activo')?.value !== false).length;
+  }
+
+  getPrincipalContactoResumen(): string {
+    const principal = this.getPrincipalContactoValue();
+    return principal?.nomContacto || 'Sin definir';
   }
 }

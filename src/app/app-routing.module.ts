@@ -96,9 +96,19 @@ const routes: Routes = [
         loadComponent: () => import('./demo/reservas/create/reserva-create.component').then((c) => c.ReservaCreateComponent)
       },
       {
+        path: 'reservas/nueva-v2',
+        canDeactivate: [CanDeactivateReservaCreateGuard],
+        loadComponent: () => import('./demo/reservas/create/v2/reserva-create-v2.component').then((c) => c.ReservaCreateV2Component)
+      },
+      {
+        path: 'reservas/:id/editar-v2',
+        canDeactivate: [CanDeactivateReservaCreateGuard],
+        loadComponent: () => import('./demo/reservas/create/v2/reserva-create-v2.component').then((c) => c.ReservaCreateV2Component)
+      },
+      {
         path: 'reservas/:id/editar',
         canDeactivate: [CanDeactivateReservaCreateGuard],
-        loadComponent: () => import('./demo/reservas/create/reserva-create.component').then((c) => c.ReservaCreateComponent)
+        loadComponent: () => import('./demo/reservas/create/v2/reserva-create-v2.component').then((c) => c.ReservaCreateV2Component)
       },
       {
         path: 'reservas/:id/detalle',
@@ -129,6 +139,11 @@ const routes: Routes = [
   {
     path: 'ordenes-trabajo/:id/detalle',
     redirectTo: 'operaciones/ordenes-trabajo/:id/detalle',
+    pathMatch: 'full'
+  },
+  {
+    path: 'operacion-diaria',
+    redirectTo: 'operaciones/operacion-diaria',
     pathMatch: 'full'
   },
   {

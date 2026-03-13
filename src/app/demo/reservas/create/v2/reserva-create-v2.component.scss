@@ -1,0 +1,109 @@
+.rsv-v2-contact-hub {
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top right, rgba(14, 165, 233, 0.10), transparent 34%),
+    linear-gradient(180deg, #fcfdff 0%, #f8fafc 100%);
+}
+
+.rsv-v2-contact-hub__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.rsv-v2-contact-hub__eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0f766e;
+  margin-bottom: 0.2rem;
+}
+
+.rsv-v2-selection-note {
+  margin-top: 0.45rem;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.rsv-v2-subtle-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.18rem 0.55rem;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f766e;
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.rsv-v2-subtle-action:hover:not(:disabled) {
+  border-color: rgba(15, 118, 110, 0.34);
+  background: #f0fdfa;
+  color: #115e59;
+  transform: translateY(-1px);
+}
+
+.rsv-v2-subtle-action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.rsv-v2-inline-spinner {
+  position: absolute;
+  top: 50%;
+  right: 0.85rem;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #64748b;
+}
+
+.rsv-v2-contact-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(14, 165, 233, 0.16);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.rsv-v2-contact-summary__title {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.rsv-v2-contact-summary__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  font-size: 0.84rem;
+  color: #475569;
+}
+
+@media (max-width: 767.98px) {
+  .rsv-v2-contact-hub {
+    padding: 0.9rem;
+  }
+
+  .rsv-v2-contact-hub__header {
+    flex-direction: column;
+    margin-bottom: 0.85rem;
+  }
+}

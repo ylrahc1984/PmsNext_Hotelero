@@ -439,6 +439,11 @@ export class DepositoFormComponent implements OnInit {
           nombre: this.normalize(first.nomCliente),
           ruc: '',
           contacto: '',
+          nombreContacto: '',
+          contactoPrincipal: '',
+          emailPrincipal: '',
+          telefonoPrincipal: '',
+          cargoPrincipal: '',
           direccion: '',
           provincia: '',
           ciudad: '',
@@ -454,7 +459,9 @@ export class DepositoFormComponent implements OnInit {
           idCanton: '',
           idDistrito: '',
           tCliente: '',
-          enviarCorreo: false
+          enviarCorreo: false,
+          totalContactos: 0,
+          contactos: []
         };
       }
       this.setCobranzas(documentos);

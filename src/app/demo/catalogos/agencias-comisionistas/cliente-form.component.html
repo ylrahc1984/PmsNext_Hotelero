@@ -51,9 +51,14 @@
               <option *ngFor="let tipo of tipoClienteOptions" [value]="tipo.value">{{ tipo.label }}</option>
             </select>
           </div>
-          <div class="col-md-4">
-            <label class="form-label">Contacto</label>
-            <input type="text" class="form-control" formControlName="contacto">
+          <div class="col-md-8">
+            <div class="contact-summary-strip">
+              <div>
+                <div class="summary-label">Contacto principal</div>
+                <div class="summary-value">{{ getPrincipalContactoResumen() }}</div>
+              </div>
+              <span class="summary-chip">{{ getContactosActivosCount() }} contacto(s)</span>
+            </div>
           </div>
         </div>
       </div>
@@ -131,6 +136,84 @@
         </div>
       </div>
 
+      <div class="section-card">
+        <div class="section-header section-header-inline">
+          <span>Contactos</span>
+          <button *ngIf="!readOnly" type="button" class="btn btn-outline-primary btn-sm" (click)="addContacto()">
+            <i class="feather icon-plus"></i> Agregar contacto
+          </button>
+        </div>
+
+        <div class="contacts-empty" *ngIf="!contactosControls.length">
+          No hay contactos registrados.
+        </div>
+
+        <div formArrayName="contactos" class="contacts-grid" *ngIf="contactosControls.length">
+          <div class="contact-card" *ngFor="let contacto of contactosControls; let i = index" [formGroupName]="i">
+            <div class="contact-card-header">
+              <div>
+                <div class="contact-card-title">Contacto {{ i + 1 < 10 ? '0' + (i + 1) : i + 1 }}</div>
+                <div class="contact-card-subtitle" *ngIf="contacto.get('cargo')?.value">{{ contacto.get('cargo')?.value }}</div>
+              </div>
+              <div class="contact-card-actions">
+                <span class="principal-badge" *ngIf="contacto.get('principal')?.value">Principal</span>
+                <button
+                  *ngIf="!readOnly && !contacto.get('principal')?.value"
+                  type="button"
+                  class="btn btn-sm btn-light"
+                  (click)="setPrincipalContacto(i)">
+                  Marcar principal
+                </button>
+                <button *ngIf="!readOnly" type="button" class="btn btn-sm btn-outline-danger" (click)="removeContacto(i)">
+                  <i class="feather icon-trash"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Nombre del contacto <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" formControlName="nomContacto">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Cargo</label>
+                <input type="text" class="form-control" formControlName="cargo">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-control" formControlName="email">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Telefono 1</label>
+                <input type="tel" class="form-control" formControlName="telefono1">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Telefono 2</label>
+                <input type="tel" class="form-control" formControlName="telefono2">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Movil</label>
+                <input type="tel" class="form-control" formControlName="movil">
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Ext.</label>
+                <input type="text" class="form-control" formControlName="ext">
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Activo</label>
+                <div class="form-check form-switch mt-2">
+                  <input class="form-check-input" type="checkbox" formControlName="activo">
+                </div>
+              </div>
+              <div class="col-md-12">
+                <label class="form-label">Observacion</label>
+                <textarea class="form-control" rows="2" formControlName="observacion"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <actividad-comercial
         [cedula]="form.get('ruc')?.value"
         (principalChange)="setActividadPrincipal($event)">
@@ -148,10 +231,22 @@
         </div>
       </div>
 
+      <div class="section-card section-metrics">
+        <div class="section-header">Resumen de Contactos</div>
+        <div class="metric-row">
+          <span>Total activos</span>
+          <strong>{{ getContactosActivosCount() }}</strong>
+        </div>
+        <div class="metric-row">
+          <span>Principal</span>
+          <strong>{{ getPrincipalContactoResumen() }}</strong>
+        </div>
+      </div>
+
       <div class="section-card section-note">
         <div class="section-header">Recomendacion</div>
         <p class="text-muted mb-0">
-          Verifique los datos de contacto y el tipo de cliente antes de guardar.
+          Verifique el contacto principal, la informacion comercial y el tipo de cliente antes de guardar.
         </p>
       </div>
     </div>

@@ -26,10 +26,10 @@
                   <label class="form-label">Plan Tarifario <span class="text-danger">*</span></label>
                   <select
                     class="form-control form-control-sm"
-                    [(ngModel)]="detalleForm.codPlan"
+                    [ngModel]="detalleForm.codPlan"
                     name="codPlan"
                     required
-                    (ngModelChange)="onTarifaChange()"
+                    (ngModelChange)="onCodPlanChange($event)"
                   >
                     <option value="">Seleccione plan tarifario</option>
                     <option *ngFor="let plan of planesTarifas" [ngValue]="plan.planId.toString()">
@@ -44,10 +44,10 @@
                   <label class="form-label">Lista de Precios <span class="text-danger">*</span></label>
                   <select
                     class="form-control form-control-sm"
-                    [(ngModel)]="detalleForm.codLstPrecio"
+                    [ngModel]="detalleForm.codLstPrecio"
                     name="codLstPrecio"
                     required
-                    (ngModelChange)="onTarifaChange()"
+                    (ngModelChange)="onCodLstPrecioChange($event)"
                   >
                     <option value="">Seleccione lista de precios</option>
                     <option *ngFor="let lista of listaPrecios" [ngValue]="lista.codigo">
@@ -66,7 +66,6 @@
             <div class="rsv-section__header rsv-section__header--split rsv-section__header--service">
               <div class="rsv-section__heading">
                 <h6 class="rsv-section__title">Información del Servicio</h6>
-                <span class="rsv-section__tag">Campos requeridos</span>
               </div>
               <div class="rsv-section__meta">
                 <label class="form-label">Fecha del Servicio <span class="text-danger">*</span></label>
@@ -107,12 +106,12 @@
                   <input
                     type="time"
                     class="form-control form-control-sm"
-                    [(ngModel)]="detalleForm.horaPickup"
+                    [ngModel]="detalleForm.horaPickup"
                     name="horaPickup"
                     lang="es-CR"
                     step="60"
                     required
-                    (ngModelChange)="recalculate.emit()"
+                    (ngModelChange)="onHoraPickupChange($event)"
                   >
                   <div class="text-danger small" *ngIf="detalleFormRef.submitted && detalleFormRef.controls.horaPickup?.invalid">
                     Hora Pick-Up es requerida.
@@ -123,12 +122,12 @@
                   <input
                     type="time"
                     class="form-control form-control-sm"
-                    [(ngModel)]="detalleForm.horaInicio"
+                    [ngModel]="detalleForm.horaInicio"
                     name="horaInicio"
                     lang="es-CR"
                     step="60"
                     required
-                    (ngModelChange)="recalculate.emit()"
+                    (ngModelChange)="onHoraInicioChange($event)"
                   >
                   <div class="text-danger small" *ngIf="detalleFormRef.submitted && detalleFormRef.controls.horaInicio?.invalid">
                     Hora Inicio es requerida.
@@ -173,9 +172,9 @@
                       <td>
                         <select
                           class="form-control form-control-sm"
-                          [(ngModel)]="pax.tipoPax"
+                          [ngModel]="pax.tipoPax"
                           name="tipoPax{{ i }}"
-                          (change)="recalculate.emit()"
+                          (ngModelChange)="onTipoPaxChange(i, $event)"
                           [disabled]="tiposPax.length === 0"
                         >
                           <option value="">Seleccione tipo pax</option>
@@ -191,9 +190,9 @@
                           type="number"
                           min="0"
                           class="form-control form-control-sm text-end"
-                          [(ngModel)]="pax.cantidad"
+                          [ngModel]="pax.cantidad"
                           name="cantidad{{ i }}"
-                          (input)="recalculate.emit()"
+                          (ngModelChange)="onCantidadChange(i, $event)"
                         >
                       </td>
                       <td class="text-end">
@@ -250,7 +249,6 @@
                         <i class="feather icon-map-pin text-primary"></i>
                         <span>Origen</span>
                       </div>
-                      <span class="rsv-badge">Buscar en Google</span>
                     </div>
                     <div class="rsv-logistics-card__body">
                       <div class="row g-2">
@@ -326,7 +324,6 @@
                         <i class="feather icon-map-pin text-primary"></i>
                         <span>Destino</span>
                       </div>
-                      <span class="rsv-badge">Buscar en Google</span>
                     </div>
                     <div class="rsv-logistics-card__body">
                       <div class="row g-2">

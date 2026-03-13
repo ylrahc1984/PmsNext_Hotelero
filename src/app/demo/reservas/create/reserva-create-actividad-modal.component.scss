@@ -184,6 +184,18 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
+}
+
+.rsv-pickup-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px;
+  gap: 12px;
+  align-items: start;
+}
+
+.rsv-pickup-layout__time {
+  min-width: 0;
 }
 
 .rsv-pickup-row {
@@ -556,6 +568,10 @@
 }
 
 @media (max-width: 575.98px) {
+  .rsv-pickup-layout {
+    grid-template-columns: 1fr;
+  }
+
   .rsv-pickup-row {
     grid-template-columns: 1fr;
   }

@@ -6,7 +6,7 @@ import { catchError, debounceTime, distinctUntilChanged, finalize, map, switchMa
 import { NgbTypeaheadModule } from '@ng-bootstrap/ng-bootstrap';
 
 import { ActividadDetalleForm, ActividadPickupForm } from './reserva-create.models';
-import { safeJsonStringify } from './reserva-create.utils';
+import { safeJsonParse, safeJsonStringify } from './reserva-create.utils';
 import { ServicioUI } from '../../catalogos/servicios/servicios.service';
 import { PlanTarifaUI } from '../../catalogos/listas-precios/planes-tarifas.service';
 import { ListaPrecioUI } from '../../catalogos/listas-precios/lista-precio.models';
@@ -27,6 +27,7 @@ export interface Tarifa {
 export interface ActividadDetalle {
   codServicio: string;
   nomServicio: string;
+  tipoServicio?: string;
   reglaPrecioID: number;
   tarifas: Tarifa[];
   totalLinea: number;
@@ -35,8 +36,10 @@ export interface ActividadDetalle {
 export interface ActividadDetallePayload {
   codServicio: string;
   nomServicio: string;
+  tipoServicio?: string;
   fecServicio: string;
   horaServicio: string;
+  horaPickup: string;
   reglaPrecioID: number;
   adultos: number;
   ninos: number;
@@ -50,6 +53,7 @@ export interface ActividadDetallePayload {
 
 export interface ActividadModalSavePayload {
   codPlan: string;
+  planTarifario: string;
   codLstPrecio: string;
   fechaServicio: string;
   horaPickup: string;
@@ -82,6 +86,7 @@ type TarifaFormGroup = FormGroup<{
 type ActividadDetalleFormGroup = FormGroup<{
   codServicio: FormControl<string>;
   nomServicio: FormControl<string>;
+  tipoServicio: FormControl<string>;
   reglaPrecioID: FormControl<number>;
   expanded: FormControl<boolean>;
   totalLinea: FormControl<number>;
@@ -143,13 +148,32 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     { tipoPax: 'NAC', tipo: 'NACIONAL' }
   ];
 
+  private resolveTipoServicioValue(value: unknown, fallback = ''): string {
+    const normalized = (value || fallback || '').toString().trim().toUpperCase();
+    if (!normalized) return '';
+    if (normalized === 'TRF' || normalized === 'TRANSFER' || normalized === 'TRASLADO' || normalized === 'TRASLADOS') {
+      return 'TRANS';
+    }
+    if (normalized === 'ACT' || normalized === 'ACTIVIDAD' || normalized === 'ACTIVIDADES' || normalized === 'TOURS') {
+      return 'TOUR';
+    }
+    return normalized;
+  }
+
+  private resolvePlanTarifario(codPlan: string): string {
+    const normalized = (codPlan || '').toString().trim();
+    if (!normalized) return '';
+    const match = (this.planesTarifas ?? []).find((item) => (item?.planId ?? '').toString().trim() === normalized);
+    return match ? String(match.planId) : normalized;
+  }
+
   constructor(private fb: FormBuilder, private tarifaService: ReservaCreateTarifaService, private listaPickupService: ListaPickupService) {
     this.form = this.fb.group({
       codPlan: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
       codLstPrecio: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
       fechaServicio: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
       horaPickup: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
-      horaInicio: this.fb.control('', { nonNullable: true }),
+      horaInicio: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
       observaciones: this.fb.control('', { nonNullable: true }),
       pickups: this.fb.array<PickupFormGroup>([]),
       actividades: this.fb.array<ActividadDetalleFormGroup>([]),
@@ -181,12 +205,24 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
       .pipe(distinctUntilChanged(), takeUntil(this.destroy$))
       .subscribe(() => {
         if (!this.open) return;
+        this.syncInputModel();
         this.cargarServiciosDetalleGeneral();
+      });
+
+    this.form.controls.horaInicio.valueChanges
+      .pipe(distinctUntilChanged(), takeUntil(this.destroy$))
+      .subscribe(() => {
+        if (!this.open) return;
+        this.recalculateHoraPickup();
       });
   }
 
   get pickupsArray(): FormArray<PickupFormGroup> {
     return this.form.controls.pickups;
+  }
+
+  get pickupGroup(): PickupFormGroup {
+    return this.ensureSinglePickupGroup();
   }
 
   get actividadesArray(): FormArray<ActividadDetalleFormGroup> {
@@ -335,6 +371,7 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     const actividades = this.getAllActividadesValue();
     this.save.emit({
       codPlan: raw.codPlan,
+      planTarifario: this.resolvePlanTarifario(raw.codPlan),
       codLstPrecio: raw.codLstPrecio,
       fechaServicio: raw.fechaServicio,
       horaPickup: raw.horaPickup,
@@ -457,7 +494,8 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
 
   construirPayload(): ActividadDetallePayload[] {
     const raw = this.form.getRawValue();
-    const horaServicio = (raw.horaPickup || raw.horaInicio || '').trim();
+    const horaServicio = (raw.horaInicio || raw.horaPickup || '').trim();
+    const horaPickup = (raw.horaPickup || '').trim();
     const actividades = this.getAllActividadesValue();
 
     return actividades
@@ -477,8 +515,10 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
         return {
           codServicio: actividad.codServicio,
           nomServicio: actividad.nomServicio,
+          tipoServicio: this.resolveTipoServicioValue(actividad.tipoServicio, 'TOUR'),
           fecServicio: raw.fechaServicio,
           horaServicio,
+          horaPickup,
           reglaPrecioID: actividad.reglaPrecioID,
           adultos,
           ninos,
@@ -489,23 +529,8 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
       .filter((item) => item.detallesPax.length > 0);
   }
 
-  addPickupRow(): void {
-    this.pickupsArray.push(this.buildPickupFormGroup());
-  }
-
-  removePickupRow(index: number): void {
-    if (this.pickupsArray.length <= 1) {
-      this.pickupsArray.clear();
-      this.pickupsArray.push(this.buildPickupFormGroup());
-      return;
-    }
-
-    this.pickupsArray.removeAt(index);
-    this.syncInputModel();
-  }
-
-  onPickupListaSelected(index: number, event: { item: PickupListaItem; preventDefault: () => void }): void {
-    const row = this.pickupsArray.at(index);
+  onPickupListaSelected(event: { item: PickupListaItem; preventDefault: () => void }): void {
+    const row = this.pickupGroup;
     if (!row) return;
     const pickupItem = event?.item;
     event?.preventDefault?.();
@@ -529,11 +554,11 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
       { emitEvent: false }
     );
 
-    this.syncInputModel();
+    this.recalculateHoraPickup(pickupItem?.CR11_Duracion);
   }
 
-  onPickupDireccionChange(index: number): void {
-    const row = this.pickupsArray.at(index);
+  onPickupDireccionChange(): void {
+    const row = this.pickupGroup;
     if (!row) return;
 
     const direccion = (row.controls.direccion.value || '').trim();
@@ -550,7 +575,7 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
       { emitEvent: false }
     );
 
-    this.syncInputModel();
+    this.recalculateHoraPickup();
   }
 
   toggleActividad(index: number): void {
@@ -616,9 +641,11 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
       { emitEvent: false }
     );
 
-    this.pickupsArray.clear();
-    const pickups = (this.actividadForm?.pickups ?? []).length ? this.actividadForm.pickups : [this.buildPickupValue()];
-    pickups.forEach((pickup) => this.pickupsArray.push(this.buildPickupFormGroup(pickup)));
+    const pickup = this.getSinglePickupFromInput(this.actividadForm?.pickups ?? []);
+    this.resetSinglePickupGroup(pickup);
+    if (!(this.form.controls.horaPickup.value || '').toString().trim()) {
+      this.recalculateHoraPickup();
+    }
 
     const actividades = this.normalizeActividades(this.actividadForm?.actividades ?? []);
     this.actividadesStateMap.clear();
@@ -672,6 +699,7 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     return {
       codServicio,
       nomServicio: (apiItem?.NomServicio || servicio?.nomReceta || codServicio).toString(),
+      tipoServicio: this.resolveTipoServicioValue(apiItem?.TipoServicio, servicio?.codGrupo || servicio?.codCateg || ''),
       reglaPrecioID: Number(apiItem?.ReglaPrecioID ?? 0) || 0,
       tarifas,
       totalLinea: 0
@@ -685,6 +713,7 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     return {
       codServicio: (codServicio || '').toString().trim(),
       nomServicio: (servicio?.nomReceta || actividadActual?.nomServicio || codServicio).toString().trim(),
+      tipoServicio: this.resolveTipoServicioValue(actividadActual?.tipoServicio, servicio?.codGrupo || servicio?.codCateg || ''),
       reglaPrecioID: Number(actividadActual?.reglaPrecioID ?? 0) || 0,
       tarifas,
       totalLinea: Number(actividadActual?.totalLinea ?? 0) || 0
@@ -798,6 +827,7 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     return this.fb.group({
       codServicio: this.fb.control((actividad.codServicio || '').toString(), { nonNullable: true }),
       nomServicio: this.fb.control((actividad.nomServicio || '').toString(), { nonNullable: true }),
+      tipoServicio: this.fb.control((actividad.tipoServicio || '').toString(), { nonNullable: true }),
       reglaPrecioID: this.fb.control(Number(actividad.reglaPrecioID ?? 0) || 0, { nonNullable: true }),
       expanded: this.fb.control(false, { nonNullable: true }),
       totalLinea: this.fb.control(Number(actividad.totalLinea ?? 0) || 0, { nonNullable: true }),
@@ -849,6 +879,7 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
       .map((item) => ({
         codServicio: (item.codServicio || '').toString().trim(),
         nomServicio: (item.nomServicio || item.codServicio || '').toString().trim(),
+        tipoServicio: this.resolveTipoServicioValue(item.tipoServicio),
         reglaPrecioID: Number(item.reglaPrecioID ?? 0) || 0,
         tarifas: this.normalizeTarifas(item.tarifas),
         totalLinea: Number(item.totalLinea ?? 0) || 0
@@ -926,22 +957,110 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     return Math.floor(numeric);
   }
 
+  private recalculateHoraPickup(durationOverride?: unknown): void {
+    const horaInicio = (this.form.controls.horaInicio.value || '').toString().trim();
+    const durationMinutes = this.parsePickupDurationToMinutes(durationOverride) ?? this.getPickupDurationMinutes();
+
+    if (horaInicio && durationMinutes != null) {
+      const calculatedHoraPickup = this.subtractMinutesFromHora(horaInicio, durationMinutes);
+      if (calculatedHoraPickup) {
+        this.form.controls.horaPickup.setValue(calculatedHoraPickup, { emitEvent: false });
+      }
+    }
+
+    this.syncInputModel();
+  }
+
+  private getPickupDurationMinutes(): number | null {
+    return this.extractPickupDurationMinutes(this.pickupGroup);
+  }
+
+  private extractPickupDurationMinutes(group?: PickupFormGroup | null): number | null {
+    if (!group) return null;
+    const pickupMeta = safeJsonParse<{ duracion?: unknown }>(group.controls.google.value);
+    return this.parsePickupDurationToMinutes(pickupMeta?.duracion);
+  }
+
+  private parsePickupDurationToMinutes(value: unknown): number | null {
+    const raw = (value ?? '').toString().trim();
+    if (!raw) return null;
+
+    const match = raw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (!match) return null;
+
+    const hours = Number(match[1] ?? 0);
+    const minutes = Number(match[2] ?? 0);
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes) || minutes < 0 || minutes >= 60) {
+      return null;
+    }
+
+    return hours * 60 + minutes;
+  }
+
+  private subtractMinutesFromHora(hora: string, minutesToSubtract: number): string {
+    const match = (hora || '').toString().trim().match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (!match) return '';
+
+    const hours = Number(match[1] ?? 0);
+    const minutes = Number(match[2] ?? 0);
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes) || hours < 0 || hours >= 24 || minutes < 0 || minutes >= 60) {
+      return '';
+    }
+
+    const minutesPerDay = 24 * 60;
+    const totalMinutes = hours * 60 + minutes;
+    const normalizedMinutes = ((totalMinutes - Math.max(0, Math.floor(minutesToSubtract))) % minutesPerDay + minutesPerDay) % minutesPerDay;
+    const nextHours = Math.floor(normalizedMinutes / 60);
+    const nextMinutes = normalizedMinutes % 60;
+    return `${String(nextHours).padStart(2, '0')}:${String(nextMinutes).padStart(2, '0')}`;
+  }
+
   private getPickupsValue(): ActividadPickupForm[] {
-    return this.pickupsArray.controls.map((group) => ({
-      direccion: (group.controls.direccion.value || '').toString(),
-      zona: (group.controls.zona.value || '').toString(),
-      google: (group.controls.google.value || '').toString(),
-      placeId: (group.controls.placeId.value || '').toString(),
-      lat: Number(group.controls.lat.value ?? 0) || 0,
-      lng: Number(group.controls.lng.value ?? 0) || 0,
-      error: (group.controls.error.value || '').toString()
+    const group = this.pickupGroup;
+    return [group].map((groupItem) => ({
+      direccion: (groupItem.controls.direccion.value || '').toString(),
+      zona: (groupItem.controls.zona.value || '').toString(),
+      google: (groupItem.controls.google.value || '').toString(),
+      placeId: (groupItem.controls.placeId.value || '').toString(),
+      lat: Number(groupItem.controls.lat.value ?? 0) || 0,
+      lng: Number(groupItem.controls.lng.value ?? 0) || 0,
+      error: (groupItem.controls.error.value || '').toString()
     }));
+  }
+
+  private ensureSinglePickupGroup(): PickupFormGroup {
+    if (!this.pickupsArray.length) {
+      this.pickupsArray.push(this.buildPickupFormGroup());
+    }
+
+    while (this.pickupsArray.length > 1) {
+      this.pickupsArray.removeAt(this.pickupsArray.length - 1);
+    }
+
+    return this.pickupsArray.at(0);
+  }
+
+  private resetSinglePickupGroup(pickup?: Partial<ActividadPickupForm>): void {
+    this.pickupsArray.clear();
+    this.pickupsArray.push(this.buildPickupFormGroup(pickup));
+  }
+
+  private getSinglePickupFromInput(pickups: ActividadPickupForm[]): ActividadPickupForm {
+    const firstWithData = (pickups ?? []).find((item) =>
+      !!(
+        (item?.direccion || '').toString().trim() ||
+        (item?.placeId || '').toString().trim() ||
+        (item?.google || '').toString().trim()
+      )
+    );
+    return firstWithData ?? this.buildPickupValue();
   }
 
   private getActividadesValue(): ActividadDetalle[] {
     return this.actividadesArray.controls.map((group) => ({
       codServicio: (group.controls.codServicio.value || '').toString(),
       nomServicio: (group.controls.nomServicio.value || '').toString(),
+      tipoServicio: this.resolveTipoServicioValue(group.controls.tipoServicio.value),
       reglaPrecioID: Number(group.controls.reglaPrecioID.value ?? 0) || 0,
       tarifas: group.controls.tarifas.controls.map((tarifaGroup) => ({
         tipoPax: this.normalizeTipoPaxCode((tarifaGroup.controls.tipoPax.value || '').toString()),
@@ -959,6 +1078,7 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     return Array.from(this.actividadesStateMap.values()).map((item) => ({
       codServicio: (item.codServicio || '').toString(),
       nomServicio: (item.nomServicio || '').toString(),
+      tipoServicio: this.resolveTipoServicioValue(item.tipoServicio),
       reglaPrecioID: Number(item.reglaPrecioID ?? 0) || 0,
       tarifas: this.normalizeTarifas(item.tarifas),
       totalLinea: Number(item.totalLinea ?? 0) || 0
@@ -990,6 +1110,7 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     const actividades = this.getAllActividadesValue();
 
     this.actividadForm.codPlan = (raw.codPlan || '').toString();
+    this.actividadForm.planTarifa = this.resolvePlanTarifario(raw.codPlan);
     this.actividadForm.codLstPrecio = (raw.codLstPrecio || '').toString();
     this.actividadForm.fechaServicio = raw.fechaServicio;
     this.actividadForm.horaPickup = raw.horaPickup;
@@ -1003,7 +1124,7 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     const first = actividades[0];
     this.actividadForm.codServicio = first?.codServicio || '';
     this.actividadForm.nomServicio = first?.nomServicio || '';
-    this.actividadForm.tipoServicio = '';
+    this.actividadForm.tipoServicio = first?.tipoServicio || '';
   }
 
   private onListaPrecioChange(): void {
@@ -1029,6 +1150,7 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     const normalized: ActividadDetalle = {
       codServicio: (actividad.codServicio || '').toString().trim(),
       nomServicio: (actividad.nomServicio || actividad.codServicio || '').toString().trim(),
+      tipoServicio: this.resolveTipoServicioValue(actividad.tipoServicio),
       reglaPrecioID: Number(actividad.reglaPrecioID ?? 0) || 0,
       tarifas: this.normalizeTarifas(actividad.tarifas),
       totalLinea: Number(actividad.totalLinea ?? 0) || 0
@@ -1057,3 +1179,4 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     }, 0);
   }
 }
+

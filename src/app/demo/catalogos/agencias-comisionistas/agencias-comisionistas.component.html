@@ -43,21 +43,33 @@
           <tr>
             <th>Codigo</th>
             <th>Nombre</th>
-            <th>Contacto</th>
+            <th>Contacto Principal</th>
             <th>Telefono</th>
             <th>Email</th>
             <th>Tipo</th>
+            <th class="text-center">Contactos</th>
             <th class="text-center">Acciones</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let cliente of filteredClientes">
             <td>{{ cliente.codigo }}</td>
-            <td>{{ cliente.nombre }}</td>
-            <td>{{ cliente.contacto || 'N/D' }}</td>
-            <td>{{ cliente.telefono1 || 'N/D' }}</td>
-            <td>{{ cliente.email || 'N/D' }}</td>
+            <td>
+              <div class="entity-name">{{ cliente.nombre }}</div>
+              <div class="entity-meta" *ngIf="cliente.ruc">{{ cliente.ruc }}</div>
+            </td>
+            <td>
+              <div class="contact-name">{{ getContactoLabel(cliente) }}</div>
+              <div class="entity-meta" *ngIf="cliente.cargoPrincipal">{{ cliente.cargoPrincipal }}</div>
+            </td>
+            <td>{{ getTelefonoLabel(cliente) }}</td>
+            <td>{{ getEmailLabel(cliente) }}</td>
             <td><span class="badge bg-light text-dark">{{ getTipoLabel(cliente.tipoCli) }}</span></td>
+            <td class="text-center">
+              <span class="contact-count-chip" [class.is-single]="cliente.totalContactos <= 1">
+                {{ cliente.totalContactos || 0 }}
+              </span>
+            </td>
             <td class="text-center">
               <div class="action-buttons">
                 <button class="btn btn-sm btn-outline-secondary" (click)="verDetalle(cliente)" title="Ver">

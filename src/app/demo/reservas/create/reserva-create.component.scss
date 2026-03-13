@@ -88,6 +88,41 @@
   margin-top: 0.35rem;
 }
 
+:host .rsv-impuestos-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+:host .rsv-impuestos-inline__label {
+  font-size: 0.72rem;
+  color: #495057;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  line-height: 1.1;
+}
+
+:host .rsv-impuestos-inline__switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #dee2e6;
+  border-radius: 12px;
+  background: #fff;
+}
+
+:host .rsv-impuestos-inline__switch .form-check-input {
+  margin: 0;
+  float: none;
+}
+
+:host .rsv-impuestos-inline__switch .form-check-label {
+  margin: 0;
+}
+
 @media (min-width: 992px) {
   :host .rsv-general-row > .col-lg-4 {
     border-left: 1px solid #e2e8f0;
@@ -96,5 +131,12 @@
 
   :host .rsv-general-row > .col-lg-8 {
     padding-right: 1.5rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  :host .rsv-impuestos-inline,
+  :host .rsv-total-reserva {
+    width: 100%;
   }
 }

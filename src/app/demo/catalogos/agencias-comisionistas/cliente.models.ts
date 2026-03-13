@@ -1,8 +1,57 @@
+export interface ClienteContactoDto {
+  id?: number;
+  nomContacto?: string;
+  cargo?: unknown;
+  email?: string;
+  telefono1?: string;
+  telefono2?: string;
+  movil?: string;
+  ext?: string;
+  principal?: boolean;
+  activo?: boolean;
+  observacion?: string;
+  accion?: string;
+  operador?: string;
+  fechaRegistro?: string;
+}
+
+export interface ClienteDetalleDto {
+  codigo?: string;
+  nombreCli?: string;
+  ruc?: string;
+  contacto?: string;
+  direccion?: string;
+  pais?: string;
+  zona?: string;
+  email?: string;
+  telefono1?: string;
+  telefono2?: string;
+  fax?: string;
+  tipoCli?: string;
+  mtoCredito?: number;
+  idProvincia?: string;
+  idCanton?: string;
+  idDistrito?: string;
+  tCliente?: string;
+  enviarCorreo?: boolean;
+  operador?: string;
+}
+
+export interface ClienteDetalleResponse {
+  cliente?: ClienteDetalleDto | null;
+  contactos?: ClienteContactoDto[] | null;
+  datos?: ClienteDto[] | ClienteDto | null;
+}
+
 export interface ClienteDto {
   MPV00_CodClien: string;
   MPV00_NomClien: string;
   MPV00_RucClien: string;
   MPV00_Contacto: string;
+  ContactoPrincipal?: string;
+  EmailPrincipal?: string;
+  TelefonoPrincipal?: string;
+  CargoPrincipal?: unknown;
   MPV00_DirClien: string;
   MPV00_PrvClien?: string;
   MPV00_CiuClien?: string;
@@ -20,6 +69,25 @@ export interface ClienteDto {
   MPV00_IdDistrito?: string;
   MPV00_TCliente: string;
   MPV00_BanderaCorreo?: number;
+  TotalContactos?: number;
+  contactos?: ClienteContactoDto[];
+}
+
+export interface ClienteContactoPost {
+  id: number;
+  nomContacto: string;
+  cargo: string;
+  email: string;
+  telefono1: string;
+  telefono2: string;
+  movil: string;
+  ext: string;
+  principal: boolean;
+  activo: boolean;
+  observacion: string;
+  accion: string;
+  operador: string;
+  fechaRegistro: string | null;
 }
 
 export interface ClientePost {
@@ -45,9 +113,28 @@ export interface ClientePost {
   tCliente: string;
   enviarCorreo: boolean;
   operador: string;
+  contactos: ClienteContactoPost[];
+  nombreContacto: string;
   respuesta: string;
   pageNumber: number;
   pageSize: number;
+}
+
+export interface ClienteContactoUI {
+  id: number;
+  nomContacto: string;
+  cargo: string;
+  email: string;
+  telefono1: string;
+  telefono2: string;
+  movil: string;
+  ext: string;
+  principal: boolean;
+  activo: boolean;
+  observacion: string;
+  accion: string;
+  operador: string;
+  fechaRegistro: string | null;
 }
 
 export interface ClienteUI {
@@ -55,6 +142,11 @@ export interface ClienteUI {
   nombre: string;
   ruc: string;
   contacto: string;
+  nombreContacto: string;
+  contactoPrincipal: string;
+  emailPrincipal: string;
+  telefonoPrincipal: string;
+  cargoPrincipal: string;
   direccion: string;
   provincia: string;
   ciudad: string;
@@ -71,4 +163,6 @@ export interface ClienteUI {
   idDistrito: string;
   tCliente: string;
   enviarCorreo: boolean;
+  totalContactos: number;
+  contactos: ClienteContactoUI[];
 }

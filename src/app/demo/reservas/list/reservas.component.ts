@@ -34,7 +34,7 @@ export class ReservasComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private http = inject(HttpClient);
 
-  // --- Filtros y paginaciÃ³n para reservas.component.ts ---
+  // --- Filtros y paginación para reservas.component.ts ---
   filtros = {
     fechaDesde: '',
     fechaHasta: '',
@@ -43,7 +43,7 @@ export class ReservasComponent implements OnInit, OnDestroy {
   };
 
   agencias: string[] = [];
-  formasPago: string[] = ['Prepago', 'CrÃ©dito', 'Efectivo', 'Transferencia'];
+  formasPago: string[] = ['Prepago', 'Crédito', 'Efectivo', 'Transferencia'];
 
   filteredReservas: Reserva[] = [];
   pagedReservas: Reserva[] = [];
@@ -169,7 +169,7 @@ export class ReservasComponent implements OnInit, OnDestroy {
   }
 
   nuevaReserva(): void {
-    this.router.navigate(['/operaciones/reservas/nueva']);
+    this.router.navigate(['/operaciones/reservas/nueva-v2']);
   }
 
   verReserva(reserva: Reserva): void {
@@ -186,10 +186,10 @@ export class ReservasComponent implements OnInit, OnDestroy {
 
     void Swal.fire({
       title: 'Cancelar reserva',
-      html: `Â¿Desea cancelar la reserva <strong>#${cod}</strong>${cliente ? ` de <strong>${cliente}</strong>` : ''}?`,
+      html: `¿Desea cancelar la reserva <strong>#${cod}</strong>${cliente ? ` de <strong>${cliente}</strong>` : ''}?`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: 'SÃ­, cancelar',
+      confirmButtonText: 'Sí, cancelar',
       cancelButtonText: 'No, volver',
       confirmButtonColor: '#dc3545'
     }).then((result) => {

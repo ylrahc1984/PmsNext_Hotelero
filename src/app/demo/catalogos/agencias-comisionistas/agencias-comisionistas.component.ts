@@ -25,7 +25,7 @@ export class AgenciasComisionistasComponent implements OnInit {
   filterTipo = '';
 
   currentPage = 1;
-  pageSize = 50;
+  pageSize = 10;
   totalPages = 1;
   totalRegistros = 0;
   pageSizeOptions = [10, 25, 50, 100];
@@ -148,5 +148,17 @@ export class AgenciasComisionistasComponent implements OnInit {
       return 'Cliente final';
     }
     return tipo || 'N/D';
+  }
+
+  getContactoLabel(cliente: ClienteUI): string {
+    return cliente.contactoPrincipal || cliente.nombreContacto || cliente.contacto || 'N/D';
+  }
+
+  getTelefonoLabel(cliente: ClienteUI): string {
+    return cliente.telefonoPrincipal || cliente.telefono1 || 'N/D';
+  }
+
+  getEmailLabel(cliente: ClienteUI): string {
+    return cliente.emailPrincipal || cliente.email || 'N/D';
   }
 }

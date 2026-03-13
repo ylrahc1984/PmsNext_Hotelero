@@ -1,7 +1,7 @@
 <div class="section-card">
   <div class="section-header">Actividad Comercial MH</div>
 
-  <form [formGroup]="form" class="row g-3 align-items-end">
+  <div [formGroup]="form" class="row g-3 align-items-end">
     <div class="col-md-3">
       <label class="form-label">Codigo AMH</label>
       <input type="text" class="form-control" formControlName="codigoAMH" [disabled]="!cedula || isLoading">
@@ -21,7 +21,7 @@
         <i class="feather icon-plus"></i> Agregar
       </button>
     </div>
-  </form>
+  </div>
 
   <div class="table-responsive mt-3" *ngIf="actividades.length; else emptyState">
     <table class="table table-hover mb-0">
@@ -46,7 +46,7 @@
               [disabled]="isLoading">
           </td>
           <td class="text-center">
-            <button class="btn btn-sm btn-outline-danger" (click)="deleteActividad(actividad)" [disabled]="isLoading">
+            <button type="button" class="btn btn-sm btn-outline-danger" (click)="deleteActividad(actividad)" [disabled]="isLoading">
               <i class="feather icon-trash"></i>
             </button>
           </td>

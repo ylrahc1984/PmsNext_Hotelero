@@ -72,6 +72,7 @@ export interface ReglaTarifaAplicada {
 export interface DetallePrecioServicioApiItem {
   ReglaPrecioID: number;
   CodLstPrecio?: string;
+  TipoServicio?: string;
   CodServicio: string;
   NomServicio: string;
   TipoTarifa?: string;
@@ -111,6 +112,7 @@ export interface ServicioPrecioApiItem {
   ReglaPrecioID: number;
   CodLstPrecio?: string;
   DesLstPrecio?: string;
+  TipoServicio?: string;
   CodServicio: string;
   NomServicio: string;
   TipoTarifa?: string;

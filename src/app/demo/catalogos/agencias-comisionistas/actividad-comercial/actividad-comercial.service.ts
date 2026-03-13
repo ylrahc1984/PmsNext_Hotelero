@@ -30,7 +30,9 @@ export class ActividadComercialService {
   eliminarActividad(id: number, cedula: string, codigoAmh: string): Observable<ActividadResponse> {
     const encodedCedula = encodeURIComponent(cedula);
     const encodedCodigo = encodeURIComponent(codigoAmh);
-    return this.http.delete<ActividadResponse>(`${this.apiUrl}/${id}?cedula=${encodedCedula}&codigoAmh=${encodedCodigo}`);
+    return this.http
+      .delete(`${this.apiUrl}/${id}?cedula=${encodedCedula}&codigoAmh=${encodedCodigo}`, { responseType: 'text' })
+      .pipe(map((response) => this.parseTextResponse(response)));
   }
 
   buildPayload(partial: Partial<ActividadPost>, proceso: number): ActividadPost {

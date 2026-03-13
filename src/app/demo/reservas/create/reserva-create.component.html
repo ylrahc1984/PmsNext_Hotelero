@@ -152,7 +152,7 @@
                   type="button"
                   class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2 px-3 py-2"
                   (click)="abrirModalDetalle()"
-                  [disabled]="!codReservaActual || form.estado !== 'PEN'"
+                  [disabled]="creandoBorrador || form.estado !== 'PEN'"
                   title="Agregar servicio de transporte / transfer"
                 >
                   <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-white bg-opacity-25" style="width: 22px; height: 22px;">
@@ -164,7 +164,7 @@
                   type="button"
                   class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2 px-3 py-2"
                   (click)="abrirModalActividad()"
-                  [disabled]="!codReservaActual || form.estado !== 'PEN'"
+                  [disabled]="creandoBorrador || form.estado !== 'PEN'"
                 >
                   <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary bg-opacity-10" style="width: 22px; height: 22px;">
                     <i class="feather icon-map-pin text-primary"></i>
@@ -174,7 +174,9 @@
               </div>
             </div>
 
-            <small class="text-muted d-block mb-2" *ngIf="!codReservaActual">Creando borrador para habilitar los servicios...</small>
+            <small class="text-muted d-block mb-2" *ngIf="!codReservaActual && !creandoBorrador">
+              El borrador se creará al agregar el primer servicio o al guardar la reserva.
+            </small>
 
             <div class="table-responsive">
               <table class="table table-hover align-middle mb-0">
@@ -292,7 +294,7 @@
                 type="button"
                 class="btn btn-primary rsv-action-btn rsv-action-btn--primary"
                 (click)="guardarReserva(reservaForm)"
-                [disabled]="!codReservaActual || confirmando || creandoBorrador || form.estado === 'CAN'"
+                [disabled]="confirmando || creandoBorrador || form.estado === 'CAN'"
               >
                 <span class="rsv-action-btn__icon">
                   <span *ngIf="confirmando" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
