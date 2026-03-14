@@ -5,7 +5,6 @@
       <div class="modal-header rsv-modal__header">
         <div class="d-flex align-items-center gap-2">
           <h5 class="modal-title rsv-modal__title">Agregar Servicio</h5>
-          <span class="rsv-badge">Actividad</span>
         </div>
         <button type="button" class="btn-close" aria-label="Close" (click)="onClose()" [disabled]="isSubmitting"></button>
       </div>
@@ -32,8 +31,7 @@
                 <option *ngFor="let lista of listaPrecios" [value]="lista.codigo">
                   {{ lista.codigo }} - {{ lista.descripcion }}
                 </option>
-              </select>
-              <small class="text-muted">Seleccione la lista que aplicará a las actividades.</small>
+              </select> 
               <div class="text-danger small mt-1" *ngIf="form.controls.codLstPrecio.touched && form.controls.codLstPrecio.invalid">
                 Lista de Precios es requerida.
               </div>
@@ -73,6 +71,10 @@
               <div class="rsv-inline-panel mt-2">
                 <div class="rsv-inline-panel__header">
                   <h6 class="rsv-inline-panel__title">Pickups - Hora</h6>
+                  <button type="button" class="btn btn-outline-primary btn-sm rsv-inline-panel__action" (click)="abrirModalPickupRapido()">
+                    <i class="feather icon-plus"></i>
+                    <span>Nuevo pickup</span>
+                  </button>
                 </div>
 
                 <div class="rsv-pickup-layout">
@@ -171,7 +173,6 @@
                               <span>{{ actividad.controls.nomServicio.value }}</span>
                               <span class="badge-activa" *ngIf="isActividadActiva(actividad)">Agregado</span>
                             </div>
-                            <small class="text-muted">{{ actividad.controls.codServicio.value }}</small>
                           </div>
                           <div class="d-flex align-items-center gap-2">
                             <button type="button" class="btn btn-outline-secondary btn-sm rsv-icon-btn" (click)="toggleActividad(i)" title="Expandir/contraer">
@@ -262,7 +263,7 @@
                     <ng-template #resumenVacio>
                       <div class="summary-panel__empty text-muted">Agregue cantidades para ver el resumen.</div>
                     </ng-template>
-                    <div class="summary-panel__total">
+                    <div class="summary-panel__total align-items-right" *ngIf="resumenActividades.length > 0">
                       <div class="summary-panel__total-label">Total General</div>
                       <div class="summary-panel__total-value total-general">
                         <span *ngIf="selectedListaPrecio?.simbolo">{{ selectedListaPrecio?.simbolo }}</span>
@@ -300,3 +301,11 @@
     </div>
   </div>
 </div>
+
+<app-reserva-create-pickup-rapido-modal
+  [open]="showPickupRapidoModal"
+  [saving]="guardandoPickupRapido"
+  [errorMessage]="pickupRapidoError"
+  (close)="cerrarModalPickupRapido()"
+  (save)="guardarPickupRapido($event)"
+></app-reserva-create-pickup-rapido-modal>

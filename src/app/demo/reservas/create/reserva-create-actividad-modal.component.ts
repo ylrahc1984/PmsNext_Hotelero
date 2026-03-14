@@ -1,11 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { AfterViewInit, Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges, ViewChild } from '@angular/core';
 import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { OperatorFunction, Subject, Subscription, of } from 'rxjs';
+import { OperatorFunction, Subject, Subscription, firstValueFrom, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, finalize, map, switchMap, takeUntil } from 'rxjs/operators';
 import { NgbTypeaheadModule } from '@ng-bootstrap/ng-bootstrap';
 
 import { ActividadDetalleForm, ActividadPickupForm } from './reserva-create.models';
+import { PickupRapidoModalSavePayload, ReservaCreatePickupRapidoModalComponent } from './reserva-create-pickup-rapido-modal.component';
+import { ReservaPickupRapidoService } from './reserva-pickup-rapido.service';
 import { safeJsonParse, safeJsonStringify } from './reserva-create.utils';
 import { ServicioUI } from '../../catalogos/servicios/servicios.service';
 import { PlanTarifaUI } from '../../catalogos/listas-precios/planes-tarifas.service';
@@ -108,7 +110,7 @@ type ActividadModalFormGroup = FormGroup<{
 @Component({
   selector: 'app-reserva-create-actividad-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, NgbTypeaheadModule],
+  imports: [CommonModule, ReactiveFormsModule, NgbTypeaheadModule, ReservaCreatePickupRapidoModalComponent],
   templateUrl: './reserva-create-actividad-modal.component.html',
   styleUrls: ['./reserva-create-actividad-modal.component.scss']
 })
@@ -133,8 +135,11 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
   tarifasLoading = false;
   tarifaError = '';
   pickupLookupLoading = false;
+  showPickupRapidoModal = false;
+  guardandoPickupRapido = false;
+  pickupRapidoError = '';
   serviciosPageNumber = 1;
-  readonly serviciosPageSize = 6;
+  readonly serviciosPageSize = 7;
   serviciosPageHasNext = false;
   serviciosPageItemsCount = 0;
   submitLocked = false;
@@ -167,7 +172,12 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     return match ? String(match.planId) : normalized;
   }
 
-  constructor(private fb: FormBuilder, private tarifaService: ReservaCreateTarifaService, private listaPickupService: ListaPickupService) {
+  constructor(
+    private fb: FormBuilder,
+    private tarifaService: ReservaCreateTarifaService,
+    private listaPickupService: ListaPickupService,
+    private pickupRapidoService: ReservaPickupRapidoService
+  ) {
     this.form = this.fb.group({
       codPlan: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
       codLstPrecio: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
@@ -299,6 +309,9 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     const openChange = changes['open'];
     if (openChange?.currentValue !== true) {
       this.submitLocked = false;
+      this.showPickupRapidoModal = false;
+      this.guardandoPickupRapido = false;
+      this.pickupRapidoError = '';
     }
 
     if (changes['saving'] && changes['saving'].currentValue !== true) {
@@ -382,6 +395,65 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
       totalGeneral: raw.totalGeneral,
       payload
     });
+  }
+
+  abrirModalPickupRapido(): void {
+    if (this.guardandoPickupRapido) {
+      return;
+    }
+
+    this.pickupRapidoError = '';
+    this.showPickupRapidoModal = true;
+  }
+
+  cerrarModalPickupRapido(): void {
+    if (this.guardandoPickupRapido) {
+      return;
+    }
+
+    this.showPickupRapidoModal = false;
+    this.pickupRapidoError = '';
+  }
+
+  async guardarPickupRapido(payload: PickupRapidoModalSavePayload): Promise<void> {
+    if (this.guardandoPickupRapido) {
+      return;
+    }
+
+    const nombre = (payload?.nombre ?? '').toString().trim();
+    const duracion = (payload?.duracion ?? '').toString().trim();
+    if (!nombre || !duracion) {
+      this.pickupRapidoError = 'Debe indicar el nombre y la duracion del pickup.';
+      return;
+    }
+
+    this.pickupRapidoError = '';
+    this.guardandoPickupRapido = true;
+
+    try {
+      const response = await firstValueFrom(
+        this.pickupRapidoService.crearPickupRapido({
+          nombre,
+          duracion
+        })
+      );
+
+      const pickup = response?.pickup;
+      this.applyPickupSelection({
+        id: pickup?.id ?? response?.idPickupCreado ?? 0,
+        nombre: pickup?.nombre ?? nombre,
+        duracion: pickup?.duracion ?? duracion,
+        localizacion: pickup?.localizacion ?? ''
+      }, 'pickup-rapido');
+
+      this.showPickupRapidoModal = false;
+      this.pickupRapidoError = '';
+    } catch (error) {
+      console.error('[ReservaCreateActividadModal] guardarPickupRapido', error);
+      this.pickupRapidoError = this.resolvePickupRapidoError(error);
+    } finally {
+      this.guardandoPickupRapido = false;
+    }
   }
 
   readonly searchPickup: OperatorFunction<string, readonly PickupListaItem[]> = (text$) =>
@@ -530,31 +602,14 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
   }
 
   onPickupListaSelected(event: { item: PickupListaItem; preventDefault: () => void }): void {
-    const row = this.pickupGroup;
-    if (!row) return;
     const pickupItem = event?.item;
     event?.preventDefault?.();
-
-    row.patchValue(
-      {
-        direccion: (pickupItem?.CR11_Nombre || '').toString(),
-        zona: (row.controls.zona.value || pickupItem?.CR11_Localizacion || '').toString(),
-        google: safeJsonStringify({
-          source: 'lista-pickup',
-          id: Number(pickupItem?.CR11_ID ?? 0) || 0,
-          nombre: (pickupItem?.CR11_Nombre || '').toString(),
-          duracion: (pickupItem?.CR11_Duracion || '').toString(),
-          localizacion: (pickupItem?.CR11_Localizacion || '').toString()
-        }),
-        placeId: (pickupItem?.CR11_ID ?? '').toString(),
-        lat: 0,
-        lng: 0,
-        error: ''
-      },
-      { emitEvent: false }
-    );
-
-    this.recalculateHoraPickup(pickupItem?.CR11_Duracion);
+    this.applyPickupSelection({
+      id: pickupItem?.CR11_ID,
+      nombre: pickupItem?.CR11_Nombre,
+      duracion: pickupItem?.CR11_Duracion,
+      localizacion: pickupItem?.CR11_Localizacion
+    }, 'lista-pickup');
   }
 
   onPickupDireccionChange(): void {
@@ -957,6 +1012,50 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     return Math.floor(numeric);
   }
 
+  private resolvePickupRapidoError(error: unknown): string {
+    const apiError = error as { error?: { mensaje?: unknown; respuesta?: unknown }; message?: unknown } | null;
+    const message =
+      apiError?.error?.mensaje ||
+      apiError?.error?.respuesta ||
+      apiError?.message;
+
+    return (message ?? '').toString().trim() || 'No se pudo crear el pickup rapido.';
+  }
+
+  private applyPickupSelection(
+    pickup: { id?: unknown; nombre?: unknown; duracion?: unknown; localizacion?: unknown },
+    source: 'lista-pickup' | 'pickup-rapido'
+  ): void {
+    const row = this.pickupGroup;
+    if (!row) return;
+
+    const nombre = (pickup?.nombre ?? '').toString();
+    const localizacion = (pickup?.localizacion ?? '').toString();
+    const duracion = (pickup?.duracion ?? '').toString();
+    const id = Number(pickup?.id ?? 0) || 0;
+
+    row.patchValue(
+      {
+        direccion: nombre,
+        zona: localizacion,
+        google: safeJsonStringify({
+          source,
+          id,
+          nombre,
+          duracion,
+          localizacion
+        }),
+        placeId: id ? String(id) : '',
+        lat: 0,
+        lng: 0,
+        error: ''
+      },
+      { emitEvent: false }
+    );
+
+    this.recalculateHoraPickup(duracion);
+  }
+
   private recalculateHoraPickup(durationOverride?: unknown): void {
     const horaInicio = (this.form.controls.horaInicio.value || '').toString().trim();
     const durationMinutes = this.parsePickupDurationToMinutes(durationOverride) ?? this.getPickupDurationMinutes();
@@ -1179,4 +1278,3 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     }, 0);
   }
 }
-

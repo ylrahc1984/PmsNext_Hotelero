@@ -1,10 +1,10 @@
 <div class="row">
   <div class="col-12">
-    <app-card cardTitle="Reserva V2">
+    <app-card cardTitle="Reserva">
       <div class="d-flex justify-content-between align-items-center mb-0 rsv-page-header">
         <div>
           <div class="d-flex align-items-center flex-wrap gap-1">
-            <h5 class="mb-0">{{ codReservaActual ? ('Editar Reserva ' + codReservaActual) : 'Nueva Reserva V2' }}</h5>
+            <h5 class="mb-0">{{ codReservaActual ? ('Editar Reserva ' + codReservaActual) : 'Nueva Reserva' }}</h5>
             <span class="badge bg-light text-dark border">{{ codReservaActual ? 'Edicion local-first' : 'Local-first' }}</span>
             <span class="badge text-white" [ngClass]="estadoBadgeClass">{{ estadoLabel }}</span>
             <span class="badge bg-light text-dark border" *ngIf="loadingReserva">Cargando...</span>

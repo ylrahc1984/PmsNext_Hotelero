@@ -1,0 +1,62 @@
+<div
+  class="modal fade show rsv-pickup-rapido-modal"
+  *ngIf="open"
+  tabindex="-1"
+  role="dialog"
+  aria-modal="true"
+  style="display: block;"
+>
+  <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
+    <div class="modal-content rsv-pickup-rapido-modal__content">
+      <div class="modal-header rsv-pickup-rapido-modal__header">
+        <div>
+          <h5 class="modal-title mb-1">Nuevo pickup</h5>
+          <small class="text-muted">Agrega un pickup m&iacute;nimo y seleccionalo en la actividad.</small>
+        </div>
+        <button type="button" class="btn-close" aria-label="Close" (click)="onClose()" [disabled]="saving"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Nombre <span class="text-danger">*</span></label>
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="nombre"
+            name="nombrePickup"
+            placeholder="Ej. Villa Azul"
+            [disabled]="saving"
+            (keyup.enter)="onSave()"
+          >
+        </div>
+
+        <div class="mb-0">
+          <label class="form-label">Duraci&oacute;n <span class="text-danger">*</span></label>
+          <input
+            type="time"
+            class="form-control"
+            [(ngModel)]="duracion"
+            name="duracionPickup"
+            step="60"
+            [disabled]="saving"
+            (keyup.enter)="onSave()"
+          >
+        </div>
+
+        <div class="alert alert-danger py-2 mt-3 mb-0" *ngIf="errorMessage">
+          {{ errorMessage }}
+        </div>
+      </div>
+
+      <div class="modal-footer rsv-pickup-rapido-modal__footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="onClose()" [disabled]="saving">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="onSave()" [disabled]="saving || !nombre.trim() || !duracion.trim()">
+          <span *ngIf="saving" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+          Crear pickup
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show rsv-pickup-rapido-modal__backdrop" *ngIf="open"></div>
