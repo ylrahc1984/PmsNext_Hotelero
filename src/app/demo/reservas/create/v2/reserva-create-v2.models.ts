@@ -61,18 +61,18 @@ export interface ReservaDraftServiceLine {
 }
 
 export interface ReservaCreateV2HeaderDraft extends ReservaCreateForm {
-  codReserva?: string;
-  fecConfirma: string;
-  fecAnulada: string;
-  fecIngresa: string;
-  fecSalida: string;
-  fecPrepago: string;
-  descripcion: string;
-  tCambio: number;
-  folio: string;
-  procesado: number;
-  cntHabitaciones: number;
-  operador: string;
+  codReserva      ?: string;
+  fecConfirma     : string;
+  fecAnulada      : string;
+  fecIngresa      : string;
+  fecSalida       : string;
+  fecPrepago      : string;
+  descripcion     : string;
+  tCambio         : number;
+  folio           : string;
+  procesado       : number;
+  cntHabitaciones : number;
+  operador        : string;
 }
 
 export interface ReservaCreateV2Draft {

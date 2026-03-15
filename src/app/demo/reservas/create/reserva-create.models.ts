@@ -1,51 +1,51 @@
 export type ReservaEstado = 'PEN' | 'CON' | 'CAN';
 
 export interface ReservaCreateForm {
-  fecha: string;
-  codAgencia: string;
-  idContacto: number;
-  nomContactoAgencia: string;
-  nomCliente: string;
-  telCliente: string;
-  emailCliente: string;
-  idioma: string;
-  formaReservacion: string;
-  formaPago: string;
-  codLstPrecio: string;
-  codPlan: string;
-  moneda: string;
-  directo: string;
-  estado: ReservaEstado;
-  totalRsv: number;
-  comentarios: string;
+  fecha                 : string;
+  codAgencia            : string;
+  idContacto            : number;
+  nomContactoAgencia    : string;
+  nomCliente            : string;
+  telCliente            : string;
+  emailCliente          : string;
+  idioma                : string;
+  formaReservacion      : string;
+  formaPago             : string;
+  codLstPrecio          : string;
+  codPlan               : string;
+  moneda                : string;
+  directo               : string;
+  estado                : ReservaEstado;
+  totalRsv              : number;
+  comentarios           : string;
 }
 
 export interface DetallePaxForm {
-  tipoPax: string;
-  cantidad: number;
-  precioTotal: number;
-  precioUnitario?: number;
-  precioPaxExtra?: number;
-  reglaPrecioId?: number;
-  error?: string;
-  manual?: boolean;
+  tipoPax             : string;
+  cantidad            : number;
+  precioTotal         : number;
+  precioUnitario     ?: number;
+  precioPaxExtra     ?: number;
+  reglaPrecioId      ?: number;
+  error              ?: string;
+  manual             ?: boolean;
 }
 
 export interface ActividadPickupForm {
-  direccion: string;
-  zona: string;
-  google: string;
-  placeId: string;
-  lat: number;
-  lng: number;
-  error?: string;
+  direccion   : string;
+  zona        : string;
+  google      : string;
+  placeId     : string;
+  lat         : number;
+  lng         : number;
+  error      ?: string;
 }
 
 export interface ActividadPaxForm {
-  tipoPax: string;
-  cantidad: number;
-  precioUnitario: number;
-  error?: string;
+  tipoPax          : string;
+  cantidad         : number;
+  precioUnitario   : number;
+  error           ?: string;
 }
 
 export interface Tarifa {

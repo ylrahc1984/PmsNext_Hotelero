@@ -228,6 +228,34 @@ const routes: Routes = [
       {
         path: 'suplidores/editar/:codSuplidor',
         loadComponent: () => import('./demo/catalogos/suplidores/suplidor-form.component').then((c) => c.SuplidorFormComponent)
+      },
+      {
+        path: 'ordenes-pedido',
+        redirectTo: '/demo/ordenes-pedido',
+        pathMatch: 'full'
+      },
+      {
+        path: 'ordenes-pedido/nuevo',
+        redirectTo: '/demo/ordenes-pedido/nuevo',
+        pathMatch: 'full'
+      }
+    ]
+  },
+  {
+    path: 'demo',
+    component: AdminComponent,
+    canActivate: [AuthGuard],
+    canActivateChild: [AuthGuard],
+    children: [
+      {
+        path: 'ordenes-pedido',
+        loadComponent: () =>
+          import('./demo/orden-pedido/pages/orden-pedido-list/orden-pedido-list.component').then((c) => c.OrdenPedidoListComponent)
+      },
+      {
+        path: 'ordenes-pedido/nuevo',
+        loadComponent: () =>
+          import('./demo/orden-pedido/pages/orden-pedido-form/orden-pedido-form.component').then((c) => c.OrdenPedidoFormComponent)
       }
     ]
   },

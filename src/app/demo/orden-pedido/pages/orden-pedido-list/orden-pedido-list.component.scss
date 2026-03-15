@@ -1,0 +1,145 @@
+.orden-list {
+  .card,
+  .form-control,
+  .form-select,
+  .btn {
+    border-radius: 8px;
+  }
+
+  .form-control,
+  .form-select {
+    border-color: #d9e2ec;
+    background: #fff;
+    min-height: 40px;
+  }
+
+  .form-control:focus,
+  .form-select:focus {
+    border-color: #4f83ff;
+    box-shadow: 0 0 0 0.15rem rgba(79, 131, 255, 0.2);
+  }
+}
+
+.orden-list--bg {
+  background: #f7f8fa;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.app-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.op-btn-primary {
+  font-weight: 600;
+}
+
+.op-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+  background: #fbfcfe;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+
+.op-hero__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.op-hero__meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.op-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid #dbe7f3;
+  background: #fff;
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.op-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 16px 0 24px;
+}
+
+.op-section {
+  margin-bottom: 24px;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
+}
+
+.op-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #4b5563;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.op-table thead th {
+  background: #f8fafc;
+  color: #334155;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom-width: 1px;
+}
+
+.op-table tbody td {
+  vertical-align: middle;
+}
+
+.op-table__expanded td {
+  background: #f8fbff;
+}
+
+.expanded-content {
+  padding: 12px 16px;
+}
+
+.expanded-content__title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.op-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.op-pagination .form-select {
+  width: auto;
+}
+
+@media (max-width: 767.98px) {
+  .op-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

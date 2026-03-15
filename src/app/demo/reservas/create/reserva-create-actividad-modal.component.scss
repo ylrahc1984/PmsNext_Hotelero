@@ -439,6 +439,40 @@
   margin-bottom: 12px;
 }
 
+.summary-panel__calc {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(15, 23, 42, 0.1);
+}
+
+.summary-panel__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.83rem;
+}
+
+.summary-panel__row + .summary-panel__row {
+  margin-top: 8px;
+}
+
+.summary-panel__row-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--bs-secondary-color);
+}
+
+.summary-panel__row-value {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.summary-panel__row--discount .summary-panel__row-value {
+  font-weight: 700;
+}
+
 .summary-item {
   display: flex;
   align-items: center;
@@ -525,6 +559,26 @@
 .total-general {
   font-weight: 700;
   font-size: 1.2rem;
+}
+
+.combo-container {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.combo-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+}
+
+.combo-check input[type='checkbox'] {
+  margin: 0;
 }
 
 .rsv-actividad-modal .rsv-map-input {

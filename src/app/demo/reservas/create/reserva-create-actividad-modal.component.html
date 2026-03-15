@@ -263,6 +263,29 @@
                     <ng-template #resumenVacio>
                       <div class="summary-panel__empty text-muted">Agregue cantidades para ver el resumen.</div>
                     </ng-template>
+                    <div class="summary-panel__calc" *ngIf="resumenActividades.length > 0">
+                      <div class="summary-panel__row">
+                        <div class="summary-panel__row-label">Subtotal</div>
+                        <div class="summary-panel__row-value">
+                          <span *ngIf="selectedListaPrecio?.simbolo">{{ selectedListaPrecio?.simbolo }}</span>
+                          {{ subTotal | number:'1.2-2' }}
+                        </div>
+                      </div>
+
+                      <div class="combo-container" *ngIf="serviciosSeleccionados.length >= 2">
+                        <label class="combo-check">
+                          <input type="checkbox" [(ngModel)]="comboActivo" [ngModelOptions]="{ standalone: true }" (change)="recalcularTotales()" />
+                          Aplicar descuento Combo (5%)
+                        </label>
+                      </div>
+
+                      <div class="summary-panel__row summary-panel__row--discount" *ngIf="descuento > 0">
+                        <div class="summary-panel__row-label">Descuento {{ porDescuento | number:'1.0-0' }}%</div>
+                        <div class="summary-panel__row-value text-danger">
+                          -<span *ngIf="selectedListaPrecio?.simbolo">{{ selectedListaPrecio?.simbolo }}</span>{{ descuento | number:'1.2-2' }}
+                        </div>
+                      </div>
+                    </div>
                     <div class="summary-panel__total align-items-right" *ngIf="resumenActividades.length > 0">
                       <div class="summary-panel__total-label">Total General</div>
                       <div class="summary-panel__total-value total-general">

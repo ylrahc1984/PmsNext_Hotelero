@@ -1,0 +1,173 @@
+<div class="row">
+  <div class="col-12">
+    <app-card [customHeader]="true">
+      <div class="app-card-header">
+        <div>
+          <h5 class="mb-1">Ordenes de Pedido</h5>
+          <p class="mb-0 text-muted">Consulta ordenes de pedido y proformas emitidas desde el área comercial.</p>
+        </div>
+        <div class="card-header-right d-flex flex-wrap align-items-center gap-2">
+          <button class="btn btn-primary op-btn-primary" type="button" (click)="nuevaOrden()" [disabled]="isLoading">
+            <i class="feather icon-plus me-1"></i>
+            Nueva Orden
+          </button>
+        </div>
+      </div>
+
+      <div class="orden-list orden-list--bg">
+        <div class="op-hero">
+          <div class="op-hero__title">Listado Comercial de Ordenes y Proformas</div>
+          <div class="op-hero__meta">
+            <span class="op-chip">{{ totalRecords }} registros</span>
+            <span class="op-chip" *ngIf="isLoading">
+              <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+              Cargando
+            </span>
+          </div>
+        </div>
+
+        <div class="op-divider"></div>
+
+        <div class="card shadow-none border op-section">
+          <div class="card-body">
+            <form [formGroup]="filtrosForm" (ngSubmit)="applyFilters()">
+              <div class="row g-3">
+                <div class="col-lg-3 col-md-6">
+                  <label class="form-label op-label">Tipo</label>
+                  <select class="form-control" formControlName="tipOrden">
+                    <option *ngFor="let tipo of tiposOrden" [value]="tipo.value">{{ tipo.label }}</option>
+                  </select>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                  <label class="form-label op-label">Fecha desde</label>
+                  <input type="date" class="form-control" formControlName="fechaDesde">
+                </div>
+                <div class="col-lg-3 col-md-6">
+                  <label class="form-label op-label">Fecha hasta</label>
+                  <input type="date" class="form-control" formControlName="fechaHasta">
+                </div>
+                <div class="col-lg-3 col-md-6">
+                  <label class="form-label op-label">Cliente</label>
+                  <input class="form-control" formControlName="nomCliente" placeholder="Nombre del cliente">
+                </div>
+              </div>
+
+              <div class="d-flex justify-content-end flex-wrap gap-2 mt-3">
+                <button class="btn btn-outline-secondary" type="button" (click)="resetFilters()" [disabled]="isLoading">
+                  Limpiar
+                </button>
+                <button class="btn btn-primary op-btn-primary" type="submit" [disabled]="isLoading">
+                  Buscar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div *ngIf="errorMessage" class="alert alert-danger mb-3">
+          <i class="feather icon-alert-triangle me-2"></i>
+          {{ errorMessage }}
+        </div>
+
+        <div class="card shadow-none border op-section">
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover mb-0 align-middle op-table">
+                <thead>
+                  <tr>
+                    <th>Tipo</th>
+                    <th>Serie</th>
+                    <th>Número</th>
+                    <th>Fecha</th>
+                    <th>Cliente</th>
+                    <th>RUC</th>
+                    <th class="text-end">Items</th>
+                    <th class="text-end">Subtotal</th>
+                    <th class="text-end">Impuesto</th>
+                    <th class="text-end">Total</th>
+                    <th>Estado</th>
+                    <th class="text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngIf="isLoading">
+                    <td colspan="12" class="text-center text-muted py-4">Cargando ordenes de pedido...</td>
+                  </tr>
+
+                  <ng-container *ngIf="!isLoading">
+                    <ng-container *ngFor="let item of ordenes; trackBy: trackByOrden">
+                      <tr>
+                        <td>{{ item.tipOrden || 'N/D' }}</td>
+                        <td>{{ item.serie || 'N/D' }}</td>
+                        <td class="font-monospace">{{ item.numero || 'N/D' }}</td>
+                        <td>{{ formatFecha(item.fecha) }}</td>
+                        <td>{{ item.cliente || 'N/D' }}</td>
+                        <td>{{ item.ruc || 'N/D' }}</td>
+                        <td class="text-end">{{ item.items | number:'1.0-0' }}</td>
+                        <td class="text-end">{{ item.subtotal | number:'1.2-2' }}</td>
+                        <td class="text-end">{{ item.impuesto | number:'1.2-2' }}</td>
+                        <td class="text-end fw-semibold">{{ item.total | number:'1.2-2' }}</td>
+                        <td>
+                          <span [ngClass]="getEstadoBadgeClass(item)">
+                            {{ item.estado || 'Sin estado' }}
+                          </span>
+                        </td>
+                        <td class="text-center">
+                          <button class="btn btn-sm btn-outline-primary" type="button" (click)="toggleExpanded(item)">
+                            <i class="feather" [ngClass]="isExpanded(item) ? 'icon-chevron-up' : 'icon-eye'"></i>
+                          </button>
+                        </td>
+                      </tr>
+
+                      <tr *ngIf="isExpanded(item)" class="op-table__expanded">
+                        <td colspan="12">
+                          <div class="expanded-content">
+                            <div class="expanded-content__title">Observaciones</div>
+                            <div class="text-muted">{{ item.observaciones || 'Sin observaciones registradas.' }}</div>
+                          </div>
+                        </td>
+                      </tr>
+                    </ng-container>
+
+                    <tr *ngIf="ordenes.length === 0">
+                      <td colspan="12" class="text-center py-5 text-muted">
+                        No se encontraron ordenes con los filtros aplicados.
+                      </td>
+                    </tr>
+                  </ng-container>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="op-pagination" *ngIf="totalRecords > 0">
+              <div class="text-muted">
+                Mostrando {{ pageStart }} - {{ pageEnd }} de {{ totalRecords }} registros
+              </div>
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <select
+                  class="form-select form-select-sm"
+                  #pageSizeSelect
+                  [value]="pageSize"
+                  (change)="onPageSizeChange(pageSizeSelect.value)"
+                  [disabled]="isLoading"
+                >
+                  <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }} por pagina</option>
+                </select>
+
+                <div class="btn-group">
+                  <button class="btn btn-outline-secondary btn-sm" type="button" (click)="goToPageRelative(-1)" [disabled]="pageNumber === 1 || isLoading">
+                    Prev
+                  </button>
+                  <button class="btn btn-outline-secondary btn-sm" type="button" (click)="goToPageRelative(1)" [disabled]="pageNumber === totalPages || isLoading">
+                    Next
+                  </button>
+                </div>
+                <span class="text-muted small">Página {{ pageNumber }} de {{ totalPages }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </app-card>
+  </div>
+</div>

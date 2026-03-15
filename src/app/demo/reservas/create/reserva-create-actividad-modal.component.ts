@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { AfterViewInit, Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges, ViewChild } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { OperatorFunction, Subject, Subscription, firstValueFrom, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, finalize, map, switchMap, takeUntil } from 'rxjs/operators';
@@ -110,7 +111,7 @@ type ActividadModalFormGroup = FormGroup<{
 @Component({
   selector: 'app-reserva-create-actividad-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, NgbTypeaheadModule, ReservaCreatePickupRapidoModalComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgbTypeaheadModule, ReservaCreatePickupRapidoModalComponent],
   templateUrl: './reserva-create-actividad-modal.component.html',
   styleUrls: ['./reserva-create-actividad-modal.component.scss']
 })
@@ -134,6 +135,13 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
 
   tarifasLoading = false;
   tarifaError = '';
+  comboActivo = false;
+  subTotal = 0;
+  porDescuento = 0;
+  descuento = 0;
+  neto = 0;
+  impuesto = 0;
+  montoServicio = 0;
   pickupLookupLoading = false;
   showPickupRapidoModal = false;
   guardandoPickupRapido = false;
@@ -249,6 +257,10 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     return Array.from(this.actividadesStateMap.values());
   }
 
+  get serviciosSeleccionados(): ActividadDetalle[] {
+    return this.resumenActividades.filter((item) => (Number(item?.totalLinea ?? 0) || 0) > 0);
+  }
+
   get isSubmitting(): boolean {
     return this.submitLocked || this.saving;
   }
@@ -283,6 +295,10 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
 
     const ordered = this.getOrderedTipoPaxCodes(Array.from(counts.keys()));
     return ordered.filter((tipo) => counts.has(tipo)).map((tipo) => `${counts.get(tipo)} ${tipo}`).join(' · ');
+  }
+
+  recalcularTotales(): void {
+    this.calcularTotales();
   }
 
   clearActividadFromResumen(actividad: ActividadDetalle): void {
@@ -554,13 +570,28 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     }
 
     this.captureCurrentPageState();
+    const serviciosSeleccionados = this.getAllActividadesValue().filter((actividad) => (Number(actividad.totalLinea ?? 0) || 0) > 0);
+    this.subTotal = this.roundCurrency(
+      serviciosSeleccionados.reduce((sum, actividad) => sum + (Number(actividad.totalLinea ?? 0) || 0), 0)
+    );
 
-    const totalGeneral = this.getAllActividadesValue().reduce((sum, actividad) => sum + (Number(actividad.totalLinea ?? 0) || 0), 0);
+    if (this.comboActivo && serviciosSeleccionados.length >= 2) {
+      this.porDescuento = 5;
+      this.descuento = this.roundCurrency(this.subTotal * 0.05);
+    } else {
+      this.comboActivo = false;
+      this.porDescuento = 0;
+      this.descuento = 0;
+    }
 
-    this.form.controls.totalGeneral.setValue(totalGeneral, { emitEvent: false });
+    this.neto = this.roundCurrency(Math.max(0, this.subTotal - this.descuento));
+    this.impuesto = this.roundCurrency(this.neto * 0.13);
+    this.montoServicio = this.roundCurrency(this.neto + this.impuesto);
+
+    this.form.controls.totalGeneral.setValue(this.neto, { emitEvent: false });
     if (this.actividadForm) {
-      this.actividadForm.montoServicio = totalGeneral;
-      this.actividadForm.totalGeneral = totalGeneral;
+      this.actividadForm.montoServicio = this.neto;
+      this.actividadForm.totalGeneral = this.neto;
     }
   }
 
@@ -703,6 +734,11 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     }
 
     const actividades = this.normalizeActividades(this.actividadForm?.actividades ?? []);
+    const totalGeneralGuardado = Number(this.actividadForm?.totalGeneral ?? this.actividadForm?.montoServicio ?? 0) || 0;
+    const subtotalGuardado = this.roundCurrency(
+      actividades.reduce((sum, actividad) => sum + (Number(actividad?.totalLinea ?? 0) || 0), 0)
+    );
+    this.comboActivo = actividades.length >= 2 && totalGeneralGuardado > 0 && totalGeneralGuardado < subtotalGuardado;
     this.actividadesStateMap.clear();
     actividades.forEach((actividad) => this.setActividadState(actividad));
     this.setActividades([]);
@@ -1010,6 +1046,10 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     const numeric = Number(value ?? 0);
     if (!Number.isFinite(numeric) || numeric <= 0) return 0;
     return Math.floor(numeric);
+  }
+
+  private roundCurrency(value: number): number {
+    return Math.round((Number(value ?? 0) + Number.EPSILON) * 100) / 100;
   }
 
   private resolvePickupRapidoError(error: unknown): string {

@@ -1,0 +1,374 @@
+<div class="row">
+  <div class="col-12">
+    <app-card [customHeader]="true">
+      <div class="app-card-header op-page-toolbar">
+        <div>
+          <h5 class="mb-1">{{ form.controls.tipNDP.value === 'PRO' ? 'Nueva Proforma' : 'Nueva Orden de Pedido' }}</h5>
+          <p class="mb-0 text-muted">Registro comercial del documento con detalle, pagos y resumen.</p>
+        </div>
+        <div class="card-header-right d-flex flex-wrap align-items-center gap-2">
+          <button class="btn btn-sm btn-outline-secondary" type="button" (click)="volverListado()" [disabled]="isSubmitting">
+            <i class="feather icon-arrow-left me-1"></i>
+            Volver al listado
+          </button>
+          <button class="btn btn-sm btn-primary op-btn-primary" type="button" (click)="guardar()" [disabled]="isSubmitting">
+            <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+            <i class="feather icon-save me-1" *ngIf="!isSubmitting"></i>
+            Guardar
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="errorMessage" class="alert alert-danger mb-3">
+        <i class="feather icon-alert-triangle me-2"></i>
+        {{ errorMessage }}
+      </div>
+
+      <div *ngIf="successMessage" class="alert alert-success mb-3">
+        <i class="feather icon-check-circle me-2"></i>
+        {{ successMessage }}
+      </div>
+
+      <form class="orden-pedido-form orden-pedido-form--bg" [formGroup]="form">
+        <section class="op-doc-header">
+          <div>
+            <div class="op-doc-header__eyebrow">Documento Comercial</div>
+            <div class="op-doc-header__title">{{ tipoDocumentoLabel }}</div>
+            <div class="op-doc-header__subtitle">
+              {{ empresa()?.MA04_Nombre || 'Empresa en desarrollo' }} · RUC {{ empresa()?.MA04_Ruc || '-' }}
+            </div>
+          </div>
+          <div class="op-doc-header__date">
+            <span class="op-doc-header__date-label">Fecha</span>
+            <input type="date" class="form-control" formControlName="fecNDP">
+          </div>
+        </section>
+
+        <div class="op-divider"></div>
+
+        <section class="op-card op-context-card">
+          <div class="op-context-card__company">
+            <h6 class="op-section-title mb-2">Empresa en Desarrollo</h6>
+            <div class="op-company-meta">RUC: {{ empresa()?.MA04_Ruc || '-' }}</div>
+            <div class="op-company-meta">Punto de venta: {{ form.controls.pntVenta.value || '-' }}</div>
+            <div class="op-company-meta">Vendedor: {{ form.controls.codVendedor.value || '-' }}</div>
+            <div class="op-company-meta">Moneda: {{ form.controls.moneda.value || '-' }}</div>
+          </div>
+
+          <div class="op-context-card__fields">
+            <div class="row g-3">
+              <div class="col-lg-6 col-md-6">
+                <label class="form-label op-label">Punto de Venta</label>
+                <select class="form-control" formControlName="pntVenta" [disabled]="isSubmitting || puntosVentaLoading">
+                  <option value="" *ngIf="puntosVentaCatalogo.length === 0">
+                    {{ puntosVentaLoading ? 'Cargando puntos de venta...' : 'Sin puntos de venta' }}
+                  </option>
+                  <option *ngFor="let puntoVenta of puntosVentaCatalogo" [value]="puntoVenta.codigo">
+                    {{ puntoVenta.codigo }} - {{ puntoVenta.descripcion }}
+                  </option>
+                </select>
+              </div>
+              <div class="col-lg-6 col-md-6">
+                <label class="form-label op-label">Tipo Documento</label>
+                <select class="form-control" formControlName="tipNDP">
+                  <option *ngFor="let tipo of tiposDocumento" [value]="tipo.value">{{ tipo.label }}</option>
+                </select>
+              </div>
+              <div class="col-lg-6 col-md-6">
+                <label class="form-label op-label">Moneda</label>
+                <select class="form-control" formControlName="moneda" [disabled]="isSubmitting || monedasLoading">
+                  <option value="" *ngIf="monedasCatalogo.length === 0">
+                    {{ monedasLoading ? 'Cargando monedas...' : 'Sin monedas disponibles' }}
+                  </option>
+                  <option *ngFor="let moneda of monedasCatalogo" [value]="moneda.codMoneda">
+                    {{ moneda.codMoneda }} - {{ moneda.moneda }}
+                  </option>
+                </select>
+              </div>
+              <div class="col-lg-6 col-md-6">
+                <label class="form-label op-label">Vendedor</label>
+                <input class="form-control" formControlName="codVendedor" placeholder="Código vendedor">
+              </div>
+              <div class="col-lg-6 col-md-6">
+                <label class="form-label op-label">Plan Tarifario</label>
+                <select class="form-control" formControlName="planTarifario" [disabled]="isSubmitting || planesTarifariosLoading">
+                  <option value="" *ngIf="planesTarifariosCatalogo.length === 0">
+                    {{ planesTarifariosLoading ? 'Cargando planes tarifarios...' : 'Sin planes tarifarios' }}
+                  </option>
+                  <option *ngFor="let plan of planesTarifariosCatalogo" [value]="plan.planId">
+                    {{ plan.nombrePlan }}
+                  </option>
+                </select>
+              </div>
+              <div class="col-lg-6 col-md-6">
+                <label class="form-label op-label">Lista de Precios</label>
+                <select class="form-control" formControlName="listaPrecio" [disabled]="isSubmitting || listasPrecioLoading">
+                  <option value="" *ngIf="listasPrecioCatalogo.length === 0">
+                    {{ listasPrecioLoading ? 'Cargando listas de precios...' : 'Sin listas de precios' }}
+                  </option>
+                  <option *ngFor="let lista of listasPrecioCatalogo" [value]="lista.codigo">
+                    {{ lista.codigo }} - {{ lista.descripcion }}
+                  </option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="op-card">
+          <div class="op-card__header">
+            <div>
+              <h6 class="op-section-title mb-1">Datos del Cliente</h6>
+              <p class="op-section-subtitle mb-0">Información comercial y fiscal asociada al documento.</p>
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-lg-4 col-md-6">
+              <label class="form-label op-label">Código Cliente</label>
+              <div class="input-group">
+                <input class="form-control" formControlName="codCliente" placeholder="Código cliente">
+                <button class="btn btn-outline-primary" type="button" (click)="abrirModalClientes()" [disabled]="isSubmitting">
+                  <i class="feather icon-search"></i>
+                </button>
+              </div>
+              <div class="op-client-selected" *ngIf="selectedCliente">
+                {{ selectedCliente.codigo }} - {{ selectedCliente.nombre }}
+                <button type="button" class="btn btn-link btn-sm p-0 ms-2" (click)="limpiarSeleccionCliente()">Limpiar</button>
+              </div>
+            </div>
+            <div class="col-lg-8">
+              <label class="form-label op-label">Nombre</label>
+              <input class="form-control" formControlName="nomCliente" placeholder="Nombre del cliente">
+            </div>
+            <div class="col-lg-4 col-md-6">
+              <label class="form-label op-label">Cédula</label>
+              <input class="form-control" [value]="form.controls.rucCliente.value" placeholder="Cédula cliente" readonly>
+            </div>
+            <div class="col-lg-4 col-md-6">
+              <label class="form-label op-label">Correo</label>
+              <input class="form-control" [value]="clienteCorreo" placeholder="Correo cliente" readonly>
+            </div>
+            <div class="col-lg-4 col-md-12">
+              <label class="form-label op-label">Código Actividad</label>
+              <input
+                class="form-control"
+                [value]="clienteActividadLoading ? 'Cargando actividad...' : clienteCodigoActividad"
+                placeholder="Código actividad"
+                readonly
+              >
+            </div>
+            <div class="col-12">
+              <label class="form-label op-label">Observaciones</label>
+              <input class="form-control" formControlName="observaciones" placeholder="Observaciones generales">
+            </div>
+          </div>
+        </section>
+
+        <section class="op-card">
+          <div class="op-card__header">
+            <div class="d-flex align-items-center gap-2">
+              <i class="feather icon-grid text-muted"></i>
+              <h6 class="op-section-title mb-0">Detalle</h6>
+            </div>
+            <button class="btn btn-sm btn-outline-primary op-outline-btn" type="button" (click)="abrirModalServicios()">
+              <i class="feather icon-plus me-1"></i>
+              Agregar servicio
+            </button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0 op-detail-table">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Descripción</th>
+                  <th>Área</th>
+                  <th>U. Medida</th>
+                  <th class="text-end">Cantidad</th>
+                  <th class="text-end">Precio</th>
+                  <th class="text-end">% Desc</th>
+                  <th class="text-end">Desc</th>
+                  <th class="text-end">Neto</th>
+                  <th class="text-end">% Imp</th>
+                  <th class="text-end">Impuesto</th>
+                  <th class="text-end">Total</th>
+                  <th class="text-center">Eliminar</th>
+                </tr>
+              </thead>
+              <tbody formArrayName="detalle">
+                <tr *ngFor="let group of detalleArray.controls; let i = index; trackBy: trackByIndex" [formGroupName]="i">
+                  <td><input class="form-control form-control-sm" formControlName="codProdu" placeholder="Código" readonly></td>
+                  <td><input class="form-control form-control-sm" formControlName="producto" placeholder="Producto" readonly></td>
+                  <td><input class="form-control form-control-sm" formControlName="area" placeholder="Área"></td>
+                  <td><input class="form-control form-control-sm" formControlName="uMedida" placeholder="UND"></td>
+                  <td><input type="number" class="form-control form-control-sm text-end" formControlName="canProdu" min="0" step="0.01"></td>
+                  <td><input type="number" class="form-control form-control-sm text-end" formControlName="pUndLst" min="0" step="0.01"></td>
+                  <td><input type="number" class="form-control form-control-sm text-end" formControlName="porDescu" min="0" step="0.01"></td>
+                  <td><input type="number" class="form-control form-control-sm text-end" formControlName="mtoDescu" readonly></td>
+                  <td><input type="number" class="form-control form-control-sm text-end" formControlName="totalNeto" readonly></td>
+                  <td><input type="number" class="form-control form-control-sm text-end" formControlName="porImpu" min="0" step="0.01"></td>
+                  <td><input type="number" class="form-control form-control-sm text-end" formControlName="mtoImpu" readonly></td>
+                  <td><input type="number" class="form-control form-control-sm text-end" formControlName="mtoTotal" readonly></td>
+                  <td class="text-center">
+                    <button class="btn btn-sm btn-outline-danger op-delete-btn" type="button" (click)="removeDetalle(i)">
+                      <i class="feather icon-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="detalleArray.length === 0">
+                  <td colspan="13" class="text-center text-muted">Agrega al menos un servicio.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <div class="row g-4">
+          <div class="col-xl-8">
+            <section class="op-card">
+              <div class="op-card__header">
+                <div class="d-flex align-items-center gap-2">
+                  <i class="feather icon-credit-card text-muted"></i>
+                  <h6 class="op-section-title mb-0">Pagos</h6>
+                </div>
+                <button class="btn btn-sm btn-outline-primary op-outline-btn" type="button" (click)="addPago()">
+                  <i class="feather icon-plus me-1"></i>
+                  Agregar pago
+                </button>
+              </div>
+
+              <div class="row g-3" formArrayName="pagos">
+                <div class="col-12" *ngFor="let group of pagosArray.controls; let i = index; trackBy: trackByIndex" [formGroupName]="i">
+                  <div class="op-payment-row">
+                    <div class="row g-3 align-items-end">
+                      <div class="col-lg-3 col-md-6">
+                        <label class="form-label op-label">Forma Pago</label>
+                        <select class="form-control" formControlName="frmPago">
+                          <option *ngFor="let forma of formasPagoDisponibles" [value]="forma">{{ forma }}</option>
+                        </select>
+                      </div>
+                      <div class="col-lg-3 col-md-6">
+                        <label class="form-label op-label">Monto</label>
+                        <input type="number" class="form-control text-end" formControlName="monto" min="0" step="0.01">
+                      </div>
+                      <div class="col-lg-2 col-md-4">
+                        <label class="form-label op-label">Moneda</label>
+                        <select class="form-control" formControlName="moneda">
+                          <option *ngFor="let moneda of monedasCatalogo" [value]="moneda.codMoneda">
+                            {{ moneda.codMoneda }}
+                          </option>
+                        </select>
+                      </div>
+                      <div class="col-lg-2 col-md-4">
+                        <label class="form-label op-label">Referencia</label>
+                        <input class="form-control" formControlName="referencia" placeholder="Referencia">
+                      </div>
+                      <div class="col-lg-1 col-md-2">
+                        <label class="form-label op-label">T/C</label>
+                        <input type="number" class="form-control text-end" formControlName="tCambio" min="0" step="0.0001">
+                      </div>
+                      <div class="col-lg-1 col-md-2 text-end">
+                        <button class="btn btn-sm btn-outline-danger op-delete-btn" type="button" (click)="removePago(i)" [disabled]="pagosArray.length === 1">
+                          <i class="feather icon-trash"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="op-card">
+              <div class="op-card__header">
+                <div class="d-flex align-items-center gap-2">
+                  <i class="feather icon-shield text-muted"></i>
+                  <h6 class="op-section-title mb-0">Exoneración</h6>
+                </div>
+                <div class="form-check form-switch m-0">
+                  <input class="form-check-input" id="exoneracionActiva" type="checkbox" formControlName="exoneracionActiva">
+                  <label class="form-check-label" for="exoneracionActiva">Aplicar</label>
+                </div>
+              </div>
+
+              <div class="row g-3" formGroupName="exoneracion" *ngIf="form.controls.exoneracionActiva.value">
+                <div class="col-lg-3 col-md-6">
+                  <label class="form-label op-label">Tipo Documento</label>
+                  <input class="form-control" formControlName="tipoDocumentoEX1" placeholder="Tipo documento">
+                </div>
+                <div class="col-lg-3 col-md-6">
+                  <label class="form-label op-label">Número Documento</label>
+                  <input class="form-control" formControlName="numeroDocumento" placeholder="Número documento">
+                </div>
+                <div class="col-lg-4 col-md-6">
+                  <label class="form-label op-label">Institución</label>
+                  <input class="form-control" formControlName="nombreInstitucion" placeholder="Institución">
+                </div>
+                <div class="col-lg-1 col-md-3">
+                  <label class="form-label op-label">Tarifa %</label>
+                  <input type="number" class="form-control text-end" formControlName="tarifaExonerada" min="0" step="0.01">
+                </div>
+                <div class="col-lg-1 col-md-3">
+                  <label class="form-label op-label">Monto</label>
+                  <input type="number" class="form-control text-end" formControlName="montoExoneracion" min="0" step="0.01">
+                </div>
+              </div>
+
+              <div class="op-empty-note" *ngIf="!form.controls.exoneracionActiva.value">
+                La exoneración es opcional. Actívela si el documento requiere descuento tributario.
+              </div>
+            </section>
+          </div>
+
+          <div class="col-xl-4">
+            <section class="op-card op-summary-card">
+              <div class="op-card__header">
+                <h6 class="op-section-title mb-0">Resumen del Documento</h6>
+              </div>
+
+              <div class="op-summary-list">
+                <div class="op-summary-list__row">
+                  <span>Subtotal</span>
+                  <strong>{{ form.controls.subTotal.value | number:'1.2-2' }}</strong>
+                </div>
+                <div class="op-summary-list__row">
+                  <span>Impuesto</span>
+                  <strong>{{ form.controls.impuesto.value | number:'1.2-2' }}</strong>
+                </div>
+                <div class="op-summary-list__row">
+                  <span>Total pagos</span>
+                  <strong>{{ form.controls.totalPago.value | number:'1.2-2' }}</strong>
+                </div>
+                <div class="op-summary-list__row">
+                  <span>Saldo pendiente</span>
+                  <strong [class.text-danger]="saldoPendiente > 0">{{ saldoPendiente | number:'1.2-2' }}</strong>
+                </div>
+              </div>
+
+              <div class="op-summary-total">
+                <span>Total documento</span>
+                <strong>{{ form.controls.totDocu.value | number:'1.2-2' }}</strong>
+              </div>
+            </section>
+          </div>
+        </div>
+      </form>
+    </app-card>
+  </div>
+</div>
+
+<app-nueva-factura-cliente-modal
+  *ngIf="showClienteModal"
+  [open]="showClienteModal"
+  (close)="showClienteModal = false"
+  (clienteSelected)="onClienteSelected($event)"
+></app-nueva-factura-cliente-modal>
+
+<app-selector-servicios-modal
+  *ngIf="showServicioModal"
+  [open]="showServicioModal"
+  [codLista]="form.controls.listaPrecio.value"
+  [modoPrecio]="modoPrecioSeleccionado"
+  (close)="cerrarModalServicios()"
+  (servicioSelected)="onServicioSelected($event)"
+></app-selector-servicios-modal>

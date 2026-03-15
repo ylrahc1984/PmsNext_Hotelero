@@ -114,6 +114,14 @@ export const NavigationItems: NavigationItem[] = [
             icon: 'feather icon-users',
             classes: 'nav-item'
           },
+        {
+            id: 'ordenes-pedido',
+            title: 'Ordenes de Pedido',
+            type: 'item',
+            url: '/demo/ordenes-pedido',
+            icon: 'feather icon-file-text',
+            classes: 'nav-item'
+          },
           {
             id: 'consulta-documentos-comercial',
             title: 'Consulta Documentos',

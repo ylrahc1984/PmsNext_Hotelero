@@ -27,7 +27,7 @@ export class ServiciosComponent implements OnInit {
   grupoOptions: CentroCostoOption[] = [];
 
   currentPage = 1;
-  pageSize = 20;
+  pageSize = 10;
   totalPages = 1;
   totalRegistros = 0;
   pageSizeOptions = [10, 20, 50, 100];

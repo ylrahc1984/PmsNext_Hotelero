@@ -253,21 +253,21 @@ export function buildInitialReservaCreateV2HeaderDraft(form?: Partial<ReservaCre
   return {
     ...base,
     ...source,
-    codReserva: safeString((source as ReservaCreateV2HeaderDraft).codReserva),
-    fecConfirma: safeString((source as ReservaCreateV2HeaderDraft).fecConfirma),
-    fecAnulada: safeString((source as ReservaCreateV2HeaderDraft).fecAnulada),
-    fecIngresa: safeString((source as ReservaCreateV2HeaderDraft).fecIngresa),
-    fecSalida: safeString((source as ReservaCreateV2HeaderDraft).fecSalida),
-    fecPrepago: safeString((source as ReservaCreateV2HeaderDraft).fecPrepago),
-    descripcion: safeString((source as ReservaCreateV2HeaderDraft).descripcion),
-    tCambio: safeNumber((source as ReservaCreateV2HeaderDraft).tCambio),
-    folio: safeString((source as ReservaCreateV2HeaderDraft).folio),
-    procesado: safeNumber((source as ReservaCreateV2HeaderDraft).procesado),
-    cntHabitaciones: safeNumber((source as ReservaCreateV2HeaderDraft).cntHabitaciones),
-    operador: safeString(options?.operador ?? (source as ReservaCreateV2HeaderDraft).operador),
-    estado: options?.estado ?? source.estado ?? 'PEN',
-    directo: normalizeDirecto(source.directo || '0'),
-    totalRsv: safeNumber(source.totalRsv)
+    codReserva      : safeString((source as ReservaCreateV2HeaderDraft).codReserva),
+    fecConfirma     : safeString((source as ReservaCreateV2HeaderDraft).fecConfirma),
+    fecAnulada      : safeString((source as ReservaCreateV2HeaderDraft).fecAnulada),
+    fecIngresa      : safeString((source as ReservaCreateV2HeaderDraft).fecIngresa),
+    fecSalida       : safeString((source as ReservaCreateV2HeaderDraft).fecSalida),
+    fecPrepago      : safeString((source as ReservaCreateV2HeaderDraft).fecPrepago),
+    descripcion     : safeString((source as ReservaCreateV2HeaderDraft).descripcion),
+    tCambio         : safeNumber((source as ReservaCreateV2HeaderDraft).tCambio),
+    folio           : safeString((source as ReservaCreateV2HeaderDraft).folio),
+    procesado       : safeNumber((source as ReservaCreateV2HeaderDraft).procesado),
+    cntHabitaciones : safeNumber((source as ReservaCreateV2HeaderDraft).cntHabitaciones),
+    operador        : safeString(options?.operador ?? (source as ReservaCreateV2HeaderDraft).operador),
+    estado          : options?.estado ?? source.estado ?? 'PEN',
+    directo         : normalizeDirecto(source.directo || '0'),
+    totalRsv        : safeNumber(source.totalRsv)
   };
 }
 
@@ -530,66 +530,93 @@ export function mapActividadSavePayloadToDraftServiceLines(
   const settings = getCalculationOptions(options);
   const pickup = (saveData?.pickups ?? [])[0];
 
-  return (saveData?.payload ?? [])
-    .filter((item) => safeNumber(item?.montoServicio) > 0)
-    .map((item, index) => {
-      const pasajeros = (item.detallesPax ?? [])
-        .map((pax) => buildPassengerLineFromTotal(pax.tipoPax, pax.cantidad, pax.precioNeto, directo, settings))
-        .filter((pax) => !!pax.tipoPax && pax.cantidad > 0);
+  const activityItems = (saveData?.payload ?? []).filter((item) => safeNumber(item?.montoServicio) > 0);
+  const baseLines = activityItems.map((item, index) => {
+    const pasajeros = (item.detallesPax ?? [])
+      .map((pax) => buildPassengerLineFromTotal(pax.tipoPax, pax.cantidad, pax.precioNeto, directo, settings))
+      .filter((pax) => !!pax.tipoPax && pax.cantidad > 0);
 
-      const subTotal = roundCurrency(
-        pasajeros.reduce((sum, pax) => sum + safeNumber(pax.subtotalNeto), 0) || safeNumber(item.montoServicio),
-        settings.redondeoDecimales
-      );
-      const descuento = roundCurrency(settings.descuentoDefault, settings.redondeoDecimales);
-      const neto = roundCurrency(Math.max(0, subTotal - descuento), settings.redondeoDecimales);
-      const split = calculateTaxFromNetAmount(neto, directo, settings);
+    const subTotal = roundCurrency(
+      pasajeros.reduce((sum, pax) => sum + safeNumber(pax.subtotalNeto), 0) || safeNumber(item.montoServicio),
+      settings.redondeoDecimales
+    );
 
-      return {
-        linea: lineaInicial + index,
-        source: 'actividad',
-        tipoServicio: normalizeTipoServicio(item.tipoServicio || tipoServicioBase, 'TOUR'),
-        codServicio: safeString(item.codServicio),
-        nomServicio: safeString(item.nomServicio),
-        fecServicio: safeString(item.fecServicio || saveData?.fechaServicio),
-        horaServicio: safeString(item.horaServicio || saveData?.horaInicio || saveData?.horaPickup),
-        horaPickup: safeString(item.horaPickup || saveData?.horaPickup),
-        origenTexto: safeString(pickup?.direccion),
-        zonaOrigen: safeString(pickup?.zona),
-        origenGoogle: safeString(pickup?.google),
-        origenPlaceId: safeString(pickup?.placeId),
-        origenLat: safeNumber(pickup?.lat),
-        origenLng: safeNumber(pickup?.lng),
-        destinoTexto: '',
-        zonaDestino: '',
-        destinoGoogle: '',
-        destinoPlaceId: '',
-        destinoLat: 0,
-        destinoLng: 0,
-        adultos: pasajeros.filter((pax) => isAdultoTipoPax(pax.tipoPax)).reduce((sum, pax) => sum + pax.cantidad, 0),
-        ninos: pasajeros.filter((pax) => isNinoTipoPax(pax.tipoPax)).reduce((sum, pax) => sum + pax.cantidad, 0),
-        totalPax: pasajeros.reduce((sum, pax) => sum + pax.cantidad, 0),
-        planTarifa: safeString(saveData?.planTarifario),
-        codLstPrecio: safeString(saveData?.codLstPrecio),
-        codPlan: safeString(saveData?.codPlan),
-        idReglaPrecio: safeNumber(item.reglaPrecioID),
-        precioAdulto: getActividadPrecioUnitario(pasajeros, 'ADULTO'),
-        precioNino: getActividadPrecioUnitario(pasajeros, 'NINO'),
-        precioPaxExtra: 0,
-        montoServicio: split.total,
-        codSuplidor: '',
-        subTotal,
-        porDescuento: 0,
-        descuento,
-        neto: split.neto,
-        impuesto: split.iva,
-        estado: 'PEN',
-        observacion: safeString(saveData?.observaciones),
-        pasajeros
-      } as ReservaDraftServiceLine;
-    });
+    return {
+      index,
+      item,
+      pasajeros,
+      subTotal
+    };
+  });
+
+  const subTotalGeneral = roundCurrency(
+    baseLines.reduce((sum, line) => sum + safeNumber(line.subTotal), 0),
+    settings.redondeoDecimales
+  );
+  const totalGeneralSolicitado = roundCurrency(safeNumber(saveData?.totalGeneral), settings.redondeoDecimales);
+  const comboActivo = baseLines.length >= 2 && totalGeneralSolicitado > 0 && totalGeneralSolicitado < subTotalGeneral;
+  const descuentoTotal = comboActivo
+    ? roundCurrency(Math.max(0, subTotalGeneral - totalGeneralSolicitado), settings.redondeoDecimales)
+    : roundCurrency(settings.descuentoDefault, settings.redondeoDecimales);
+  let descuentoPendiente = descuentoTotal;
+
+  return baseLines.map((line, index) => {
+    const descuento =
+      comboActivo && subTotalGeneral > 0
+        ? index === baseLines.length - 1
+          ? roundCurrency(descuentoPendiente, settings.redondeoDecimales)
+          : roundCurrency((line.subTotal / subTotalGeneral) * descuentoTotal, settings.redondeoDecimales)
+        : roundCurrency(settings.descuentoDefault, settings.redondeoDecimales);
+    descuentoPendiente = roundCurrency(Math.max(0, descuentoPendiente - descuento), settings.redondeoDecimales);
+
+    const neto = roundCurrency(Math.max(0, line.subTotal - descuento), settings.redondeoDecimales);
+    const split = calculateTaxFromNetAmount(neto, directo, settings);
+
+    return {
+      linea: lineaInicial + line.index,
+      source: 'actividad',
+      tipoServicio: normalizeTipoServicio(line.item.tipoServicio || tipoServicioBase, 'TOUR'),
+      codServicio: safeString(line.item.codServicio),
+      nomServicio: safeString(line.item.nomServicio),
+      fecServicio: safeString(line.item.fecServicio || saveData?.fechaServicio),
+      horaServicio: safeString(line.item.horaServicio || saveData?.horaInicio || saveData?.horaPickup),
+      horaPickup: safeString(line.item.horaPickup || saveData?.horaPickup),
+      origenTexto: safeString(pickup?.direccion),
+      zonaOrigen: safeString(pickup?.zona),
+      origenGoogle: safeString(pickup?.google),
+      origenPlaceId: safeString(pickup?.placeId),
+      origenLat: safeNumber(pickup?.lat),
+      origenLng: safeNumber(pickup?.lng),
+      destinoTexto: '',
+      zonaDestino: '',
+      destinoGoogle: '',
+      destinoPlaceId: '',
+      destinoLat: 0,
+      destinoLng: 0,
+      adultos: line.pasajeros.filter((pax) => isAdultoTipoPax(pax.tipoPax)).reduce((sum, pax) => sum + pax.cantidad, 0),
+      ninos: line.pasajeros.filter((pax) => isNinoTipoPax(pax.tipoPax)).reduce((sum, pax) => sum + pax.cantidad, 0),
+      totalPax: line.pasajeros.reduce((sum, pax) => sum + pax.cantidad, 0),
+      planTarifa: safeString(saveData?.planTarifario),
+      codLstPrecio: safeString(saveData?.codLstPrecio),
+      codPlan: safeString(saveData?.codPlan),
+      idReglaPrecio: safeNumber(line.item.reglaPrecioID),
+      precioAdulto: getActividadPrecioUnitario(line.pasajeros, 'ADULTO'),
+      precioNino: getActividadPrecioUnitario(line.pasajeros, 'NINO'),
+      precioPaxExtra: 0,
+      montoServicio: split.total,
+      codSuplidor: '',
+      subTotal: line.subTotal,
+      porDescuento: comboActivo ? 5 : 0,
+      descuento,
+      neto: split.neto,
+      impuesto: split.iva,
+      estado: 'PEN',
+      observacion: safeString(saveData?.observaciones),
+      pasajeros: line.pasajeros
+    } as ReservaDraftServiceLine;
+  });
+
 }
-
 export function replaceDraftServiceLine(draft: ReservaCreateV2Draft, nextLine: ReservaDraftServiceLine): ReservaCreateV2Draft {
   const servicios = [...(draft?.servicios ?? [])];
   const index = servicios.findIndex((item) => item.linea === nextLine.linea);
@@ -695,44 +722,45 @@ export function buildReservaToursPayloadFromDraft(
   const dateRange = calculatePayloadDateRange(header, servicios);
 
   return {
-    tipo: safeNumber(tipo),
-    codReserva: emptyToNull(codReserva ?? header.codReserva),
-    codAgencia: safeString(header.codAgencia),
-    idContacto: safeNumber(header.idContacto),
-    nomCliente: safeString(header.nomCliente),
-    telCliente: safeString(header.telCliente),
-    emailCliente: safeString(header.emailCliente),
-    idioma: safeString(header.idioma),
-    formaReserva: safeString(header.formaReservacion),
-    formaPago: safeString(header.formaPago),
-    codLstPrecio: safeString(header.codLstPrecio),
-    codPlan: safeString(header.codPlan),
-    fecCreacion: formatDateToApiDate(header.fecha),
-    fecConfirma: emptyToNull(formatDateToApiDate(header.fecConfirma)),
-    fecAnulada: emptyToNull(formatDateToApiDate(header.fecAnulada)),
-    fecIngresa: dateRange.fecIngresa,
-    fecSalida: dateRange.fecSalida,
-    fecPrepago: emptyToNull(formatDateToApiDate(header.fecPrepago)),
-    totNoches: dateRange.totNoches,
-    totDias: dateRange.totDias,
-    descripcion: safeString(header.descripcion),
-    tCambio: safeNumber(header.tCambio),
-    folio: safeString(header.folio),
-    estado: normalizeReservaEstadoForPayload(header.estado),
-    moneda: safeString(header.moneda),
-    totalRsv: totals.totalServicios,
-    observacion: safeString(header.comentarios),
-    procesado: safeNumber(header.procesado),
-    directo: normalizeDirecto(header.directo),
-    cntHabitaciones: safeNumber(header.cntHabitaciones),
-    operador: safeString(header.operador),
-    detalleServicios: servicios.map(mapDraftServiceLineToDto),
-    detallePasajeros: servicios.flatMap((item) => (item.pasajeros ?? []).map((pax) => mapDraftPassengerLineToDto(item.linea, pax))),
-    pageNumber: 1,
-    pageSize: DEFAULT_POST_PAGE_SIZE,
-    respuesta: ''
+    tipo              : safeNumber(tipo),
+    codReserva        : emptyToNull(codReserva ?? header.codReserva),
+    codAgencia        : safeString(header.codAgencia),
+    idContacto        : safeNumber(header.idContacto),
+    nomCliente        : safeString(header.nomCliente),
+    telCliente        : safeString(header.telCliente),
+    emailCliente      : safeString(header.emailCliente),
+    idioma            : safeString(header.idioma),
+    formaReserva      : safeString(header.formaReservacion),
+    formaPago         : safeString(header.formaPago),
+    codLstPrecio      : safeString(header.codLstPrecio),
+    codPlan           : safeString(header.codPlan),
+    fecCreacion       : formatDateToApiDate(header.fecha),
+    fecConfirma       : emptyToNull(formatDateToApiDate(header.fecConfirma)),
+    fecAnulada        : emptyToNull(formatDateToApiDate(header.fecAnulada)),
+    fecIngresa        : dateRange.fecIngresa,
+    fecSalida         : dateRange.fecSalida,
+    fecPrepago        : emptyToNull(formatDateToApiDate(header.fecPrepago)),
+    totNoches         : dateRange.totNoches,
+    totDias           : dateRange.totDias,
+    descripcion       : safeString(header.descripcion),
+    tCambio           : safeNumber(header.tCambio),
+    folio             : safeString(header.folio),
+    estado            : normalizeReservaEstadoForPayload(header.estado),
+    moneda            : safeString(header.moneda),
+    totalRsv          : totals.totalServicios,
+    observacion       : safeString(header.comentarios),
+    procesado         : safeNumber(header.procesado),
+    directo           : normalizeDirecto(header.directo),
+    cntHabitaciones   : safeNumber(header.cntHabitaciones),
+    operador          : safeString(header.operador),
+    detalleServicios  : servicios.map(mapDraftServiceLineToDto),
+    detallePasajeros  : servicios.flatMap((item) => (item.pasajeros ?? []).map((pax) => mapDraftPassengerLineToDto(item.linea, pax))),
+    pageNumber        : 1,
+    pageSize          : DEFAULT_POST_PAGE_SIZE,
+    respuesta         : ''
   };
 }
+
 
 
 
