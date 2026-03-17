@@ -41,20 +41,38 @@ export interface OrdenPedidoDetalleItem {
   uMedida: string;
   canProdu: number;
   pUndLst: number;
+  uniSinImp: number;
+  totSinImp: number;
   porDescu: number;
   mtoDescu: number;
   totalNeto: number;
   porImpu: number;
   mtoImpu: number;
+  porExonera: number;
+  mtoExonera: number;
+  uniConImp: number;
   mtoTotal: number;
+  grabado: string;
+  moneda: string;
+  tCambio: number;
+  orden: number;
+  uMedidaDos: string;
+  canProduDos: number;
 }
 
 export interface OrdenPedidoPagoItem {
+  orden: number;
   frmPago: string;
+  tipo: string;
+  numTarjeta: string;
   referencia: string;
   moneda: string;
   monto: number;
+  montoOri: number;
   tCambio: number;
+  vencimiento: string;
+  caja: string;
+  turno: string;
 }
 
 export interface OrdenPedidoExoneracion {
@@ -66,6 +84,9 @@ export interface OrdenPedidoExoneracion {
 }
 
 export interface OrdenPedidoCreatePayload {
+  proceso: number;
+  detalle: OrdenPedidoDetalleItem[];
+  formasPago: OrdenPedidoPagoItem[];
   tipNDP: string;
   serieNDP: string;
   numeroNDP: string;
@@ -76,18 +97,34 @@ export interface OrdenPedidoCreatePayload {
   codCliente: string;
   rucCliente: string;
   nomCliente: string;
-  observaciones: string;
-  detalle: OrdenPedidoDetalleItem[];
-  formasPago: OrdenPedidoPagoItem[];
+  exento: number;
   subTotal: number;
   impuesto: number;
   totDocu: number;
   totalPago: number;
+  estadoNDP: string;
+  moneda: string;
+  tCambio: number;
+  fecVenc: string;
+  lstPrecio: string;
+  items: number;
+  nReferencia: string;
+  observaciones: string;
+  operador: string;
+  idBeep: string;
+  cActividad: string;
+  pageNumber: number;
+  pageSize: number;
+  respuesta: string;
   exoneracion?: OrdenPedidoExoneracion | null;
 }
 
 export interface OrdenPedidoCreateResponse {
   respuesta?: string;
   mensaje?: string;
-  datos?: unknown;
+  datos?: Array<{
+    TipNDP?: string;
+    Serie?: string;
+    NumNDP?: string;
+  }>;
 }
