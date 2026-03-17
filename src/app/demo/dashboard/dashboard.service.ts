@@ -4,10 +4,12 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 import { Weather } from './models/weather.model';
+import { environment } from 'src/environments/environment.prod';
 
 @Injectable({ providedIn: 'root' })
 export class DashboardService {
-  private readonly weatherUrl = 'http://localhost:5000/api/pronostico-tiempo';
+  private readonly weatherUrl = `${environment.apiUrl}/pronostico-tiempo`;
+  
 
   private readonly weatherSubject = new BehaviorSubject<Weather | null>(null);
   private readonly loadingSubject = new BehaviorSubject<boolean>(false);
