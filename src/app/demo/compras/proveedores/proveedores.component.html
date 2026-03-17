@@ -53,13 +53,25 @@
             <td>{{ proveedor.telefono1 || proveedor.telefono2 || 'N/D' }}</td>
             <td>{{ proveedor.tipoProveedor || 'N/D' }}</td>
             <td class="text-center">
-              <div class="action-buttons">
-                <button class="btn btn-sm btn-outline-primary" (click)="editar(proveedor)" title="Editar">
-                  <i class="feather icon-edit"></i>
+              <div ngbDropdown container="body" placement="bottom-end" class="proveedor-action-menu">
+                <button type="button" ngbDropdownToggle class="proveedor-action-toggle" aria-label="Abrir acciones del proveedor">
+                  <i class="feather icon-more-horizontal" aria-hidden="true"></i>
+                  <span>Acciones</span>
                 </button>
-                <button class="btn btn-sm btn-outline-danger ms-1" (click)="eliminar(proveedor)" title="Eliminar">
-                  <i class="feather icon-trash"></i>
-                </button>
+
+                <div ngbDropdownMenu class="dropdown-menu proveedor-action-dropdown">
+                  <button type="button" ngbDropdownItem class="dropdown-item" (click)="editar(proveedor)">
+                    <i class="feather icon-edit" aria-hidden="true"></i>
+                    <span>Editar proveedor</span>
+                  </button>
+
+                  <div class="proveedor-action-divider"></div>
+
+                  <button type="button" ngbDropdownItem class="dropdown-item dropdown-item--danger" (click)="eliminar(proveedor)">
+                    <i class="feather icon-trash" aria-hidden="true"></i>
+                    <span>Eliminar proveedor</span>
+                  </button>
+                </div>
               </div>
             </td>
           </tr>

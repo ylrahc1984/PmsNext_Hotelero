@@ -71,16 +71,29 @@
               </span>
             </td>
             <td class="text-center">
-              <div class="action-buttons">
-                <button class="btn btn-sm btn-outline-secondary" (click)="verDetalle(cliente)" title="Ver">
-                  <i class="feather icon-eye"></i>
+              <div ngbDropdown container="body" placement="bottom-end" class="cliente-action-menu">
+                <button type="button" ngbDropdownToggle class="cliente-action-toggle" aria-label="Abrir acciones del cliente">
+                  <i class="feather icon-more-horizontal" aria-hidden="true"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-primary ms-1" (click)="editar(cliente)" title="Editar">
-                  <i class="feather icon-edit"></i>
-                </button>
-                <button class="btn btn-sm btn-outline-danger ms-1" (click)="eliminar(cliente)" title="Eliminar">
-                  <i class="feather icon-trash"></i>
-                </button>
+
+                <div ngbDropdownMenu class="dropdown-menu cliente-action-dropdown">
+                  <button type="button" ngbDropdownItem class="dropdown-item" (click)="verDetalle(cliente)">
+                    <i class="feather icon-eye" aria-hidden="true"></i>
+                    <span>Ver detalle</span>
+                  </button>
+
+                  <button type="button" ngbDropdownItem class="dropdown-item" (click)="editar(cliente)">
+                    <i class="feather icon-edit" aria-hidden="true"></i>
+                    <span>Editar registro</span>
+                  </button>
+
+                  <div class="cliente-action-divider"></div>
+
+                  <button type="button" ngbDropdownItem class="dropdown-item dropdown-item--danger" (click)="eliminar(cliente)">
+                    <i class="feather icon-trash" aria-hidden="true"></i>
+                    <span>Eliminar registro</span>
+                  </button>
+                </div>
               </div>
             </td>
           </tr>

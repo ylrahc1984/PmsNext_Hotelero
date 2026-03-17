@@ -3,7 +3,7 @@
   <li
     data-username="dashboard Default Ecommerce CRM Analytics Crypto Project"
     class="nav-item pcoded-hasmenu"
-    [routerLinkActive]="['active']"
+    [ngClass]="{ 'pcoded-trigger': isExpanded, active: isExpanded }"
   >
     <a [routerLinkActive]="['active']" href="javascript:" class="nav-link" (click)="navCollapse($event)">
       <ng-container *ngTemplateOutlet="itemContent"></ng-container>
@@ -24,10 +24,15 @@
     <ul class="pcoded-submenu" [routerLinkActive]="['active']">
       @for (items of item().children; track items) {
         @if (items.type === 'item') {
-          <app-nav-item [item]="items" />
+          <app-nav-item [item]="items" [rootSectionId]="currentRootSectionId" (rootSectionChange)="rootSectionChange.emit($event)" />
         }
         @if (items.type === 'collapse') {
-          <app-nav-collapse [item]="items" />
+          <app-nav-collapse
+            [item]="items"
+            [expandedRootId]="expandedRootId()"
+            [rootSectionId]="currentRootSectionId"
+            (rootSectionChange)="rootSectionChange.emit($event)"
+          />
         }
       }
     </ul>

@@ -1,6 +1,8 @@
 // angular import
-import { Component, inject, output } from '@angular/core';
-import { Location } from '@angular/common';
+import { Component, DestroyRef, inject, output } from '@angular/core';
+import { NavigationEnd, Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { filter } from 'rxjs/operators';
 
 // project import
 import { environment } from 'src/environments/environment';
@@ -16,7 +18,8 @@ import { NavItemComponent } from './nav-item/nav-item.component';
   styleUrls: ['./nav-content.component.scss']
 })
 export class NavContentComponent {
-  private location = inject(Location);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
 
   // public method
   // version
@@ -26,35 +29,63 @@ export class NavContentComponent {
   navigations!: NavigationItem[];
   wrapperWidth: number;
   windowWidth = window.innerWidth;
+  expandedRootId: string | null = null;
 
   NavCollapsedMob = output();
 
   // constructor
   constructor() {
     this.navigations = NavigationItems;
+    this.syncExpandedRootWithUrl(this.router.url);
+    this.router.events
+      .pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((event) => {
+        this.syncExpandedRootWithUrl(event.urlAfterRedirects);
+      });
   }
 
   fireOutClick() {
-    let current_url = this.location.path();
-    if (this.location['_baseHref']) {
-      current_url = this.location['_baseHref'] + this.location.path();
-    }
-    const link = "a.nav-link[ href='" + current_url + "' ]";
-    const ele = document.querySelector(link);
-    if (ele !== null && ele !== undefined) {
-      const parent = ele.parentElement;
-      const up_parent = parent.parentElement.parentElement;
-      const last_parent = up_parent.parentElement;
-      if (parent.classList.contains('pcoded-hasmenu')) {
-        parent.classList.add('pcoded-trigger');
-        parent.classList.add('active');
-      } else if (up_parent.classList.contains('pcoded-hasmenu')) {
-        up_parent.classList.add('pcoded-trigger');
-        up_parent.classList.add('active');
-      } else if (last_parent.classList.contains('pcoded-hasmenu')) {
-        last_parent.classList.add('pcoded-trigger');
-        last_parent.classList.add('active');
+    // Mantiene la seccion actualmente expandida en lugar de restaurar por DOM.
+  }
+
+  onRootSectionChange(sectionId: string | null) {
+    this.expandedRootId = sectionId;
+  }
+
+  private syncExpandedRootWithUrl(url: string) {
+    this.expandedRootId = this.findRootSectionIdByUrl(url);
+  }
+
+  private findRootSectionIdByUrl(url: string): string | null {
+    const normalizedUrl = this.normalizeUrl(url);
+
+    for (const navigation of this.navigations) {
+      if (navigation.type !== 'group' || !navigation.children) {
+        continue;
+      }
+
+      for (const section of navigation.children) {
+        if (section.type === 'collapse' && this.itemContainsUrl(section, normalizedUrl)) {
+          return section.id;
+        }
       }
     }
+
+    return null;
+  }
+
+  private itemContainsUrl(item: NavigationItem, url: string): boolean {
+    if (item.url && this.normalizeUrl(item.url) === url) {
+      return true;
+    }
+
+    return item.children?.some((child) => this.itemContainsUrl(child, url)) ?? false;
+  }
+
+  private normalizeUrl(url: string): string {
+    return url.split('?')[0].split('#')[0];
   }
 }

@@ -5,7 +5,7 @@
     </li>
     @for (items of item().children; track items) {
       @if (items.type === 'collapse') {
-        <app-nav-collapse [item]="items" />
+        <app-nav-collapse [item]="items" [expandedRootId]="expandedRootId()" (rootSectionChange)="rootSectionChange.emit($event)" />
       }
       @if (items.type === 'item') {
         <app-nav-item [item]="items" />
@@ -13,6 +13,6 @@
     }
   }
   @if (item().type === 'collapse') {
-    <app-nav-collapse [item]="item()" />
+    <app-nav-collapse [item]="item()" [expandedRootId]="expandedRootId()" (rootSectionChange)="rootSectionChange.emit($event)" />
   }
 }

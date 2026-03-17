@@ -230,36 +230,62 @@
                       {{ d.PRV02_MontoServicio | number:'1.2-2' }}
                     </td>
                     <td class="text-end text-nowrap">
-                      <div class="d-inline-flex gap-2 justify-content-end">
-                        <a
-                          class="btn btn-outline-primary btn-sm rsv-icon-btn"
-                          [href]="getDetalleMapsLink(d, 'origen') || null"
-                          [class.disabled]="!getDetalleMapsLink(d, 'origen')"
-                          [attr.target]="getDetalleMapsLink(d, 'origen') ? '_blank' : null"
-                          [attr.rel]="getDetalleMapsLink(d, 'origen') ? 'noopener' : null"
-                          title="Ver origen en Google Maps"
-                        >
-                          <i class="feather icon-map-pin"></i>
-                        </a>
-
-                        <button type="button" class="btn btn-outline-secondary btn-sm rsv-icon-btn" (click)="copiarLink('origen', d)" title="Copiar link de origen">
-                          <i class="feather icon-copy"></i>
+                      <div ngbDropdown container="body" placement="bottom-end" class="rsv-row-action-menu">
+                        <button type="button" ngbDropdownToggle class="rsv-row-action-toggle" aria-label="Abrir acciones del servicio">
+                          <i class="feather icon-more-horizontal" aria-hidden="true"></i>
                         </button>
 
-                        <a
-                          class="btn btn-outline-info btn-sm rsv-icon-btn"
-                          [href]="getDetalleMapsLink(d, 'destino') || null"
-                          [class.disabled]="!getDetalleMapsLink(d, 'destino')"
-                          [attr.target]="getDetalleMapsLink(d, 'destino') ? '_blank' : null"
-                          [attr.rel]="getDetalleMapsLink(d, 'destino') ? 'noopener' : null"
-                          title="Ver destino en Google Maps"
-                        >
-                          <i class="feather icon-navigation-2"></i>
-                        </a>
+                        <div ngbDropdownMenu class="dropdown-menu rsv-row-action-dropdown">
+                          <div class="rsv-row-action-section">
+                            <div class="rsv-row-action-section__title">Origen</div>
+                            <button
+                              type="button"
+                              ngbDropdownItem
+                              class="dropdown-item"
+                              (click)="abrirMapa('origen', d)"
+                              [disabled]="!getDetalleMapsLink(d, 'origen')"
+                            >
+                              <i class="feather icon-map-pin" aria-hidden="true"></i>
+                              <span>Ver en Google Maps</span>
+                            </button>
+                            <button
+                              type="button"
+                              ngbDropdownItem
+                              class="dropdown-item"
+                              (click)="copiarLink('origen', d)"
+                              [disabled]="!getDetalleMapsLink(d, 'origen')"
+                            >
+                              <i class="feather icon-copy" aria-hidden="true"></i>
+                              <span>Copiar enlace</span>
+                            </button>
+                          </div>
 
-                        <button type="button" class="btn btn-outline-secondary btn-sm rsv-icon-btn" (click)="copiarLink('destino', d)" title="Copiar link de destino">
-                          <i class="feather icon-copy"></i>
-                        </button>
+                          <div class="rsv-row-action-divider"></div>
+
+                          <div class="rsv-row-action-section">
+                            <div class="rsv-row-action-section__title">Destino</div>
+                            <button
+                              type="button"
+                              ngbDropdownItem
+                              class="dropdown-item"
+                              (click)="abrirMapa('destino', d)"
+                              [disabled]="!getDetalleMapsLink(d, 'destino')"
+                            >
+                              <i class="feather icon-navigation-2" aria-hidden="true"></i>
+                              <span>Ver en Google Maps</span>
+                            </button>
+                            <button
+                              type="button"
+                              ngbDropdownItem
+                              class="dropdown-item"
+                              (click)="copiarLink('destino', d)"
+                              [disabled]="!getDetalleMapsLink(d, 'destino')"
+                            >
+                              <i class="feather icon-copy" aria-hidden="true"></i>
+                              <span>Copiar enlace</span>
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </td>
                   </tr>

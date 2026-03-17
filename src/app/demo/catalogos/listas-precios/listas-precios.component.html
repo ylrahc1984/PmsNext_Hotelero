@@ -75,15 +75,31 @@
                 <ng-template #noVigencia>-</ng-template>
               </td>
               <td class="text-center">
-                <button class="btn btn-sm btn-outline-info" (click)="verDetalle(lista)" title="Ver detalle">
-                  <i class="feather icon-eye"></i>
-                </button>
-                <button class="btn btn-sm btn-outline-primary ms-1" (click)="openForm(lista.codigo)" title="Editar">
-                  <i class="feather icon-edit"></i>
-                </button>
-                <button class="btn btn-sm btn-outline-danger ms-1" (click)="eliminar(lista.codigo)" title="Eliminar">
-                  <i class="feather icon-trash"></i>
-                </button>
+                <div ngbDropdown container="body" placement="bottom-end" class="lista-action-menu">
+                  <button type="button" ngbDropdownToggle class="lista-action-toggle" aria-label="Abrir acciones de la lista de precios">
+                    <i class="feather icon-more-horizontal" aria-hidden="true"></i>
+                    <span>Acciones</span>
+                  </button>
+
+                  <div ngbDropdownMenu class="dropdown-menu lista-action-dropdown">
+                    <button type="button" ngbDropdownItem class="dropdown-item" (click)="verDetalle(lista)">
+                      <i class="feather icon-eye" aria-hidden="true"></i>
+                      <span>Ver detalle</span>
+                    </button>
+
+                    <button type="button" ngbDropdownItem class="dropdown-item" (click)="openForm(lista.codigo)">
+                      <i class="feather icon-edit" aria-hidden="true"></i>
+                      <span>Editar lista</span>
+                    </button>
+
+                    <div class="lista-action-divider"></div>
+
+                    <button type="button" ngbDropdownItem class="dropdown-item dropdown-item--danger" (click)="eliminar(lista.codigo)">
+                      <i class="feather icon-trash" aria-hidden="true"></i>
+                      <span>Eliminar lista</span>
+                    </button>
+                  </div>
+                </div>
               </td>
             </tr>
             <tr *ngIf="!isLoading && filteredListas.length === 0">

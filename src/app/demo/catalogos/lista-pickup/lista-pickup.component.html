@@ -69,13 +69,25 @@
             <td class="location-cell">{{ pickup.CR11_Localizacion || 'N/D' }}</td>
             <td>{{ pickup.CR11_Operador || 'N/D' }}</td>
             <td class="text-center">
-              <div class="action-buttons">
-                <button class="btn btn-sm btn-outline-primary" (click)="editarPickup(pickup)" title="Editar">
-                  <i class="feather icon-edit"></i>
+              <div ngbDropdown container="body" placement="bottom-end" class="pickup-action-menu">
+                <button type="button" ngbDropdownToggle class="pickup-action-toggle" aria-label="Abrir acciones del pickup">
+                  <i class="feather icon-more-horizontal" aria-hidden="true"></i>
+                  <span>Acciones</span>
                 </button>
-                <button class="btn btn-sm btn-outline-danger" (click)="eliminarPickup(pickup)" title="Eliminar">
-                  <i class="feather icon-trash"></i>
-                </button>
+
+                <div ngbDropdownMenu class="dropdown-menu pickup-action-dropdown">
+                  <button type="button" ngbDropdownItem class="dropdown-item" (click)="editarPickup(pickup)">
+                    <i class="feather icon-edit" aria-hidden="true"></i>
+                    <span>Editar pickup</span>
+                  </button>
+
+                  <div class="pickup-action-divider"></div>
+
+                  <button type="button" ngbDropdownItem class="dropdown-item dropdown-item--danger" (click)="eliminarPickup(pickup)">
+                    <i class="feather icon-trash" aria-hidden="true"></i>
+                    <span>Eliminar pickup</span>
+                  </button>
+                </div>
               </div>
             </td>
           </tr>

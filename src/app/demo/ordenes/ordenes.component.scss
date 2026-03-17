@@ -2,21 +2,99 @@
   text-align: right;
 }
 
-.action-buttons .btn-group + .btn,
-.action-buttons .btn + .btn-group {
-  margin-left: 0.25rem;
-}
-
-.action-buttons .dropdown-menu {
-  min-width: 12rem;
-}
-
-.action-buttons .btn {
-  padding: 0.25rem 0.45rem;
-}
-
 .estado-badge {
   min-width: 110px;
   display: inline-flex;
   justify-content: center;
+}
+
+.ot-action-menu {
+  display: inline-flex;
+  justify-content: center;
+}
+
+.ot-action-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid #d7dfeb;
+  border-radius: 999px;
+  background: #fff;
+  color: #334155;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    color 0.2s ease;
+}
+
+.ot-action-toggle:hover,
+.ot-action-toggle:focus {
+  border-color: rgba(13, 110, 253, 0.35);
+  color: #0b5ed7;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.12);
+}
+
+.ot-action-toggle i {
+  font-size: 0.95rem;
+}
+
+.ot-action-dropdown {
+  min-width: 16rem;
+  padding: 0.45rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.16);
+}
+
+.ot-action-dropdown .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.65rem;
+  border-radius: 10px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.ot-action-dropdown .dropdown-item i {
+  width: 1rem;
+  text-align: center;
+  color: #64748b;
+}
+
+.ot-action-dropdown .dropdown-item:hover,
+.ot-action-dropdown .dropdown-item:focus {
+  background: #f3f7ff;
+  color: #0f172a;
+}
+
+.ot-action-dropdown .dropdown-item:disabled {
+  opacity: 0.5;
+}
+
+.ot-action-dropdown .dropdown-item--danger {
+  color: #b42318;
+}
+
+.ot-action-dropdown .dropdown-item--danger i {
+  color: #dc2626;
+}
+
+.ot-action-dropdown .dropdown-item--danger:hover,
+.ot-action-dropdown .dropdown-item--danger:focus {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.ot-action-divider {
+  height: 1px;
+  margin: 0.35rem 0;
+  background: #e9eef5;
 }

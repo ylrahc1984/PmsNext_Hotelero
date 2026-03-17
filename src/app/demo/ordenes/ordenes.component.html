@@ -103,34 +103,57 @@
                 </td>
                 <td>{{ orden.moneda || 'N/D' }}</td>
                 <td class="text-center">
-                  <div class="action-buttons">
-                    <button class="btn btn-sm btn-outline-secondary" (click)="verDetalle(orden)" [disabled]="isLoading" title="Ver detalle">
-                      <i class="feather icon-eye"></i>
+                  <div ngbDropdown container="body" placement="bottom-end" class="ot-action-menu">
+                    <button type="button" ngbDropdownToggle class="ot-action-toggle" aria-label="Abrir acciones de la orden">
+                      <i class="feather icon-more-horizontal" aria-hidden="true"></i>
                     </button>
-                    <button 
-                      class="btn btn-sm btn-outline-primary ms-1" 
-                      (click)="verEditar(orden)" 
-                      [disabled]="isLoading || esOrdenAnulada(orden)" 
-                      [title]="esOrdenAnulada(orden) ? 'No se puede editar una orden anulada' : 'Editar'">
-                      <i class="feather icon-edit"></i>
-                    </button>
-                    <button 
-                      class="btn btn-sm btn-outline-info ms-1" 
-                      (click)="cambiarSuplidorVehiculo(orden)" 
-                      [disabled]="isLoading || esOrdenAnulada(orden)" 
-                      [title]="esOrdenAnulada(orden) ? 'No se puede modificar una orden anulada' : 'Cambiar Suplidor/Vehículo/Chofer'">
-                      <i class="feather icon-shuffle"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-secondary ms-1" (click)="imprimirOrden(orden)" [disabled]="isLoading" title="Imprimir">
-                      <i class="feather icon-printer"></i>
-                    </button>
-                    <button 
-                      class="btn btn-sm btn-outline-danger ms-1" 
-                      (click)="cancelarOrden(orden)" 
-                      [disabled]="isLoading || esOrdenAnulada(orden)" 
-                      [title]="esOrdenAnulada(orden) ? 'Orden ya cancelada' : 'Cancelar orden'">
-                      <i class="feather icon-x-circle"></i>
-                    </button>
+
+                    <div ngbDropdownMenu class="dropdown-menu ot-action-dropdown">
+                      <button type="button" ngbDropdownItem class="dropdown-item" (click)="verDetalle(orden)" [disabled]="isLoading">
+                        <i class="feather icon-eye" aria-hidden="true"></i>
+                        <span>Ver detalle</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        ngbDropdownItem
+                        class="dropdown-item"
+                        (click)="verEditar(orden)"
+                        [disabled]="isLoading || esOrdenAnulada(orden)"
+                      >
+                        <i class="feather icon-edit" aria-hidden="true"></i>
+                        <span>Editar orden</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        ngbDropdownItem
+                        class="dropdown-item"
+                        (click)="cambiarSuplidorVehiculo(orden)"
+                        [disabled]="isLoading || esOrdenAnulada(orden)"
+                      >
+                        <i class="feather icon-shuffle" aria-hidden="true"></i>
+                        <span>Cambiar suplidor/vehículo/chofer</span>
+                      </button>
+
+                      <div class="ot-action-divider"></div>
+
+                      <button type="button" ngbDropdownItem class="dropdown-item" (click)="imprimirOrden(orden)" [disabled]="isLoading">
+                        <i class="feather icon-printer" aria-hidden="true"></i>
+                        <span>Imprimir orden</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        ngbDropdownItem
+                        class="dropdown-item dropdown-item--danger"
+                        (click)="cancelarOrden(orden)"
+                        [disabled]="isLoading || esOrdenAnulada(orden)"
+                      >
+                        <i class="feather icon-x-circle" aria-hidden="true"></i>
+                        <span>Cancelar orden</span>
+                      </button>
+                    </div>
                   </div>
                 </td>
               </tr>

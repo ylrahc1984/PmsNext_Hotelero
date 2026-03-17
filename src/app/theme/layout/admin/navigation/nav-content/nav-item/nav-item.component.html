@@ -1,7 +1,12 @@
 @if (!item().hidden) {
   @if (item().url && !item().external) {
     <li [ngClass]="item().classes" [routerLinkActive]="['active']">
-      <a class="nav-link" [target]="item().target ? '_blank' : '_self'" [routerLink]="[item().url]" (click)="closeOtherMenu($event)">
+      <a
+        class="nav-link"
+        [target]="item().target ? '_blank' : '_self'"
+        [routerLink]="[item().url]"
+        (click)="closeOtherMenu($event)"
+      >
         <ng-container *ngTemplateOutlet="itemIcon"></ng-container>
 
         @if (item().icon) {

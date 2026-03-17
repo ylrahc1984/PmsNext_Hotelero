@@ -96,6 +96,7 @@
                 <th>Moneda</th>
                 <th>Estado Documento</th>
                 <th>Estado Electrónico</th>
+                <th>Operador</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -118,37 +119,49 @@
                     {{ documento.PPV15_EstadoElectronico || 'N/D' }}
                   </span>
                 </td>
-                <td>
-                  <div class="d-flex gap-2">
-                    <button
-                      class="btn btn-sm btn-outline-primary"
-                      type="button"
-                      (click)="verDocumento(documento)"
-                      title="Ver documento"
-                      aria-label="Ver documento"
-                    >
-                      <i class="feather icon-eye"></i>
+                <td class="text-center">{{ documento.PPV00_Operador || 'N/D' }}</td>
+                <td class="text-center">
+
+                  <div ngbDropdown container="body" placement="bottom-end" class="doc-action-menu">
+                    <button type="button" ngbDropdownToggle class="doc-action-toggle" aria-label="Abrir acciones del documento">
+                      <i class="feather icon-more-horizontal" aria-hidden="true"></i>
                     </button>
-                    <button
-                      class="btn btn-sm btn-outline-info"
-                      type="button"
-                      (click)="imprimirDocumento(documento)"
-                      [disabled]="isPrinting(documento)"
-                      title="Imprimir documento"
-                      aria-label="Imprimir documento"
-                    >
-                      <span *ngIf="isPrinting(documento)" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                      <i *ngIf="!isPrinting(documento)" class="feather icon-printer"></i>
-                    </button>
-                    <button
-                      class="btn btn-sm btn-outline-secondary"
-                      type="button"
-                      disabled
-                      title="Nota crédito (próximamente)"
-                      aria-label="Nota crédito (próximamente)"
-                    >
-                      <i class="feather icon-file-minus"></i>
-                    </button>
+
+                    <div ngbDropdownMenu class="dropdown-menu doc-action-dropdown">
+                      <button
+                        type="button"
+                        ngbDropdownItem
+                        class="dropdown-item"
+                        (click)="verDocumento(documento)"
+                      >
+                        <i class="feather icon-eye" aria-hidden="true"></i>
+                        <span>Ver documento</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        ngbDropdownItem
+                        class="dropdown-item"
+                        (click)="imprimirDocumento(documento)"
+                        [disabled]="isPrinting(documento)"
+                      >
+                        <span *ngIf="isPrinting(documento)" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                        <i *ngIf="!isPrinting(documento)" class="feather icon-printer" aria-hidden="true"></i>
+                        <span>{{ isPrinting(documento) ? 'Imprimiendo...' : 'Imprimir documento' }}</span>
+                      </button>
+
+                      <div class="doc-action-divider"></div>
+
+                      <button
+                        type="button"
+                        ngbDropdownItem
+                        class="dropdown-item"
+                        disabled
+                      >
+                        <i class="feather icon-file-minus" aria-hidden="true"></i>
+                        <span>Nota crédito (próximamente)</span>
+                      </button>
+                    </div>
                   </div>
                 </td>
               </tr>

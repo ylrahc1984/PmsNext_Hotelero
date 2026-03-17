@@ -110,37 +110,40 @@
             </td>
             <td>{{ factura.formaPago || 'N/D' }}</td>
             <td class="text-center">
-              <div class="action-buttons">
-                <button class="btn btn-sm btn-outline-secondary" type="button" (click)="verDetalle(factura)" title="Ver detalle">
-                  <i class="feather icon-eye"></i>
+              <div ngbDropdown container="body" placement="bottom-end" class="recepcion-action-menu">
+                <button type="button" ngbDropdownToggle class="recepcion-action-toggle" aria-label="Abrir acciones de la factura">
+                  <i class="feather icon-more-horizontal" aria-hidden="true"></i>
                 </button>
-                <button
-                  class="btn btn-sm btn-outline-primary ms-1"
-                  type="button"
-                  (click)="editarFactura(factura)"
-                  [disabled]="!canEdit(factura)"
-                  title="Editar"
-                >
-                  <i class="feather icon-edit"></i>
-                </button>
-                <button
-                  class="btn btn-sm btn-outline-danger ms-1"
-                  type="button"
-                  (click)="eliminarFactura(factura)"
-                  [disabled]="!canDelete(factura) || isDeleting"
-                  title="Eliminar"
-                >
-                  <i class="feather icon-trash"></i>
-                </button>
-                <button
-                  class="btn btn-sm btn-outline-success ms-1"
-                  type="button"
-                  (click)="registrarPago(factura)"
-                  [disabled]="!canRegisterPayment(factura)"
-                  title="Registrar pago"
-                >
-                  <i class="feather icon-credit-card"></i>
-                </button>
+
+                <div ngbDropdownMenu class="dropdown-menu recepcion-action-dropdown">
+                  <button type="button" ngbDropdownItem class="dropdown-item" (click)="verDetalle(factura)">
+                    <i class="feather icon-eye" aria-hidden="true"></i>
+                    <span>Ver detalle</span>
+                  </button>
+
+                  <button type="button" ngbDropdownItem class="dropdown-item" (click)="editarFactura(factura)" [disabled]="!canEdit(factura)">
+                    <i class="feather icon-edit" aria-hidden="true"></i>
+                    <span>Editar factura</span>
+                  </button>
+
+                  <button type="button" ngbDropdownItem class="dropdown-item" (click)="registrarPago(factura)" [disabled]="!canRegisterPayment(factura)">
+                    <i class="feather icon-credit-card" aria-hidden="true"></i>
+                    <span>Registrar pago</span>
+                  </button>
+
+                  <div class="recepcion-action-divider"></div>
+
+                  <button
+                    type="button"
+                    ngbDropdownItem
+                    class="dropdown-item dropdown-item--danger"
+                    (click)="eliminarFactura(factura)"
+                    [disabled]="!canDelete(factura) || isDeleting"
+                  >
+                    <i class="feather icon-trash" aria-hidden="true"></i>
+                    <span>Eliminar factura</span>
+                  </button>
+                </div>
               </div>
             </td>
           </tr>

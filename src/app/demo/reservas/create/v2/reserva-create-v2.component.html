@@ -61,7 +61,7 @@
                             *ngIf="selectedCliente"
                             (click)="abrirModalContactoRapido()"
                             [disabled]="contactosLoading">
-                            <i class="feather icon-plus"></i>
+                            <i class="feather icon-truck"></i>
                             <span>Nuevo contacto</span>
                           </button>
                         </div>
@@ -179,7 +179,7 @@
               <div class="d-flex flex-wrap gap-2">
                 <button type="button" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2 px-3 py-2" (click)="abrirModalDetalle()">
                   <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-white bg-opacity-25" style="width: 22px; height: 22px;">
-                    <i class="feather icon-plus"></i>
+                    <i class="feather icon-navigation-2 text-white fs-6"></i>
                   </span>
                   <span>Agregar transfer</span>
                 </button>
@@ -283,7 +283,7 @@
                   <span *ngIf="guardandoReserva" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
                   <i *ngIf="!guardandoReserva" class="feather icon-save"></i>
                 </span>
-                <span>{{ guardandoReserva ? 'Guardando...' : (codReservaActual ? 'Actualizar reserva' : 'Guardar reserva unificada') }}</span>
+                <span>{{ guardandoReserva ? 'Guardando...' : (codReservaActual ? 'Actualizar reserva' : 'Guardar reserva') }}</span>
               </button>
             </div>
           </div>
@@ -340,3 +340,4 @@
   (save)="guardarActividadDetalle($event)"
   (serviceChange)="onActividadServicioChange($event)"
 ></app-reserva-create-actividad-modal>
+

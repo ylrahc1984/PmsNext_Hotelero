@@ -107,13 +107,31 @@
               </span>
             </td>
             <td class="text-center">
-              <div class="action-buttons">
-                <button class="btn btn-sm btn-outline-primary" (click)="editarProducto(producto)" [disabled]="isLoading" title="Editar">
-                  <i class="feather icon-edit"></i>
+              <div ngbDropdown container="body" placement="bottom-end" class="producto-action-menu">
+                <button
+                  type="button"
+                  ngbDropdownToggle
+                  class="producto-action-toggle"
+                  aria-label="Abrir acciones del producto"
+                  [disabled]="isLoading"
+                >
+                  <i class="feather icon-more-horizontal" aria-hidden="true"></i>
+                  <span>Acciones</span>
                 </button>
-                <button class="btn btn-sm btn-outline-danger ms-1" (click)="eliminarProducto(producto)" [disabled]="isLoading" title="Eliminar">
-                  <i class="feather icon-trash"></i>
-                </button>
+
+                <div ngbDropdownMenu class="dropdown-menu producto-action-dropdown">
+                  <button type="button" ngbDropdownItem class="dropdown-item" (click)="editarProducto(producto)" [disabled]="isLoading">
+                    <i class="feather icon-edit" aria-hidden="true"></i>
+                    <span>Editar producto</span>
+                  </button>
+
+                  <div class="producto-action-divider"></div>
+
+                  <button type="button" ngbDropdownItem class="dropdown-item dropdown-item--danger" (click)="eliminarProducto(producto)" [disabled]="isLoading">
+                    <i class="feather icon-trash" aria-hidden="true"></i>
+                    <span>Eliminar producto</span>
+                  </button>
+                </div>
               </div>
             </td>
           </tr>

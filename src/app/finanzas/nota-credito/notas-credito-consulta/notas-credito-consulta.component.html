@@ -97,26 +97,36 @@
                 <td class="text-end">{{ nota.PFD07_Impuesto | number:'1.2-2' }}</td>
                 <td class="text-end">{{ nota.PFD07_Total | number:'1.2-2' }}</td>
                 <td>{{ nota.PFD07_Moneda }}</td>
-                <td>
-                  <div class="d-flex gap-2">
-                    <button
-                      class="btn btn-sm btn-outline-primary app-icon-btn"
-                      type="button"
-                      (click)="verPdf(nota)"
-                      title="Ver PDF"
-                      aria-label="Ver PDF"
-                    >
-                      <i class="feather icon-printer"></i>
+                <td class="text-center">
+                  <div ngbDropdown container="body" placement="bottom-end" class="nota-action-menu">
+                    <button type="button" ngbDropdownToggle class="nota-action-toggle" aria-label="Abrir acciones de la nota de crédito">
+                      <i class="feather icon-more-horizontal" aria-hidden="true"></i>
+                      <span>Acciones</span>
                     </button>
-                    <button
-                      class="btn btn-sm btn-outline-danger app-icon-btn"
-                      type="button"
-                      (click)="anularNota(nota)"
-                      title="Anular nota"
-                      aria-label="Anular nota"
-                    >
-                      <i class="feather icon-x-circle"></i>
-                    </button>
+
+                    <div ngbDropdownMenu class="dropdown-menu nota-action-dropdown">
+                      <button
+                        type="button"
+                        ngbDropdownItem
+                        class="dropdown-item"
+                        (click)="verPdf(nota)"
+                      >
+                        <i class="feather icon-printer" aria-hidden="true"></i>
+                        <span>Ver PDF</span>
+                      </button>
+
+                      <div class="nota-action-divider"></div>
+
+                      <button
+                        type="button"
+                        ngbDropdownItem
+                        class="dropdown-item dropdown-item--danger"
+                        (click)="anularNota(nota)"
+                      >
+                        <i class="feather icon-x-circle" aria-hidden="true"></i>
+                        <span>Anular nota</span>
+                      </button>
+                    </div>
                   </div>
                 </td>
               </tr>

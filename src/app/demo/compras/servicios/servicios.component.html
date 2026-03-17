@@ -83,13 +83,31 @@
             </td>
             <td>{{ servicio.operador || 'N/D' }}</td>
             <td class="text-center">
-              <div class="action-buttons">
-                <button class="btn btn-sm btn-outline-primary" (click)="abrirModalEditar(servicio)" [disabled]="isLoading" title="Editar">
-                  <i class="feather icon-edit"></i>
+              <div ngbDropdown container="body" placement="bottom-end" class="servicio-action-menu">
+                <button
+                  type="button"
+                  ngbDropdownToggle
+                  class="servicio-action-toggle"
+                  aria-label="Abrir acciones del servicio"
+                  [disabled]="isLoading"
+                >
+                  <i class="feather icon-more-horizontal" aria-hidden="true"></i>
+                  <span>Acciones</span>
                 </button>
-                <button class="btn btn-sm btn-outline-danger ms-1" (click)="eliminarServicio(servicio)" [disabled]="isDeleting" title="Eliminar">
-                  <i class="feather icon-trash"></i>
-                </button>
+
+                <div ngbDropdownMenu class="dropdown-menu servicio-action-dropdown">
+                  <button type="button" ngbDropdownItem class="dropdown-item" (click)="abrirModalEditar(servicio)" [disabled]="isLoading">
+                    <i class="feather icon-edit" aria-hidden="true"></i>
+                    <span>Editar servicio</span>
+                  </button>
+
+                  <div class="servicio-action-divider"></div>
+
+                  <button type="button" ngbDropdownItem class="dropdown-item dropdown-item--danger" (click)="eliminarServicio(servicio)" [disabled]="isDeleting">
+                    <i class="feather icon-trash" aria-hidden="true"></i>
+                    <span>Eliminar servicio</span>
+                  </button>
+                </div>
               </div>
             </td>
           </tr>

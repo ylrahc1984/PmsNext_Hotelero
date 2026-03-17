@@ -7,7 +7,7 @@
           <app-nav-item [item]="item" />
         }
         @if (item.type === 'group' || item.type === 'collapse') {
-          <app-nav-group [item]="item" />
+          <app-nav-group [item]="item" [expandedRootId]="expandedRootId" (rootSectionChange)="onRootSectionChange($event)" />
         }
       }
     </ul>

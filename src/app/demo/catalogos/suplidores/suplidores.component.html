@@ -59,19 +59,35 @@
             <td>{{ suplidor.operador || 'N/D' }}</td>
             <td>{{ suplidor.fechaReg | date:'dd/MM/yyyy' || 'N/D' }}</td>
             <td class="text-center">
-              <div class="action-buttons">
-                <button class="btn btn-sm btn-outline-primary" (click)="editar(suplidor)" title="Editar">
-                  <i class="feather icon-edit"></i>
+              <div ngbDropdown container="body" placement="bottom-end" class="suplidor-action-menu">
+                <button type="button" ngbDropdownToggle class="suplidor-action-toggle" aria-label="Abrir acciones del suplidor">
+                  <i class="feather icon-more-horizontal" aria-hidden="true"></i>
+                  <span>Acciones</span>
                 </button>
-                <button class="btn btn-sm btn-outline-info" (click)="abrirVehiculos(suplidor)" title="Vehículos">
-                  <i class="feather icon-package"></i>
-                </button>
-                <button class="btn btn-sm btn-outline-secondary" (click)="abrirChoferes(suplidor)" title="Choferes">
-                  <i class="feather icon-users"></i>
-                </button>
-                <button class="btn btn-sm btn-outline-danger" (click)="eliminar(suplidor)" title="Eliminar">
-                  <i class="feather icon-trash"></i>
-                </button>
+
+                <div ngbDropdownMenu class="dropdown-menu suplidor-action-dropdown">
+                  <button type="button" ngbDropdownItem class="dropdown-item" (click)="editar(suplidor)">
+                    <i class="feather icon-edit" aria-hidden="true"></i>
+                    <span>Editar suplidor</span>
+                  </button>
+
+                  <button type="button" ngbDropdownItem class="dropdown-item" (click)="abrirVehiculos(suplidor)">
+                    <i class="feather icon-package" aria-hidden="true"></i>
+                    <span>Gestionar vehículos</span>
+                  </button>
+
+                  <button type="button" ngbDropdownItem class="dropdown-item" (click)="abrirChoferes(suplidor)">
+                    <i class="feather icon-users" aria-hidden="true"></i>
+                    <span>Gestionar choferes</span>
+                  </button>
+
+                  <div class="suplidor-action-divider"></div>
+
+                  <button type="button" ngbDropdownItem class="dropdown-item dropdown-item--danger" (click)="eliminar(suplidor)">
+                    <i class="feather icon-trash" aria-hidden="true"></i>
+                    <span>Eliminar suplidor</span>
+                  </button>
+                </div>
               </div>
             </td>
           </tr>

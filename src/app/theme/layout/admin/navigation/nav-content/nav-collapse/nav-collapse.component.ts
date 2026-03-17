@@ -1,7 +1,7 @@
 // angular import
-import { Component, input } from '@angular/core';
+import { Component, inject, input, output } from '@angular/core';
 import { animate, style, transition, trigger } from '@angular/animations';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 
 // project import
@@ -25,41 +25,54 @@ import { NavItemComponent } from '../nav-item/nav-item.component';
   ]
 })
 export class NavCollapseComponent {
+  private readonly router = inject(Router);
+
   // public props
   item = input<NavigationItem>();
+  expandedRootId = input<string | null>(null);
+  rootSectionId = input<string | null>(null);
+  rootSectionChange = output<string | null>();
   visible = false;
+
+  get isExpanded(): boolean {
+    if (this.isTopLevelSection()) {
+      return this.expandedRootId() === this.item().id;
+    }
+
+    return this.visible || this.itemContainsUrl(this.item(), this.router.url);
+  }
+
+  get currentRootSectionId(): string {
+    return this.rootSectionId() ?? this.item().id;
+  }
 
   // public method
   navCollapse(e: MouseEvent) {
+    e.preventDefault();
+
+    if (this.isTopLevelSection()) {
+      this.rootSectionChange.emit(this.isExpanded ? null : this.item().id);
+      return;
+    }
+
     this.visible = !this.visible;
-    let parent = e.target as HTMLElement;
+  }
 
-    if (parent?.tagName === 'SPAN') {
-      parent = parent.parentElement!;
+  private isTopLevelSection(): boolean {
+    return this.rootSectionId() === null;
+  }
+
+  private itemContainsUrl(item: NavigationItem, url: string): boolean {
+    const normalizedUrl = this.normalizeUrl(url);
+
+    if (item.url && this.normalizeUrl(item.url) === normalizedUrl) {
+      return true;
     }
 
-    parent = (parent as HTMLElement).parentElement as HTMLElement;
+    return item.children?.some((child) => this.itemContainsUrl(child, normalizedUrl)) ?? false;
+  }
 
-    const sections = document.querySelectorAll('.pcoded-hasmenu');
-    for (let i = 0; i < sections.length; i++) {
-      if (sections[i] !== parent) {
-        sections[i].classList.remove('pcoded-trigger');
-      }
-    }
-
-    let first_parent = parent.parentElement;
-    let pre_parent = ((parent as HTMLElement).parentElement as HTMLElement).parentElement as HTMLElement;
-    if (first_parent.classList.contains('pcoded-hasmenu')) {
-      do {
-        first_parent.classList.add('pcoded-trigger');
-        first_parent = ((first_parent as HTMLElement).parentElement as HTMLElement).parentElement as HTMLElement;
-      } while (first_parent.classList.contains('pcoded-hasmenu'));
-    } else if (pre_parent.classList.contains('pcoded-submenu')) {
-      do {
-        pre_parent.parentElement.classList.add('pcoded-trigger');
-        pre_parent = (((pre_parent as HTMLElement).parentElement as HTMLElement).parentElement as HTMLElement).parentElement as HTMLElement;
-      } while (pre_parent.classList.contains('pcoded-submenu'));
-    }
-    parent.classList.toggle('pcoded-trigger');
+  private normalizeUrl(url: string): string {
+    return url.split('?')[0].split('#')[0];
   }
 }

@@ -300,6 +300,13 @@ export class ReservaDetalleComponent implements OnInit, OnDestroy {
     return this.getMapsLinkFromCoords(detalle.PRV02_DestinoLat, detalle.PRV02_DestinoLng);
   }
 
+  abrirMapa(tipo: 'origen' | 'destino', detalle: ReservaDetalle): void {
+    const link = this.getDetalleMapsLink(detalle, tipo);
+    if (!link) return;
+
+    window.open(link, '_blank', 'noopener');
+  }
+
   getGoogleDisplayText(value: unknown): string {
     return extractGoogleDisplayText(value);
   }
