@@ -1,0 +1,37 @@
+.cc-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.cc-hero {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+}
+
+.cc-action-btn {
+  min-width: 180px;
+}
+
+.cc-summary-card {
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.cc-summary-label {
+  color: #64748b;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cc-summary-value {
+  margin-top: 0.35rem;
+  color: #0f172a;
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.cc-empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: #64748b;
+}

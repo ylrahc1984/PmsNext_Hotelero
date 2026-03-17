@@ -1,0 +1,53 @@
+<section class="weather-card">
+  <div class="weather-card__header">
+    <div>
+      <p class="weather-card__eyebrow">Clima actual</p>
+      <h3 class="weather-card__title">Condiciones en tiempo real</h3>
+    </div>
+
+    <div class="weather-card__controls">
+      <select class="weather-card__select" [value]="selectedCity" (change)="changeCity($event)">
+        <option *ngFor="let city of cities" [value]="city">{{ city }}</option>
+      </select>
+      <button type="button" class="weather-card__refresh" (click)="reload()" [disabled]="loading" aria-label="Refrescar clima">
+        <i class="feather icon-refresh-cw"></i>
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="weather-card__state">
+    <div class="weather-card__loader"></div>
+    <span>Cargando clima...</span>
+  </div>
+
+  <div *ngIf="!loading && error" class="weather-card__state weather-card__state--error">
+    <span>{{ error }}</span>
+  </div>
+
+  <div *ngIf="!loading && weather" class="weather-card__body">
+    <div class="weather-card__temp">
+      {{ weather.temperatura | number:'1.0-0' }}<span>°C</span>
+    </div>
+    <div class="weather-card__desc">{{ weather.descripcion }}</div>
+    <div class="weather-card__city">{{ weather.ciudad }}</div>
+
+    <div class="weather-card__details">
+      <div class="weather-card__detail">
+        <span class="weather-card__detail-label">Sensación</span>
+        <strong>{{ weather.sensacion | number:'1.0-0' }} °C</strong>
+      </div>
+      <div class="weather-card__detail">
+        <span class="weather-card__detail-label">Humedad</span>
+        <strong>{{ weather.humedad | number:'1.0-0' }}%</strong>
+      </div>
+      <div class="weather-card__detail">
+        <span class="weather-card__detail-label">Presión</span>
+        <strong>{{ weather.presion | number:'1.0-0' }} hPa</strong>
+      </div>
+      <div class="weather-card__detail">
+        <span class="weather-card__detail-label">Viento</span>
+        <strong>{{ weather.viento | number:'1.0-0' }} km/h</strong>
+      </div>
+    </div>
+  </div>
+</section>

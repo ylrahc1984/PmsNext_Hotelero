@@ -1,0 +1,80 @@
+.welcome-card {
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.2), transparent 34%),
+    linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  border-radius: 20px;
+  padding: 28px;
+  color: #fff;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  min-height: 230px;
+  box-shadow: var(--shadow-soft, 0 18px 44px rgba(15, 23, 42, 0.18));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  transition: all 0.3s ease;
+}
+
+.welcome-card:hover {
+  transform: translateY(-3px);
+}
+
+.welcome-card__avatar {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 1.6rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  backdrop-filter: blur(10px);
+  flex: 0 0 auto;
+}
+
+.welcome-card__content {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.welcome-card__eyebrow {
+  margin: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.welcome-card__title {
+  margin: 0;
+  font-size: clamp(1.7rem, 3vw, 2.4rem);
+  line-height: 1.05;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.welcome-card__description {
+  margin: 0;
+  max-width: 56ch;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.welcome-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.welcome-card__chip {
+  border-radius: 999px;
+  padding: 0.42rem 0.8rem;
+  font-size: 0.82rem;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+@media (max-width: 767.98px) {
+  .welcome-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

@@ -67,6 +67,18 @@ const routes: Routes = [
         loadComponent: () => import('./operaciones/operacion-diaria/operacion-diaria.component').then((c) => c.OperacionDiariaComponent)
       },
       {
+        path: 'cierre-caja',
+        loadComponent: () => import('./operaciones/cierre-caja/cierre-caja-list.component').then((c) => c.CierreCajaListComponent)
+      },
+      {
+        path: 'cierre-caja/nuevo',
+        loadComponent: () => import('./operaciones/cierre-caja/cierre-caja-form.component').then((c) => c.CierreCajaFormComponent)
+      },
+      {
+        path: 'cierre-caja/:id',
+        loadComponent: () => import('./operaciones/cierre-caja/cierre-caja-form.component').then((c) => c.CierreCajaFormComponent)
+      },
+      {
         path: 'lista-pickup',
         loadComponent: () => import('./demo/catalogos/lista-pickup/lista-pickup.component').then((c) => c.ListaPickupComponent)
       },

@@ -1,3 +1,13 @@
+<div class="dashboard-top">
+  <app-welcome-card [userName]="userName"></app-welcome-card>
+
+  <app-weather-card
+    [weather]="weather"
+    [loading]="loading"
+    [error]="weatherError">
+  </app-weather-card>
+</div>
+
 <div class="row">
   @for (sale of sales; track sale) {
     <div class="{{ sale.design }}">
@@ -37,15 +47,16 @@
           </button>
         </div>
         <div class="col-md-3">
-          <button class="btn btn-success btn-block" routerLink="/catalogos/clientes">
-            <i class="feather icon-users"></i> Gestionar Clientes
-          </button>
-        </div>
-        <div class="col-md-3">
           <button class="btn btn-warning btn-block" routerLink="/operaciones/operacion-diaria">
             <i class="feather icon-file-text"></i> Operacion Diaria
           </button>
         </div>
+        <div class="col-md-3">
+          <button class="btn btn-success btn-block" routerLink="/catalogos/clientes">
+            <i class="feather icon-users"></i> Gestionar Clientes
+          </button>
+        </div>
+        
       </div>
     </app-card>
   </div>

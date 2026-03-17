@@ -1,0 +1,115 @@
+:host {
+  display: block;
+  --color-primary-dark: #1e2a3a;
+  --color-primary: #2c3e50;
+  --color-accent: #3b82f6;
+  --color-accent-light: #6366f1;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f8fafc;
+  --color-text-soft: #64748b;
+  --shadow-soft: 0 18px 40px rgba(15, 23, 42, 0.08);
+  --shadow-hover: 0 22px 44px rgba(30, 42, 58, 0.12);
+}
+
+.dashboard-top {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+:host ::ng-deep .card {
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+:host ::ng-deep .card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-hover);
+}
+
+:host ::ng-deep .card .card-header {
+  background: linear-gradient(135deg, rgba(30, 42, 58, 0.96), rgba(59, 130, 246, 0.92));
+  color: #fff;
+  border-bottom: 0;
+}
+
+:host ::ng-deep .card .card-header h5 {
+  color: inherit;
+  font-weight: 600;
+  margin: 0;
+}
+
+:host ::ng-deep .card .card-block {
+  background: linear-gradient(180deg, var(--color-surface), var(--color-surface-muted));
+}
+
+.row:first-of-type > [class*='col-'] {
+  margin-bottom: 1.2rem;
+}
+
+.row:first-of-type > [class*='col-'] ::ng-deep .card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+}
+
+.row:first-of-type > [class*='col-'] ::ng-deep .card .card-block {
+  background: #ffffff;
+}
+
+.row:first-of-type > [class*='col-'] ::ng-deep h6 {
+  color: var(--color-text-soft);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.row:first-of-type > [class*='col-'] ::ng-deep h3 {
+  color: var(--color-primary-dark);
+  font-weight: 700;
+}
+
+.row:first-of-type > [class*='col-'] ::ng-deep .progress {
+  background: rgba(148, 163, 184, 0.16);
+  border-radius: 999px;
+}
+
+.row:first-of-type > [class*='col-'] ::ng-deep .progress-bar {
+  border-radius: 999px;
+}
+
+.row.mt-4:first-of-type button.btn {
+  min-height: 46px;
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 12px 24px rgba(59, 130, 246, 0.18);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+}
+
+.row.mt-4:first-of-type button.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 30px rgba(59, 130, 246, 0.22);
+  filter: brightness(1.03);
+}
+
+.row.mt-4:first-of-type .btn-primary,
+.row.mt-4:first-of-type .btn-info,
+.row.mt-4:first-of-type .btn-success,
+.row.mt-4:first-of-type .btn-warning {
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-light));
+}
+
+.row.mt-4:first-of-type .btn i {
+  margin-right: 0.45rem;
+}
+
+@media (max-width: 991.98px) {
+  .dashboard-top {
+    grid-template-columns: 1fr;
+  }
+}

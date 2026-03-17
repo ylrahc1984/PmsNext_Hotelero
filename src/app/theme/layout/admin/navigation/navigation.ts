@@ -63,6 +63,14 @@ export const NavigationItems: NavigationItem[] = [
             classes: 'nav-item'
           },
           {
+            id: 'cierre-caja',
+            title: 'Cierre de Caja',
+            type: 'item',
+            url: '/operaciones/cierre-caja',
+            icon: 'feather icon-credit-card',
+            classes: 'nav-item'
+          },
+          {
             id: 'lista-pickup',
             title: 'Lista Pickup',
             type: 'item',

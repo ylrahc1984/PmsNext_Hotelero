@@ -1,0 +1,35 @@
+.cc-form-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.cc-form-hero {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+}
+
+.cc-form-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.cc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.cc-actions .btn {
+  min-width: 180px;
+}
+
+@media (max-width: 767.98px) {
+  .cc-actions {
+    flex-direction: column-reverse;
+  }
+
+  .cc-actions .btn {
+    width: 100%;
+  }
+}

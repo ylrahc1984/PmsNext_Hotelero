@@ -1,0 +1,149 @@
+<div class="cc-form-page">
+  <div class="card cc-form-hero">
+    <div class="card-body d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+      <div>
+        <p class="text-muted text-uppercase small fw-semibold mb-2">Operaciones</p>
+        <h2 class="mb-1">{{ isNew ? 'Apertura de Caja' : 'Gestión de Cierre de Caja' }}</h2>
+        <p class="text-muted mb-0">
+          {{ isNew ? 'Registra la apertura del turno y deja lista la caja.' : 'Actualiza el conteo por forma de pago y cierra el turno.' }}
+        </p>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <span class="badge bg-warning-subtle text-warning border border-warning-subtle" *ngIf="!isClosed && !isNew">ABIERTO</span>
+        <span class="badge bg-success-subtle text-success border border-success-subtle" *ngIf="isClosed">CERRADO</span>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="isLoading" class="card">
+    <div class="card-body text-muted">Cargando información del cierre...</div>
+  </div>
+
+  <form *ngIf="!isLoading" class="cc-form-grid" [formGroup]="form">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="mb-3">Encabezado</h5>
+        <div class="row g-3">
+          <div class="col-12 col-md-3">
+            <label class="form-label">Usuario</label>
+            <input type="text" class="form-control" formControlName="usuario" readonly>
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label">Fecha</label>
+            <input type="date" class="form-control" formControlName="fecha">
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label">Punto de venta</label>
+            <select class="form-control" formControlName="pntVenta">
+              <option value="">Seleccione</option>
+              <option *ngFor="let item of puntosVenta" [value]="item.codigo">
+                {{ item.codigo }} - {{ item.descripcion }}
+              </option>
+            </select>
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label">Monto apertura</label>
+            <input type="number" class="form-control" formControlName="montoApertura" min="0" step="0.01">
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label">Caja</label>
+            <input type="text" class="form-control" formControlName="caja" placeholder="CAJA01">
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label">Turno</label>
+            <input type="text" class="form-control" formControlName="turno" placeholder="T1">
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label">Hora apertura</label>
+            <input type="time" class="form-control" formControlName="horaApertura">
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label">Hora cierre</label>
+            <input type="time" class="form-control" formControlName="horaCierre" readonly>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Observaciones</label>
+            <textarea class="form-control" rows="3" formControlName="observaciones" placeholder="Notas del turno o del cierre"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2 mb-3">
+          <div>
+            <h5 class="mb-1">Resumen por Forma de Pago</h5>
+            <p class="text-muted mb-0 small">
+              En esta primera versión el monto sistema puede ajustarse manualmente hasta integrar los movimientos automáticos.
+            </p>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>Forma de pago</th>
+                <th>Tipo</th>
+                <th class="text-end">Monto sistema</th>
+                <th class="text-end">Monto declarado</th>
+                <th class="text-end">Diferencia</th>
+              </tr>
+            </thead>
+            <tbody formArrayName="lineas">
+              <tr *ngFor="let group of lineasArray.controls; let i = index" [formGroupName]="i">
+                <td>
+                  <div class="fw-semibold">{{ group.get('frmPago')?.value }}</div>
+                  <div class="text-muted small">{{ group.get('descripcion')?.value }}</div>
+                </td>
+                <td>{{ group.get('tipoPago')?.value || '-' }}</td>
+                <td>
+                  <input type="number" class="form-control text-end" formControlName="montoSistema" min="0" step="0.01">
+                </td>
+                <td>
+                  <input type="number" class="form-control text-end" formControlName="montoDeclarado" min="0" step="0.01">
+                </td>
+                <td class="text-end fw-semibold" [class.text-danger]="getLineDifference(i) < 0" [class.text-success]="getLineDifference(i) > 0">
+                  ₡ {{ getLineDifference(i) | number:'1.2-2' }}
+                </td>
+              </tr>
+              <tr *ngIf="lineasArray.length === 0">
+                <td colspan="5" class="text-center text-muted py-4">No hay formas de pago cargadas.</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <th colspan="2" class="text-end">Totales</th>
+                <th class="text-end">₡ {{ totalSistema | number:'1.2-2' }}</th>
+                <th class="text-end">₡ {{ totalDeclarado | number:'1.2-2' }}</th>
+                <th class="text-end" [class.text-danger]="diferenciaTotal < 0" [class.text-success]="diferenciaTotal > 0">
+                  ₡ {{ diferenciaTotal | number:'1.2-2' }}
+                </th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="cc-actions">
+      <button type="button" class="btn btn-outline-secondary" (click)="cancelar()">
+        Volver al listado
+      </button>
+
+      <button *ngIf="isNew" type="button" class="btn btn-primary" (click)="guardarApertura()" [disabled]="isSubmitting">
+        Registrar apertura
+      </button>
+
+      <ng-container *ngIf="!isNew && !isClosed">
+        <button type="button" class="btn btn-outline-primary" (click)="guardarAvance()" [disabled]="isSubmitting">
+          Guardar avance
+        </button>
+        <button type="button" class="btn btn-success" (click)="cerrarCaja()" [disabled]="isSubmitting">
+          Confirmar cierre
+        </button>
+      </ng-container>
+    </div>
+  </form>
+</div>

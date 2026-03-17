@@ -1,22 +1,37 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
+import { AuthService } from 'src/app/core/services/auth.service';
 import { ReservasService } from '../reservas/services/reservas.service';
 import { OrdenesService } from '../ordenes/ordenes.service';
+import { DashboardService } from './dashboard.service';
+import { Weather } from './models/weather.model';
+import { WelcomeCardComponent } from './components/welcome-card/welcome-card.component';
+import { WeatherCardComponent } from './components/weather-card/weather-card.component';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [CommonModule, RouterModule, SharedModule],
+  standalone: true,
+  imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
   templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.scss']
+  styleUrls: ['./dashboard.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DashboardComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly authService = inject(AuthService);
   reservasDia = 0;
   reservasPendientes = 0;
   ordenesActivas = 0;
   ingresosEstimados = 0;
+  weather: Weather | null = null;
+  loading = false;
+  weatherError: string | null = null;
+  readonly defaultCity = 'San Jose';
+  readonly userName = this.resolveUserName();
 
   sales = [
     {
@@ -59,9 +74,12 @@ export class DashboardComponent implements OnInit {
 
   private reservasService = inject(ReservasService);
   private ordenesService = inject(OrdenesService);
+  private dashboardService = inject(DashboardService);
 
   ngOnInit() {
     this.calculateMetrics();
+    this.bindWeatherState();
+    this.dashboardService.loadWeather(this.defaultCity);
   }
 
   calculateMetrics() {
@@ -90,5 +108,24 @@ export class DashboardComponent implements OnInit {
     const ordenes = this.ordenesService.getOrdenes();
     this.ordenesActivas = ordenes.filter(o => o.estado !== 'COM' && o.estado !== 'CAN').length;
     this.sales[2].amount = this.ordenesActivas.toString();
+  }
+
+  private bindWeatherState(): void {
+    this.dashboardService.weather$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((weather) => {
+      this.weather = weather;
+    });
+
+    this.dashboardService.loading$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((loading) => {
+      this.loading = loading;
+    });
+
+    this.dashboardService.error$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((error) => {
+      this.weatherError = error;
+    });
+  }
+
+  private resolveUserName(): string {
+    const user = this.authService.getCurrentUser();
+    return String(user?.nombreUsu ?? user?.usuario ?? 'Usuario').trim() || 'Usuario';
   }
 }

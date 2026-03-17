@@ -1,0 +1,122 @@
+<div class="cc-page">
+  <div class="card cc-hero">
+    <div class="card-body">
+      <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div>
+          <p class="text-muted text-uppercase small fw-semibold mb-2">Operaciones</p>
+          <h2 class="mb-1">Cierre de Caja</h2>
+          <p class="text-muted mb-0">Consulta aperturas y cierres del turno operativo del usuario actual.</p>
+        </div>
+        <button type="button" class="btn btn-primary cc-action-btn" (click)="nuevaApertura()">
+          Nueva apertura
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 cc-summary">
+    <div class="col-12 col-md-4">
+      <div class="card cc-summary-card">
+        <div class="card-body">
+          <div class="cc-summary-label">Abiertos</div>
+          <div class="cc-summary-value">{{ abiertosCount }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="card cc-summary-card">
+        <div class="card-body">
+          <div class="cc-summary-label">Cerrados</div>
+          <div class="cc-summary-value">{{ cerradosCount }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="card cc-summary-card">
+        <div class="card-body">
+          <div class="cc-summary-label">Diferencia acumulada</div>
+          <div class="cc-summary-value">₡ {{ diferenciaAcumulada | number:'1.2-2' }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <form class="row g-3 align-items-end" [formGroup]="filtrosForm">
+        <div class="col-12 col-md-3">
+          <label class="form-label">Fecha</label>
+          <input type="date" class="form-control" formControlName="fecha">
+        </div>
+        <div class="col-12 col-md-3">
+          <label class="form-label">Estado</label>
+          <select class="form-control" formControlName="estado">
+            <option *ngFor="let item of estados" [value]="item.value">{{ item.label }}</option>
+          </select>
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label">Punto de venta</label>
+          <select class="form-control" formControlName="pntVenta">
+            <option value="">Todos</option>
+            <option *ngFor="let item of puntosVenta" [value]="item.codigo">
+              {{ item.codigo }} - {{ item.descripcion }}
+            </option>
+          </select>
+        </div>
+        <div class="col-12 col-md-2 d-grid gap-2">
+          <button type="button" class="btn btn-outline-primary" (click)="applyFilters()">Buscar</button>
+          <button type="button" class="btn btn-outline-secondary" (click)="resetFilters()">Limpiar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <div *ngIf="isLoading" class="text-muted">Cargando cierres...</div>
+
+      <div *ngIf="!isLoading && cierres.length === 0" class="cc-empty">
+        No hay cierres de caja para los filtros seleccionados.
+      </div>
+
+      <div *ngIf="!isLoading && cierres.length > 0" class="table-responsive">
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Punto de venta</th>
+              <th>Caja / Turno</th>
+              <th>Apertura</th>
+              <th>Sistema</th>
+              <th>Declarado</th>
+              <th>Diferencia</th>
+              <th>Estado</th>
+              <th class="text-end">Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of cierres">
+              <td>{{ item.fecha }}</td>
+              <td>{{ item.pntVenta || 'N/D' }}</td>
+              <td>{{ item.caja || '-' }} / {{ item.turno || '-' }}</td>
+              <td>₡ {{ item.montoApertura | number:'1.2-2' }}</td>
+              <td>₡ {{ item.totalSistema | number:'1.2-2' }}</td>
+              <td>₡ {{ item.totalDeclarado | number:'1.2-2' }}</td>
+              <td [class.text-danger]="item.diferenciaTotal < 0" [class.text-success]="item.diferenciaTotal > 0">
+                ₡ {{ item.diferenciaTotal | number:'1.2-2' }}
+              </td>
+              <td>
+                <span [class]="getEstadoBadgeClass(item)">{{ item.estado }}</span>
+              </td>
+              <td class="text-end">
+                <button type="button" class="btn btn-sm btn-outline-primary" (click)="abrirRegistro(item)">
+                  {{ item.estado === 'ABIERTO' ? 'Continuar' : 'Ver' }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
