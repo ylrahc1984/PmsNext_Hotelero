@@ -58,6 +58,8 @@ export interface OrdenPedidoDetalleItem {
   orden: number;
   uMedidaDos: string;
   canProduDos: number;
+  lstPrecio: string;
+  planTarifa: string;
 }
 
 export interface OrdenPedidoPagoItem {

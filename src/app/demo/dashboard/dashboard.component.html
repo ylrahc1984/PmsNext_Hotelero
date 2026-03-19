@@ -35,28 +35,58 @@
 <div class="row mt-4">
   <div class="col-12">
     <app-card cardTitle="Accesos Rápidos">
-      <div class="row">
-        <div class="col-md-3">
-          <button class="btn btn-primary btn-block" routerLink="/operaciones/reservas/nueva-v2">
-            <i class="feather icon-plus"></i> Nueva Reserva
-          </button>
-        </div>
-        <div class="col-md-3">
-          <button class="btn btn-info btn-block" routerLink="/operaciones/ordenes-trabajo">
-            <i class="feather icon-clipboard"></i> Ver Órdenes
-          </button>
-        </div>
-        <div class="col-md-3">
-          <button class="btn btn-warning btn-block" routerLink="/operaciones/operacion-diaria">
-            <i class="feather icon-file-text"></i> Operacion Diaria
-          </button>
-        </div>
-        <div class="col-md-3">
-          <button class="btn btn-success btn-block" routerLink="/catalogos/clientes">
-            <i class="feather icon-users"></i> Gestionar Clientes
-          </button>
-        </div>
-        
+      <div class="quick-actions">
+        <button class="quick-action quick-action--primary" routerLink="/operaciones/reservas/nueva-v2">
+          <span class="quick-action__icon">
+            <i class="feather icon-plus"></i>
+          </span>
+          <span class="quick-action__content">
+            <span class="quick-action__label">Nueva Reserva</span>
+            <span class="quick-action__hint">Crea una reserva o cotizacion desde cero.</span>
+          </span>
+          <span class="quick-action__arrow">
+            <i class="feather icon-arrow-right"></i>
+          </span>
+        </button>
+
+        <button class="quick-action quick-action--amber" routerLink="/operaciones/operacion-diaria">
+          <span class="quick-action__icon">
+            <i class="feather icon-file-text"></i>
+          </span>
+          <span class="quick-action__content">
+            <span class="quick-action__label">Operacion Diaria</span>
+            <span class="quick-action__hint">Revisa pendientes y movimientos del dia.</span>
+          </span>
+          <span class="quick-action__arrow">
+            <i class="feather icon-arrow-right"></i>
+          </span>
+        </button>
+
+        <button class="quick-action quick-action--sky" routerLink="/operaciones/ordenes-trabajo">
+          <span class="quick-action__icon">
+            <i class="feather icon-clipboard"></i>
+          </span>
+          <span class="quick-action__content">
+            <span class="quick-action__label">Ver Órdenes</span>
+            <span class="quick-action__hint">Consulta el tablero operativo y su seguimiento.</span>
+          </span>
+          <span class="quick-action__arrow">
+            <i class="feather icon-arrow-right"></i>
+          </span>
+        </button>
+
+        <button class="quick-action quick-action--emerald" routerLink="/catalogos/clientes">
+          <span class="quick-action__icon">
+            <i class="feather icon-users"></i>
+          </span>
+          <span class="quick-action__content">
+            <span class="quick-action__label">Gestionar Clientes</span>
+            <span class="quick-action__hint">Accede al catalogo y actualiza sus datos.</span>
+          </span>
+          <span class="quick-action__arrow">
+            <i class="feather icon-arrow-right"></i>
+          </span>
+        </button>
       </div>
     </app-card>
   </div>

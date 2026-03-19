@@ -316,6 +316,21 @@ export class OperacionDiariaComponent {
     });
   }
 
+  onVerDetalleReserva(detalle: OperacionDetalle): void {
+    const codReserva = (detalle?.prV02_CodReserva ?? '').toString().trim();
+
+    if (!codReserva) {
+      Swal.fire({
+        title: 'Reserva inválida',
+        text: 'No se pudo determinar el código de la reserva para abrir el detalle.',
+        icon: 'warning'
+      });
+      return;
+    }
+
+    this.router.navigate(['/operaciones/reservas', codReserva, 'detalle']);
+  }
+
   isPrintingVoucher(detalle: OperacionDetalle): boolean {
     return this.printingVouchers.has(this.getDetalleKey(detalle));
   }

@@ -81,35 +81,148 @@
   border-radius: 999px;
 }
 
-.row.mt-4:first-of-type button.btn {
-  min-height: 46px;
-  border: none;
-  border-radius: 10px;
-  color: #fff;
-  font-weight: 600;
-  box-shadow: 0 12px 24px rgba(59, 130, 246, 0.18);
-  transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
 }
 
-.row.mt-4:first-of-type button.btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 16px 30px rgba(59, 130, 246, 0.22);
-  filter: brightness(1.03);
+.quick-action {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  min-height: 112px;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0) 36%),
+    linear-gradient(145deg, var(--quick-action-bg-start), var(--quick-action-bg-end));
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  appearance: none;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
 
-.row.mt-4:first-of-type .btn-primary,
-.row.mt-4:first-of-type .btn-info,
-.row.mt-4:first-of-type .btn-success,
-.row.mt-4:first-of-type .btn-warning {
-  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-light));
+.quick-action:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 36px rgba(15, 23, 42, 0.14);
+  border-color: rgba(59, 130, 246, 0.28);
 }
 
-.row.mt-4:first-of-type .btn i {
-  margin-right: 0.45rem;
+.quick-action:focus-visible {
+  outline: 0;
+  border-color: rgba(37, 99, 235, 0.45);
+  box-shadow:
+    0 0 0 4px rgba(59, 130, 246, 0.16),
+    0 20px 36px rgba(15, 23, 42, 0.14);
+}
+
+.quick-action__icon,
+.quick-action__arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.quick-action__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--quick-action-accent-soft);
+  color: var(--quick-action-accent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.quick-action__icon i {
+  font-size: 1.2rem;
+}
+
+.quick-action__content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.quick-action__label {
+  color: var(--color-primary-dark);
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.quick-action__hint {
+  margin-top: 0.35rem;
+  color: var(--color-text-soft);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.quick-action__arrow {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--quick-action-accent);
+  transition: transform 0.25s ease, background-color 0.25s ease;
+}
+
+.quick-action:hover .quick-action__arrow {
+  transform: translateX(3px);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.quick-action--primary {
+  --quick-action-accent: #2563eb;
+  --quick-action-accent-soft: rgba(37, 99, 235, 0.14);
+  --quick-action-bg-start: #f8fbff;
+  --quick-action-bg-end: #edf4ff;
+}
+
+.quick-action--amber {
+  --quick-action-accent: #d97706;
+  --quick-action-accent-soft: rgba(217, 119, 6, 0.14);
+  --quick-action-bg-start: #fffaf1;
+  --quick-action-bg-end: #fff1d8;
+}
+
+.quick-action--sky {
+  --quick-action-accent: #0284c7;
+  --quick-action-accent-soft: rgba(2, 132, 199, 0.14);
+  --quick-action-bg-start: #f2fbff;
+  --quick-action-bg-end: #e0f5ff;
+}
+
+.quick-action--emerald {
+  --quick-action-accent: #059669;
+  --quick-action-accent-soft: rgba(5, 150, 105, 0.14);
+  --quick-action-bg-start: #f2fcf8;
+  --quick-action-bg-end: #ddf7ed;
 }
 
 @media (max-width: 991.98px) {
   .dashboard-top {
     grid-template-columns: 1fr;
+  }
+
+  .quick-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 575.98px) {
+  .quick-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-action {
+    min-height: 96px;
+    padding: 1rem;
   }
 }

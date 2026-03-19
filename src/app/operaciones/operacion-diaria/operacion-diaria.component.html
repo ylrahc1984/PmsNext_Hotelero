@@ -170,38 +170,71 @@
                   <td class="text-end action-cell">
                     <div ngbDropdown container="body" placement="bottom-end" class="action-menu">
                       <button type="button" ngbDropdownToggle class="action-toggle" aria-label="Abrir acciones">
-                        <i class="feather icon-chevron-down" aria-hidden="true"></i>
+                        <span class="action-toggle__icon">
+                          <i class="feather icon-more-horizontal" aria-hidden="true"></i>
+                        </span>
+                        <i class="feather icon-chevron-down action-toggle__caret" aria-hidden="true"></i>
                       </button>
-                      <div ngbDropdownMenu class="dropdown-menu">
+                      <div ngbDropdownMenu class="dropdown-menu action-dropdown">
+                        <div class="action-dropdown__section-title">Navegacion</div>
                         <button
                           type="button"
                           ngbDropdownItem
-                          class="dropdown-item"
+                          class="dropdown-item action-item"
+                          (click)="onVerDetalleReserva(detalle)"
+                          [disabled]="!detalle.prV02_CodReserva"
+                        >
+                          <span class="action-item__icon action-item__icon--primary">
+                            <i class="feather icon-eye" aria-hidden="true"></i>
+                          </span>
+                          <span class="action-item__content">
+                            <span class="action-item__label">Ver detalle reserva</span>
+                          </span>
+                        </button>
+
+                        <div class="action-dropdown__divider"></div>
+                        <div class="action-dropdown__section-title">Operaciones</div>
+                        <button
+                          type="button"
+                          ngbDropdownItem
+                          class="dropdown-item action-item"
                           (click)="onCheckIn(detalle)"
                           [disabled]="isCheckingIn(detalle) || isCheckInRealizado(detalle)"
                         >
-                          <i class="feather icon-log-in" aria-hidden="true"></i>
-                          Check In
+                          <span class="action-item__icon action-item__icon--success">
+                            <i class="feather icon-log-in" aria-hidden="true"></i>
+                          </span>
+                          <span class="action-item__content">
+                            <span class="action-item__label">Check In</span>
+                          </span>
                         </button>
                         <button
                           type="button"
                           ngbDropdownItem
-                          class="dropdown-item"
+                          class="dropdown-item action-item"
                           (click)="onPrintVoucher(detalle)"
                           [disabled]="isPrintingVoucher(detalle)"
                         >
-                          <i class="feather icon-printer" aria-hidden="true"></i>
-                          {{ isPrintingVoucher(detalle) ? 'Imprimiendo...' : 'Imprimir Voucher' }}
+                          <span class="action-item__icon action-item__icon--sky">
+                            <i class="feather icon-printer" aria-hidden="true"></i>
+                          </span>
+                          <span class="action-item__content">
+                            <span class="action-item__label">{{ isPrintingVoucher(detalle) ? 'Imprimiendo...' : 'Imprimir Voucher' }}</span>
+                          </span>
                         </button>
                         <button
                           type="button"
                           ngbDropdownItem
-                          class="dropdown-item"
+                          class="dropdown-item action-item"
                           (click)="onFacturarReserva(detalle)"
                           [disabled]="!detalle.prV02_CodReserva || !detalle.codAgencia"
                         >
-                          <i class="feather icon-file-text" aria-hidden="true"></i>
-                          Facturar Reserva
+                          <span class="action-item__icon action-item__icon--amber">
+                            <i class="feather icon-file-text" aria-hidden="true"></i>
+                          </span>
+                          <span class="action-item__content">
+                            <span class="action-item__label">Facturar Reserva</span>
+                          </span>
                         </button>
                       </div>
                     </div>

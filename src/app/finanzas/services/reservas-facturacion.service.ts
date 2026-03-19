@@ -33,6 +33,8 @@ export interface ReservaPendienteDetalle {
   nomServicio: string;
   codGrupo: string;
   uMedida: string;
+  codLstPrecio: string;
+  planTarifario: string;
   saldoPendiente: number;
   neto: number;
   totalPax: number;
@@ -186,6 +188,22 @@ export class ReservasFacturacionService {
       nomServicio: this.readString(item, normalized, 'prV02_NomServicio', 'PRV02_NomServicio', 'nomServicio', 'nombreServicio'),
       codGrupo: this.readString(item, normalized, 'mpV01_CodGrupo', 'MPV01_CodGrupo', 'codGrupo', 'grupo', 'cod_grupo'),
       uMedida: this.readString(item, normalized, 'mpV01_UMedida', 'MPV01_UMedida', 'uMedida', 'umedida', 'unidadMedida'),
+      codLstPrecio: this.readString(
+        item,
+        normalized,
+        'prV02_CodLstPrecio',
+        'PRV02_CodLstPrecio',
+        'codLstPrecio',
+        'lstPrecio'
+      ),
+      planTarifario: this.readString(
+        item,
+        normalized,
+        'prV02_PlanTarifario',
+        'PRV02_PlanTarifario',
+        'planTarifario',
+        'planTarifa'
+      ),
       saldoPendiente: this.readNumber(
         item,
         normalized,

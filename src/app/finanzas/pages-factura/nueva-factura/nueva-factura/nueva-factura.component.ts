@@ -204,6 +204,13 @@ export class NuevaFacturaComponent implements OnInit {
       .pipe(distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
       .subscribe((value) => {
         this.onListaPrecioChange((value || '').toString());
+        this.syncDetalleCatalogCodes();
+      });
+
+    this.form.controls.planTarifario.valueChanges
+      .pipe(distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.syncDetalleCatalogCodes();
       });
 
   }
@@ -446,6 +453,7 @@ export class NuevaFacturaComponent implements OnInit {
       orden: this.fb.nonNullable.control(orden),
       fechaConsumo: this.fb.nonNullable.control(this.form.controls.fechaDocu.value),
       lstPrecio: this.fb.nonNullable.control(this.form.controls.listaPrecio.value),
+      planTarifa: this.fb.nonNullable.control(this.form.controls.planTarifario.value),
       codProdu: this.fb.nonNullable.control(''),
       areaProdu: this.fb.nonNullable.control(''),
       descripcion: this.fb.nonNullable.control(''),
@@ -503,6 +511,7 @@ export class NuevaFacturaComponent implements OnInit {
         porImp: 0,
         fechaConsumo: this.form.controls.fechaDocu.value,
         lstPrecio: this.form.controls.listaPrecio.value,
+        planTarifa: this.form.controls.planTarifario.value,
         pntVenta: this.form.controls.pntVenta.value
       },
       { emitEvent: false }
@@ -672,6 +681,7 @@ export class NuevaFacturaComponent implements OnInit {
               this.form.controls.planTarifario.setValue(String(nextValue), { emitEvent: false });
             }
           }
+          this.syncDetalleCatalogCodes();
         },
         error: () => {
           this.planesTarifarios = [];
@@ -704,6 +714,7 @@ export class NuevaFacturaComponent implements OnInit {
           } else {
             this.previousListaPrecio = (current || '').toString();
           }
+          this.syncDetalleCatalogCodes();
         },
         error: () => {
           this.listasPrecio = [];
@@ -777,6 +788,7 @@ export class NuevaFacturaComponent implements OnInit {
           this.reservaActual = codReserva;
           this.form.controls.codReserva.setValue(codReserva, { emitEvent: false });
           this.aplicarClienteReserva(cliente, codAgencia);
+          this.aplicarCatalogosReserva(detalle ?? []);
           this.setModoReserva(true);
           this.aplicarDetalleReserva(detalle ?? []);
           this.cdr.markForCheck();
@@ -896,7 +908,8 @@ export class NuevaFacturaComponent implements OnInit {
             comanda: (item.id ?? '').toString(),
             saldoPendiente: saldo,
             fechaConsumo: this.form.controls.fechaDocu.value,
-            lstPrecio: this.form.controls.listaPrecio.value,
+            lstPrecio: (item.codLstPrecio || this.form.controls.listaPrecio.value || '').toString(),
+            planTarifa: (item.planTarifario || this.form.controls.planTarifario.value || '').toString(),
             pntVenta: this.form.controls.pntVenta.value
           },
           { emitEvent: false }
@@ -920,6 +933,7 @@ export class NuevaFacturaComponent implements OnInit {
   private setModoReserva(active: boolean): void {
     this.modoReserva = active;
     this.setClienteEditable(!active);
+    this.setPlanTarifarioEditable(!active);
     this.setListaPrecioEditable(!active);
   }
 
@@ -944,6 +958,16 @@ export class NuevaFacturaComponent implements OnInit {
 
   private setListaPrecioEditable(enabled: boolean): void {
     const control = this.form.controls.listaPrecio;
+    if (enabled && control.disabled) {
+      control.enable({ emitEvent: false });
+    }
+    if (!enabled && control.enabled) {
+      control.disable({ emitEvent: false });
+    }
+  }
+
+  private setPlanTarifarioEditable(enabled: boolean): void {
+    const control = this.form.controls.planTarifario;
     if (enabled && control.disabled) {
       control.enable({ emitEvent: false });
     }
@@ -1017,8 +1041,7 @@ export class NuevaFacturaComponent implements OnInit {
       const raw = group.getRawValue();
       return {
         orden: index + 1,
-        fechaConsumo: fechaDocu,
-        lstPrecio: value.listaPrecio,
+        fechaConsumo: this.formatDate(raw.fechaConsumo || value.fechaDocu),
         codProdu: raw.codProdu,
         areaProdu: raw.areaProdu,
         descripcion: raw.descripcion,
@@ -1036,7 +1059,9 @@ export class NuevaFacturaComponent implements OnInit {
         comanda: raw.comanda,
         pntVenta: value.pntVenta,
         mozo: raw.mozo,
-        numHabita: raw.numHabita
+        numHabita: raw.numHabita,
+        lstPrecio: (raw.lstPrecio || value.listaPrecio || '').toString(),
+        planTarifa: (raw.planTarifa || value.planTarifario || '').toString()
       };
     });
 
@@ -1116,6 +1141,43 @@ export class NuevaFacturaComponent implements OnInit {
     }
     if (!shouldLock && control.disabled) {
       control.enable({ emitEvent: false });
+    }
+  }
+
+  private syncDetalleCatalogCodes(): void {
+    if (this.modoReserva) {
+      return;
+    }
+
+    const lstPrecio = (this.form.controls.listaPrecio.value || '').toString();
+    const planTarifa = (this.form.controls.planTarifario.value || '').toString();
+
+    this.detalleArray.controls.forEach((group) => {
+      if (group.controls.lstPrecio.value !== lstPrecio) {
+        group.controls.lstPrecio.setValue(lstPrecio, { emitEvent: false });
+      }
+      if (group.controls.planTarifa.value !== planTarifa) {
+        group.controls.planTarifa.setValue(planTarifa, { emitEvent: false });
+      }
+    });
+  }
+
+  private aplicarCatalogosReserva(detalles: ReservaPendienteDetalle[]): void {
+    const primerDetalle = detalles.find((item) => (item.codLstPrecio || item.planTarifario || '').toString().trim());
+    if (!primerDetalle) {
+      return;
+    }
+
+    const lstPrecio = (primerDetalle.codLstPrecio || '').toString().trim();
+    const planTarifario = (primerDetalle.planTarifario || '').toString().trim();
+
+    if (lstPrecio) {
+      this.form.controls.listaPrecio.setValue(lstPrecio, { emitEvent: false });
+      this.previousListaPrecio = lstPrecio;
+    }
+
+    if (planTarifario) {
+      this.form.controls.planTarifario.setValue(planTarifario, { emitEvent: false });
     }
   }
 

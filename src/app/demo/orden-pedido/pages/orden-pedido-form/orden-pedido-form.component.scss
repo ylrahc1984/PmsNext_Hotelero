@@ -187,6 +187,21 @@
   font-size: 0.85rem;
 }
 
+.op-reserva-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.op-reserva-badge {
+  padding: 0.55rem 0.8rem;
+  border-radius: 999px;
+  background: #eef7ff;
+  border: 1px solid #cfe3f7;
+  color: #1c5aa6;
+  font-weight: 700;
+}
+
 .op-detail-table thead th {
   background: #f7f9fc;
   border-bottom: 1px solid var(--op-border);
@@ -211,10 +226,21 @@
   vertical-align: middle;
 }
 
+.op-detail-row--invalid td {
+  background: #fffaf5;
+}
+
 .op-detail-table .form-control {
   min-width: 90px;
   min-height: 38px;
   padding: 0.55rem 0.7rem;
+}
+
+.op-qty-error {
+  margin-top: 0.28rem;
+  color: #c2410c;
+  font-size: 0.72rem;
+  line-height: 1.3;
 }
 
 .op-payment-row {

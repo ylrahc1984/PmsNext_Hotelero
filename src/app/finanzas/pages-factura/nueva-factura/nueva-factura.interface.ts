@@ -5,6 +5,7 @@ export type DetalleForm = {
   orden: FormControl<number>;
   fechaConsumo: FormControl<string>;
   lstPrecio: FormControl<string>;
+  planTarifa: FormControl<string>;
   codProdu: FormControl<string>;
   areaProdu: FormControl<string>;
   descripcion: FormControl<string>;
@@ -100,7 +101,6 @@ export interface ConfirmarFacturaResponse {
 export interface DetalleFacturaPayload {
   orden: number;
   fechaConsumo: string;
-  lstPrecio: string;
   codProdu: string;
   areaProdu: string;
   descripcion: string;
@@ -119,6 +119,8 @@ export interface DetalleFacturaPayload {
   pntVenta: string;
   mozo: string;
   numHabita: string;
+  lstPrecio: string;
+  planTarifa: string;
 }
 
 export interface PagoFacturaPayload {

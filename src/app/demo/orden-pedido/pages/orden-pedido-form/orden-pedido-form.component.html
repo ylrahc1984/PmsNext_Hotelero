@@ -116,19 +116,19 @@
             <div class="col-lg-4 col-md-6">
               <label class="form-label op-label">Código Cliente</label>
               <div class="input-group">
-                <input class="form-control" formControlName="codCliente" placeholder="Código cliente">
-                <button class="btn btn-outline-primary" type="button" (click)="abrirModalClientes()" [disabled]="isSubmitting">
+                <input class="form-control" formControlName="codCliente" placeholder="Código cliente" [readonly]="modoReserva">
+                <button class="btn btn-outline-primary" type="button" (click)="abrirModalClientes()" [disabled]="isSubmitting || modoReserva">
                   <i class="feather icon-search"></i>
                 </button>
               </div>
               <div class="op-client-selected" *ngIf="selectedCliente">
                 {{ selectedCliente.codigo }} - {{ selectedCliente.nombre }}
-                <button type="button" class="btn btn-link btn-sm p-0 ms-2" (click)="limpiarSeleccionCliente()">Limpiar</button>
+                <button type="button" class="btn btn-link btn-sm p-0 ms-2" *ngIf="!modoReserva" (click)="limpiarSeleccionCliente()">Limpiar</button>
               </div>
             </div>
             <div class="col-lg-8">
               <label class="form-label op-label">Nombre</label>
-              <input class="form-control" formControlName="nomCliente" placeholder="Nombre del cliente">
+              <input class="form-control" formControlName="nomCliente" placeholder="Nombre del cliente" [readonly]="modoReserva">
             </div>
             <div class="col-lg-4 col-md-6">
               <label class="form-label op-label">Cédula</label>
@@ -160,10 +160,48 @@
               <i class="feather icon-grid text-muted"></i>
               <h6 class="op-section-title mb-0">Detalle</h6>
             </div>
-            <button class="btn btn-sm btn-outline-primary op-outline-btn" type="button" (click)="abrirModalServicios()">
-              <i class="feather icon-plus me-1"></i>
-              Agregar servicio
-            </button>
+            <div class="d-flex align-items-center flex-wrap gap-2 op-reserva-actions">
+              <span class="badge op-reserva-badge" *ngIf="modoReserva">
+                Documento desde Reserva: {{ reservaActual || '-' }}
+              </span>
+              <button
+                class="btn btn-sm btn-outline-danger op-outline-btn"
+                type="button"
+                *ngIf="modoReserva"
+                (click)="quitarReserva()"
+                [disabled]="reservaLoading || isSubmitting"
+              >
+                <span *ngIf="reservaLoading" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                <i class="feather icon-x" *ngIf="!reservaLoading"></i>
+                Quitar Reserva
+              </button>
+              <button
+                class="btn btn-sm btn-outline-primary op-outline-btn"
+                type="button"
+                *ngIf="!modoReserva"
+                (click)="abrirModalReserva()"
+                [disabled]="isSubmitting || reservaLoading"
+              >
+                <span *ngIf="reservaLoading" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                <i class="feather icon-clipboard me-1" *ngIf="!reservaLoading"></i>
+                Cargar desde Reserva
+              </button>
+              <button
+                class="btn btn-sm btn-outline-primary op-outline-btn"
+                type="button"
+                *ngIf="!modoReserva"
+                (click)="abrirModalServicios()"
+                [disabled]="isSubmitting"
+              >
+                <i class="feather icon-plus me-1"></i>
+                Agregar servicio
+              </button>
+            </div>
+          </div>
+
+          <div class="alert alert-warning py-2 mb-3" *ngIf="reservaErrorMessage">
+            <i class="feather icon-alert-circle me-1"></i>
+            {{ reservaErrorMessage }}
           </div>
 
           <div class="table-responsive">
@@ -181,10 +219,32 @@
                 </tr>
               </thead>
               <tbody formArrayName="detalle">
-                <tr *ngFor="let group of detalleArray.controls; let i = index; trackBy: trackByIndex" [formGroupName]="i">
+                <tr
+                  *ngFor="let group of detalleArray.controls; let i = index; trackBy: trackByIndex"
+                  [formGroupName]="i"
+                  [class.op-detail-row--invalid]="modoReserva && group.get('canProdu')?.invalid && (group.get('canProdu')?.dirty || group.get('canProdu')?.touched)"
+                >
                   <td><input class="form-control form-control-sm" formControlName="codProdu" placeholder="Código" readonly></td>
                   <td><input class="form-control form-control-sm" formControlName="producto" placeholder="Descripción" readonly></td>
-                  <td><input type="number" class="form-control form-control-sm text-end" formControlName="canProdu" min="0" step="0.01"></td>
+                  <td>
+                    <input
+                      type="number"
+                      class="form-control form-control-sm text-end"
+                      formControlName="canProdu"
+                      min="0"
+                      step="0.01"
+                      [attr.max]="modoReserva ? group.get('saldoPendiente')?.value : null"
+                    >
+                    <div
+                      class="op-qty-error"
+                      *ngIf="modoReserva && group.get('canProdu')?.invalid && (group.get('canProdu')?.dirty || group.get('canProdu')?.touched)"
+                    >
+                      <span *ngIf="group.get('canProdu')?.errors?.['min']">Cantidad debe ser mayor a 0.</span>
+                      <span *ngIf="group.get('canProdu')?.errors?.['max']">
+                        Maximo: {{ group.get('saldoPendiente')?.value | number:'1.0-2' }}
+                      </span>
+                    </div>
+                  </td>
                   <td><input type="number" class="form-control form-control-sm text-end" formControlName="pUndLst" min="0" step="0.01"></td>
                   <td><input type="number" class="form-control form-control-sm text-end" formControlName="mtoDescu" readonly></td>
                   <td><input type="number" class="form-control form-control-sm text-end" formControlName="mtoImpu" readonly></td>
@@ -375,3 +435,10 @@
   (close)="cerrarModalServicios()"
   (servicioSelected)="onServicioSelected($event)"
 ></app-selector-servicios-modal>
+
+<app-reserva-pendiente-modal
+  *ngIf="showReservaModal"
+  [open]="showReservaModal"
+  (close)="cerrarModalReserva()"
+  (reservaSeleccionada)="onReservaSeleccionada($event)"
+></app-reserva-pendiente-modal>

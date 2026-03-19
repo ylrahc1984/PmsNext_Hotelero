@@ -1,13 +1,15 @@
 import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { FormArray, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { distinctUntilChanged, finalize } from 'rxjs/operators';
+import { forkJoin, of } from 'rxjs';
+import { catchError, distinctUntilChanged, finalize } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
 import { ClienteUI } from 'src/app/demo/catalogos/agencias-comisionistas/cliente.models';
 import { ActividadComercialService } from 'src/app/demo/catalogos/agencias-comisionistas/actividad-comercial/actividad-comercial.service';
+import { ClienteService } from 'src/app/demo/catalogos/agencias-comisionistas/cliente.service';
 import { ListaPrecioUI } from 'src/app/demo/catalogos/listas-precios/lista-precio.models';
 import { ListaPrecioService } from 'src/app/demo/catalogos/listas-precios/lista-precio.service';
 import { PlanesTarifasService, PlanTarifaUI } from 'src/app/demo/catalogos/listas-precios/planes-tarifas.service';
@@ -19,8 +21,11 @@ import { UsuarioService } from 'src/app/demo/administracion/usuarios/usuario.ser
 import { AuthService } from 'src/app/core/services/auth.service';
 import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
 import { NuevaFacturaClienteModalComponent } from 'src/app/finanzas/pages-factura/nueva-factura/nueva-factura-cliente-modal/nueva-factura-cliente-modal.component';
+import { ReservaPendienteModalComponent } from 'src/app/finanzas/pages-factura/nueva-factura/reserva-pendiente-modal/reserva-pendiente-modal.component';
 import { SelectorServiciosModalComponent } from 'src/app/finanzas/pages-factura/nueva-factura/selector-servicios-modal/selector-servicios-modal.component';
 import { ModoPrecio, ServicioListaPrecioItem } from 'src/app/finanzas/services/servicios-lista-precio.service';
+import { ReservaPendienteDetalle, ReservasFacturacionService } from 'src/app/finanzas/services/reservas-facturacion.service';
+import { ReservasService } from 'src/app/demo/reservas/services/reservas.service';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import {
   OrdenPedidoCreatePayload,
@@ -33,15 +38,25 @@ import { OrdenPedidoService } from '../../services/orden-pedido.service';
 @Component({
   selector: 'app-orden-pedido-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, SharedModule, NuevaFacturaClienteModalComponent, SelectorServiciosModalComponent],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    RouterModule,
+    SharedModule,
+    NuevaFacturaClienteModalComponent,
+    SelectorServiciosModalComponent,
+    ReservaPendienteModalComponent
+  ],
   templateUrl: './orden-pedido-form.component.html',
   styleUrls: ['./orden-pedido-form.component.scss']
 })
 export class OrdenPedidoFormComponent implements OnInit {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly authService = inject(AuthService);
   private readonly actividadComercialService = inject(ActividadComercialService);
+  private readonly clienteService = inject(ClienteService);
   private readonly planesTarifasService = inject(PlanesTarifasService);
   private readonly listaPrecioService = inject(ListaPrecioService);
   private readonly monedaService = inject(MonedaService);
@@ -50,6 +65,8 @@ export class OrdenPedidoFormComponent implements OnInit {
   private readonly empresaContext = inject(EmpresaContextService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly ordenPedidoService = inject(OrdenPedidoService);
+  private readonly reservasFacturacionService = inject(ReservasFacturacionService);
+  private readonly reservasService = inject(ReservasService);
 
   readonly empresa = this.empresaContext.empresa;
   readonly tiposDocumento = [
@@ -102,6 +119,11 @@ export class OrdenPedidoFormComponent implements OnInit {
   showClienteModal = false;
   selectedCliente: ClienteUI | null = null;
   showServicioModal = false;
+  showReservaModal = false;
+  modoReserva = false;
+  reservaActual: string | null = null;
+  reservaLoading = false;
+  reservaErrorMessage = '';
   clienteCorreo = '';
   clienteCodigoActividad = '';
   clienteActividadLoading = false;
@@ -132,6 +154,12 @@ export class OrdenPedidoFormComponent implements OnInit {
       .pipe(distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
       .subscribe((listaPrecio) => {
         this.onListaPrecioChange((listaPrecio || '').toString());
+        this.syncDetalleCatalogCodes();
+      });
+    this.form.controls.planTarifario.valueChanges
+      .pipe(distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.syncDetalleCatalogCodes();
       });
     this.form.controls.exoneracionActiva.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((active) => {
       if (!active) {
@@ -152,6 +180,7 @@ export class OrdenPedidoFormComponent implements OnInit {
     this.loadPuntosVenta();
     this.loadPlanesTarifarios();
     this.loadListasPrecio();
+    this.initReservaFromQuery();
     this.recalculateTotals();
   }
 
@@ -202,10 +231,16 @@ export class OrdenPedidoFormComponent implements OnInit {
   }
 
   abrirModalClientes(): void {
+    if (this.modoReserva) {
+      return;
+    }
     this.showClienteModal = true;
   }
 
   abrirModalServicios(): void {
+    if (this.modoReserva) {
+      return;
+    }
     const codLista = (this.form.controls.listaPrecio.value || '').toString().trim();
     if (!codLista) {
       window.alert('Seleccione la lista de precios antes de agregar servicios.');
@@ -218,7 +253,40 @@ export class OrdenPedidoFormComponent implements OnInit {
     this.showServicioModal = false;
   }
 
+  abrirModalReserva(): void {
+    if (this.isSubmitting || this.modoReserva) {
+      return;
+    }
+    this.showReservaModal = true;
+    this.reservaErrorMessage = '';
+  }
+
+  cerrarModalReserva(): void {
+    this.showReservaModal = false;
+  }
+
+  onReservaSeleccionada(selection: { codReserva: string; codAgencia: string }): void {
+    this.showReservaModal = false;
+    if (this.isSubmitting) {
+      return;
+    }
+    this.cargarReservaDesdeSeleccion(selection);
+  }
+
+  quitarReserva(): void {
+    if (this.isSubmitting || this.reservaLoading) {
+      return;
+    }
+    this.reservaActual = null;
+    this.reservaErrorMessage = '';
+    this.setModoReserva(false);
+    this.clearDetalle();
+  }
+
   onClienteSelected(cliente: ClienteUI): void {
+    if (this.modoReserva) {
+      return;
+    }
     this.selectedCliente = cliente;
     this.clienteCorreo = cliente.emailPrincipal || cliente.email || '';
     this.form.patchValue(
@@ -234,11 +302,17 @@ export class OrdenPedidoFormComponent implements OnInit {
   }
 
   onServicioSelected(servicio: ServicioListaPrecioItem): void {
+    if (this.modoReserva) {
+      return;
+    }
     this.showServicioModal = false;
     this.addDetalleFromServicio(servicio);
   }
 
   limpiarSeleccionCliente(): void {
+    if (this.modoReserva) {
+      return;
+    }
     this.selectedCliente = null;
     this.clienteCorreo = '';
     this.clienteCodigoActividad = '';
@@ -399,7 +473,10 @@ export class OrdenPedidoFormComponent implements OnInit {
       producto: this.fb.control('', { validators: [Validators.required] }),
       area: this.fb.control('TOURS'),
       uMedida: this.fb.control('Unid'),
+      lstPrecio: this.fb.control(this.form.controls.listaPrecio.value),
+      planTarifa: this.fb.control(this.form.controls.planTarifario.value),
       canProdu: this.fb.control(1, { validators: [Validators.required, Validators.min(0.01)] }),
+      saldoPendiente: this.fb.control(0),
       pUndLst: this.fb.control(0, { validators: [Validators.required, Validators.min(0)] }),
       porDescu: this.fb.control(0),
       mtoDescu: this.fb.control(0),
@@ -418,6 +495,8 @@ export class OrdenPedidoFormComponent implements OnInit {
         producto: (servicio.nombreServicio || '').toString(),
         area: 'TOURS',
         uMedida: 'Unid',
+        lstPrecio: this.form.controls.listaPrecio.value,
+        planTarifa: this.form.controls.planTarifario.value,
         canProdu: 1,
         pUndLst: Number(servicio.precioUnitario ?? 0) || 0,
         porDescu: 0,
@@ -595,6 +674,7 @@ export class OrdenPedidoFormComponent implements OnInit {
               emitEvent: false
             });
           }
+          this.syncDetalleCatalogCodes();
         },
         error: () => {
           this.planesTarifariosCatalogo = [];
@@ -622,10 +702,12 @@ export class OrdenPedidoFormComponent implements OnInit {
           if (!current || !exists) {
             this.form.controls.listaPrecio.setValue(defaultValue, { emitEvent: false });
             this.previousListaPrecio = defaultValue;
+            this.syncDetalleCatalogCodes();
             return;
           }
 
           this.previousListaPrecio = (current || '').toString();
+          this.syncDetalleCatalogCodes();
         },
         error: () => {
           this.listasPrecioCatalogo = [];
@@ -670,6 +752,202 @@ export class OrdenPedidoFormComponent implements OnInit {
     this.recalculateTotals();
   }
 
+  private cargarReservaDesdeSeleccion(selection: { codReserva: string; codAgencia: string }): void {
+    const codReserva = (selection?.codReserva ?? '').toString().trim();
+    const codAgencia = (selection?.codAgencia ?? '').toString().trim();
+
+    if (!codReserva) {
+      return;
+    }
+
+    this.reservaLoading = true;
+    this.reservaErrorMessage = '';
+
+    forkJoin({
+      detalle: this.reservasFacturacionService.getDetalle(codReserva),
+      cliente: codAgencia
+        ? this.clienteService.getClienteByCodigo(codAgencia).pipe(catchError(() => of(null)))
+        : of(null)
+    })
+      .pipe(
+        finalize(() => {
+          this.reservaLoading = false;
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: ({ detalle, cliente }) => {
+          this.reservaActual = codReserva;
+          this.aplicarClienteReserva(cliente, codAgencia);
+          this.aplicarCatalogosReserva(detalle ?? []);
+          this.setModoReserva(true);
+          this.aplicarDetalleReserva(detalle ?? []);
+        },
+        error: (error: unknown) => {
+          this.reservaErrorMessage = error instanceof Error ? error.message : 'No se pudo cargar la reserva seleccionada.';
+        }
+      });
+  }
+
+  private initReservaFromQuery(): void {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      const codReserva = (params.get('codReserva') ?? '').toString().trim();
+      const codAgencia = (params.get('codAgencia') ?? '').toString().trim();
+
+      if (!codReserva || this.isSubmitting) {
+        return;
+      }
+
+      if (this.modoReserva && this.reservaActual === codReserva) {
+        return;
+      }
+
+      if (codAgencia) {
+        this.cargarReservaDesdeSeleccion({ codReserva, codAgencia });
+        return;
+      }
+
+      this.reservaLoading = true;
+      this.reservaErrorMessage = '';
+
+      this.reservasService
+        .getReservaByCod(codReserva)
+        .pipe(
+          finalize(() => {
+            this.reservaLoading = false;
+          }),
+          takeUntilDestroyed(this.destroyRef)
+        )
+        .subscribe({
+          next: (reserva) => {
+            const agencia = (reserva?.PRV01_CodAgencia ?? '').toString().trim();
+            if (!agencia) {
+              this.reservaErrorMessage = 'No se pudo determinar el código de agencia para cargar la reserva.';
+              return;
+            }
+            this.cargarReservaDesdeSeleccion({ codReserva, codAgencia: agencia });
+          },
+          error: (error: unknown) => {
+            this.reservaErrorMessage = error instanceof Error ? error.message : 'No se pudo cargar la reserva seleccionada.';
+          }
+        });
+    });
+  }
+
+  private aplicarClienteReserva(cliente: ClienteUI | null, codAgencia: string): void {
+    if (cliente) {
+      this.selectedCliente = cliente;
+      this.clienteCorreo = cliente.emailPrincipal || cliente.email || '';
+      this.form.patchValue(
+        {
+          codCliente: cliente.codigo,
+          nomCliente: cliente.nombre,
+          rucCliente: cliente.ruc
+        },
+        { emitEvent: false }
+      );
+      this.loadClienteActividad(cliente.ruc);
+    } else {
+      this.selectedCliente = null;
+      this.clienteCorreo = '';
+      this.clienteCodigoActividad = '';
+      this.form.patchValue(
+        {
+          codCliente: codAgencia,
+          nomCliente: '',
+          rucCliente: ''
+        },
+        { emitEvent: false }
+      );
+    }
+
+    this.setClienteEditable(false);
+  }
+
+  private aplicarDetalleReserva(detalles: ReservaPendienteDetalle[]): void {
+    this.detalleArray.clear();
+
+    detalles
+      .filter((item) => this.toNumber(item.saldoPendiente) > 0)
+      .forEach((item) => {
+        const saldo = this.toNumber(item.saldoPendiente);
+        const totalPax = this.toNumber(item.totalPax);
+        const neto = this.toNumber(item.neto);
+        const impuestoMonto = this.toNumber(item.impuesto);
+        const porImp = neto > 0 ? (impuestoMonto / neto) * 100 : 0;
+        const precioUnit = totalPax > 0 ? neto / totalPax : 0;
+
+        const group = this.createDetalleGroup();
+        group.patchValue(
+          {
+            codProdu: (item.codServicio || '').toString(),
+            producto: (item.nomServicio || '').toString(),
+            area: (item.codGrupo || 'TOURS').toString(),
+            uMedida: (item.uMedida || 'Unid').toString(),
+            lstPrecio: (item.codLstPrecio || this.form.controls.listaPrecio.value || '').toString(),
+            planTarifa: (item.planTarifario || this.form.controls.planTarifario.value || '').toString(),
+            canProdu: saldo,
+            saldoPendiente: saldo,
+            pUndLst: this.round(precioUnit),
+            porDescu: this.toNumber(item.porDescuento),
+            porImpu: this.round(porImp)
+          },
+          { emitEvent: false }
+        );
+
+        const validators = [Validators.required, Validators.min(0.01)];
+        if (saldo > 0) {
+          validators.push(Validators.max(saldo));
+        }
+        group.controls['canProdu'].setValidators(validators);
+        group.controls['canProdu'].updateValueAndValidity({ emitEvent: false });
+
+        this.detalleArray.push(group);
+      });
+
+    this.recalculateTotals();
+  }
+
+  private setModoReserva(active: boolean): void {
+    this.modoReserva = active;
+    this.setClienteEditable(!active);
+    this.setPlanTarifarioEditable(!active);
+    this.setListaPrecioEditable(!active);
+  }
+
+  private setClienteEditable(enabled: boolean): void {
+    const controls = [this.form.controls.codCliente, this.form.controls.nomCliente];
+
+    controls.forEach((control) => {
+      if (enabled && control.disabled) {
+        control.enable({ emitEvent: false });
+      }
+      if (!enabled && control.enabled) {
+        control.disable({ emitEvent: false });
+      }
+    });
+  }
+
+  private setListaPrecioEditable(enabled: boolean): void {
+    const control = this.form.controls.listaPrecio;
+    if (enabled && control.disabled) {
+      control.enable({ emitEvent: false });
+    }
+    if (!enabled && control.enabled) {
+      control.disable({ emitEvent: false });
+    }
+  }
+
+  private setPlanTarifarioEditable(enabled: boolean): void {
+    const control = this.form.controls.planTarifario;
+    if (enabled && control.disabled) {
+      control.enable({ emitEvent: false });
+    }
+    if (!enabled && control.enabled) {
+      control.disable({ emitEvent: false });
+    }
+  }
+
   private applyPuntosVentaCatalogo(puntosVenta: PuntoVentaUI[]): void {
     this.puntosVentaCatalogo = puntosVenta;
 
@@ -693,6 +971,43 @@ export class OrdenPedidoFormComponent implements OnInit {
 
     exoneracionForm.controls.montoExoneracion.setValue(this.round(monto), { emitEvent: false });
     return this.round(monto);
+  }
+
+  private syncDetalleCatalogCodes(): void {
+    if (this.modoReserva) {
+      return;
+    }
+
+    const lstPrecio = (this.form.controls.listaPrecio.value || '').toString();
+    const planTarifa = (this.form.controls.planTarifario.value || '').toString();
+
+    this.detalleArray.controls.forEach((group) => {
+      if (String(group.get('lstPrecio')?.value ?? '') !== lstPrecio) {
+        group.get('lstPrecio')?.setValue(lstPrecio, { emitEvent: false });
+      }
+      if (String(group.get('planTarifa')?.value ?? '') !== planTarifa) {
+        group.get('planTarifa')?.setValue(planTarifa, { emitEvent: false });
+      }
+    });
+  }
+
+  private aplicarCatalogosReserva(detalles: ReservaPendienteDetalle[]): void {
+    const primerDetalle = detalles.find((item) => (item.codLstPrecio || item.planTarifario || '').toString().trim());
+    if (!primerDetalle) {
+      return;
+    }
+
+    const lstPrecio = (primerDetalle.codLstPrecio || '').toString().trim();
+    const planTarifario = (primerDetalle.planTarifario || '').toString().trim();
+
+    if (lstPrecio) {
+      this.form.controls.listaPrecio.setValue(lstPrecio, { emitEvent: false });
+      this.previousListaPrecio = lstPrecio;
+    }
+
+    if (planTarifario) {
+      this.form.controls.planTarifario.setValue(planTarifario, { emitEvent: false });
+    }
   }
 
   private loadClienteActividad(cedula: string): void {
@@ -848,7 +1163,9 @@ export class OrdenPedidoFormComponent implements OnInit {
         tCambio,
         orden: index + 1,
         uMedidaDos: '',
-        canProduDos: 0
+        canProduDos: 0,
+        lstPrecio: this.cleanText(raw['lstPrecio']) || this.cleanText(this.form.controls.listaPrecio.value),
+        planTarifa: this.cleanText(raw['planTarifa']) || this.cleanText(this.form.controls.planTarifario.value)
       };
     });
   }
