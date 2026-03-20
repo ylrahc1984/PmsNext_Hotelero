@@ -11,7 +11,7 @@
 <div class="row">
   @for (sale of sales; track sale) {
     <div class="{{ sale.design }}">
-      <app-card [hidHeader]="true">
+      <app-card [hidHeader]="true" blockClass="dashboard-card-block dashboard-card-block--metric">
         <h6 class="mb-4">{{ sale.title }}</h6>
         <div class="row d-flex align-items-center">
           <div class="col-9">
@@ -34,7 +34,7 @@
 
 <div class="row mt-4">
   <div class="col-12">
-    <app-card cardTitle="Accesos Rápidos">
+    <app-card cardTitle="Accesos Rápidos" blockClass="dashboard-card-block dashboard-card-block--compact">
       <div class="quick-actions">
         <button class="quick-action quick-action--primary" routerLink="/operaciones/reservas/nueva-v2">
           <span class="quick-action__icon">

@@ -21,6 +21,26 @@
           </button>
 
           <button
+            class="btn btn-success rsv-action-btn rsv-action-btn--primary rsv-action-btn--compact"
+            type="button"
+            (click)="irFacturarReserva()"
+            [disabled]="!codReserva"
+          >
+            <span class="rsv-action-btn__icon"><i class="feather icon-file-text"></i></span>
+            <span>Facturar</span>
+          </button>
+
+          <button
+            class="btn btn-outline-dark rsv-action-btn rsv-action-btn--outline rsv-action-btn--compact"
+            type="button"
+            (click)="irOrdenPedido()"
+            [disabled]="!codReserva"
+          >
+            <span class="rsv-action-btn__icon"><i class="feather icon-clipboard"></i></span>
+            <span>Orden Pedido</span>
+          </button>
+
+          <button
             class="btn btn-outline-primary rsv-action-btn rsv-action-btn--outline rsv-action-btn--compact"
             type="button"
             (click)="editarReserva()"

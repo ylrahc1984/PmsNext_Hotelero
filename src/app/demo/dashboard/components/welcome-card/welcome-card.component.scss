@@ -3,12 +3,12 @@
     radial-gradient(circle at top right, rgba(255, 255, 255, 0.2), transparent 34%),
     linear-gradient(135deg, var(--color-primary), var(--color-accent));
   border-radius: 20px;
-  padding: 28px;
+  padding: 22px 28px;
   color: #fff;
   display: flex;
-  gap: 20px;
+  gap: 18px;
   align-items: center;
-  min-height: 230px;
+  min-height: 208px;
   box-shadow: var(--shadow-soft, 0 18px 44px rgba(15, 23, 42, 0.18));
   border: 1px solid rgba(255, 255, 255, 0.14);
   transition: all 0.3s ease;
@@ -74,6 +74,7 @@
 
 @media (max-width: 767.98px) {
   .welcome-card {
+    padding: 20px 22px;
     flex-direction: column;
     align-items: flex-start;
   }

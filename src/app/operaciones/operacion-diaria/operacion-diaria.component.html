@@ -115,10 +115,9 @@
                   </td>
                   <td>
                     <div class="d-flex flex-wrap align-items-center gap-2">
-                      <span class="service-chip" [ngClass]="getServiceColor(detalle.codServicio)">
+                      <span class="service-chip fw-bold" [ngClass]="getServiceColor(detalle.codServicio)">
                         {{ detalle.nomServicio }}
                       </span>
-                      <span class="text-muted small">{{ detalle.codServicio }}</span>
                     </div>
                     <div class="text-muted small">{{ detalle.planTarifa }} - {{ detalle.tipoTarifa }}</div>
                   </td>
@@ -163,6 +162,17 @@
                         triggers="hover focus"
                         title="Observacion"
                         aria-label="Observacion"
+                        tabindex="0"
+                      ></i>
+                      <i
+                        *ngIf="detalle.observacionOperacion && detalle.observacionOperacion.trim().length"
+                        class="feather icon-alert-circle indicator-row__icon--operacion"
+                        [ngbPopover]="detalle.observacionOperacion"
+                        popoverTitle="Observacion Operacion"
+                        container="body"
+                        triggers="hover focus"
+                        title="Observacion Operacion"
+                        aria-label="Observacion Operacion"
                         tabindex="0"
                       ></i>
                     </div>
@@ -220,6 +230,20 @@
                           </span>
                           <span class="action-item__content">
                             <span class="action-item__label">{{ isPrintingVoucher(detalle) ? 'Imprimiendo...' : 'Imprimir Voucher' }}</span>
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          ngbDropdownItem
+                          class="dropdown-item action-item"
+                          (click)="onEditarObservacion(detalle)"
+                          [disabled]="!detalle.prV02_CodReserva"
+                        >
+                          <span class="action-item__icon action-item__icon--slate">
+                            <i class="feather icon-message-square" aria-hidden="true"></i>
+                          </span>
+                          <span class="action-item__content">
+                            <span class="action-item__label">{{ hasObservacionOperacion(detalle) ? 'Actualizar comentario' : 'Agregar comentario' }}</span>
                           </span>
                         </button>
                         <button
@@ -307,4 +331,95 @@
       </div>
     </div>
   </ng-container>
+
+  <div
+    *ngIf="observacionModalOpen"
+    class="observacion-modal-backdrop"
+    (click)="closeObservacionModal()"
+  >
+    <div
+      class="observacion-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="observacion-modal-title"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="observacion-modal__header">
+        <div>
+          <div class="observacion-modal__eyebrow">Recepción</div>
+          <h3 id="observacion-modal-title" class="observacion-modal__title">
+            {{ hasObservacionOperacion(observacionDetalleSeleccionado) ? 'Actualizar comentario operativo' : 'Agregar comentario operativo' }}
+          </h3>
+          <p class="observacion-modal__subtitle">
+            Registra una observación breve para que el equipo de recepción la tenga visible durante la operación.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          class="observacion-modal__close"
+          (click)="closeObservacionModal()"
+          [disabled]="savingObservacion"
+          aria-label="Cerrar modal"
+        >
+          <i class="feather icon-x" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div *ngIf="observacionDetalleSeleccionado as detalle" class="observacion-modal__context">
+        <div class="observacion-context-card">
+          <span class="observacion-context-card__label">Reserva</span>
+          <strong>#{{ detalle.prV02_CodReserva }}</strong>
+          <small>{{ detalle.prV02_FecServicio | date:'dd/MM/yyyy' }}</small>
+        </div>
+        <div class="observacion-context-card">
+          <span class="observacion-context-card__label">Cliente</span>
+          <strong>{{ detalle.cliente }}</strong>
+          <small>{{ detalle.agencia }}</small>
+        </div>
+        <div class="observacion-context-card">
+          <span class="observacion-context-card__label">Servicio</span>
+          <strong>{{ detalle.nomServicio }}</strong>
+          <small>{{ detalle.lugarPickup }}</small>
+        </div>
+      </div>
+
+      <form class="observacion-modal__form" [formGroup]="observacionForm" (ngSubmit)="guardarObservacionOperacion()">
+        <label for="observacion-operacion-textarea" class="form-label observacion-modal__label">Comentario</label>
+        <textarea
+          id="observacion-operacion-textarea"
+          class="form-control observacion-modal__textarea"
+          formControlName="nuevaObservacion"
+          rows="5"
+          [attr.maxlength]="observacionMaxLength"
+          placeholder="Ej. Cliente solicita confirmar pickup en lobby, familia llega 15 minutos antes, llevar observación a recepción..."
+        ></textarea>
+
+        <div class="observacion-modal__meta">
+          <span class="observacion-modal__helper">
+            {{ hasObservacionOperacion(observacionDetalleSeleccionado) ? 'Se cargó el comentario actual para editarlo.' : 'El comentario se guardará sobre la reserva seleccionada.' }}
+          </span>
+          <span class="observacion-modal__counter">
+            {{ observacionControl.value.length }}/{{ observacionMaxLength }}
+          </span>
+        </div>
+
+        <div *ngIf="observacionControl.invalid && observacionControl.touched" class="observacion-modal__error">
+          El comentario es requerido.
+        </div>
+
+        <div class="observacion-modal__actions">
+          <button type="button" class="btn btn-light" (click)="closeObservacionModal()" [disabled]="savingObservacion">Cancelar</button>
+          <button
+            type="submit"
+            class="btn btn-primary"
+            [disabled]="savingObservacion || observacionForm.invalid || observacionSinCambios"
+          >
+            <span *ngIf="savingObservacion" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+            {{ savingObservacion ? 'Guardando...' : (hasObservacionOperacion(observacionDetalleSeleccionado) ? 'Actualizar comentario' : 'Guardar comentario') }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>

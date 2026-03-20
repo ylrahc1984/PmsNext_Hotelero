@@ -12,6 +12,7 @@ import { AuthService } from 'src/app/core/services/auth.service';
 import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
 import { environment } from 'src/environments/environment';
 import {
+  ActualizarObservacionOperacionPayload,
   BloqueHora,
   OperacionDetalle,
   OperacionDiariaResponse,
@@ -19,18 +20,18 @@ import {
 } from './models/operacion-diaria.model';
 
 interface OperacionDiariaViewState {
-  loading: boolean;
-  error: string | null;
-  data: OperacionDiariaResponse | null;
+  loading   : boolean;
+  error     : string | null;
+  data      : OperacionDiariaResponse | null;
 }
 
 interface PrintVoucherPayload {
-  empresa: string;
-  fechaActividad: string;
-  servicio: string;
-  numeroTicket: number;
-  numeroReserva: number;
-  totalPax: number;
+  empresa           : string;
+  fechaActividad    : string;
+  servicio          : string;
+  numeroTicket      : number;
+  numeroReserva     : number;
+  totalPax          : number;
 }
 
 @Component({
@@ -61,12 +62,17 @@ export class OperacionDiariaComponent {
   });
 
   readonly autoRefresh = false;
+  readonly observacionMaxLength = 500;
   readonly pageSizes = [25, 50, 100];
   page = 1;
   pageSize = 50;
   totalRegistros = 0;
   checkingIn = new Set<number | string>();
   printingVouchers = new Set<number | string>();
+  observacionModalOpen = false;
+  savingObservacion = false;
+  observacionDetalleSeleccionado: OperacionDetalle | null = null;
+  private observacionOriginal = '';
 
   private readonly manualRefresh$ = new Subject<void>();
   private readonly autoRefresh$ = this.form.valueChanges.pipe(
@@ -81,6 +87,12 @@ export class OperacionDiariaComponent {
 
   private readonly refresh$ = merge(this.manualRefresh$, this.autoRefresh$).pipe(startWith(void 0));
   private resumenPorHora = new Map<string, ResumenActividadHora[]>();
+  readonly observacionForm = this.fb.group({
+    nuevaObservacion: this.fb.control('', {
+      validators: [Validators.required, Validators.maxLength(this.observacionMaxLength)],
+      nonNullable: true
+    })
+  });
 
   readonly vm$: Observable<OperacionDiariaViewState> = this.refresh$.pipe(
     map(() => this.buildParams()),
@@ -155,6 +167,14 @@ export class OperacionDiariaComponent {
 
   getResumenPorHora(hora: string): ResumenActividadHora[] {
     return this.resumenPorHora.get(hora) ?? [];
+  }
+
+  get observacionControl() {
+    return this.observacionForm.controls.nuevaObservacion;
+  }
+
+  get observacionSinCambios(): boolean {
+    return this.observacionControl.value.trim() === this.observacionOriginal;
   }
 
   getEstadoBadge(estado: string): string {
@@ -335,6 +355,129 @@ export class OperacionDiariaComponent {
     return this.printingVouchers.has(this.getDetalleKey(detalle));
   }
 
+  hasObservacion(detalle: OperacionDetalle | null | undefined): boolean {
+    return this.hasTexto(detalle?.observacion);
+  }
+
+  hasObservacionOperacion(detalle: OperacionDetalle | null | undefined): boolean {
+    return this.hasTexto(detalle?.observacionOperacion);
+  }
+
+  onEditarObservacion(detalle: OperacionDetalle): void {
+    const codReserva = (detalle?.prV02_CodReserva ?? '').toString().trim();
+    if (!codReserva) {
+      Swal.fire({
+        title: 'Reserva inválida',
+        text: 'No se pudo determinar el código de la reserva para registrar el comentario.',
+        icon: 'warning'
+      });
+      return;
+    }
+
+    this.observacionOriginal = (detalle?.observacionOperacion ?? '').toString().trim();
+    this.observacionDetalleSeleccionado = detalle;
+    this.observacionForm.reset({
+      nuevaObservacion: this.observacionOriginal
+    });
+    this.observacionForm.markAsPristine();
+    this.observacionForm.markAsUntouched();
+    this.observacionModalOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  closeObservacionModal(force = false): void {
+    if (this.savingObservacion && !force) {
+      return;
+    }
+
+    this.observacionModalOpen = false;
+    this.observacionDetalleSeleccionado = null;
+    this.observacionOriginal = '';
+    this.observacionForm.reset({
+      nuevaObservacion: ''
+    });
+    this.observacionForm.enable({ emitEvent: false });
+    this.cdr.markForCheck();
+  }
+
+  guardarObservacionOperacion(): void {
+    if (this.savingObservacion) {
+      return;
+    }
+
+    const detalle = this.observacionDetalleSeleccionado;
+    const codReserva = (detalle?.prV02_CodReserva ?? '').toString().trim();
+    const nuevaObservacion = this.observacionControl.value.trim();
+
+    if (!codReserva) {
+      Swal.fire({
+        title: 'Reserva inválida',
+        text: 'No se pudo determinar el código de la reserva para guardar el comentario.',
+        icon: 'warning'
+      });
+      return;
+    }
+
+    if (!nuevaObservacion) {
+      this.observacionControl.markAsTouched();
+      this.observacionControl.setErrors({ required: true });
+      return;
+    }
+
+    if (this.observacionSinCambios) {
+      this.closeObservacionModal();
+      return;
+    }
+
+    const payload: ActualizarObservacionOperacionPayload = {
+      codReserva,
+      nuevaObservacion,
+      usuario: this.getOperador(),
+      resultado: 'string'
+    };
+
+    this.savingObservacion = true;
+    this.observacionForm.disable({ emitEvent: false });
+    this.cdr.markForCheck();
+
+    this.operacionDiariaService
+      .actualizarObservacionOperacion(payload)
+      .pipe(
+        finalize(() => {
+          this.savingObservacion = false;
+          if (this.observacionModalOpen) {
+            this.observacionForm.enable({ emitEvent: false });
+          }
+          this.cdr.markForCheck();
+        })
+      )
+      .subscribe({
+        next: (response) => {
+          if (detalle) {
+            detalle.observacionOperacion = nuevaObservacion;
+          }
+
+          this.closeObservacionModal(true);
+          Swal.fire({
+            title: 'Comentario actualizado',
+            text: response?.mensaje || `Observación actualizada exitosamente para la reserva ${codReserva}.`,
+            icon: response?.exito === false ? 'info' : 'success',
+            timer: 1900,
+            showConfirmButton: false
+          });
+          this.buscar();
+        },
+        error: (error) => {
+          console.error('Error actualizando observación de operación:', error);
+          Swal.fire({
+            title: 'Error',
+            text: 'No se pudo guardar el comentario de recepción.',
+            icon: 'error'
+          });
+        }
+      });
+  }
+
   getServiceColor(codServicio: string): string {
     const code = (codServicio ?? '').toString().trim().toUpperCase();
     if (code.startsWith('TOU') || code.startsWith('TUR') || code.startsWith('TOUR')) return 'chip--tours';
@@ -357,6 +500,10 @@ export class OperacionDiariaComponent {
 
   private getDetalleKey(detalle: OperacionDetalle): number | string {
     return detalle.prV02_ID ?? detalle.prV02_CodReserva ?? 'detalle';
+  }
+
+  private hasTexto(value: string | null | undefined): boolean {
+    return (value ?? '').toString().trim().length > 0;
   }
 
   private getOperador(): string {

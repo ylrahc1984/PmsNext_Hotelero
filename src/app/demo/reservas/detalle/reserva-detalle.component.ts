@@ -173,6 +173,20 @@ export class ReservaDetalleComponent implements OnInit, OnDestroy {
     this.router.navigate(['/operaciones/reservas', this.codReserva, 'editar']);
   }
 
+  irFacturarReserva(): void {
+    if (!this.codReserva) return;
+    this.router.navigate(['/finanzas/nueva-factura'], {
+      queryParams: this.buildReservaQueryParams()
+    });
+  }
+
+  irOrdenPedido(): void {
+    if (!this.codReserva) return;
+    this.router.navigate(['/demo/ordenes-pedido/nuevo'], {
+      queryParams: this.buildReservaQueryParams()
+    });
+  }
+
   async confirmarReserva(): Promise<void> {
     if (this.busyConfirm || !this.codReserva) return;
     if (normalizeReservaEstado(this.reserva?.PRV01_Estado ?? '') !== 'PEN') return;
@@ -336,5 +350,12 @@ export class ReservaDetalleComponent implements OnInit, OnDestroy {
       console.error('Error copiando enlace', err);
       void Swal.fire({ title: 'Error', text: 'No se pudo copiar el enlace.', icon: 'error' });
     }
+  }
+
+  private buildReservaQueryParams(): { codReserva: string; codAgencia?: string } {
+    const codAgencia = (this.reserva?.PRV01_CodAgencia ?? '').toString().trim();
+    return codAgencia
+      ? { codReserva: this.codReserva, codAgencia }
+      : { codReserva: this.codReserva };
   }
 }

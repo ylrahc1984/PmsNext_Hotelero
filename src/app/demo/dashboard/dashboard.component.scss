@@ -47,6 +47,16 @@
   background: linear-gradient(180deg, var(--color-surface), var(--color-surface-muted));
 }
 
+:host ::ng-deep .card .card-block.dashboard-card-block--compact {
+  padding-top: 20px;
+  padding-bottom: 20px;
+}
+
+:host ::ng-deep .card .card-block.dashboard-card-block--metric {
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+
 .row:first-of-type > [class*='col-'] {
   margin-bottom: 1.2rem;
 }

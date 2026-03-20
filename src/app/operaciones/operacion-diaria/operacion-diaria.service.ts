@@ -3,16 +3,20 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 import { environment } from 'src/environments/environment';
-import { OperacionDiariaResponse } from './models/operacion-diaria.model';
+import {
+  ActualizarObservacionOperacionPayload,
+  ActualizarObservacionOperacionResponse,
+  OperacionDiariaResponse
+} from './models/operacion-diaria.model';
 
 export interface OperacionDiariaParams {
-  fechaInicio: string;
-  fechaFin: string;
-  busqueda?: string;
-  agenciaId?: string;
-  choferId?: string;
-  page?: number;
-  pageSize?: number;
+  fechaInicio   : string;
+  fechaFin      : string;
+  busqueda      ?: string;
+  agenciaId     ?: string;
+  choferId      ?: string;
+  page          ?: number;
+  pageSize      ?: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -39,5 +43,11 @@ export class OperacionDiariaService {
     httpParams = httpParams.set('page', page.toString()).set('pageSize', pageSize.toString());
 
     return this.http.get<OperacionDiariaResponse>(`${this.baseUrl}/reportes/operacion-diaria`, { params: httpParams });
+  }
+
+  actualizarObservacionOperacion(
+    payload: ActualizarObservacionOperacionPayload
+  ): Observable<ActualizarObservacionOperacionResponse> {
+    return this.http.put<ActualizarObservacionOperacionResponse>(`${this.baseUrl}/reservas/observacion-operacion`, payload);
   }
 }
