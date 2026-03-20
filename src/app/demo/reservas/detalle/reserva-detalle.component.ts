@@ -24,6 +24,7 @@ export class ReservaDetalleComponent implements OnInit, OnDestroy {
   codReserva = '';
   reserva: Reserva | null = null;
   detalles: ReservaDetalle[] = [];
+  facturadoHint = false;
 
   loading = false;
   busyConfirm = false;
@@ -44,6 +45,12 @@ export class ReservaDetalleComponent implements OnInit, OnDestroy {
   readonly empresa = this.empresaContext.empresa;
 
   ngOnInit(): void {
+    this.route.queryParamMap
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((params) => {
+        this.facturadoHint = this.parseFacturadoFlag(params.get('facturado'));
+      });
+
     this.route.paramMap
       .pipe(
         takeUntil(this.destroy$),
@@ -87,6 +94,13 @@ export class ReservaDetalleComponent implements OnInit, OnDestroy {
       default:
         return 'bg-warning';
     }
+  }
+
+  get isFacturada(): boolean {
+    const raw = this.reserva?.PRV01_Facturado ?? this.reserva?.facturado;
+    if (raw === true) return true;
+    if (raw === false || raw === null || raw === undefined) return this.facturadoHint;
+    return Number(raw) === 1 || this.facturadoHint;
   }
 
   get cantidadServicios(): number {
@@ -169,19 +183,19 @@ export class ReservaDetalleComponent implements OnInit, OnDestroy {
   }
 
   editarReserva(): void {
-    if (!this.codReserva) return;
+    if (!this.codReserva || this.isFacturada) return;
     this.router.navigate(['/operaciones/reservas', this.codReserva, 'editar']);
   }
 
   irFacturarReserva(): void {
-    if (!this.codReserva) return;
+    if (!this.codReserva || this.isFacturada) return;
     this.router.navigate(['/finanzas/nueva-factura'], {
       queryParams: this.buildReservaQueryParams()
     });
   }
 
   irOrdenPedido(): void {
-    if (!this.codReserva) return;
+    if (!this.codReserva || this.isFacturada) return;
     this.router.navigate(['/demo/ordenes-pedido/nuevo'], {
       queryParams: this.buildReservaQueryParams()
     });
@@ -224,7 +238,7 @@ export class ReservaDetalleComponent implements OnInit, OnDestroy {
   }
 
   async cancelarReserva(): Promise<void> {
-    if (this.busyCancel || !this.codReserva) return;
+    if (this.busyCancel || !this.codReserva || this.isFacturada) return;
     if (normalizeReservaEstado(this.reserva?.PRV01_Estado ?? '') === 'CAN') return;
 
     const cliente = (this.reserva?.PRV01_NomCliente ?? '').toString().trim();
@@ -357,5 +371,13 @@ export class ReservaDetalleComponent implements OnInit, OnDestroy {
     return codAgencia
       ? { codReserva: this.codReserva, codAgencia }
       : { codReserva: this.codReserva };
+  }
+
+  private parseFacturadoFlag(value: unknown): boolean {
+    if (value === true) return true;
+    if (value === false || value === null || value === undefined) return false;
+
+    const normalized = String(value).trim().toLowerCase();
+    return normalized === '1' || normalized === 'true' || normalized === 'si' || normalized === 'sí';
   }
 }

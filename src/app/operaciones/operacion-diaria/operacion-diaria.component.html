@@ -251,7 +251,7 @@
                           ngbDropdownItem
                           class="dropdown-item action-item"
                           (click)="onFacturarReserva(detalle)"
-                          [disabled]="!detalle.prV02_CodReserva || !detalle.codAgencia"
+                          [disabled]="!detalle.prV02_CodReserva || !detalle.codAgencia || isReservaFacturada(detalle)"
                         >
                           <span class="action-item__icon action-item__icon--amber">
                             <i class="feather icon-file-text" aria-hidden="true"></i>

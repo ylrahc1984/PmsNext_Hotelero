@@ -2,7 +2,7 @@
   <div class="col-12">
     <app-card cardTitle="Detalle de Reserva">
       <div class="d-flex justify-content-between align-items-center mb-0 rsv-page-header">
-        <div>
+        <div class="rsv-page-header__info">
           <div class="d-flex align-items-center flex-wrap gap-1">
             <h5 class="mb-0">Reserva</h5>
             <span class="badge bg-light text-dark border" *ngIf="codReserva">#{{ codReserva }}</span>
@@ -14,53 +14,72 @@
           <p class="text-muted mb-0 small">Resumen, totales y servicios</p>
         </div>
 
-        <div class="d-flex flex-wrap gap-2">
-          <button class="btn btn-outline-secondary rsv-action-btn rsv-action-btn--outline rsv-action-btn--compact" routerLink="/operaciones/reservas">
-            <span class="rsv-action-btn__icon"><i class="feather icon-chevron-left"></i></span>
-            <span>Volver</span>
+        <div class="rsv-page-header__actions">
+          <button
+            class="btn rsv-top-action-btn rsv-top-action-btn--back"
+            routerLink="/operaciones/reservas"
+            type="button"
+          >
+            <span class="rsv-top-action-btn__icon" aria-hidden="true"><i class="feather icon-chevron-left"></i></span>
+            <span class="rsv-top-action-btn__content">
+              <span class="rsv-top-action-btn__label">Volver</span>
+              <small class="rsv-top-action-btn__hint">Lista de reservas</small>
+            </span>
           </button>
 
           <button
-            class="btn btn-success rsv-action-btn rsv-action-btn--primary rsv-action-btn--compact"
+            class="btn rsv-top-action-btn rsv-top-action-btn--success"
             type="button"
             (click)="irFacturarReserva()"
-            [disabled]="!codReserva"
+            [disabled]="!codReserva || isFacturada"
           >
-            <span class="rsv-action-btn__icon"><i class="feather icon-file-text"></i></span>
-            <span>Facturar</span>
+            <span class="rsv-top-action-btn__icon" aria-hidden="true"><i class="feather icon-file-text"></i></span>
+            <span class="rsv-top-action-btn__content">
+              <span class="rsv-top-action-btn__label">Facturar</span>
+              <small class="rsv-top-action-btn__hint">Crear documento</small>
+            </span>
           </button>
 
           <button
-            class="btn btn-outline-dark rsv-action-btn rsv-action-btn--outline rsv-action-btn--compact"
+            class="btn rsv-top-action-btn rsv-top-action-btn--dark"
             type="button"
             (click)="irOrdenPedido()"
-            [disabled]="!codReserva"
+            [disabled]="!codReserva || isFacturada"
           >
-            <span class="rsv-action-btn__icon"><i class="feather icon-clipboard"></i></span>
-            <span>Orden Pedido</span>
+            <span class="rsv-top-action-btn__icon" aria-hidden="true"><i class="feather icon-clipboard"></i></span>
+            <span class="rsv-top-action-btn__content">
+              <span class="rsv-top-action-btn__label">Recibo</span>
+              <small class="rsv-top-action-btn__hint">Generar orden</small>
+            </span>
           </button>
 
           <button
-            class="btn btn-outline-primary rsv-action-btn rsv-action-btn--outline rsv-action-btn--compact"
+            class="btn rsv-top-action-btn rsv-top-action-btn--primary"
             type="button"
             (click)="editarReserva()"
-            [disabled]="!codReserva"
+            [disabled]="!codReserva || isFacturada"
           >
-            <span class="rsv-action-btn__icon"><i class="feather icon-edit"></i></span>
-            <span>Editar</span>
+            <span class="rsv-top-action-btn__icon" aria-hidden="true"><i class="feather icon-edit"></i></span>
+            <span class="rsv-top-action-btn__content">
+              <span class="rsv-top-action-btn__label">Editar</span>
+              <small class="rsv-top-action-btn__hint">Ajustar datos</small>
+            </span>
           </button>
 
           <button
-            class="btn btn-outline-info rsv-action-btn rsv-action-btn--outline rsv-action-btn--compact"
+            class="btn rsv-top-action-btn rsv-top-action-btn--info"
             type="button"
             (click)="imprimirConfirmacion()"
             [disabled]="!codReserva || busyPdf"
           >
-            <span class="rsv-action-btn__icon">
+            <span class="rsv-top-action-btn__icon" aria-hidden="true">
               <span *ngIf="busyPdf" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
               <i *ngIf="!busyPdf" class="feather icon-printer"></i>
             </span>
-            <span>Confirmación PDF</span>
+            <span class="rsv-top-action-btn__content">
+              <span class="rsv-top-action-btn__label">Confirmación PDF</span>
+              <small class="rsv-top-action-btn__hint">Descargar archivo</small>
+            </span>
           </button>
         </div>
       </div>
@@ -149,7 +168,7 @@
                     type="button"
                     class="btn btn-outline-danger rsv-action-btn rsv-action-btn--outline"
                     (click)="cancelarReserva()"
-                    [disabled]="busyCancel || estadoLabel === 'ANULADA'"
+                    [disabled]="busyCancel || estadoLabel === 'ANULADA' || isFacturada"
                   >
                     <span class="rsv-action-btn__icon">
                       <span *ngIf="busyCancel" class="spinner-border spinner-border-sm" aria-hidden="true"></span>

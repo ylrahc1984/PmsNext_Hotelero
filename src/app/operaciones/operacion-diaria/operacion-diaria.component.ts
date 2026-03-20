@@ -206,6 +206,13 @@ export class OperacionDiariaComponent {
     return estado === 'CHK';
   }
 
+  isReservaFacturada(detalle: OperacionDetalle | null | undefined): boolean {
+    const raw = detalle?.facturado as unknown;
+    if (raw === true) return true;
+    if (raw === false || raw === null || raw === undefined) return false;
+    return Number(raw) === 1;
+  }
+
   isCheckingIn(detalle: OperacionDetalle): boolean {
     return this.checkingIn.has(this.getDetalleKey(detalle));
   }
@@ -307,6 +314,15 @@ export class OperacionDiariaComponent {
   }
 
   onFacturarReserva(detalle: OperacionDetalle): void {
+    if (this.isReservaFacturada(detalle)) {
+      Swal.fire({
+        title: 'Reserva ya facturada',
+        text: 'La reserva ya está facturada y no puede volver a enviarse a facturación.',
+        icon: 'info'
+      });
+      return;
+    }
+
     const codReserva = (detalle?.prV02_CodReserva ?? '').toString().trim();
     const codAgencia = (detalle?.codAgencia ?? '').toString().trim();
 
@@ -348,7 +364,11 @@ export class OperacionDiariaComponent {
       return;
     }
 
-    this.router.navigate(['/operaciones/reservas', codReserva, 'detalle']);
+    this.router.navigate(['/operaciones/reservas', codReserva, 'detalle'], {
+      queryParams: {
+        facturado: this.isReservaFacturada(detalle) ? '1' : '0'
+      }
+    });
   }
 
   isPrintingVoucher(detalle: OperacionDetalle): boolean {

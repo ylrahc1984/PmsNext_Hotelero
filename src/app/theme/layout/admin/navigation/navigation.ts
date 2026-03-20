@@ -39,6 +39,14 @@ export const NavigationItems: NavigationItem[] = [
         icon: 'feather icon-briefcase',
         children: [
           {
+            id: 'operacion-diaria',
+            title: 'Operación Diaria',
+            type: 'item',
+            url: '/operaciones/operacion-diaria',
+            icon: 'feather icon-clock',
+            classes: 'nav-item'
+          },
+          {
             id: 'reservas',
             title: 'Reservas',
             type: 'item',
@@ -52,14 +60,6 @@ export const NavigationItems: NavigationItem[] = [
             type: 'item',
             url: '/operaciones/ordenes-trabajo',
             icon: 'feather icon-clipboard',
-            classes: 'nav-item'
-          },
-          {
-            id: 'operacion-diaria',
-            title: 'Operación Diaria',
-            type: 'item',
-            url: '/operaciones/operacion-diaria',
-            icon: 'feather icon-clock',
             classes: 'nav-item'
           },
           {

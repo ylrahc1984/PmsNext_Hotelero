@@ -32,9 +32,11 @@ export interface Reserva {
   PRV01_TotalRsv: number;
   PRV01_Observacion: string;
   PRV01_Procesado: number;
+  PRV01_Facturado?: number | string | boolean | null;
   PRV01_Directo: string;
   PRV01_CntHabitaciones: number;
   PRV01_Operador: string;
+  facturado?: number | string | boolean | null;
 }
 
 // Interfaces para detalles pendientes de asignar
@@ -226,7 +228,7 @@ export class ReservasService {
         if (!item) {
           throw new Error('Reserva no encontrada');
         }
-        return item as Reserva;
+        return this.normalizeReserva(item);
       })
     );
   }
@@ -321,5 +323,66 @@ export class ReservasService {
       asignadoOT: apiData.AsignadoOT === 1,
       codOrdenTrabajo: typeof apiData.CodOrdenTrabajo === 'object' ? null : String(apiData.CodOrdenTrabajo || '')
     };
+  }
+
+  private normalizeReserva(item: any): Reserva {
+    const reserva = (item ?? {}) as Reserva & Record<string, unknown>;
+    const facturado = this.extractFacturadoFlag(item);
+
+    return {
+      ...reserva,
+      PRV01_Facturado: reserva.PRV01_Facturado ?? facturado,
+      facturado: reserva.facturado ?? facturado
+    };
+  }
+
+  private extractFacturadoFlag(item: unknown): number | null {
+    if (!item || typeof item !== 'object') {
+      return null;
+    }
+
+    const record = item as Record<string, unknown>;
+    const directCandidates = [
+      record['PRV01_Facturado'],
+      record['prv01_facturado'],
+      record['Facturado'],
+      record['facturado'],
+      record['FacturaDo'],
+      record['FACTURADO']
+    ];
+
+    for (const candidate of directCandidates) {
+      const parsed = this.toFacturadoNumber(candidate);
+      if (parsed !== null) {
+        return parsed;
+      }
+    }
+
+    for (const [key, value] of Object.entries(record)) {
+      const normalizedKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (!normalizedKey.includes('factur')) {
+        continue;
+      }
+      const parsed = this.toFacturadoNumber(value);
+      if (parsed !== null) {
+        return parsed;
+      }
+    }
+
+    return null;
+  }
+
+  private toFacturadoNumber(value: unknown): number | null {
+    if (value === true) return 1;
+    if (value === false) return 0;
+    if (value === null || value === undefined) return null;
+
+    const normalized = String(value).trim().toLowerCase();
+    if (!normalized) return null;
+    if (normalized === '1' || normalized === 'true' || normalized === 'si' || normalized === 'sí') return 1;
+    if (normalized === '0' || normalized === 'false' || normalized === 'no') return 0;
+
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? (numeric === 1 ? 1 : 0) : null;
   }
 }
