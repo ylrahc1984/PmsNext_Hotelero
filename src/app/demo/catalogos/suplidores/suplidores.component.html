@@ -39,8 +39,8 @@
             <th>Contacto</th>
             <th>Teléfono</th>
             <th>Estado</th>
-            <th>Operador</th>
             <th>Fecha Registro</th>
+            <th>Operador</th>
             <th class="text-center">Acciones</th>
           </tr>
         </thead>
@@ -56,8 +56,8 @@
                 {{ getEstadoText(suplidor.estado) }}
               </span>
             </td>
-            <td>{{ suplidor.operador || 'N/D' }}</td>
             <td>{{ suplidor.fechaReg | date:'dd/MM/yyyy' || 'N/D' }}</td>
+            <td>{{ suplidor.operador || 'N/D' }}</td>
             <td class="text-center">
               <div ngbDropdown container="body" placement="bottom-end" class="suplidor-action-menu">
                 <button type="button" ngbDropdownToggle class="suplidor-action-toggle" aria-label="Abrir acciones del suplidor">

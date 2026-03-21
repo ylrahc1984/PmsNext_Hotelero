@@ -82,6 +82,7 @@
                 <th class="text-end">Impuesto</th>
                 <th class="text-end">Total</th>
                 <th>Moneda</th>
+                <th>Operador</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -97,6 +98,7 @@
                 <td class="text-end">{{ nota.PFD07_Impuesto | number:'1.2-2' }}</td>
                 <td class="text-end">{{ nota.PFD07_Total | number:'1.2-2' }}</td>
                 <td>{{ nota.PFD07_Moneda }}</td>
+                <td class="text-center">{{ nota.PFD07_Operador || 'N/D' }}</td>
                 <td class="text-center">
                   <div ngbDropdown container="body" placement="bottom-end" class="nota-action-menu">
                     <button type="button" ngbDropdownToggle class="nota-action-toggle" aria-label="Abrir acciones de la nota de crédito">
@@ -129,9 +131,10 @@
                     </div>
                   </div>
                 </td>
+
               </tr>
               <tr *ngIf="!vm.loading && vm.hasSearched && vm.notas.length === 0">
-                <td colspan="11" class="text-center text-muted">No hay resultados para los filtros aplicados.</td>
+                <td colspan="12" class="text-center text-muted">No hay resultados para los filtros aplicados.</td>
               </tr>
             </tbody>
           </table>

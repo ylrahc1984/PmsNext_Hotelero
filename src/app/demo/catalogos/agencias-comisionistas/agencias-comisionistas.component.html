@@ -48,6 +48,7 @@
             <th>Email</th>
             <th>Tipo</th>
             <th class="text-center">Contactos</th>
+            <th>Operador</th>
             <th class="text-center">Acciones</th>
           </tr>
         </thead>
@@ -70,6 +71,7 @@
                 {{ cliente.totalContactos || 0 }}
               </span>
             </td>
+            <td class="text-center">{{ cliente.operador }}</td>
             <td class="text-center">
               <div ngbDropdown container="body" placement="bottom-end" class="cliente-action-menu">
                 <button type="button" ngbDropdownToggle class="cliente-action-toggle" aria-label="Abrir acciones del cliente">

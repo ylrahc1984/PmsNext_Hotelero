@@ -1,12 +1,12 @@
 <div class="row">
   <div class="col-12">
-    <app-card cardTitle="Ordenes de Trabajo">
+    <app-card cardTitle="Asignación de Traslados">
       <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
         <div>
-          <p class="mb-0 text-muted">Listado general de ordenes generadas desde las reservas y asignadas a proveedores.</p>
+          <p class="mb-0 text-muted">Listado general de ordenes generadas desde las reservas y asignadas a proveedores de transporte.</p>
         </div>
         <button class="btn btn-primary" (click)="nuevaOrden()" [disabled]="isLoading">
-          <i class="feather icon-plus"></i> Nueva Orden de Trabajo
+          <i class="feather icon-plus"></i> Nueva Asignación de Traslado
         </button>
       </div>
 
@@ -61,6 +61,7 @@
               <th>Estado</th>
               <th class="text-end">Total OT</th>
               <th>Moneda</th>
+              <th>Operador</th>
               <th class="text-center">Acciones</th>
             </tr>
           </thead>
@@ -102,6 +103,7 @@
                   <ng-template #totalND>N/D</ng-template>
                 </td>
                 <td>{{ orden.moneda || 'N/D' }}</td>
+                <td>{{ orden.operador || 'N/D' }}</td>
                 <td class="text-center">
                   <div ngbDropdown container="body" placement="bottom-end" class="ot-action-menu">
                     <button type="button" ngbDropdownToggle class="ot-action-toggle" aria-label="Abrir acciones de la orden">
@@ -159,7 +161,7 @@
               </tr>
             </ng-container>
             <tr *ngIf="!isLoading && ordenes.length === 0">
-              <td colspan="10" class="text-center text-muted">No se encontraron órdenes con los filtros aplicados.</td>
+              <td colspan="11" class="text-center text-muted">No se encontraron órdenes con los filtros aplicados.</td>
             </tr>
           </tbody>
         </table>

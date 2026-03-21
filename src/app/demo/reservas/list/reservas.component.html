@@ -71,6 +71,7 @@
               <th>Estado de la Reserva</th>
               <th>Forma de Pago</th>
               <th>Total Reserva</th>
+              <th>Usuario</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -95,6 +96,7 @@
               </td>
               <td>{{ reserva.PRV01_FormaPago }}</td>
               <td class="text-end">{{ reserva.PRV01_TotalRsv | number:'1.2-2' }}</td>
+              <td>{{ reserva.PRV01_Operador }}</td>
               <td>
                 <div class="dropdown" ngbDropdown container="body" [placement]="'bottom-end'">
                   <button

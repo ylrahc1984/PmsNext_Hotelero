@@ -1,6 +1,6 @@
 <div class="row">
   <div class="col-12">
-    <app-card cardTitle="Gestión de Órdenes de Trabajo">
+    <app-card cardTitle="Gestión de Asignación de Traslados">
       <!-- Botón de retornar en el header del card -->
       <div class="card-header-right">
         <button 
@@ -21,7 +21,7 @@
             <div class="text-muted small mb-1">
               {{ empresa()?.MA04_Nombre || 'Empresa' }} · Cédula: {{ empresa()?.MA04_Ruc || '-' }}
             </div>
-            <p class="text-muted mb-0 small">Asigne servicios a suplidores y genere la orden operativa</p>
+            <p class="text-muted mb-0 small">Asigne servicios a suplidores de transporte y genere la orden operativa</p>
           </div>
           <span class="badge badge-pill px-2 py-1" [ngClass]="getEstadoBadgeClass(form.get('estado')?.value)">
             {{ getEstadoDescripcion(form.get('estado')?.value) }}

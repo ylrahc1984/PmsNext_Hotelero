@@ -87,6 +87,7 @@
             <th class="text-end">Total Pagado</th>
             <th>Estado</th>
             <th>Forma Pago</th>
+            <th>Operador</th>
             <th class="text-center">Acciones</th>
           </tr>
         </thead>
@@ -109,6 +110,7 @@
               </span>
             </td>
             <td>{{ factura.formaPago || 'N/D' }}</td>
+            <td>{{ factura.operador }}</td>
             <td class="text-center">
               <div ngbDropdown container="body" placement="bottom-end" class="recepcion-action-menu">
                 <button type="button" ngbDropdownToggle class="recepcion-action-toggle" aria-label="Abrir acciones de la factura">

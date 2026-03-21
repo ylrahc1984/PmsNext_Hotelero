@@ -56,7 +56,7 @@ export const NavigationItems: NavigationItem[] = [
           },
           {
             id: 'ordenes-trabajo',
-            title: 'Órdenes de Trabajo',
+            title: 'Asignación de Traslados',
             type: 'item',
             url: '/operaciones/ordenes-trabajo',
             icon: 'feather icon-clipboard',

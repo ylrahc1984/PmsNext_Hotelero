@@ -9,23 +9,24 @@ import { ProveedorService, ProveedorUI } from './proveedor.service';
 import { environment } from 'src/environments/environment';
 
 interface ProveedorFormData {
-  codigo: string;
-  descripcion: string;
-  tipCedula: string;
-  ruc: string;
-  codTipo: string;
-  contacto: string;
-  email: string;
-  telefono1: string;
-  telefono2: string;
-  fax: string;
-  direccion: string;
-  ciudad: string;
-  provincia: string;
-  pais: string;
-  limiteCre: number;
-  banco: string;
-  ctaBanco: string;
+  codigo        : string;
+  descripcion   : string;
+  tipCedula     : string;
+  ruc           : string;
+  codTipo       : string;
+  contacto      : string;
+  email         : string;
+  telefono1     : string;
+  telefono2     : string;
+  fax           : string;
+  direccion     : string;
+  ciudad        : string;
+  provincia     : string;
+  pais          : string;
+  limiteCre     : number;
+  banco         : string;
+  ctaBanco      : string;
+  operador      : string;
 }
 
 @Component({
@@ -78,7 +79,8 @@ export class ProveedorFormComponent implements OnInit {
       pais: '',
       limiteCre: 0,
       banco: '',
-      ctaBanco: ''
+      ctaBanco: '',
+      operador: ''
     };
   }
 
@@ -165,7 +167,8 @@ export class ProveedorFormComponent implements OnInit {
       pais: proveedor.pais || '',
       limiteCre: Number(proveedor.limiteCre || 0),
       banco: proveedor.banco || '',
-      ctaBanco: proveedor.ctaBanco || ''
+      ctaBanco: proveedor.ctaBanco || '',
+      operador: proveedor.operador || ''
     };
   }
 
@@ -192,7 +195,8 @@ export class ProveedorFormComponent implements OnInit {
       banco: this.formData.banco?.trim() || '',
       ctaBanco: this.formData.ctaBanco?.trim() || '',
       codTipo: this.formData.codTipo || '001',
-      tipoProveedor: ''
+      tipoProveedor: '',
+      operador: ''
     };
 
     const payload = this.proveedorService.buildPayloadFromUI(cleaned, this.isEditing ? 2 : 1);

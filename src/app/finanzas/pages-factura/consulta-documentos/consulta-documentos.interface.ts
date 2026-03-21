@@ -9,6 +9,7 @@ export interface Documento {
   PPV00_EstadoDocumento: string;
   PPV15_EstadoElectronico: string;
   PPV00_Moneda: string;
+  PPV00_UsuarioCreacion: string;
 }
 
 export interface ConsultaDocumentosResponse {

@@ -6,6 +6,7 @@ import Swal from 'sweetalert2';
 
 import { AuthService } from 'src/app/core/services/auth.service';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
+import { normalizeTimeInputValue } from '../../reservas/create/reserva-create.utils';
 import { GooglePlaceSelection, GooglePlacesAutocompleteDirective } from '../../reservas/shared/google-places-autocomplete.directive';
 import { ListaPickupService } from './lista-pickup.service';
 
@@ -47,7 +48,7 @@ export class ListaPickupFormComponent implements OnInit {
       cR11_Nombre: ['', [Validators.required, Validators.minLength(3)]],
       cR11_Duracion: ['', [Validators.required, Validators.pattern(this.durationPattern)]],
       cR11_Estado: [1, [Validators.required]],
-      cR11_Localizacion: ['', [Validators.required]],
+      cR11_Localizacion: [''],
       cR11_Operador: [operador, [Validators.required]]
     });
   }
@@ -70,11 +71,14 @@ export class ListaPickupFormComponent implements OnInit {
         this.form.patchValue({
           cR11_ID: pickup.CR11_ID,
           cR11_Nombre: pickup.CR11_Nombre,
-          cR11_Duracion: pickup.CR11_Duracion,
+          cR11_Duracion: this.normalizeDuration(pickup.CR11_Duracion),
           cR11_Estado: Number(pickup.CR11_Estado ?? 0),
           cR11_Localizacion: pickup.CR11_Localizacion || '',
           cR11_Operador: pickup.CR11_Operador || this.form.get('cR11_Operador')?.value
         });
+        this.form.updateValueAndValidity();
+        this.form.markAsPristine();
+        this.form.markAsUntouched();
         this.isLoading = false;
       },
       error: (error) => {
@@ -165,6 +169,10 @@ export class ListaPickupFormComponent implements OnInit {
     if (this.placeSelectionMessage) {
       this.placeSelectionMessage = '';
     }
+  }
+
+  private normalizeDuration(value: unknown): string {
+    return normalizeTimeInputValue(value);
   }
 
   isFieldInvalid(controlName: string): boolean {

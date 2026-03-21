@@ -29,6 +29,7 @@ export class ClienteFormComponent implements OnInit {
   isEditing = false;
   isLoading = false;
   readOnly = false;
+  selectedContactoIndex = 0;
   private codigoCliente = '';
   private deletedContactos: ClienteContactoUI[] = [];
 
@@ -48,6 +49,13 @@ export class ClienteFormComponent implements OnInit {
 
   get contactosControls(): FormGroup[] {
     return this.contactosArray.controls as FormGroup[];
+  }
+
+  get selectedContactoGroup(): FormGroup | null {
+    if (!this.contactosControls.length) {
+      return null;
+    }
+    return this.contactosControls[this.selectedContactoIndex] ?? this.contactosControls[0] ?? null;
   }
 
   ngOnInit(): void {
@@ -250,6 +258,7 @@ export class ClienteFormComponent implements OnInit {
       this.ensureDefaultContacto();
     }
     this.ensureSinglePrincipal();
+    this.syncSelectedContacto();
   }
 
   addContacto(contacto?: Partial<ClienteContactoUI>): void {
@@ -261,6 +270,7 @@ export class ClienteFormComponent implements OnInit {
       })
     );
     this.ensureSinglePrincipal();
+    this.selectedContactoIndex = Math.max(0, this.contactosArray.length - 1);
     this.syncContactSummary();
   }
 
@@ -280,6 +290,7 @@ export class ClienteFormComponent implements OnInit {
     this.contactosArray.removeAt(index);
     this.ensureDefaultContacto();
     this.ensureSinglePrincipal();
+    this.syncSelectedContacto(index);
     this.syncContactSummary();
   }
 
@@ -288,6 +299,13 @@ export class ClienteFormComponent implements OnInit {
       group.get('principal')?.setValue(currentIndex === index, { emitEvent: false });
     });
     this.syncContactSummary();
+  }
+
+  selectContacto(index: number): void {
+    if (index < 0 || index >= this.contactosArray.length) {
+      return;
+    }
+    this.selectedContactoIndex = index;
   }
 
   private ensureDefaultContacto(): void {
@@ -313,6 +331,24 @@ export class ClienteFormComponent implements OnInit {
     controls.forEach((group, index) => {
       group.get('principal')?.setValue(index === principalIndex, { emitEvent: false });
     });
+  }
+
+  private syncSelectedContacto(removedIndex?: number): void {
+    const total = this.contactosArray.length;
+    if (!total) {
+      this.selectedContactoIndex = 0;
+      return;
+    }
+
+    if (removedIndex !== undefined && this.selectedContactoIndex > removedIndex) {
+      this.selectedContactoIndex -= 1;
+    } else if (removedIndex !== undefined && this.selectedContactoIndex === removedIndex) {
+      this.selectedContactoIndex = Math.min(removedIndex, total - 1);
+    }
+
+    if (this.selectedContactoIndex < 0 || this.selectedContactoIndex >= total) {
+      this.selectedContactoIndex = 0;
+    }
   }
 
   private getPrincipalContactoValue(): ClienteContactoUI | null {
@@ -570,6 +606,7 @@ export class ClienteFormComponent implements OnInit {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.contactosArray.markAllAsTouched();
+      this.selectFirstInvalidContacto();
       return;
     }
     this.ensureSinglePrincipal();
@@ -666,5 +703,32 @@ export class ClienteFormComponent implements OnInit {
   getPrincipalContactoResumen(): string {
     const principal = this.getPrincipalContactoValue();
     return principal?.nomContacto || 'Sin definir';
+  }
+
+  getContactoDisplayName(index: number): string {
+    const contacto = this.contactosControls[index];
+    const nombre = (contacto?.get('nomContacto')?.value || '').toString().trim();
+    return nombre || `Contacto ${index + 1 < 10 ? '0' + (index + 1) : index + 1}`;
+  }
+
+  getContactoListDetail(index: number): string {
+    const contacto = this.contactosControls[index];
+    if (!contacto) {
+      return '';
+    }
+
+    const parts = [
+      (contacto.get('email')?.value || '').toString().trim(),
+      (contacto.get('telefono1')?.value || contacto.get('movil')?.value || '').toString().trim()
+    ].filter(Boolean);
+
+    return parts.join(' · ') || 'Sin datos complementarios';
+  }
+
+  private selectFirstInvalidContacto(): void {
+    const invalidIndex = this.contactosControls.findIndex((group) => group.invalid);
+    if (invalidIndex >= 0) {
+      this.selectedContactoIndex = invalidIndex;
+    }
   }
 }

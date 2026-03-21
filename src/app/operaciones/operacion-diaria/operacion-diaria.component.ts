@@ -64,6 +64,7 @@ export class OperacionDiariaComponent {
   readonly autoRefresh = false;
   readonly observacionMaxLength = 500;
   readonly pageSizes = [25, 50, 100];
+  selectedBloqueHora = '';
   page = 1;
   pageSize = 50;
   totalRegistros = 0;
@@ -106,6 +107,7 @@ export class OperacionDiariaComponent {
             this.manualRefresh$.next();
           }
           this.resumenPorHora = this.buildResumenMap(data?.resumenActividadPorHora ?? []);
+          this.syncSelectedBloqueHora(data?.bloques ?? []);
           return { loading: false, error: null, data };
         }),
         startWith({ loading: true, error: null, data: null }),
@@ -167,6 +169,35 @@ export class OperacionDiariaComponent {
 
   getResumenPorHora(hora: string): ResumenActividadHora[] {
     return this.resumenPorHora.get(hora) ?? [];
+  }
+
+  getBloquesHoraDisponibles(data: OperacionDiariaResponse | null | undefined): string[] {
+    return (data?.bloques ?? [])
+      .map((bloque) => (bloque.bloqueHora ?? '').toString().trim())
+      .filter((hora, index, arr) => !!hora && arr.indexOf(hora) === index);
+  }
+
+  getBloquesFiltrados(data: OperacionDiariaResponse | null | undefined): BloqueHora[] {
+    const bloques = data?.bloques ?? [];
+    if (!this.selectedBloqueHora) {
+      return bloques;
+    }
+
+    return bloques.filter((bloque) => (bloque.bloqueHora ?? '').toString().trim() === this.selectedBloqueHora);
+  }
+
+  setBloqueHoraFilter(hora: string): void {
+    const next = (hora ?? '').toString().trim();
+    if (this.selectedBloqueHora === next) {
+      return;
+    }
+
+    this.selectedBloqueHora = next;
+    this.cdr.markForCheck();
+  }
+
+  isBloqueHoraSelected(hora: string): boolean {
+    return this.selectedBloqueHora === (hora ?? '').toString().trim();
   }
 
   get observacionControl() {
@@ -577,6 +608,18 @@ export class OperacionDiariaComponent {
       mapByHora.get(key)!.push(item);
     });
     return mapByHora;
+  }
+
+  private syncSelectedBloqueHora(bloques: BloqueHora[]): void {
+    if (!this.selectedBloqueHora) {
+      return;
+    }
+
+    const exists = bloques.some((bloque) => (bloque.bloqueHora ?? '').toString().trim() === this.selectedBloqueHora);
+    if (!exists) {
+      this.selectedBloqueHora = '';
+      this.cdr.markForCheck();
+    }
   }
 
   private toDateInput(date: Date): string {

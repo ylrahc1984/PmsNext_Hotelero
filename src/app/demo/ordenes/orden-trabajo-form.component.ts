@@ -69,7 +69,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
   detallesOriginales: OrdenTrabajoDetalle[] = []; // Snapshot de detalles al cargar la orden
   estadoBloqueado = false;
   isEdit = false;
-  titulo = 'Nueva Orden de Trabajo';
+  titulo = 'Nueva Asignación de Traslado';
 
   // Propiedades UI/UX para control visual
   selectedSupplierId: string | null = null;

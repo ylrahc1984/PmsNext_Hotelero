@@ -165,7 +165,7 @@ export class ClienteService {
         idDistrito: value.idDistrito || '',
         tCliente: value.tCliente || '',
         enviarCorreo: value.enviarCorreo ?? false,
-        operador: '',
+        operador: value.operador || '',
         contactos,
         nombreContacto: contactoNombre,
         respuesta: '',
@@ -221,7 +221,8 @@ export class ClienteService {
       tCliente: (apiData.MPV00_TCliente || '').trim(),
       enviarCorreo: (apiData.MPV00_BanderaCorreo ?? 0) === 1,
       totalContactos,
-      contactos: contactos.length ? contactos : this.buildFallbackContactos(apiData, contactoPrincipal)
+      contactos: contactos.length ? contactos : this.buildFallbackContactos(apiData, contactoPrincipal),
+      operador: apiData.MPV00_Operador || ''
     };
   }
 
@@ -262,7 +263,8 @@ export class ClienteService {
       totalContactos,
       contactos: contactos.length
         ? contactos
-        : this.buildFallbackContactosFromDetalle(apiData, contactoNombre)
+        : this.buildFallbackContactosFromDetalle(apiData, contactoNombre),
+      operador: apiData.operador || ''
     };
   }
 

@@ -4,6 +4,7 @@ import { Observable, of, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { environment } from 'src/environments/environment';
+import { extractGoogleDisplayText, normalizeTimeInputValue } from '../../reservas/create/reserva-create.utils';
 import { PickupListaItem, PickupListaResponse, PickupUpsertRequest } from './lista-pickup.models';
 
 @Injectable({
@@ -109,7 +110,7 @@ export class ListaPickupService {
     return {
       CR11_ID: Number(apiData?.CR11_ID ?? 0),
       CR11_Nombre: (apiData?.CR11_Nombre ?? '').toString(),
-      CR11_Duracion: (apiData?.CR11_Duracion ?? '').toString(),
+      CR11_Duracion: normalizeTimeInputValue(apiData?.CR11_Duracion),
       CR11_Estado: Number(apiData?.CR11_Estado ?? 0),
       CR11_Localizacion: this.normalizeLocalizacion(apiData?.CR11_Localizacion),
       CR11_Operador: (apiData?.CR11_Operador ?? '').toString()
@@ -124,12 +125,12 @@ export class ListaPickupService {
     if (!value) {
       return '';
     }
-    if (typeof value === 'string') {
-      return value;
+
+    const displayText = extractGoogleDisplayText(value).trim();
+    if (displayText) {
+      return displayText;
     }
-    if (typeof value === 'object') {
-      return '';
-    }
+
     return String(value);
   }
 

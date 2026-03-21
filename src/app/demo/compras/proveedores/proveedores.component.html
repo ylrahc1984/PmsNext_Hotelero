@@ -42,6 +42,7 @@
             <th>Contacto</th>
             <th>Telefono</th>
             <th>Tipo</th>
+            <th>Operador</th>
             <th class="text-center">Acciones</th>
           </tr>
         </thead>
@@ -52,6 +53,7 @@
             <td>{{ proveedor.contacto || 'N/D' }}</td>
             <td>{{ proveedor.telefono1 || proveedor.telefono2 || 'N/D' }}</td>
             <td>{{ proveedor.tipoProveedor || 'N/D' }}</td>
+            <td>{{ proveedor.operador || 'N/D' }}</td>
             <td class="text-center">
               <div ngbDropdown container="body" placement="bottom-end" class="proveedor-action-menu">
                 <button type="button" ngbDropdownToggle class="proveedor-action-toggle" aria-label="Abrir acciones del proveedor">

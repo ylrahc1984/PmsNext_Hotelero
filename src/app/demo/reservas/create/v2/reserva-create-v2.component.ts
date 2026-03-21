@@ -72,6 +72,9 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
   draft: ReservaCreateV2Draft = buildInitialReservaCreateV2Draft();
   detalleForm: DetalleForm = buildInitialDetalleForm();
   actividadForm: ActividadDetalleForm = buildInitialActividadDetalleForm();
+  agenciaSearchTerm = '';
+  agenciaSearchResults: ClienteUI[] = [];
+  agenciaSearchOpen = false;
 
   idiomas: IdiomaDto[] = [];
   formasReservacion: FormaReservaDto[] = [];
@@ -106,6 +109,11 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
   codReservaActual: string | null = null;
   loadingReserva = false;
   private allowNavigation = false;
+  private readonly agenciaSearchMinLength = 2;
+  agenciaSearchLoading = false;
+  private agenciaSearchRequestId = 0;
+  private agenciaSearchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private agenciaSearchBlurTimer: ReturnType<typeof setTimeout> | null = null;
 
   protected router = inject(Router);
   private route = inject(ActivatedRoute);
@@ -155,6 +163,7 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
 
     const restoredDraft = this.restoreStoredDraft(this.codReservaActual);
     if (restoredDraft) {
+      this.syncAgenciaSearchTermFromCurrentState();
       if (safeString(this.form.codAgencia).trim()) {
         void this.cargarClienteDetalle(this.form.codAgencia, { preserveSelection: true, silent: true });
       }
@@ -369,9 +378,71 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
     this.showClienteModal = true;
   }
 
+  onAgenciaSearchTermChange(value: string): void {
+    this.agenciaSearchTerm = safeString(value);
+    this.clearAgenciaSearchBlurTimer();
+
+    if (this.shouldClearSelectedCliente(this.agenciaSearchTerm)) {
+      this.clearSelectedClienteState();
+    }
+
+    const term = this.agenciaSearchTerm.trim();
+    if (this.agenciaSearchDebounceTimer) {
+      clearTimeout(this.agenciaSearchDebounceTimer);
+      this.agenciaSearchDebounceTimer = null;
+    }
+
+    if (term.length < this.agenciaSearchMinLength) {
+      this.cancelAgenciaSearchRequests();
+      this.agenciaSearchResults = [];
+      this.agenciaSearchOpen = false;
+      return;
+    }
+
+    this.agenciaSearchDebounceTimer = setTimeout(() => {
+      void this.buscarAgenciasDirecto(term);
+    }, 280);
+  }
+
+  onAgenciaSearchFocus(): void {
+    this.clearAgenciaSearchBlurTimer();
+    if (this.agenciaSearchResults.length && this.agenciaSearchTerm.trim().length >= this.agenciaSearchMinLength) {
+      this.agenciaSearchOpen = true;
+    }
+  }
+
+  onAgenciaSearchBlur(): void {
+    this.clearAgenciaSearchBlurTimer();
+    this.agenciaSearchBlurTimer = setTimeout(() => {
+      this.agenciaSearchOpen = false;
+    }, 180);
+  }
+
+  onAgenciaSearchEnter(event: Event): void {
+    event.preventDefault();
+    this.clearAgenciaSearchBlurTimer();
+    if (this.agenciaSearchResults.length) {
+      void this.seleccionarAgenciaBusqueda(this.agenciaSearchResults[0]);
+      return;
+    }
+    const term = this.agenciaSearchTerm.trim();
+    if (term.length >= this.agenciaSearchMinLength) {
+      void this.buscarAgenciasDirecto(term);
+    }
+  }
+
+  onAgenciaSuggestionMouseDown(cliente: ClienteUI, event: MouseEvent): void {
+    event.preventDefault();
+    void this.seleccionarAgenciaBusqueda(cliente);
+  }
+
   async onClienteSelected(cliente: ClienteUI): Promise<void> {
     this.selectedCliente = cliente;
     this.form.codAgencia = cliente.codigo;
+    this.syncAgenciaSearchTermFromCurrentState();
+    this.cancelAgenciaSearchRequests();
+    this.agenciaSearchResults = [];
+    this.agenciaSearchOpen = false;
     this.showClienteModal = false;
     this.contactosCliente = [];
     this.applyContactoSeleccionado(null, false);
@@ -380,11 +451,11 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
   }
 
   limpiarSeleccionCliente(): void {
-    this.selectedCliente = null;
-    this.form.codAgencia = '';
-    this.contactosCliente = [];
-    this.applyContactoSeleccionado(null, false);
-    this.syncDraftHeader();
+    this.clearSelectedClienteState();
+    this.agenciaSearchTerm = '';
+    this.cancelAgenciaSearchRequests();
+    this.agenciaSearchResults = [];
+    this.agenciaSearchOpen = false;
   }
 
   onContactoSeleccionado(contactId: number | string): void {
@@ -707,6 +778,7 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
       ...(stored.draft.header ?? {})
     };
     this.selectedCliente = stored.selectedCliente ?? null;
+    this.syncAgenciaSearchTermFromCurrentState();
     this.codReservaActual = storedCodReserva || null;
     return true;
   }
@@ -728,6 +800,7 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
         ...(nextDraft.header ?? {})
       };
       this.selectedCliente = null;
+      this.syncAgenciaSearchTermFromCurrentState();
       if (safeString(this.form.codAgencia).trim()) {
         await this.cargarClienteDetalle(this.form.codAgencia, { preserveSelection: true, silent: true });
       }
@@ -770,6 +843,7 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
       }
 
       this.selectedCliente = cliente;
+      this.syncAgenciaSearchTermFromCurrentState();
       this.contactosCliente = this.sortContactosCliente(cliente.contactos ?? []);
       const preferredId = safeNumber(options?.preferredContactId || (options?.preserveSelection ? this.form.idContacto : 0));
       const selectedContacto =
@@ -800,6 +874,99 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
     if (syncHeader) {
       this.syncDraftHeader();
     }
+  }
+
+  private syncAgenciaSearchTermFromCurrentState(): void {
+    if (this.selectedCliente) {
+      this.agenciaSearchTerm = this.buildAgenciaSearchLabel(this.selectedCliente);
+      return;
+    }
+    this.agenciaSearchTerm = safeString(this.form.codAgencia).trim();
+  }
+
+  private buildAgenciaSearchLabel(cliente: ClienteUI | null): string {
+    if (!cliente) {
+      return '';
+    }
+    const codigo = safeString(cliente.codigo).trim();
+    const nombre = safeString(cliente.nombre).trim();
+    return [codigo, nombre].filter(Boolean).join(' - ');
+  }
+
+  private shouldClearSelectedCliente(nextTerm: string): boolean {
+    if (!this.selectedCliente) {
+      return false;
+    }
+    const normalizedTerm = safeString(nextTerm).trim();
+    const selectedLabel = this.buildAgenciaSearchLabel(this.selectedCliente);
+    const selectedCode = safeString(this.selectedCliente.codigo).trim();
+    return normalizedTerm !== selectedLabel && normalizedTerm !== selectedCode;
+  }
+
+  private clearSelectedClienteState(syncHeader = true): void {
+    this.selectedCliente = null;
+    this.form.codAgencia = '';
+    this.contactosCliente = [];
+    this.applyContactoSeleccionado(null, false);
+    if (syncHeader) {
+      this.syncDraftHeader();
+    }
+  }
+
+  private clearAgenciaSearchBlurTimer(): void {
+    if (this.agenciaSearchBlurTimer) {
+      clearTimeout(this.agenciaSearchBlurTimer);
+      this.agenciaSearchBlurTimer = null;
+    }
+  }
+
+  private cancelAgenciaSearchRequests(): void {
+    if (this.agenciaSearchDebounceTimer) {
+      clearTimeout(this.agenciaSearchDebounceTimer);
+      this.agenciaSearchDebounceTimer = null;
+    }
+    this.agenciaSearchRequestId += 1;
+    this.agenciaSearchLoading = false;
+  }
+
+  private async buscarAgenciasDirecto(term: string): Promise<void> {
+    const normalized = safeString(term).trim();
+    if (normalized.length < this.agenciaSearchMinLength) {
+      this.agenciaSearchResults = [];
+      this.agenciaSearchOpen = false;
+      this.agenciaSearchLoading = false;
+      return;
+    }
+
+    const currentRequest = ++this.agenciaSearchRequestId;
+    this.agenciaSearchLoading = true;
+    try {
+      const response = await firstValueFrom(this.clienteService.getClientes(1, 8, normalized).pipe(take(1)));
+      if (currentRequest !== this.agenciaSearchRequestId || this.agenciaSearchTerm.trim() !== normalized) {
+        return;
+      }
+      this.agenciaSearchResults = response.data ?? [];
+      this.agenciaSearchOpen = true;
+    } catch (error) {
+      if (currentRequest !== this.agenciaSearchRequestId) {
+        return;
+      }
+      console.error('[ReservaCreateV2] buscarAgenciasDirecto', error);
+      this.agenciaSearchResults = [];
+      this.agenciaSearchOpen = true;
+    } finally {
+      if (currentRequest === this.agenciaSearchRequestId) {
+        this.agenciaSearchLoading = false;
+      }
+    }
+  }
+
+  private async seleccionarAgenciaBusqueda(cliente: ClienteUI): Promise<void> {
+    this.clearAgenciaSearchBlurTimer();
+    this.cancelAgenciaSearchRequests();
+    this.agenciaSearchResults = [];
+    this.agenciaSearchOpen = false;
+    await this.onClienteSelected(cliente);
   }
 
   private resolveContactoPorDefecto(contactos: ClienteContactoUI[]): ClienteContactoUI | null {
@@ -1308,6 +1475,8 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
 function roundTo2(value: number): number {
   return Math.round((safeNumber(value) + Number.EPSILON) * 100) / 100;
 }
+
+
 
 
 

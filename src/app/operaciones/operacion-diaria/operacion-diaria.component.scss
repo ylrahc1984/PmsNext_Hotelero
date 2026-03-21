@@ -9,16 +9,55 @@
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
 }
 
+.filter-card .card-body {
+  padding: 0.9rem 1rem;
+}
+
+.filter-card .form-label {
+  margin-bottom: 0.25rem;
+}
+
+.hour-filter-panel {
+  padding-top: 0.65rem;
+  border-top: 1px solid #e6eaf2;
+}
+
+.hour-filter-panel__title {
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 0.45rem;
+}
+
+.hour-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.hour-filter-chip {
+  border: 1px solid #d7dfec;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #475569;
+  padding: 0.32rem 0.7rem;
+}
+
+.hour-filter-chip.is-active {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #ffffff;
+}
+
 .filters-grid {
   display: grid;
-  gap: 1rem;
+  gap: 0.75rem;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   align-items: end;
 }
 
 .filter-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.4rem;
   align-items: end;
   justify-content: flex-end;
 }
@@ -207,10 +246,6 @@
   font-size: 0.82rem;
 }
 
-.action-toggle__label {
-  line-height: 1;
-}
-
 .action-toggle__caret {
   font-size: 0.72rem;
   color: #64748b;
@@ -231,21 +266,6 @@
   backdrop-filter: blur(10px);
 }
 
-.action-dropdown__header {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  margin-bottom: 0.45rem;
-  padding: 0.45rem 0.55rem 0.55rem;
-}
-
-.action-dropdown__header strong {
-  color: #1f2a44;
-  font-size: 0.92rem;
-  line-height: 1.2;
-}
-
-.action-dropdown__eyebrow,
 .action-dropdown__section-title {
   font-size: 0.62rem;
   font-weight: 700;
@@ -330,13 +350,6 @@
 .action-item__label {
   font-weight: 700;
   line-height: 1.25;
-}
-
-.action-item__hint {
-  margin-top: 0.15rem;
-  color: #6b7690;
-  font-size: 0.74rem;
-  line-height: 1.35;
 }
 
 .action-menu .dropdown-item.action-item:hover,

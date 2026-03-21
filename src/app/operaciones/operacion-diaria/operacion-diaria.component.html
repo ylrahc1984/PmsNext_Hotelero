@@ -44,6 +44,33 @@
           <button type="button" class="btn btn-outline-secondary" (click)="setHoy()">Hoy</button>
         </div>
       </form>
+
+      <ng-container *ngIf="vm$ | async as filterVm">
+        <div *ngIf="filterVm.data?.bloques?.length" class="hour-filter-panel">
+          <div class="hour-filter-panel__title">Bloques por hora</div>
+
+          <div class="hour-filter-chips">
+            <button
+              type="button"
+              class="hour-filter-chip"
+              [class.is-active]="!selectedBloqueHora"
+              (click)="setBloqueHoraFilter('')"
+            >
+              Todo
+            </button>
+
+            <button
+              type="button"
+              class="hour-filter-chip"
+              *ngFor="let hora of getBloquesHoraDisponibles(filterVm.data)"
+              [class.is-active]="isBloqueHoraSelected(hora)"
+              (click)="setBloqueHoraFilter(hora)"
+            >
+              {{ hora }}
+            </button>
+          </div>
+        </div>
+      </ng-container>
     </div>
   </div>
 
@@ -62,7 +89,7 @@
     </div>
 
     <div *ngIf="!vm.loading && !vm.error && (vm.data?.totalRegistros ?? 0) > 0" class="hourly-grid">
-      <div class="card hour-card" *ngFor="let bloque of vm.data?.bloques; trackBy: trackByBloque">
+      <div class="card hour-card" *ngFor="let bloque of getBloquesFiltrados(vm.data); trackBy: trackByBloque">
         <div class="card-header hour-card__header">
           <div class="hour-title">{{ bloque.bloqueHora }}</div>
           <div class="hour-metrics">

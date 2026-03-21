@@ -37,16 +37,49 @@
                   <div class="row g-3">
                     <div class="col-12 col-md-6">
                       <label class="form-label">Agencia / Comisionista <span class="text-danger">*</span></label>
-                      <div class="input-group input-group-sm">
-                        <input type="text" class="form-control" [(ngModel)]="form.codAgencia" name="codAgencia" required placeholder="Seleccione agencia" readonly (ngModelChange)="onHeaderChange()">
-                        <button class="btn btn-outline-primary btn-sm rsv-icon-btn" type="button" (click)="abrirModalClientes()" title="Buscar cliente">
-                          <i class="feather icon-search"></i>
-                        </button>
+                      <div class="position-relative rsv-v2-agencia-search">
+                        <div class="input-group input-group-sm">
+                          <input
+                            type="text"
+                            class="form-control"
+                            [ngModel]="agenciaSearchTerm"
+                            (ngModelChange)="onAgenciaSearchTermChange($event)"
+                            name="codAgenciaSearch"
+                            placeholder="Escriba para buscar agencia"
+                            autocomplete="off"
+                            (focus)="onAgenciaSearchFocus()"
+                            (blur)="onAgenciaSearchBlur()"
+                            (keydown.enter)="onAgenciaSearchEnter($event)">
+                          <button class="btn btn-outline-primary btn-sm rsv-icon-btn" type="button" (click)="abrirModalClientes()" title="Buscar cliente">
+                            <i class="feather icon-search"></i>
+                          </button>
+                        </div>
+                        <input type="text" class="d-none" [(ngModel)]="form.codAgencia" name="codAgencia" required tabindex="-1" aria-hidden="true">
+                        <div class="rsv-v2-agencia-dropdown" *ngIf="agenciaSearchOpen">
+                          <button
+                            type="button"
+                            class="rsv-v2-agencia-dropdown__item"
+                            *ngFor="let cliente of agenciaSearchResults"
+                            (mousedown)="onAgenciaSuggestionMouseDown(cliente, $event)">
+                            <span class="rsv-v2-agencia-dropdown__title">{{ cliente.nombre }}</span>
+                            <span class="rsv-v2-agencia-dropdown__meta">{{ cliente.codigo }}<ng-container *ngIf="cliente.ruc"> · {{ cliente.ruc }}</ng-container></span>
+                          </button>
+                          <div class="rsv-v2-agencia-dropdown__state" *ngIf="agenciaSearchLoading && agenciaSearchResults.length === 0">
+                            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                            <span>Buscando agencias...</span>
+                          </div>
+                          <div class="rsv-v2-agencia-dropdown__state" *ngIf="!agenciaSearchLoading && agenciaSearchResults.length === 0">
+                            <span>No se encontraron coincidencias.</span>
+                          </div>
+                        </div>
                       </div>
                       <div class="rsv-v2-selection-note" *ngIf="selectedCliente">
                         <span class="fw-semibold">{{ selectedCliente.nombre }}</span>
                         <span class="text-muted">· {{ selectedCliente.codigo }}</span>
                         <span class="text-muted" *ngIf="selectedCliente.ruc">· {{ selectedCliente.ruc }}</span>
+                      </div>
+                      <div class="rsv-v2-selection-note" *ngIf="!selectedCliente && agenciaSearchTerm.trim().length >= 2 && !agenciaSearchLoading">
+                        Seleccione una agencia de la lista o use el botón de búsqueda avanzada.
                       </div>
                       <button type="button" class="btn btn-link p-0 small" *ngIf="selectedCliente" (click)="limpiarSeleccionCliente()">Limpiar selección</button>
                     </div>

@@ -51,15 +51,7 @@
               <option *ngFor="let tipo of tipoClienteOptions" [value]="tipo.value">{{ tipo.label }}</option>
             </select>
           </div>
-          <div class="col-md-8">
-            <div class="contact-summary-strip">
-              <div>
-                <div class="summary-label">Contacto principal</div>
-                <div class="summary-value">{{ getPrincipalContactoResumen() }}</div>
-              </div>
-              <span class="summary-chip">{{ getContactosActivosCount() }} contacto(s)</span>
-            </div>
-          </div>
+
         </div>
       </div>
 
@@ -117,14 +109,6 @@
             <input type="tel" class="form-control" formControlName="telefono1">
           </div>
           <div class="col-md-3">
-            <label class="form-label">Telefono 2</label>
-            <input type="tel" class="form-control" formControlName="telefono2">
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Fax</label>
-            <input type="text" class="form-control" formControlName="fax">
-          </div>
-          <div class="col-md-3">
             <label class="form-label">Enviar Correo</label>
             <div class="form-check form-switch">
               <input class="form-check-input" type="checkbox" id="enviarCorreo" formControlName="enviarCorreo">
@@ -138,7 +122,10 @@
 
       <div class="section-card">
         <div class="section-header section-header-inline">
-          <span>Contactos</span>
+          <div>
+            <span>Contactos</span>
+            <div class="section-header-caption">Selecciona un contacto para editarlo sin expandir toda la seccion.</div>
+          </div>
           <button *ngIf="!readOnly" type="button" class="btn btn-outline-primary btn-sm" (click)="addContacto()">
             <i class="feather icon-plus"></i> Agregar contacto
           </button>
@@ -148,69 +135,83 @@
           No hay contactos registrados.
         </div>
 
-        <div formArrayName="contactos" class="contacts-grid" *ngIf="contactosControls.length">
-          <div class="contact-card" *ngFor="let contacto of contactosControls; let i = index" [formGroupName]="i">
-            <div class="contact-card-header">
-              <div>
-                <div class="contact-card-title">Contacto {{ i + 1 < 10 ? '0' + (i + 1) : i + 1 }}</div>
-                <div class="contact-card-subtitle" *ngIf="contacto.get('cargo')?.value">{{ contacto.get('cargo')?.value }}</div>
+        <div class="contacts-workspace" *ngIf="contactosControls.length">
+          <div class="contacts-list-panel">
+            <button
+              type="button"
+              class="contact-list-item"
+              *ngFor="let contacto of contactosControls; let i = index"
+              [class.is-selected]="selectedContactoIndex === i"
+              (click)="selectContacto(i)">
+              <div class="contact-list-main">
+                <div class="contact-list-title-row">
+                  <span class="contact-list-index">{{ i + 1 < 10 ? '0' + (i + 1) : i + 1 }}</span>
+                  <span class="contact-list-title">{{ getContactoDisplayName(i) }}</span>
+                </div>
+                <div class="contact-list-detail">{{ getContactoListDetail(i) }}</div>
               </div>
-              <div class="contact-card-actions">
+              <div class="contact-list-badges">
                 <span class="principal-badge" *ngIf="contacto.get('principal')?.value">Principal</span>
-                <button
-                  *ngIf="!readOnly && !contacto.get('principal')?.value"
-                  type="button"
-                  class="btn btn-sm btn-light"
-                  (click)="setPrincipalContacto(i)">
-                  Marcar principal
-                </button>
-                <button *ngIf="!readOnly" type="button" class="btn btn-sm btn-outline-danger" (click)="removeContacto(i)">
-                  <i class="feather icon-trash"></i>
-                </button>
+                <span class="contact-status-badge" [class.is-inactive]="contacto.get('activo')?.value === false">
+                  {{ contacto.get('activo')?.value === false ? 'Inactivo' : 'Activo' }}
+                </span>
               </div>
-            </div>
+            </button>
+          </div>
 
-            <div class="row g-3">
-              <div class="col-md-6">
-                <label class="form-label">Nombre del contacto <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" formControlName="nomContacto">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Cargo</label>
-                <input type="text" class="form-control" formControlName="cargo">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Email</label>
-                <input type="email" class="form-control" formControlName="email">
-              </div>
-              <div class="col-md-3">
-                <label class="form-label">Telefono 1</label>
-                <input type="tel" class="form-control" formControlName="telefono1">
-              </div>
-              <div class="col-md-3">
-                <label class="form-label">Telefono 2</label>
-                <input type="tel" class="form-control" formControlName="telefono2">
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">Movil</label>
-                <input type="tel" class="form-control" formControlName="movil">
-              </div>
-              <div class="col-md-2">
-                <label class="form-label">Ext.</label>
-                <input type="text" class="form-control" formControlName="ext">
-              </div>
-              <div class="col-md-2">
-                <label class="form-label">Activo</label>
-                <div class="form-check form-switch mt-2">
-                  <input class="form-check-input" type="checkbox" formControlName="activo">
+          <ng-container *ngIf="selectedContactoGroup as selectedContacto">
+            <div class="contact-editor-panel" [formGroup]="selectedContacto">
+              <div class="contact-editor-header">
+                <div>
+                  <div class="contact-editor-eyebrow">Contacto seleccionado</div>
+                  <div class="contact-card-title">{{ getContactoDisplayName(selectedContactoIndex) }}</div>
+                  <div class="contact-card-subtitle">{{ getContactoListDetail(selectedContactoIndex) }}</div>
+                </div>
+                <div class="contact-card-actions">
+                  <span class="principal-badge" *ngIf="selectedContacto.get('principal')?.value">Principal</span>
+                  <button
+                    *ngIf="!readOnly && !selectedContacto.get('principal')?.value"
+                    type="button"
+                    class="btn btn-sm btn-light"
+                    (click)="setPrincipalContacto(selectedContactoIndex)">
+                    Marcar principal
+                  </button>
+                  <button
+                    *ngIf="!readOnly"
+                    type="button"
+                    class="btn btn-sm btn-outline-danger"
+                    (click)="removeContacto(selectedContactoIndex)">
+                    <i class="feather icon-trash"></i>
+                  </button>
                 </div>
               </div>
-              <div class="col-md-12">
-                <label class="form-label">Observacion</label>
-                <textarea class="form-control" rows="2" formControlName="observacion"></textarea>
+
+              <div class="row g-3">
+                <div class="col-md-9">
+                  <label class="form-label">Nombre del contacto <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" formControlName="nomContacto">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label">Activo</label>
+                  <div class="form-check form-switch mt-2">
+                    <input class="form-check-input" type="checkbox" formControlName="activo">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Email</label>
+                  <input type="email" class="form-control" formControlName="email">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label">Telefono 1</label>
+                  <input type="tel" class="form-control" formControlName="telefono1">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label">Movil</label>
+                  <input type="tel" class="form-control" formControlName="movil">
+                </div>
               </div>
             </div>
-          </div>
+          </ng-container>
         </div>
       </div>
 
@@ -252,8 +253,25 @@
     </div>
   </div>
 
-  <div class="form-actions d-flex justify-content-end mt-3">
-    <button type="button" class="btn btn-light me-2" (click)="cancelForm()">{{ readOnly ? 'Cerrar' : 'Cancelar' }}</button>
-    <button *ngIf="!readOnly" type="submit" class="btn btn-primary" [disabled]="form.invalid || isLoading">Guardar</button>
+  <div class="form-actions mt-3">
+    <div class="form-actions__summary" *ngIf="!readOnly">
+      <span class="form-actions__label">Estado del formulario</span>
+      <strong>{{ isLoading ? 'Guardando cambios...' : 'Listo para guardar' }}</strong>
+    </div>
+
+    <div class="form-actions__buttons">
+      <button type="button" class="btn btn-outline-secondary form-actions__button form-actions__button--secondary" (click)="cancelForm()">
+        <i class="feather" [ngClass]="readOnly ? 'icon-x' : 'icon-corner-up-left'"></i>
+        <span>{{ readOnly ? 'Cerrar' : 'Cancelar' }}</span>
+      </button>
+      <button
+        *ngIf="!readOnly"
+        type="submit"
+        class="btn btn-primary form-actions__button form-actions__button--primary"
+        [disabled]="form.invalid || isLoading">
+        <i class="feather" [ngClass]="isLoading ? 'icon-loader' : 'icon-save'"></i>
+        <span>{{ isLoading ? 'Guardando...' : 'Guardar' }}</span>
+      </button>
+    </div>
   </div>
 </form>

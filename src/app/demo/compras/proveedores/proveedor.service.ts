@@ -71,6 +71,7 @@ export interface ProveedorUI {
   ctaBanco: string;
   codTipo: string;
   tipoProveedor: string;
+  operador: string;
 }
 
 @Injectable({
@@ -202,7 +203,8 @@ export class ProveedorService {
       banco: apiData.MAC01_BanProve,
       ctaBanco: apiData.MAC01_CtaBanco,
       codTipo: apiData.MAC01_CodTipo,
-      tipoProveedor: apiData.CAC01_TipoProve
+      tipoProveedor: apiData.CAC01_TipoProve,
+      operador: apiData.MAC01_Operador
     };
   }
 

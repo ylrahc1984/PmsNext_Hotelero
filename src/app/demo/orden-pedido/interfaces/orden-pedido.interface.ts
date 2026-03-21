@@ -27,6 +27,7 @@ export interface OrdenPedidoListadoItem {
   total: number;
   estado: string;
   observaciones: string;
+  operador: string;
 }
 
 export interface OrdenPedidoListadoResponse {

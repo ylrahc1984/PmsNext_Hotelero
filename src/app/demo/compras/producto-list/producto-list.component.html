@@ -82,6 +82,7 @@
             <th class="text-end">Impuesto %</th>
             <th class="text-end">Stock</th>
             <th class="text-center">Estado</th>
+            <th class="text-center">Operador</th>
             <th class="text-center">Acciones</th>
           </tr>
         </thead>
@@ -106,6 +107,7 @@
                 {{ getEstadoLabel(producto) }}
               </span>
             </td>
+            <td class="text-center">{{ producto.MAC02_Operador }}</td>
             <td class="text-center">
               <div ngbDropdown container="body" placement="bottom-end" class="producto-action-menu">
                 <button

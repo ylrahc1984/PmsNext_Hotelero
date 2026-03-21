@@ -96,7 +96,8 @@ export class OrdenPedidoService {
       total: this.readNumber(item, 'PPV05_TotalDocu', 'totDocu', 'total'),
       estado: this.readString(item, 'PPV05_EstDocu', 'estado'),
       items: this.readNumber(item, 'PPV05_Items', 'items', 'cantidadItems'),
-      observaciones: this.readString(item, 'PPV05_Observaciones', 'observaciones')
+      observaciones: this.readString(item, 'PPV05_Observaciones', 'observaciones'),
+      operador: this.readString(item, 'PPV05_Operador', 'operador', 'usuario')
     };
   }
 

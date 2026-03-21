@@ -86,12 +86,13 @@
                     <th class="text-end">Impuesto</th>
                     <th class="text-end">Total</th>
                     <th>Estado</th>
+                    <th>Operador</th>
                     <th class="text-center">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr *ngIf="isLoading">
-                    <td colspan="12" class="text-center text-muted py-4">Cargando ordenes de pedido...</td>
+                    <td colspan="13" class="text-center text-muted py-4">Cargando ordenes de pedido...</td>
                   </tr>
 
                   <ng-container *ngIf="!isLoading">
@@ -112,6 +113,7 @@
                             {{ item.estado || 'Sin estado' }}
                           </span>
                         </td>
+                        <td>{{ item.operador || 'N/D' }}</td>
                         <td class="text-center">
                           <button class="btn btn-sm btn-outline-primary" type="button" (click)="toggleExpanded(item)">
                             <i class="feather" [ngClass]="isExpanded(item) ? 'icon-chevron-up' : 'icon-eye'"></i>
@@ -120,7 +122,7 @@
                       </tr>
 
                       <tr *ngIf="isExpanded(item)" class="op-table__expanded">
-                        <td colspan="12">
+                        <td colspan="13">
                           <div class="expanded-content">
                             <div class="expanded-content__title">Observaciones</div>
                             <div class="text-muted">{{ item.observaciones || 'Sin observaciones registradas.' }}</div>
@@ -130,7 +132,7 @@
                     </ng-container>
 
                     <tr *ngIf="ordenes.length === 0">
-                      <td colspan="12" class="text-center py-5 text-muted">
+                      <td colspan="13" class="text-center py-5 text-muted">
                         No se encontraron ordenes con los filtros aplicados.
                       </td>
                     </tr>
