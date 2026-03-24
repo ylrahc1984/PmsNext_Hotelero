@@ -43,6 +43,16 @@ export class ClienteFormComponent implements OnInit {
   distritoOptions: Array<{ value: string; label: string }> = [];
   isLoadingDistritos = false;
 
+  get comprobanteElectronicoLabel(): string {
+    return this.form?.get('enviarCorreo')?.value ? 'Factura Electronica' : 'Tiquete Electronico';
+  }
+
+  get comprobanteElectronicoHint(): string {
+    return this.form?.get('enviarCorreo')?.value
+      ? 'Al activar este control, el cliente queda configurado para Factura Electronica.'
+      : 'Al dejar este control inactivo, el cliente queda configurado para Tiquete Electronico.';
+  }
+
   get contactosArray(): FormArray {
     return this.form.get('contactos') as FormArray;
   }

@@ -57,14 +57,22 @@
                 <div class="col-lg-3 col-md-6 mb-1">
                   <label class="form-label">Hora Inicio <span class="text-danger">*</span></label>
                   <input
-                    type="time"
+                    type="text"
                     class="form-control form-control-sm"
                     formControlName="horaInicio"
-                    lang="es-CR"
-                    step="60"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    placeholder="HH:mm"
+                    maxlength="5"
+                    (input)="onHoraInput('horaInicio', $any($event.target).value)"
+                    (blur)="onHoraBlur('horaInicio')"
                   >
-                  <div class="text-danger small mt-1" *ngIf="form.controls.horaInicio.touched && form.controls.horaInicio.invalid">
+                  <small class="form-text text-muted d-block mt-1">Formato 24 horas: HH:mm</small>
+                  <div class="text-danger small mt-1" *ngIf="form.controls.horaInicio.touched && form.controls.horaInicio.errors?.['required']">
                     La hora de inicio es obligatoria.
+                  </div>
+                  <div class="text-danger small mt-1" *ngIf="form.controls.horaInicio.touched && form.controls.horaInicio.errors?.['pattern']">
+                    Use formato 24 horas. Ejemplo: 09:30 o 14:45.
                   </div>
                 </div>
               </div>
@@ -103,14 +111,22 @@
 
                   <div class="rsv-pickup-layout__time">
                     <input
-                      type="time"
+                      type="text"
                       class="form-control form-control-sm"
                       [formControl]="form.controls.horaPickup"
-                      lang="es-CR"
-                      step="60"
+                      inputmode="numeric"
+                      autocomplete="off"
+                      placeholder="HH:mm"
+                      maxlength="5"
+                      (input)="onHoraInput('horaPickup', $any($event.target).value)"
+                      (blur)="onHoraBlur('horaPickup')"
                     >
-                    <div class="text-danger small mt-1" *ngIf="form.controls.horaPickup.touched && form.controls.horaPickup.invalid">
+                    <small class="form-text text-muted d-block mt-1">Formato 24 horas: HH:mm</small>
+                    <div class="text-danger small mt-1" *ngIf="form.controls.horaPickup.touched && form.controls.horaPickup.errors?.['required']">
                       La hora pick-up es obligatoria.
+                    </div>
+                    <div class="text-danger small mt-1" *ngIf="form.controls.horaPickup.touched && form.controls.horaPickup.errors?.['pattern']">
+                      Use formato 24 horas. Ejemplo: 09:30 o 14:45.
                     </div>
                   </div>
                 </div>

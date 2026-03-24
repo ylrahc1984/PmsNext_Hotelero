@@ -15,7 +15,7 @@
             </div>
             <div class="stat">
               <span class="stat-label">Total filtrado</span>
-              <strong class="stat-value">{{ totalFiltrado() | currency:'USD':'symbol':'1.0-0' }}</strong>
+              <strong class="stat-value">{{ totalFiltrado() | number:'1.2-2' }}</strong>
             </div>
           </div>
           <div class="header-actions">
@@ -34,10 +34,21 @@
       <div class="filters-grid">
         <div class="filter-group">
           <label>Agencia</label>
-          <select class="form-control" [(ngModel)]="filtros.agencia" (ngModelChange)="resetPagina()">
-            <option value="todos">Todas</option>
-            <option *ngFor="let a of agencias" [value]="a">{{ a }}</option>
-          </select>
+          <div class="input-icon">
+            <i class="feather icon-search"></i>
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Todas las agencias"
+              autocomplete="off"
+              [ngbTypeahead]="searchAgencias"
+              [editable]="true"
+              [(ngModel)]="agenciaSearchValue"
+              [ngModelOptions]="{ standalone: true }"
+              (selectItem)="onAgenciaSelected($event)"
+              (ngModelChange)="onAgenciaInputChange($event)"
+              (blur)="onAgenciaBlur()">
+          </div>
         </div>
         <div class="filter-group">
           <label>Estado</label>
@@ -91,7 +102,7 @@
                 <th>Pax</th>
                 <th>Agencia</th>
                 <th>Estado</th>
-                <th>Total</th>
+                <th class="text-right">Total</th>
               </tr>
             </thead>
             <tbody>
@@ -110,7 +121,7 @@
                     {{ r.estado | titlecase }}
                   </span>
                 </td>
-                <td><span class="monto">{{ r.total | currency:'USD':'symbol':'1.0-0' }}</span></td>
+                <td class="text-right"><span class="monto">{{ r.total | number:'1.2-2' }}</span></td>
               </tr>
             </tbody>
           </table>

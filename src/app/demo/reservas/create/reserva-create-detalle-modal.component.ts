@@ -1,13 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, NgForm } from '@angular/forms';
 import { NgbTypeaheadModule, NgbTypeaheadSelectItemEvent } from '@ng-bootstrap/ng-bootstrap';
 import { OperatorFunction, Subject, merge } from 'rxjs';
 import { debounceTime, distinctUntilChanged, map, tap } from 'rxjs/operators';
 
 import { GooglePlaceSelection, GooglePlacesAutocompleteDirective } from '../shared/google-places-autocomplete.directive';
 import { DetalleForm } from './reserva-create.models';
-import { hasCoordinates, safeJsonStringify } from './reserva-create.utils';
+import { hasCoordinates, safeJsonStringify, safeString } from './reserva-create.utils';
 import { TipoPaxUI } from '../services/tipo-pax.service';
 import { PlanTarifaUI } from '../../catalogos/listas-precios/planes-tarifas.service';
 import { ListaPrecioUI } from '../../catalogos/listas-precios/lista-precio.models';
@@ -51,6 +51,18 @@ export class ReservaCreateDetalleModalComponent implements OnChanges {
   private servicioSearchTouched = false;
   private lastServicioTerm = '';
   private readonly serviciosRefresh$ = new Subject<string>();
+  private readonly requiredFieldLabels: Record<string, string> = {
+    codPlan: 'Plan Tarifario',
+    codLstPrecio: 'Lista de Precios',
+    fechaServicio: 'Fecha del Servicio',
+    codServicio: 'Ruta/Actividad',
+    horaPickup: 'Hora Pick-Up',
+    horaInicio: 'Hora Inicio',
+    origenLugar: 'Lugar de Origen',
+    origenZona: 'Zona de Origen',
+    destinoLugar: 'Lugar de Destino',
+    destinoZona: 'Zona de Destino'
+  };
 
   readonly searchServicios: OperatorFunction<string, readonly ServicioPrecioApiItem[]> = (text$) => {
     const userInput$ = text$.pipe(
@@ -101,12 +113,14 @@ export class ReservaCreateDetalleModalComponent implements OnChanges {
       this.resetAutocompleteState();
       this.resetServicioSearch();
       this.syncServicioSearchSelection();
+      this.normalizeHoraFields();
     }
 
     if (this.open && changes['detalleForm']) {
       this.servicioSearchTouched = false;
       this.syncServicioSearchSelection();
       this.detalleForm.planTarifa = this.resolvePlanTarifario(this.detalleForm?.codPlan || '');
+      this.normalizeHoraFields();
     }
 
     if (this.open && changes['servicios']) {
@@ -142,14 +156,18 @@ export class ReservaCreateDetalleModalComponent implements OnChanges {
     this.onTarifaChange();
   }
 
-  onHoraPickupChange(value: string): void {
-    this.detalleForm.horaPickup = (value ?? '').toString();
+  onHoraPickupInput(value: string): void {
+    this.detalleForm.horaPickup = this.sanitizeHoraInput(value);
     this.recalculate.emit();
   }
 
-  onHoraInicioChange(value: string): void {
-    this.detalleForm.horaInicio = (value ?? '').toString();
+  onHoraInicioInput(value: string): void {
+    this.detalleForm.horaInicio = this.sanitizeHoraInput(value);
     this.recalculate.emit();
+  }
+
+  onHoraBlur(field: 'horaPickup' | 'horaInicio'): void {
+    this.setHoraField(field, this.normalizeHoraValue(this.detalleForm?.[field]));
   }
 
   onTipoPaxChange(index: number, value: string): void {
@@ -193,12 +211,29 @@ export class ReservaCreateDetalleModalComponent implements OnChanges {
     }
   }
 
-  onSubmit(formRef: any): void {
+  onSubmit(formRef: NgForm): void {
     if (this.isSubmitting) {
+      return;
+    }
+    this.normalizeHoraFields();
+    formRef?.control?.markAllAsTouched?.();
+    if (this.collectMissingRequiredFields(formRef).length || !this.hasValidPaxItems()) {
       return;
     }
     this.submitLocked = true;
     this.save.emit(formRef);
+  }
+
+  showRequiredError(formRef: NgForm | null | undefined, controlName: string): boolean {
+    const control = formRef?.controls?.[controlName];
+    if (!control) return false;
+    const interacted = !!formRef?.submitted || !!control.touched;
+    if (!interacted) return false;
+    return this.isRequiredFieldMissing(controlName, control);
+  }
+
+  showPaxValidationError(formRef: NgForm | null | undefined): boolean {
+    return !!formRef?.submitted && !this.hasValidPaxItems();
   }
 
   openLocationInfo(tipo: 'origen' | 'destino'): void {
@@ -420,5 +455,121 @@ export class ReservaCreateDetalleModalComponent implements OnChanges {
     if (!value) return '';
     if (typeof value === 'string') return value;
     return this.servicioResultFormatter(value);
+  }
+
+  private collectMissingRequiredFields(formRef: NgForm | null | undefined): string[] {
+    return Object.keys(this.requiredFieldLabels).filter((field) => this.isRequiredFieldMissing(field, formRef?.controls?.[field]));
+  }
+
+  private isRequiredFieldMissing(controlName: string, control?: { invalid?: boolean } | null): boolean {
+    if (control?.invalid) {
+      return true;
+    }
+    return !safeString(this.getRequiredFieldValue(controlName)).trim();
+  }
+
+  private getRequiredFieldValue(controlName: string): unknown {
+    switch (controlName) {
+      case 'codPlan':
+        return this.detalleForm?.codPlan;
+      case 'codLstPrecio':
+        return this.detalleForm?.codLstPrecio;
+      case 'fechaServicio':
+        return this.detalleForm?.fechaServicio;
+      case 'codServicio':
+        return this.detalleForm?.codServicio;
+      case 'horaPickup':
+        return this.detalleForm?.horaPickup;
+      case 'horaInicio':
+        return this.detalleForm?.horaInicio;
+      case 'origenLugar':
+        return this.detalleForm?.origenLugar;
+      case 'origenZona':
+        return this.detalleForm?.origenZona;
+      case 'destinoLugar':
+        return this.detalleForm?.destinoLugar;
+      case 'destinoZona':
+        return this.detalleForm?.destinoZona;
+      default:
+        return '';
+    }
+  }
+
+  private hasValidPaxItems(): boolean {
+    return (this.detalleForm?.detallesPax ?? []).some((item) => safeString(item?.tipoPax).trim() && Number(item?.cantidad ?? 0) > 0);
+  }
+
+  private normalizeHoraFields(): void {
+    this.setHoraField('horaPickup', this.normalizeHoraValue(this.detalleForm?.horaPickup));
+    this.setHoraField('horaInicio', this.normalizeHoraValue(this.detalleForm?.horaInicio));
+  }
+
+  private setHoraField(field: 'horaPickup' | 'horaInicio', value: string): void {
+    if (!this.detalleForm) return;
+    this.detalleForm[field] = value;
+  }
+
+  private sanitizeHoraInput(value: string | null | undefined): string {
+    const raw = (value ?? '').toString().replace(/[^\d:]/g, '');
+    const [hoursPart = '', ...rest] = raw.split(':');
+    const hours = hoursPart.slice(0, 2);
+    const minutes = rest.join('').slice(0, 2);
+
+    if (raw.includes(':')) {
+      return `${hours}:${minutes}`;
+    }
+
+    return raw.slice(0, 4);
+  }
+
+  private normalizeHoraValue(value: string | null | undefined): string {
+    const raw = this.sanitizeHoraInput(value).trim();
+    if (!raw) return '';
+
+    const colonMatch = raw.match(/^(\d{1,2}):(\d{1,2})$/);
+    if (colonMatch) {
+      return this.buildHoraValue(colonMatch[1], colonMatch[2]) ?? raw;
+    }
+
+    const digits = raw.replace(/\D/g, '');
+    if (digits.length === 1) {
+      return this.buildHoraValue(digits, '00') ?? raw;
+    }
+
+    if (digits.length === 2) {
+      const asHour = this.buildHoraValue(digits, '00');
+      if (asHour) {
+        return asHour;
+      }
+
+      const shorthandHour = digits.slice(0, 1);
+      const shorthandMinutes = `${digits.slice(1)}0`;
+      return this.buildHoraValue(shorthandHour, shorthandMinutes) ?? raw;
+    }
+
+    if (digits.length === 3) {
+      return this.buildHoraValue(digits.slice(0, 1), digits.slice(1)) ?? raw;
+    }
+
+    if (digits.length === 4) {
+      return this.buildHoraValue(digits.slice(0, 2), digits.slice(2)) ?? raw;
+    }
+
+    return raw;
+  }
+
+  private buildHoraValue(hoursText: string, minutesText: string): string | null {
+    const hours = Number(hoursText);
+    const minutes = Number(minutesText);
+
+    if (!Number.isInteger(hours) || !Number.isInteger(minutes)) {
+      return null;
+    }
+
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      return null;
+    }
+
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
   }
 }

@@ -190,8 +190,14 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
       codPlan: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
       codLstPrecio: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
       fechaServicio: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
-      horaPickup: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
-      horaInicio: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
+      horaPickup: this.fb.control('', {
+        nonNullable: true,
+        validators: [Validators.required, Validators.pattern(/^([01][0-9]|2[0-3]):[0-5][0-9]$/)]
+      }),
+      horaInicio: this.fb.control('', {
+        nonNullable: true,
+        validators: [Validators.required, Validators.pattern(/^([01][0-9]|2[0-3]):[0-5][0-9]$/)]
+      }),
       observaciones: this.fb.control('', { nonNullable: true }),
       pickups: this.fb.array<PickupFormGroup>([]),
       actividades: this.fb.array<ActividadDetalleFormGroup>([]),
@@ -376,10 +382,40 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     this.close.emit();
   }
 
+  onHoraInput(field: 'horaPickup' | 'horaInicio', value: string): void {
+    const control = this.form.controls[field];
+    const sanitized = this.sanitizeHoraInput(value);
+    if (control.value !== sanitized) {
+      control.setValue(sanitized);
+      return;
+    }
+
+    if (field === 'horaPickup') {
+      this.syncInputModel();
+    }
+  }
+
+  onHoraBlur(field: 'horaPickup' | 'horaInicio'): void {
+    const control = this.form.controls[field];
+    const normalized = this.normalizeHoraValue(control.value);
+    if (control.value !== normalized) {
+      control.setValue(normalized);
+    }
+    control.markAsTouched();
+
+    if (field === 'horaInicio') {
+      this.recalculateHoraPickup();
+    } else {
+      this.syncInputModel();
+    }
+  }
+
   onSubmit(): void {
     if (this.isSubmitting) {
       return;
     }
+
+    this.normalizeHoraFields();
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -719,8 +755,8 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
         codPlan: this.resolveDefaultCodPlan(),
         codLstPrecio: this.resolveDefaultCodLstPrecio(),
         fechaServicio: (this.actividadForm?.fechaServicio || today).toString(),
-        horaPickup: (this.actividadForm?.horaPickup || '').toString(),
-        horaInicio: (this.actividadForm?.horaInicio || '').toString(),
+        horaPickup: this.normalizeHoraValue((this.actividadForm?.horaPickup || '').toString()),
+        horaInicio: this.normalizeHoraValue((this.actividadForm?.horaInicio || '').toString()),
         observaciones: (this.actividadForm?.observaciones || '').toString(),
         totalGeneral: Number(this.actividadForm?.totalGeneral ?? this.actividadForm?.montoServicio ?? 0) || 0
       },
@@ -1097,7 +1133,7 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
   }
 
   private recalculateHoraPickup(durationOverride?: unknown): void {
-    const horaInicio = (this.form.controls.horaInicio.value || '').toString().trim();
+    const horaInicio = this.normalizeHoraValue(this.form.controls.horaInicio.value);
     const durationMinutes = this.parsePickupDurationToMinutes(durationOverride) ?? this.getPickupDurationMinutes();
 
     if (horaInicio && durationMinutes != null) {
@@ -1108,6 +1144,76 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     }
 
     this.syncInputModel();
+  }
+
+  private normalizeHoraFields(): void {
+    const horaInicio = this.normalizeHoraValue(this.form.controls.horaInicio.value);
+    const horaPickup = this.normalizeHoraValue(this.form.controls.horaPickup.value);
+
+    this.form.controls.horaInicio.setValue(horaInicio, { emitEvent: false });
+    this.form.controls.horaPickup.setValue(horaPickup, { emitEvent: false });
+  }
+
+  private sanitizeHoraInput(value: string | null | undefined): string {
+    const raw = (value ?? '').toString().replace(/[^\d:]/g, '');
+    const [hoursPart = '', ...rest] = raw.split(':');
+    const hours = hoursPart.slice(0, 2);
+    const minutes = rest.join('').slice(0, 2);
+
+    if (raw.includes(':')) {
+      return `${hours}:${minutes}`;
+    }
+
+    return raw.slice(0, 4);
+  }
+
+  private normalizeHoraValue(value: string | null | undefined): string {
+    const raw = this.sanitizeHoraInput(value).trim();
+    if (!raw) return '';
+
+    const colonMatch = raw.match(/^(\d{1,2}):(\d{1,2})$/);
+    if (colonMatch) {
+      return this.buildHoraValue(colonMatch[1], colonMatch[2]) ?? raw;
+    }
+
+    const digits = raw.replace(/\D/g, '');
+    if (digits.length === 1) {
+      return this.buildHoraValue(digits, '00') ?? raw;
+    }
+
+    if (digits.length === 2) {
+      const asHour = this.buildHoraValue(digits, '00');
+      if (asHour) {
+        return asHour;
+      }
+
+      return this.buildHoraValue(digits.slice(0, 1), `${digits.slice(1)}0`) ?? raw;
+    }
+
+    if (digits.length === 3) {
+      return this.buildHoraValue(digits.slice(0, 1), digits.slice(1)) ?? raw;
+    }
+
+    if (digits.length === 4) {
+      return this.buildHoraValue(digits.slice(0, 2), digits.slice(2)) ?? raw;
+    }
+
+    return raw;
+  }
+
+  private buildHoraValue(hoursText: string, minutesText: string): string | null {
+    const hours = Number(hoursText);
+    const minutes = Number(minutesText);
+
+    if (!Number.isInteger(hours) || !Number.isInteger(minutes)) {
+      return null;
+    }
+
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      return null;
+    }
+
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
   }
 
   private getPickupDurationMinutes(): number | null {

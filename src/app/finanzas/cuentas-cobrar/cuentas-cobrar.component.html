@@ -151,8 +151,8 @@
                 <td class="text-end">{{ item.saldo | number:'1.2-2' }}</td>
                 <td>{{ item.moneda }}</td>
                 <td>
-                  <span class="estado-badge" [ngClass]="getEstadoClase(item.estadoElectronico)">
-                    {{ item.estadoElectronico || 'N/D' }}
+                  <span class="estado-badge" [ngClass]="getEstadoClase(item)">
+                    {{ getEstadoCobro(item) }}
                   </span>
                 </td>
               </tr>

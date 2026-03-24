@@ -1,10 +1,14 @@
 // angular import
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { NgbTypeaheadModule, NgbTypeaheadSelectItemEvent } from '@ng-bootstrap/ng-bootstrap';
+import { OperatorFunction } from 'rxjs';
+import { debounceTime, distinctUntilChanged, map } from 'rxjs/operators';
 
 // project import
 import { SharedModule } from 'src/app/theme/shared/shared.module';
+import { ReporteOperacionItem, ReservasReporteService } from './reservas-reporte.service';
 
 type EstadoReserva = 'confirmada' | 'pendiente' | 'cancelada';
 
@@ -22,23 +26,27 @@ interface ReservaReporte {
   total: number;
 }
 
+interface FiltrosReservaReporte {
+  buscar: string;
+  estado: 'todos' | EstadoReserva;
+  agencia: string;
+  desde: string;
+  hasta: string;
+}
+
 @Component({
   selector: 'app-reservas-reporte',
   standalone: true,
-  imports: [CommonModule, FormsModule, SharedModule],
+  imports: [CommonModule, FormsModule, SharedModule, NgbTypeaheadModule],
   templateUrl: './reservas.component.html',
   styleUrls: ['./reservas.component.scss']
 })
-export class ReservasComponent {
-  reservas: ReservaReporte[] = [
-    { codigo: 'RES-1001', fecha: '2026-01-04', cliente: 'Quality Travel', servicio: 'Tour Monteverde', origen: 'San Jose', destino: 'Monteverde', hora: '07:30', pax: 4, agencia: 'Allan Paniagua', estado: 'confirmada', total: 520 },
-    { codigo: 'RES-1002', fecha: '2026-01-03', cliente: 'Agencia Caribe', servicio: 'Transfer Privado', origen: 'SJO', destino: 'Los Pinos', hora: '10:00', pax: 2, agencia: 'Agencia Caribe', estado: 'pendiente', total: 310 },
-    { codigo: 'RES-1003', fecha: '2026-01-02', cliente: 'Brenda Jones', servicio: 'Tour Nocturno', origen: 'Lodge Jaguarundi', destino: 'Night Hike', hora: '17:45', pax: 2, agencia: 'Allan Paniagua', estado: 'confirmada', total: 240 },
-    { codigo: 'RES-1004', fecha: '2025-12-30', cliente: 'Trapp Family', servicio: 'Transfer Colectivo', origen: 'Courtyard', destino: 'Trapp Family', hora: '14:00', pax: 2, agencia: 'Trapp Family', estado: 'cancelada', total: 0 },
-    { codigo: 'RES-1005', fecha: '2025-12-28', cliente: 'Stephen Campbell', servicio: 'Privado Normal', origen: 'Marriott Hacienda', destino: 'Los Pinos', hora: '09:00', pax: 2, agencia: 'Los Pinos', estado: 'confirmada', total: 179 }
-  ];
+export class ReservasComponent implements OnInit {
+  private readonly reservasReporteService = inject(ReservasReporteService);
 
-  filtros = {
+  reservas: ReservaReporte[] = [];
+
+  filtros: FiltrosReservaReporte = {
     buscar: '',
     estado: 'todos',
     agencia: 'todos',
@@ -46,11 +54,23 @@ export class ReservasComponent {
     hasta: ''
   };
 
-  agencias = ['Allan Paniagua', 'Agencia Caribe', 'Trapp Family', 'Los Pinos'];
+  agencias: string[] = [];
+  agenciaSearchValue = '';
 
   page = 1;
   pageSize = 5;
   pageSizes = [5, 10, 20];
+
+  readonly searchAgencias: OperatorFunction<string, readonly string[]> = (text$) =>
+    text$.pipe(
+      debounceTime(200),
+      distinctUntilChanged(),
+      map((term) => this.filterAgencias(term))
+    );
+
+  ngOnInit() {
+    this.cargarReservas();
+  }
 
   filteredReservas() {
     const texto = this.filtros.buscar.trim().toLowerCase();
@@ -99,6 +119,7 @@ export class ReservasComponent {
 
   resetFiltros() {
     this.filtros = { buscar: '', estado: 'todos', agencia: 'todos', desde: '', hasta: '' };
+    this.agenciaSearchValue = '';
     this.page = 1;
   }
 
@@ -123,5 +144,137 @@ export class ReservasComponent {
 
   imprimir() {
     window.print();
+  }
+
+  onAgenciaSelected(event: NgbTypeaheadSelectItemEvent): void {
+    const agencia = (event.item ?? '').toString().trim();
+    this.filtros.agencia = agencia || 'todos';
+    this.agenciaSearchValue = agencia;
+    this.resetPagina();
+  }
+
+  onAgenciaInputChange(value: string): void {
+    const term = (value ?? '').toString();
+    this.agenciaSearchValue = term;
+
+    if (!term.trim()) {
+      if (this.filtros.agencia !== 'todos') {
+        this.filtros.agencia = 'todos';
+        this.resetPagina();
+      }
+      return;
+    }
+
+    const exactMatch = this.findAgenciaExacta(term);
+    if (exactMatch && this.filtros.agencia !== exactMatch) {
+      this.filtros.agencia = exactMatch;
+      this.resetPagina();
+    }
+  }
+
+  onAgenciaBlur(): void {
+    const term = this.agenciaSearchValue.trim();
+    if (!term) {
+      this.agenciaSearchValue = '';
+      this.filtros.agencia = 'todos';
+      return;
+    }
+
+    const exactMatch = this.findAgenciaExacta(term);
+    if (exactMatch) {
+      this.agenciaSearchValue = exactMatch;
+      this.filtros.agencia = exactMatch;
+      return;
+    }
+
+    this.syncAgenciaSearchValue();
+  }
+
+  private cargarReservas() {
+    this.reservasReporteService.getTodasLasOperaciones().subscribe({
+      next: (response) => {
+        this.reservas = (response.datos ?? []).map((item) => this.mapReserva(item));
+        this.agencias = this.getAgencias(this.reservas);
+        if (!this.agencias.includes(this.filtros.agencia)) {
+          this.filtros.agencia = 'todos';
+        }
+        this.syncAgenciaSearchValue();
+        this.page = 1;
+      },
+      error: (error) => {
+        console.error('No se pudo cargar el reporte de reservas.', error);
+        this.reservas = [];
+        this.agencias = [];
+        this.agenciaSearchValue = '';
+        this.page = 1;
+      }
+    });
+  }
+
+  private mapReserva(item: ReporteOperacionItem): ReservaReporte {
+    return {
+      codigo: (item.numeroReserva ?? '').toString().trim(),
+      fecha: item.fecha,
+      cliente: (item.cliente ?? '').toString().trim(),
+      servicio: (item.servicio ?? '').toString().trim(),
+      origen: (item.origen ?? '').toString().trim(),
+      destino: (item.destino ?? '').toString().trim(),
+      hora: (item.hora ?? '').toString().trim(),
+      pax: Number(item.pax ?? 0),
+      agencia: (item.agenciaOCliente ?? '').toString().trim(),
+      estado: this.normalizarEstado(item.estado),
+      total: Number(item.total ?? 0)
+    };
+  }
+
+  private normalizarEstado(estado: string | null | undefined): EstadoReserva {
+    const valor = (estado ?? '').toString().trim().toUpperCase();
+
+    if (['CAN', 'ANU', 'CANCELADA', 'CANCELADO'].includes(valor)) {
+      return 'cancelada';
+    }
+
+    if (['CON', 'CONF', 'CONFIRMADA', 'COM', 'COMPLETADA', 'ASI', 'ASIGNADA'].includes(valor)) {
+      return 'confirmada';
+    }
+
+    return 'pendiente';
+  }
+
+  private getAgencias(reservas: ReservaReporte[]): string[] {
+    return [...new Set(reservas.map((reserva) => reserva.agencia).filter((agencia) => !!agencia))]
+      .sort((a, b) => a.localeCompare(b));
+  }
+
+  private filterAgencias(term: string): string[] {
+    const query = this.normalizeText(term);
+    const agencias = this.agencias ?? [];
+
+    if (!query) {
+      return agencias.slice(0, 20);
+    }
+
+    return agencias
+      .filter((agencia) => this.normalizeText(agencia).includes(query))
+      .slice(0, 20);
+  }
+
+  private findAgenciaExacta(value: string): string | null {
+    const query = this.normalizeText(value);
+    if (!query) return null;
+    return this.agencias.find((agencia) => this.normalizeText(agencia) === query) ?? null;
+  }
+
+  private syncAgenciaSearchValue(): void {
+    this.agenciaSearchValue = this.filtros.agencia === 'todos' ? '' : this.filtros.agencia;
+  }
+
+  private normalizeText(value: string | null | undefined): string {
+    return (value ?? '')
+      .toString()
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
   }
 }

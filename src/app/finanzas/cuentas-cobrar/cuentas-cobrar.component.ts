@@ -20,18 +20,18 @@ type EstadoCuentaForm = {
 };
 
 type DocumentoSeleccionado = {
-  tipoDocu: string;
-  serie: string;
-  numDocu: string;
-  fechaDocu: string;
-  codCliente: string;
-  nomCliente: string;
-  totalDocu: number;
-  totalPago: number;
-  saldo: number;
-  moneda: string;
-  tCambio: number;
-  estadoElectronico: string;
+  tipoDocu            : string;
+  serie               : string;
+  numDocu             : string;
+  fechaDocu           : string;
+  codCliente          : string;
+  nomCliente          : string;
+  totalDocu           : number;
+  totalPago           : number;
+  saldo               : number;
+  moneda              : string;
+  tCambio             : number;
+  estadoElectronico   : string;
 };
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -88,11 +88,6 @@ export class CuentasCobrarComponent implements OnInit {
     { value: 'P', label: 'Pagado' }
   ];
 
-  private readonly estadoBadgeMap: Record<string, string> = {
-    ABIERTO: 'estado-abierto',
-    CANCELADO: 'estado-cancelado'
-  };
-
   ngOnInit(): void {
     this.onBuscar();
   }
@@ -136,9 +131,44 @@ export class CuentasCobrarComponent implements OnInit {
     return `${item.tipoDocu}-${item.serie}-${item.numDocu}-${index}`;
   }
 
-  getEstadoClase(estado: string): string {
-    const normalized = this.normalize(estado).toUpperCase();
-    return this.estadoBadgeMap[normalized] ?? 'estado-neutral';
+  getEstadoCobro(item: EstadoCuentaCliente): string {
+    const totalDocu = this.normalizeNumber(item.totalDocu);
+    const totalPago = this.normalizeNumber(item.totalPago);
+    const saldo = this.normalizeNumber(item.saldo);
+    const tolerance = 0.009;
+
+    if (saldo < -tolerance) {
+      return 'Saldo a favor';
+    }
+
+    if (Math.abs(saldo) <= tolerance && (totalDocu > tolerance || totalPago > tolerance)) {
+      return 'Cancelado';
+    }
+
+    if (saldo > tolerance && totalPago > tolerance && totalPago + tolerance < totalDocu) {
+      return 'Abono parcial';
+    }
+
+    if (saldo > tolerance) {
+      return 'Pendiente';
+    }
+
+    return 'Sin saldo';
+  }
+
+  getEstadoClase(item: EstadoCuentaCliente): string {
+    switch (this.getEstadoCobro(item)) {
+      case 'Cancelado':
+        return 'estado-cancelado';
+      case 'Abono parcial':
+        return 'estado-parcial';
+      case 'Pendiente':
+        return 'estado-pendiente';
+      case 'Saldo a favor':
+        return 'estado-favor';
+      default:
+        return 'estado-neutral';
+    }
   }
 
   openClienteModal(): void {

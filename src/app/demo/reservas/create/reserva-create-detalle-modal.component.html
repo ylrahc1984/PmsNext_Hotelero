@@ -26,6 +26,7 @@
                   <label class="form-label">Plan Tarifario <span class="text-danger">*</span></label>
                   <select
                     class="form-control form-control-sm"
+                    [class.is-invalid]="showRequiredError(detalleFormRef, 'codPlan')"
                     [ngModel]="detalleForm.codPlan"
                     name="codPlan"
                     required
@@ -44,6 +45,7 @@
                   <label class="form-label">Lista de Precios <span class="text-danger">*</span></label>
                   <select
                     class="form-control form-control-sm"
+                    [class.is-invalid]="showRequiredError(detalleFormRef, 'codLstPrecio')"
                     [ngModel]="detalleForm.codLstPrecio"
                     name="codLstPrecio"
                     required
@@ -72,26 +74,31 @@
                 <input
                   type="date"
                   class="form-control form-control-sm"
+                  [class.is-invalid]="showRequiredError(detalleFormRef, 'fechaServicio')"
                   [(ngModel)]="detalleForm.fechaServicio"
                   name="fechaServicio"
                   required
                 >
+                <div class="text-danger small mt-1" *ngIf="showRequiredError(detalleFormRef, 'fechaServicio')">
+                  Fecha del Servicio es requerida.
+                </div>
               </div>
             </div>
             <div class="rsv-section__body">
               <div class="row g-2">
                 <div class="col-lg-6 col-md-6">
-                  <label class="form-label">Servicio <span class="text-danger">*</span></label>
+                  <label class="form-label">Ruta/Actividad<span class="text-danger">*</span></label>
                   <input
                     type="text"
                     class="form-control form-control-sm"
-                    placeholder="Buscar servicio"
+                    placeholder="Buscar ruta/actividad"
                     autocomplete="off"
                     [ngbTypeahead]="searchServicios"
                     [inputFormatter]="servicioInputFormatter"
                     [resultFormatter]="servicioResultFormatter"
                     [openOnFocus]="true"
                     [editable]="true"
+                    [class.is-invalid]="showRequiredError(detalleFormRef, 'codServicio')"
                     [(ngModel)]="servicioSearchValue"
                     [ngModelOptions]="{ standalone: true }"
                     (selectItem)="onServicioSelected($event)"
@@ -100,37 +107,58 @@
                   <input type="hidden" [(ngModel)]="detalleForm.codServicio" name="codServicio" required>
                   <small class="form-text text-muted" *ngIf="serviciosLoading">Cargando servicios...</small>
                   <small class="form-text text-muted" *ngIf="!serviciosLoading && servicios.length === 0">No hay servicios disponibles.</small>
+                  <div class="text-danger small mt-1" *ngIf="showRequiredError(detalleFormRef, 'codServicio')">
+                    Ruta/Actividad es requerida. Seleccione una opción de la lista.
+                  </div>
                 </div>
                 <div class="col-lg-3 col-md-6">
                   <label class="form-label">Hora Pick-Up <span class="text-danger">*</span></label>
                   <input
-                    type="time"
+                    type="text"
                     class="form-control form-control-sm"
+                    [class.is-invalid]="showRequiredError(detalleFormRef, 'horaPickup')"
                     [ngModel]="detalleForm.horaPickup"
                     name="horaPickup"
-                    lang="es-CR"
-                    step="60"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    placeholder="HH:mm"
+                    maxlength="5"
+                    pattern="([01][0-9]|2[0-3]):[0-5][0-9]"
                     required
-                    (ngModelChange)="onHoraPickupChange($event)"
+                    (ngModelChange)="onHoraPickupInput($event)"
+                    (blur)="onHoraBlur('horaPickup')"
                   >
-                  <div class="text-danger small" *ngIf="detalleFormRef.submitted && detalleFormRef.controls.horaPickup?.invalid">
+                  <small class="form-text text-muted">Formato 24 horas: HH:mm</small>
+                  <div class="text-danger small" *ngIf="detalleFormRef.controls.horaPickup?.errors?.['required'] && (detalleFormRef.submitted || detalleFormRef.controls.horaPickup?.touched)">
                     Hora Pick-Up es requerida.
+                  </div>
+                  <div class="text-danger small" *ngIf="detalleFormRef.controls.horaPickup?.errors?.['pattern'] && (detalleFormRef.submitted || detalleFormRef.controls.horaPickup?.touched)">
+                    Use formato 24 horas. Ejemplo: 09:30 o 14:45.
                   </div>
                 </div>
                 <div class="col-lg-3 col-md-6">
                   <label class="form-label">Hora Inicio <span class="text-danger">*</span></label>
                   <input
-                    type="time"
+                    type="text"
                     class="form-control form-control-sm"
+                    [class.is-invalid]="showRequiredError(detalleFormRef, 'horaInicio')"
                     [ngModel]="detalleForm.horaInicio"
                     name="horaInicio"
-                    lang="es-CR"
-                    step="60"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    placeholder="HH:mm"
+                    maxlength="5"
+                    pattern="([01][0-9]|2[0-3]):[0-5][0-9]"
                     required
-                    (ngModelChange)="onHoraInicioChange($event)"
+                    (ngModelChange)="onHoraInicioInput($event)"
+                    (blur)="onHoraBlur('horaInicio')"
                   >
-                  <div class="text-danger small" *ngIf="detalleFormRef.submitted && detalleFormRef.controls.horaInicio?.invalid">
+                  <small class="form-text text-muted">Formato 24 horas: HH:mm</small>
+                  <div class="text-danger small" *ngIf="detalleFormRef.controls.horaInicio?.errors?.['required'] && (detalleFormRef.submitted || detalleFormRef.controls.horaInicio?.touched)">
                     Hora Inicio es requerida.
+                  </div>
+                  <div class="text-danger small" *ngIf="detalleFormRef.controls.horaInicio?.errors?.['pattern'] && (detalleFormRef.submitted || detalleFormRef.controls.horaInicio?.touched)">
+                    Use formato 24 horas. Ejemplo: 09:30 o 14:45.
                   </div>
                 </div>
               </div>
@@ -230,6 +258,9 @@
                   </tbody>
                 </table>
               </div>
+              <div class="text-danger small mt-2" *ngIf="showPaxValidationError(detalleFormRef)">
+                Debe agregar al menos un tipo de pax con cantidad mayor a cero.
+              </div>
             </div>
           </section>
 
@@ -253,21 +284,36 @@
                       <div class="row g-2">
                         <div class="col-md-6">
                           <label class="form-label">Lugar <span class="text-danger">*</span></label>
-                          <input type="text" class="form-control form-control-sm" [(ngModel)]="detalleForm.origenLugar" name="origenLugar" required placeholder="Hotel, aeropuerto, etc.">
-                        </div>
-                        <div class="col-md-6">
-                          <label class="form-label">Zona <span class="text-danger">*</span></label>
                           <input
                             type="text"
                             class="form-control form-control-sm"
-                            [(ngModel)]="detalleForm.origenZona"
-                            name="origenZona"
+                            [class.is-invalid]="showRequiredError(detalleFormRef, 'origenLugar')"
+                            [(ngModel)]="detalleForm.origenLugar"
+                            name="origenLugar"
                             required
-                            placeholder="Digite la zona"
-                            (ngModelChange)="recalculate.emit()"
+                            placeholder="Hotel, aeropuerto, etc."
                           >
+                        <div class="text-danger small mt-1" *ngIf="showRequiredError(detalleFormRef, 'origenLugar')">
+                          Lugar de Origen es requerido.
                         </div>
                       </div>
+                      <div class="col-md-6">
+                        <label class="form-label">Zona <span class="text-danger">*</span></label>
+                        <input
+                          type="text"
+                          class="form-control form-control-sm"
+                          [class.is-invalid]="showRequiredError(detalleFormRef, 'origenZona')"
+                          [(ngModel)]="detalleForm.origenZona"
+                          name="origenZona"
+                          required
+                          placeholder="Digite la zona"
+                          (ngModelChange)="recalculate.emit()"
+                        >
+                        <div class="text-danger small mt-1" *ngIf="showRequiredError(detalleFormRef, 'origenZona')">
+                          Zona de Origen es requerida.
+                        </div>
+                      </div>
+                    </div>
 
                       <div class="mt-2">
                         <label class="form-label">Ubicación exacta de recojo (Google Maps)</label>
@@ -328,21 +374,36 @@
                       <div class="row g-2">
                         <div class="col-md-6">
                           <label class="form-label">Lugar <span class="text-danger">*</span></label>
-                          <input type="text" class="form-control form-control-sm" [(ngModel)]="detalleForm.destinoLugar" name="destinoLugar" required placeholder="Hotel, aeropuerto, etc.">
-                        </div>
-                        <div class="col-md-6">
-                          <label class="form-label">Zona <span class="text-danger">*</span></label>
                           <input
                             type="text"
                             class="form-control form-control-sm"
-                            [(ngModel)]="detalleForm.destinoZona"
-                            name="destinoZona"
+                            [class.is-invalid]="showRequiredError(detalleFormRef, 'destinoLugar')"
+                            [(ngModel)]="detalleForm.destinoLugar"
+                            name="destinoLugar"
                             required
-                            placeholder="Digite la zona"
-                            (ngModelChange)="recalculate.emit()"
+                            placeholder="Hotel, aeropuerto, etc."
                           >
+                        <div class="text-danger small mt-1" *ngIf="showRequiredError(detalleFormRef, 'destinoLugar')">
+                          Lugar de Destino es requerido.
                         </div>
                       </div>
+                      <div class="col-md-6">
+                        <label class="form-label">Zona <span class="text-danger">*</span></label>
+                        <input
+                          type="text"
+                          class="form-control form-control-sm"
+                          [class.is-invalid]="showRequiredError(detalleFormRef, 'destinoZona')"
+                          [(ngModel)]="detalleForm.destinoZona"
+                          name="destinoZona"
+                          required
+                          placeholder="Digite la zona"
+                          (ngModelChange)="recalculate.emit()"
+                        >
+                        <div class="text-danger small mt-1" *ngIf="showRequiredError(detalleFormRef, 'destinoZona')">
+                          Zona de Destino es requerida.
+                        </div>
+                      </div>
+                    </div>
 
                       <div class="mt-2">
                         <label class="form-label">Ubicación exacta de entrega (Google Maps)</label>

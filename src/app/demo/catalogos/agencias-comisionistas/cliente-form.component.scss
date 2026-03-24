@@ -74,6 +74,44 @@
   border-style: dashed;
 }
 
+.mode-switch-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 2.8rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ced4da;
+  border-radius: 12px;
+  background: #f8fbff;
+  overflow: hidden;
+}
+
+.mode-switch-card__content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.mode-switch-card__title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #334155;
+  line-height: 1.2;
+}
+
+.mode-switch-card__toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 0;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.mode-switch-card__toggle .form-check-input {
+  margin-top: 0;
+}
+
 .section-metrics {
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
 }
@@ -401,7 +439,8 @@
   .contacts-toolbar,
   .contact-editor-header,
   .form-actions,
-  .section-header-inline {
+  .section-header-inline,
+  .mode-switch-card {
     flex-direction: column;
     align-items: stretch;
   }

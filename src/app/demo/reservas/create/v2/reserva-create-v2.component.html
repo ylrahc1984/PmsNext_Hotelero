@@ -132,15 +132,15 @@
                 <div class="row">
                   <div class="col-12 col-md-4 mb-2">
                     <label class="form-label">Cliente Final <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control form-control-sm" [(ngModel)]="form.nomCliente" name="nomCliente" required placeholder="Nombre del pasajero principal" (ngModelChange)="onHeaderChange()">
+                    <input type="text" class="form-control form-control-sm" [(ngModel)]="form.nomCliente" name="nomCliente" required placeholder="Nombre y apellido del pasajero principal" (ngModelChange)="onHeaderChange()">
                   </div>
                   <div class="col-12 col-md-4 mb-2">
                     <label class="form-label">Teléfono</label>
-                    <input type="tel" class="form-control form-control-sm" [(ngModel)]="form.telCliente" name="telCliente" (ngModelChange)="onHeaderChange()">
+                    <input type="tel" class="form-control form-control-sm" [(ngModel)]="form.telCliente" name="telCliente" (ngModelChange)="onHeaderChange()" placeholder="Teléfono del pasajero principal">
                   </div>
                   <div class="col-12 col-md-4 mb-2">
                     <label class="form-label">Email</label>
-                    <input type="email" class="form-control form-control-sm" [(ngModel)]="form.emailCliente" name="emailCliente" (ngModelChange)="onHeaderChange()">
+                    <input type="email" class="form-control form-control-sm" [(ngModel)]="form.emailCliente" name="emailCliente" (ngModelChange)="onHeaderChange()" placeholder="Email del pasajero principal">
                   </div>
                 </div>
 

@@ -51,7 +51,20 @@
               <option *ngFor="let tipo of tipoClienteOptions" [value]="tipo.value">{{ tipo.label }}</option>
             </select>
           </div>
-
+          <div class="col-md-4">
+            <label class="form-label">Comprobante Electronico</label>
+            <div class="mode-switch-card">
+              <div class="mode-switch-card__content">
+                <div class="mode-switch-card__title">{{ comprobanteElectronicoLabel }}</div>
+              </div>
+              <div class="form-check form-switch mode-switch-card__toggle">
+                <input class="form-check-input" type="checkbox" id="enviarCorreo" formControlName="enviarCorreo">
+                <label class="form-check-label" for="enviarCorreo">
+                  {{ form.get('enviarCorreo')?.value ? 'Activo' : 'Inactivo' }}
+                </label>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -107,15 +120,6 @@
           <div class="col-md-3">
             <label class="form-label">Telefono 1 <span class="text-danger">*</span></label>
             <input type="tel" class="form-control" formControlName="telefono1">
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Enviar Correo</label>
-            <div class="form-check form-switch">
-              <input class="form-check-input" type="checkbox" id="enviarCorreo" formControlName="enviarCorreo">
-              <label class="form-check-label" for="enviarCorreo">
-                {{ form.get('enviarCorreo')?.value ? 'Si' : 'No' }}
-              </label>
-            </div>
           </div>
         </div>
       </div>
