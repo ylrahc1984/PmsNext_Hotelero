@@ -19,6 +19,25 @@ interface DetalleDisponibleUI extends ReservaDetalleDisponible {
   esRemanente?: boolean;
 }
 
+interface ResumenOrdenAgrupado {
+  key                 : string;
+  detalles            : OrdenTrabajoDetalle[];
+  cantidad            : number;
+  paxTotal            : number;
+  hora                : string;
+  horaPickup          : string;
+  fechaServicio       : string;
+  origenOT            : string;
+  destinoOT           : string;
+  primerIndice        : number;
+  ultimoIndice        : number;
+  reservaId           : string;
+  servicio            : string;
+  reservaOrigen       : string;
+  reservaDestino      : string;
+  mostrarInfoReserva  : boolean;
+}
+
 @Component({
   selector: 'app-orden-trabajo-form',
   standalone: true,
@@ -40,53 +59,53 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
   private orden?: OrdenTrabajo;
   private subs = new Subscription();
 
+  private readonly remanentesStorageKey = 'ot_remanentes_pendientes';
   readonly empresa = this.empresaContext.empresa;
 
   form = this.fb.group({
-    numeroOrden: [{ value: '', disabled: true }],
-    fechaCreacion: [{ value: '', disabled: true }],
-    fechaServicio: ['', Validators.required],
-    estado: ['Pendiente' as EstadoOrden, Validators.required],
-    suplidor: ['', Validators.required],
-    observaciones: [''],
-    totalPagar: [0],
-    
+    numeroOrden     : [{ value: '', disabled: true }],
+    fechaCreacion   : [{ value: '', disabled: true }],
+    fechaServicio   : ['', Validators.required],
+    estado          : ['Pendiente' as EstadoOrden, Validators.required],
+    suplidor        : ['', Validators.required],
+    observaciones   : [''],
+    totalPagar      : [0],
     // Campos adicionales de configuración OT
-    tipo: [0, Validators.required],           // 0=Transfer, 1=Tour, 2=Excursión, etc.
-    moneda: ['USD', Validators.required],     // USD, CRC, EUR
-    tCambio: [500],                             // Tipo de cambio
-    rutaCodigo: [''],                         // Código de ruta
-    rotulacion: [''],                         // Indicaciones de rotulación
-    conexion: [''],                           // Conexión/enlace
-    kmInicial: [null as number | null],       // Kilometraje inicial
-    kmFinal: [null as number | null],         // Kilometraje final
-    operador: [{ value: '', disabled: true }] // Usuario que crea la OT
+    tipo            : [0, Validators.required],           // 0=Transfer, 1=Tour, 2=Excursión, etc.
+    moneda          : ['USD', Validators.required],     // USD, CRC, EUR
+    tCambio         : [500],                             // Tipo de cambio
+    rutaCodigo      : [''],                         // Código de ruta
+    rotulacion      : [''],                         // Indicaciones de rotulación
+    conexion        : [''],                           // Conexión/enlace
+    kmInicial       : [null as number | null],       // Kilometraje inicial
+    kmFinal         : [null as number | null],         // Kilometraje final
+    operador        : [{ value: '', disabled: true }] // Usuario que crea la OT
   });
 
-  detallesDisponibles: DetalleDisponibleUI[] = [];
-  detallesSeleccionados = new Set<string>();
-  detallesOrden: OrdenTrabajoDetalle[] = [];
-  detallesOriginales: OrdenTrabajoDetalle[] = []; // Snapshot de detalles al cargar la orden
-  estadoBloqueado = false;
-  isEdit = false;
-  titulo = 'Nueva Asignación de Traslado';
+  detallesDisponibles            : DetalleDisponibleUI[] = [];
+  detallesSeleccionados          = new Set<string>();
+  detallesOrden                  : OrdenTrabajoDetalle[] = [];
+  detallesOriginales             : OrdenTrabajoDetalle[] = []; // Snapshot de detalles al cargar la orden
+  estadoBloqueado                = false;
+  ordenSecuenciaPersonalizada    = false;
+  isEdit                         = false;
+  titulo                         = 'Nueva Asignación de Traslado';
 
   // Propiedades UI/UX para control visual
-  selectedSupplierId: string | null = null;
-  selectedVehiculoId: string | null = null;
-  selectedChoferId: string | null = null;
-  selectedTime: string | null = null;
-  selectedRows: Set<string> = new Set();
-  searchText = '';
-  showConfigOT = false; // Controla el acordeón de configuración
-  loadingSuplidores = false;
-  loadingServicios = false;
-  remanentesPendientes: DetalleDisponibleUI[] = [];
-  private readonly remanentesStorageKey = 'ot_remanentes_pendientes';
+  selectedSupplierId             : string | null = null;
+  selectedVehiculoId             : string | null = null;
+  selectedChoferId               : string | null = null;
+  selectedTime                   : string | null = null;
+  selectedRows                   : Set<string> = new Set();
+  searchText                     = '';
+  showConfigOT                   = false; // Controla el acordeón de configuración
+  loadingSuplidores              = false;
+  loadingServicios               = false;
+  remanentesPendientes           : DetalleDisponibleUI[] = [];
   
   // Datos reales de suplidores con disponibilidad
-  suplidoresDisponibles: SuplidorDisponibilidadUI[] = [];
-  horariosDisponibles: string[] = [];
+  suplidoresDisponibles           : SuplidorDisponibilidadUI[] = [];
+  horariosDisponibles             : string[] = [];
 
   // Catálogos para selectores
   tiposOT = [
@@ -189,7 +208,142 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     if (!filtroHora) {
       return this.detallesDisponibles;
     }
-    return this.detallesDisponibles.filter((detalle) => this.normalizeHora(detalle.hora) === filtroHora);
+    return this.detallesDisponibles.filter((detalle) => this.obtenerHoraReferenciaDetalle(detalle) === filtroHora);
+  }
+
+  get detallesDisponiblesVisibles(): DetalleDisponibleUI[] {
+    return this.getAgrupacionesPorReserva().visibles;
+  }
+
+  private obtenerHoraReferenciaDetalle(detalle: { hora?: string | null; horaPickup?: string | null }): string {
+    return this.normalizeHora(detalle.horaPickup || detalle.hora);
+  }
+
+  cantidadServiciosDetalle(detalle: DetalleDisponibleUI): number {
+    const key = this.buildAgrupacionKey(detalle);
+    return this.getAgrupacionesPorReserva().counts.get(key) ?? 0;
+  }
+
+  trackDetalleDisponible(_: number, detalle: DetalleDisponibleUI): string {
+    return detalle.key || `${detalle.codReserva}-${detalle.id}`;
+  }
+
+  get detallesOrdenAgrupados(): ResumenOrdenAgrupado[] {
+    const agrupaciones = new Map<string, ResumenOrdenAgrupado>();
+    this.detallesOrden.forEach((detalle, index) => {
+      const clave = this.buildAgrupacionKeyOrdenDetalle(detalle);
+      const pax = detalle.pax || 0;
+      const necesitaInfoReserva =
+        detalle.origenReserva !== detalle.origenOT || detalle.destinoReserva !== detalle.destinoOT;
+      const existente = agrupaciones.get(clave);
+      const horaPickupDetalle = detalle.horaPickup || detalle.hora || '';
+
+      if (existente) {
+        existente.detalles.push(detalle);
+        existente.cantidad += 1;
+        existente.paxTotal += pax;
+        existente.ultimoIndice = index;
+        existente.mostrarInfoReserva = existente.mostrarInfoReserva || necesitaInfoReserva;
+        existente.horaPickup = this.obtenerHoraMasTemprana(existente.horaPickup, horaPickupDetalle);
+      } else {
+        agrupaciones.set(clave, {
+          key: clave,
+          detalles: [detalle],
+          cantidad: 1,
+          paxTotal: pax,
+          hora: detalle.hora,
+          horaPickup: horaPickupDetalle,
+          fechaServicio: detalle.fechaServicio,
+          origenOT: detalle.origenOT,
+          destinoOT: detalle.destinoOT,
+          primerIndice: index,
+          ultimoIndice: index,
+          reservaId: detalle.reservaId,
+          servicio: detalle.servicio,
+          reservaOrigen: detalle.origenReserva,
+          reservaDestino: detalle.destinoReserva,
+          mostrarInfoReserva: necesitaInfoReserva
+        });
+      }
+    });
+
+    const resultado = Array.from(agrupaciones.values());
+    if (!this.ordenSecuenciaPersonalizada) {
+      resultado.sort((a, b) => {
+        const comparacion = this.compararHorarios(a.horaPickup, b.horaPickup);
+        if (comparacion !== 0) {
+          return comparacion;
+        }
+        return a.key.localeCompare(b.key);
+      });
+    }
+
+    return resultado;
+  }
+
+  trackResumenGrupo(_: number, grupo: ResumenOrdenAgrupado): string {
+    return grupo.key;
+  }
+
+  private agrupacionesPorReservaCache: { visibles: DetalleDisponibleUI[]; counts: Map<string, number> } | null = null;
+
+  private getAgrupacionesPorReserva(): { visibles: DetalleDisponibleUI[]; counts: Map<string, number> } {
+    if (this.agrupacionesPorReservaCache) {
+      return this.agrupacionesPorReservaCache;
+    }
+
+    const counts = new Map<string, number>();
+    const visibles: DetalleDisponibleUI[] = [];
+    const seen = new Set<string>();
+    const detallesOrdenados = [...this.detallesDisponiblesFiltrados].sort((a, b) => this.compararDetallesPorHora(a, b));
+
+    detallesOrdenados.forEach((detalle) => {
+      const key = this.buildAgrupacionKey(detalle);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+      if (!seen.has(key)) {
+        visibles.push(detalle);
+        seen.add(key);
+      }
+    });
+
+    this.agrupacionesPorReservaCache = { visibles, counts };
+    return this.agrupacionesPorReservaCache;
+  }
+
+  private compararDetallesPorHora(a: DetalleDisponibleUI, b: DetalleDisponibleUI): number {
+    const horaA = this.obtenerHoraReferenciaDetalle(a);
+    const horaB = this.obtenerHoraReferenciaDetalle(b);
+    const comparacion = this.compararHorarios(horaA, horaB);
+    if (comparacion !== 0) {
+      return comparacion;
+    }
+    const claveA = a.codReserva || a.key || `${a.id}`;
+    const claveB = b.codReserva || b.key || `${b.id}`;
+    if (claveA && claveB) {
+      return claveA.localeCompare(claveB);
+    }
+    return 0;
+  }
+
+  private buildAgrupacionKey(detalle: DetalleDisponibleUI): string {
+    const fechaNormalizada = this.normalizeFecha(detalle.fechaServicio);
+    const horaNormalizada = this.normalizeHora(detalle.hora);
+    const base = detalle.codReserva || detalle.key || `${detalle.id}`;
+    return `${base}::${fechaNormalizada}::${horaNormalizada}`;
+  }
+
+  private buildAgrupacionKeyOrdenDetalle(detalle: OrdenTrabajoDetalle): string {
+    const fechaNormalizada = this.normalizeFecha(detalle.fechaServicio);
+    const horaNormalizada = this.normalizeHora(detalle.hora);
+    const base =
+      detalle.reservaId ||
+      (detalle.detalleReservaId ? `${detalle.detalleReservaId}` : undefined) ||
+      `${detalle.id}`;
+    return `${base}::${fechaNormalizada}::${horaNormalizada}`;
+  }
+
+  private invalidarAgrupacionesPorReserva(): void {
+    this.agrupacionesPorReservaCache = null;
   }
 
   get estadosDisponibles(): EstadoOrdenOption[] {
@@ -223,7 +377,26 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
   }
 
   agregarSeleccionados(): void {
-    const seleccionados = this.detallesDisponibles.filter(det => this.detallesSeleccionados.has(det.key));
+    const agrupaciones = new Map<string, DetalleDisponibleUI[]>();
+    this.detallesDisponiblesFiltrados.forEach((detalle) => {
+      const key = this.buildAgrupacionKey(detalle);
+      const grupo = agrupaciones.get(key);
+      if (grupo) {
+        grupo.push(detalle);
+      } else {
+        agrupaciones.set(key, [detalle]);
+      }
+    });
+
+    const seleccionadosMap = new Map<string, DetalleDisponibleUI>();
+    agrupaciones.forEach((detalles) => {
+      const agrupacionSeleccionada = detalles.some(det => this.detallesSeleccionados.has(det.key));
+      if (agrupacionSeleccionada) {
+        detalles.forEach(det => seleccionadosMap.set(det.key, det));
+      }
+    });
+
+    const seleccionados = Array.from(seleccionadosMap.values());
     if (!seleccionados.length || this.estadoBloqueado) {
       return;
     }
@@ -274,6 +447,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
   }
 
   private procesarAgregarSeleccionados(seleccionados: DetalleDisponibleUI[]): void {
+    this.removerAgrupacionesSeleccionadas(seleccionados);
     let nextId = this.getNextDetalleId();
     const nuevosRemanentes: DetalleDisponibleUI[] = [];
     const remanentesEliminados = new Set<string>();
@@ -320,10 +494,26 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     this.refreshDisponibles();
   }
 
-  quitarDetalle(detalle: OrdenTrabajoDetalle): void {
+  private removerAgrupacionesSeleccionadas(seleccionados: DetalleDisponibleUI[]): void {
+    if (!seleccionados.length) {
+      return;
+    }
+    const claves = new Set<string>();
+    seleccionados.forEach((detalle) => claves.add(this.buildAgrupacionKey(detalle)));
+    if (!claves.size) {
+      return;
+    }
+    this.detallesDisponibles = this.detallesDisponibles.filter(
+      (detalle) => !claves.has(this.buildAgrupacionKey(detalle))
+    );
+    this.invalidarAgrupacionesPorReserva();
+  }
+
+  quitarDetalle(detalle: OrdenTrabajoDetalle, options?: { suppressRefresh?: boolean }): void {
     if (this.estadoBloqueado) {
       return;
     }
+    this.ordenSecuenciaPersonalizada = true;
     let remanentesActualizados = false;
 
     if (detalle.esRemanente) {
@@ -350,6 +540,17 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
 
     this.detallesOrden = this.detallesOrden.filter(d => d.id !== detalle.id);
     this.recalcularTotales();
+    if (!options?.suppressRefresh) {
+      this.refreshDisponibles();
+    }
+  }
+
+  quitarGrupoOrden(grupo: ResumenOrdenAgrupado): void {
+    if (this.estadoBloqueado || !grupo.detalles.length) {
+      return;
+    }
+    this.ordenSecuenciaPersonalizada = true;
+    [...grupo.detalles].forEach((detalle) => this.quitarDetalle(detalle, { suppressRefresh: true }));
     this.refreshDisponibles();
   }
 
@@ -480,24 +681,24 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
 
           // Actualizar estado local (para mantener compatibilidad con mock data)
           const payload: OrdenTrabajo = {
-            id: this.orden?.id || 0,
-            numeroOrden: this.orden?.numeroOrden || 0,
-            fechaCreacion: this.orden?.fechaCreacion || new Date().toISOString().split('T')[0],
-            fechaServicio: raw.fechaServicio || '',
-            suplidor: raw.suplidor || '',
-            codSuplidor: this.selectedSupplierId || undefined,
-            ruta: raw.rutaCodigo || '',
-            conexion: raw.conexion || '',
-            observaciones: raw.observaciones || '',
-            kmInicial: raw.kmInicial ?? undefined,
-            kmFinal: raw.kmFinal ?? undefined,
-            rotulacion: !!raw.rotulacion,
-            codVehiculo: this.selectedVehiculoId || undefined,
-            codChofer: this.selectedChoferId || undefined,
-            estado: estadoFinal,
-            detalles: this.detallesOrden,
-            totalPax: this.totalPax,
-            totalPagar: raw.totalPagar || this.totalPagarSugerido
+            id              : this.orden?.id || 0,
+            numeroOrden     : this.orden?.numeroOrden || 0,
+            fechaCreacion   : this.orden?.fechaCreacion || new Date().toISOString().split('T')[0],
+            fechaServicio   : raw.fechaServicio || '',
+            suplidor        : raw.suplidor || '',
+            codSuplidor     : this.selectedSupplierId || undefined,
+            ruta            : raw.rutaCodigo || '',
+            conexion        : raw.conexion || '',
+            observaciones   : raw.observaciones || '',
+            kmInicial       : raw.kmInicial ?? undefined,
+            kmFinal         : raw.kmFinal ?? undefined,
+            rotulacion      : !!raw.rotulacion,
+            codVehiculo     : this.selectedVehiculoId || undefined,
+            codChofer       : this.selectedChoferId || undefined,
+            estado          : estadoFinal,
+            detalles        : this.detallesOrden,
+            totalPax        : this.totalPax,
+            totalPagar      : raw.totalPagar || this.totalPagarSugerido
           };
 
           if (this.isEdit && this.orden) {
@@ -589,6 +790,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
   selectTime(time: string | null): void {
     this.selectedTime = this.selectedTime === time ? null : time;
     // Filtrar servicios por horario (lógica futura)
+    this.invalidarAgrupacionesPorReserva();
   }
 
   clearFilters(): void {
@@ -670,6 +872,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     if (this.estadoBloqueado) return;
     const newIndex = direccion === 'up' ? index - 1 : index + 1;
     if (newIndex < 0 || newIndex >= this.detallesOrden.length) return;
+    this.ordenSecuenciaPersonalizada = true;
     
     const temp = this.detallesOrden[index];
     this.detallesOrden[index] = this.detallesOrden[newIndex];
@@ -739,6 +942,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     this.isEdit = true;
     this.titulo = `Editar Orden #${codOT}`;
     this.detallesOrden = [...orden.detalles];
+    this.ordenSecuenciaPersonalizada = false;
     // Guardar snapshot de detalles originales para diff posterior
     this.detallesOriginales = JSON.parse(JSON.stringify(orden.detalles));
     this.pruneRemanentesAsignados();
@@ -788,6 +992,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     this.isEdit = true;
     this.titulo = `Editar Orden #${orden.numeroOrden}`;
     this.detallesOrden = [...orden.detalles];
+    this.ordenSecuenciaPersonalizada = false;
     this.pruneRemanentesAsignados();
     this.estadoBloqueado = orden.estado === 'COM';
     
@@ -978,6 +1183,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
       operador: operadorActual
     });
     this.detallesOrden = [];
+    this.ordenSecuenciaPersonalizada = false;
     this.estadoBloqueado = false;
     
     // Cargar datos iniciales
@@ -1006,6 +1212,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
             .filter(rem => !this.isRemanenteAsignado(rem));
 
           this.detallesDisponibles = [...baseDisponibles, ...remanentesFecha];
+          this.invalidarAgrupacionesPorReserva();
           this.updateHorariosDisponibles(this.detallesDisponibles);
           this.loadingServicios = false;
         },
@@ -1014,6 +1221,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
           const remanentesFecha = this.getRemanentesParaFecha(fecha)
             .filter(rem => !this.isRemanenteAsignado(rem));
           this.detallesDisponibles = remanentesFecha;
+          this.invalidarAgrupacionesPorReserva();
           this.updateHorariosDisponibles(this.detallesDisponibles);
           this.loadingServicios = false;
         }
@@ -1024,7 +1232,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
   private updateHorariosDisponibles(detalles: DetalleDisponibleUI[]): void {
     const horariosUnicos = new Set<string>();
     detalles.forEach((detalle) => {
-      const normalizado = this.normalizeHora(detalle.hora);
+      const normalizado = this.obtenerHoraReferenciaDetalle(detalle);
       if (normalizado) {
         horariosUnicos.add(normalizado);
       }
@@ -1070,45 +1278,46 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     }
 
     return {
-      key: this.buildRemanenteKeyFromValues(detalle.detalleReservaId, detalle.hora, origen, destino),
-      id: detalle.detalleReservaId,
-      codReserva: detalle.reservaId,
-      linea: 0,
-      cliente: detalle.clienteFinal,
-      telefono: detalle.telefonoCliente || '',
-      email: detalle.emailCliente || '',
-      agencia: detalle.agencia,
-      nombreAgencia: detalle.agencia,
-      estadoReserva: '',
-      folio: detalle.boleta || '',
-      tipoServicio: '',
-      codServicio: detalle.servicioId || '',
-      servicio: detalle.servicio,
-      observacion: detalle.observaciones || '',
-      fechaServicio: detalle.fechaServicio,
-      hora: detalle.hora,
-      origen,
-      zonaOrigen: '',
-      origenPlaceId: detalle.origenPlaceId || '',
-      origenLat: detalle.origenLat || 0,
-      origenLng: detalle.origenLng || 0,
-      destino,
-      zonaDestino: '',
-      destinoPlaceId: detalle.destinoPlaceId || '',
-      destinoLat: detalle.destinoLat || 0,
-      destinoLng: detalle.destinoLng || 0,
-      adultos: detalle.adultos || 0,
-      ninos: detalle.ninos || 0,
-      pax: detalle.pax,
-      precioAdulto: 0,
-      precioNino: 0,
-      montoServicio: detalle.montoServicio || 0,
-      moneda: detalle.moneda || '',
-      distanciaKm: 0,
-      tiempoEstimadoMin: 0,
-      asignadoOT: false,
-      codOrdenTrabajo: null,
-      esRemanente: true
+      key               : this.buildRemanenteKeyFromValues(detalle.detalleReservaId, detalle.hora, origen, destino),
+      id                : detalle.detalleReservaId,
+      codReserva        : detalle.reservaId,
+      linea             : 0,
+      cliente           : detalle.clienteFinal,
+      telefono          : detalle.telefonoCliente || '',
+      email             : detalle.emailCliente || '',
+      agencia           : detalle.agencia,
+      nombreAgencia     : detalle.agencia,
+      estadoReserva     : '',
+      folio             : detalle.boleta || '',
+      tipoServicio      : '',
+      codServicio       : detalle.servicioId || '',
+      servicio          : detalle.servicio,
+      observacion       : detalle.observaciones || '',
+      fechaServicio     : detalle.fechaServicio,
+      hora              : detalle.hora,
+      horaPickup        : detalle.horaPickup || '',
+      origen            : '',
+      zonaOrigen        : '',
+      origenPlaceId     : detalle.origenPlaceId || '',
+      origenLat         : detalle.origenLat || 0,
+      origenLng         : detalle.origenLng || 0,
+      destino           : '',
+      zonaDestino       : '',
+      destinoPlaceId    : detalle.destinoPlaceId || '',
+      destinoLat        : detalle.destinoLat || 0,
+      destinoLng        : detalle.destinoLng || 0,
+      adultos           : detalle.adultos || 0,
+      ninos             : detalle.ninos || 0,
+      pax               : detalle.pax,
+      precioAdulto      : 0,
+      precioNino        : 0,
+      montoServicio     : detalle.montoServicio || 0,
+      moneda            : detalle.moneda || '',
+      distanciaKm       : 0,
+      tiempoEstimadoMin : 0,
+      asignadoOT        : false,
+      codOrdenTrabajo   : null,
+      esRemanente       : true
     };
   }
 
@@ -1268,5 +1477,35 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     const horas = match[1].padStart(2, '0');
     const minutos = match[2];
     return `${horas}:${minutos}`;
+  }
+
+  private compararHorarios(horaA: string | null | undefined, horaB: string | null | undefined): number {
+    const normalizadaA = this.normalizeHora(horaA);
+    const normalizadaB = this.normalizeHora(horaB);
+    if (normalizadaA && normalizadaB) {
+      return normalizadaA.localeCompare(normalizadaB);
+    }
+    if (normalizadaA) {
+      return -1;
+    }
+    if (normalizadaB) {
+      return 1;
+    }
+    return 0;
+  }
+
+  private obtenerHoraMasTemprana(actual: string | null | undefined, candidato: string | null | undefined): string {
+    const normalizadaActual = this.normalizeHora(actual);
+    const normalizadaCandidato = this.normalizeHora(candidato);
+    if (!normalizadaActual && !normalizadaCandidato) {
+      return actual || candidato || '';
+    }
+    if (!normalizadaActual) {
+      return candidato || '';
+    }
+    if (!normalizadaCandidato) {
+      return actual || '';
+    }
+    return normalizadaCandidato < normalizadaActual ? (candidato || '') : (actual || '');
   }
 }

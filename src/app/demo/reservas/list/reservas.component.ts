@@ -177,7 +177,11 @@ export class ReservasComponent implements OnInit, OnDestroy {
   }
 
   verDetalles(reserva: Reserva): void {
-    this.router.navigate(['/operaciones/reservas', reserva.PRV01_CodReserva, 'detalle']);
+    this.router.navigate(['/operaciones/reservas', reserva.PRV01_CodReserva, 'detalle'], {
+      queryParams: {
+        origen: 'reservas'
+      }
+    });
   }
 
   cancelarReserva(reserva: Reserva): void {

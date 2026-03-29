@@ -25,6 +25,7 @@ export class ListasPreciosAsignacionesComponent implements OnInit {
   clientes: ClienteUI[] = [];
   filteredClientes: ClienteUI[] = [];
   listasPrecios: ListaPrecioUI[] = [];
+  listasPreciosVigentes: ListaPrecioUI[] = [];
   asignaciones: TarifaClienteUI[] = [];
 
   selectedCliente: ClienteUI | null = null;
@@ -37,7 +38,7 @@ export class ListasPreciosAsignacionesComponent implements OnInit {
 
   filterNombreCliente = '';
   currentPage = 1;
-  pageSize = 25;
+  pageSize = 10;
   totalPages = 1;
   totalRegistros = 0;
   pageSizeOptions = [10, 25, 50, 100];
@@ -77,6 +78,7 @@ export class ListasPreciosAsignacionesComponent implements OnInit {
     this.listasPreciosService.getListas({ pageNumber: 1, pageSize: 200 }).subscribe({
       next: (result) => {
         this.listasPrecios = result.data ?? [];
+        this.listasPreciosVigentes = this.listasPrecios.filter((lista) => lista.vigente === 'S');
         this.listaByCodigo = new Map(this.listasPrecios.map((item) => [item.codigo, item]));
         this.isLoadingListas = false;
       },

@@ -20,92 +20,92 @@ import { ListaPickupService } from '../../catalogos/lista-pickup/lista-pickup.se
 import { PickupListaItem } from '../../catalogos/lista-pickup/lista-pickup.models';
 
 export interface Tarifa {
-  tipoPax?: string;
-  tipo: string;
-  precio: number;
-  cantidad: number;
-  total: number;
+  tipoPax   ?: string;
+  tipo      : string;
+  precio    : number;
+  cantidad  : number;
+  total     : number;
 }
 
 export interface ActividadDetalle {
-  codServicio: string;
-  nomServicio: string;
-  tipoServicio?: string;
-  reglaPrecioID: number;
-  tarifas: Tarifa[];
-  totalLinea: number;
+  codServicio       : string;
+  nomServicio       : string;
+  tipoServicio     ?: string;
+  reglaPrecioID     : number;
+  tarifas           : Tarifa[];
+  totalLinea        : number;
 }
 
 export interface ActividadDetallePayload {
-  codServicio: string;
-  nomServicio: string;
-  tipoServicio?: string;
-  fecServicio: string;
-  horaServicio: string;
-  horaPickup: string;
-  reglaPrecioID: number;
-  adultos: number;
-  ninos: number;
-  montoServicio: number;
-  detallesPax: Array<{
-    tipoPax: string;
-    cantidad: number;
-    precioNeto: number;
+  codServicio           : string;
+  nomServicio           : string;
+  tipoServicio         ?: string;
+  fecServicio           : string;
+  horaServicio          : string;
+  horaPickup            : string;
+  reglaPrecioID         : number;
+  adultos               : number;
+  ninos                 : number;
+  montoServicio         : number;
+  detallesPax           : Array<{
+    tipoPax     : string;
+    cantidad    : number;
+    precioNeto  : number;
   }>;
 }
 
 export interface ActividadModalSavePayload {
-  codPlan: string;
-  planTarifario: string;
-  codLstPrecio: string;
-  fechaServicio: string;
-  horaPickup: string;
-  horaInicio: string;
-  observaciones: string;
-  pickups: ActividadPickupForm[];
-  actividades: ActividadDetalle[];
-  totalGeneral: number;
-  payload: ActividadDetallePayload[];
+  codPlan           : string;
+  planTarifario     : string;
+  codLstPrecio      : string;
+  fechaServicio     : string;
+  horaPickup        : string;
+  horaInicio        : string;
+  observaciones     : string;
+  pickups           : ActividadPickupForm[];
+  actividades       : ActividadDetalle[];
+  totalGeneral      : number;
+  payload           : ActividadDetallePayload[];
 }
 
 type PickupFormGroup = FormGroup<{
-  direccion: FormControl<string>;
-  zona: FormControl<string>;
-  google: FormControl<string>;
-  placeId: FormControl<string>;
-  lat: FormControl<number>;
-  lng: FormControl<number>;
-  error: FormControl<string>;
+  direccion     : FormControl<string>;
+  zona          : FormControl<string>;
+  google        : FormControl<string>;
+  placeId       : FormControl<string>;
+  lat           : FormControl<number>;
+  lng           : FormControl<number>;
+  error         : FormControl<string>;
 }>;
 
 type TarifaFormGroup = FormGroup<{
-  tipoPax: FormControl<string>;
-  tipo: FormControl<string>;
-  precio: FormControl<number>;
-  cantidad: FormControl<number>;
-  total: FormControl<number>;
+  tipoPax     : FormControl<string>;
+  tipo        : FormControl<string>;
+  precio      : FormControl<number>;
+  cantidad    : FormControl<number>;
+  total       : FormControl<number>;
 }>;
 
 type ActividadDetalleFormGroup = FormGroup<{
-  codServicio: FormControl<string>;
-  nomServicio: FormControl<string>;
-  tipoServicio: FormControl<string>;
-  reglaPrecioID: FormControl<number>;
-  expanded: FormControl<boolean>;
-  totalLinea: FormControl<number>;
-  tarifas: FormArray<TarifaFormGroup>;
+  codServicio       : FormControl<string>;
+  nomServicio       : FormControl<string>;
+  tipoServicio      : FormControl<string>;
+  reglaPrecioID     : FormControl<number>;
+  expanded          : FormControl<boolean>;
+  totalLinea        : FormControl<number>;
+  tarifas           : FormArray<TarifaFormGroup>;
 }>;
 
 type ActividadModalFormGroup = FormGroup<{
-  codPlan: FormControl<string>;
-  codLstPrecio: FormControl<string>;
-  fechaServicio: FormControl<string>;
-  horaPickup: FormControl<string>;
-  horaInicio: FormControl<string>;
-  observaciones: FormControl<string>;
-  pickups: FormArray<PickupFormGroup>;
-  actividades: FormArray<ActividadDetalleFormGroup>;
-  totalGeneral: FormControl<number>;
+  codPlan         : FormControl<string>;
+  codLstPrecio    : FormControl<string>;
+  fechaServicio   : FormControl<string>;
+  horaPickup      : FormControl<string>;
+  horaInicio      : FormControl<string>;
+  observaciones   : FormControl<string>;
+  pickups         : FormArray<PickupFormGroup>;
+  actividades     : FormArray<ActividadDetalleFormGroup>;
+  totalGeneral    : FormControl<number>;
 }>;
 
 @Component({

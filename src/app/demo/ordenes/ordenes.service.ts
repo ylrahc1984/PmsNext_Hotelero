@@ -12,9 +12,9 @@ export type EstadoOrden = 'PEN' | 'ASI' | 'PRO' | 'COM' | 'CAN';
  * Interfaz para opciones de estado con código y descripción
  */
 export interface EstadoOrdenOption {
-  codigo: EstadoOrden;
-  descripcion: string;
-  badge: string; // Clase CSS para el badge
+  codigo          : EstadoOrden;
+  descripcion     : string;
+  badge           : string; // Clase CSS para el badge
 }
 
 /**
@@ -34,30 +34,30 @@ export const ESTADOS_OT: EstadoOrdenOption[] = [
  * DTO para enviar al endpoint POST/PUT /api/ordentrabajo
  */
 export interface OrdenTrabajoEncabezadoDTO {
-  tipo: number;
-  codOT?: string;              // Solo en PUT, generado automáticamente en POST
-  codReserva: string;
-  codSuplidor: string;
-  fecServicio: string;         // ISO 8601: "2026-02-05T03:55:13.213Z"
-  rutaCodigo: string;
-  rotulacion: string;
-  conexion: string;
-  kmInicial: number;
-  kmFinal: number;
-  observaciones: string;
-  estado: string;
-  moneda: string;
-  tCambio: number;
-  totalOT: number;
-  operador: string;
-  codVehiculo: string;         // Código del vehículo asignado
-  codChofer: string;           // Código del chofer asignado
-  fechaInicio: string;
-  fechaFin: string;
-  nombreSuplidor: string;
-  pageNumber?: number;
-  pageSize?: number;
-  respuesta?: string;
+  tipo              : number;
+  codOT            ?: string;              // Solo en PUT, generado automáticamente en POST
+  codReserva        : string;
+  codSuplidor       : string;
+  fecServicio       : string;         // ISO 8601: "2026-02-05T03:55:13.213Z"
+  rutaCodigo        : string;
+  rotulacion        : string;
+  conexion          : string;
+  kmInicial         : number;
+  kmFinal           : number;
+  observaciones     : string;
+  estado            : string;
+  moneda            : string;
+  tCambio           : number;
+  totalOT           : number;
+  operador          : string;
+  codVehiculo       : string;         // Código del vehículo asignado
+  codChofer         : string;           // Código del chofer asignado
+  fechaInicio       : string;
+  fechaFin          : string;
+  nombreSuplidor    : string;
+  pageNumber        ?: number;
+  pageSize          ?: number;
+  respuesta         ?: string;
 }
 
 /**
@@ -73,29 +73,29 @@ export interface OrdenTrabajoEncabezadoResponse {
  * DTO de respuesta del GET /api/ordentrabajo/codigo/{codOT}
  */
 export interface EncabezadoOrdenTrabajoApiDTO {
-  PRV10_CodOT: string;
-  PRV10_CodReserva: string;
-  PRV10_CodSuplidor: string;
-  MRV10_DescSuplidor: string;
-  PRV10_FecServicio: string;
-  PRV10_RutaCodigo: string;
-  PRV10_Rotulacion: string;
-  PRV10_Conexion: string;
-  PRV10_KmInicial: number;
-  PRV10_KmFinal: number;
-  KmRecorridos: number;
-  PRV10_Observaciones: string;
-  PRV10_Estado: string;
-  EstadoDescripcion: string;
-  PRV10_Moneda: string;
-  PRV10_TCambio: number;
-  PRV10_TotalOT: number;
-  PRV10_Operador: string;
-  PRV10_FechaRegistro: string;
-  PRV10_CodVehiculo: string;
-  MRV11_Placa:string;
-  PRV10_CodChofer: string;
-  MRV12_NombreCompleto:string;
+  PRV10_CodOT           : string;
+  PRV10_CodReserva      : string;
+  PRV10_CodSuplidor     : string;
+  MRV10_DescSuplidor    : string;
+  PRV10_FecServicio     : string;
+  PRV10_RutaCodigo      : string;
+  PRV10_Rotulacion      : string;
+  PRV10_Conexion        : string;
+  PRV10_KmInicial       : number;
+  PRV10_KmFinal         : number;
+  KmRecorridos          : number;
+  PRV10_Observaciones   : string;
+  PRV10_Estado          : string;
+  EstadoDescripcion     : string;
+  PRV10_Moneda          : string;
+  PRV10_TCambio         : number;
+  PRV10_TotalOT         : number;
+  PRV10_Operador        : string;
+  PRV10_FechaRegistro   : string;
+  PRV10_CodVehiculo     : string;
+  MRV11_Placa           :string;
+  PRV10_CodChofer       : string;
+  MRV12_NombreCompleto  :string;
 }
 
 /**
@@ -109,68 +109,69 @@ export interface EncabezadoOrdenTrabajoApiResponse {
  * DTO para enviar al endpoint POST/PUT /api/orden-trabajo/detalle
  */
 export interface OrdenTrabajoDetalleDTO {
-  tipo: number;
-  id?: number;                 // Solo en PUT
-  codOT: string;
-  linea: number;               // Secuencia
-  codReserva: string;
-  idDetReserva: number;
-  codServicio: string;
-  nomServicio: string;
-  origenTexto: string;
-  destinoTexto: string;
-  origenPlaceId: string;
-  destinoPlaceId: string;
-  origenLat: number;
-  origenLng: number;
-  destinoLat: number;
-  destinoLng: number;
-  horaPax: string;
-  adultos: number;
-  ninos: number;
-  totalPax: number;
-  boleta: string;
-  voucher: string;
-  agenciaCobro: string;
-  estado: string;
-  observacion: string;
-  operador: string;
-  respuesta?: string;
+  tipo               : number;
+  id                ?: number;                 // Solo en PUT
+  codOT              : string;
+  linea              : number;               // Secuencia
+  codReserva         : string;
+  idDetReserva       : number;
+  codServicio        : string;
+  nomServicio        : string;
+  origenTexto        : string;
+  destinoTexto       : string;
+  origenPlaceId      : string;
+  destinoPlaceId     : string;
+  origenLat          : number;
+  origenLng          : number;
+  destinoLat         : number;
+  destinoLng         : number;
+  horaPax            : string;
+  adultos            : number;
+  ninos              : number;
+  totalPax           : number;
+  boleta             : string;
+  voucher            : string;
+  agenciaCobro       : string;
+  estado             : string;
+  observacion        : string;
+  operador           : string;
+  respuesta          ?: string;
 }
 
 /**
  * DTO de respuesta del GET /api/orden-trabajo/detalle/por-codOT
  */
 export interface DetalleOrdenTrabajoApiDTO {
-  PRV11_ID: number;
-  PRV11_CodOT: string;
-  PRV11_Linea: number;
-  PRV11_CodReserva: string;
-  PRV11_IdDetReserva: number;
-  PRV11_CodServicio: string;
-  PRV11_NomServicio: string;
-  PRV11_OrigenTexto: string;
-  PRV11_DestinoTexto: string;
-  PRV11_OrigenPlaceId: string;
-  PRV11_DestinoPlaceId: string;
-  PRV11_OrigenLat: number;
-  PRV11_OrigenLng: number;
-  PRV11_DestinoLat: number;
-  PRV11_DestinoLng: number;
-  PRV11_HoraPax: string;
-  PRV11_Adultos: number;
-  PRV11_Ninos: number;
-  PRV11_TotalPax: number;
-  PRV11_Boleta: string;
-  PRV11_Voucher: string;
-  PRV11_AgenciaCobro: string;
-  PRV11_Estado: string;
-  PRV11_Observacion: string;
-  PRV11_Operador: string;
-  PRV11_FechaRegistro: string;
-  PRV01_NomCliente: string;
-  PRV01_TelCliente: string;
-  PRV01_EmailCliente: string;
+  PRV11_ID                : number;
+  PRV11_CodOT             : string;
+  PRV11_Linea             : number;
+  PRV11_CodReserva        : string;
+  PRV11_IdDetReserva      : number;
+  PRV11_HoraPickup        : string;
+  PRV11_CodServicio       : string;
+  PRV11_NomServicio       : string;
+  PRV11_OrigenTexto       : string;
+  PRV11_DestinoTexto      : string;
+  PRV11_OrigenPlaceId     : string;
+  PRV11_DestinoPlaceId    : string;
+  PRV11_OrigenLat         : number;
+  PRV11_OrigenLng         : number;
+  PRV11_DestinoLat        : number;
+  PRV11_DestinoLng        : number;
+  PRV11_HoraPax           : string;
+  PRV11_Adultos           : number;
+  PRV11_Ninos             : number;
+  PRV11_TotalPax          : number;
+  PRV11_Boleta            : string;
+  PRV11_Voucher           : string;
+  PRV11_AgenciaCobro      : string;
+  PRV11_Estado            : string;
+  PRV11_Observacion       : string;
+  PRV11_Operador          : string;
+  PRV11_FechaRegistro     : string;
+  PRV01_NomCliente        : string;
+  PRV01_TelCliente        : string;
+  PRV01_EmailCliente      : string;
 }
 
 /**
@@ -183,88 +184,89 @@ export interface DetalleOrdenTrabajoApiResponse {
 // ==================== Modelos de UI ====================
 
 export interface OrdenTrabajoDetalle {
-  id: number;
-  reservaId: string;           // Cambiado de number a string (código de reserva)
-  numeroBoleta: string;         // Cambiado de number a string (folio)
-  clienteFinal: string;
-  telefonoCliente?: string;     // Teléfono del cliente
-  emailCliente?: string;        // Email del cliente
-  agencia: string;
-  servicioId?: string;         // Código del servicio
-  servicio: string;
-  fechaServicio: string;
-  hora: string;
+  id                  : number;
+  reservaId           : string;           // Cambiado de number a string (código de reserva)
+  numeroBoleta        : string;         // Cambiado de number a string (folio)
+  clienteFinal        : string;
+  telefonoCliente    ?: string;     // Teléfono del cliente
+  emailCliente       ?: string;        // Email del cliente
+  agencia             : string;
+  servicioId         ?: string;         // Código del servicio
+  servicio            : string;
+  fechaServicio       : string;
+  hora                : string;
+  horaPickup          : string;
   
-  // ORIGEN Y DESTINO DE LA RESERVA (Solo lectura, informativo)
-  origenReserva: string;        // Origen original de la reserva
-  destinoReserva: string;       // Destino original de la reserva
+  //                   ORIGEN Y DESTINO DE LA RESERVA (Solo lectura, informativo)
+  origenReserva       : string;        // Origen original de la reserva
+  destinoReserva      : string;       // Destino original de la reserva
   
-  // ORIGEN Y DESTINO DE LA ORDEN DE TRABAJO (Editable)
-  origenOT: string;             // Origen para este tramo específico de la OT
-  destinoOT: string;            // Destino para este tramo específico de la OT
+  //                   ORIGEN Y DESTINO DE LA ORDEN DE TRABAJO (Editable)
+  origenOT            : string;             // Origen para este tramo específico de la OT
+  destinoOT           : string;            // Destino para este tramo específico de la OT
   
-  // Información geográfica
-  origenPlaceId?: string;
-  destinoPlaceId?: string;
-  origenLat?: number;
-  origenLng?: number;
-  destinoLat?: number;
-  destinoLng?: number;
+  //                   Información geográfica
+  origenPlaceId      ?: string;
+  destinoPlaceId     ?: string;
+  origenLat          ?: number;
+  origenLng          ?: number;
+  destinoLat         ?: number;
+  destinoLng         ?: number;
   
-  // Datos de pasajeros
-  pax: number;
-  adultos?: number;
-  ninos?: number;
+  //                   Datos de pasajeros
+  pax                 : number;
+  adultos            ?: number;
+  ninos              ?: number;
   
-  // Referencias y documentos
-  detalleReservaId?: number;    // ID del PRV02
-  boleta?: string;              // Número de boleta
-  voucher?: string;             // Número de voucher
+  //                   Referencias y documentos
+  detalleReservaId   ?: number;    // ID del PRV02
+  boleta             ?: string;              // Número de boleta
+  voucher            ?: string;             // Número de voucher
   
-  // Información financiera
-  montoServicio?: number;       // Precio del servicio
-  moneda?: string;              // Moneda (USD, CRC)
+  //                   Información financiera
+  montoServicio      ?: number;       // Precio del servicio
+  moneda             ?: string;              // Moneda (USD, CRC)
   
-  // Observaciones
-  observaciones?: string;       // Observaciones del servicio
+  //                   Observaciones
+  observaciones      ?: string;       // Observaciones del servicio
 
-  // Marca UI para indicar que proviene de un tramo pendiente
-  esRemanente?: boolean;
+  //                   Marca UI para indicar que proviene de un tramo pendiente
+  esRemanente        ?: boolean;
 }
 
 export interface OrdenTrabajo {
-  id: number;
-  numeroOrden: number;
-  codOT?: string;               // Código generado por el backend
-  fechaCreacion: string;
-  fechaServicio: string;
-  suplidor: string;
-  codSuplidor?: string;
-  ruta: string;
-  conexion?: string;
-  observaciones?: string;
-  kmInicial?: number;
-  kmFinal?: number;
-  rotulacion?: boolean;
-  codVehiculo?: string;
-  placaVehiculo?: string;          // Placa del vehículo (opcional, para mostrar en UI)
-  codChofer?: string;
-  nombreChofer?: string;          // Nombre del chofer (opcional, para mostrar en UI)
-  estado: EstadoOrden;
-  moneda?: string;              // Moneda de la orden
-  detalles: OrdenTrabajoDetalle[];
-  totalPax: number;
-  totalPagar: number;
+  id              : number;
+  numeroOrden     : number;
+  codOT          ?: string;               // Código generado por el backend
+  fechaCreacion   : string;
+  fechaServicio   : string;
+  suplidor        : string;
+  codSuplidor    ?: string;
+  ruta            : string;
+  conexion       ?: string;
+  observaciones  ?: string;
+  kmInicial      ?: number;
+  kmFinal        ?: number;
+  rotulacion     ?: boolean;
+  codVehiculo    ?: string;
+  placaVehiculo  ?: string;          // Placa del vehículo (opcional, para mostrar en UI)
+  codChofer      ?: string;
+  nombreChofer   ?: string;          // Nombre del chofer (opcional, para mostrar en UI)
+  estado          : EstadoOrden;
+  moneda         ?: string;              // Moneda de la orden
+  detalles        : OrdenTrabajoDetalle[];
+  totalPax        : number;
+  totalPagar      : number;
 }
 
 export interface OrdenTrabajoFiltros {
-  numeroOrden?: string;
-  fechaDesde?: string;
-  fechaHasta?: string;
-  suplidor?: string;
-  estado?: EstadoOrden | '';
-  rutaZona?: string;
-  agencia?: string;
+  numeroOrden   ?: string;
+  fechaDesde    ?: string;
+  fechaHasta    ?: string;
+  suplidor      ?: string;
+  estado        ?: EstadoOrden | '';
+  rutaZona      ?: string;
+  agencia       ?: string;
 }
 
 @Injectable({
@@ -440,43 +442,44 @@ export class OrdenesService {
     const destinoPlace = this.parsePlaceIdJson(apiDetalle.PRV11_DestinoPlaceId);
     
     return {
-      id: apiDetalle.PRV11_ID,
-      reservaId: apiDetalle.PRV11_CodReserva,
-      numeroBoleta: apiDetalle.PRV11_Boleta || apiDetalle.PRV11_CodReserva,
-      clienteFinal: apiDetalle.PRV01_NomCliente || '',
-      telefonoCliente: apiDetalle.PRV01_TelCliente || '',
-      emailCliente: apiDetalle.PRV01_EmailCliente || '',
-      agencia: apiDetalle.PRV11_AgenciaCobro,
-      servicioId: apiDetalle.PRV11_CodServicio,
-      servicio: apiDetalle.PRV11_NomServicio,
-      fechaServicio: apiDetalle.PRV11_FechaRegistro?.split('T')[0] ?? '',
-      hora: apiDetalle.PRV11_HoraPax,
+      id                : apiDetalle.PRV11_ID,
+      reservaId         : apiDetalle.PRV11_CodReserva,
+      numeroBoleta      : apiDetalle.PRV11_Boleta || apiDetalle.PRV11_CodReserva,
+      clienteFinal      : apiDetalle.PRV01_NomCliente || '',
+      telefonoCliente   : apiDetalle.PRV01_TelCliente || '',
+      emailCliente      : apiDetalle.PRV01_EmailCliente || '',
+      agencia           : apiDetalle.PRV11_AgenciaCobro,
+      servicioId        : apiDetalle.PRV11_CodServicio,
+      servicio          : apiDetalle.PRV11_NomServicio,
+      fechaServicio     : apiDetalle.PRV11_FechaRegistro?.split('T')[0] ?? '',
+      hora              : apiDetalle.PRV11_HoraPax,
+      horaPickup        : apiDetalle.PRV11_HoraPickup || '',
+
+      origenReserva     : apiDetalle.PRV11_OrigenTexto,
+      destinoReserva    : apiDetalle.PRV11_DestinoTexto,
+
+      origenOT          : apiDetalle.PRV11_OrigenTexto,
+      destinoOT         : apiDetalle.PRV11_DestinoTexto,
       
-      origenReserva: apiDetalle.PRV11_OrigenTexto,
-      destinoReserva: apiDetalle.PRV11_DestinoTexto,
+      origenPlaceId     : origenPlace?.placeId || apiDetalle.PRV11_OrigenPlaceId || '',
+      destinoPlaceId    : destinoPlace?.placeId || apiDetalle.PRV11_DestinoPlaceId || '',
+      origenLat         : origenPlace?.lat || apiDetalle.PRV11_OrigenLat || 0,
+      origenLng         : origenPlace?.lng || apiDetalle.PRV11_OrigenLng || 0,
+      destinoLat        : destinoPlace?.lat || apiDetalle.PRV11_DestinoLat || 0,
+      destinoLng        : destinoPlace?.lng || apiDetalle.PRV11_DestinoLng || 0,
       
-      origenOT: apiDetalle.PRV11_OrigenTexto,
-      destinoOT: apiDetalle.PRV11_DestinoTexto,
+      pax               : apiDetalle.PRV11_TotalPax,
+      adultos           : apiDetalle.PRV11_Adultos,
+      ninos             : apiDetalle.PRV11_Ninos,
       
-      origenPlaceId: origenPlace?.placeId || apiDetalle.PRV11_OrigenPlaceId || '',
-      destinoPlaceId: destinoPlace?.placeId || apiDetalle.PRV11_DestinoPlaceId || '',
-      origenLat: origenPlace?.lat || apiDetalle.PRV11_OrigenLat || 0,
-      origenLng: origenPlace?.lng || apiDetalle.PRV11_OrigenLng || 0,
-      destinoLat: destinoPlace?.lat || apiDetalle.PRV11_DestinoLat || 0,
-      destinoLng: destinoPlace?.lng || apiDetalle.PRV11_DestinoLng || 0,
+      detalleReservaId  : apiDetalle.PRV11_IdDetReserva,
+      boleta            : apiDetalle.PRV11_Boleta,
+      voucher           : apiDetalle.PRV11_Voucher,
       
-      pax: apiDetalle.PRV11_TotalPax,
-      adultos: apiDetalle.PRV11_Adultos,
-      ninos: apiDetalle.PRV11_Ninos,
+      montoServicio     : 0, // No viene en la respuesta
+      moneda            : undefined,
       
-      detalleReservaId: apiDetalle.PRV11_IdDetReserva,
-      boleta: apiDetalle.PRV11_Boleta,
-      voucher: apiDetalle.PRV11_Voucher,
-      
-      montoServicio: 0, // No viene en la respuesta
-      moneda: undefined,
-      
-      observaciones: apiDetalle.PRV11_Observacion
+      observaciones     : apiDetalle.PRV11_Observacion
     };
   }
 
@@ -613,51 +616,44 @@ export class OrdenesService {
     destinoCustom?: string
   ): OrdenTrabajoDetalle {
     return {
-      id: nextDetalleId,
-      reservaId: disponible.codReserva,
-      numeroBoleta: disponible.folio || disponible.codReserva,
-      clienteFinal: disponible.cliente,
-      agencia: disponible.nombreAgencia || disponible.agencia,
-      servicioId: disponible.codServicio,
-      servicio: disponible.servicio,
-      fechaServicio: disponible.fechaServicio,
-      hora: disponible.hora,
-      
-      // Origen y destino de la reserva (inmutable)
-      origenReserva: disponible.origen,
-      destinoReserva: disponible.destino,
-      
-      // Origen y destino de la OT (editable, por defecto copia los de la reserva)
-      origenOT: origenCustom || disponible.origen,
-      destinoOT: destinoCustom || disponible.destino,
-      
-      // Información geográfica (Google Places ID y coordenadas)
-      origenPlaceId: disponible.origenPlaceId || '',
-      destinoPlaceId: disponible.destinoPlaceId || '',
-      origenLat: disponible.origenLat || 0,
-      origenLng: disponible.origenLng || 0,
-      destinoLat: disponible.destinoLat || 0,
-      destinoLng: disponible.destinoLng || 0,
-      
-      // Pasajeros
-      pax: disponible.pax,
-      adultos: disponible.adultos,
-      ninos: disponible.ninos,
-      
-      // Referencias
-      detalleReservaId: disponible.id,
-      boleta: disponible.folio,
-      voucher: disponible.folio, // Usar folio como voucher por ahora
-      
-      // Financiero
-      montoServicio: disponible.montoServicio,
-      moneda: disponible.moneda,
-      
-      // Observaciones
-      observaciones: disponible.observacion,
-
-      // UI
-      esRemanente: (disponible as { esRemanente?: boolean })?.esRemanente ?? false
+      id                : nextDetalleId,
+      reservaId         : disponible.codReserva,
+      numeroBoleta      : disponible.folio || disponible.codReserva,
+      clienteFinal      : disponible.cliente,
+      agencia           : disponible.nombreAgencia || disponible.agencia,
+      servicioId        : disponible.codServicio,
+      servicio          : disponible.servicio,
+      fechaServicio     : disponible.fechaServicio,
+      hora              : disponible.hora,
+      horaPickup        : disponible.horaPickup || '',
+      //                 Origen y destino de la reserva (inmutable)
+      origenReserva     : disponible.origen,
+      destinoReserva    : disponible.destino,
+      //                 Origen y destino de la OT (editable, por defecto copia los de la reserva)
+      origenOT          : origenCustom || disponible.origen,
+      destinoOT         : destinoCustom || disponible.destino,
+      //                 Información geográfica (Google Places ID y coordenadas)
+      origenPlaceId     : disponible.origenPlaceId || '',
+      destinoPlaceId    : disponible.destinoPlaceId || '',
+      origenLat         : disponible.origenLat || 0,
+      origenLng         : disponible.origenLng || 0,
+      destinoLat        : disponible.destinoLat || 0,
+      destinoLng        : disponible.destinoLng || 0,
+      //                 Pasajeros
+      pax               : disponible.pax,
+      adultos           : disponible.adultos,
+      ninos             : disponible.ninos,
+      //                 Referencias
+      detalleReservaId  : disponible.id,
+      boleta            : disponible.folio,
+      voucher           : disponible.folio, // Usar folio como voucher por ahora
+      //                 Financiero
+      montoServicio     : disponible.montoServicio,
+      moneda            : disponible.moneda,
+      //                 Observaciones
+      observaciones     : disponible.observacion,
+      //                 UI
+      esRemanente       : (disponible as { esRemanente?: boolean })?.esRemanente ?? false
     };
   }
 
@@ -818,11 +814,11 @@ export class OrdenesService {
    * Endpoint: PUT /api/ordentrabajo/{codOT}/suplidor-vehiculo
    */
   actualizarSuplidorVehiculo(
-    codOT: string, 
-    codSuplidor: string, 
-    codVehiculo: string, 
-    codChofer: string,
-    operador: string
+    codOT         : string, 
+    codSuplidor   : string, 
+    codVehiculo   : string, 
+    codChofer     : string,
+    operador      : string
   ): Observable<any> {
     const url = `${this.apiUrl}/${codOT}/suplidor-vehiculo`;
     const body = {
@@ -1131,30 +1127,30 @@ export class OrdenesService {
     console.log('Estado mapeado:', { original: formValue.estado, codigo: estadoCodigo });
     
     const dto = {
-      tipo: Number(formValue.tipo ?? 0),
-      codOT: '', // Se genera en el backend
-      codReserva: String(detalles[0]?.reservaId || ''),
-      codSuplidor: String(formValue.suplidor || ''),
-      fecServicio: formValue.fechaServicio || new Date().toISOString().split('T')[0],
-      rutaCodigo: String(formValue.rutaCodigo || ''),
-      rotulacion: String(formValue.rotulacion || ''),
-      conexion: String(formValue.conexion || ''),
-      kmInicial: this.toSafeNumber(formValue.kmInicial, 0),
-      kmFinal: this.toSafeNumber(formValue.kmFinal, 0),
-      observaciones: String(formValue.observaciones || ''),
-      estado: estadoCodigo,
-      moneda: String(formValue.moneda || 'USD'),
-      tCambio: this.toSafeNumber(formValue.tCambio, 1),
-      totalOT: this.toSafeNumber(totales.totalPagar, 0),
-      operador: String(formValue.operador || 'ADMIN').toUpperCase(),
-      codVehiculo: String(formValue.codVehiculo || ''),
-      codChofer: String(formValue.codChofer || ''),
-      fechaInicio: formValue.fechaCreacion || new Date().toISOString(),
-      fechaFin: formValue.fechaServicio || new Date().toISOString().split('T')[0],
-      nombreSuplidor: '', // Se completa desde el backend o catálogo
-      pageNumber: 0,
-      pageSize: 0,
-      respuesta: ''
+      tipo            : Number(formValue.tipo ?? 0),
+      codOT           : '', // Se genera en el backend
+      codReserva      : String(detalles[0]?.reservaId || ''),
+      codSuplidor     : String(formValue.suplidor || ''),
+      fecServicio     : formValue.fechaServicio || new Date().toISOString().split('T')[0],
+      rutaCodigo      : String(formValue.rutaCodigo || ''),
+      rotulacion      : String(formValue.rotulacion || ''),
+      conexion        : String(formValue.conexion || ''),
+      kmInicial       : this.toSafeNumber(formValue.kmInicial, 0),
+      kmFinal         : this.toSafeNumber(formValue.kmFinal, 0),
+      observaciones   : String(formValue.observaciones || ''),
+      estado          : estadoCodigo,
+      moneda          : String(formValue.moneda || 'USD'),
+      tCambio         : this.toSafeNumber(formValue.tCambio, 1),
+      totalOT         : this.toSafeNumber(totales.totalPagar, 0),
+      operador        : String(formValue.operador || 'ADMIN').toUpperCase(),
+      codVehiculo     : String(formValue.codVehiculo || ''),
+      codChofer       : String(formValue.codChofer || ''),
+      fechaInicio     : formValue.fechaCreacion || new Date().toISOString(),
+      fechaFin        : formValue.fechaServicio || new Date().toISOString().split('T')[0],
+      nombreSuplidor  : '', // Se completa desde el backend o catálogo
+      pageNumber      : 0,
+      pageSize        : 0,
+      respuesta       : ''
     };
     
     console.log('✅ DTO encabezado preparado:', JSON.stringify(dto, null, 2));
@@ -1200,39 +1196,39 @@ export class OrdenesService {
    * Mapea un OrdenTrabajoDetalle al DTO para la API.
    */
   mapDetalleToDTO(
-    detalle: OrdenTrabajoDetalle, 
-    codOT: string, 
-    linea: number, 
-    operador: string
+    detalle   : OrdenTrabajoDetalle, 
+    codOT     : string, 
+    linea     : number, 
+    operador  : string
   ): OrdenTrabajoDetalleDTO {
     return {
-      tipo: 0,
-      id: 0, // Se genera en el backend
-      codOT,
-      linea,
-      codReserva: detalle.reservaId,
-      idDetReserva: detalle.detalleReservaId || 0,
-      codServicio: detalle.servicioId || '',
-      nomServicio: detalle.servicio,
-      origenTexto: detalle.origenOT || detalle.origenReserva || '',
-      destinoTexto: detalle.destinoOT || detalle.destinoReserva || '',
-      origenPlaceId: detalle.origenPlaceId || '',
-      destinoPlaceId: detalle.destinoPlaceId || '',
-      origenLat: detalle.origenLat || 0,
-      origenLng: detalle.origenLng || 0,
-      destinoLat: detalle.destinoLat || 0,
-      destinoLng: detalle.destinoLng || 0,
-      horaPax: detalle.hora,
-      adultos: detalle.adultos || 0,
-      ninos: detalle.ninos || 0,
-      totalPax: detalle.pax,
-      boleta: detalle.boleta || '',
-      voucher: detalle.voucher || '',
-      agenciaCobro: detalle.agencia || '',
-      estado: 'PENDIENTE',
-      observacion: detalle.observaciones || '',
-      operador,
-      respuesta: ''
+      tipo            : 0,
+      id              : 0, // Se genera en el backend
+      codOT           ,
+      linea           ,
+      codReserva      : detalle.reservaId,
+      idDetReserva    : detalle.detalleReservaId || 0,
+      codServicio     : detalle.servicioId || '',
+      nomServicio     : detalle.servicio,
+      origenTexto     : detalle.origenOT || detalle.origenReserva || '',
+      destinoTexto    : detalle.destinoOT || detalle.destinoReserva || '',
+      origenPlaceId   : detalle.origenPlaceId || '',
+      destinoPlaceId  : detalle.destinoPlaceId || '',
+      origenLat       : detalle.origenLat || 0,
+      origenLng       : detalle.origenLng || 0,
+      destinoLat      : detalle.destinoLat || 0,
+      destinoLng      : detalle.destinoLng || 0,
+      horaPax         : detalle.horaPickup || '',
+      adultos         : detalle.adultos || 0,
+      ninos           : detalle.ninos || 0,
+      totalPax        : detalle.pax,
+      boleta          : detalle.boleta || '',
+      voucher         : detalle.voucher || '',
+      agenciaCobro    : detalle.agencia || '',
+      estado          : 'PENDIENTE',
+      observacion     : detalle.observaciones || '',
+      operador        ,
+      respuesta       : ''
     };
   }
 }

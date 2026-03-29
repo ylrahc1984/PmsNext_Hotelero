@@ -13,6 +13,7 @@ import { FormaPago } from '../../../administracion/forma-pago/forma-pago.models'
 import { MonedaService, MonedaUI } from '../../../administracion/monedas/moneda.service';
 import { ListaPrecioService } from '../../../catalogos/listas-precios/lista-precio.service';
 import { ListaPrecioUI } from '../../../catalogos/listas-precios/lista-precio.models';
+import { TarifasClienteService } from '../../../catalogos/listas-precios/tarifas-cliente.service';
 import { PlanesTarifasService, PlanTarifaUI } from '../../../catalogos/listas-precios/planes-tarifas.service';
 import { ClienteContactoUI, ClienteUI } from '../../../catalogos/agencias-comisionistas/cliente.models';
 import { ClienteService } from '../../../catalogos/agencias-comisionistas/cliente.service';
@@ -77,9 +78,18 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
   agenciaSearchOpen = false;
 
   idiomas: IdiomaDto[] = [];
+  get listaPreciosDisponibles(): ListaPrecioUI[] {
+    return this.listasPreciosAsignadas.length ? this.listasPreciosAsignadas : this.listaPreciosVigentes;
+  }
+  get listaPreciosParaActividad(): ListaPrecioUI[] {
+    return this.listaPreciosDisponibles;
+  }
+
   formasReservacion: FormaReservaDto[] = [];
   formasPagoApi: FormaPago[] = [];
   listaPrecios: ListaPrecioUI[] = [];
+  listaPreciosVigentes: ListaPrecioUI[] = [];
+  listasPreciosAsignadas: ListaPrecioUI[] = [];
   planesTarifas: PlanTarifaUI[] = [];
   monedas: MonedaUI[] = [];
   servicios: ServicioUI[] = [];
@@ -123,6 +133,7 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
   private listaPrecioService = inject(ListaPrecioService);
   private planesTarifasService = inject(PlanesTarifasService);
   private clienteService = inject(ClienteService);
+  private tarifasClienteService = inject(TarifasClienteService);
   private tipoPaxService = inject(TipoPaxService);
   private serviciosService = inject(ServiciosService);
   private idiomasService = inject(IdiomasService);
@@ -130,6 +141,9 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
   private tarifaService = inject(ReservaCreateTarifaService);
   private contactoRapidoService = inject(ReservaContactoRapidoService);
   private reservaToursService = inject(ReservaToursV2Service);
+  private listaPreciosAsignadasCodigos = new Set<string>();
+  private tarifasClienteRequestId = 0;
+
   private clienteDetailRequestId = 0;
 
   private resolveTipoServicioValue(value: unknown, fallback = ''): string {
@@ -153,6 +167,9 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
 
   ngOnInit(): void {
     this.codReservaActual = safeString(this.route.snapshot.paramMap.get('id')).trim() || null;
+    if (!safeString(this.form.moneda).trim()) {
+      this.form.moneda = 'USD';
+    }
     this.cargarIdiomas();
     this.cargarFormasReservacion();
     this.cargarPlanesTarifas();
@@ -446,6 +463,7 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
     this.showClienteModal = false;
     this.contactosCliente = [];
     this.applyContactoSeleccionado(null, false);
+    this.resetListasPreciosAsignadas();
     this.syncDraftHeader();
     await this.cargarClienteDetalle(cliente.codigo);
   }
@@ -595,6 +613,11 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
       this.actividadForm.codLstPrecio = this.form.codLstPrecio || this.resolveDefaultListaPrecio();
     }
 
+    if (this.selectedCliente?.codigo) {
+      void this.cargarListasPreciosAsignadasParaCliente(this.selectedCliente.codigo);
+    } else {
+      this.resetListasPreciosAsignadas();
+    }
     this.showActividadModal = true;
     this.cargarServicios('TOURS');
   }
@@ -602,6 +625,7 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
   cerrarModalActividad(): void {
     this.showActividadModal = false;
     this.editingActividadLinea = null;
+    this.actividadForm = buildInitialActividadDetalleForm();
   }
 
   async guardarActividadDetalle(saveData: ActividadModalSavePayload): Promise<void> {
@@ -819,6 +843,7 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
   ): Promise<void> {
     const normalized = safeString(codigo).trim();
     if (!normalized) {
+      this.resetListasPreciosAsignadas();
       this.contactosCliente = [];
       this.applyContactoSeleccionado(null, false);
       this.syncDraftHeader();
@@ -833,6 +858,7 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
         return;
       }
       if (!cliente) {
+        this.resetListasPreciosAsignadas();
         this.contactosCliente = [];
         this.applyContactoSeleccionado(null, false);
         if (!options?.silent) {
@@ -845,6 +871,7 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
       this.selectedCliente = cliente;
       this.syncAgenciaSearchTermFromCurrentState();
       this.contactosCliente = this.sortContactosCliente(cliente.contactos ?? []);
+      void this.cargarListasPreciosAsignadasParaCliente(cliente.codigo);
       const preferredId = safeNumber(options?.preferredContactId || (options?.preserveSelection ? this.form.idContacto : 0));
       const selectedContacto =
         this.contactosCliente.find((item) => safeNumber(item.id) === preferredId) ?? this.resolveContactoPorDefecto(this.contactosCliente);
@@ -911,6 +938,62 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
     if (syncHeader) {
       this.syncDraftHeader();
     }
+  }
+
+  private async cargarListasPreciosAsignadasParaCliente(codigo?: string): Promise<void> {
+    const normalized = safeString(codigo).trim();
+    if (!normalized) {
+      this.resetListasPreciosAsignadas();
+      return;
+    }
+    const currentRequest = ++this.tarifasClienteRequestId;
+    this.listaPreciosAsignadasCodigos.clear();
+    this.listasPreciosAsignadas = [];
+    try {
+      const asignaciones = await firstValueFrom(this.tarifasClienteService.getAsignaciones(normalized).pipe(take(1)));
+      if (currentRequest !== this.tarifasClienteRequestId) {
+        return;
+      }
+      const codigos = new Set<string>();
+      for (const item of asignaciones ?? []) {
+        const code = safeString(item.codTari);
+        if (code) {
+          codigos.add(code);
+        }
+      }
+      this.listaPreciosAsignadasCodigos = codigos;
+    } catch (error) {
+      if (currentRequest !== this.tarifasClienteRequestId) {
+        return;
+      }
+      console.error('[ReservaCreateV2] cargarListasPreciosAsignadasParaCliente', error);
+      this.listaPreciosAsignadasCodigos.clear();
+    } finally {
+      if (currentRequest === this.tarifasClienteRequestId) {
+        this.actualizarListasPreciosAsignadasCache();
+      }
+    }
+  }
+
+  private actualizarListasPreciosAsignadasCache(): void {
+    if (!this.listaPreciosAsignadasCodigos.size) {
+      this.listasPreciosAsignadas = [];
+      return;
+    }
+    const activos = this.listaPrecios.filter((lista) => {
+      const codigo = safeString(lista.codigo);
+      return (
+        codigo &&
+        this.listaPreciosAsignadasCodigos.has(codigo) &&
+        safeString(lista.vigente).toUpperCase() === 'S'
+      );
+    });
+    this.listasPreciosAsignadas = activos;
+  }
+
+  private resetListasPreciosAsignadas(): void {
+    this.listaPreciosAsignadasCodigos.clear();
+    this.listasPreciosAsignadas = [];
   }
 
   private clearAgenciaSearchBlurTimer(): void {
@@ -1140,11 +1223,18 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
         pageNumber += 1;
       } while (pageNumber <= totalPages);
       this.listaPrecios = all;
-      if (!this.form.codLstPrecio && this.listaPrecios.length > 0) {
-        this.form.codLstPrecio = String(this.listaPrecios[0].codigo);
+      this.listaPreciosVigentes = this.listaPrecios.filter((item) => safeString(item.vigente).toUpperCase() === 'S');
+      if (!this.form.codLstPrecio) {
+        const defaultLista = this.listaPreciosParaActividad[0];
+        if (defaultLista) {
+          this.form.codLstPrecio = String(defaultLista.codigo);
+        }
       }
     } catch {
       this.listaPrecios = [];
+      this.listaPreciosVigentes = [];
+    } finally {
+      this.actualizarListasPreciosAsignadasCache();
     }
   }
 
@@ -1166,8 +1256,9 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
     this.monedaService.getAll().subscribe({
       next: (res) => {
         this.monedas = res ?? [];
-        if (this.monedas.length > 0 && !this.form.moneda) {
-          this.form.moneda = this.monedas[0].codMoneda;
+        const usdOption = (this.monedas ?? []).find((item) => safeString(item?.codMoneda).toUpperCase() === 'USD');
+        if (!safeString(this.form.moneda).trim()) {
+          this.form.moneda = usdOption?.codMoneda || this.monedas[0]?.codMoneda || 'USD';
         }
       },
       error: () => {
@@ -1403,7 +1494,8 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
   }
 
   private resolveDefaultListaPrecio(): string {
-    return this.listaPrecios?.[0] ? String(this.listaPrecios[0].codigo) : '';
+    const defaultLista = this.listaPreciosParaActividad[0];
+    return defaultLista ? String(defaultLista.codigo) : '';
   }
 
   private mergeIdiomas(items: IdiomaDto[]): IdiomaDto[] {
@@ -1475,20 +1567,3 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
 function roundTo2(value: number): number {
   return Math.round((safeNumber(value) + Number.EPSILON) * 100) / 100;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

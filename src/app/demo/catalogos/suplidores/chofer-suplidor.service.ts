@@ -115,9 +115,9 @@ export class ChoferSuplidorService {
 
   editarChofer(codChofer: string, payload: ChoferSuplidorPost): Observable<{ respuesta?: string }> {
     const normalized = this.normalizePayload(payload, 2);
-    // PUT envía codChofer en el body
+    // PUT envía codChofer en el body y en la ruta
     normalized.codChofer = codChofer;
-    return this.http.put(this.apiUrl, normalized, { responseType: 'text' }).pipe(
+    return this.http.put(`${this.apiUrl}/${encodeURIComponent(codChofer)}`, normalized, { responseType: 'text' }).pipe(
       map((res) => this.parseTextResponse(res))
     );
   }

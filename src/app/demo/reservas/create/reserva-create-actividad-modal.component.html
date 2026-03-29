@@ -27,7 +27,6 @@
             <div class="col-lg-7 col-md-6">
               <label class="form-label">Lista de Precios <span class="text-danger">*</span></label>
               <select class="form-control form-control-sm" formControlName="codLstPrecio">
-                <option value="">Seleccione lista de precios</option>
                 <option *ngFor="let lista of listaPrecios" [value]="lista.codigo">
                   {{ lista.codigo }} - {{ lista.descripcion }}
                 </option>
@@ -43,7 +42,6 @@
           <section class="rsv-section rsv-section--compact">
             <div class="rsv-section__header">
               <h6 class="rsv-section__title">Datos del servicio</h6>
-              <span class="rsv-section__tag">Campos requeridos</span>
             </div>
             <div class="rsv-section__body">
               <div class="row g-2">
@@ -56,18 +54,19 @@
                 </div>
                 <div class="col-lg-3 col-md-6 mb-1">
                   <label class="form-label">Hora Inicio <span class="text-danger">*</span></label>
-                  <input
-                    type="text"
-                    class="form-control form-control-sm"
-                    formControlName="horaInicio"
-                    inputmode="numeric"
-                    autocomplete="off"
-                    placeholder="HH:mm"
-                    maxlength="5"
-                    (input)="onHoraInput('horaInicio', $any($event.target).value)"
-                    (blur)="onHoraBlur('horaInicio')"
-                  >
-                  <small class="form-text text-muted d-block mt-1">Formato 24 horas: HH:mm</small>
+                  <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <input
+                      type="text"
+                      class="form-control form-control-sm flex-grow-1"
+                      formControlName="horaInicio"
+                      inputmode="numeric"
+                      autocomplete="off"
+                      placeholder="HH:mm"
+                      maxlength="5"
+                      (input)="onHoraInput('horaInicio', $any($event.target).value)"
+                      (blur)="onHoraBlur('horaInicio')"
+                    >
+                  </div>
                   <div class="text-danger small mt-1" *ngIf="form.controls.horaInicio.touched && form.controls.horaInicio.errors?.['required']">
                     La hora de inicio es obligatoria.
                   </div>
@@ -121,7 +120,6 @@
                       (input)="onHoraInput('horaPickup', $any($event.target).value)"
                       (blur)="onHoraBlur('horaPickup')"
                     >
-                    <small class="form-text text-muted d-block mt-1">Formato 24 horas: HH:mm</small>
                     <div class="text-danger small mt-1" *ngIf="form.controls.horaPickup.touched && form.controls.horaPickup.errors?.['required']">
                       La hora pick-up es obligatoria.
                     </div>
@@ -130,7 +128,6 @@
                     </div>
                   </div>
                 </div>
-                <small class="form-text text-muted d-block mt-1">Escriba al menos 2 letras para buscar en la lista pickup.</small>
                 <small class="form-text text-muted d-block mt-1" *ngIf="pickupLookupLoading">Buscando pickups...</small>
  
               </div>
@@ -173,8 +170,6 @@
                       </div>
                     </div>
                   </div>
-
-                  <small class="text-muted d-block mb-2">Lista general paginada; expanda cada servicio y coloque cantidades por tarifa.</small>
                   <div class="actividades-container">
                     <div class="rsv-actividad-list" formArrayName="actividades">
                       <div

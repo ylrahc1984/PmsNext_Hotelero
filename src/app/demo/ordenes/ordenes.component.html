@@ -55,6 +55,8 @@
             <tr>
               <th>Código OT</th>
               <th>Suplidor</th>
+              <th>Vehículo</th>
+              <th>Conductor</th>
               <th>Fecha de servicio</th>
               <th>Ruta / Conexión</th>
               <th class="text-end">Km</th>
@@ -78,6 +80,8 @@
                   <small class="text-muted" *ngIf="orden.id !== null && orden.id !== undefined">ID {{ orden.id }}</small>
                 </td>
                 <td>{{ orden.suplidor || 'N/D' }}</td>
+                <td>{{ orden.vehiculo || 'N/D' }}</td>
+                <td>{{ orden.conductor || 'N/D' }}</td>
                 <td>{{ orden.fechaServicio ? (orden.fechaServicio | date:'dd/MM/yyyy') : 'N/D' }}</td>
                 <td>
                   <div>{{ orden.ruta || 'N/D' }}</div>

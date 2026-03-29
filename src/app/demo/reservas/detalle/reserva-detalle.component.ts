@@ -43,12 +43,14 @@ export class ReservaDetalleComponent implements OnInit, OnDestroy {
   private empresaContext = inject(EmpresaContextService);
 
   readonly empresa = this.empresaContext.empresa;
+  origenVista: 'reservas' | 'operacion-diaria' | 'otro' = 'reservas';
 
   ngOnInit(): void {
     this.route.queryParamMap
       .pipe(takeUntil(this.destroy$))
       .subscribe((params) => {
         this.facturadoHint = this.parseFacturadoFlag(params.get('facturado'));
+        this.origenVista = this.parseOrigen(params.get('origen'));
       });
 
     this.route.paramMap
@@ -379,5 +381,24 @@ export class ReservaDetalleComponent implements OnInit, OnDestroy {
 
     const normalized = String(value).trim().toLowerCase();
     return normalized === '1' || normalized === 'true' || normalized === 'si' || normalized === 'sí';
+  }
+
+  private parseOrigen(value: string | null): 'reservas' | 'operacion-diaria' | 'otro' {
+    const normalized = (value ?? '').toString().trim().toLowerCase();
+    if (normalized === 'operacion-diaria' || normalized === 'operaciondiaria') {
+      return 'operacion-diaria';
+    }
+    if (normalized === 'reservas') {
+      return 'reservas';
+    }
+    return 'otro';
+  }
+
+  volver(): void {
+    if (this.origenVista === 'operacion-diaria') {
+      this.router.navigate(['/operaciones/operacion-diaria']);
+      return;
+    }
+    this.router.navigate(['/operaciones/reservas']);
   }
 }

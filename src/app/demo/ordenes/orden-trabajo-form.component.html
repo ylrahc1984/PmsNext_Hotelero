@@ -300,7 +300,9 @@
             <div class="d-flex justify-content-between align-items-center">
               <div>
                 <h6 class="mb-0">Servicios pendientes</h6>
-                <small class="text-muted">Mostrando {{ detallesDisponiblesFiltrados.length }} servicios</small>
+                <small class="text-muted">
+                  Mostrando {{ detallesDisponiblesVisibles.length }} reservas ({{ detallesDisponiblesFiltrados.length }} servicios)
+                </small>
               </div>
               <button 
                 class="btn btn-outline-primary btn-sm" 
@@ -320,7 +322,7 @@
               <i class="feather icon-alert-triangle"></i> Seleccione un Transporte para asignar servicios
             </div>
 
-            <div class="table-responsive" *ngIf="detallesDisponiblesFiltrados.length">
+            <div class="table-responsive" *ngIf="detallesDisponiblesVisibles.length">
               <table class="table table-hover table-sm mb-0">
                 <thead>
                   <tr>
@@ -334,8 +336,8 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr 
-                    *ngFor="let det of detallesDisponiblesFiltrados"
+                  <tr
+                    *ngFor="let det of detallesDisponiblesVisibles; trackBy: trackDetalleDisponible"
                     [class.row-selected]="detallesSeleccionados.has(det.key)">
                     <td (click)="$event.stopPropagation()">
                       <input
@@ -345,11 +347,14 @@
                         (change)="toggleSeleccion(det, $any($event.target).checked)"
                         [disabled]="estadoBloqueado">
                     </td>
-                    <td><strong>{{ det.hora }}</strong></td>
                     <td>
-                      <!-- MOSTRAR ORIGEN/DESTINO SEGÚN SELECCIÓN -->
+                      <div><strong>{{ det.hora }}</strong></div>
+                      <div class="text-muted small" *ngIf="det.horaPickup">
+                        Pickup · {{ det.horaPickup }}
+                      </div>
+                    </td>
+                    <td>
                       <div *ngIf="!detallesSeleccionados.has(det.key)">
-                        <!-- SIN SELECCIONAR: Solo texto -->
                         <div class="text-truncate small">
                           <i class="feather icon-map-pin text-primary"></i>
                           <strong>{{ det.origen }}</strong>
@@ -359,9 +364,7 @@
                           {{ det.destino }}
                         </div>
                       </div>
-                      
                       <div *ngIf="detallesSeleccionados.has(det.key)">
-                        <!-- SELECCIONADO: Inputs editables + info de reserva -->
                         <div class="mb-1">
                           <label class="form-label mb-0 small text-muted">
                             <i class="feather icon-info"></i> Reserva:
@@ -400,7 +403,17 @@
                       <span class="badge badge-info badge-pill">{{ det.pax }}</span>
                     </td>
                     <td>{{ det.cliente }}</td>
-                    <td><small class="text-muted">#{{ det.codReserva }}</small></td>
+                    <td>
+                      <div class="d-flex flex-wrap align-items-baseline gap-2">
+                        <small class="text-muted">#{{ det.codReserva }}</small>
+                        <small class="text-muted">
+                          ({{ cantidadServiciosDetalle(det) }} {{ cantidadServiciosDetalle(det) === 1 ? 'servicio' : 'servicios' }})
+                        </small>
+                      </div>
+                      <div class="text-muted small text-truncate" *ngIf="det.tipoServicio">
+                        {{ det.tipoServicio }}
+                      </div>
+                    </td>
                     <td>
                       <span class="badge badge-sm badge-secondary">Pendiente</span>
                     </td>
@@ -409,7 +422,7 @@
               </table>
             </div>
 
-            <div *ngIf="!detallesDisponiblesFiltrados.length && form.get('fechaServicio')?.value" class="text-center text-muted py-4">
+            <div *ngIf="!detallesDisponiblesVisibles.length && form.get('fechaServicio')?.value" class="text-center text-muted py-4">
               <i class="feather icon-calendar" style="font-size: 2rem; opacity: 0.3;"></i>
               <p class="mb-0 mt-2">No hay servicios para los filtros aplicados</p>
             </div>
@@ -451,9 +464,9 @@
                     <span class="resumen-strip__label">Observaciones</span>
                     <textarea 
                       class="form-control form-control-sm resumen-strip__textarea"
-                      rows="1"
+                      rows="2"
                       [formControl]="$any(form.get('observaciones'))"
-                      placeholder="Indicaciones para el suplidor"
+                      placeholder="Observaciones"
                       [disabled]="estadoBloqueado"></textarea>
                   </label>
                 </div>
@@ -473,33 +486,40 @@
 
               <div class="secuencia-list">
                 <div 
-                  *ngFor="let det of detallesOrden; let i = index"
+                  *ngFor="let grupo of detallesOrdenAgrupados; let grupoIndex = index; trackBy: trackResumenGrupo"
                   class="secuencia-item">
                   <div class="d-flex align-items-center">
-                    <span class="sequence-number">{{ i + 1 }}</span>
+                    <span class="sequence-number">{{ grupoIndex + 1 }}</span>
                     <div class="flex-grow-1">
-                      <div class="font-weight-bold small">{{ det.origenOT }} → {{ det.destinoOT }}</div>
+                      <div class="font-weight-bold small">{{ grupo.origenOT }} → {{ grupo.destinoOT }}</div>
                       <div class="text-muted" style="font-size: 0.75rem;">
-                        {{ det.hora }} | {{ det.pax }} pax
+                        {{ grupo.hora }} | {{ grupo.paxTotal }} pax
+                        <span *ngIf="grupo.cantidad > 1" class="text-muted">· {{ grupo.cantidad }} servicios</span>
                       </div>
-                      <!-- Mostrar info de reserva original si difiere -->
-                      <div class="text-muted" style="font-size: 0.65rem;" *ngIf="det.origenReserva !== det.origenOT || det.destinoReserva !== det.destinoOT">
-                        <i class="feather icon-info"></i> Reserva: {{ det.origenReserva }} → {{ det.destinoReserva }}
+                      <div class="text-muted small" style="font-size: 0.65rem;" *ngIf="grupo.horaPickup">
+                        Pickup · {{ grupo.horaPickup }}
+                      </div>
+                      <div class="text-muted" style="font-size: 0.65rem;" *ngIf="grupo.mostrarInfoReserva">
+                        <i class="feather icon-info"></i> Reserva: {{ grupo.reservaOrigen }} → {{ grupo.reservaDestino }}
+                      </div>
+                      <div class="text-muted small d-flex flex-wrap gap-1 align-items-center mt-1">
+                        <span class="badge badge-sm badge-light">#{{ grupo.reservaId }}</span>
+                        <small *ngIf="grupo.servicio">{{ grupo.servicio }}</small>
                       </div>
                     </div>
                     <div class="btn-group-vertical btn-group-sm">
                       <button 
                         type="button"
                         class="btn btn-outline-secondary btn-xs"
-                        [disabled]="i === 0 || estadoBloqueado"
-                        (click)="moverDetalle(i, 'up')">
+                        [disabled]="grupo.primerIndice === 0 || estadoBloqueado"
+                        (click)="moverDetalle(grupo.primerIndice, 'up')">
                         <i class="feather icon-chevron-up"></i>
                       </button>
                       <button 
                         type="button"
                         class="btn btn-outline-secondary btn-xs"
-                        [disabled]="i === detallesOrden.length - 1 || estadoBloqueado"
-                        (click)="moverDetalle(i, 'down')">
+                        [disabled]="grupo.ultimoIndice === detallesOrden.length - 1 || estadoBloqueado"
+                        (click)="moverDetalle(grupo.ultimoIndice, 'down')">
                         <i class="feather icon-chevron-down"></i>
                       </button>
                     </div>
@@ -507,7 +527,7 @@
                       type="button"
                       class="btn btn-outline-danger btn-sm ml-2"
                       [disabled]="estadoBloqueado"
-                      (click)="quitarDetalle(det)">
+                      (click)="quitarGrupoOrden(grupo)">
                       <i class="feather icon-x"></i>
                     </button>
                   </div>

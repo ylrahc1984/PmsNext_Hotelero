@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Observable, Subject, catchError, debounceTime, filter, finalize, map, merge, of, shareReplay, startWith, switchMap } from 'rxjs';
@@ -18,6 +18,18 @@ import {
   OperacionDiariaResponse,
   ResumenActividadHora
 } from './models/operacion-diaria.model';
+
+interface ChoferOption {
+  code: string;
+  name: string;
+}
+
+interface ChoferApiResponse {
+  datos: Array<{
+    MRV12_CodChofer: string;
+    MRV12_NombreCompleto: string;
+  }>;
+}
 
 interface OperacionDiariaViewState {
   loading   : boolean;
@@ -42,7 +54,7 @@ interface PrintVoucherPayload {
   styleUrls: ['./operacion-diaria.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class OperacionDiariaComponent {
+export class OperacionDiariaComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly operacionDiariaService = inject(OperacionDiariaService);
   private readonly http = inject(HttpClient);
@@ -74,6 +86,10 @@ export class OperacionDiariaComponent {
   savingObservacion = false;
   observacionDetalleSeleccionado: OperacionDetalle | null = null;
   private observacionOriginal = '';
+  choferes: ChoferOption[] = [];
+  choferesLoading = false;
+  choferesError = '';
+  private choferCodes = new Set<string>();
 
   private readonly manualRefresh$ = new Subject<void>();
   private readonly autoRefresh$ = this.form.valueChanges.pipe(
@@ -117,7 +133,12 @@ export class OperacionDiariaComponent {
     shareReplay({ bufferSize: 1, refCount: true })
   );
 
+  ngOnInit(): void {
+    this.loadChoferes();
+  }
+
   buscar(): void {
+    this.ensureChoferSelection();
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -397,7 +418,8 @@ export class OperacionDiariaComponent {
 
     this.router.navigate(['/operaciones/reservas', codReserva, 'detalle'], {
       queryParams: {
-        facturado: this.isReservaFacturada(detalle) ? '1' : '0'
+        facturado: this.isReservaFacturada(detalle) ? '1' : '0',
+        origen: 'operacion-diaria'
       }
     });
   }
@@ -569,10 +591,24 @@ export class OperacionDiariaComponent {
       fechaFin: this.formatDateForApi(value.fechaFin),
       busqueda: this.normalizeOptional(value.busqueda),
       agenciaId: this.normalizeOptional(value.agenciaId),
-      choferId: this.normalizeOptional(value.choferId),
+      choferId: this.normalizeChoferId(value.choferId),
       page: this.page,
       pageSize: this.pageSize
     };
+  }
+
+  private ensureChoferSelection(): void {
+    const control = this.form.controls.choferId;
+    const selected = (control.value ?? '').toString().trim();
+    if (!selected || this.choferCodes.has(selected)) {
+      return;
+    }
+    control.setValue(null, { emitEvent: false });
+  }
+
+  private normalizeChoferId(value: string | null | undefined): string | undefined {
+    const normalized = (value ?? '').toString().trim();
+    return normalized && this.choferCodes.has(normalized) ? normalized : undefined;
   }
 
   private normalizeOptional(value: string | null | undefined): string | undefined {
@@ -620,6 +656,35 @@ export class OperacionDiariaComponent {
       this.selectedBloqueHora = '';
       this.cdr.markForCheck();
     }
+  }
+
+  private loadChoferes(): void {
+    this.choferesLoading = true;
+    this.choferesError = '';
+    const params = new HttpParams().set('pageNumber', '1').set('pageSize', '50');
+    this.http
+      .get<ChoferApiResponse>(`${environment.apiUrl}/chofer-suplidor`, { params })
+      .pipe(
+        map((response) => response?.datos ?? []),
+        catchError((error) => {
+          console.error('Error cargando choferes:', error);
+          this.choferesError = 'No se pudo cargar los choferes disponibles.';
+          return of([] as Array<ChoferApiResponse['datos'][number]>);
+        }),
+        finalize(() => {
+          this.choferesLoading = false;
+          this.cdr.markForCheck();
+        })
+      )
+      .subscribe((datos) => {
+        this.choferes = datos
+          .filter((item) => !!item?.MRV12_CodChofer)
+          .map((item) => ({
+            code: item.MRV12_CodChofer,
+            name: item.MRV12_NombreCompleto ?? ''
+          }));
+        this.choferCodes = new Set(this.choferes.map((chofer) => chofer.code));
+      });
   }
 
   private toDateInput(date: Date): string {

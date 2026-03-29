@@ -131,7 +131,7 @@
                   [disabled]="!selectedCliente || isLoadingListas"
                 >
                   <option value="">Seleccione una lista</option>
-                  <option *ngFor="let lista of listasPrecios" [value]="lista.codigo">
+                  <option *ngFor="let lista of listasPreciosVigentes" [value]="lista.codigo">
                     {{ lista.codigo }} - {{ lista.descripcion }}
                   </option>
                 </select>

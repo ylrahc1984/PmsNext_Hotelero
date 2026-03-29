@@ -36,7 +36,18 @@
 
         <div class="filter-item">
           <label class="form-label">Chofer</label>
-          <input type="text" class="form-control" formControlName="choferId" placeholder="ID chofer" />
+          <div class="input-group">
+            <select class="form-select" formControlName="choferId">
+              <option value="">Todos</option>
+              <option *ngFor="let chofer of choferes" [value]="chofer.code">
+                {{ chofer.code }} · {{ chofer.name }}
+              </option>
+            </select>
+            <span class="input-group-text bg-transparent border-start-0" *ngIf="choferesLoading">
+              <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+            </span>
+          </div>
+          <div *ngIf="choferesError" class="text-danger small mt-1">{{ choferesError }}</div>
         </div>
 
         <div class="filter-actions">

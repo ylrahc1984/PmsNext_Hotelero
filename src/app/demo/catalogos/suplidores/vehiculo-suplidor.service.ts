@@ -115,9 +115,9 @@ export class VehiculoSuplidorService {
 
   editarVehiculo(codVehiculo: string, payload: VehiculoSuplidorPost): Observable<{ respuesta?: string }> {
     const normalized = this.normalizePayload(payload, 2);
-    // PUT envía codVehiculo en el body
+    // PUT envía codVehiculo en el body y en la ruta
     normalized.codVehiculo = codVehiculo;
-    return this.http.put(this.apiUrl, normalized, { responseType: 'text' }).pipe(
+    return this.http.put(`${this.apiUrl}/${encodeURIComponent(codVehiculo)}`, normalized, { responseType: 'text' }).pipe(
       map((res) => this.parseTextResponse(res))
     );
   }

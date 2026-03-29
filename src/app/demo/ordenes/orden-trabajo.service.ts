@@ -5,98 +5,102 @@ import { map, tap } from 'rxjs/operators';
 import { environment } from 'src/environments/environment';
 
 export interface OrdenTrabajoEstadoUI {
-  codigo?: string;
-  descripcion?: string;
+  codigo      ?: string;
+  descripcion ?: string;
 }
 
 export interface OrdenTrabajoUI {
-  id?: number | string;
-  codOT?: string;
-  codReserva?: string;
-  codSuplidor?: string;
-  suplidor?: string;
-  fechaServicio?: string;
-  ruta?: string;
-  rotulacion?: string;
-  conexion?: string;
-  kmInicial?: number;
-  kmFinal?: number;
-  kmRecorridos?: number | null;
-  observaciones?: string;
-  estado?: OrdenTrabajoEstadoUI;
-  total?: number | null;
-  moneda?: string;
-  tCambio?: number;
-  operador?: string;
-  fechaRegistro?: string;
-  codVehiculo?: string | null;
-  codChofer?: string | null;
+  id              ?: number | string;
+  codOT           ?: string;
+  codReserva      ?: string;
+  codSuplidor     ?: string;
+  suplidor        ?: string;
+  fechaServicio   ?: string;
+  ruta            ?: string;
+  rotulacion      ?: string;
+  conexion        ?: string;
+  kmInicial       ?: number;
+  kmFinal         ?: number;
+  kmRecorridos    ?: number | null;
+  observaciones   ?: string;
+  estado          ?: OrdenTrabajoEstadoUI;
+  total           ?: number | null;
+  moneda          ?: string;
+  tCambio         ?: number;
+  operador        ?: string;
+  fechaRegistro   ?: string;
+  codVehiculo     ?: string | null;
+  codChofer       ?: string | null;
+  vehiculo        ?: string | null;
+  conductor       ?: string | null;
 }
 
 export interface OrdenTrabajoPaginacionUI {
-  paginaActual: number;
-  registrosPorPagina: number;
-  totalRegistros: number;
-  totalPaginas: number;
-  tienePaginaAnterior: boolean;
-  tienePaginaSiguiente: boolean;
+  paginaActual          : number;
+  registrosPorPagina    : number;
+  totalRegistros        : number;
+  totalPaginas          : number;
+  tienePaginaAnterior   : boolean;
+  tienePaginaSiguiente  : boolean;
 }
 
 export interface OrdenTrabajoListResult {
-  datos: OrdenTrabajoUI[];
-  paginacion: OrdenTrabajoPaginacionUI;
+  datos       : OrdenTrabajoUI[];
+  paginacion  : OrdenTrabajoPaginacionUI;
 }
 
 export interface OrdenTrabajoListQuery {
-  codOT?: string;
-  codReserva?: string;
-  estado?: string;
-  fechaInicio?: string;
-  fechaFin?: string;
-  nombreSuplidor?: string;
-  pageNumber?: number;
-  pageSize?: number;
+  codOT           ?: string;
+  codReserva      ?: string;
+  estado          ?: string;
+  fechaInicio     ?: string;
+  fechaFin        ?: string;
+  nombreSuplidor  ?: string;
+  pageNumber      ?: number;
+  pageSize        ?: number;
 }
 
 export interface OrdenTrabajoApiItem {
-  PRV10_CodOT?: string;
-  PRV10_CodReserva?: string;
-  PRV10_CodSuplidor?: string;
-  MRV10_DescSuplidor?: string;
-  PRV10_FecServicio?: string;
-  PRV10_RutaCodigo?: string;
-  PRV10_Rotulacion?: string;
-  PRV10_Conexion?: string;
-  PRV10_KmInicial?: number;
-  PRV10_KmFinal?: number;
-  KmRecorridos?: number;
-  PRV10_Observaciones?: string;
-  PRV10_Estado?: string;
-  EstadoDescripcion?: string;
-  PRV10_Moneda?: string;
-  PRV10_TCambio?: number;
-  PRV10_TotalOT?: number;
-  PRV10_Operador?: string;
-  PRV10_FechaRegistro?: string;
-  PRV10_CodVehiculo?: any;
-  PRV10_CodChofer?: any;
-  PaginaActual?: number;
-  TotalPaginas?: number;
-  TotalRegistros?: number;
+  PRV10_CodOT           ?: string;
+  PRV10_CodReserva      ?: string;
+  PRV10_CodSuplidor     ?: string;
+  MRV10_DescSuplidor    ?: string;
+  PRV10_FecServicio     ?: string;
+  PRV10_RutaCodigo      ?: string;
+  PRV10_Rotulacion      ?: string;
+  PRV10_Conexion        ?: string;
+  PRV10_KmInicial       ?: number;
+  PRV10_KmFinal         ?: number;
+  KmRecorridos          ?: number;
+  PRV10_Observaciones   ?: string;
+  PRV10_Estado          ?: string;
+  EstadoDescripcion     ?: string;
+  PRV10_Moneda          ?: string;
+  PRV10_TCambio         ?: number;
+  PRV10_TotalOT         ?: number;
+  PRV10_Operador        ?: string;
+  PRV10_FechaRegistro   ?: string;
+  PRV10_CodVehiculo     ?: any;
+  PRV10_CodChofer       ?: any;
+  MRV11_Placa           ?: string;
+  MRV12_NombreCompleto  ?: string;
+  PaginaActual          ?: number;
+  TotalPaginas          ?: number;
+  TotalRegistros        ?: number;
 }
 
 export interface OrdenTrabajoApiPaginacion {
-  paginaActual?: number;
-  registrosPorPagina?: number;
-  totalRegistros?: number;
-  totalPaginas?: number;
-  tienePaginaSiguiente?: boolean;
-  tienePaginaAnterior?: boolean;
+  paginaActual            ?: number;
+  registrosPorPagina      ?: number;
+  totalRegistros          ?: number;
+  totalPaginas            ?: number;
+  tienePaginaSiguiente    ?: boolean;
+  tienePaginaAnterior     ?: boolean;
 }
 
 export interface OrdenTrabajoApiResponse {
-  datos?: OrdenTrabajoApiItem[];
-  paginacion?: OrdenTrabajoApiPaginacion;
+  datos       ?: OrdenTrabajoApiItem[];
+  paginacion  ?: OrdenTrabajoApiPaginacion;
 }
 
 @Injectable({
@@ -183,11 +187,11 @@ export class OrdenTrabajoService {
   }
 
   private mapPaginacionFromApi(
-    raw: unknown,
-    pageNumber: number,
-    pageSize: number,
-    fallbackTotal: number,
-    fallbackFromItem?: Record<string, unknown> | null
+    raw               : unknown,
+    pageNumber        : number,
+    pageSize          : number,
+    fallbackTotal     : number,
+    fallbackFromItem ?: Record<string, unknown> | null
   ): OrdenTrabajoPaginacionUI {
     const rec = this.asRecord(raw) ?? {};
     const itemRec = fallbackFromItem ?? {};
@@ -269,7 +273,9 @@ export class OrdenTrabajoService {
       operador: this.toStringOrUndefined(this.pick(rec, ['PRV10_Operador', 'operador', 'usuario'])),
       fechaRegistro: this.toStringOrUndefined(this.pick(rec, ['PRV10_FechaRegistro', 'fechaRegistro', 'fechaCreacion', 'fechaCreada'])),
       codVehiculo: this.toStringOrNull(this.pick(rec, ['PRV10_CodVehiculo', 'codVehiculo', 'vehiculo'])),
-      codChofer: this.toStringOrNull(this.pick(rec, ['PRV10_CodChofer', 'codChofer', 'chofer']))
+      codChofer: this.toStringOrNull(this.pick(rec, ['PRV10_CodChofer', 'codChofer', 'chofer'])),
+      vehiculo: this.toStringOrNull(this.pick(rec, ['MRV11_Placa', 'placa', 'vehiculoPlaca'])),
+      conductor: this.toStringOrNull(this.pick(rec, ['MRV12_NombreCompleto', 'nombreCompletoChofer', 'conductorNombre']))
     };
   }
 

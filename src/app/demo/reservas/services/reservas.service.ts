@@ -5,129 +5,131 @@ import { map } from 'rxjs/operators';
 import { environment } from 'src/environments/environment';
 
 export interface Reserva {
-  PRV01_CodReserva: string;
-  PRV01_CodAgencia: string;
-  MPV00_NomClien: string;
-  PRV01_NomCliente: string;
-  PRV01_TelCliente: string;
-  PRV01_EmailCliente: string;
-  PRV01_Idioma: number | string;
-  PRV01_FormaReserva: number | string;
-  PRV01_FormaPago: string;
-  PRV01_CodLstPrecio: string;
-  PRV01_CodPlan: string;
-  PRV01_FecCreacion: string;
-  PRV01_FecConfirma: string;
-  PRV01_FecAnulada: string;
-  PRV01_FecIngresa: string;
-  PRV01_FecSalida: string;
-  PRV01_FecPrepago: string;
-  PRV01_TotNoches: number;
-  PRV01_TotDias: number;
-  PRV01_Descripcion: string;
-  PRV01_TCambio: number;
-  PRV01_Folio: string;
-  PRV01_Estado: string;
-  PRV01_Moneda: string;
-  PRV01_TotalRsv: number;
-  PRV01_Observacion: string;
-  PRV01_Procesado: number;
-  PRV01_Facturado?: number | string | boolean | null;
-  PRV01_Directo: string;
-  PRV01_CntHabitaciones: number;
-  PRV01_Operador: string;
-  facturado?: number | string | boolean | null;
+  PRV01_CodReserva              : string;
+  PRV01_CodAgencia              : string;
+  MPV00_NomClien                : string;
+  PRV01_NomCliente              : string;
+  PRV01_TelCliente              : string;
+  PRV01_EmailCliente            : string;
+  PRV01_Idioma                  : number | string;
+  PRV01_FormaReserva            : number | string;
+  PRV01_FormaPago               : string;
+  PRV01_CodLstPrecio            : string;
+  PRV01_CodPlan                 : string;
+  PRV01_FecCreacion             : string;
+  PRV01_FecConfirma             : string;
+  PRV01_FecAnulada              : string;
+  PRV01_FecIngresa              : string;
+  PRV01_FecSalida               : string;
+  PRV01_FecPrepago              : string;
+  PRV01_TotNoches               : number;
+  PRV01_TotDias                 : number;
+  PRV01_Descripcion             : string;
+  PRV01_TCambio                 : number;
+  PRV01_Folio                   : string;
+  PRV01_Estado                  : string;
+  PRV01_Moneda                  : string;
+  PRV01_TotalRsv                : number;
+  PRV01_Observacion             : string;
+  PRV01_Procesado               : number;
+  PRV01_Facturado               ?: number | string | boolean | null;
+  PRV01_Directo                 : string;
+  PRV01_CntHabitaciones         : number;
+  PRV01_Operador                : string;
+  facturado                     ?: number | string | boolean | null;
 }
 
 // Interfaces para detalles pendientes de asignar
 export interface DetalleReservaPendienteDto {
-  PRV02_ID: number;
-  PRV02_CodReserva: string;
-  PRV02_Linea: number;
-  PRV01_NomCliente: string;
-  PRV01_TelCliente: string;
-  PRV01_EmailCliente: string;
-  PRV01_CodAgencia: string;
-  MPV00_NomAgencia: string;
-  PRV01_Estado: string;
-  PRV01_Folio: any;
-  PRV02_TipoServicio: string;
-  PRV02_CodServicio: string;
-  PRV02_NomServicio: string;
-  PRV02_Observacion: string;
-  PRV02_FecServicio: string;
-  PRV02_HoraServicio: string;
-  PRV02_OrigenTexto: string;
-  PRV02_ZonaOrigen: string;
-  PRV02_OrigenPlaceId: string;
-  PRV02_OrigenLat: number;
-  PRV02_OrigenLng: number;
-  PRV02_OrigenGoogle: string;
-  PRV02_DestinoTexto: string;
-  PRV02_ZonaDestino: string;
-  PRV02_DestinoPlaceId: string;
-  PRV02_DestinoLat: number;
-  PRV02_DestinoLng: number;
-  PRV02_DestinoGoogle: string;
-  PRV02_Adultos: number;
-  PRV02_Ninos: number;
-  PRV02_TotalPax: number;
-  PRV02_CodLstPrecio: string;
-  PRV02_IdReglaPrecio: number;
-  PRV02_PrecioAdulto: number;
-  PRV02_PrecioNino: number;
-  PRV02_PrecioPaxExtra: number;
-  PRV02_MontoServicio: number;
-  PRV01_Moneda: string;
-  PRV02_Estado: string;
-  AsignadoOT: number;
-  CodOrdenTrabajo: any;
-  DistanciaKm: number;
-  TiempoEstimadoMin: number;
-  PRV02_Operador: string;
-  PRV02_FechaRegistro: string;
+  PRV02_ID                : number;
+  PRV02_CodReserva        : string;
+  PRV02_Linea             : number;
+  PRV01_NomCliente        : string;
+  PRV01_TelCliente        : string;
+  PRV01_EmailCliente      : string;
+  PRV01_CodAgencia        : string;
+  MPV00_NomAgencia        : string;
+  PRV01_Estado            : string;
+  PRV01_Folio             : any;
+  PRV02_TipoServicio      : string;
+  PRV02_CodServicio       : string;
+  PRV02_NomServicio       : string;
+  PRV02_Observacion       : string;
+  PRV02_FecServicio       : string;
+  PRV02_HoraServicio      : string;
+  PRV02_HoraPickup        : string;
+  PRV02_OrigenTexto       : string;
+  PRV02_ZonaOrigen        : string;
+  PRV02_OrigenPlaceId     : string;
+  PRV02_OrigenLat         : number;
+  PRV02_OrigenLng         : number;
+  PRV02_OrigenGoogle      : string;
+  PRV02_DestinoTexto      : string;
+  PRV02_ZonaDestino       : string;
+  PRV02_DestinoPlaceId    : string;
+  PRV02_DestinoLat        : number;
+  PRV02_DestinoLng        : number;
+  PRV02_DestinoGoogle     : string;
+  PRV02_Adultos           : number;
+  PRV02_Ninos             : number;
+  PRV02_TotalPax          : number;
+  PRV02_CodLstPrecio      : string;
+  PRV02_IdReglaPrecio     : number;
+  PRV02_PrecioAdulto      : number;
+  PRV02_PrecioNino        : number;
+  PRV02_PrecioPaxExtra    : number;
+  PRV02_MontoServicio     : number;
+  PRV01_Moneda            : string;
+  PRV02_Estado            : string;
+  AsignadoOT              : number;
+  CodOrdenTrabajo         : any;
+  DistanciaKm             : number;
+  TiempoEstimadoMin       : number;
+  PRV02_Operador          : string;
+  PRV02_FechaRegistro     : string;
 }
 
 // Interfaz UI simplificada para orden de trabajo
 export interface ReservaDetalleDisponible {
-  key: string;
-  id: number;
-  codReserva: string;
-  linea: number;
-  cliente: string;
-  telefono: string;
-  email: string;
-  agencia: string;
-  nombreAgencia: string;
-  estadoReserva: string;
-  folio: string;
-  tipoServicio: string;
-  codServicio: string;
-  servicio: string;
-  observacion: string;
-  fechaServicio: string;
-  hora: string;
-  origen: string;
-  zonaOrigen: string;
-  origenPlaceId: string;
-  origenLat: number;
-  origenLng: number;
-  destino: string;
-  zonaDestino: string;
-  destinoPlaceId: string;
-  destinoLat: number;
-  destinoLng: number;
-  adultos: number;
-  ninos: number;
-  pax: number;
-  precioAdulto: number;
-  precioNino: number;
-  montoServicio: number;
-  moneda: string;
-  distanciaKm: number;
-  tiempoEstimadoMin: number;
-  asignadoOT: boolean;
-  codOrdenTrabajo: string | null;
+  key                 : string;
+  id                  : number;
+  codReserva          : string;
+  linea               : number;
+  cliente             : string;
+  telefono            : string;
+  email               : string;
+  agencia             : string;
+  nombreAgencia       : string;
+  estadoReserva       : string;
+  folio               : string;
+  tipoServicio        : string;
+  codServicio         : string;
+  servicio            : string;
+  observacion         : string;
+  fechaServicio       : string;
+  hora                : string;
+  horaPickup          : string;
+  origen              : string;
+  zonaOrigen          : string;
+  origenPlaceId       : string;
+  origenLat           : number;
+  origenLng           : number;
+  destino             : string;
+  zonaDestino         : string;
+  destinoPlaceId      : string;
+  destinoLat          : number;
+  destinoLng          : number;
+  adultos             : number;
+  ninos               : number;
+  pax                 : number;
+  precioAdulto        : number;
+  precioNino          : number;
+  montoServicio       : number;
+  moneda              : string;
+  distanciaKm         : number;
+  tiempoEstimadoMin   : number;
+  asignadoOT          : boolean;
+  codOrdenTrabajo     : string | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -193,11 +195,11 @@ export class ReservasService {
   }
 
   consultarReservas(options: {
-    fechaInicio?: string | null;
-    fechaFin?: string | null;
-    parametroBusqueda?: string | null;
-    pageNumber: number;
-    pageSize: number;
+    fechaInicio         ?: string | null;
+    fechaFin            ?: string | null;
+    parametroBusqueda   ?: string | null;
+    pageNumber          : number;
+    pageSize            : number;
   }): Observable<{ data: Reserva[]; total: number }> {
     let params = new HttpParams()
       .set('pageNumber', (options.pageNumber ?? 1).toString())
@@ -284,44 +286,45 @@ export class ReservasService {
 
   private mapDetallePendienteFromApi(apiData: DetalleReservaPendienteDto): ReservaDetalleDisponible {
     return {
-      key: `${apiData.PRV02_CodReserva}-${apiData.PRV02_ID}`,
-      id: apiData.PRV02_ID,
-      codReserva: apiData.PRV02_CodReserva,
-      linea: apiData.PRV02_Linea,
-      cliente: apiData.PRV01_NomCliente,
-      telefono: apiData.PRV01_TelCliente,
-      email: apiData.PRV01_EmailCliente,
-      agencia: apiData.PRV01_CodAgencia,
-      nombreAgencia: apiData.MPV00_NomAgencia,
-      estadoReserva: apiData.PRV01_Estado,
-      folio: typeof apiData.PRV01_Folio === 'object' ? '' : String(apiData.PRV01_Folio || ''),
-      tipoServicio: apiData.PRV02_TipoServicio,
-      codServicio: apiData.PRV02_CodServicio,
-      servicio: apiData.PRV02_NomServicio,
-      observacion: apiData.PRV02_Observacion,
-      fechaServicio: apiData.PRV02_FecServicio,
-      hora: apiData.PRV02_HoraServicio,
-      origen: apiData.PRV02_OrigenTexto,
-      zonaOrigen: apiData.PRV02_ZonaOrigen,
-      origenPlaceId: apiData.PRV02_OrigenGoogle || '',
-      origenLat: apiData.PRV02_OrigenLat || 0,
-      origenLng: apiData.PRV02_OrigenLng || 0,
-      destino: apiData.PRV02_DestinoTexto,
-      zonaDestino: apiData.PRV02_ZonaDestino,
-      destinoPlaceId: apiData.PRV02_DestinoGoogle || '',
-      destinoLat: apiData.PRV02_DestinoLat || 0,
-      destinoLng: apiData.PRV02_DestinoLng || 0,
-      adultos: apiData.PRV02_Adultos,
-      ninos: apiData.PRV02_Ninos,
-      pax: apiData.PRV02_TotalPax,
-      precioAdulto: apiData.PRV02_PrecioAdulto,
-      precioNino: apiData.PRV02_PrecioNino,
-      montoServicio: apiData.PRV02_MontoServicio,
-      moneda: apiData.PRV01_Moneda,
-      distanciaKm: apiData.DistanciaKm,
-      tiempoEstimadoMin: apiData.TiempoEstimadoMin,
-      asignadoOT: apiData.AsignadoOT === 1,
-      codOrdenTrabajo: typeof apiData.CodOrdenTrabajo === 'object' ? null : String(apiData.CodOrdenTrabajo || '')
+      key                 : `${apiData.PRV02_CodReserva}-${apiData.PRV02_ID}`,
+      id                  : apiData.PRV02_ID,
+      codReserva            : apiData.PRV02_CodReserva,
+      linea                 : apiData.PRV02_Linea,
+      cliente               : apiData.PRV01_NomCliente,
+      telefono              : apiData.PRV01_TelCliente,
+      email                 : apiData.PRV01_EmailCliente,
+      agencia               : apiData.PRV01_CodAgencia,
+      nombreAgencia         : apiData.MPV00_NomAgencia,
+      estadoReserva         : apiData.PRV01_Estado,
+      folio                 : typeof apiData.PRV01_Folio === 'object' ? '' : String(apiData.PRV01_Folio || ''),
+      tipoServicio          : apiData.PRV02_TipoServicio,
+      codServicio           : apiData.PRV02_CodServicio,
+      servicio              : apiData.PRV02_NomServicio,
+      observacion           : apiData.PRV02_Observacion,
+      fechaServicio         : apiData.PRV02_FecServicio,
+      hora                  : apiData.PRV02_HoraServicio,
+      horaPickup            : apiData.PRV02_HoraPickup,
+      origen                : apiData.PRV02_OrigenTexto,
+      zonaOrigen            : apiData.PRV02_ZonaOrigen,
+      origenPlaceId         : apiData.PRV02_OrigenGoogle || '',
+      origenLat             : apiData.PRV02_OrigenLat || 0,
+      origenLng             : apiData.PRV02_OrigenLng || 0,
+      destino               : apiData.PRV02_DestinoTexto,
+      zonaDestino           : apiData.PRV02_ZonaDestino,
+      destinoPlaceId        : apiData.PRV02_DestinoGoogle || '',
+      destinoLat            : apiData.PRV02_DestinoLat || 0,
+      destinoLng            : apiData.PRV02_DestinoLng || 0,
+      adultos               : apiData.PRV02_Adultos,
+      ninos                 : apiData.PRV02_Ninos,
+      pax                   : apiData.PRV02_TotalPax,
+      precioAdulto          : apiData.PRV02_PrecioAdulto,
+      precioNino            : apiData.PRV02_PrecioNino,
+      montoServicio         : apiData.PRV02_MontoServicio,
+      moneda                : apiData.PRV01_Moneda,
+      distanciaKm           : apiData.DistanciaKm,
+      tiempoEstimadoMin     : apiData.TiempoEstimadoMin,
+      asignadoOT            : apiData.AsignadoOT === 1,
+      codOrdenTrabajo       : typeof apiData.CodOrdenTrabajo === 'object' ? null : String(apiData.CodOrdenTrabajo || '')
     };
   }
 

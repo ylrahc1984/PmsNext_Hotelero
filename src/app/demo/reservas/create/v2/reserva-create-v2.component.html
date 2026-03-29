@@ -26,9 +26,6 @@
                 <i class="feather icon-file-text text-muted me-2"></i>
                 <h6 class="mb-0">Datos Generales</h6>
               </div>
-              <small class="text-muted">
-                {{ codReservaActual ? 'La reserva se cargó al draft local V2 desde el endpoint unificado.' : 'La reserva se guarda en un solo submit' }}
-              </small>
             </div>
 
             <div class="row rsv-general-row">
@@ -73,11 +70,7 @@
                           </div>
                         </div>
                       </div>
-                      <div class="rsv-v2-selection-note" *ngIf="selectedCliente">
-                        <span class="fw-semibold">{{ selectedCliente.nombre }}</span>
-                        <span class="text-muted">· {{ selectedCliente.codigo }}</span>
-                        <span class="text-muted" *ngIf="selectedCliente.ruc">· {{ selectedCliente.ruc }}</span>
-                      </div>
+    
                       <div class="rsv-v2-selection-note" *ngIf="!selectedCliente && agenciaSearchTerm.trim().length >= 2 && !agenciaSearchLoading">
                         Seleccione una agencia de la lista o use el botón de búsqueda avanzada.
                       </div>
@@ -186,15 +179,7 @@
                       <option *ngFor="let forma of formasPagoApi" [ngValue]="forma.codigo">{{ forma.descripcion }}</option>
                     </select>
                   </div>
-                  <div class="col-12 mb-2">
-                    <label class="form-label">Moneda <span class="text-danger">*</span></label>
-                    <select class="form-control form-control-sm" [(ngModel)]="form.moneda" name="moneda" required (ngModelChange)="onHeaderChange()">
-                      <option value="">Seleccione moneda</option>
-                      <option *ngFor="let moneda of monedas" [ngValue]="moneda.codMoneda">
-                        {{ moneda.codMoneda }} - {{ moneda.moneda }}
-                      </option>
-                    </select>
-                  </div>
+                  <input type="hidden" [(ngModel)]="form.moneda" name="moneda">
                 </div>
               </div>
             </div>
@@ -235,6 +220,7 @@
                     <th>Tipo</th>
                     <th>Servicio</th>
                     <th>Fecha</th>
+                    <th>Hora</th>
                     <th>Ruta</th>
                     <th>Detalle Pax</th>
                     <th>Total</th>
@@ -254,6 +240,7 @@
                       <small class="text-muted">{{ detalle.codServicio }}</small>
                     </td>
                     <td class="text-nowrap">{{ detalle.fecServicio | date:'dd/MM/yyyy' }}</td>
+                    <td class="text-nowrap">{{ detalle.horaServicio || '-' }}</td>
                     <td>
                       <div>{{ detalle.origenTexto }}</div>
                       <small class="text-muted">{{ detalle.destinoTexto }}</small>
@@ -272,7 +259,7 @@
                     </td>
                   </tr>
                   <tr *ngIf="detalles.length === 0">
-                    <td colspan="8" class="text-center text-muted py-4">Aún no hay servicios agregados.</td>
+                    <td colspan="9" class="text-center text-muted py-4">Aún no hay servicios agregados.</td>
                   </tr>
                 </tbody>
               </table>
@@ -350,7 +337,7 @@
   [reglaTarifaError]="reglaTarifaError"
   [allowManualPricing]="allowManualPricing"
   [planesTarifas]="planesTarifas"
-  [listaPrecios]="listaPrecios"
+  [listaPrecios]="listaPreciosDisponibles"
   [tiposPax]="tiposPaxBase"
   (close)="cerrarModalDetalle()"
   (save)="guardarDetalle($event)"
@@ -361,16 +348,20 @@
 ></app-reserva-create-detalle-modal>
 
 <app-reserva-create-actividad-modal
+  *ngIf="showActividadModal"
   [open]="showActividadModal"
   [saving]="guardandoActividad"
   [actividadForm]="actividadForm"
   [servicios]="servicios"
   [serviciosLoading]="serviciosLoading"
   [planesTarifas]="planesTarifas"
-  [listaPrecios]="listaPrecios"
+  [listaPrecios]="listaPreciosParaActividad"
   [tiposPax]="tiposPaxBase"
   (close)="cerrarModalActividad()"
   (save)="guardarActividadDetalle($event)"
   (serviceChange)="onActividadServicioChange($event)"
 ></app-reserva-create-actividad-modal>
+
+
+
 
