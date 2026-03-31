@@ -144,33 +144,33 @@ export class ClienteService {
     const contactoNombre = contactoPrincipal?.nomContacto || value.contacto || '';
     return this.normalizePayload(
       {
-        proceso,
-        codigo: value.codigo || '',
-        nombreCli: value.nombre || '',
-        ruc: value.ruc || '',
-        contacto: contactoNombre,
-        direccion: value.direccion || '',
-        provincia: value.provincia || '',
-        ciudad: value.ciudad || '',
-        pais: value.pais || '',
-        zona: value.zona || '',
-        email: value.email || '',
-        telefono1: value.telefono1 || '',
-        telefono2: value.telefono2 || '',
-        fax: value.fax || '',
-        tipoCli: value.tipoCli || 'AGE',
-        mtoCredito: Number(value.mtoCredito || 0),
-        idProvincia: value.idProvincia || '',
-        idCanton: value.idCanton || '',
-        idDistrito: value.idDistrito || '',
-        tCliente: value.tCliente || '',
-        enviarCorreo: value.enviarCorreo ?? false,
-        operador: value.operador || '',
-        contactos,
-        nombreContacto: contactoNombre,
-        respuesta: '',
-        pageNumber,
-        pageSize
+        proceso         ,
+        codigo          : value.codigo || '',
+        nombreCli       : value.nombre || '',
+        ruc             : value.ruc || '',
+        contacto        : contactoNombre,
+        direccion       : value.direccion || '',
+        provincia       : value.provincia || '',
+        ciudad          : value.ciudad || '',
+        pais            : value.pais || '',
+        zona            : value.zona || '',
+        email           : value.email || '',
+        telefono1       : value.telefono1 || '',
+        telefono2       : value.telefono2 || '',
+        fax             : value.fax || '',
+        tipoCli         : value.tipoCli || 'AGE',
+        mtoCredito      : Number(value.mtoCredito || 0),
+        idProvincia     : value.idProvincia || '',
+        idCanton        : value.idCanton || '',
+        idDistrito      : value.idDistrito || '',
+        tCliente        : value.tCliente || '',
+        enviarCorreo    : value.enviarCorreo ?? false,
+        operador        : value.operador || '',
+        contactos       ,
+        nombreContacto  : contactoNombre,
+        respuesta       : '',
+        pageNumber      ,
+        pageSize          
       },
       proceso
     );
@@ -195,34 +195,36 @@ export class ClienteService {
     const contactoPrincipal = this.resolveContactoPrincipal(apiData, contactos);
     const totalContactos = apiData.TotalContactos ?? contactos.length ?? (contactoPrincipal.nomContacto ? 1 : 0);
     return {
-      codigo: apiData.MPV00_CodClien,
-      nombre: apiData.MPV00_NomClien,
-      ruc: apiData.MPV00_RucClien,
-      contacto: contactoPrincipal.nomContacto || apiData.MPV00_Contacto || '',
-      nombreContacto: contactoPrincipal.nomContacto || apiData.MPV00_Contacto || '',
-      contactoPrincipal: contactoPrincipal.nomContacto,
-      emailPrincipal: contactoPrincipal.email,
-      telefonoPrincipal: contactoPrincipal.telefono1 || contactoPrincipal.movil,
-      cargoPrincipal: contactoPrincipal.cargo,
-      direccion: apiData.MPV00_DirClien,
-      provincia: apiData.MPV00_PrvClien || '',
-      ciudad: apiData.MPV00_CiuClien || '',
-      pais: apiData.MPV00_PaiClien || '',
-      zona,
-      email: apiData.MPV00_Email,
-      telefono1: apiData.MPV00_Te1Clien,
-      telefono2: apiData.MPV00_Te2Clien,
-      fax: apiData.MPV00_FaxClien || '',
-      tipoCli: apiData.MPV00_TipClien,
-      mtoCredito: apiData.MPV00_MtoCredito ?? 0,
-      idProvincia: apiData.MPV00_IdProvincia || '',
-      idCanton: apiData.MPV00_IdCanton || '',
-      idDistrito: apiData.MPV00_IdDistrito || '',
-      tCliente: (apiData.MPV00_TCliente || '').trim(),
-      enviarCorreo: (apiData.MPV00_BanderaCorreo ?? 0) === 1,
-      totalContactos,
-      contactos: contactos.length ? contactos : this.buildFallbackContactos(apiData, contactoPrincipal),
-      operador: apiData.MPV00_Operador || ''
+      codigo                : apiData.MPV00_CodClien,
+      nombre                : apiData.MPV00_NomClien,
+      ruc                   : apiData.MPV00_RucClien,
+      contacto              : contactoPrincipal.nomContacto || apiData.MPV00_Contacto || '',
+      nombreContacto        : contactoPrincipal.nomContacto || apiData.MPV00_Contacto || '',
+      contactoPrincipal     : contactoPrincipal.nomContacto,
+      emailPrincipal        : contactoPrincipal.email,
+      telefonoPrincipal     : contactoPrincipal.telefono1 || contactoPrincipal.movil,
+      cargoPrincipal        : contactoPrincipal.cargo,
+      direccion             : apiData.MPV00_DirClien,
+      provincia             : apiData.MPV00_PrvClien || '',
+      ciudad                : apiData.MPV00_CiuClien || '',
+      pais                  : apiData.MPV00_PaiClien || '',
+      zona                  : zona,
+      email                 : apiData.MPV00_Email,
+      telefono1             : apiData.MPV00_Te1Clien,
+      telefono2             : apiData.MPV00_Te2Clien,
+      fax                   : apiData.MPV00_FaxClien || '',
+      tipoCli               : apiData.MPV00_TipClien,
+      mtoCredito            : apiData.MPV00_MtoCredito ?? 0,
+      idProvincia           : apiData.MPV00_IdProvincia || '',
+      idCanton              : apiData.MPV00_IdCanton || '',
+      idDistrito            : apiData.MPV00_IdDistrito || '',
+      tCliente              : (apiData.MPV00_TCliente || '').trim(),
+      enviarCorreo          : (apiData.MPV00_BanderaCorreo ?? 0) === 1,
+      totalContactos        : totalContactos,
+      contactos             : contactos.length ? contactos : this.buildFallbackContactos(apiData, contactoPrincipal),
+      operador              : apiData.MPV00_Operador || '',
+      codigoActividad       : apiData.MPV32_CodActividad || '',
+      nombreActividad       : apiData.MPV32_NombreActividad || ''
     };
   }
 
@@ -234,37 +236,42 @@ export class ClienteService {
       contactos.length ||
       (contactoNombre || (apiData.email ?? '').toString().trim() || (apiData.telefono1 ?? '').toString().trim() ? 1 : 0);
 
+    const codigoActividad = (apiData.codigoActividad ?? apiData.MPV32_CodActividad ?? '').toString().trim();
+    const nombreActividad = (apiData.nombreActividad ?? apiData.MPV32_NombreActividad ?? '').toString().trim();
+
     return {
-      codigo: (apiData.codigo ?? '').toString().trim(),
-      nombre: (apiData.nombreCli ?? '').toString().trim(),
-      ruc: (apiData.ruc ?? '').toString().trim(),
-      contacto: contactoNombre,
-      nombreContacto: contactoNombre,
-      contactoPrincipal: contactoPrincipal?.nomContacto || '',
-      emailPrincipal: contactoPrincipal?.email || '',
-      telefonoPrincipal: contactoPrincipal?.telefono1 || contactoPrincipal?.movil || '',
-      cargoPrincipal: contactoPrincipal?.cargo || '',
-      direccion: (apiData.direccion ?? '').toString().trim(),
-      provincia: '',
-      ciudad: '',
-      pais: (apiData.pais ?? '').toString().trim(),
-      zona: (apiData.zona ?? '').toString().trim(),
-      email: (apiData.email ?? '').toString().trim(),
-      telefono1: (apiData.telefono1 ?? '').toString().trim(),
-      telefono2: (apiData.telefono2 ?? '').toString().trim(),
-      fax: (apiData.fax ?? '').toString().trim(),
-      tipoCli: (apiData.tipoCli ?? '').toString().trim(),
-      mtoCredito: Number(apiData.mtoCredito ?? 0),
-      idProvincia: (apiData.idProvincia ?? '').toString().trim(),
-      idCanton: (apiData.idCanton ?? '').toString().trim(),
-      idDistrito: (apiData.idDistrito ?? '').toString().trim(),
-      tCliente: (apiData.tCliente ?? '').toString().trim(),
-      enviarCorreo: !!apiData.enviarCorreo,
-      totalContactos,
-      contactos: contactos.length
-        ? contactos
-        : this.buildFallbackContactosFromDetalle(apiData, contactoNombre),
-      operador: apiData.operador || ''
+      codigo              : (apiData.codigo ?? '').toString().trim(),
+      nombre              : (apiData.nombreCli ?? '').toString().trim(),
+      ruc                 : (apiData.ruc ?? '').toString().trim(),
+      contacto            : contactoNombre,
+      nombreContacto      : contactoNombre,
+      contactoPrincipal   : contactoPrincipal?.nomContacto || '',
+      emailPrincipal      : contactoPrincipal?.email || '',
+      telefonoPrincipal   : contactoPrincipal?.telefono1 || contactoPrincipal?.movil || '',
+      cargoPrincipal      : contactoPrincipal?.cargo || '',
+      direccion           : (apiData.direccion ?? '').toString().trim(),
+      provincia           : '',
+      ciudad              : '',
+      pais                : (apiData.pais ?? '').toString().trim(),
+      zona                : (apiData.zona ?? '').toString().trim(),
+      email               : (apiData.email ?? '').toString().trim(),
+      telefono1           : (apiData.telefono1 ?? '').toString().trim(),
+       telefono2          : (apiData.telefono2 ?? '').toString().trim(),
+      fax                 : (apiData.fax ?? '').toString().trim(),
+      tipoCli             : (apiData.tipoCli ?? '').toString().trim(),
+      mtoCredito          : Number(apiData.mtoCredito ?? 0),
+      idProvincia         : (apiData.idProvincia ?? '').toString().trim(),
+      idCanton            : (apiData.idCanton ?? '').toString().trim(),
+      idDistrito          : (apiData.idDistrito ?? '').toString().trim(),
+      tCliente            : (apiData.tCliente ?? '').toString().trim(),
+      enviarCorreo        : !!apiData.enviarCorreo,
+      totalContactos      ,
+      contactos           : contactos.length
+        ?contactos
+        :this.buildFallbackContactosFromDetalle(apiData, contactoNombre),
+      operador            : apiData.operador || '',
+      codigoActividad     : codigoActividad,
+      nombreActividad     : nombreActividad
     };
   }
 
@@ -277,20 +284,20 @@ export class ClienteService {
 
   private mapContactos(contactos?: ClienteContactoDto[] | null): ClienteContactoUI[] {
     return (contactos ?? []).map((item) => ({
-      id: Number(item.id ?? 0),
-      nomContacto: (item.nomContacto ?? '').toString().trim(),
-      cargo: this.normalizeText(item.cargo),
-      email: (item.email ?? '').toString().trim(),
-      telefono1: (item.telefono1 ?? '').toString().trim(),
-      telefono2: (item.telefono2 ?? '').toString().trim(),
-      movil: (item.movil ?? '').toString().trim(),
-      ext: (item.ext ?? '').toString().trim(),
-      principal: !!item.principal,
-      activo: item.activo ?? true,
-      observacion: (item.observacion ?? '').toString().trim(),
-      accion: (item.accion ?? '').toString().trim(),
-      operador: (item.operador ?? '').toString().trim(),
-      fechaRegistro: item.fechaRegistro ?? null
+      id              : Number(item.id ?? 0),
+      nomContacto     : (item.nomContacto ?? '').toString().trim(),
+      cargo           : this.normalizeText(item.cargo),
+      email           : (item.email ?? '').toString().trim(),
+      telefono1       : (item.telefono1 ?? '').toString().trim(),
+      telefono2       : (item.telefono2 ?? '').toString().trim(),
+      movil           : (item.movil ?? '').toString().trim(),
+      ext             : (item.ext ?? '').toString().trim(),
+      principal       : !!item.principal,
+      activo          : item.activo ?? true,
+      observacion     : (item.observacion ?? '').toString().trim(),
+      accion          : (item.accion ?? '').toString().trim(),
+      operador        : (item.operador ?? '').toString().trim(),
+      fechaRegistro   : item.fechaRegistro ?? null
     }));
   }
 
@@ -303,11 +310,11 @@ export class ClienteService {
       return principal;
     }
     return {
-      nomContacto: (apiData.ContactoPrincipal ?? apiData.MPV00_Contacto ?? '').toString().trim(),
-      email: (apiData.EmailPrincipal ?? '').toString().trim(),
-      telefono1: (apiData.TelefonoPrincipal ?? '').toString().trim(),
-      movil: '',
-      cargo: this.normalizeText(apiData.CargoPrincipal)
+      nomContacto   : (apiData.ContactoPrincipal ?? apiData.MPV00_Contacto ?? '').toString().trim(),
+      email         : (apiData.EmailPrincipal ?? '').toString().trim(),
+      telefono1     : (apiData.TelefonoPrincipal ?? '').toString().trim(),
+      movil         : '',
+      cargo         : this.normalizeText(apiData.CargoPrincipal)
     };
   }
 
@@ -320,20 +327,20 @@ export class ClienteService {
     }
     return [
       {
-        id: 0,
-        nomContacto: principal.nomContacto,
-        cargo: principal.cargo,
-        email: principal.email || apiData.MPV00_Email || '',
-        telefono1: principal.telefono1 || apiData.MPV00_Te1Clien || '',
-        telefono2: apiData.MPV00_Te2Clien || '',
-        movil: principal.movil || '',
-        ext: '',
-        principal: true,
-        activo: true,
-        observacion: '',
-        accion: '',
-        operador: '',
-        fechaRegistro: null
+        id              : 0,
+        nomContacto     : principal.nomContacto,
+        cargo           : principal.cargo,
+        email           : principal.email || apiData.MPV00_Email || '',
+        telefono1       : principal.telefono1 || apiData.MPV00_Te1Clien || '',
+        telefono2       : apiData.MPV00_Te2Clien || '',
+        movil           : principal.movil || '',
+        ext             : '',
+        principal       : true,
+        activo          : true,
+        observacion     : '',
+        accion          : '',
+        operador        : '',
+        fechaRegistro   : null
       }
     ];
   }
@@ -347,20 +354,20 @@ export class ClienteService {
     }
     return [
       {
-        id: 0,
-        nomContacto: contactoNombre,
-        cargo: '',
-        email,
-        telefono1,
-        telefono2,
-        movil: '',
-        ext: '',
-        principal: true,
-        activo: true,
-        observacion: '',
-        accion: '',
-        operador: '',
-        fechaRegistro: null
+        id              : 0,
+        nomContacto     : contactoNombre,
+        cargo           : '',
+        email           ,
+        telefono1       ,
+        telefono2       ,
+        movil           : '',
+        ext             : '',
+        principal       : true,
+        activo          : true,
+        observacion     : '',
+        accion          : '',
+        operador        : '',
+        fechaRegistro   : null
       }
     ];
   }
@@ -379,20 +386,20 @@ export class ClienteService {
         }
         const accion = (item.accion ?? '').trim().toUpperCase() || (Number(item.id) > 0 ? 'U' : 'I');
         return {
-          id: Number(item.id ?? 0),
-          nomContacto,
-          cargo: (item.cargo ?? '').trim(),
-          email,
-          telefono1,
-          telefono2,
-          movil,
-          ext: (item.ext ?? '').trim(),
-          principal: item.principal || index === 0,
-          activo: item.activo ?? true,
-          observacion: (item.observacion ?? '').trim(),
-          accion,
-          operador: '',
-          fechaRegistro: item.fechaRegistro ?? null
+          id            : Number(item.id ?? 0),
+          nomContacto   ,
+          cargo         : (item.cargo ?? '').trim(),
+          email         ,
+          telefono1     ,
+          telefono2     ,
+          movil         ,
+          ext           : (item.ext ?? '').trim(),
+          principal     : item.principal || index === 0,
+          activo        : item.activo ?? true,
+          observacion   : (item.observacion ?? '').trim(),
+          accion        ,
+          operador      : '',
+          fechaRegistro : item.fechaRegistro ?? null
         };
       })
       .filter((item): item is ClienteContactoPost => !!item);

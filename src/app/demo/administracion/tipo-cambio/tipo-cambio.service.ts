@@ -1,42 +1,46 @@
 import { Injectable, signal } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { map, tap } from 'rxjs/operators';
+
+import { environment } from 'src/environments/environment';
 
 export interface TipoCambio {
-  fecha: string;
-  monedaBase: string;
-  monedaReferencia: string;
-  compra: number;
-  venta: number;
+  fecha               : string;
+  monedaBase          : string;
+  monedaReferencia    : string;
+  compra              : number;
+  venta               : number;
+}
+
+interface TipoCambioDto {
+  CA01_IDTCambio      : number;
+  CA01_Fecha          : string;
+  CA01_Moneda         : string;
+  CA01_CompraS        : number;
+  CA01_VentaS         : number;
+  CA01_CompraCB       : number;
+  CA01_VentaCB        : number;
+  CA01_Operador       : string;
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class TipoCambioService {
+  private readonly apiUrl = `${environment.apiUrl}/tipocambio`;
   private historial = signal<TipoCambio[]>(this.buildMock());
 
-  private buildMock(): TipoCambio[] {
-    const today = new Date();
-    const baseCompra = 530.25;
-    const baseVenta = 545.75;
-    const data: TipoCambio[] = [];
+  constructor(private http: HttpClient) {}
 
-    for (let i = 0; i < 15; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() - i);
-      const variation = (Math.sin(i) * 0.8) + (Math.cos(i / 2) * 0.5);
-      const compra = +(baseCompra + variation - i * 0.1).toFixed(2);
-      const venta = +(baseVenta + variation - i * 0.1).toFixed(2);
-
-      data.push({
-        fecha: date.toISOString().split('T')[0],
-        monedaBase: 'CRC',
-        monedaReferencia: 'USD',
-        compra,
-        venta
-      });
-    }
-
-    return data.sort((a, b) => b.fecha.localeCompare(a.fecha));
+  fetchTipoCambio(fechaDia: string, moneda: string): Observable<TipoCambio[]> {
+    const params = new HttpParams().set('fechaDia', fechaDia).set('moneda', moneda);
+    return this.http
+      .get<TipoCambioDto[]>(this.apiUrl, { params })
+      .pipe(
+        map((response) => (response ?? []).map((item) => this.mapFromDto(item))),
+        tap((items) => this.historial.set(items))
+      );
   }
 
   getActual() {
@@ -61,5 +65,46 @@ export class TipoCambioService {
       const beforeHasta = !hastaDate || current <= hastaDate;
       return afterDesde && beforeHasta;
     }).sort((a, b) => b.fecha.localeCompare(a.fecha));
+  }
+
+  private mapFromDto(dto: TipoCambioDto): TipoCambio {
+    const fecha = dto.CA01_Fecha ? dto.CA01_Fecha.split('T')[0] : '';
+    return {
+      fecha,
+      monedaBase: 'COL',
+      monedaReferencia: dto.CA01_Moneda,
+      compra: this.normalizeNumber(dto.CA01_CompraS),
+      venta: this.normalizeNumber(dto.CA01_VentaS)
+    };
+  }
+
+  private normalizeNumber(value: unknown): number {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private buildMock(): TipoCambio[] {
+    const today = new Date();
+    const baseCompra = 530.25;
+    const baseVenta = 545.75;
+    const data: TipoCambio[] = [];
+
+    for (let i = 0; i < 15; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const variation = (Math.sin(i) * 0.8) + (Math.cos(i / 2) * 0.5);
+      const compra = +(baseCompra + variation - i * 0.1).toFixed(2);
+      const venta = +(baseVenta + variation - i * 0.1).toFixed(2);
+
+      data.push({
+        fecha: date.toISOString().split('T')[0],
+        monedaBase: 'COL',
+        monedaReferencia: 'USD',
+        compra,
+        venta
+      });
+    }
+
+    return data.sort((a, b) => b.fecha.localeCompare(a.fecha));
   }
 }

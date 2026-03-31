@@ -37,20 +37,16 @@
               <option *ngFor="let tipo of tipoIdentificacionOptions" [value]="tipo.value">{{ tipo.label }}</option>
             </select>
           </div>
-          <div class="col-md-3">
+          <div class="col-md-4">
             <label class="form-label">Cedula <span class="text-danger">*</span></label>
             <input type="text" class="form-control" formControlName="ruc">
+            <small class="form-text text-muted mt-1">Ingrese solo números, sin espacios ni símbolos.</small>
+            <small class="form-text text-danger mt-1" *ngIf="rucControl?.touched && rucControl.invalid">
+              <span *ngIf="rucControl?.errors?.['required']">La cédula es obligatoria.</span>
+              <span *ngIf="rucControl?.errors?.['pattern']">Solo se permiten dígitos sin espacios.</span>
+            </small>
           </div>
-          <div class="col-md-5">
-            <label class="form-label">Nombre <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" formControlName="nombreCli">
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Tipo de Cliente</label>
-            <select class="form-control" formControlName="tipoCli">
-              <option *ngFor="let tipo of tipoClienteOptions" [value]="tipo.value">{{ tipo.label }}</option>
-            </select>
-          </div>
+
           <div class="col-md-4">
             <label class="form-label">Comprobante Electronico</label>
             <div class="mode-switch-card">
@@ -64,6 +60,48 @@
                 </label>
               </div>
             </div>
+          </div>
+
+
+        </div>
+
+        <div class="row g-3 mt-1">
+          <div class="col-md-6">
+            <label class="form-label">Nombre <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" formControlName="nombreCli">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Nombre Comercial</label>
+            <input type="text" class="form-control" formControlName="contacto">
+          </div>
+        </div>
+
+        <div class="row g-3 mt-1">
+ 
+          <div class="col-md-4">
+            <label class="form-label">Tipo de Cliente</label>
+            <select class="form-control" formControlName="tipoCli">
+              <option *ngFor="let tipo of tipoClienteOptions" [value]="tipo.value">{{ tipo.label }}</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      <div class="section-card">
+        <div class="section-header">Comunicacion</div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Email <span class="text-danger">*</span></label>
+            <input type="email" class="form-control" formControlName="email">
+            <small class="form-text text-muted mt-1">Use el formato valido para Email.</small>
+            <small class="form-text text-danger mt-1" *ngIf="emailControl?.touched && emailControl.invalid">
+              <span *ngIf="emailControl?.errors?.['required']">El correo es obligatorio.</span>
+              <span *ngIf="emailControl?.errors?.['email'] || emailControl?.errors?.['pattern']">Ingrese una dirección válida.</span>
+            </small>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Telefono 1 <span class="text-danger">*</span></label>
+            <input type="tel" class="form-control" formControlName="telefono1">
           </div>
         </div>
       </div>
@@ -109,21 +147,7 @@
           </div>
         </div>
       </div>
-
-      <div class="section-card">
-        <div class="section-header">Comunicacion</div>
-        <div class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label">Email <span class="text-danger">*</span></label>
-            <input type="email" class="form-control" formControlName="email">
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Telefono 1 <span class="text-danger">*</span></label>
-            <input type="tel" class="form-control" formControlName="telefono1">
-          </div>
-        </div>
-      </div>
-
+ 
       <div class="section-card">
         <div class="section-header section-header-inline">
           <div>
@@ -192,7 +216,7 @@
 
               <div class="row g-3">
                 <div class="col-md-9">
-                  <label class="form-label">Nombre del contacto <span class="text-danger">*</span></label>
+                  <label class="form-label">Nombre del contacto</label>
                   <input type="text" class="form-control" formControlName="nomContacto">
                 </div>
                 <div class="col-md-3">
@@ -220,8 +244,10 @@
       </div>
 
       <actividad-comercial
+        *ngIf="mostrarActividadComercial"
         [cedula]="form.get('ruc')?.value"
-        (principalChange)="setActividadPrincipal($event)">
+        (principalChange)="setActividadPrincipal($event)"
+        (actividadesCountChange)="onActividadesCountChange($event)">
       </actividad-comercial>
     </div>
 

@@ -1,46 +1,50 @@
 export interface ClienteContactoDto {
-  id?: number;
-  nomContacto?: string;
-  cargo?: unknown;
-  email?: string;
-  telefono1?: string;
-  telefono2?: string;
-  movil?: string;
-  ext?: string;
-  principal?: boolean;
-  activo?: boolean;
-  observacion?: string;
-  accion?: string;
-  operador?: string;
-  fechaRegistro?: string;
+  id              ?: number;
+  nomContacto     ?: string;
+  cargo           ?: unknown;
+  email           ?: string;
+  telefono1       ?: string;
+  telefono2       ?: string;
+  movil           ?: string;
+  ext             ?: string;
+  principal       ?: boolean;
+  activo          ?: boolean;
+  observacion     ?: string;
+  accion          ?: string;
+  operador        ?: string;
+  fechaRegistro   ?: string;
 }
 
 export interface ClienteDetalleDto {
-  codigo?: string;
-  nombreCli?: string;
-  ruc?: string;
-  contacto?: string;
-  direccion?: string;
-  pais?: string;
-  zona?: string;
-  email?: string;
-  telefono1?: string;
-  telefono2?: string;
-  fax?: string;
-  tipoCli?: string;
-  mtoCredito?: number;
-  idProvincia?: string;
-  idCanton?: string;
-  idDistrito?: string;
-  tCliente?: string;
-  enviarCorreo?: boolean;
-  operador?: string;
+  codigo                  ?: string;
+  nombreCli               ?: string;
+  ruc                     ?: string;
+  contacto                ?: string;
+  direccion               ?: string;
+  pais                    ?: string;
+  zona                    ?: string;
+  email                   ?: string;
+  telefono1               ?: string;
+  telefono2               ?: string;
+  fax                     ?: string;
+  tipoCli                 ?: string;
+  mtoCredito              ?: number;
+  idProvincia             ?: string;
+  idCanton                ?: string;
+  idDistrito              ?: string;
+  tCliente                ?: string;
+  enviarCorreo            ?: boolean;
+  operador                ?: string;
+  codigoActividad         ?: string;
+  nombreActividad         ?: string;
+  MPV32_CodActividad      ?: string;
+  MPV32_NombreActividad   ?: string;
 }
 
 export interface ClienteDetalleResponse {
-  cliente?: ClienteDetalleDto | null;
-  contactos?: ClienteContactoDto[] | null;
-  datos?: ClienteDto[] | ClienteDto | null;
+  cliente     ?: ClienteDetalleDto | null;
+  contactos   ?: ClienteContactoDto[] | null;
+  datos       ?: ClienteDto[] | ClienteDto | null;
 }
 
 export interface ClienteDto {
@@ -71,6 +75,8 @@ export interface ClienteDto {
   MPV00_BanderaCorreo     ?: number;
   TotalContactos          ?: number;
   contactos               ?: ClienteContactoDto[];
+  MPV32_CodActividad      ?: string;
+  MPV32_NombreActividad   ?: string;
   MPV00_Operador          ?: string;
 }
 
@@ -162,9 +168,11 @@ export interface ClienteUI {
   idProvincia         : string;
   idCanton            : string;
   idDistrito          : string;
-  tCliente            : string;
-  enviarCorreo        : boolean;
+  tCliente            : string;  
+  enviarCorreo        : boolean; // Es importante por que define si es o no Factura Electrónica o Tiquete Electrónico
   totalContactos      : number;
   contactos           : ClienteContactoUI[];
   operador            ?: string;
+  codigoActividad     ?: string;
+  nombreActividad     ?: string;
 }

@@ -1,6 +1,6 @@
 import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpClientModule } from '@angular/common/http';
 import Swal from 'sweetalert2';
@@ -11,6 +11,25 @@ import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { ClienteService } from './cliente.service';
 import { ClienteContactoUI, ClienteUI } from './cliente.models';
 import { ActividadComercialComponent } from './actividad-comercial/actividad-comercial.component';
+
+const RUC_PATTERN = /^[0-9]+$/;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const FIELD_LABELS: Record<string, string> = {
+  nombreCli     : 'Nombre',
+  ruc           : 'Cédula',
+  contacto      : 'Nombre comercial',
+  direccion     : 'Dirección',
+  email         : 'Email',
+  telefono1     : 'Teléfono 1',
+  telefono2     : 'Teléfono 2',
+  tipoCli       : 'Tipo de cliente',
+  mtoCredito    : 'Monto de crédito',
+  idProvincia   : 'Provincia',
+  idCanton      : 'Cantón',
+  idDistrito    : 'Distrito',
+  tCliente      : 'Tipo identificación',
+  enviarCorreo  : 'Comprobante electrónico'
+};
 
 @Component({
   selector: 'app-cliente-form',
@@ -32,6 +51,7 @@ export class ClienteFormComponent implements OnInit {
   selectedContactoIndex = 0;
   private codigoCliente = '';
   private deletedContactos: ClienteContactoUI[] = [];
+  private actividadComercialCount = 0;
 
   tipoClienteOptions: Array<{ value: string; label: string }> = [];
 
@@ -68,11 +88,24 @@ export class ClienteFormComponent implements OnInit {
     return this.contactosControls[this.selectedContactoIndex] ?? this.contactosControls[0] ?? null;
   }
 
+  get mostrarActividadComercial(): boolean {
+    return !!this.form?.get('enviarCorreo')?.value;
+  }
+
+  get rucControl(): AbstractControl | null {
+    return this.form.get('ruc');
+  }
+
+  get emailControl(): AbstractControl | null {
+    return this.form.get('email');
+  }
+
   ngOnInit(): void {
     this.buildForm();
     this.readOnly = !!this.route.snapshot.data?.['readOnly'];
     this.listenProvinciaChanges();
     this.listenCantonChanges();
+    this.listenEnviarCorreoChanges();
     this.codigoCliente = this.route.snapshot.paramMap.get('codigo') ?? '';
     if (this.codigoCliente) {
       this.isEditing = true;
@@ -187,6 +220,20 @@ export class ClienteFormComponent implements OnInit {
     });
   }
 
+  private listenEnviarCorreoChanges(): void {
+    const control = this.form.get('enviarCorreo');
+    if (!control) {
+      return;
+    }
+
+    control.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((value) => {
+      if (!value) {
+        this.actividadComercialCount = 0;
+      }
+      this.syncActividadComercialErrorState();
+    });
+  }
+
   private loadDistritos(idProvincia: string, idCanton: string): void {
     if (!idProvincia || !idCanton) {
       this.distritoOptions = [];
@@ -216,47 +263,47 @@ export class ClienteFormComponent implements OnInit {
 
   private buildForm(): void {
     this.form = this.fb.group({
-      codigo: [''],
-      nombreCli: ['', [Validators.required]],
-      ruc: ['', [Validators.required]],
-      contacto: [''],
-      direccion: [''],
-      provincia: [''],
-      ciudad: [''],
-      pais: [''],
-      zona: [''],
-      email: ['', [Validators.email]],
-      telefono1: [''],
-      telefono2: [''],
-      fax: [''],
-      tipoCli: ['AGE', [Validators.required]],
-      mtoCredito: [0],
-      idProvincia: [''],
-      idCanton: [''],
-      idDistrito: [''],
-      tCliente: [''],
-      enviarCorreo: [false],
-      contactos: this.fb.array([])
+      codigo          : [''],
+      nombreCli       : ['', [Validators.required]],
+      ruc             : ['', [Validators.required, Validators.pattern(RUC_PATTERN)]],
+      contacto        : [''],
+      direccion       : [''],
+      provincia       : [''],
+      ciudad          : [''],
+      pais            : [''],
+      zona            : [''],
+      email           : ['', [Validators.required, Validators.pattern(EMAIL_PATTERN), Validators.email]],
+      telefono1       : [''],
+      telefono2       : [''],
+      fax             : [''],
+      tipoCli         : ['AGE', [Validators.required]],
+      mtoCredito      : [0],
+      idProvincia     : [''],
+      idCanton        : [''],
+      idDistrito      : [''],
+      tCliente        : [''],
+      enviarCorreo    : [false, [this.actividadComercialValidator.bind(this)]],
+      contactos       : this.fb.array([])
     });
     this.ensureDefaultContacto();
   }
 
   private createContactoGroup(contacto?: Partial<ClienteContactoUI>): FormGroup {
     return this.fb.group({
-      id: [Number(contacto?.id ?? 0)],
-      nomContacto: [contacto?.nomContacto ?? '', [Validators.required]],
-      cargo: [contacto?.cargo ?? ''],
-      email: [contacto?.email ?? '', [Validators.email]],
-      telefono1: [contacto?.telefono1 ?? ''],
-      telefono2: [contacto?.telefono2 ?? ''],
-      movil: [contacto?.movil ?? ''],
-      ext: [contacto?.ext ?? ''],
-      principal: [contacto?.principal ?? false],
-      activo: [contacto?.activo ?? true],
-      observacion: [contacto?.observacion ?? ''],
-      accion: [contacto?.accion ?? ''],
-      operador: [contacto?.operador ?? ''],
-      fechaRegistro: [contacto?.fechaRegistro ?? null]
+      id              : [Number(contacto?.id ?? 0)],
+      nomContacto     : [contacto?.nomContacto ?? ''],
+      cargo           : [contacto?.cargo ?? ''],
+      email           : [contacto?.email ?? ''],
+      telefono1       : [contacto?.telefono1 ?? ''],
+      telefono2       : [contacto?.telefono2 ?? ''],
+      movil           : [contacto?.movil ?? ''],
+      ext             : [contacto?.ext ?? ''],
+      principal       : [contacto?.principal ?? false],
+      activo          : [contacto?.activo ?? true],
+      observacion     : [contacto?.observacion ?? ''],
+      accion          : [contacto?.accion ?? ''],
+      operador        : [contacto?.operador ?? ''],
+      fechaRegistro   : [contacto?.fechaRegistro ?? null]
     });
   }
 
@@ -396,26 +443,26 @@ export class ClienteFormComponent implements OnInit {
   private applyState(cliente?: ClienteUI, emitEvent = true): void {
     if (cliente) {
       this.form.patchValue({
-        codigo: cliente.codigo,
-        nombreCli: cliente.nombre,
-        ruc: cliente.ruc,
-        contacto: cliente.contacto,
-        direccion: cliente.direccion,
-        provincia: cliente.provincia,
-        ciudad: cliente.ciudad,
-        pais: cliente.pais,
-        zona: cliente.zona,
-        email: cliente.email,
-        telefono1: cliente.telefono1,
-        telefono2: cliente.telefono2,
-        fax: cliente.fax,
-        tipoCli: cliente.tipoCli || 'AGE',
-        mtoCredito: cliente.mtoCredito ?? 0,
-        idProvincia: cliente.idProvincia,
-        idCanton: cliente.idCanton,
-        idDistrito: cliente.idDistrito,
-        tCliente: this.normalizeSelectValue(cliente.tCliente),
-        enviarCorreo: cliente.enviarCorreo ?? false
+        codigo          : cliente.codigo,
+        nombreCli       : cliente.nombre,
+        ruc             : cliente.ruc,
+        contacto        : cliente.contacto,
+        direccion       : cliente.direccion,
+        provincia       : cliente.provincia,
+        ciudad          : cliente.ciudad,
+        pais            : cliente.pais,
+        zona            : cliente.zona,
+        email           : cliente.email,
+        telefono1       : cliente.telefono1,
+        telefono2       : cliente.telefono2,
+        fax             : cliente.fax,
+        tipoCli         : cliente.tipoCli || 'AGE',
+        mtoCredito      : cliente.mtoCredito ?? 0,
+        idProvincia     : cliente.idProvincia,
+        idCanton        : cliente.idCanton,
+        idDistrito      : cliente.idDistrito,
+        tCliente        : this.normalizeSelectValue(cliente.tCliente),
+        enviarCorreo    : cliente.enviarCorreo ?? false
       }, { emitEvent });
       this.replaceContactos(cliente.contactos ?? []);
       this.tipoIdentificacionOptions = this.mergeSelectedOption(this.tipoIdentificacionOptions, cliente.tCliente);
@@ -424,26 +471,26 @@ export class ClienteFormComponent implements OnInit {
     } else {
       this.deletedContactos = [];
       this.form.reset({
-        codigo: '',
-        nombreCli: '',
-        ruc: '',
-        contacto: '',
-        direccion: '',
-        provincia: '',
-        ciudad: '',
-        pais: '',
-        zona: '',
-        email: '',
-        telefono1: '',
-        telefono2: '',
-        fax: '',
-        tipoCli: 'AGE',
-        mtoCredito: 0,
-        idProvincia: '',
-        idCanton: '',
-        idDistrito: '',
-        tCliente: '',
-        enviarCorreo: false
+        codigo          : '',
+        nombreCli       : '',
+        ruc             : '',
+        contacto        : '',
+        direccion       : '',
+        provincia       : '',
+        ciudad          : '',
+        pais            : '',
+        zona            : '',
+        email           : '',
+        telefono1       : '',
+        telefono2       : '',
+        fax             : '',
+        tipoCli         : 'AGE',
+        mtoCredito      : 0,
+        idProvincia     : '',
+        idCanton        : '',
+        idDistrito      : '',
+        tCliente        : '',
+        enviarCorreo    : false
       }, { emitEvent });
       this.replaceContactos([]);
       this.cantonOptions = [];
@@ -612,13 +659,18 @@ export class ClienteFormComponent implements OnInit {
     control.setValue(value, { emitEvent: false });
   }
 
-  submit(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      this.contactosArray.markAllAsTouched();
-      this.selectFirstInvalidContacto();
+  async submit(): Promise<void> {
+    if (!this.ensureFormValidityBeforeSubmit()) {
       return;
     }
+
+    if (!this.isEditing) {
+      const confirmed = await this.confirmBeforeSave();
+      if (!confirmed) {
+        return;
+      }
+    }
+
     this.ensureSinglePrincipal();
     this.syncContactSummary();
     const contactos = this.buildContactosForSubmit();
@@ -635,33 +687,33 @@ export class ClienteFormComponent implements OnInit {
     const principal = contactosActivos.find((item) => item.principal) ?? contactosActivos[0];
     const raw = this.form.getRawValue();
     const payload: ClienteUI = {
-      codigo: raw.codigo || '',
-      nombre: raw.nombreCli || '',
-      ruc: raw.ruc || '',
-      contacto: principal?.nomContacto || raw.contacto || '',
-      nombreContacto: principal?.nomContacto || raw.contacto || '',
-      contactoPrincipal: principal?.nomContacto || '',
-      emailPrincipal: principal?.email || '',
-      telefonoPrincipal: principal?.telefono1 || principal?.movil || '',
-      cargoPrincipal: principal?.cargo || '',
-      direccion: raw.direccion || '',
-      provincia: raw.provincia || '',
-      ciudad: raw.ciudad || '',
-      pais: raw.pais || '',
-      zona: raw.zona || '',
-      email: raw.email || '',
-      telefono1: raw.telefono1 || '',
-      telefono2: raw.telefono2 || '',
-      fax: raw.fax || '',
-      tipoCli: raw.tipoCli || 'AGE',
-      mtoCredito: Number(raw.mtoCredito || 0),
-      idProvincia: raw.idProvincia || '',
-      idCanton: raw.idCanton || '',
-      idDistrito: raw.idDistrito || '',
-      tCliente: raw.tCliente || '',
-      enviarCorreo: !!raw.enviarCorreo,
-      totalContactos: contactosActivos.length,
-      contactos
+      codigo                : raw.codigo || '',
+      nombre                : raw.nombreCli || '',
+      ruc                   : raw.ruc || '',
+      contacto              : principal?.nomContacto || raw.contacto || '',
+      nombreContacto        : principal?.nomContacto || raw.contacto || '',
+      contactoPrincipal     : principal?.nomContacto || '',
+      emailPrincipal        : principal?.email || '',
+      telefonoPrincipal     : principal?.telefono1 || principal?.movil || '',
+      cargoPrincipal        : principal?.cargo || '',
+      direccion             : raw.direccion || '',
+      provincia             : raw.provincia || '',
+      ciudad                : raw.ciudad || '',
+      pais                  : raw.pais || '',
+      zona                  : raw.zona || '',
+      email                 : raw.email || '',
+      telefono1             : raw.telefono1 || '',
+      telefono2             : raw.telefono2 || '',
+      fax                   : raw.fax || '',
+      tipoCli               : raw.tipoCli || 'AGE',
+      mtoCredito            : Number(raw.mtoCredito || 0),
+      idProvincia           : raw.idProvincia || '',
+      idCanton              : raw.idCanton || '',
+      idDistrito            : raw.idDistrito || '',
+      tCliente              : raw.tCliente || '',
+      enviarCorreo          : !!raw.enviarCorreo,
+      totalContactos        : contactosActivos.length,
+      contactos                   
     };
 
     const request = this.isEditing
@@ -692,7 +744,115 @@ export class ClienteFormComponent implements OnInit {
             icon: 'error'
           });
         }
-      });
+    });
+  }
+
+  private ensureFormValidityBeforeSubmit(): boolean {
+    this.form.markAllAsTouched();
+    this.contactosArray.markAllAsTouched();
+    this.selectFirstInvalidContacto();
+    const issues = this.collectValidationIssues();
+    if (issues.length) {
+      this.showValidationAlert(issues);
+      return false;
+    }
+    return true;
+  }
+
+  private collectValidationIssues(): string[] {
+    const issues: string[] = [];
+    Object.entries(this.form.controls).forEach(([key, control]) => {
+      if (!control || control instanceof FormArray) {
+        return;
+      }
+      if (!control.invalid) {
+        return;
+      }
+
+      const errors = control.errors ?? {};
+      const messages: string[] = [];
+      if (errors['required']) {
+        messages.push('requerido');
+      }
+      if (errors['pattern']) {
+        messages.push('formato inválido');
+      }
+      if (errors['email']) {
+        messages.push('correo electrónico inválido');
+      }
+      if (errors['min']) {
+        messages.push(`valor mínimo ${errors['min'].min}`);
+      }
+      if (errors['actividadRequerida']) {
+        messages.push('requiere al menos una actividad comercial MH');
+      }
+      if (!messages.length) {
+        messages.push('valor inválido');
+      }
+
+      const label = FIELD_LABELS[key] ?? this.toDisplayName(key);
+      issues.push(`${label}: ${messages.join(', ')}`);
+    });
+
+    if (this.contactosArray.invalid) {
+      issues.push('Contactos: revise los contactos registrados');
+    }
+
+    return issues;
+  }
+
+  private toDisplayName(controlName: string): string {
+    return controlName
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (match) => match.toUpperCase())
+      .trim();
+  }
+
+  private showValidationAlert(issues: string[]): void {
+    const list = issues.map((issue) => `<li>${issue}</li>`).join('');
+    Swal.fire({
+      title: 'Información incompleta o incorrecta',
+      icon: 'warning',
+      html: `<ul class="text-start mb-0">${list}</ul>`
+    });
+  }
+
+  private confirmBeforeSave(): Promise<boolean> {
+    return Swal.fire({
+      title: 'Confirmar guardado',
+      text: '¿Está seguro de guardar este nuevo cliente?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, guardar',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true,
+      allowOutsideClick: false
+    }).then((result) => result.isConfirmed);
+  }
+
+  onActividadesCountChange(count: number): void {
+    this.actividadComercialCount = count;
+    this.syncActividadComercialErrorState();
+  }
+
+  private hasActividadComercialRegistrada(): boolean {
+    return this.actividadComercialCount > 0;
+  }
+
+  private syncActividadComercialErrorState(): void {
+    const control = this.form.get('enviarCorreo');
+    if (!control) {
+      return;
+    }
+    control.updateValueAndValidity({ onlySelf: true, emitEvent: false });
+  }
+
+  private actividadComercialValidator(control: AbstractControl): ValidationErrors | null {
+    if (!control.value) {
+      return null;
+    }
+    return this.hasActividadComercialRegistrada() ? null : { actividadRequerida: true };
   }
 
   cancelForm(): void {

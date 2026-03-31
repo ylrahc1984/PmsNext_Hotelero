@@ -14,7 +14,7 @@ import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } fr
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { forkJoin } from 'rxjs';
-import { distinctUntilChanged, finalize, startWith } from 'rxjs/operators';
+import { distinctUntilChanged, finalize, startWith, debounceTime } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
@@ -41,6 +41,7 @@ import {
   ReservasFacturacionService
 } from 'src/app/finanzas/services/reservas-facturacion.service';
 import { ReservasService } from 'src/app/demo/reservas/services/reservas.service';
+import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
 import type {
   ConfirmarFacturaPayload,
   ConfirmarFacturaResponse,
@@ -50,6 +51,7 @@ import type {
   PagoForm,
   TotalesResumen
 } from '../nueva-factura.interface';
+import { C } from '@angular/cdk/scrolling-module.d-C_w4tIrZ';
 
 @Component({
   selector: 'app-nueva-factura',
@@ -84,42 +86,44 @@ export class NuevaFacturaComponent implements OnInit {
   private readonly listaPrecioService = inject(ListaPrecioService);
   private readonly reservasFacturacionService = inject(ReservasFacturacionService);
   private readonly reservasService = inject(ReservasService);
+  private readonly tipoCambioService = inject(TipoCambioService);
+  private readonly auth = inject(AuthService);
 
   private readonly apiUrl = `${environment.apiUrl}/facturacion/confirmar`;
 
   readonly empresa = this.empresaContext.empresa;
 
   readonly form: FormGroup<NuevaFacturaForm> = this.fb.group({
-    tipDocu: this.fb.nonNullable.control('FAC', { validators: [Validators.required] }),
-    codCliente: this.fb.nonNullable.control('', { validators: [Validators.required] }),
-    rucCliente: this.fb.nonNullable.control(''),
-    nomCliente: this.fb.nonNullable.control('', { validators: [Validators.required] }),
-    correoCliente: this.fb.nonNullable.control(''),
-    codReserva: this.fb.nonNullable.control(''),
-    fechaInicio: this.fb.nonNullable.control(''),
-    fechaFin: this.fb.nonNullable.control(''),
-    voucherRsv: this.fb.nonNullable.control(''),
-    nProveedor: this.fb.nonNullable.control(''),
-    habitacion: this.fb.nonNullable.control(''),
-    master: this.fb.nonNullable.control(''),
-    fechaDocu: this.fb.nonNullable.control(this.getTodayIsoDate()),
-    pntVenta: this.fb.nonNullable.control(''),
-    numMesa: this.fb.nonNullable.control(''),
-    numPax: this.fb.nonNullable.control(0),
-    codVendedor: this.fb.nonNullable.control(''),
-    condicionVenta: this.fb.nonNullable.control('01', { validators: [Validators.required] }),
-    moneda: this.fb.nonNullable.control('CRC', { validators: [Validators.required] }),
-    codigoActividad: this.fb.nonNullable.control(''),
-    observacion: this.fb.nonNullable.control(''),
-    planTarifario: this.fb.nonNullable.control(''),
-    listaPrecio: this.fb.nonNullable.control(''),
-    tCambio: this.fb.nonNullable.control(1),
-    operador: this.fb.nonNullable.control('admin'),
-    respuesta: this.fb.nonNullable.control(''),
-    serie: this.fb.nonNullable.control(''),
-    numero: this.fb.nonNullable.control(''),
-    detalle: this.fb.array<FormGroup<DetalleForm>>([], { validators: [Validators.required] }),
-    pagos: this.fb.array<FormGroup<PagoForm>>([])
+    tipDocu               : this.fb.nonNullable.control('FAC', { validators: [Validators.required] }),
+    codCliente            : this.fb.nonNullable.control('', { validators: [Validators.required] }),
+    rucCliente            : this.fb.nonNullable.control(''),
+    nomCliente            : this.fb.nonNullable.control('', { validators: [Validators.required] }),
+    correoCliente         : this.fb.nonNullable.control(''),
+    codReserva            : this.fb.nonNullable.control(''),
+    fechaInicio           : this.fb.nonNullable.control(''),
+    fechaFin              : this.fb.nonNullable.control(''),
+    voucherRsv            : this.fb.nonNullable.control(''),
+    nProveedor            : this.fb.nonNullable.control(''),
+    habitacion            : this.fb.nonNullable.control(''),
+    master                : this.fb.nonNullable.control(''),
+    fechaDocu             : this.fb.nonNullable.control(this.getTodayIsoDate()),
+    pntVenta              : this.fb.nonNullable.control(''),
+    numMesa               : this.fb.nonNullable.control(''),
+    numPax                : this.fb.nonNullable.control(0),
+    codVendedor           : this.fb.nonNullable.control(''),
+    condicionVenta        : this.fb.nonNullable.control('01', { validators: [Validators.required] }),
+    moneda                : this.fb.nonNullable.control('USD', { validators: [Validators.required] }),
+    codigoActividad       : this.fb.nonNullable.control(''),
+    observacion           : this.fb.nonNullable.control(''),
+    planTarifario         : this.fb.nonNullable.control(''),
+    listaPrecio           : this.fb.nonNullable.control(''),
+    tCambio               : this.fb.nonNullable.control(1),
+    operador              : this.fb.nonNullable.control(this.getOperador()),
+    respuesta             : this.fb.nonNullable.control(''),
+    serie                 : this.fb.nonNullable.control(''),
+    numero                : this.fb.nonNullable.control(''),
+    detalle               : this.fb.array<FormGroup<DetalleForm>>([], { validators: [Validators.required] }),
+    pagos                 : this.fb.array<FormGroup<PagoForm>>([])
   });
 
   readonly lineasCalculo: LineaCalculo[] = [];
@@ -129,14 +133,17 @@ export class NuevaFacturaComponent implements OnInit {
   pagosTotal = 0;
   pagosValid = true;
 
-  selectedCliente: ClienteUI | null = null;
-  showClienteModal = false;
-  showServicioModal = false;
-  showReservaModal = false;
-  modoReserva = false;
-  reservaActual: string | null = null;
-  reservaLoading = false;
-  reservaErrorMessage: string | null = null;
+  selectedCliente           : ClienteUI | null = null;
+  clienteSearchResults      : ClienteUI[] = [];
+  clienteSearchLoading      = false;
+  clienteSearchError        : string | null = null;
+  showClienteModal          = false;
+  showServicioModal         = false;
+  showReservaModal          = false;
+  modoReserva               = false;
+  reservaActual             : string | null = null;
+  reservaLoading            = false;
+  reservaErrorMessage       : string | null = null;
 
   @ViewChildren('cantidadInput') cantidadInputs?: QueryList<ElementRef<HTMLInputElement>>;
 
@@ -147,6 +154,7 @@ export class NuevaFacturaComponent implements OnInit {
   monedasLoading = false;
 
   tiposDocumento: DocumentoDto[] = [];
+  private tiposDocumentoBase: DocumentoDto[] = [];
   tiposDocumentoLoading = false;
 
   puntosVenta: PuntoVentaUI[] = [];
@@ -168,6 +176,10 @@ export class NuevaFacturaComponent implements OnInit {
   facturaSerie = '';
   facturaNumero = '';
   locked = false;
+
+  tipoCambioActual: TipoCambio | null = null;
+  tipoCambioLoading = false;
+  tipoCambioError: string | null = null;
 
   constructor() {
     const currentUser = this.authService.getCurrentUser();
@@ -213,16 +225,50 @@ export class NuevaFacturaComponent implements OnInit {
         this.syncDetalleCatalogCodes();
       });
 
+    this.form.controls.codCliente.valueChanges
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((value) => {
+        const query = (value ?? '').toString().trim();
+        if (!query || this.locked || this.modoReserva) {
+          this.clearClienteSearchResults();
+          return;
+        }
+        this.searchClientes(query);
+      });
+
+    this.form.controls.fechaDocu.valueChanges
+      .pipe(
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => this.loadTipoCambio());
+
+    this.form.controls.moneda.valueChanges
+      .pipe(
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => this.loadTipoCambio());
+
   }
 
   ngOnInit(): void {
     this.cargarMonedas();
-    this.cargarTiposDocumento();
+    //this.cargarTiposDocumento();
     this.cargarPuntosVenta();
     this.cargarFormasPago();
     this.cargarPlanesTarifarios();
     this.cargarListasPrecio();
     this.initReservaFromQuery();
+    this.loadTipoCambio();
+  }
+
+  private getOperador(): string {
+    return this.auth.getCurrentUser()?.usuario ?? '';
   }
 
   get detalleArray(): FormArray<FormGroup<DetalleForm>> {
@@ -380,14 +426,17 @@ export class NuevaFacturaComponent implements OnInit {
     this.selectedCliente = cliente;
     this.form.patchValue(
       {
-        codCliente: cliente.codigo,
-        nomCliente: cliente.nombre,
-        rucCliente: cliente.ruc,
-        correoCliente: cliente.email || ''
+        codCliente        : cliente.codigo,
+        nomCliente        : cliente.nombre,
+        rucCliente        : cliente.ruc,
+        correoCliente     : cliente.email || '',
+        codigoActividad   : cliente.codigoActividad || '',
       },
       { emitEvent: false }
     );
     this.cdr.markForCheck();
+    this.clearClienteSearchResults();
+    this.cargarTiposDocumento();
   }
 
   public limpiarSeleccionCliente(): void {
@@ -395,14 +444,17 @@ export class NuevaFacturaComponent implements OnInit {
     this.selectedCliente = null;
     this.form.patchValue(
       {
-        codCliente: '',
-        nomCliente: '',
-        rucCliente: '',
-        correoCliente: ''
+        codCliente          : '',
+        nomCliente          : '',
+        rucCliente          : '',
+        correoCliente       : '',
+        codigoActividad     : '',
       },
       { emitEvent: false }
     );
+    this.refreshTiposDocumentoPorCorreo(null);
     this.cdr.markForCheck();
+    this.clearClienteSearchResults();
   }
 
   private submitFactura(): void {
@@ -449,44 +501,44 @@ export class NuevaFacturaComponent implements OnInit {
 
   private createDetalleGroup(orden: number): FormGroup<DetalleForm> {
     return this.fb.nonNullable.group({
-      reglaPrecioId: this.fb.nonNullable.control(0),
-      orden: this.fb.nonNullable.control(orden),
-      fechaConsumo: this.fb.nonNullable.control(this.form.controls.fechaDocu.value),
-      lstPrecio: this.fb.nonNullable.control(this.form.controls.listaPrecio.value),
-      planTarifa: this.fb.nonNullable.control(this.form.controls.planTarifario.value),
-      codProdu: this.fb.nonNullable.control(''),
-      areaProdu: this.fb.nonNullable.control(''),
-      descripcion: this.fb.nonNullable.control(''),
-      cantidad: this.fb.nonNullable.control(1),
-      uMedida: this.fb.nonNullable.control(''),
-      pUndLst: this.fb.nonNullable.control(0),
-      uniSinImp: this.fb.nonNullable.control(0),
-      porDescu: this.fb.nonNullable.control(0),
-      porImp: this.fb.nonNullable.control(0),
-      porExonera: this.fb.nonNullable.control(0),
-      mtoImpVarios: this.fb.nonNullable.control(0),
-      saldoPendiente: this.fb.nonNullable.control(0),
-      almacen: this.fb.nonNullable.control(''),
-      area: this.fb.nonNullable.control(''),
-      tipComanda: this.fb.nonNullable.control(''),
-      comanda: this.fb.nonNullable.control(''),
-      pntVenta: this.fb.nonNullable.control(this.form.controls.pntVenta.value),
-      mozo: this.fb.nonNullable.control(''),
-      numHabita: this.fb.nonNullable.control('')
+      reglaPrecioId         : this.fb.nonNullable.control(0),
+      orden                 : this.fb.nonNullable.control(orden),
+      fechaConsumo          : this.fb.nonNullable.control(this.form.controls.fechaDocu.value),
+      lstPrecio             : this.fb.nonNullable.control(this.form.controls.listaPrecio.value),
+      planTarifa            : this.fb.nonNullable.control(this.form.controls.planTarifario.value),
+      codProdu              : this.fb.nonNullable.control(''),
+      areaProdu             : this.fb.nonNullable.control(''),
+      descripcion           : this.fb.nonNullable.control(''),
+      cantidad              : this.fb.nonNullable.control(1),
+      uMedida               : this.fb.nonNullable.control(''),
+      pUndLst               : this.fb.nonNullable.control(0),
+      uniSinImp             : this.fb.nonNullable.control(0),
+      porDescu              : this.fb.nonNullable.control(0),
+      porImp                : this.fb.nonNullable.control(0),
+      porExonera            : this.fb.nonNullable.control(0),
+      mtoImpVarios          : this.fb.nonNullable.control(0),
+      saldoPendiente        : this.fb.nonNullable.control(0),
+      almacen               : this.fb.nonNullable.control(''),
+      area                  : this.fb.nonNullable.control(''),
+      tipComanda            : this.fb.nonNullable.control(''),
+      comanda               : this.fb.nonNullable.control(''),
+      pntVenta              : this.fb.nonNullable.control(this.form.controls.pntVenta.value),
+      mozo                  : this.fb.nonNullable.control(''),
+      numHabita             : this.fb.nonNullable.control('')
     });
   }
 
   private createPagoGroup(): FormGroup<PagoForm> {
     return this.fb.nonNullable.group({
-      orden: this.fb.nonNullable.control(0),
-      frmPago: this.fb.nonNullable.control(''),
-      tipo: this.fb.nonNullable.control(''),
-      tCambio: this.fb.nonNullable.control(this.form.controls.tCambio.value),
-      monto: this.fb.nonNullable.control(0),
-      moneda: this.fb.nonNullable.control(this.form.controls.moneda.value),
-      referencia: this.fb.nonNullable.control(''),
-      numTarjeta: this.fb.nonNullable.control(''),
-      vencimiento: this.fb.nonNullable.control('')
+      orden         : this.fb.nonNullable.control(0),
+      frmPago       : this.fb.nonNullable.control(''),
+      tipo          : this.fb.nonNullable.control(''),
+      tCambio       : this.fb.nonNullable.control(this.form.controls.tCambio.value),
+      monto         : this.fb.nonNullable.control(0),
+      moneda        : this.fb.nonNullable.control(this.form.controls.moneda.value),
+      referencia    : this.fb.nonNullable.control(''),
+      numTarjeta    : this.fb.nonNullable.control(''),
+      vencimiento   : this.fb.nonNullable.control('')
     });
   }
 
@@ -501,18 +553,18 @@ export class NuevaFacturaComponent implements OnInit {
     const group = this.createDetalleGroup(orden);
     group.patchValue(
       {
-        reglaPrecioId: Number(servicio.reglaPrecioId ?? 0) || 0,
-        codProdu: (servicio.codigoServicio || '').toString(),
-        descripcion: (servicio.nombreServicio || '').toString(),
-        cantidad: 1,
-        pUndLst: Number(servicio.precioUnitario ?? 0) || 0,
-        uniSinImp: Number(servicio.precioUnitario ?? 0) || 0,
-        porDescu: 0,
-        porImp: 0,
-        fechaConsumo: this.form.controls.fechaDocu.value,
-        lstPrecio: this.form.controls.listaPrecio.value,
-        planTarifa: this.form.controls.planTarifario.value,
-        pntVenta: this.form.controls.pntVenta.value
+        reglaPrecioId     : Number(servicio.reglaPrecioId ?? 0) || 0,
+        codProdu          : (servicio.codigoServicio || '').toString(),
+        descripcion       : (servicio.nombreServicio || '').toString(),
+        cantidad          : 1,
+        pUndLst           : Number(servicio.precioUnitario ?? 0) || 0,
+        uniSinImp         : Number(servicio.precioUnitario ?? 0) || 0,
+        porDescu          : 0,
+        porImp            : 0,
+        fechaConsumo      : this.form.controls.fechaDocu.value,
+        lstPrecio         : this.form.controls.listaPrecio.value,
+        planTarifa        : this.form.controls.planTarifario.value,
+        pntVenta          : this.form.controls.pntVenta.value
       },
       { emitEvent: false }
     );
@@ -537,11 +589,11 @@ export class NuevaFacturaComponent implements OnInit {
       const total = base + impuesto;
 
       return {
-        subtotal: this.round(subtotal),
-        descuento: this.round(descuento),
-        base: this.round(base),
-        impuesto: this.round(impuesto),
-        total: this.round(total)
+        subtotal    : this.round(subtotal),
+        descuento   : this.round(descuento),
+        base        : this.round(base),
+        impuesto    : this.round(impuesto),
+        total       : this.round(total)
       };
     });
 
@@ -559,10 +611,10 @@ export class NuevaFacturaComponent implements OnInit {
     );
 
     this.resumen = {
-      subtotal: this.round(resumen.subtotal),
-      descuento: this.round(resumen.descuento),
-      impuesto: this.round(resumen.impuesto),
-      total: this.round(resumen.total)
+      subtotal    : this.round(resumen.subtotal),
+      descuento   : this.round(resumen.descuento),
+      impuesto    : this.round(resumen.impuesto),
+      total       : this.round(resumen.total)
     };
 
     const pagos = this.pagosArray.controls.map((group) => this.toNumber(group.controls.monto.value));
@@ -775,6 +827,7 @@ export class NuevaFacturaComponent implements OnInit {
     forkJoin({
       detalle: this.reservasFacturacionService.getDetalle(codReserva),
       cliente: this.clienteService.getClienteByCodigo(codAgencia)
+      
     })
       .pipe(
         finalize(() => {
@@ -856,10 +909,12 @@ export class NuevaFacturaComponent implements OnInit {
       this.selectedCliente = cliente;
       this.form.patchValue(
         {
-          codCliente: cliente.codigo,
-          nomCliente: cliente.nombre,
-          rucCliente: cliente.ruc,
-          correoCliente: cliente.email || ''
+          codCliente        : cliente.codigo,
+          nomCliente        : cliente.nombre,
+          rucCliente        : cliente.ruc,
+          correoCliente     : cliente.email || '',
+          codigoActividad   : cliente.codigoActividad || '',
+
         },
         { emitEvent: false }
       );
@@ -867,15 +922,51 @@ export class NuevaFacturaComponent implements OnInit {
       this.selectedCliente = null;
       this.form.patchValue(
         {
-          codCliente: codAgencia,
-          nomCliente: '',
-          rucCliente: '',
-          correoCliente: ''
+          codCliente        : codAgencia,
+          nomCliente        : '',
+          rucCliente        : '',
+          correoCliente     : '',
+          codigoActividad   : ''
+
         },
         { emitEvent: false }
       );
     }
+ 
     this.setClienteEditable(false);
+    this.clearClienteSearchResults();
+    this.cargarTiposDocumento();
+  }
+
+  private searchClientes(query: string): void {
+    this.clienteSearchLoading = true;
+    this.clienteSearchError = null;
+    this.clienteSearchResults = [];
+
+    this.clienteService
+      .getClientes(1, 6, query)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => {
+          this.clienteSearchLoading = false;
+          this.cdr.markForCheck();
+        })
+      )
+      .subscribe({
+        next: (response) => {
+          this.clienteSearchResults = response.data;
+        },
+        error: (error: unknown) => {
+          this.clienteSearchError =
+            error instanceof Error ? error.message : 'No se pudo buscar clientes.';
+        }
+      });
+  }
+
+  private clearClienteSearchResults(): void {
+    this.clienteSearchResults = [];
+    this.clienteSearchLoading = false;
+    this.clienteSearchError = null;
   }
 
   private aplicarDetalleReserva(detalles: ReservaPendienteDetalle[]): void {
@@ -895,22 +986,22 @@ export class NuevaFacturaComponent implements OnInit {
         const group = this.createDetalleGroup(index + 1);
         group.patchValue(
           {
-            codProdu: (item.codServicio || '').toString(),
-            descripcion: (item.nomServicio || '').toString(),
-            areaProdu: (item.codGrupo || '').toString(),
-            area: (item.codGrupo || '').toString(),
-            uMedida: (item.uMedida || '').toString(),
-            cantidad: saldo,
-            pUndLst: this.round(precioUnit),
-            uniSinImp: this.round(precioUnit),
-            porDescu: this.toNumber(item.porDescuento),
-            porImp: this.round(porImp),
-            comanda: (item.id ?? '').toString(),
-            saldoPendiente: saldo,
-            fechaConsumo: this.form.controls.fechaDocu.value,
-            lstPrecio: (item.codLstPrecio || this.form.controls.listaPrecio.value || '').toString(),
-            planTarifa: (item.planTarifario || this.form.controls.planTarifario.value || '').toString(),
-            pntVenta: this.form.controls.pntVenta.value
+            codProdu        : (item.codServicio || '').toString(),
+            descripcion     : (item.nomServicio || '').toString(),
+            areaProdu       : (item.codGrupo || '').toString(),
+            area            : (item.codGrupo || '').toString(),
+            uMedida         : (item.uMedida || '').toString(),
+            cantidad        : saldo,
+            pUndLst         : this.round(precioUnit),
+            uniSinImp       : this.round(precioUnit),
+            porDescu        : this.toNumber(item.porDescuento),
+            porImp          : this.round(porImp),
+            comanda         : (item.id ?? '').toString(),
+            saldoPendiente  : saldo,
+            fechaConsumo    : this.form.controls.fechaDocu.value,
+            lstPrecio       : (item.codLstPrecio || this.form.controls.listaPrecio.value || '').toString(),
+            planTarifa      : (item.planTarifario || this.form.controls.planTarifario.value || '').toString(),
+            pntVenta        : this.form.controls.pntVenta.value
           },
           { emitEvent: false }
         );
@@ -991,6 +1082,10 @@ export class NuevaFacturaComponent implements OnInit {
     return tipo === 'N' ? 'N' : 'R';
   }
 
+  get tipoCambioMostrar(): number {
+    return this.tipoCambioActual?.venta ?? this.form.controls.tCambio.value ?? 0;
+  }
+
   private cargarTiposDocumento(): void {
     this.tiposDocumentoLoading = true;
     const params = new HttpParams().set('venta', '1').set('docu', '1');
@@ -1017,21 +1112,126 @@ export class NuevaFacturaComponent implements OnInit {
                 ? [res as DocumentoDto]
                 : [];
 
-          this.tiposDocumento = dataArray ?? [];
-
-          const current = this.form.controls.tipDocu.value;
-          const exists = this.tiposDocumento.some((doc) => doc.CA04_CodDocu === current);
-          if (!current || !exists) {
-            const nextValue = this.tiposDocumento[0]?.CA04_CodDocu ?? '';
-            if (nextValue) {
-              this.form.controls.tipDocu.setValue(nextValue, { emitEvent: false });
-            }
-          }
+          this.tiposDocumentoBase = dataArray ?? [];
+          this.refreshTiposDocumentoPorCorreo(this.selectedCliente?.enviarCorreo ?? null);
         },
         error: () => {
           this.tiposDocumento = [];
         }
+    });
+  }
+
+  private refreshTiposDocumentoPorCorreo(enviarCorreo: boolean | null = null): void {
+
+  
+    if (!this.tiposDocumentoBase.length) {
+      this.tiposDocumento = [];
+      return;
+    }
+    if (enviarCorreo === null || enviarCorreo === undefined) {
+      this.tiposDocumento = [...this.tiposDocumentoBase];
+      this.ensureTipoDocumentoSeleccionado();
+      return;
+    }
+    const preferCode = enviarCorreo ? '01' : '04';
+    const preferido = this.tiposDocumentoBase.filter((item) => this.resolveTipoDocumentoFe(item) === preferCode);
+    if (preferido.length) {
+      this.tiposDocumento = [...preferido];
+      this.ensureTipoDocumentoSeleccionado();
+      return;
+    }
+    this.tiposDocumento = [...this.tiposDocumentoBase];
+    this.ensureTipoDocumentoSeleccionado();
+  }
+
+  private resolveTipoDocumentoFe(doc: DocumentoDto): string {
+    const raw = (doc as DocumentoDto & { CA404_TDocFE?: string; CA04_TDocFE?: string; tDocFE?: string });
+    return (
+      (raw.CA404_TDocFE ?? raw.CA04_TDocFE ?? raw.tDocFE ?? '')
+        .toString()
+        .trim()
+    );
+  }
+
+  private ensureTipoDocumentoSeleccionado(): void {
+    if (!this.tiposDocumento.length) {
+      return;
+    }
+    const current = this.form.controls.tipDocu.value;
+    const exists = this.tiposDocumento.some((doc) => doc.CA04_CodDocu === current);
+    if (current && exists) {
+      return;
+    }
+    const nextValue = this.tiposDocumento[0]?.CA04_CodDocu ?? '';
+    if (nextValue) {
+      this.form.controls.tipDocu.setValue(nextValue, { emitEvent: false });
+    }
+  }
+
+  private loadTipoCambio(): void {
+    const fechaParam = this.buildFechaParaTipoCambio(this.form.controls.fechaDocu.value);
+    const moneda = (this.form.controls.moneda.value || '').toString().trim();
+    if (!fechaParam || !moneda) {
+      this.tipoCambioActual = null;
+      return;
+    }
+
+    this.tipoCambioLoading = true;
+    this.tipoCambioError = null;
+
+    console.log('Cargando tipo de cambio para', { fecha: fechaParam, moneda });
+
+    this.tipoCambioService
+      .fetchTipoCambio(fechaParam, moneda)
+      .pipe(
+        finalize(() => {
+          this.tipoCambioLoading = false;
+          this.cdr.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (items) => {
+          this.tipoCambioActual = items[0] ?? null;
+          const valor = this.tipoCambioActual?.venta ?? this.form.controls.tCambio.value;
+          if (valor !== null && valor !== undefined) {
+            this.form.controls.tCambio.setValue(valor, { emitEvent: false });
+          }
+
+          console.log('Tipo de cambio cargado', this.tipoCambioActual);
+
+        },
+        error: (error: unknown) => {
+          this.tipoCambioError =
+            error instanceof Error ? error.message : 'No se pudo cargar el tipo de cambio.';
+          this.tipoCambioActual = null;
+        }
       });
+  }
+
+  private buildFechaParaTipoCambio(value: string): string {
+    const trimmed = (value ?? '').toString().trim();
+    if (!trimmed) {
+      const today = new Date();
+      const day = `${today.getDate()}`.padStart(2, '0');
+      const month = `${today.getMonth() + 1}`.padStart(2, '0');
+      const year = today.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+    if (trimmed.includes('/')) {
+      const parts = trimmed.split('/');
+      if (parts.length === 3) {
+        const [day, month, year] = parts;
+        return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+      }
+      return trimmed;
+    }
+    const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+    if (isoMatch) {
+      const [, year, month, day] = isoMatch;
+      return `${day}/${month}/${year}`;
+    }
+    return trimmed;
   }
 
   private buildPayload(): ConfirmarFacturaPayload {
@@ -1040,28 +1240,28 @@ export class NuevaFacturaComponent implements OnInit {
     const detalle = this.detalleArray.controls.map((group, index) => {
       const raw = group.getRawValue();
       return {
-        orden: index + 1,
-        fechaConsumo: this.formatDate(raw.fechaConsumo || value.fechaDocu),
-        codProdu: raw.codProdu,
-        areaProdu: raw.areaProdu,
-        descripcion: raw.descripcion,
-        cantidad: this.toNumber(raw.cantidad),
-        uMedida: raw.uMedida,
-        pUndLst: this.toNumber(raw.pUndLst),
-        uniSinImp: this.toNumber(raw.uniSinImp || raw.pUndLst),
-        porDescu: this.toNumber(raw.porDescu),
-        porImp: this.toNumber(raw.porImp),
-        porExonera: this.toNumber(raw.porExonera),
-        mtoImpVarios: this.toNumber(raw.mtoImpVarios),
-        almacen: raw.almacen,
-        area: raw.area,
-        tipComanda: raw.tipComanda,
-        comanda: raw.comanda,
-        pntVenta: value.pntVenta,
-        mozo: raw.mozo,
-        numHabita: raw.numHabita,
-        lstPrecio: (raw.lstPrecio || value.listaPrecio || '').toString(),
-        planTarifa: (raw.planTarifa || value.planTarifario || '').toString()
+        orden           : index + 1,
+        fechaConsumo    : this.formatDate(raw.fechaConsumo || value.fechaDocu),
+        codProdu        : raw.codProdu,
+        areaProdu       : raw.areaProdu,
+        descripcion     : raw.descripcion,
+        cantidad        : this.toNumber(raw.cantidad),
+        uMedida         : raw.uMedida,
+        pUndLst         : this.toNumber(raw.pUndLst),
+        uniSinImp       : this.toNumber(raw.uniSinImp || raw.pUndLst),
+        porDescu        : this.toNumber(raw.porDescu),
+        porImp          : this.toNumber(raw.porImp),
+        porExonera      : this.toNumber(raw.porExonera),
+        mtoImpVarios    : this.toNumber(raw.mtoImpVarios),
+        almacen         : raw.almacen,
+        area            : raw.area,
+        tipComanda      : raw.tipComanda,
+        comanda         : raw.comanda,
+        pntVenta        : value.pntVenta,
+        mozo            : raw.mozo,
+        numHabita       : raw.numHabita,
+        lstPrecio       : (raw.lstPrecio || value.listaPrecio || '').toString(),
+        planTarifa      : (raw.planTarifa || value.planTarifario || '').toString()
       };
     });
 
@@ -1069,47 +1269,47 @@ export class NuevaFacturaComponent implements OnInit {
       ? this.pagosArray.controls.map((group, index) => {
           const raw = group.getRawValue();
           return {
-            orden: index + 1,
-            frmPago: raw.frmPago,
-            tipo: raw.tipo,
-            moneda: raw.moneda,
-            monto: this.toNumber(raw.monto),
-            tCambio: this.toNumber(raw.tCambio || value.tCambio),
-            referencia: raw.referencia,
-            numTarjeta: raw.numTarjeta,
-            vencimiento: this.formatDate(raw.vencimiento)
+            orden         : index + 1,
+            frmPago       : raw.frmPago,
+            tipo          : raw.tipo,
+            moneda        : raw.moneda,
+            monto         : this.toNumber(raw.monto),
+            tCambio       : this.toNumber(raw.tCambio || value.tCambio),
+            referencia    : raw.referencia,
+            numTarjeta    : raw.numTarjeta,
+            vencimiento   : this.formatDate(raw.vencimiento)
           };
         })
       : [];
 
     return {
-      tipDocu: value.tipDocu,
-      codCliente: value.codCliente,
-      rucCliente: value.rucCliente,
-      nomCliente: value.nomCliente,
-      condicionVenta: value.condicionVenta,
-      codReserva: value.codReserva,
-      fechaInicio: this.formatDate(value.fechaInicio),
-      fechaFin: this.formatDate(value.fechaFin),
-      voucherRsv: value.voucherRsv,
-      nProveedor: value.nProveedor,
-      habitacion: value.habitacion,
-      master: value.master,
-      fechaDocu,
-      pntVenta: value.pntVenta,
-      numMesa: value.numMesa,
-      numPax: this.toNumber(value.numPax),
-      codVendedor: value.codVendedor,
-      moneda: value.moneda,
-      tCambio: this.toNumber(value.tCambio),
-      codigoActividad: value.codigoActividad,
-      observacion: value.observacion,
-      operador: value.operador,
-      detalle,
-      pagos,
-      respuesta: value.respuesta,
-      serie: value.serie,
-      numero: value.numero
+      tipDocu           : value.tipDocu,
+      codCliente        : value.codCliente,
+      rucCliente        : value.rucCliente,
+      nomCliente        : value.nomCliente,
+      condicionVenta    : value.condicionVenta,
+      codReserva        : value.codReserva,
+      fechaInicio       : this.formatDate(value.fechaInicio),
+      fechaFin          : this.formatDate(value.fechaFin),
+      voucherRsv        : value.voucherRsv,
+      nProveedor        : value.nProveedor,
+      habitacion        : value.habitacion,
+      master            : value.master,
+      fechaDocu         ,
+      pntVenta          : value.pntVenta,
+      numMesa           : value.numMesa,
+      numPax            : this.toNumber(value.numPax),
+      codVendedor       : value.codVendedor,
+      moneda            : value.moneda,
+      tCambio           : this.toNumber(value.tCambio),
+      codigoActividad   : value.codigoActividad,
+      observacion       : value.observacion,
+      operador          : value.operador,
+      detalle           ,
+      pagos             ,
+      respuesta         : value.respuesta,
+      serie             : value.serie,
+      numero            : value.numero
     };
   }
 
