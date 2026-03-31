@@ -6,6 +6,7 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "postbuild": "node replace-env.js",
     "build-prod": "ng build --configuration production --base-href /demos/admin-templates/datta-able/angular/free/",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",

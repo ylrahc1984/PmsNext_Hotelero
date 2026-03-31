@@ -1,7 +1,8 @@
 // This file can be replaced during build by using the `fileReplacements` array.
 // `ng build` replaces `environment.ts` with `environment.prod.ts`.
 // The list of file replacements can be found in `angular.json`.
-
+import packageInfo from '../../package.json';
+/*
 import packageInfo from '../../package.json';
 
 export const environment = {
@@ -11,6 +12,7 @@ export const environment = {
   baseUrl: 'http://localhost:5000/api',
   googleMapsApiKey: 'AIzaSyA-o3tTaSdRzt7JBBjRwBzYGNpUEtGyfF8'
 };
+*/
 /*
  * For easier debugging in development mode, you can import the following file
  * to ignore zone related error stack frames such as `zone.run`, `zoneDelegate.invokeTask`.
@@ -19,3 +21,17 @@ export const environment = {
  * on performance if an error is thrown.
  */
 // import 'zone.js/plugins/zone-error';  // Included with Angular CLI.
+
+declare global {
+  interface Window {
+    __env: any;
+  }
+}
+
+export const environment = {
+  appVersion: packageInfo.version,
+  production: false,
+  apiUrl: window.__env?.apiUrl || '',
+  baseUrl: window.__env?.baseUrl || '',
+  googleMapsApiKey: 'AIzaSyA-o3tTaSdRzt7JBBjRwBzYGNpUEtGyfF8'
+};
