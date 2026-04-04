@@ -67,6 +67,11 @@ const routes: Routes = [
         loadComponent: () => import('./operaciones/operacion-diaria/operacion-diaria.component').then((c) => c.OperacionDiariaComponent)
       },
       {
+        path: 'forecast-actividades',
+        loadComponent: () =>
+          import('./operaciones/forecast-actividades/forecast-actividades.component').then((c) => c.ForecastActividadesComponent)
+      },
+      {
         path: 'cierre-caja',
         loadComponent: () => import('./operaciones/cierre-caja/cierre-caja-list.component').then((c) => c.CierreCajaListComponent)
       },

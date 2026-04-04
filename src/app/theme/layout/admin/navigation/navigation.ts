@@ -47,6 +47,14 @@ export const NavigationItems: NavigationItem[] = [
             classes: 'nav-item'
           },
           {
+            id: 'forecast-actividades',
+            title: 'Forecast de Actividades',
+            type: 'item',
+            url: '/operaciones/forecast-actividades',
+            icon: 'feather icon-bar-chart-2',
+            classes: 'nav-item'
+          },
+          {
             id: 'reservas',
             title: 'Reservas',
             type: 'item',

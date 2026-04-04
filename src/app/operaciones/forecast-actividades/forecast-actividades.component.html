@@ -1,0 +1,299 @@
+<div class="forecast-actividades">
+  <div class="card forecast-header">
+    <div class="card-body">
+      <div class="forecast-header__top">
+        <div class="forecast-header__copy">
+          <div class="forecast-header__eyebrow">OPERACIONES</div>
+          <h2>Forecast de Actividades</h2>
+          <p>Proyección operativa de tours, horarios y carga futura.</p>
+        </div>
+
+        <form class="forecast-header__actions" [formGroup]="form" (ngSubmit)="consultar()">
+          <div class="control-field">
+            <label class="form-label">Fecha Inicio</label>
+            <input type="date" class="form-control" formControlName="fechaInicio" />
+          </div>
+          <div class="control-field">
+            <label class="form-label">Fecha Fin</label>
+            <input type="date" class="form-control" formControlName="fechaFin" />
+          </div>
+          <div class="control-buttons">
+            <button type="submit" class="btn btn-primary">
+              <i class="feather icon-search me-1"></i>
+              Consultar
+            </button>
+            <button type="button" class="btn btn-outline-secondary" (click)="setHoy()">Hoy</button>
+            <button type="button" class="btn btn-light btn-reload" (click)="consultar()" aria-label="Recargar forecast">
+              <i class="feather icon-refresh-cw"></i>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="forecast-header__bottom">
+        <div class="view-switch" role="group" aria-label="Vista de rango">
+          <button
+            *ngFor="let vista of vistaOptions"
+            type="button"
+            class="view-switch__btn"
+            [class.is-active]="isVistaActiva(vista.key)"
+            (click)="seleccionarVista(vista.key)"
+          >
+            {{ vista.label }}
+          </button>
+        </div>
+
+        <div class="filter-grid" [formGroup]="form">
+          <div class="control-field">
+            <label class="form-label">Actividad</label>
+            <input type="text" class="form-control" formControlName="busquedaActividad" placeholder="Buscar por nombre o código..." />
+          </div>
+
+          <div class="control-field">
+            <label class="form-label">Agencia</label>
+            <select class="form-select" formControlName="agencia">
+              <option value="">Todas</option>
+              <option *ngFor="let agencia of agenciasDisponibles" [value]="agencia">{{ agencia }}</option>
+            </select>
+          </div>
+
+          <div class="control-field">
+            <label class="form-label">Bloque Horario</label>
+            <select class="form-select" formControlName="bloqueHora">
+              <option value="">Todos</option>
+              <option *ngFor="let bloqueHora of bloquesHoraDisponibles" [value]="bloqueHora">{{ bloqueHora }}</option>
+            </select>
+          </div>
+
+          <div class="toggle-field">
+            <label class="form-label">Filtros Operativos</label>
+            <div class="toggle-list">
+              <label class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" formControlName="soloNoProcesados" />
+                <span class="form-check-label">Solo no procesados</span>
+              </label>
+              <label class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" formControlName="soloAltaSaturacion" />
+                <span class="form-check-label">Solo alta saturación</span>
+              </label>
+              <label class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" formControlName="vistaCompacta" />
+                <span class="form-check-label">Vista compacta</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-card__icon bg-sky">
+        <i class="feather icon-clipboard"></i>
+      </div>
+      <div class="kpi-card__content">
+        <span>Total de servicios</span>
+        <strong>{{ kpis.totalServicios }}</strong>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-card__icon bg-indigo">
+        <i class="feather icon-users"></i>
+      </div>
+      <div class="kpi-card__content">
+        <span>Total de pasajeros</span>
+        <strong>{{ kpis.totalPasajeros }}</strong>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-card__icon bg-emerald">
+        <i class="feather icon-dollar-sign"></i>
+      </div>
+      <div class="kpi-card__content">
+        <span>Total monetario</span>
+        <strong>{{ kpis.totalMonetario | number: '1.2-2' }}</strong>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-card__icon bg-amber">
+        <i class="feather icon-activity"></i>
+      </div>
+      <div class="kpi-card__content">
+        <span>Bloque más cargado</span>
+        <strong class="kpi-card__text">{{ kpis.bloqueMasCargado }}</strong>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-card__icon bg-rose">
+        <i class="feather icon-award"></i>
+      </div>
+      <div class="kpi-card__content">
+        <span>Actividad más demandada</span>
+        <strong class="kpi-card__text">{{ kpis.actividadMasDemandada }}</strong>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-card__icon bg-slate">
+        <i class="feather icon-layers"></i>
+      </div>
+      <div class="kpi-card__content">
+        <span>Actividades activas</span>
+        <strong>{{ kpis.actividadesActivas }}</strong>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="card status-card">
+    <div class="card-body d-flex align-items-center gap-2">
+      <span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>
+      <span>Cargando forecast operativo...</span>
+    </div>
+  </div>
+
+  <div *ngIf="error && !loading" class="alert alert-danger">{{ error }}</div>
+
+  <div *ngIf="!loading && !error && hasLoaded && !hasRows" class="card status-card">
+    <div class="card-body text-center text-muted">
+      No hay datos para los filtros seleccionados en el rango consultado.
+    </div>
+  </div>
+
+  <div *ngIf="!loading && !error && hasRows" class="card matrix-card">
+    <div class="card-body">
+      <div class="matrix-toolbar">
+        <div class="matrix-toolbar__title">
+          <h5>Matriz de Forecast</h5>
+          <p>Filas por actividad, columnas por fecha y microbloques por hora.</p>
+        </div>
+        <div class="matrix-toolbar__meta" *ngIf="lastUpdatedAt">
+          Actualizado: {{ lastUpdatedAt | date: 'dd/MM/yyyy HH:mm' }}
+        </div>
+      </div>
+
+      <div class="matrix-wrapper">
+        <div class="matrix-grid" [style.min-width.px]="matrixMinWidthPx">
+          <div class="matrix-header-row" [style.grid-template-columns]="gridTemplateColumns">
+            <div class="matrix-head matrix-head--sticky">Actividad / Fecha</div>
+            <div class="matrix-head matrix-head--date" *ngFor="let fecha of fechasVisibles; trackBy: trackByFecha">
+              {{ formatFechaHeader(fecha) }}
+            </div>
+          </div>
+
+          <div class="matrix-row" [style.grid-template-columns]="gridTemplateColumns" *ngFor="let fila of filasVisibles; trackBy: trackByFila">
+            <div class="matrix-activity">
+              <div class="matrix-activity__name">{{ fila.nomServicio }}</div>
+              <div class="matrix-activity__code">{{ fila.codServicio }}</div>
+              <div class="matrix-activity__totals">
+                <span>{{ fila.totalPax }} pax</span>
+                <span>{{ fila.totalServicios }} srv</span>
+              </div>
+            </div>
+
+            <div class="matrix-cell" *ngFor="let celda of fila.fechas; trackBy: trackByCelda">
+              <ng-container *ngIf="celda.bloques.length; else emptyState">
+                <button
+                  type="button"
+                  class="hour-block"
+                  *ngFor="let bloque of celda.bloques; trackBy: trackByBloque"
+                  [ngClass]="[getSemaforoClass(bloque.semaforoSaturacion), getEstadoProcesoClass(bloque.estadoProceso), vistaCompacta ? 'is-compact' : '']"
+                  [ngbPopover]="popoverDetalle"
+                  [popoverContext]="{ bloque: bloque, actividad: fila, fecha: celda.fecha }"
+                  popoverClass="forecast-popover"
+                  popoverTitle="Detalle Operativo"
+                  triggers="hover focus"
+                  container="body"
+                >
+                  <div class="hour-block__top">
+                    <span class="hour-block__time">{{ bloque.hora }}</span>
+                    <span class="hour-block__flags">
+                      <i class="feather icon-check-circle" *ngIf="bloque.estadoProceso === 'procesado'" title="Procesado"></i>
+                      <i class="feather icon-alert-triangle" *ngIf="bloque.noProcesados > 0" title="Pendiente de procesar"></i>
+                      <i class="feather icon-truck" *ngIf="bloque.tieneChofer" title="Chofer asignado"></i>
+                    </span>
+                  </div>
+
+                  <div class="hour-block__meta">{{ bloque.totalPax }} pax · {{ bloque.cantidadServicios }} srv</div>
+
+                  <div class="hour-block__occupancy">
+                    <div class="hour-block__bar">
+                      <span [style.width.%]="getOcupacionWidth(bloque.porcentajeOcupacion)"></span>
+                    </div>
+                    <strong>{{ bloque.porcentajeOcupacion | number: '1.0-0' }}%</strong>
+                  </div>
+                </button>
+              </ng-container>
+
+              <ng-template #emptyState>
+                <div class="matrix-cell__empty">Sin salidas</div>
+              </ng-template>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card legend-card">
+    <div class="card-body">
+      <h6>Leyenda y Semáforo</h6>
+      <div class="legend-grid">
+        <div class="legend-item"><span class="legend-item__dot dot-baja"></span>Baja carga (0-39%)</div>
+        <div class="legend-item"><span class="legend-item__dot dot-media"></span>Media carga (40-69%)</div>
+        <div class="legend-item"><span class="legend-item__dot dot-alta"></span>Alta carga (70-89%)</div>
+        <div class="legend-item"><span class="legend-item__dot dot-critica"></span>Crítica (90%+)</div>
+        <div class="legend-item"><span class="legend-item__badge badge-pendiente"></span>Pendiente de procesar</div>
+        <div class="legend-item"><span class="legend-item__badge badge-procesado"></span>Procesado</div>
+        <div class="legend-item"><span class="legend-item__badge badge-sin-asignacion"></span>Sin asignación</div>
+        <div class="legend-item">
+          <span class="legend-item__badge badge-capacidad"></span>Capacidad simulada base {{ occupancyLegendValue }} pax
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <ng-template #popoverDetalle let-bloque="bloque" let-actividad="actividad" let-fecha="fecha">
+    <div class="popover-detail">
+      <div class="popover-detail__title">{{ actividad.nomServicio }}</div>
+      <div class="popover-detail__subtitle">{{ getFormattedDatetime(fecha, bloque.hora) }}</div>
+
+      <div class="popover-detail__grid">
+        <div>
+          <span>Pax</span>
+          <strong>{{ bloque.totalPax }}</strong>
+        </div>
+        <div>
+          <span>Servicios</span>
+          <strong>{{ bloque.cantidadServicios }}</strong>
+        </div>
+        <div>
+          <span>Ocupación</span>
+          <strong>{{ bloque.porcentajeOcupacion | number: '1.0-0' }}%</strong>
+        </div>
+        <div>
+          <span>Disponibles</span>
+          <strong>{{ bloque.capacidadVendibleFutura }}</strong>
+        </div>
+      </div>
+
+      <div class="popover-detail__line"><span>Clientes</span><strong>{{ formatLista(bloque.clientes) }}</strong></div>
+      <div class="popover-detail__line"><span>Agencias</span><strong>{{ formatLista(bloque.agencias) }}</strong></div>
+      <div class="popover-detail__line"><span>Pickup</span><strong>{{ formatLista(bloque.pickups) }}</strong></div>
+      <div class="popover-detail__line"><span>Chofer</span><strong>{{ formatLista(bloque.choferes, 2) }}</strong></div>
+      <div class="popover-detail__line"><span>Estado</span><strong>{{ formatLista(bloque.estados, 2) }}</strong></div>
+      <div class="popover-detail__line">
+        <span>Procesado</span>
+        <strong>{{ bloque.procesados }}/{{ bloque.cantidadServicios }}</strong>
+      </div>
+      <div class="popover-detail__line" *ngIf="bloque.observacionesOperacion.length">
+        <span>Observación</span>
+        <strong>{{ formatLista(bloque.observacionesOperacion, 1) }}</strong>
+      </div>
+    </div>
+  </ng-template>
+</div>

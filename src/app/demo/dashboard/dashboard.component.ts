@@ -23,52 +23,53 @@ import { WeatherCardComponent } from './components/weather-card/weather-card.com
 export class DashboardComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly authService = inject(AuthService);
-  reservasDia = 0;
-  reservasPendientes = 0;
-  ordenesActivas = 0;
-  ingresosEstimados = 0;
-  weather: Weather | null = null;
-  loading = false;
-  weatherError: string | null = null;
   readonly defaultCity = 'San Jose';
   readonly userName = this.resolveUserName();
 
+  reservasDia           = 0;
+  reservasPendientes    = 0;
+  ordenesActivas        = 0;
+  ingresosEstimados     = 0;
+  weather               : Weather | null = null;
+  loading               = false;
+  weatherError          : string | null = null;
+
   sales = [
     {
-      title: 'Reservas del Dia',
-      amount: '0',
-      percentage: '+0%',
-      progress: 0,
-      progress_bg: 'bg-c-blue',
-      icon: 'icon-calendar',
-      design: 'col-xl-3 col-md-6'
+      title         : 'Reservas del Dia',
+      amount        : '0',
+      percentage    : '+0%',
+      progress      : 0,
+      progress_bg   : 'bg-c-blue',
+      icon          : 'icon-calendar',
+      design        : 'col-xl-3 col-md-6'
     },
     {
-      title: 'Reservas Pendientes',
-      amount: '0',
-      percentage: '0%',
-      progress: 0,
-      progress_bg: 'bg-c-green',
-      icon: 'icon-clock',
-      design: 'col-xl-3 col-md-6'
+      title         : 'Reservas Pendientes',
+      amount        : '0',
+      percentage    : '0%',
+      progress      : 0,
+      progress_bg   : 'bg-c-green',
+      icon          : 'icon-clock',
+      design        : 'col-xl-3 col-md-6'
     },
     {
-      title: 'Ordenes Activas',
-      amount: '0',
-      percentage: '0%',
-      progress: 0,
-      progress_bg: 'bg-c-yellow',
-      icon: 'icon-clipboard',
-      design: 'col-xl-3 col-md-6'
+      title         : 'Ordenes Activas',
+      amount        : '0',
+      percentage    : '0%',
+      progress      : 0,
+      progress_bg   : 'bg-c-yellow',
+      icon          : 'icon-clipboard',
+      design        : 'col-xl-3 col-md-6'
     },
     {
-      title: 'Ingresos Estimados',
-      amount: 'CRC 0',
-      percentage: '+0%',
-      progress: 0,
-      progress_bg: 'bg-c-red',
-      icon: 'icon-dollar-sign',
-      design: 'col-xl-3 col-md-6'
+      title         : 'Ingresos Estimados',
+      amount        : 'CRC 0',
+      percentage    : '+0%',
+      progress      : 0,
+      progress_bg   : 'bg-c-red',
+      icon          : 'icon-dollar-sign',
+      design        : 'col-xl-3 col-md-6'
     }
   ];
 

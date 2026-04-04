@@ -82,13 +82,13 @@ export class DashboardService {
     const firstWeather = this.asRecord(weatherArray[0]);
 
     return {
-      ciudad: this.toText(data['ciudad'] ?? data['Ciudad'] ?? ciudad),
-      temperatura: this.toNumber(data['temperatura'] ?? data['Temperatura'] ?? main['temp']),
-      descripcion: this.toText(data['descripcion'] ?? data['Descripcion'] ?? firstWeather['description'] ?? 'Sin descripción'),
-      sensacion: this.toNumber(data['sensacion'] ?? data['Sensacion'] ?? main['feels_like']),
-      humedad: this.toNumber(data['humedad'] ?? data['Humedad'] ?? main['humidity']),
-      presion: this.toNumber(data['presion'] ?? data['Presion'] ?? main['pressure']),
-      viento: this.toNumber(data['viento'] ?? data['Viento'] ?? wind['speed'])
+      ciudad          : this.toText(data['ciudad'] ?? data['Ciudad'] ?? ciudad),
+      temperatura     : this.toNumber(data['temperatura'] ?? data['Temperatura'] ?? main['temp']),
+      descripcion     : this.toText(data['descripcion'] ?? data['Descripcion'] ?? firstWeather['description'] ?? 'Sin descripción'),
+      sensacion       : this.toNumber(data['sensacion'] ?? data['Sensacion'] ?? main['feels_like']),
+      humedad         : this.toNumber(data['humedad'] ?? data['Humedad'] ?? main['humidity']),
+      presion         : this.toNumber(data['presion'] ?? data['Presion'] ?? main['pressure']),
+      viento          : this.toNumber(data['viento'] ?? data['Viento'] ?? wind['speed'])
     };
   }
 
