@@ -173,6 +173,7 @@ export class ReservasComponent implements OnInit, OnDestroy {
   }
 
   verReserva(reserva: Reserva): void {
+    if (this.isEstadoChk(reserva?.PRV01_Estado)) return;
     this.router.navigate(['/operaciones/reservas', reserva.PRV01_CodReserva, 'editar']);
   }
 
@@ -311,6 +312,10 @@ export class ReservasComponent implements OnInit, OnDestroy {
   getCantidadServicios(reserva: Reserva): number {
     // Si el backend no retorna el detalle, este mÃ©todo puede requerir ajuste
     return reserva['detalles']?.length || 0;
+  }
+
+  isEstadoChk(estado: string): boolean {
+    return (estado ?? '').toString().trim().toUpperCase() === 'CHK';
   }
 
   private setDefaultFechas(): void {

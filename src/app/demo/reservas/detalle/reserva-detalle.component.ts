@@ -105,6 +105,10 @@ export class ReservaDetalleComponent implements OnInit, OnDestroy {
     return Number(raw) === 1 || this.facturadoHint;
   }
 
+  get isEstadoChk(): boolean {
+    return (this.reserva?.PRV01_Estado ?? '').toString().trim().toUpperCase() === 'CHK';
+  }
+
   get cantidadServicios(): number {
     return this.detalles.length;
   }
@@ -185,7 +189,7 @@ export class ReservaDetalleComponent implements OnInit, OnDestroy {
   }
 
   editarReserva(): void {
-    if (!this.codReserva || this.isFacturada) return;
+    if (!this.codReserva || this.isFacturada || this.isEstadoChk) return;
     this.router.navigate(['/operaciones/reservas', this.codReserva, 'editar']);
   }
 
@@ -205,6 +209,7 @@ export class ReservaDetalleComponent implements OnInit, OnDestroy {
 
   async confirmarReserva(): Promise<void> {
     if (this.busyConfirm || !this.codReserva) return;
+    if (this.isEstadoChk) return;
     if (normalizeReservaEstado(this.reserva?.PRV01_Estado ?? '') !== 'PEN') return;
 
     const result = await Swal.fire({
@@ -240,7 +245,7 @@ export class ReservaDetalleComponent implements OnInit, OnDestroy {
   }
 
   async cancelarReserva(): Promise<void> {
-    if (this.busyCancel || !this.codReserva || this.isFacturada) return;
+    if (this.busyCancel || !this.codReserva || this.isFacturada || this.isEstadoChk) return;
     if (normalizeReservaEstado(this.reserva?.PRV01_Estado ?? '') === 'CAN') return;
 
     const cliente = (this.reserva?.PRV01_NomCliente ?? '').toString().trim();

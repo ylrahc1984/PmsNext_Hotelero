@@ -60,7 +60,7 @@
               class="btn rsv-top-action-btn rsv-top-action-btn--primary"
               type="button"
               (click)="editarReserva()"
-              [disabled]="!codReserva || isFacturada"
+              [disabled]="!codReserva || isFacturada || isEstadoChk"
             >
               <span class="rsv-top-action-btn__icon" aria-hidden="true"><i class="feather icon-edit"></i></span>
               <span class="rsv-top-action-btn__content">
@@ -159,7 +159,7 @@
                     type="button"
                     class="btn btn-primary rsv-action-btn rsv-action-btn--primary"
                     (click)="confirmarReserva()"
-                    [disabled]="busyConfirm || estadoLabel !== 'PENDIENTE'"
+                    [disabled]="busyConfirm || estadoLabel !== 'PENDIENTE' || isEstadoChk"
                   >
                     <span class="rsv-action-btn__icon">
                       <span *ngIf="busyConfirm" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
@@ -172,7 +172,7 @@
                     type="button"
                     class="btn btn-outline-danger rsv-action-btn rsv-action-btn--outline"
                     (click)="cancelarReserva()"
-                    [disabled]="busyCancel || estadoLabel === 'ANULADA' || isFacturada"
+                    [disabled]="busyCancel || estadoLabel === 'ANULADA' || isFacturada || isEstadoChk"
                   >
                     <span class="rsv-action-btn__icon">
                       <span *ngIf="busyCancel" class="spinner-border spinner-border-sm" aria-hidden="true"></span>

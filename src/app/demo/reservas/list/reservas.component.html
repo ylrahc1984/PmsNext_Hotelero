@@ -109,7 +109,7 @@
                     <i class="feather icon-more-vertical"></i>
                   </button>
                   <div class="dropdown-menu dropdown-menu-end" ngbDropdownMenu>
-                    <button class="dropdown-item" type="button" (click)="verReserva(reserva)">
+                    <button class="dropdown-item" type="button" (click)="verReserva(reserva)" [disabled]="isEstadoChk(reserva.PRV01_Estado)">
                       <i class="feather icon-edit me-2"></i> Ver / Editar
                     </button>
                     <button class="dropdown-item" type="button" (click)="verDetalles(reserva)">

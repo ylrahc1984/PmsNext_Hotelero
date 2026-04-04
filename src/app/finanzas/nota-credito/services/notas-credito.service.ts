@@ -9,10 +9,12 @@ import { NotaCreditoRequest, NotaCreditoResponse } from 'src/app/finanzas/nota-c
 @Injectable({ providedIn: 'root' })
 export class NotasCreditoService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = `${environment.baseUrl}/notas-credito`;
+  private readonly apiBaseUrl = this.resolveApiBaseUrl();
+  private readonly baseUrl = `${this.apiBaseUrl}/notas-credito`;
   private readonly consultaUrl = `${this.baseUrl}/consultar/95`;
 
   consultarNotasCredito(
+    tipNC: string,
     fecha: string,
     fechaFin: string,
     page: number,
@@ -20,6 +22,7 @@ export class NotasCreditoService {
     filtro?: string
   ): Observable<NotaCreditoResponse> {
     let params = new HttpParams()
+      .set('TipNC', (tipNC ?? '').toString().trim().toUpperCase())
       .set('Fecha', fecha)
       .set('FechaFin', fechaFin)
       .set('Page', String(page))
@@ -55,5 +58,10 @@ export class NotasCreditoService {
         return throwError(() => new Error(message));
       })
     );
+  }
+
+  private resolveApiBaseUrl(): string {
+    const rawBaseUrl = (environment.apiUrl || environment.baseUrl || '').toString().trim();
+    return rawBaseUrl.replace(/\/+$/, '');
   }
 }

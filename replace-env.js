@@ -19,7 +19,7 @@ if (!fs.existsSync(templatePath)) {
 const template = fs.readFileSync(templatePath, 'utf8');
 
 // Reemplazar variable
-const result = template.replace('${API_URL}', process.env.API_URL);
+const result = template.split('${API_URL}').join(process.env.API_URL);
 
 // Escribir archivo final
 fs.writeFileSync(outputPath, result, 'utf8');

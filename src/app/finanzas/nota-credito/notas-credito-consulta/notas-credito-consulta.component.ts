@@ -30,6 +30,7 @@ interface NotasCreditoViewModel {
 }
 
 const DEFAULT_PAGE_SIZE = 20;
+const DEFAULT_TIP_NC = 'NCC';
 
 @Component({
   selector: 'app-notas-credito-consulta',
@@ -44,6 +45,7 @@ export class NotasCreditoConsultaComponent implements OnInit {
   private readonly notasService = inject(NotasCreditoService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly apiBaseUrl = this.resolveApiBaseUrl();
 
   readonly pageSizeOptions = [10, 20, 50];
   private readonly defaultDateRange = this.getDefaultDateRange();
@@ -126,7 +128,7 @@ export class NotasCreditoConsultaComponent implements OnInit {
       return;
     }
 
-    const url = `${environment.baseUrl}/notas-credito/${encodeURIComponent(tipo)}/${encodeURIComponent(
+    const url = `${this.apiBaseUrl}/notas-credito/${encodeURIComponent(tipo)}/${encodeURIComponent(
       serie
     )}/${encodeURIComponent(numero)}/pdf`;
     const opened = window.open(url, '_blank', 'noopener');
@@ -149,6 +151,7 @@ export class NotasCreditoConsultaComponent implements OnInit {
 
     this.activeRequest = this.notasService
       .consultarNotasCredito(
+        DEFAULT_TIP_NC,
         this.filtrosBase.fecha,
         this.filtrosBase.fechaFin,
         pageNumber,
@@ -187,7 +190,8 @@ export class NotasCreditoConsultaComponent implements OnInit {
   private updateVmSuccess(response: NotaCreditoResponse, pageNumber: number, pageSize: number): void {
     const totalRegistros = response?.paginacion?.totalRegistros ?? 0;
     const notas = response?.datos ?? [];
-    const size = response?.paginacion?.pageSize ?? pageSize;
+    const responsePageSize = Number(response?.paginacion?.pageSize ?? 0);
+    const size = responsePageSize > 0 ? responsePageSize : pageSize;
     const totalPages = Math.max(1, Math.ceil(totalRegistros / size));
     const pageStart = totalRegistros === 0 ? 0 : (pageNumber - 1) * size + 1;
     const pageEnd = totalRegistros === 0 ? 0 : Math.min(pageStart + size - 1, totalRegistros);
@@ -269,5 +273,10 @@ export class NotasCreditoConsultaComponent implements OnInit {
       return error;
     }
     return 'Ocurrió un error inesperado al consultar notas de crédito.';
+  }
+
+  private resolveApiBaseUrl(): string {
+    const rawBaseUrl = (environment.apiUrl || environment.baseUrl || '').toString().trim();
+    return rawBaseUrl.replace(/\/+$/, '');
   }
 }
