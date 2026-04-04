@@ -4,6 +4,16 @@
       <div class="app-card-header">
         <h5>Nueva Factura</h5>
         <div class="card-header-right d-flex flex-wrap align-items-center gap-2">
+          <button
+            class="btn btn-sm btn-outline-secondary"
+            type="button"
+            (click)="irOperacionDiaria()"
+            [disabled]="isSubmitting"
+            title="Volver a Operación Diaria"
+          >
+            <i class="feather icon-arrow-left me-1"></i>
+            Volver a Operación Diaria
+          </button>
           <button class="btn btn-sm btn-outline-secondary" type="button" (click)="irConsulta()" [disabled]="isSubmitting">
             <i class="feather icon-list me-1"></i>
             Ir a consulta
@@ -150,8 +160,8 @@
                 <div class="col-md-4 position-relative">
                   <label class="form-label nf-label">Código cliente</label>
                   <div class="input-group input-group-sm nf-client-lookup">
-                    <input class="form-control" formControlName="codCliente" placeholder="Código cliente" [readonly]="locked || modoReserva">
-                    <button class="btn btn-outline-primary" type="button" (click)="abrirModalClientes()" [disabled]="locked || modoReserva" title="Buscar cliente">
+                    <input class="form-control" formControlName="codCliente" placeholder="Código cliente" [readonly]="locked">
+                    <button class="btn btn-outline-primary" type="button" (click)="abrirModalClientes()" [disabled]="locked" title="Buscar cliente">
                       <i class="feather icon-search"></i>
                     </button>
                   </div>
@@ -174,14 +184,14 @@
                       <strong>{{ cliente.codigo }}</strong> — {{ cliente.nombre }}
                     </button>
                   </div>
-                  <button type="button" class="btn btn-link p-0 small" *ngIf="selectedCliente && !modoReserva" (click)="limpiarSeleccionCliente()">
+                  <button type="button" class="btn btn-link p-0 small" *ngIf="selectedCliente" (click)="limpiarSeleccionCliente()">
                     Limpiar selección
                   </button>
                 </div>
                 <div class="col-md-8">
                   <label class="form-label nf-label">Nombre</label>
                   <div class="nf-input-wrap">
-                    <input class="form-control form-control-sm" formControlName="nomCliente" placeholder="Nombre del cliente" [readonly]="locked || modoReserva">
+                    <input class="form-control form-control-sm" formControlName="nomCliente" placeholder="Nombre del cliente" [readonly]="locked">
                   </div>
                 </div>
               </div>
@@ -189,19 +199,19 @@
                 <div class="col-md-4">
                   <label class="form-label nf-label">RUC</label>
                   <div class="nf-input-wrap">
-                    <input class="form-control form-control-sm" formControlName="rucCliente" placeholder="RUC" [readonly]="locked || modoReserva">
+                    <input class="form-control form-control-sm" formControlName="rucCliente" placeholder="RUC" [readonly]="locked">
                   </div>
                 </div>
                 <div class="col-md-4">
                   <label class="form-label nf-label">Correo electrónico</label>
                   <div class="nf-input-wrap">
-                    <input class="form-control form-control-sm" formControlName="correoCliente" placeholder="correo@empresa.com" [readonly]="locked || modoReserva">
+                    <input class="form-control form-control-sm" formControlName="correoCliente" placeholder="correo@empresa.com" [readonly]="locked">
                   </div>
                 </div>
                 <div class="col-md-4">
                   <label class="form-label nf-label">Código actividad comercial</label>
                   <div class="nf-input-wrap">
-                    <input class="form-control form-control-sm" formControlName="codigoActividad" placeholder="Código actividad" [readonly]="locked || modoReserva">
+                    <input class="form-control form-control-sm" formControlName="codigoActividad" placeholder="Código actividad" [readonly]="locked">
                   </div>
                 </div>
               </div>

@@ -94,7 +94,7 @@ export class NuevaFacturaComponent implements OnInit {
   readonly empresa = this.empresaContext.empresa;
 
   readonly form: FormGroup<NuevaFacturaForm> = this.fb.group({
-    tipDocu               : this.fb.nonNullable.control('FAC', { validators: [Validators.required] }),
+    tipDocu               : this.fb.nonNullable.control('01', { validators: [Validators.required] }),
     codCliente            : this.fb.nonNullable.control('', { validators: [Validators.required] }),
     rucCliente            : this.fb.nonNullable.control(''),
     nomCliente            : this.fb.nonNullable.control('', { validators: [Validators.required] }),
@@ -238,6 +238,11 @@ export class NuevaFacturaComponent implements OnInit {
           this.clearClienteSearchResults();
           return;
         }
+
+        if (this.selectedCliente && this.selectedCliente.codigo.trim() !== query) {
+          this.selectedCliente = null;
+        }
+
         this.searchClientes(query);
       });
 
@@ -1053,7 +1058,18 @@ export class NuevaFacturaComponent implements OnInit {
       )
       .subscribe({
         next: (response) => {
-          this.clienteSearchResults = response.data;
+          const resultados = response.data ?? [];
+          const queryNormalizado = query.trim().toLowerCase();
+          const coincidenciasExactas = resultados.filter(
+            (cliente) => cliente.codigo.trim().toLowerCase() === queryNormalizado
+          );
+
+          if (coincidenciasExactas.length === 1) {
+            this.onClienteSelected(coincidenciasExactas[0]);
+            return;
+          }
+
+          this.clienteSearchResults = resultados;
         },
         error: (error: unknown) => {
           this.clienteSearchError =
@@ -1080,6 +1096,7 @@ export class NuevaFacturaComponent implements OnInit {
         const neto = this.toNumber(item.neto);
         const impuestoMonto = this.toNumber(item.impuesto);
         const porImp = neto > 0 ? (impuestoMonto / neto) * 100 : 0;
+        const precioUnitario = saldo > 0 ? Number((subTotal / saldo).toFixed(6)) : 0;
 
         const group = this.createDetalleGroup(index + 1);
         group.patchValue(
@@ -1090,8 +1107,8 @@ export class NuevaFacturaComponent implements OnInit {
             area            : (item.codGrupo || '').toString(),
             uMedida         : (item.uMedida || '').toString(),
             cantidad        : saldo,
-            pUndLst         : this.round(subTotal),
-            uniSinImp       : this.round(subTotal),
+            pUndLst         : precioUnitario,
+            uniSinImp       : precioUnitario,
             porDescu        : this.toNumber(item.porDescuento),
             porImp          : this.round(porImp),
             comanda         : (item.id ?? '').toString(),
@@ -1240,13 +1257,16 @@ export class NuevaFacturaComponent implements OnInit {
       this.ensureTipoDocumentoSeleccionado();
       return;
     }
+
     const preferCode = envioCorreoNormalizado ? '01' : '04';
-    const preferido = this.tiposDocumentoBase.filter((item) => this.resolveTipoDocumentoFe(item) === preferCode);
-    if (preferido.length) {
-      this.tiposDocumento = [...preferido];
+    const preferidoPorFe = this.tiposDocumentoBase.filter((item) => this.resolveTipoDocumentoFe(item) === preferCode);
+
+    if (preferidoPorFe.length) {
+      this.tiposDocumento = [...preferidoPorFe];
       this.ensureTipoDocumentoSeleccionado();
       return;
     }
+
     this.tiposDocumento = [...this.tiposDocumentoBase];
     this.ensureTipoDocumentoSeleccionado();
   }
@@ -1454,9 +1474,15 @@ export class NuevaFacturaComponent implements OnInit {
 
   private normalizeCodigoActividad(value: string | null | undefined): string {
     const normalized = (value ?? '').toString().trim();
-    if (/^\d{6}$/.test(normalized)) {
-      return normalized;
+    if (!normalized) {
+      return '000000';
     }
+
+    const digitsOnly = normalized.replace(/\D/g, '');
+    if (digitsOnly.length >= 1 && digitsOnly.length <= 6) {
+      return digitsOnly.padStart(6, '0');
+    }
+
     return '000000';
   }
 
