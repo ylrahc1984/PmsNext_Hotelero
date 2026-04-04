@@ -6,40 +6,41 @@ import { catchError, map } from 'rxjs/operators';
 import { environment } from 'src/environments/environment';
 
 export interface ReservaPendiente {
-  codReserva: string;
-  codAgencia: string;
-  fecha: string;
-  agencia: string;
-  cliente: string;
-  paxPendiente: number;
-  serviciosPendientes: number;
+  codReserva            : string;
+  codAgencia            : string;
+  fecha                 : string;
+  agencia               : string;
+  cliente               : string;
+  paxPendiente          : number;
+  serviciosPendientes   : number;
 }
 
 export interface ReservasPendientesPaginacion {
-  totalRegistros: number;
-  paginaActual: number;
-  pageSize: number;
-  totalPaginas: number;
+  totalRegistros  : number;
+  paginaActual    : number;
+  pageSize        : number;
+  totalPaginas    : number;
 }
 
 export interface ReservasPendientesResponse {
-  datos: ReservaPendiente[];
-  paginacion: ReservasPendientesPaginacion;
+  datos           : ReservaPendiente[];
+  paginacion      : ReservasPendientesPaginacion;
 }
 
 export interface ReservaPendienteDetalle {
-  id: number;
-  codServicio: string;
-  nomServicio: string;
-  codGrupo: string;
-  uMedida: string;
-  codLstPrecio: string;
-  planTarifario: string;
-  saldoPendiente: number;
-  neto: number;
-  totalPax: number;
-  porDescuento: number;
-  impuesto: number;
+  id              : number;
+  codServicio     : string;
+  nomServicio     : string;
+  codGrupo        : string;
+  uMedida         : string;
+  codLstPrecio    : string;
+  planTarifario   : string;
+  saldoPendiente  : number;
+  subTotal        : number;
+  neto            : number;
+  totalPax        : number;
+  porDescuento    : number;
+  impuesto        : number;
 }
 
 type ApiRecord = Record<string, unknown>;
@@ -213,6 +214,7 @@ export class ReservasFacturacionService {
         'saldo',
         'pendiente'
       ),
+      subTotal: this.readNumber(item, normalized, 'prV02_SubTotal', 'PRV02_SubTotal', 'subTotal', 'montoSubTotal'),
       neto: this.readNumber(item, normalized, 'prV02_Neto', 'PRV02_Neto', 'neto', 'montoNeto'),
       totalPax: this.readNumber(item, normalized, 'prV02_TotalPax', 'PRV02_TotalPax', 'totalPax', 'pax'),
       porDescuento: this.readNumber(item, normalized, 'prV02_PorDescuento', 'PRV02_PorDescuento', 'porDescuento', 'descuento'),

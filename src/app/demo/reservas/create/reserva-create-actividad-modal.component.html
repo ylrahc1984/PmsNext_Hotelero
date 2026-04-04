@@ -132,9 +132,6 @@
  
               </div>
 
-              <div class="alert alert-info py-2 mb-0" *ngIf="tarifasLoading">
-                Consultando servicios y tarifas...
-              </div>
               <div class="alert alert-warning py-2 mb-0" *ngIf="tarifaError">{{ tarifaError }}</div>
             </div>
           </section>
@@ -285,13 +282,41 @@
 
                       <div class="combo-container" *ngIf="serviciosSeleccionados.length >= 2">
                         <label class="combo-check">
-                          <input type="checkbox" [(ngModel)]="comboActivo" [ngModelOptions]="{ standalone: true }" (change)="recalcularTotales()" />
-                          Aplicar descuento Combo (5%)
+                          <input type="checkbox" [(ngModel)]="comboActivo" [ngModelOptions]="{ standalone: true }" (change)="onComboActivoChange()" />
+                          Aplicar descuento
                         </label>
+                        <div class="d-flex align-items-center gap-2 mt-2" *ngIf="comboActivo">
+                          <div class="d-flex align-items-center gap-1 flex-fill">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="0.01"
+                              class="form-control form-control-sm text-end"
+                              [ngModel]="porDescuentoInput"
+                              [ngModelOptions]="{ standalone: true }"
+                              (ngModelChange)="onPorDescuentoInputChange($event)"
+                            >
+                            <span class="text-muted small fw-semibold">%</span>
+                          </div>
+                          <span class="text-muted small">ó</span>
+                          <div class="d-flex align-items-center gap-1 flex-fill">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              class="form-control form-control-sm text-end"
+                              [ngModel]="descuentoMontoInput"
+                              [ngModelOptions]="{ standalone: true }"
+                              (ngModelChange)="onDescuentoMontoInputChange($event)"
+                            >
+                            <span class="text-muted small fw-semibold" *ngIf="selectedListaPrecio?.simbolo">{{ selectedListaPrecio?.simbolo }}</span>
+                          </div>
+                        </div>
                       </div>
 
                       <div class="summary-panel__row summary-panel__row--discount" *ngIf="descuento > 0">
-                        <div class="summary-panel__row-label">Descuento {{ porDescuento | number:'1.0-0' }}%</div>
+                        <div class="summary-panel__row-label">Descuento {{ porDescuento | number:'1.2-2' }}%</div>
                         <div class="summary-panel__row-value text-danger">
                           -<span *ngIf="selectedListaPrecio?.simbolo">{{ selectedListaPrecio?.simbolo }}</span>{{ descuento | number:'1.2-2' }}
                         </div>

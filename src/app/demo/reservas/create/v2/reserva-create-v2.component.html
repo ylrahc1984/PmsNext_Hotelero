@@ -213,7 +213,7 @@
             <small class="text-muted d-block mb-2">Los servicios viven en memoria hasta guardar la reserva completa.</small>
 
             <div class="table-responsive">
-              <table class="table table-hover align-middle mb-0">
+              <table class="table table-hover align-middle mb-0 rsv-v2-table-compact">
                 <thead class="table-light">
                   <tr>
                     <th>Línea</th>
@@ -223,7 +223,9 @@
                     <th>Hora</th>
                     <th>Ruta</th>
                     <th>Detalle Pax</th>
-                    <th>Total</th>
+                    <th class="text-end">Subtotal</th>
+                    <th class="text-end">Descuento</th>
+                    <th class="text-end">Neto</th>
                     <th class="text-end">Acciones</th>
                   </tr>
                 </thead>
@@ -246,7 +248,13 @@
                       <small class="text-muted">{{ detalle.destinoTexto }}</small>
                     </td>
                     <td>{{ getDetallePaxSummary(detalle) }}</td>
-                    <td>{{ detalle.montoServicio | number:'1.2-2' }}</td>
+                    <td class="text-end">{{ detalle.subTotal | number:'1.2-2' }}</td>
+                    <td class="text-end" [attr.title]="getDetalleDescuentoTooltip(detalle)">
+                      <span class="rsv-v2-descuento-cell" [class.rsv-v2-descuento-cell--active]="detalle.descuento > 0">
+                        {{ getDetalleDescuentoLabel(detalle) }}
+                      </span>
+                    </td>
+                    <td class="text-end fw-semibold">{{ detalle.neto | number:'1.2-2' }}</td>
                     <td>
                       <div class="d-flex justify-content-end gap-2">
                         <button class="btn btn-outline-info btn-sm rsv-icon-btn" type="button" (click)="editarLinea(detalle)" title="Editar servicio">
@@ -259,7 +267,7 @@
                     </td>
                   </tr>
                   <tr *ngIf="detalles.length === 0">
-                    <td colspan="9" class="text-center text-muted py-4">Aún no hay servicios agregados.</td>
+                    <td colspan="11" class="text-center text-muted py-4">Aún no hay servicios agregados.</td>
                   </tr>
                 </tbody>
               </table>
@@ -275,17 +283,28 @@
                 <small class="text-muted d-block">{{ form.directo === '1' ? 'Modo actual: Sin impuesto' : 'Modo actual: Con impuesto' }}</small>
               </div>
 
-              <div class="rsv-total-reserva text-end" aria-label="Total Reserva">
-                <div class="d-flex align-items-center justify-content-between gap-2">
-                  <div class="rsv-total-reserva__content">
-                    <div class="rsv-total-reserva__label">Total Reserva</div>
-                    <div class="rsv-total-reserva__value">
+              <div class="rsv-total-reserva text-end" aria-label="Resumen total reserva">
+                <div class="rsv-total-reserva__rows">
+                  <div class="rsv-total-reserva__row">
+                    <span class="rsv-total-reserva__row-label">Total Neto</span>
+                    <span class="rsv-total-reserva__row-value">
+                      {{ totalNetoReserva | number:'1.2-2' }}
+                      <span class="rsv-total-reserva__currency" *ngIf="form.moneda">{{ form.moneda }}</span>
+                    </span>
+                  </div>
+                  <div class="rsv-total-reserva__row">
+                    <span class="rsv-total-reserva__row-label">Impuestos</span>
+                    <span class="rsv-total-reserva__row-value">
+                      {{ totalImpuestosReserva | number:'1.2-2' }}
+                      <span class="rsv-total-reserva__currency" *ngIf="form.moneda">{{ form.moneda }}</span>
+                    </span>
+                  </div>
+                  <div class="rsv-total-reserva__row rsv-total-reserva__row--grand">
+                    <span class="rsv-total-reserva__row-label">Total Reserva</span>
+                    <span class="rsv-total-reserva__row-value">
                       {{ totalRack | number:'1.2-2' }}
                       <span class="rsv-total-reserva__currency" *ngIf="form.moneda">{{ form.moneda }}</span>
-                    </div>
-                  </div>
-                  <div class="rsv-total-reserva__icon" aria-hidden="true">
-                    <i class="feather icon-credit-card"></i>
+                    </span>
                   </div>
                 </div>
               </div>

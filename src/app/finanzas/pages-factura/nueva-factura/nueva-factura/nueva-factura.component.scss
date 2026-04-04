@@ -145,10 +145,13 @@
   background: #ffffff;
   border-radius: 6px;
   box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
+  .card-body {
+    padding: 6px 12px;
+  }
 }
 
 .nf-header {
-  padding: 12px;
+  padding: 0;
 }
 
 .nf-header__top {
@@ -276,6 +279,16 @@
 
   .form-control {
     min-width: 90px;
+  }
+
+  td.nf-col-compact {
+    width: 120px;
+    max-width: 120px;
+  }
+
+  td.nf-col-compact .form-control {
+    min-width: 0;
+    width: 100%;
   }
 
   .total-col {

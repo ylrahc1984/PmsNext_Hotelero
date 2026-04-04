@@ -147,39 +147,40 @@ export class NuevaFacturaComponent implements OnInit {
 
   @ViewChildren('cantidadInput') cantidadInputs?: QueryList<ElementRef<HTMLInputElement>>;
 
-  private previousListaPrecio = '';
-  private suppressListaPrecioChange = false;
+  private previousListaPrecio         = '';
+  private suppressListaPrecioChange   = false;
+  private singlePagoAutoMonto         : number | null = null;
+  private tiposDocumentoBase          : DocumentoDto[] = [];
 
-  monedas: MonedaUI[] = [];
-  monedasLoading = false;
+  monedas                 : MonedaUI[] = [];
+  monedasLoading          = false;
 
-  tiposDocumento: DocumentoDto[] = [];
-  private tiposDocumentoBase: DocumentoDto[] = [];
-  tiposDocumentoLoading = false;
+  tiposDocumento          : DocumentoDto[] = [];
+  tiposDocumentoLoading   = false;
 
-  puntosVenta: PuntoVentaUI[] = [];
-  puntosVentaLoading = false;
+  puntosVenta             : PuntoVentaUI[] = [];
+  puntosVentaLoading      = false;
 
-  formasPago: FormaPago[] = [];
-  formasPagoLoading = false;
+  formasPago              : FormaPago[] = [];
+  formasPagoLoading       = false;
 
-  planesTarifarios: PlanTarifaUI[] = [];
+  planesTarifarios        : PlanTarifaUI[] = [];
   planesTarifariosLoading = false;
 
-  listasPrecio: ListaPrecioUI[] = [];
-  listasPrecioLoading = false;
+  listasPrecio             : ListaPrecioUI[] = [];
+  listasPrecioLoading      = false;
 
-  isSubmitting = false;
-  showConfirmModal = false;
-  errorMessage: string | null = null;
-  successMessage: string | null = null;
-  facturaSerie = '';
-  facturaNumero = '';
-  locked = false;
+  isSubmitting             = false;
+  showConfirmModal         = false;
+  errorMessage             : string | null = null;
+  successMessage           : string | null = null;
+  facturaSerie             = '';
+  facturaNumero            = '';
+  locked                   = false;
 
-  tipoCambioActual: TipoCambio | null = null;
-  tipoCambioLoading = false;
-  tipoCambioError: string | null = null;
+  tipoCambioActual        : TipoCambio | null = null;
+  tipoCambioLoading       = false;
+  tipoCambioError         : string | null = null;
 
   constructor() {
     const currentUser = this.authService.getCurrentUser();
@@ -233,7 +234,7 @@ export class NuevaFacturaComponent implements OnInit {
       )
       .subscribe((value) => {
         const query = (value ?? '').toString().trim();
-        if (!query || this.locked || this.modoReserva) {
+        if (!query || this.locked) {
           this.clearClienteSearchResults();
           return;
         }
@@ -307,8 +308,11 @@ export class NuevaFacturaComponent implements OnInit {
 
   addPago(): void {
     if (this.locked) return;
-    this.pagosArray.push(this.createPagoGroup());
+    const pendingAmount = this.getPendingAmountForNewPago();
+    const group = this.createPagoGroup();
+    this.pagosArray.push(group);
     this.syncPagosDefaults();
+    this.populatePagoPendingAmount(group, pendingAmount);
     this.updateCalculos();
   }
 
@@ -337,6 +341,10 @@ export class NuevaFacturaComponent implements OnInit {
     this.submitFactura();
   }
 
+  irOperacionDiaria(): void {
+    this.router.navigate(['/operaciones/operacion-diaria']);
+  }
+
   irConsulta(): void {
     this.router.navigate(['/finanzas/consulta-documentos']);
   }
@@ -356,6 +364,10 @@ export class NuevaFacturaComponent implements OnInit {
     return index;
   }
 
+  getLineaSubTotal(index: number): number {
+    return this.lineasCalculo[index]?.subtotal ?? 0;
+  }
+
   getLineaImpuesto(index: number): number {
     return this.lineasCalculo[index]?.impuesto ?? 0;
   }
@@ -365,7 +377,7 @@ export class NuevaFacturaComponent implements OnInit {
   }
 
   public abrirModalClientes(): void {
-    if (this.locked || this.modoReserva) return;
+    if (this.locked) return;
     this.showClienteModal = true;
     this.cdr.markForCheck();
   }
@@ -422,7 +434,7 @@ export class NuevaFacturaComponent implements OnInit {
   }
 
   public onClienteSelected(cliente: ClienteUI): void {
-    if (this.locked || this.modoReserva) return;
+    if (this.locked) return;
     this.selectedCliente = cliente;
     this.form.patchValue(
       {
@@ -430,17 +442,17 @@ export class NuevaFacturaComponent implements OnInit {
         nomCliente        : cliente.nombre,
         rucCliente        : cliente.ruc,
         correoCliente     : cliente.email || '',
-        codigoActividad   : cliente.codigoActividad || '',
+        codigoActividad   : this.normalizeCodigoActividad(cliente.codigoActividad),
       },
       { emitEvent: false }
     );
+    this.syncTiposDocumentoCliente(cliente.enviarCorreo);
     this.cdr.markForCheck();
     this.clearClienteSearchResults();
-    this.cargarTiposDocumento();
   }
 
   public limpiarSeleccionCliente(): void {
-    if (this.locked || this.modoReserva) return;
+    if (this.locked) return;
     this.selectedCliente = null;
     this.form.patchValue(
       {
@@ -448,11 +460,11 @@ export class NuevaFacturaComponent implements OnInit {
         nomCliente          : '',
         rucCliente          : '',
         correoCliente       : '',
-        codigoActividad     : '',
+        codigoActividad     : this.normalizeCodigoActividad(''),
       },
       { emitEvent: false }
     );
-    this.refreshTiposDocumentoPorCorreo(null);
+    this.syncTiposDocumentoCliente(null);
     this.cdr.markForCheck();
     this.clearClienteSearchResults();
   }
@@ -617,8 +629,9 @@ export class NuevaFacturaComponent implements OnInit {
       total       : this.round(resumen.total)
     };
 
-    const pagos = this.pagosArray.controls.map((group) => this.toNumber(group.controls.monto.value));
-    this.pagosTotal = this.round(pagos.reduce((sum, value) => sum + value, 0));
+    this.enforceSinglePagoAutoMonto();
+
+    this.pagosTotal = this.round(this.getPagosTotalInDocCurrency());
 
     if (!this.mostrarPagos) {
       this.pagosValid = true;
@@ -628,6 +641,92 @@ export class NuevaFacturaComponent implements OnInit {
 
     this.syncPagoTipos();
     this.syncPuntoVentaLock();
+  }
+
+  private getDocCurrency(): string {
+    return ((this.form.controls.moneda.value ?? 'USD').toString().trim().toUpperCase()) || 'USD';
+  }
+
+  private getVentaTipoCambio(): number {
+    const valor = this.tipoCambioMostrar;
+    return valor > 0 ? valor : 0;
+  }
+
+  private convertAmountToDocCurrency(amount: number, currency: string): number {
+    if (!amount) {
+      return 0;
+    }
+    const paymentCurrency = (currency ?? '').toString().trim().toUpperCase();
+    const docCurrency = this.getDocCurrency();
+    if (!paymentCurrency || paymentCurrency === docCurrency) {
+      return amount;
+    }
+    const rate = this.getVentaTipoCambio();
+    if (!rate) {
+      return amount;
+    }
+    if (docCurrency === 'USD') {
+      return amount / rate;
+    }
+    if (paymentCurrency === 'USD') {
+      return amount * rate;
+    }
+    return amount;
+  }
+
+  private convertAmountFromDocCurrency(amount: number, currency: string): number {
+    if (!amount) {
+      return 0;
+    }
+    const paymentCurrency = (currency ?? '').toString().trim().toUpperCase();
+    const docCurrency = this.getDocCurrency();
+    if (!paymentCurrency || paymentCurrency === docCurrency) {
+      return amount;
+    }
+    const rate = this.getVentaTipoCambio();
+    if (!rate) {
+      return amount;
+    }
+    if (docCurrency === 'USD') {
+      return amount * rate;
+    }
+    if (paymentCurrency === 'USD') {
+      return amount / rate;
+    }
+    return amount;
+  }
+
+  private getPagosTotalInDocCurrency(): number {
+    return this.pagosArray.controls.reduce((sum, group) => {
+      const monto = this.toNumber(group.controls.monto.value);
+      return sum + this.convertAmountToDocCurrency(monto, group.controls.moneda.value);
+    }, 0);
+  }
+
+  private getPendingAmountForNewPago(): number {
+    const pending = this.resumen.total - this.getPagosTotalInDocCurrency();
+    return pending > 0 ? pending : 0;
+  }
+
+  private populatePagoPendingAmount(group: FormGroup<PagoForm>, pendingAmount: number): void {
+    const currency = group.controls.moneda.value;
+    const monto = this.convertAmountFromDocCurrency(pendingAmount, currency);
+    group.controls.monto.setValue(this.round(monto), { emitEvent: false });
+  }
+
+  private enforceSinglePagoAutoMonto(): void {
+    if (this.pagosArray.length !== 1) {
+      this.singlePagoAutoMonto = null;
+      return;
+    }
+    const group = this.pagosArray.controls[0];
+    const currency = group.controls.moneda.value;
+    const currentMonto = this.round(this.toNumber(group.controls.monto.value));
+    const autoMonto = this.round(this.convertAmountFromDocCurrency(this.resumen.total, currency));
+    if (this.singlePagoAutoMonto === null || this.singlePagoAutoMonto === currentMonto) {
+      group.controls.monto.setValue(autoMonto, { emitEvent: false });
+      this.singlePagoAutoMonto = autoMonto;
+    }
   }
 
   private cargarMonedas(): void {
@@ -913,7 +1012,7 @@ export class NuevaFacturaComponent implements OnInit {
           nomCliente        : cliente.nombre,
           rucCliente        : cliente.ruc,
           correoCliente     : cliente.email || '',
-          codigoActividad   : cliente.codigoActividad || '',
+          codigoActividad   : this.normalizeCodigoActividad(cliente.codigoActividad),
 
         },
         { emitEvent: false }
@@ -926,16 +1025,16 @@ export class NuevaFacturaComponent implements OnInit {
           nomCliente        : '',
           rucCliente        : '',
           correoCliente     : '',
-          codigoActividad   : ''
+          codigoActividad   : this.normalizeCodigoActividad('')
 
         },
         { emitEvent: false }
       );
     }
  
-    this.setClienteEditable(false);
+    this.setClienteEditable(true);
+    this.syncTiposDocumentoCliente(cliente?.enviarCorreo ?? null);
     this.clearClienteSearchResults();
-    this.cargarTiposDocumento();
   }
 
   private searchClientes(query: string): void {
@@ -977,11 +1076,10 @@ export class NuevaFacturaComponent implements OnInit {
       .filter((item) => this.toNumber(item.saldoPendiente) > 0)
       .forEach((item, index) => {
         const saldo = this.toNumber(item.saldoPendiente);
-        const totalPax = this.toNumber(item.totalPax);
+        const subTotal = this.toNumber(item.subTotal);
         const neto = this.toNumber(item.neto);
         const impuestoMonto = this.toNumber(item.impuesto);
         const porImp = neto > 0 ? (impuestoMonto / neto) * 100 : 0;
-        const precioUnit = totalPax > 0 ? neto / totalPax : 0;
 
         const group = this.createDetalleGroup(index + 1);
         group.patchValue(
@@ -992,8 +1090,8 @@ export class NuevaFacturaComponent implements OnInit {
             area            : (item.codGrupo || '').toString(),
             uMedida         : (item.uMedida || '').toString(),
             cantidad        : saldo,
-            pUndLst         : this.round(precioUnit),
-            uniSinImp       : this.round(precioUnit),
+            pUndLst         : this.round(subTotal),
+            uniSinImp       : this.round(subTotal),
             porDescu        : this.toNumber(item.porDescuento),
             porImp          : this.round(porImp),
             comanda         : (item.id ?? '').toString(),
@@ -1023,7 +1121,7 @@ export class NuevaFacturaComponent implements OnInit {
 
   private setModoReserva(active: boolean): void {
     this.modoReserva = active;
-    this.setClienteEditable(!active);
+    this.setClienteEditable(true);
     this.setPlanTarifarioEditable(!active);
     this.setListaPrecioEditable(!active);
   }
@@ -1121,19 +1219,28 @@ export class NuevaFacturaComponent implements OnInit {
     });
   }
 
-  private refreshTiposDocumentoPorCorreo(enviarCorreo: boolean | null = null): void {
+  private syncTiposDocumentoCliente(enviarCorreo: boolean | number | string | null | undefined): void {
+    if (this.tiposDocumentoBase.length) {
+      this.refreshTiposDocumentoPorCorreo(enviarCorreo);
+      return;
+    }
+    this.cargarTiposDocumento();
+  }
+
+  private refreshTiposDocumentoPorCorreo(enviarCorreo: boolean | number | string | null | undefined = null): void {
 
   
     if (!this.tiposDocumentoBase.length) {
       this.tiposDocumento = [];
       return;
     }
-    if (enviarCorreo === null || enviarCorreo === undefined) {
+    const envioCorreoNormalizado = this.normalizeEnviarCorreo(enviarCorreo);
+    if (envioCorreoNormalizado === null) {
       this.tiposDocumento = [...this.tiposDocumentoBase];
       this.ensureTipoDocumentoSeleccionado();
       return;
     }
-    const preferCode = enviarCorreo ? '01' : '04';
+    const preferCode = envioCorreoNormalizado ? '01' : '04';
     const preferido = this.tiposDocumentoBase.filter((item) => this.resolveTipoDocumentoFe(item) === preferCode);
     if (preferido.length) {
       this.tiposDocumento = [...preferido];
@@ -1151,6 +1258,29 @@ export class NuevaFacturaComponent implements OnInit {
         .toString()
         .trim()
     );
+  }
+
+  private normalizeEnviarCorreo(value: boolean | number | string | null | undefined): boolean | null {
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+    if (typeof value === 'boolean') {
+      return value;
+    }
+    if (typeof value === 'number') {
+      return value === 1;
+    }
+    const normalized = value.toString().trim().toLowerCase();
+    if (!normalized) {
+      return null;
+    }
+    if (normalized === '1' || normalized === 'true') {
+      return true;
+    }
+    if (normalized === '0' || normalized === 'false') {
+      return false;
+    }
+    return null;
   }
 
   private ensureTipoDocumentoSeleccionado(): void {
@@ -1302,7 +1432,7 @@ export class NuevaFacturaComponent implements OnInit {
       codVendedor       : value.codVendedor,
       moneda            : value.moneda,
       tCambio           : this.toNumber(value.tCambio),
-      codigoActividad   : value.codigoActividad,
+      codigoActividad   : this.normalizeCodigoActividad(value.codigoActividad),
       observacion       : value.observacion,
       operador          : value.operador,
       detalle           ,
@@ -1320,6 +1450,14 @@ export class NuevaFacturaComponent implements OnInit {
 
   private round(value: number): number {
     return Math.round(value * 100) / 100;
+  }
+
+  private normalizeCodigoActividad(value: string | null | undefined): string {
+    const normalized = (value ?? '').toString().trim();
+    if (/^\d{6}$/.test(normalized)) {
+      return normalized;
+    }
+    return '000000';
   }
 
   private formatDate(value: string): string {

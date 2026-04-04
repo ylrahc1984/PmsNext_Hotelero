@@ -553,16 +553,19 @@ export function mapActividadSavePayloadToDraftServiceLines(
     baseLines.reduce((sum, line) => sum + safeNumber(line.subTotal), 0),
     settings.redondeoDecimales
   );
-  const totalGeneralSolicitado = roundCurrency(safeNumber(saveData?.totalGeneral), settings.redondeoDecimales);
-  const comboActivo = baseLines.length >= 2 && totalGeneralSolicitado > 0 && totalGeneralSolicitado < subTotalGeneral;
-  const descuentoTotal = comboActivo
-    ? roundCurrency(Math.max(0, subTotalGeneral - totalGeneralSolicitado), settings.redondeoDecimales)
+  const descuentoTotalSolicitado = roundCurrency(
+    Math.min(safeNumber(saveData?.descuentoMonto), subTotalGeneral),
+    settings.redondeoDecimales
+  );
+  const hayDescuento = descuentoTotalSolicitado > 0 && subTotalGeneral > 0;
+  const descuentoTotal = hayDescuento
+    ? descuentoTotalSolicitado
     : roundCurrency(settings.descuentoDefault, settings.redondeoDecimales);
   let descuentoPendiente = descuentoTotal;
 
   return baseLines.map((line, index) => {
     const descuento =
-      comboActivo && subTotalGeneral > 0
+      hayDescuento && subTotalGeneral > 0
         ? index === baseLines.length - 1
           ? roundCurrency(descuentoPendiente, settings.redondeoDecimales)
           : roundCurrency((line.subTotal / subTotalGeneral) * descuentoTotal, settings.redondeoDecimales)
@@ -573,46 +576,46 @@ export function mapActividadSavePayloadToDraftServiceLines(
     const split = calculateTaxFromNetAmount(neto, directo, settings);
 
     return {
-      linea: lineaInicial + line.index,
-      source: 'actividad',
-      tipoServicio: normalizeTipoServicio(line.item.tipoServicio || tipoServicioBase, 'TOUR'),
-      codServicio: safeString(line.item.codServicio),
-      nomServicio: safeString(line.item.nomServicio),
-      fecServicio: safeString(line.item.fecServicio || saveData?.fechaServicio),
-      horaServicio: safeString(line.item.horaServicio || saveData?.horaInicio || saveData?.horaPickup),
-      horaPickup: safeString(line.item.horaPickup || saveData?.horaPickup),
-      origenTexto: safeString(pickup?.direccion),
-      zonaOrigen: safeString(pickup?.zona),
-      origenGoogle: safeString(pickup?.google),
-      origenPlaceId: safeString(pickup?.placeId),
-      origenLat: safeNumber(pickup?.lat),
-      origenLng: safeNumber(pickup?.lng),
-      destinoTexto: '',
-      zonaDestino: '',
-      destinoGoogle: '',
-      destinoPlaceId: '',
-      destinoLat: 0,
-      destinoLng: 0,
-      adultos: line.pasajeros.filter((pax) => isAdultoTipoPax(pax.tipoPax)).reduce((sum, pax) => sum + pax.cantidad, 0),
-      ninos: line.pasajeros.filter((pax) => isNinoTipoPax(pax.tipoPax)).reduce((sum, pax) => sum + pax.cantidad, 0),
-      totalPax: line.pasajeros.reduce((sum, pax) => sum + pax.cantidad, 0),
-      planTarifa: safeString(saveData?.planTarifario),
-      codLstPrecio: safeString(saveData?.codLstPrecio),
-      codPlan: safeString(saveData?.codPlan),
-      idReglaPrecio: safeNumber(line.item.reglaPrecioID),
-      precioAdulto: getActividadPrecioUnitario(line.pasajeros, 'ADULTO'),
-      precioNino: getActividadPrecioUnitario(line.pasajeros, 'NINO'),
-      precioPaxExtra: 0,
-      montoServicio: split.total,
-      codSuplidor: '',
-      subTotal: line.subTotal,
-      porDescuento: comboActivo ? 5 : 0,
+      linea             : lineaInicial + line.index,
+      source             : 'actividad',
+      tipoServicio       : normalizeTipoServicio(line.item.tipoServicio || tipoServicioBase || '', 'TOUR'),
+      codServicio        : safeString(line.item.codServicio),
+      nomServicio        : safeString(line.item.nomServicio),
+      fecServicio        : safeString(line.item.fecServicio || saveData?.fechaServicio),
+      horaServicio       : safeString(line.item.horaServicio || saveData?.horaInicio || saveData?.horaPickup),
+      horaPickup         : safeString(line.item.horaPickup || saveData?.horaPickup),
+      origenTexto        : safeString(pickup?.direccion),
+      zonaOrigen         : safeString(pickup?.zona),
+      origenGoogle       : safeString(pickup?.google),
+      origenPlaceId      : safeString(pickup?.placeId),
+      origenLat          : safeNumber(pickup?.lat),
+      origenLng          : safeNumber(pickup?.lng),
+      destinoTexto       : '',
+      zonaDestino        : '',
+      destinoGoogle      : '',
+      destinoPlaceId     : '',
+      destinoLat         : 0,
+      destinoLng         : 0,
+      adultos            : line.pasajeros.filter((pax) => isAdultoTipoPax(pax.tipoPax)).reduce((sum, pax) => sum + pax.cantidad, 0),
+      ninos              : line.pasajeros.filter((pax) => isNinoTipoPax(pax.tipoPax)).reduce((sum, pax) => sum + pax.cantidad, 0),
+      totalPax           : line.pasajeros.reduce((sum, pax) => sum + pax.cantidad, 0),
+      planTarifa         : safeString(saveData?.planTarifario),
+      codLstPrecio       : safeString(saveData?.codLstPrecio),
+      codPlan            : safeString(saveData?.codPlan),
+      idReglaPrecio      : safeNumber(line.item.reglaPrecioID),
+      precioAdulto       : getActividadPrecioUnitario(line.pasajeros, 'ADULTO'),
+      precioNino         : getActividadPrecioUnitario(line.pasajeros, 'NINO'),
+      precioPaxExtra     : 0,
+      montoServicio      : split.total,
+      codSuplidor        : '',
+      subTotal           : line.subTotal,
+      porDescuento       : safeNumber(saveData?.porDescuento),
       descuento,
-      neto: split.neto,
-      impuesto: split.iva,
-      estado: 'PEN',
-      observacion: safeString(saveData?.observaciones),
-      pasajeros: line.pasajeros
+      neto               : split.neto,
+      impuesto           : split.iva,
+      estado             : 'PEN',
+      observacion        : safeString(saveData?.observaciones),
+      pasajeros          : line.pasajeros
     } as ReservaDraftServiceLine;
   });
 

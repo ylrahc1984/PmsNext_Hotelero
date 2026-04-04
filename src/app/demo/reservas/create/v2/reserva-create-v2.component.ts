@@ -27,6 +27,7 @@ import { ReservaCreateTarifaService, ModoPrecio, ReglaTarifaPaxAplicada } from '
 import { ServicioPrecioApiItem } from '../reserva-create.tarifa.models';
 import { showAlertWithFocusRestore } from '../reserva-create.alert';
 import { buildInitialActividadDetalleForm, buildInitialDetalleForm, buildInitialReservaCreateForm } from '../reserva-create.builders';
+import { FISCAL_CONFIG } from 'src/app/core/config/fiscal.config';
 import { ReservaCreateActividadModalComponent, ActividadModalSavePayload } from '../reserva-create-actividad-modal.component';
 import { ReservaCreateClienteModalComponent } from '../reserva-create-cliente-modal.component';
 import { ContactoRapidoModalSavePayload, ReservaCreateContactoRapidoModalComponent } from '../reserva-create-contacto-rapido-modal.component';
@@ -238,8 +239,20 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
     return this.draft.servicios ?? [];
   }
 
+  get draftTotals(): { totalServicios: number; totalNeto: number; totalImpuesto: number } {
+    return calculateDraftTotals(this.detalles);
+  }
+
   get totalRack(): number {
-    return calculateDraftTotals(this.detalles).totalServicios;
+    return this.draftTotals.totalServicios;
+  }
+
+  get totalNetoReserva(): number {
+    return this.draftTotals.totalNeto;
+  }
+
+  get totalImpuestosReserva(): number {
+    return this.draftTotals.totalImpuesto;
   }
 
   get cantidadServicios(): number {
@@ -753,6 +766,37 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
     return (detalle.pasajeros ?? []).map((item) => `${item.tipoPax}: ${item.cantidad}`).join(', ') || '-';
   }
 
+  getDetalleDescuentoLabel(detalle: ReservaDraftServiceLine): string {
+    const monto = safeNumber(detalle?.descuento);
+    const porcentaje = safeNumber(detalle?.porDescuento);
+    if (monto <= 0) {
+      return '-';
+    }
+    if (porcentaje > 0) {
+      return `${porcentaje.toFixed(2)}% (-${monto.toFixed(2)})`;
+    }
+    return `-${monto.toFixed(2)}`;
+  }
+
+  getDetalleDescuentoTooltip(detalle: ReservaDraftServiceLine): string {
+    const subtotal = safeNumber(detalle?.subTotal);
+    const descuento = safeNumber(detalle?.descuento);
+    const neto = safeNumber(detalle?.neto);
+    const impuesto = safeNumber(detalle?.impuesto);
+    const total = safeNumber(detalle?.montoServicio);
+    const porcentaje = safeNumber(detalle?.porDescuento);
+    const moneda = safeString(this.form?.moneda).trim();
+    const suffix = moneda ? ` ${moneda}` : '';
+
+    return [
+      `Base: ${subtotal.toFixed(2)}${suffix}`,
+      `Descuento: ${descuento.toFixed(2)}${suffix}${porcentaje > 0 ? ` (${porcentaje.toFixed(2)}%)` : ''}`,
+      `Neto: ${neto.toFixed(2)}${suffix}`,
+      `Impuesto: ${impuesto.toFixed(2)}${suffix}`,
+      `Total: ${total.toFixed(2)}${suffix}`
+    ].join('\n');
+  }
+
   private syncDraftHeader(): void {
     this.draft = {
       ...this.draft,
@@ -1098,15 +1142,49 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
 
   private recalculateServiciosForDirecto(): void {
     const directo = this.form.directo || '0';
+    const taxRate = safeNumber(FISCAL_CONFIG.taxRate);
+    const removeTax = directo === '1';
     this.draft = {
       ...this.draft,
       servicios: (this.draft.servicios ?? []).map((line) => {
-        const detalleForm = this.mapDraftServiceLineToDetalleForm(line);
-        const recalculated = mapDetalleFormToDraftServiceLine(detalleForm, line.linea, directo);
+        const lineSubtotal = roundTo2(
+          safeNumber(line.subTotal) ||
+            (line.pasajeros ?? []).reduce((sum, pax) => sum + safeNumber(pax.subtotalNeto), 0)
+        );
+        const descuento = roundTo2(Math.min(Math.max(0, safeNumber(line.descuento)), lineSubtotal));
+        const neto = roundTo2(Math.max(0, lineSubtotal - descuento));
+        const impuesto = removeTax ? 0 : roundTo2(neto * taxRate);
+        const montoServicio = roundTo2(neto + impuesto);
+
+        const pasajeros = (line.pasajeros ?? []).map((pax) => {
+          const cantidad = safeNumber(pax.cantidad);
+          const subtotalNeto = roundTo2(safeNumber(pax.subtotalNeto));
+          const subtotalIVA = removeTax ? 0 : roundTo2(subtotalNeto * taxRate);
+          const subtotalTotal = roundTo2(subtotalNeto + subtotalIVA);
+          const precioUnitarioNeto =
+            cantidad > 0 ? roundTo2(subtotalNeto / cantidad) : roundTo2(safeNumber(pax.precioUnitarioNeto));
+          const precioUnitarioIVA = cantidad > 0 ? roundTo2(subtotalIVA / cantidad) : 0;
+          const precioUnitarioTotal = roundTo2(precioUnitarioNeto + precioUnitarioIVA);
+
+          return {
+            ...pax,
+            precioUnitarioNeto,
+            precioUnitarioIVA,
+            precioUnitarioTotal,
+            subtotalNeto,
+            subtotalIVA,
+            subtotalTotal
+          };
+        });
+
         return {
-          ...recalculated,
-          source: line.source,
-          tipoServicio: line.tipoServicio || recalculated.tipoServicio
+          ...line,
+          subTotal: lineSubtotal,
+          descuento,
+          neto,
+          impuesto,
+          montoServicio,
+          pasajeros
         };
       })
     };
@@ -1115,39 +1193,39 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
   private mapDraftServiceLineToDetalleForm(line: ReservaDraftServiceLine): DetalleForm {
     const selectedPlan = line.planTarifa || line.codPlan;
     return {
-      codPlan: selectedPlan,
-      planTarifa: selectedPlan || this.resolvePlanTarifarioNombre(selectedPlan),
-      codLstPrecio: line.codLstPrecio,
-      codServicio: line.codServicio,
-      nomServicio: line.nomServicio,
-      tipoServicio: line.tipoServicio,
-      fechaServicio: line.fecServicio,
-      horaPickup: normalizeTimeInputValue(line.horaPickup, { zeroAsEmpty: true }),
-      horaInicio: normalizeTimeInputValue(line.horaServicio, { zeroAsEmpty: true }) || normalizeTimeInputValue(line.horaPickup, { zeroAsEmpty: true }),
-      origenLugar: line.origenTexto,
-      origenZona: line.zonaOrigen,
-      origenDireccionGoogle: line.origenTexto,
-      origenGoogle: line.origenGoogle,
-      origenLat: line.origenLat,
-      origenLng: line.origenLng,
-      origenPlaceId: line.origenPlaceId,
-      destinoLugar: line.destinoTexto,
-      destinoZona: line.zonaDestino,
-      destinoDireccionGoogle: line.destinoTexto,
-      destinoGoogle: line.destinoGoogle,
-      destinoLat: line.destinoLat,
-      destinoLng: line.destinoLng,
-      destinoPlaceId: line.destinoPlaceId,
-      montoServicio: line.neto,
-      detallesPax: (line.pasajeros ?? []).map((pax) => ({
-        tipoPax: pax.tipoPax,
-        cantidad: pax.cantidad,
-        precioTotal: pax.subtotalNeto,
-        precioUnitario: pax.precioUnitarioNeto,
-        reglaPrecioId: pax.reglaPrecioId,
-        precioPaxExtra: pax.precioPaxExtra,
-        manual: pax.manual,
-        error: pax.error
+      codPlan                   : selectedPlan,
+      planTarifa                : selectedPlan || this.resolvePlanTarifarioNombre(selectedPlan),
+      codLstPrecio              : line.codLstPrecio,
+      codServicio               : line.codServicio,
+      nomServicio               : line.nomServicio,
+      tipoServicio              : line.tipoServicio,
+      fechaServicio             : line.fecServicio,
+      horaPickup                : normalizeTimeInputValue(line.horaPickup, { zeroAsEmpty: true }),
+      horaInicio                : normalizeTimeInputValue(line.horaServicio, { zeroAsEmpty: true }) || normalizeTimeInputValue(line.horaPickup, { zeroAsEmpty: true }),
+      origenLugar               : line.origenTexto,
+      origenZona                : line.zonaOrigen,
+      origenDireccionGoogle     : line.origenTexto,
+      origenGoogle              : line.origenGoogle,
+      origenLat                 : line.origenLat,
+      origenLng                 : line.origenLng,
+      origenPlaceId             : line.origenPlaceId,
+      destinoLugar              : line.destinoTexto,
+      destinoZona               : line.zonaDestino,
+      destinoDireccionGoogle    : line.destinoTexto,
+      destinoGoogle             : line.destinoGoogle,
+      destinoLat                : line.destinoLat,
+      destinoLng                : line.destinoLng,
+      destinoPlaceId            : line.destinoPlaceId,
+      montoServicio             : line.neto,
+      detallesPax               : (line.pasajeros ?? []).map((pax) => ({
+        tipoPax           : pax.tipoPax,
+        cantidad          : pax.cantidad,
+        precioTotal       : pax.subtotalNeto,
+        precioUnitario    : pax.precioUnitarioNeto,
+        reglaPrecioId     : pax.reglaPrecioId,
+        precioPaxExtra    : pax.precioPaxExtra,
+        manual            : pax.manual,
+        error             : pax.error
       })),
       estado: line.estado || 'PEN',
       observaciones: line.observacion || ''
@@ -1157,51 +1235,51 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
   private mapDraftServiceLineToActividadForm(line: ReservaDraftServiceLine): ActividadDetalleForm {
     const pickup = line.origenTexto || line.origenPlaceId || line.origenGoogle
       ? {
-          direccion: line.origenTexto,
-          zona: line.zonaOrigen,
-          google: line.origenGoogle,
-          placeId: line.origenPlaceId,
-          lat: line.origenLat,
-          lng: line.origenLng
+          direccion     : line.origenTexto,
+          zona          : line.zonaOrigen,
+          google        : line.origenGoogle,
+          placeId       : line.origenPlaceId,
+          lat           : line.origenLat,
+          lng           : line.origenLng
         }
       : {
-          direccion: line.destinoTexto,
-          zona: line.zonaDestino,
-          google: line.destinoGoogle,
-          placeId: line.destinoPlaceId,
-          lat: line.destinoLat,
-          lng: line.destinoLng
+          direccion     : line.destinoTexto,
+          zona          : line.zonaDestino,
+          google        : line.destinoGoogle,
+          placeId       : line.destinoPlaceId,
+          lat           : line.destinoLat,
+          lng           : line.destinoLng
         };
 
     const selectedPlan = line.planTarifa || line.codPlan;
     return {
-      codPlan: selectedPlan,
-      planTarifa: selectedPlan || this.resolvePlanTarifarioNombre(selectedPlan),
-      codLstPrecio: line.codLstPrecio,
-      codServicio: line.codServicio,
-      nomServicio: line.nomServicio,
-      tipoServicio: line.tipoServicio,
-      fechaServicio: line.fecServicio,
-      horaPickup: line.horaPickup || line.horaServicio,
-      horaInicio: line.horaServicio || line.horaPickup || '',
-      observaciones: line.observacion,
-      pickups: [pickup],
-      detallesPax: (line.pasajeros ?? []).map((pax) => ({
-        tipoPax: pax.tipoPax,
-        cantidad: pax.cantidad,
-        precioUnitario: pax.precioUnitarioNeto
+      codPlan           : selectedPlan,
+      planTarifa        : selectedPlan || this.resolvePlanTarifarioNombre(selectedPlan),
+      codLstPrecio      : line.codLstPrecio,
+      codServicio       : line.codServicio,
+      nomServicio       : line.nomServicio,
+      tipoServicio      : line.tipoServicio,
+      fechaServicio     : line.fecServicio,
+      horaPickup        : line.horaPickup || line.horaServicio,
+      horaInicio        : line.horaServicio || line.horaPickup || '',
+      observaciones     : line.observacion,
+      pickups           : [pickup],
+      detallesPax       : (line.pasajeros ?? []).map((pax) => ({
+        tipoPax         : pax.tipoPax,
+        cantidad        : pax.cantidad,
+        precioUnitario  : pax.precioUnitarioNeto
       })),
       actividades: [
         {
-          codServicio: line.codServicio,
-          nomServicio: line.nomServicio,
-          reglaPrecioID: line.idReglaPrecio,
-          tarifas: (line.pasajeros ?? []).map((pax) => ({
-            tipoPax: pax.tipoPax,
-            tipo: pax.tipoPax,
-            precio: pax.precioUnitarioNeto,
-            cantidad: pax.cantidad,
-            total: pax.subtotalNeto
+          codServicio     : line.codServicio,
+          nomServicio     : line.nomServicio,
+          reglaPrecioID   : line.idReglaPrecio,
+          tarifas         : (line.pasajeros ?? []).map((pax) => ({
+            tipoPax   : pax.tipoPax,
+            tipo      : pax.tipoPax,
+            precio    : pax.precioUnitarioNeto,
+            cantidad  : pax.cantidad,
+            total     : pax.subtotalNeto
           })),
           totalLinea: line.neto
         }

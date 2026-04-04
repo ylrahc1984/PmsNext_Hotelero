@@ -135,6 +135,24 @@
   margin-bottom: 16px;
 }
 
+.op-card--client-compact {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.op-card--client-compact .op-card__header {
+  margin-bottom: 10px;
+}
+
+.op-card--client-compact .op-label {
+  margin-bottom: 4px;
+}
+
+.op-card--client-compact .form-text,
+.op-card--client-compact .op-client-selected {
+  margin-top: 4px;
+}
+
 .op-context-card {
   display: grid;
   grid-template-columns: minmax(260px, 0.92fr) minmax(0, 1.4fr);
@@ -150,6 +168,12 @@
 .op-context-card__fields {
   display: flex;
   align-items: center;
+  padding-block: 2px;
+}
+
+.op-context-card__fields .row {
+  width: 100%;
+  margin-bottom: 0;
 }
 
 .op-section-title {

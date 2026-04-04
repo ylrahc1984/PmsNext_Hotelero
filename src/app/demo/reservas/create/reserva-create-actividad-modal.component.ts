@@ -9,6 +9,7 @@ import { NgbTypeaheadModule } from '@ng-bootstrap/ng-bootstrap';
 import { ActividadDetalleForm, ActividadPickupForm } from './reserva-create.models';
 import { PickupRapidoModalSavePayload, ReservaCreatePickupRapidoModalComponent } from './reserva-create-pickup-rapido-modal.component';
 import { ReservaPickupRapidoService } from './reserva-pickup-rapido.service';
+import { FISCAL_CONFIG } from 'src/app/core/config/fiscal.config';
 import { safeJsonParse, safeJsonStringify } from './reserva-create.utils';
 import { ServicioUI } from '../../catalogos/servicios/servicios.service';
 import { PlanTarifaUI } from '../../catalogos/listas-precios/planes-tarifas.service';
@@ -65,6 +66,8 @@ export interface ActividadModalSavePayload {
   pickups           : ActividadPickupForm[];
   actividades       : ActividadDetalle[];
   totalGeneral      : number;
+  porDescuento      : number;
+  descuentoMonto    : number;
   payload           : ActividadDetallePayload[];
 }
 
@@ -136,6 +139,8 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
   tarifasLoading = false;
   tarifaError = '';
   comboActivo = false;
+  porDescuentoInput = 0;
+  descuentoMontoInput = 0;
   subTotal = 0;
   porDescuento = 0;
   descuento = 0;
@@ -307,6 +312,34 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     this.calcularTotales();
   }
 
+  onComboActivoChange(): void {
+    if (this.comboActivo && this.porDescuentoInput === 0 && this.descuentoMontoInput === 0) {
+      this.porDescuentoInput = 5;
+      this.descuentoMontoInput = this.roundCurrency(this.subTotal * 0.05);
+    }
+    if (!this.comboActivo) {
+      this.porDescuentoInput = 0;
+      this.descuentoMontoInput = 0;
+    }
+    this.calcularTotales();
+  }
+
+  onPorDescuentoInputChange(val: number | string): void {
+    const pct = Math.min(100, Math.max(0, Number(val ?? 0) || 0));
+    this.porDescuentoInput = pct;
+    this.descuentoMontoInput = this.roundCurrency(this.subTotal * pct / 100);
+    this.calcularTotales();
+  }
+
+  onDescuentoMontoInputChange(val: number | string): void {
+    const monto = Math.min(this.subTotal, Math.max(0, Number(val ?? 0) || 0));
+    this.descuentoMontoInput = monto;
+    this.porDescuentoInput = this.subTotal > 0
+      ? this.roundCurrency((monto / this.subTotal) * 100)
+      : 0;
+    this.calcularTotales();
+  }
+
   clearActividadFromResumen(actividad: ActividadDetalle): void {
     const key = this.buildActividadKey(actividad.codServicio);
     if (!key) return;
@@ -445,6 +478,8 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
       pickups: this.getPickupsValue(),
       actividades,
       totalGeneral: raw.totalGeneral,
+      porDescuento: this.porDescuento,
+      descuentoMonto: this.descuento,
       payload
     });
   }
@@ -611,17 +646,19 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
       serviciosSeleccionados.reduce((sum, actividad) => sum + (Number(actividad.totalLinea ?? 0) || 0), 0)
     );
 
-    if (this.comboActivo && serviciosSeleccionados.length >= 2) {
-      this.porDescuento = 5;
-      this.descuento = this.roundCurrency(this.subTotal * 0.05);
-    } else {
+    const descuentoActivo = this.comboActivo && serviciosSeleccionados.length >= 2;
+    if (!descuentoActivo) {
       this.comboActivo = false;
-      this.porDescuento = 0;
-      this.descuento = 0;
+      this.porDescuentoInput = 0;
+      this.descuentoMontoInput = 0;
     }
+    this.porDescuento = descuentoActivo ? this.porDescuentoInput : 0;
+    this.descuento = descuentoActivo
+      ? this.roundCurrency(Math.min(this.descuentoMontoInput, this.subTotal))
+      : 0;
 
     this.neto = this.roundCurrency(Math.max(0, this.subTotal - this.descuento));
-    this.impuesto = this.roundCurrency(this.neto * 0.13);
+    this.impuesto = this.roundCurrency(this.neto * FISCAL_CONFIG.taxRate);
     this.montoServicio = this.roundCurrency(this.neto + this.impuesto);
 
     this.form.controls.totalGeneral.setValue(this.neto, { emitEvent: false });
@@ -775,6 +812,14 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
       actividades.reduce((sum, actividad) => sum + (Number(actividad?.totalLinea ?? 0) || 0), 0)
     );
     this.comboActivo = actividades.length >= 2 && totalGeneralGuardado > 0 && totalGeneralGuardado < subtotalGuardado;
+    if (this.comboActivo && subtotalGuardado > 0) {
+      const descGuardado = this.roundCurrency(subtotalGuardado - totalGeneralGuardado);
+      this.descuentoMontoInput = descGuardado;
+      this.porDescuentoInput = this.roundCurrency((descGuardado / subtotalGuardado) * 100);
+    } else {
+      this.porDescuentoInput = 0;
+      this.descuentoMontoInput = 0;
+    }
     this.actividadesStateMap.clear();
     actividades.forEach((actividad) => this.setActividadState(actividad));
     this.setActividades([]);

@@ -22,7 +22,7 @@ export class WeatherCardComponent implements OnInit {
   @Input() loading = false;
   @Input() error: string | null = null;
 
-  readonly cities = ['San Jose', 'Puntarenas', 'Monteverde', 'Liberia', 'Cartago'];
+  readonly cities = ['Monteverde', 'San Jose', 'Puntarenas', 'Liberia', 'Cartago'];
   selectedCity = 'San Jose';
 
   ngOnInit(): void {

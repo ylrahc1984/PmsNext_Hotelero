@@ -7,6 +7,64 @@
     linear-gradient(180deg, #fcfdff 0%, #f8fafc 100%);
 }
 
+.rsv-v2-table-compact th,
+.rsv-v2-table-compact td {
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+}
+
+.rsv-v2-descuento-cell {
+  display: inline-block;
+  font-size: 0.82rem;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.rsv-v2-descuento-cell--active {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.rsv-total-reserva__rows {
+  min-width: 270px;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.rsv-total-reserva__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.2rem 0;
+}
+
+.rsv-total-reserva__row + .rsv-total-reserva__row {
+  border-top: 1px dashed rgba(148, 163, 184, 0.28);
+}
+
+.rsv-total-reserva__row-label {
+  color: #475569;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.rsv-total-reserva__row-value {
+  color: #0f172a;
+  font-size: 0.92rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.rsv-total-reserva__row--grand .rsv-total-reserva__row-label,
+.rsv-total-reserva__row--grand .rsv-total-reserva__row-value {
+  color: #0f172a;
+  font-size: 0.98rem;
+}
+
+
 .rsv-v2-contact-hub__header {
   display: flex;
   justify-content: space-between;

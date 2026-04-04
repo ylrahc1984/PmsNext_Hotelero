@@ -3,18 +3,18 @@ import { ReservaCreateForm, ReservaEstado } from '../reserva-create.models';
 export type ReservaDraftServiceSource = 'transfer' | 'actividad';
 
 export interface ReservaDraftPassengerLine {
-  tipoPax: string;
-  cantidad: number;
-  precioUnitarioNeto: number;
-  precioUnitarioIVA: number;
-  precioUnitarioTotal: number;
-  subtotalNeto: number;
-  subtotalIVA: number;
-  subtotalTotal: number;
-  reglaPrecioId?: number;
-  precioPaxExtra?: number;
-  manual?: boolean;
-  error?: string;
+  tipoPax                 : string;
+  cantidad                : number;
+  precioUnitarioNeto      : number;
+  precioUnitarioIVA       : number;
+  precioUnitarioTotal     : number;
+  subtotalNeto            : number;
+  subtotalIVA             : number;
+  subtotalTotal           : number;
+  reglaPrecioId           ?: number;
+  precioPaxExtra          ?: number;
+  manual                  ?: boolean;
+  error                   ?: string;
 }
 
 export interface ReservaDraftServiceLine {
@@ -76,24 +76,24 @@ export interface ReservaCreateV2HeaderDraft extends ReservaCreateForm {
 }
 
 export interface ReservaCreateV2Draft {
-  header: ReservaCreateV2HeaderDraft;
-  servicios: ReservaDraftServiceLine[];
+  header      : ReservaCreateV2HeaderDraft;
+  servicios   : ReservaDraftServiceLine[];
 }
 
 export interface ReservaDraftTotals {
-  totalServicios: number;
-  totalNeto: number;
-  totalImpuesto: number;
+  totalServicios    : number;
+  totalNeto         : number;
+  totalImpuesto     : number;
 }
 
 export interface ReservaDraftCalculationOptions {
-  pricesIncludeTax: boolean;
-  taxRate: number;
-  descuentoDefault: number;
-  redondeoDecimales: number;
+  pricesIncludeTax    : boolean;
+  taxRate             : number;
+  descuentoDefault    : number;
+  redondeoDecimales   : number;
 }
 
 export interface ReservaDraftBuildOptions {
-  estado?: ReservaEstado;
-  operador?: string;
+  estado      ?: ReservaEstado;
+  operador    ?: string;
 }
