@@ -87,6 +87,7 @@ export interface DetalleReservaPendienteDto {
   TiempoEstimadoMin       : number;
   PRV02_Operador          : string;
   PRV02_FechaRegistro     : string;
+  
 }
 
 // Interfaz UI simplificada para orden de trabajo

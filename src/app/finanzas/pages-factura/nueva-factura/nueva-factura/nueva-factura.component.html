@@ -63,7 +63,7 @@
               <div class="col-lg-5">
                 <div class="nf-emisor nf-emisor--compact">
                   <div class="nf-emisor__name">{{ empresa()?.MA04_Nombre || 'Empresa' }}</div>
-                  <div class="nf-emisor__meta">RUC: {{ empresa()?.MA04_Ruc || '-' }}</div>
+                  <div class="nf-emisor__meta">Cedula: {{ empresa()?.MA04_Ruc || '-' }}</div>
                   <div class="nf-emisor__meta">Punto de venta: -</div>
                   <div class="nf-emisor__meta">Actividad económica: -</div>
                   <div class="nf-emisor__meta">
@@ -197,9 +197,9 @@
               </div>
               <div class="row nf-client-row">
                 <div class="col-md-4">
-                  <label class="form-label nf-label">RUC</label>
+                  <label class="form-label nf-label">Cédula</label>
                   <div class="nf-input-wrap">
-                    <input class="form-control form-control-sm" formControlName="rucCliente" placeholder="RUC" [readonly]="locked">
+                    <input class="form-control form-control-sm" formControlName="rucCliente" placeholder="Cédula" [readonly]="locked">
                   </div>
                 </div>
                 <div class="col-md-4">
@@ -385,9 +385,8 @@
                         <th>Forma Pago</th>
                         <th class="text-end">Monto</th>
                         <th>Moneda</th>
-                        <th>Referencia</th>
-                        <th>Tarjeta</th>
-                        <th>Vencimiento</th>
+                        <th style="width: 170px;" class="text-nowrap">Referencia</th>
+                        <th style="width: 120px;" class="text-nowrap">Vencimiento</th>
                         <th class="text-center">Eliminar</th>
                       </tr>
                     </thead>
@@ -403,7 +402,15 @@
                           </select>
                         </td>
                         <td>
-                          <input type="number" class="form-control form-control-sm text-end" formControlName="monto" min="0" step="0.01">
+                          <input
+                            type="text"
+                            class="form-control form-control-sm text-end"
+                            formControlName="monto"
+                            inputmode="decimal"
+                            placeholder="0.00"
+                            (focus)="onPagoMontoFocus($event, i)"
+                            (blur)="onPagoMontoBlur($event, i)"
+                          >
                         </td>
                         <td>
                           <select class="form-control form-control-sm" formControlName="moneda">
@@ -414,14 +421,18 @@
                             </option>
                           </select>
                         </td>
-                        <td>
-                          <input class="form-control form-control-sm" formControlName="referencia" placeholder="Referencia">
+                        <td style="width: 170px;">
+                          <input class="form-control form-control-sm" formControlName="referencia" placeholder="Referencia" maxlength="50">
                         </td>
-                        <td>
-                          <input class="form-control form-control-sm" formControlName="numTarjeta" placeholder="Tarjeta">
-                        </td>
-                        <td>
-                          <input type="date" class="form-control form-control-sm" formControlName="vencimiento">
+                        <td style="width: 120px;">
+                          <input
+                            type="text"
+                            class="form-control form-control-sm text-center"
+                            formControlName="vencimiento"
+                            placeholder="MM/yyyy"
+                            maxlength="7"
+                            (blur)="onPagoVencimientoBlur(i)"
+                          >
                         </td>
                         <td class="text-center">
                           <button class="btn btn-sm btn-outline-danger" type="button" (click)="removePago(i)" [disabled]="locked">
@@ -430,7 +441,7 @@
                         </td>
                       </tr>
                       <tr *ngIf="pagosArray.length === 0">
-                        <td colspan="7" class="text-center text-muted">Agrega pagos para confirmar al contado.</td>
+                        <td colspan="6" class="text-center text-muted">Agrega pagos para confirmar al contado.</td>
                       </tr>
                     </tbody>
                   </table>

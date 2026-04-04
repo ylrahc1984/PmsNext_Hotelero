@@ -327,6 +327,41 @@ export class NuevaFacturaComponent implements OnInit {
     this.updateCalculos();
   }
 
+  onPagoMontoFocus(event: FocusEvent, index: number): void {
+    const input = event.target as HTMLInputElement | null;
+    const group = this.pagosArray.at(index);
+    if (!input || !group) {
+      return;
+    }
+    const monto = this.round(this.toNumber(group.controls.monto.value));
+    input.value = monto > 0 ? monto.toFixed(2) : '';
+  }
+
+  onPagoMontoBlur(event: FocusEvent, index: number): void {
+    const input = event.target as HTMLInputElement | null;
+    const group = this.pagosArray.at(index);
+    if (!group) {
+      return;
+    }
+
+    const rawValue = input?.value ?? group.controls.monto.value;
+    const monto = this.round(this.toNumber(rawValue));
+    group.controls.monto.setValue(monto);
+
+    if (input) {
+      input.value = monto > 0 ? this.formatAmountWithThousands(monto) : '';
+    }
+  }
+
+  onPagoVencimientoBlur(index: number): void {
+    const group = this.pagosArray.at(index);
+    if (!group) {
+      return;
+    }
+    const normalized = this.normalizeCardExpiry(group.controls.vencimiento.value);
+    group.controls.vencimiento.setValue(normalized, { emitEvent: false });
+  }
+
   openConfirm(): void {
     if (!this.canConfirm) {
       this.form.markAllAsTouched();
@@ -1427,7 +1462,7 @@ export class NuevaFacturaComponent implements OnInit {
             tCambio       : this.toNumber(raw.tCambio || value.tCambio),
             referencia    : raw.referencia,
             numTarjeta    : raw.numTarjeta,
-            vencimiento   : this.formatDate(raw.vencimiento)
+            vencimiento   : this.normalizeCardExpiry(raw.vencimiento)
           };
         })
       : [];
@@ -1464,8 +1499,45 @@ export class NuevaFacturaComponent implements OnInit {
   }
 
   private toNumber(value: number | string): number {
+    if (typeof value === 'string') {
+      const sanitized = value.replace(/,/g, '').trim();
+      if (!sanitized) {
+        return 0;
+      }
+      const parsed = Number(sanitized);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private formatAmountWithThousands(value: number): string {
+    return value.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  private normalizeCardExpiry(value: string | null | undefined): string {
+    const raw = (value ?? '').toString().trim();
+    if (!raw) {
+      return '';
+    }
+
+    const compact = raw.replace(/\s+/g, '');
+    const match = /^(\d{1,2})[\/-]?(\d{2}|\d{4})$/.exec(compact);
+    if (!match) {
+      return '';
+    }
+
+    const month = Number(match[1]);
+    if (!Number.isFinite(month) || month < 1 || month > 12) {
+      return '';
+    }
+
+    const monthText = String(month).padStart(2, '0');
+    const yearText = match[2].length === 2 ? `20${match[2]}` : match[2];
+    return `${monthText}/${yearText}`;
   }
 
   private round(value: number): number {

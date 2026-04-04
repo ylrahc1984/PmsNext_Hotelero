@@ -240,6 +240,11 @@
                     <th>Origen</th>
                     <th>Destino</th>
                     <th class="text-center">Pax</th>
+                    <th class="text-end">Sub Total</th>
+                    <th class="text-end">% Descuento</th>
+                    <th class="text-end">Descuento</th>
+                    <th class="text-end">Neto</th>
+                    <th class="text-end">Impuesto</th>
                     <th class="text-end">Monto</th>
                     <th class="text-end">Acciones</th>
                   </tr>
@@ -268,6 +273,21 @@
                     <td class="text-center">
                       <span class="badge bg-light text-dark border">{{ d.PRV02_TotalPax || 0 }}</span>
                       <div class="text-muted small">{{ d.PRV02_Adultos || 0 }} / {{ d.PRV02_Ninos || 0 }}</div>
+                    </td>
+                    <td class="text-end text-nowrap">
+                      {{ d.PRV02_SubTotal | number:'1.2-2' }}
+                    </td>
+                    <td class="text-end text-nowrap">
+                      {{ d.PRV02_PorDescuento | number:'1.2-2' }}
+                    </td>
+                    <td class="text-end text-nowrap">
+                      {{ d.PRV02_Descuento | number:'1.2-2' }}
+                    </td>
+                    <td class="text-end text-nowrap">
+                      {{ d.PRV02_Neto | number:'1.2-2' }}
+                    </td>
+                    <td class="text-end text-nowrap">
+                      {{ d.PRV02_Impuesto | number:'1.2-2' }}
                     </td>
                     <td class="text-end text-nowrap">
                       {{ d.PRV02_MontoServicio | number:'1.2-2' }}
@@ -334,7 +354,7 @@
                   </tr>
 
                   <tr *ngIf="detallesFiltrados.length === 0">
-                    <td colspan="7" class="text-center text-muted py-4">
+                    <td colspan="12" class="text-center text-muted py-4">
                       {{ detalles.length === 0 ? 'Aún no hay servicios agregados.' : 'No hay resultados para el filtro.' }}
                     </td>
                   </tr>

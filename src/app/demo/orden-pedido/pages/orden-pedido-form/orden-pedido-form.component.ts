@@ -70,6 +70,11 @@ export class OrdenPedidoFormComponent implements OnInit {
   private readonly reservasFacturacionService = inject(ReservasFacturacionService);
   private readonly reservasService = inject(ReservasService);
 
+  private clienteActividadCedula = '';
+  private singlePagoAutoMonto: number | null = null;
+  private previousListaPrecio = '';
+  private suppressListaPrecioChange = false;
+  
   readonly empresa = this.empresaContext.empresa;
   readonly tiposDocumento = [
     { value: 'NDP', label: 'Orden de Pedido' },
@@ -135,11 +140,8 @@ export class OrdenPedidoFormComponent implements OnInit {
   clienteSearchResults           : ClienteUI[] = [];
   clienteSearchLoading           = false;
   clienteSearchError             = '';
-  private clienteActividadCedula = '';
-  pagosValid = true;
-  private singlePagoAutoMonto: number | null = null;
-  private previousListaPrecio = '';
-  private suppressListaPrecioChange = false;
+  pagosValid                     = true;
+  
 
   ngOnInit(): void {
     const currentUser = this.authService.getCurrentUser();
@@ -186,11 +188,11 @@ export class OrdenPedidoFormComponent implements OnInit {
     this.form.controls.exoneracionActiva.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((active) => {
       if (!active) {
         this.form.controls.exoneracion.reset({
-          tipoDocumentoEX1: '',
-          numeroDocumento: '',
-          nombreInstitucion: '',
-          tarifaExonerada: 0,
-          montoExoneracion: 0
+          tipoDocumentoEX1      : '',
+          numeroDocumento       : '',
+          nombreInstitucion     : '',
+          tarifaExonerada       : 0,
+          montoExoneracion      : 0
         });
       }
       this.recalculateTotals();
@@ -426,6 +428,32 @@ export class OrdenPedidoFormComponent implements OnInit {
 
   trackByIndex(index: number): number {
     return index;
+  }
+
+  getLineaSubTotal(index: number): number {
+    const group = this.detalleArray.at(index);
+    if (!group) {
+      return 0;
+    }
+    const cantidad = this.toNumber(group.get('canProdu')?.value);
+    const precio = this.toNumber(group.get('pUndLst')?.value);
+    return this.round(cantidad * precio);
+  }
+
+  getLineaImpuesto(index: number): number {
+    const group = this.detalleArray.at(index);
+    if (!group) {
+      return 0;
+    }
+    return this.round(this.toNumber(group.get('mtoImpu')?.value));
+  }
+
+  getLineaTotal(index: number): number {
+    const group = this.detalleArray.at(index);
+    if (!group) {
+      return 0;
+    }
+    return this.round(this.toNumber(group.get('mtoTotal')?.value));
   }
 
   private buildGuardarValidationMessage(): string {
@@ -934,10 +962,11 @@ export class OrdenPedidoFormComponent implements OnInit {
       .forEach((item) => {
         const saldo = this.toNumber(item.saldoPendiente);
         const totalPax = this.toNumber(item.totalPax);
+        const subTotal = this.toNumber(item.subTotal);
         const neto = this.toNumber(item.neto);
         const impuestoMonto = this.toNumber(item.impuesto);
         const porImp = neto > 0 ? (impuestoMonto / neto) * 100 : 0;
-        const precioUnit = totalPax > 0 ? neto / totalPax : 0;
+        const precioUnit = totalPax > 0 ? subTotal / totalPax : 0;
 
         const group = this.createDetalleGroup();
         group.patchValue(
