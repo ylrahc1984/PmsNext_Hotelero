@@ -20,7 +20,7 @@ export class AuthGuard {
 
     // Si el token está expirado, hacer logout y redirigir a login
     if (this.authService.isTokenExpired(token)) {
-      this.authService.logout();
+      this.authService.clearSession();
       return this.router.createUrlTree(['/login']);
     }
 

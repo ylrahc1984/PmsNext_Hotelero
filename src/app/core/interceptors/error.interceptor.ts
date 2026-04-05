@@ -35,10 +35,7 @@ export class ErrorInterceptor implements HttpInterceptor {
     }
 
     switch (error.status) {
-      case 401: // No autenticado
-        this.handleUnauthorized();
-        break;
-      case 403: // Prohibido (token inválido/expirado)
+      case 403: // Prohibido
         this.handleForbidden();
         break;
       case 0: // Error de conexión
@@ -47,12 +44,6 @@ export class ErrorInterceptor implements HttpInterceptor {
       default:
         this.handleGenericError(error);
     }
-  }
-
-  private handleUnauthorized(): void {
-    console.warn('Error 401: No autenticado. Redirigiendo a login...');
-    this.toastService.error('Sesión expirada. Por favor, inicie sesión nuevamente.');
-    this.performLogout();
   }
 
   private handleForbidden(): void {
@@ -85,16 +76,8 @@ export class ErrorInterceptor implements HttpInterceptor {
 
   private performLogout(): void {
     this.isLogoutInProgress = true;
-
-    // Logout en el servicio
-    this.authService.logout();
-
-    // Redirigir a login con delay para asegurar que se completa el logout
-    setTimeout(() => {
-      this.router.navigate(['/login'], {
-        queryParams: { returnUrl: this.router.url }
-      });
-      this.isLogoutInProgress = false;
-    }, 500);
+    this.authService.logout().subscribe({
+      complete: () => { this.isLogoutInProgress = false; }
+    });
   }
 }

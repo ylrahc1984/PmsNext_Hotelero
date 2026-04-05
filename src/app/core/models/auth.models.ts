@@ -10,13 +10,14 @@ export interface LoginRequest {
 
 export interface UsuarioInfo {
   usuario: string;
-  claveSecreta: string;
   nombre: string;
   modulo: string;
 }
 
 export interface LoginResponse {
   token: string;
+  refreshToken: string;
+  expiresIn: number;
   usuario: UsuarioInfo[];
 }
 

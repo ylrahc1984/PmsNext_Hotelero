@@ -1,7 +1,6 @@
 // angular import
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
-import { Router } from '@angular/router';
 
 // bootstrap import
 import { NgbDropdownConfig } from '@ng-bootstrap/ng-bootstrap';
@@ -21,7 +20,6 @@ export class NavRightComponent {
   user$ = inject(AuthService).currentUser$;
 
   private authService = inject(AuthService);
-  private router = inject(Router);
 
   constructor() {
     const config = inject(NgbDropdownConfig);
@@ -29,7 +27,6 @@ export class NavRightComponent {
   }
 
   onLogout(): void {
-    this.authService.logout();
-    this.router.navigate(['/login']);
+    this.authService.logout().subscribe();
   }
 }
