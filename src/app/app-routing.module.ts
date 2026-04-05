@@ -273,6 +273,13 @@ const routes: Routes = [
         path: 'ordenes-pedido/nuevo',
         loadComponent: () =>
           import('./demo/orden-pedido/pages/orden-pedido-form/orden-pedido-form.component').then((c) => c.OrdenPedidoFormComponent)
+      },
+      {
+        path: 'ordenes-pedido/detalle/:tipOrden/:serie/:numero',
+        loadComponent: () =>
+          import('./demo/orden-pedido/pages/orden-pedido-detalle/orden-pedido-detalle.component').then(
+            (c) => c.OrdenPedidoDetalleComponent
+          )
       }
     ]
   },

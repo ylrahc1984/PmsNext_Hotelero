@@ -36,7 +36,6 @@ export class OrdenPedidoListComponent implements OnInit {
   readonly pageSizeOptions = [10, 20, 50];
 
   ordenes: OrdenPedidoListadoItem[] = [];
-  expandedKey: string | null = null;
   isLoading = false;
   errorMessage = '';
 
@@ -90,13 +89,16 @@ export class OrdenPedidoListComponent implements OnInit {
     void this.router.navigate(['/demo/ordenes-pedido/nuevo']);
   }
 
-  toggleExpanded(item: OrdenPedidoListadoItem): void {
-    const key = this.getRowKey(item);
-    this.expandedKey = this.expandedKey === key ? null : key;
-  }
+  verDetalle(item: OrdenPedidoListadoItem): void {
+    const tipOrden = (item.tipOrden ?? '').toString().trim();
+    const serie = (item.serie ?? '').toString().trim() || '000';
+    const numero = (item.numero ?? '').toString().trim();
 
-  isExpanded(item: OrdenPedidoListadoItem): boolean {
-    return this.expandedKey === this.getRowKey(item);
+    if (!tipOrden || !numero) {
+      return;
+    }
+
+    void this.router.navigate(['/demo/ordenes-pedido/detalle', tipOrden, serie, numero]);
   }
 
   getEstadoBadgeClass(item: OrdenPedidoListadoItem): string {
@@ -140,7 +142,6 @@ export class OrdenPedidoListComponent implements OnInit {
   private loadOrdenes(): void {
     this.isLoading = true;
     this.errorMessage = '';
-    this.expandedKey = null;
 
     const filters = {
       ...this.filtrosForm.getRawValue(),

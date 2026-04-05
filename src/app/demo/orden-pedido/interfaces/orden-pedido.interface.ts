@@ -35,6 +35,92 @@ export interface OrdenPedidoListadoResponse {
   paginacion: OrdenPedidoPaginacion;
 }
 
+export interface OrdenPedidoCompletaEncabezado {
+  tipNDP: string;
+  serieNDP: string;
+  numNDP: string;
+  puntoVenta: string;
+  fechaDocumento: string;
+  horaDocumento: string;
+  codVendedor: string;
+  codCliente: string;
+  rucCliente: string;
+  nomCliente: string;
+  dirCliente: string;
+  subtotal: number;
+  impuesto: number;
+  totalDocumento: number;
+  totalPago: number;
+  estadoDocumento: string;
+  moneda: string;
+  tipoCambio: number;
+  fechaVencimiento: string;
+  listaPrecio: string;
+  items: number;
+  referencia: string;
+  observaciones: string;
+  operador: string;
+  idBee: string;
+  codActividad: string;
+}
+
+export interface OrdenPedidoCompletaDetalleItem {
+  orden: number;
+  codProducto: string;
+  nomProducto: string;
+  categoria: string;
+  cantidad: number;
+  unidadMedida: string;
+  precioUnitarioLista: number;
+  unitarioSinImpuesto: number;
+  subtotalSinImpuesto: number;
+  porcentajeDescuento: number;
+  descuento: number;
+  totalNeto: number;
+  porcentajeImpuesto: number;
+  impuesto: number;
+  unitarioConImpuesto: number;
+  totalLinea: number;
+  moneda: string;
+  tipoCambio: number;
+  almacen: string;
+}
+
+export interface OrdenPedidoCompletaFormaPago {
+  orden: number;
+  formaPago: string;
+  tipo: string;
+  moneda: string;
+  monto: number;
+  montoOriginal: number;
+  tipoCambio: number;
+  referencia: string;
+  numeroTarjeta: string;
+  vencimiento: string;
+}
+
+export interface OrdenPedidoCompletaCliente {
+  codCliente: string;
+  nomCliente: string;
+  rucCliente: string;
+  contacto: string;
+  direccion: string;
+  provincia: string;
+  ciudad: string;
+  pais: string;
+  email: string;
+  telefono1: string;
+  telefono2: string;
+  tipoCliente: string;
+}
+
+export interface OrdenPedidoCompletaResponse {
+  encabezado: OrdenPedidoCompletaEncabezado | null;
+  detalle: OrdenPedidoCompletaDetalleItem[];
+  formasPago: OrdenPedidoCompletaFormaPago[];
+  cliente: OrdenPedidoCompletaCliente | null;
+}
+
 export interface OrdenPedidoDetalleItem {
   codProdu: string;
   producto: string;

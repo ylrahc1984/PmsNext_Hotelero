@@ -1,0 +1,292 @@
+<div class="row">
+  <div class="col-12">
+    <app-card [customHeader]="true">
+      <div class="app-card-header">
+        <div>
+          <h5 class="mb-1">Detalle Documento Comercial</h5>
+          <p class="mb-0 text-muted">Resumen ejecutivo, cliente, líneas y formas de pago.</p>
+        </div>
+        <div class="card-header-right d-flex flex-wrap align-items-center gap-2">
+          <button class="btn btn-outline-secondary" type="button" (click)="backToList()" [disabled]="loading">
+            <i class="feather icon-chevron-left me-1"></i>
+            Volver
+          </button>
+          <button class="btn btn-primary op-btn-primary" type="button" (click)="reload()" [disabled]="loading">
+            <i class="feather icon-refresh-cw me-1"></i>
+            Refrescar
+          </button>
+        </div>
+      </div>
+
+      <div class="detalle-wrap">
+        <div *ngIf="loading" class="alert alert-info mb-3">
+          <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+          Cargando detalle de la orden...
+        </div>
+
+        <div *ngIf="errorMsg" class="alert alert-danger mb-3">{{ errorMsg }}</div>
+
+        <ng-container *ngIf="!loading && encabezado as h">
+          <section class="op-hero">
+            <div class="op-hero__main">
+              <div class="op-hero__eyebrow">Documento comercial</div>
+              <h2 class="op-hero__title">{{ documentoCodigo || 'Orden de Pedido' }}</h2>
+              <div class="op-hero__meta-row">
+                <span class="status-badge" [ngClass]="estadoBadgeClass">{{ estadoDocumentoLabel }}</span>
+                <span class="op-chip">
+                  <i class="feather icon-map-pin" aria-hidden="true"></i>
+                  Punto venta: {{ h.puntoVenta || 'N/D' }}
+                </span>
+                <span class="op-chip">
+                  <i class="feather icon-layers" aria-hidden="true"></i>
+                  {{ detalle.length }} líneas
+                </span>
+                <span class="op-chip">
+                  <i class="feather icon-credit-card" aria-hidden="true"></i>
+                  {{ formasPago.length }} pagos
+                </span>
+                <span class="op-chip">
+                  <i class="feather icon-calendar" aria-hidden="true"></i>
+                  {{ formatFecha(h.fechaDocumento) }}
+                </span>
+              </div>
+            </div>
+
+            <aside class="op-hero__total-card">
+              <div class="op-hero__total-label">Total general</div>
+              <div class="op-hero__total-value">{{ totalGeneral | number:'1.2-2' }}</div>
+              <div class="op-hero__total-foot">
+                <span class="op-chip op-chip--soft">{{ monedaDocumento }}</span>
+                <span class="payment-chip" [ngClass]="isPagoCompleto ? 'is-ok' : 'is-pending'">
+                  {{ isPagoCompleto ? 'Pagado completo' : 'Saldo pendiente' }}
+                </span>
+              </div>
+            </aside>
+          </section>
+
+          <section class="op-section-grid mt-3">
+            <article class="op-panel op-panel--info">
+              <header class="op-panel__header">
+                <div>
+                  <h6 class="op-panel__title mb-0">Información General</h6>
+                  <p class="op-panel__subtitle mb-0">Datos clave del documento y referencia comercial.</p>
+                </div>
+              </header>
+
+              <div class="op-kv-grid">
+                <div class="op-kv-item">
+                  <span class="op-kv-item__label">Tipo / Serie / Número</span>
+                  <strong class="op-kv-item__value">{{ h.tipNDP || 'N/D' }} / {{ h.serieNDP || 'N/D' }} / {{ h.numNDP || 'N/D' }}</strong>
+                </div>
+                <div class="op-kv-item">
+                  <span class="op-kv-item__label">Fecha documento</span>
+                  <span class="op-kv-item__value">{{ formatFecha(h.fechaDocumento) }}</span>
+                </div>
+                <div class="op-kv-item">
+                  <span class="op-kv-item__label">Fecha vencimiento</span>
+                  <span class="op-kv-item__value">{{ formatFecha(h.fechaVencimiento) }}</span>
+                </div>
+                <div class="op-kv-item">
+                  <span class="op-kv-item__label">Vendedor</span>
+                  <span class="op-kv-item__value">{{ h.codVendedor || 'N/D' }}</span>
+                </div>
+                <div class="op-kv-item">
+                  <span class="op-kv-item__label">Operador</span>
+                  <span class="op-kv-item__value">{{ h.operador || 'N/D' }}</span>
+                </div>
+                <div class="op-kv-item">
+                  <span class="op-kv-item__label">Moneda</span>
+                  <span class="op-kv-item__value">{{ h.moneda || 'N/D' }}</span>
+                </div>
+                <div class="op-kv-item">
+                  <span class="op-kv-item__label">Tipo cambio</span>
+                  <span class="op-kv-item__value">{{ h.tipoCambio | number:'1.2-2' }}</span>
+                </div>
+                <div class="op-kv-item">
+                  <span class="op-kv-item__label">Lista de precio</span>
+                  <span class="op-kv-item__value">{{ h.listaPrecio || 'N/D' }}</span>
+                </div>
+                <div class="op-kv-item">
+                  <span class="op-kv-item__label">Items</span>
+                  <span class="op-kv-item__value">{{ h.items | number:'1.0-0' }}</span>
+                </div>
+              </div>
+
+              <div class="op-kv-grid op-kv-grid--wide mt-1">
+                <div class="op-kv-item">
+                  <span class="op-kv-item__label">Referencia</span>
+                  <span class="op-kv-item__value">{{ h.referencia || 'N/D' }}</span>
+                </div>
+                <div class="op-kv-item">
+                  <span class="op-kv-item__label">Observaciones</span>
+                  <span class="op-kv-item__value">{{ h.observaciones || 'N/D' }}</span>
+                </div>
+              </div>
+
+              <div class="op-metric-grid mt-2">
+                <div class="op-metric-card">
+                  <div class="op-metric-card__label">Subtotal</div>
+                  <div class="op-metric-card__value">{{ subtotalGeneral | number:'1.2-2' }}</div>
+                </div>
+                <div class="op-metric-card op-metric-card--discount">
+                  <div class="op-metric-card__label">Descuento</div>
+                  <div class="op-metric-card__value">{{ descuentoGeneral | number:'1.2-2' }}</div>
+                </div>
+                <div class="op-metric-card">
+                  <div class="op-metric-card__label">Impuesto</div>
+                  <div class="op-metric-card__value">{{ impuestoGeneral | number:'1.2-2' }}</div>
+                </div>
+                <div class="op-metric-card op-metric-card--total">
+                  <div class="op-metric-card__label">Total</div>
+                  <div class="op-metric-card__value">{{ totalGeneral | number:'1.2-2' }}</div>
+                </div>
+                <div class="op-metric-card" [ngClass]="isPagoCompleto ? 'op-metric-card--paid' : 'op-metric-card--pending'">
+                  <div class="op-metric-card__label">Total pagado</div>
+                  <div class="op-metric-card__value">{{ totalPagadoVista | number:'1.2-2' }}</div>
+                </div>
+              </div>
+            </article>
+
+            <article class="op-panel op-panel--cliente" *ngIf="cliente as c">
+              <header class="op-panel__header">
+                <div>
+                  <h6 class="op-panel__title mb-0">Cliente</h6>
+                  <p class="op-panel__subtitle mb-0">Ficha comercial y de contacto.</p>
+                </div>
+              </header>
+
+              <div class="op-client-card">
+                <h6 class="op-client-card__name mb-0">{{ c.nomCliente || 'N/D' }}</h6>
+                <div class="op-client-card__meta">RUC: {{ c.rucCliente || 'N/D' }}</div>
+              </div>
+
+              <div class="op-kv-grid">
+                <div class="op-kv-item">
+                  <span class="op-kv-item__label">Contacto</span>
+                  <span class="op-kv-item__value">{{ c.contacto || 'N/D' }}</span>
+                </div>
+                <div class="op-kv-item">
+                  <span class="op-kv-item__label">Tipo cliente</span>
+                  <span class="op-kv-item__value">{{ c.tipoCliente || 'N/D' }}</span>
+                </div>
+                <div class="op-kv-item op-kv-item--full">
+                  <span class="op-kv-item__label">Dirección</span>
+                  <span class="op-kv-item__value">{{ c.direccion || 'N/D' }}</span>
+                </div>
+                <div class="op-kv-item">
+                  <span class="op-kv-item__label">Provincia / Ciudad</span>
+                  <span class="op-kv-item__value">{{ c.provincia || 'N/D' }} / {{ c.ciudad || 'N/D' }}</span>
+                </div>
+                <div class="op-kv-item">
+                  <span class="op-kv-item__label">País</span>
+                  <span class="op-kv-item__value">{{ c.pais || 'N/D' }}</span>
+                </div>
+                <div class="op-kv-item">
+                  <span class="op-kv-item__label">Teléfonos</span>
+                  <span class="op-kv-item__value">{{ c.telefono1 || 'N/D' }}{{ c.telefono2 ? ' / ' + c.telefono2 : '' }}</span>
+                </div>
+                <div class="op-kv-item">
+                  <span class="op-kv-item__label">Email</span>
+                  <span class="op-kv-item__value">{{ c.email || 'N/D' }}</span>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <section class="op-panel mt-3">
+            <header class="op-panel__header">
+              <div>
+                <h6 class="op-panel__title mb-0">Detalle de Productos / Servicios</h6>
+                <p class="op-panel__subtitle mb-0">Líneas comerciales con importes y categorías.</p>
+              </div>
+              <span class="op-chip">{{ detalle.length }} líneas</span>
+            </header>
+
+            <div class="table-responsive op-table-wrap">
+              <table class="table table-hover mb-0 align-middle op-table">
+                <thead>
+                  <tr>
+                    <th>Orden</th>
+                    <th>Código</th>
+                    <th>Producto</th>
+                    <th>Categoría</th>
+                    <th class="text-end">Cantidad</th>
+                    <th class="text-end">P.Unit</th>
+                    <th class="text-end">Desc.</th>
+                    <th class="text-end">Impuesto</th>
+                    <th class="text-end">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let item of detalle; trackBy: trackByDetalle">
+                    <td>{{ item.orden | number:'1.0-0' }}</td>
+                    <td class="font-monospace text-nowrap">{{ item.codProducto || 'N/D' }}</td>
+                    <td>
+                      <div class="op-product-name">{{ item.nomProducto || 'N/D' }}</div>
+                      <div class="op-product-meta">{{ item.unidadMedida || 'N/D' }}</div>
+                    </td>
+                    <td>
+                      <span class="op-pill" [ngClass]="getCategoriaClass(item.categoria)">{{ item.categoria || 'N/D' }}</span>
+                    </td>
+                    <td class="text-end">{{ item.cantidad | number:'1.2-2' }}</td>
+                    <td class="text-end">{{ item.precioUnitarioLista | number:'1.2-2' }}</td>
+                    <td class="text-end">{{ item.descuento | number:'1.2-2' }}</td>
+                    <td class="text-end">{{ item.impuesto | number:'1.2-2' }}</td>
+                    <td class="text-end fw-semibold">{{ item.totalLinea | number:'1.2-2' }}</td>
+                  </tr>
+                  <tr *ngIf="detalle.length === 0">
+                    <td colspan="9" class="text-center py-4 text-muted">No hay líneas en la orden.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="op-panel mt-3">
+            <header class="op-panel__header">
+              <div>
+                <h6 class="op-panel__title mb-0">Pagos / Formas de Pago</h6>
+                <p class="op-panel__subtitle mb-0">Distribución de pagos y referencias.</p>
+              </div>
+              <span class="op-chip">{{ formasPago.length }} pagos</span>
+            </header>
+
+            <div class="table-responsive op-table-wrap">
+              <table class="table table-hover mb-0 align-middle op-table op-table--payments">
+                <thead>
+                  <tr>
+                    <th>Orden</th>
+                    <th>Forma pago</th>
+                    <th>Tipo</th>
+                    <th>Moneda</th>
+                    <th class="text-end">Monto</th>
+                    <th>Referencia</th>
+                    <th>Tarjeta</th>
+                    <th>Vencimiento</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let item of formasPago; trackBy: trackByPago">
+                    <td>{{ item.orden | number:'1.0-0' }}</td>
+                    <td>
+                      <span class="op-pill op-pill--neutral">{{ item.formaPago || 'N/D' }}</span>
+                    </td>
+                    <td>{{ item.tipo || 'N/D' }}</td>
+                    <td>{{ item.moneda || 'N/D' }}</td>
+                    <td class="text-end fw-semibold">{{ item.monto | number:'1.2-2' }}</td>
+                    <td class="op-text-muted">{{ item.referencia || 'N/D' }}</td>
+                    <td class="font-monospace op-text-muted">{{ item.numeroTarjeta || 'N/D' }}</td>
+                    <td>{{ item.vencimiento || 'N/D' }}</td>
+                  </tr>
+                  <tr *ngIf="formasPago.length === 0">
+                    <td colspan="8" class="text-center py-4 text-muted">No hay formas de pago registradas.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </ng-container>
+      </div>
+    </app-card>
+  </div>
+</div>
