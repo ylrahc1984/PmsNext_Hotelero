@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Observable, Subject, catchError, debounceTime, filter, finalize, map, merge, of, shareReplay, startWith, switchMap } from 'rxjs';
 import Swal from 'sweetalert2';
 
@@ -49,7 +49,7 @@ interface PrintVoucherPayload {
 @Component({
   selector: 'app-operacion-diaria',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, SharedModule],
+  imports: [CommonModule, ReactiveFormsModule, SharedModule, RouterLink],
   templateUrl: './operacion-diaria.component.html',
   styleUrls: ['./operacion-diaria.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

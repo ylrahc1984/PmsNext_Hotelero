@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { finalize } from 'rxjs/operators';
 
+import { syncFiscalConfigFromEmpresaActivo } from '../config/fiscal.config';
 import { Empresa } from '../models/empresa.model';
 import { EmpresaService } from './empresa.service';
 
@@ -50,6 +51,7 @@ export class EmpresaContextService {
       const parsed = JSON.parse(stored) as Empresa;
       if (parsed?.MA04_Unidad) {
         this._empresa.set(parsed);
+        syncFiscalConfigFromEmpresaActivo(parsed.MA04_Activo);
       }
     } catch {
       localStorage.removeItem(this.storageKey);
@@ -58,11 +60,13 @@ export class EmpresaContextService {
 
   setEmpresa(empresa: Empresa): void {
     this._empresa.set(empresa);
+    syncFiscalConfigFromEmpresaActivo(empresa?.MA04_Activo);
     localStorage.setItem(this.storageKey, JSON.stringify(empresa));
   }
 
   limpiar(): void {
     this._empresa.set(null);
+    syncFiscalConfigFromEmpresaActivo(null);
     localStorage.removeItem(this.storageKey);
   }
 

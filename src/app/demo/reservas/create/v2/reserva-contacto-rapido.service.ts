@@ -7,28 +7,28 @@ import { environment } from 'src/environments/environment';
 import { ClienteContactoUI } from '../../../catalogos/agencias-comisionistas/cliente.models';
 
 export interface ReservaContactoRapidoPayload {
-  codAgencia: string;
-  nomContacto: string;
-  marcarPrincipal?: boolean;
+  codAgencia          : string;
+  nomContacto         : string;
+  marcarPrincipal     ?: boolean;
 }
 
 export interface ReservaContactoRapidoResponse {
-  mensaje?: string;
-  idContactoCreado?: number;
-  contacto?: Partial<ClienteContactoUI> | null;
+  mensaje             ?: string;
+  idContactoCreado    ?: number;
+  contacto            ?: Partial<ClienteContactoUI> | null;
 }
 
 interface ReservaContactoRapidoApiPayload {
-  codAgencia: string;
-  nomContacto: string;
-  cargo: string;
-  email: string;
-  telefono1: string;
-  telefono2: string;
-  movil: string;
-  ext: string;
-  marcarPrincipal: boolean;
-  operador: string;
+  codAgencia          : string;
+  nomContacto         : string;
+  cargo               : string;
+  email               : string;
+  telefono1           : string;
+  telefono2           : string;
+  movil               : string;
+  ext                 : string;
+  marcarPrincipal     : boolean;
+  operador            : string;
 }
 
 @Injectable({ providedIn: 'root' })

@@ -216,7 +216,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
   }
 
   private obtenerHoraReferenciaDetalle(detalle: { hora?: string | null; horaPickup?: string | null }): string {
-    return this.normalizeHora(detalle.horaPickup || detalle.hora);
+    return this.normalizeHora(detalle.hora || detalle.horaPickup);
   }
 
   cantidadServiciosDetalle(detalle: DetalleDisponibleUI): number {
@@ -241,7 +241,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
       if (existente) {
         existente.detalles.push(detalle);
         existente.cantidad += 1;
-        existente.paxTotal += pax;
+        existente.paxTotal = pax;
         existente.ultimoIndice = index;
         existente.mostrarInfoReserva = existente.mostrarInfoReserva || necesitaInfoReserva;
         existente.horaPickup = this.obtenerHoraMasTemprana(existente.horaPickup, horaPickupDetalle);
@@ -1287,6 +1287,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
       email             : detalle.emailCliente || '',
       agencia           : detalle.agencia,
       nombreAgencia     : detalle.agencia,
+      contacto          : detalle.agencia || '',
       estadoReserva     : '',
       folio             : detalle.boleta || '',
       tipoServicio      : '',

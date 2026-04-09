@@ -22,12 +22,6 @@ import {
   ReservaToursPayloadDto
 } from './reserva-tours.models';
 
-const DEFAULT_CALCULATION_OPTIONS: ReservaDraftCalculationOptions = {
-  pricesIncludeTax: FISCAL_CONFIG.pricesIncludeTax,
-  taxRate: FISCAL_CONFIG.taxRate,
-  descuentoDefault: 0,
-  redondeoDecimales: 2
-};
 const DEFAULT_POST_PAGE_SIZE = 10;
 
 function roundCurrency(value: number, decimals: number): number {
@@ -39,9 +33,18 @@ function normalizeDirecto(value: string): '0' | '1' {
   return (value || '').toString().trim() === '1' ? '1' : '0';
 }
 
+function getDefaultCalculationOptions(): ReservaDraftCalculationOptions {
+  return {
+    pricesIncludeTax      : FISCAL_CONFIG.pricesIncludeTax,
+    taxRate               : FISCAL_CONFIG.taxRate,
+    descuentoDefault      : 0,
+    redondeoDecimales     : 2
+  };
+}
+
 function getCalculationOptions(options?: Partial<ReservaDraftCalculationOptions>): ReservaDraftCalculationOptions {
   return {
-    ...DEFAULT_CALCULATION_OPTIONS,
+    ...getDefaultCalculationOptions(),
     ...(options ?? {})
   };
 }
@@ -204,18 +207,18 @@ function buildPassengerLineFromTotal(
   const unitSplit = splitConfiguredAmount(configuredUnitPrice, directo, settings);
 
   return {
-    tipoPax: normalizeTipoPax(tipoPax),
-    cantidad: qty,
-    precioUnitarioNeto: unitSplit.neto,
-    precioUnitarioIVA: unitSplit.iva,
-    precioUnitarioTotal: unitSplit.total,
-    subtotalNeto: subtotalSplit.neto,
-    subtotalIVA: subtotalSplit.iva,
-    subtotalTotal: subtotalSplit.total,
-    reglaPrecioId: safeNumber(extra?.reglaPrecioId),
-    precioPaxExtra: safeNumber(extra?.precioPaxExtra),
-    manual: !!extra?.manual,
-    error: safeString(extra?.error)
+    tipoPax                 : normalizeTipoPax(tipoPax),
+    cantidad                : qty,
+    precioUnitarioNeto      : unitSplit.neto,
+    precioUnitarioIVA       : unitSplit.iva,
+    precioUnitarioTotal     : unitSplit.total,
+    subtotalNeto            : subtotalSplit.neto,
+    subtotalIVA             : subtotalSplit.iva,
+    subtotalTotal           : subtotalSplit.total,
+    reglaPrecioId           : safeNumber(extra?.reglaPrecioId),
+    precioPaxExtra          : safeNumber(extra?.precioPaxExtra),
+    manual                  : !!extra?.manual,
+    error                   : safeString(extra?.error)
   };
 }
 
@@ -226,6 +229,7 @@ function getPrecioUnitarioFallback(item?: {
   precioUnitarioNeto?: number;
   precioUnitarioTotal?: number;
 }): number {
+  const { redondeoDecimales } = getDefaultCalculationOptions();
   const explicit = safeNumber(item?.precioUnitarioNeto);
   if (explicit > 0) return explicit;
   const explicitTotal = safeNumber(item?.precioUnitarioTotal);
@@ -234,9 +238,9 @@ function getPrecioUnitarioFallback(item?: {
   if (qty <= 0) return 0;
   const netSubtotal = safeNumber(item?.subtotalNeto);
   if (netSubtotal > 0) {
-    return roundCurrency(netSubtotal / qty, DEFAULT_CALCULATION_OPTIONS.redondeoDecimales);
+    return roundCurrency(netSubtotal / qty, redondeoDecimales);
   }
-  return roundCurrency(safeNumber(item?.subtotalTotal) / qty, DEFAULT_CALCULATION_OPTIONS.redondeoDecimales);
+  return roundCurrency(safeNumber(item?.subtotalTotal) / qty, redondeoDecimales);
 }
 
 function getActividadPrecioUnitario(paxItems: ReservaDraftPassengerLine[], tipo: 'ADULTO' | 'NINO'): number {
@@ -292,41 +296,41 @@ function mapReservaToursCompletaEncabezadoToHeaderDraft(
   const estado = normalizeReservaEstado(safeString(encabezado?.PRV01_Estado));
   const header = buildInitialReservaCreateV2HeaderDraft(
     {
-      fecha: toDateInputValue(encabezado?.PRV01_FecCreacion),
-      codAgencia: safeString(encabezado?.PRV01_CodAgencia),
-      idContacto: safeNumber(encabezado?.PRV01_IdContacto),
-      nomContactoAgencia: safeString(encabezado?.PRV01_NomContactoAgencia),
-      nomCliente: safeString(encabezado?.PRV01_NomCliente),
-      telCliente: safeString(encabezado?.PRV01_TelCliente),
-      emailCliente: safeString(encabezado?.PRV01_EmailCliente),
-      idioma: safeString(encabezado?.PRV01_Idioma),
-      formaReservacion: safeString(encabezado?.PRV01_FormaReserva),
-      formaPago: safeString(encabezado?.PRV01_FormaPago),
-      codLstPrecio: safeString(encabezado?.PRV01_CodLstPrecio),
-      codPlan: safeString(encabezado?.PRV01_CodPlan),
-      moneda: safeString(encabezado?.PRV01_Moneda),
-      directo: safeString(encabezado?.PRV01_Directo || '0'),
-      estado,
-      totalRsv: safeNumber(encabezado?.PRV01_TotalRsv),
-      comentarios: safeString(encabezado?.PRV01_Observacion)
+      fecha                 : toDateInputValue(encabezado?.PRV01_FecCreacion),
+      codAgencia            : safeString(encabezado?.PRV01_CodAgencia),
+      idContacto            : safeNumber(encabezado?.PRV01_IdContacto),
+      nomContactoAgencia    : safeString(encabezado?.PRV01_NomContactoAgencia),
+      nomCliente            : safeString(encabezado?.PRV01_NomCliente),
+      telCliente            : safeString(encabezado?.PRV01_TelCliente),
+      emailCliente          : safeString(encabezado?.PRV01_EmailCliente),
+      idioma                : safeString(encabezado?.PRV01_Idioma),
+      formaReservacion      : safeString(encabezado?.PRV01_FormaReserva),
+      formaPago             : safeString(encabezado?.PRV01_FormaPago),
+      codLstPrecio          : safeString(encabezado?.PRV01_CodLstPrecio),
+      codPlan               : safeString(encabezado?.PRV01_CodPlan),
+      moneda                : safeString(encabezado?.PRV01_Moneda),
+      directo               : safeString(encabezado?.PRV01_Directo || '0'),
+      estado                ,
+      totalRsv              : safeNumber(encabezado?.PRV01_TotalRsv),
+      comentarios           : safeString(encabezado?.PRV01_Observacion)
     },
     { estado, operador: safeString(encabezado?.PRV01_Operador) }
   );
 
   return {
     ...header,
-    codReserva: safeString(encabezado?.PRV01_CodReserva),
-    fecConfirma: toDateInputValue(encabezado?.PRV01_FecConfirma),
-    fecAnulada: toDateInputValue(encabezado?.PRV01_FecAnulada),
-    fecIngresa: toDateInputValue(encabezado?.PRV01_FecIngresa),
-    fecSalida: toDateInputValue(encabezado?.PRV01_FecSalida),
-    fecPrepago: toDateInputValue(encabezado?.PRV01_FecPrepago),
-    descripcion: safeString(encabezado?.PRV01_Descripcion),
-    tCambio: safeNumber(encabezado?.PRV01_TCambio),
-    folio: safeString(encabezado?.PRV01_Folio),
-    procesado: safeNumber(encabezado?.PRV01_Procesado),
-    cntHabitaciones: safeNumber(encabezado?.PRV01_CntHabitaciones),
-    operador: safeString(encabezado?.PRV01_Operador)
+    codReserva      : safeString(encabezado?.PRV01_CodReserva),
+    fecConfirma     : toDateInputValue(encabezado?.PRV01_FecConfirma),
+    fecAnulada      : toDateInputValue(encabezado?.PRV01_FecAnulada),
+    fecIngresa      : toDateInputValue(encabezado?.PRV01_FecIngresa),
+    fecSalida       : toDateInputValue(encabezado?.PRV01_FecSalida),
+    fecPrepago      : toDateInputValue(encabezado?.PRV01_FecPrepago),
+    descripcion     : safeString(encabezado?.PRV01_Descripcion),
+    tCambio         : safeNumber(encabezado?.PRV01_TCambio),
+    folio           : safeString(encabezado?.PRV01_Folio),
+    procesado       : safeNumber(encabezado?.PRV01_Procesado),
+    cntHabitaciones : safeNumber(encabezado?.PRV01_CntHabitaciones),
+    operador        : safeString(encabezado?.PRV01_Operador)
   };
 }
 
@@ -334,14 +338,14 @@ function mapReservaToursCompletaPasajeroToDraftPassenger(
   pasajero: ReservaToursCompletaPasajeroDto
 ): ReservaDraftPassengerLine {
   return {
-    tipoPax: normalizeTipoPax(safeString(pasajero?.PRV03_TipoPax)),
-    cantidad: safeNumber(pasajero?.PRV03_Cantidad),
-    precioUnitarioNeto: safeNumber(pasajero?.PRV03_PrecioUnitarioNeto),
-    precioUnitarioIVA: safeNumber(pasajero?.PRV03_PrecioUnitarioIVA),
-    precioUnitarioTotal: safeNumber(pasajero?.PRV03_PrecioUnitarioTotal),
-    subtotalNeto: safeNumber(pasajero?.PRV03_SubtotalNeto),
-    subtotalIVA: safeNumber(pasajero?.PRV03_SubtotalIVA),
-    subtotalTotal: safeNumber(pasajero?.PRV03_SubtotalTotal)
+    tipoPax               : normalizeTipoPax(safeString(pasajero?.PRV03_TipoPax)),
+    cantidad              : safeNumber(pasajero?.PRV03_Cantidad),
+    precioUnitarioNeto    : safeNumber(pasajero?.PRV03_PrecioUnitarioNeto),
+    precioUnitarioIVA     : safeNumber(pasajero?.PRV03_PrecioUnitarioIVA),
+    precioUnitarioTotal   : safeNumber(pasajero?.PRV03_PrecioUnitarioTotal),
+    subtotalNeto          : safeNumber(pasajero?.PRV03_SubtotalNeto),
+    subtotalIVA           : safeNumber(pasajero?.PRV03_SubtotalIVA),
+    subtotalTotal         : safeNumber(pasajero?.PRV03_SubtotalTotal)
   };
 }
 
@@ -358,46 +362,46 @@ function mapReservaToursCompletaServicioToDraftServiceLine(
   const planTarifa = safeString(servicio?.PRV02_PlanTarifario) || safeString(header.codPlan);
 
   return {
-    linea: Math.max(1, safeNumber(servicio?.PRV02_Linea)),
-    source: inferDraftSourceFromTipoServicio(servicio?.PRV02_TipoServicio),
-    tipoServicio: normalizeTipoServicio(servicio?.PRV02_TipoServicio),
-    codServicio: safeString(servicio?.PRV02_CodServicio),
-    nomServicio: safeString(servicio?.PRV02_NomServicio),
-    fecServicio: toDateInputValue(servicio?.PRV02_FecServicio),
-    horaServicio: normalizeTimeInputValue(servicio?.PRV02_HoraServicio, { zeroAsEmpty: true }),
-    horaPickup: normalizeTimeInputValue(servicio?.PRV02_HoraPickup, { zeroAsEmpty: true }),
-    origenTexto: safeString(servicio?.PRV02_OrigenTexto),
-    zonaOrigen: safeString(servicio?.PRV02_ZonaOrigen),
-    origenGoogle: safeString(servicio?.PRV02_OrigenGoogle),
-    origenPlaceId: safeString(servicio?.PRV02_OrigenPlaceId),
-    origenLat: safeNumber(servicio?.PRV02_OrigenLat),
-    origenLng: safeNumber(servicio?.PRV02_OrigenLng),
-    destinoTexto: safeString(servicio?.PRV02_DestinoTexto),
-    zonaDestino: safeString(servicio?.PRV02_ZonaDestino),
-    destinoGoogle: safeString(servicio?.PRV02_DestinoGoogle),
-    destinoPlaceId: safeString(servicio?.PRV02_DestinoPlaceId),
-    destinoLat: safeNumber(servicio?.PRV02_DestinoLat),
-    destinoLng: safeNumber(servicio?.PRV02_DestinoLng),
-    adultos: safeNumber(servicio?.PRV02_Adultos),
-    ninos: safeNumber(servicio?.PRV02_Ninos),
-    totalPax: safeNumber(servicio?.PRV02_TotalPax),
-    planTarifa,
-    codLstPrecio: safeString(servicio?.PRV02_CodLstPrecio) || safeString(header.codLstPrecio),
-    codPlan: planTarifa,
-    idReglaPrecio: safeNumber(servicio?.PRV02_IdReglaPrecio),
-    precioAdulto: safeNumber(servicio?.PRV02_PrecioAdulto),
-    precioNino: safeNumber(servicio?.PRV02_PrecioNino),
-    precioPaxExtra: safeNumber(servicio?.PRV02_PrecioPaxExtra),
-    montoServicio,
-    codSuplidor: safeString(servicio?.PRV02_CodSuplidor),
-    subTotal,
-    porDescuento: safeNumber(servicio?.PRV02_PorDescuento),
-    descuento: safeNumber(servicio?.PRV02_Descuento),
-    neto,
-    impuesto,
-    estado: normalizeDetalleEstado(servicio?.PRV02_Estado),
-    observacion: safeString(servicio?.PRV02_Observacion),
-    pasajeros: paxLines
+    linea             : Math.max(1, safeNumber(servicio?.PRV02_Linea)),
+    source            : inferDraftSourceFromTipoServicio(servicio?.PRV02_TipoServicio),
+    tipoServicio      : normalizeTipoServicio(servicio?.PRV02_TipoServicio),
+    codServicio       : safeString(servicio?.PRV02_CodServicio),
+    nomServicio       : safeString(servicio?.PRV02_NomServicio),
+    fecServicio       : toDateInputValue(servicio?.PRV02_FecServicio),
+    horaServicio      : normalizeTimeInputValue(servicio?.PRV02_HoraServicio, { zeroAsEmpty: true }),
+    horaPickup        : normalizeTimeInputValue(servicio?.PRV02_HoraPickup, { zeroAsEmpty: true }),
+    origenTexto       : safeString(servicio?.PRV02_OrigenTexto),
+    zonaOrigen        : safeString(servicio?.PRV02_ZonaOrigen),
+    origenGoogle      : safeString(servicio?.PRV02_OrigenGoogle),
+    origenPlaceId     : safeString(servicio?.PRV02_OrigenPlaceId),
+    origenLat         : safeNumber(servicio?.PRV02_OrigenLat),
+    origenLng         : safeNumber(servicio?.PRV02_OrigenLng),
+    destinoTexto      : safeString(servicio?.PRV02_DestinoTexto),
+    zonaDestino       : safeString(servicio?.PRV02_ZonaDestino),
+    destinoGoogle     : safeString(servicio?.PRV02_DestinoGoogle),
+    destinoPlaceId    : safeString(servicio?.PRV02_DestinoPlaceId),
+    destinoLat        : safeNumber(servicio?.PRV02_DestinoLat),
+    destinoLng        : safeNumber(servicio?.PRV02_DestinoLng),
+    adultos           : safeNumber(servicio?.PRV02_Adultos),
+    ninos             : safeNumber(servicio?.PRV02_Ninos),
+    totalPax          : safeNumber(servicio?.PRV02_TotalPax),
+    planTarifa        ,
+    codLstPrecio      : safeString(servicio?.PRV02_CodLstPrecio) || safeString(header.codLstPrecio),
+    codPlan           : planTarifa,
+    idReglaPrecio     : safeNumber(servicio?.PRV02_IdReglaPrecio),
+    precioAdulto      : safeNumber(servicio?.PRV02_PrecioAdulto),
+    precioNino        : safeNumber(servicio?.PRV02_PrecioNino),
+    precioPaxExtra    : safeNumber(servicio?.PRV02_PrecioPaxExtra),
+    montoServicio     ,
+    codSuplidor       : safeString(servicio?.PRV02_CodSuplidor),
+    subTotal          ,
+    porDescuento      : safeNumber(servicio?.PRV02_PorDescuento),
+    descuento         : safeNumber(servicio?.PRV02_Descuento),
+    neto              ,
+    impuesto          ,
+    estado            : normalizeDetalleEstado(servicio?.PRV02_Estado),
+    observacion       : safeString(servicio?.PRV02_Observacion),
+    pasajeros         : paxLines
   };
 }
 
@@ -477,46 +481,46 @@ export function mapDetalleFormToDraftServiceLine(
   const split = calculateTaxFromNetAmount(neto, directo, settings);
 
   return {
-    linea,
-    source: 'transfer',
-    tipoServicio: normalizeTipoServicio(detalleForm?.tipoServicio, 'TRANS'),
-    codServicio: safeString(detalleForm?.codServicio),
-    nomServicio: safeString(detalleForm?.nomServicio),
-    fecServicio: safeString(detalleForm?.fechaServicio),
-    horaServicio: safeString(detalleForm?.horaInicio || detalleForm?.horaPickup),
-    horaPickup: safeString(detalleForm?.horaPickup),
-    origenTexto: safeString(detalleForm?.origenLugar),
-    zonaOrigen: safeString(detalleForm?.origenZona),
-    origenGoogle: safeString(detalleForm?.origenGoogle),
-    origenPlaceId: safeString(detalleForm?.origenPlaceId),
-    origenLat: safeNumber(detalleForm?.origenLat),
-    origenLng: safeNumber(detalleForm?.origenLng),
-    destinoTexto: safeString(detalleForm?.destinoLugar),
-    zonaDestino: safeString(detalleForm?.destinoZona),
-    destinoGoogle: safeString(detalleForm?.destinoGoogle),
-    destinoPlaceId: safeString(detalleForm?.destinoPlaceId),
-    destinoLat: safeNumber(detalleForm?.destinoLat),
-    destinoLng: safeNumber(detalleForm?.destinoLng),
-    adultos: pasajeros.filter((item) => isAdultoTipoPax(item.tipoPax)).reduce((sum, item) => sum + item.cantidad, 0),
-    ninos: pasajeros.filter((item) => isNinoTipoPax(item.tipoPax)).reduce((sum, item) => sum + item.cantidad, 0),
-    totalPax: pasajeros.reduce((sum, item) => sum + item.cantidad, 0),
-    planTarifa: safeString(detalleForm?.planTarifa),
-    codLstPrecio: safeString(detalleForm?.codLstPrecio),
-    codPlan: safeString(detalleForm?.codPlan),
-    idReglaPrecio: safeNumber(adultosLine?.reglaPrecioId || ninosLine?.reglaPrecioId),
-    precioAdulto: getPrecioUnitarioFallback(adultosLine),
-    precioNino: getPrecioUnitarioFallback(ninosLine),
-    precioPaxExtra: safeNumber(adultosLine?.precioPaxExtra || ninosLine?.precioPaxExtra),
-    montoServicio: split.total,
-    codSuplidor: '',
-    subTotal,
-    porDescuento: 0,
-    descuento,
-    neto: split.neto,
-    impuesto: split.iva,
-    estado: normalizeDetalleEstado(detalleForm?.estado),
-    observacion: safeString(detalleForm?.observaciones),
-    pasajeros
+    linea             ,
+    source            : 'transfer',
+    tipoServicio      : normalizeTipoServicio(detalleForm?.tipoServicio, 'TRANS'),
+    codServicio       : safeString(detalleForm?.codServicio),
+    nomServicio       : safeString(detalleForm?.nomServicio),
+    fecServicio       : safeString(detalleForm?.fechaServicio),
+    horaServicio      : safeString(detalleForm?.horaInicio || detalleForm?.horaPickup),
+    horaPickup        : safeString(detalleForm?.horaPickup),
+    origenTexto       : safeString(detalleForm?.origenLugar),
+    zonaOrigen        : safeString(detalleForm?.origenZona),
+    origenGoogle      : safeString(detalleForm?.origenGoogle),
+    origenPlaceId     : safeString(detalleForm?.origenPlaceId),
+    origenLat         : safeNumber(detalleForm?.origenLat),
+    origenLng         : safeNumber(detalleForm?.origenLng),
+    destinoTexto      : safeString(detalleForm?.destinoLugar),
+    zonaDestino       : safeString(detalleForm?.destinoZona),
+    destinoGoogle     : safeString(detalleForm?.destinoGoogle),
+    destinoPlaceId    : safeString(detalleForm?.destinoPlaceId),
+    destinoLat        : safeNumber(detalleForm?.destinoLat),
+    destinoLng        : safeNumber(detalleForm?.destinoLng),
+    adultos           : pasajeros.filter((item) => isAdultoTipoPax(item.tipoPax)).reduce((sum, item) => sum + item.cantidad, 0),
+    ninos             : pasajeros.filter((item) => isNinoTipoPax(item.tipoPax)).reduce((sum, item) => sum + item.cantidad, 0),
+    totalPax          : pasajeros.reduce((sum, item) => sum + item.cantidad, 0),
+    planTarifa        : safeString(detalleForm?.planTarifa),
+    codLstPrecio      : safeString(detalleForm?.codLstPrecio),
+    codPlan           : safeString(detalleForm?.codPlan),
+    idReglaPrecio     : safeNumber(adultosLine?.reglaPrecioId || ninosLine?.reglaPrecioId),
+    precioAdulto      : getPrecioUnitarioFallback(adultosLine),
+    precioNino        : getPrecioUnitarioFallback(ninosLine),
+    precioPaxExtra    : safeNumber(adultosLine?.precioPaxExtra || ninosLine?.precioPaxExtra),
+    montoServicio     : split.total,
+    codSuplidor       : '',
+    subTotal          ,
+    porDescuento      : 0,
+    descuento         ,
+    neto              : split.neto,
+    impuesto          : split.iva,
+    estado            : normalizeDetalleEstado(detalleForm?.estado),
+    observacion       : safeString(detalleForm?.observaciones),
+    pasajeros           
   };
 }
 
@@ -648,11 +652,12 @@ export function getNextDraftLinea(servicios: ReservaDraftServiceLine[]): number 
 }
 
 export function calculateDraftTotals(servicios: ReservaDraftServiceLine[]): ReservaDraftTotals {
+  const { redondeoDecimales } = getDefaultCalculationOptions();
   return (servicios ?? []).reduce<ReservaDraftTotals>(
     (acc, item) => ({
-      totalServicios: roundCurrency(acc.totalServicios + safeNumber(item?.montoServicio), DEFAULT_CALCULATION_OPTIONS.redondeoDecimales),
-      totalNeto: roundCurrency(acc.totalNeto + safeNumber(item?.neto), DEFAULT_CALCULATION_OPTIONS.redondeoDecimales),
-      totalImpuesto: roundCurrency(acc.totalImpuesto + safeNumber(item?.impuesto), DEFAULT_CALCULATION_OPTIONS.redondeoDecimales)
+      totalServicios: roundCurrency(acc.totalServicios + safeNumber(item?.montoServicio), redondeoDecimales),
+      totalNeto: roundCurrency(acc.totalNeto + safeNumber(item?.neto), redondeoDecimales),
+      totalImpuesto: roundCurrency(acc.totalImpuesto + safeNumber(item?.impuesto), redondeoDecimales)
     }),
     { totalServicios: 0, totalNeto: 0, totalImpuesto: 0 }
   );
@@ -660,57 +665,57 @@ export function calculateDraftTotals(servicios: ReservaDraftServiceLine[]): Rese
 
 function mapDraftServiceLineToDto(item: ReservaDraftServiceLine): ReservaToursDetalleServicioDto {
   return {
-    linea: safeNumber(item.linea),
-    tipoServicio: normalizeTipoServicio(item.tipoServicio),
-    codServicio: safeString(item.codServicio),
-    nomServicio: safeString(item.nomServicio),
-    fecServicio: formatDateToApiDate(item.fecServicio),
-    horaServicio: safeString(item.horaServicio),
-    horaPickup: safeString(item.horaPickup),
-    origenTexto: safeString(item.origenTexto),
-    zonaOrigen: safeString(item.zonaOrigen),
-    origenGoogle: safeString(item.origenGoogle),
-    origenPlaceId: safeString(item.origenPlaceId),
-    origenLat: safeNumber(item.origenLat),
-    origenLng: safeNumber(item.origenLng),
-    destinoTexto: safeString(item.destinoTexto),
-    zonaDestino: safeString(item.zonaDestino),
-    destinoGoogle: safeString(item.destinoGoogle),
-    destinoPlaceId: safeString(item.destinoPlaceId),
-    destinoLat: safeNumber(item.destinoLat),
-    destinoLng: safeNumber(item.destinoLng),
-    adultos: safeNumber(item.adultos),
-    ninos: safeNumber(item.ninos),
-    totalPax: safeNumber(item.totalPax),
-    planTarifa: safeString(item.planTarifa),
-    codLstPrecio: safeString(item.codLstPrecio),
-    idReglaPrecio: safeNumber(item.idReglaPrecio),
-    precioAdulto: safeNumber(item.precioAdulto),
-    precioNino: safeNumber(item.precioNino),
-    precioPaxExtra: safeNumber(item.precioPaxExtra),
-    montoServicio: safeNumber(item.montoServicio),
-    codSuplidor: safeString(item.codSuplidor),
-    subTotal: safeNumber(item.subTotal),
-    porDescuento: safeNumber(item.porDescuento),
-    descuento: safeNumber(item.descuento),
-    neto: safeNumber(item.neto),
-    impuesto: safeNumber(item.impuesto),
-    estado: normalizeDetalleEstado(item.estado),
-    observacion: safeString(item.observacion)
+    linea               : safeNumber(item.linea),
+    tipoServicio        : normalizeTipoServicio(item.tipoServicio),
+    codServicio         : safeString(item.codServicio),
+    nomServicio         : safeString(item.nomServicio),
+    fecServicio         : formatDateToApiDate(item.fecServicio),
+    horaServicio        : safeString(item.horaServicio),
+    horaPickup          : safeString(item.horaPickup),
+    origenTexto         : safeString(item.origenTexto),
+    zonaOrigen          : safeString(item.zonaOrigen),
+    origenGoogle        : safeString(item.origenGoogle),
+    origenPlaceId       : safeString(item.origenPlaceId),
+    origenLat           : safeNumber(item.origenLat),
+    origenLng           : safeNumber(item.origenLng),
+    destinoTexto        : safeString(item.destinoTexto),
+    zonaDestino         : safeString(item.zonaDestino),
+    destinoGoogle       : safeString(item.destinoGoogle),
+    destinoPlaceId      : safeString(item.destinoPlaceId),
+    destinoLat          : safeNumber(item.destinoLat),
+    destinoLng          : safeNumber(item.destinoLng),
+    adultos             : safeNumber(item.adultos),
+    ninos               : safeNumber(item.ninos),
+    totalPax            : safeNumber(item.totalPax),
+    planTarifa          : safeString(item.planTarifa),
+    codLstPrecio        : safeString(item.codLstPrecio),
+    idReglaPrecio       : safeNumber(item.idReglaPrecio),
+    precioAdulto        : safeNumber(item.precioAdulto),
+    precioNino          : safeNumber(item.precioNino),
+    precioPaxExtra      : safeNumber(item.precioPaxExtra),
+    montoServicio       : safeNumber(item.montoServicio),
+    codSuplidor         : safeString(item.codSuplidor),
+    subTotal            : safeNumber(item.subTotal),
+    porDescuento        : safeNumber(item.porDescuento),
+    descuento           : safeNumber(item.descuento),
+    neto                : safeNumber(item.neto),
+    impuesto            : safeNumber(item.impuesto),
+    estado              : normalizeDetalleEstado(item.estado),
+    observacion         : safeString(item.observacion)
   };
 }
 
 function mapDraftPassengerLineToDto(linea: number, item: ReservaDraftPassengerLine): ReservaToursDetallePasajeroDto {
   return {
-    linea: safeNumber(linea),
-    tipoPax: safeString(item.tipoPax),
-    cantidad: safeNumber(item.cantidad),
-    precioUnitarioNeto: safeNumber(item.precioUnitarioNeto),
-    precioUnitarioIVA: safeNumber(item.precioUnitarioIVA),
-    precioUnitarioTotal: safeNumber(item.precioUnitarioTotal),
-    subtotalNeto: safeNumber(item.subtotalNeto),
-    subtotalIVA: safeNumber(item.subtotalIVA),
-    subtotalTotal: safeNumber(item.subtotalTotal)
+    linea                 : safeNumber(linea),
+    tipoPax               : safeString(item.tipoPax),
+    cantidad              : safeNumber(item.cantidad),
+    precioUnitarioNeto    : safeNumber(item.precioUnitarioNeto),
+    precioUnitarioIVA     : safeNumber(item.precioUnitarioIVA),
+    precioUnitarioTotal   : safeNumber(item.precioUnitarioTotal),
+    subtotalNeto          : safeNumber(item.subtotalNeto),
+    subtotalIVA           : safeNumber(item.subtotalIVA),
+    subtotalTotal         : safeNumber(item.subtotalTotal)
   };
 }
 

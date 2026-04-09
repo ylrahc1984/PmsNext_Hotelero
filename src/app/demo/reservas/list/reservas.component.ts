@@ -311,7 +311,7 @@ export class ReservasComponent implements OnInit, OnDestroy {
 
   getCantidadServicios(reserva: Reserva): number {
     // Si el backend no retorna el detalle, este mÃ©todo puede requerir ajuste
-    return reserva['detalles']?.length || 0;
+    return  0;
   }
 
   isEstadoChk(estado: string): boolean {

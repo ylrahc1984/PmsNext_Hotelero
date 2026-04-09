@@ -58,7 +58,18 @@
 
       <ng-container *ngIf="vm$ | async as filterVm">
         <div *ngIf="filterVm.data?.bloques?.length" class="hour-filter-panel">
-          <div class="hour-filter-panel__title">Bloques por hora</div>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="hour-filter-panel__title">Bloques por hora</div>
+            <button
+              type="button"
+              class="btn btn-primary btn-sm d-flex align-items-center gap-2"
+              routerLink="/operaciones/reservas/nueva-v2"
+              aria-label="Nueva Reserva"
+            >
+              <i class="feather icon-plus"></i>
+              <span>Nueva Reserva</span>
+            </button>
+          </div>
 
           <div class="hour-filter-chips">
             <button

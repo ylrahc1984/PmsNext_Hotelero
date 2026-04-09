@@ -58,6 +58,7 @@
                             class="rsv-v2-agencia-dropdown__item"
                             *ngFor="let cliente of agenciaSearchResults"
                             (mousedown)="onAgenciaSuggestionMouseDown(cliente, $event)">
+                            <span class="rsv-v2-agencia-dropdown__title">{{ cliente.contacto }}</span>
                             <span class="rsv-v2-agencia-dropdown__title">{{ cliente.nombre }}</span>
                             <span class="rsv-v2-agencia-dropdown__meta">{{ cliente.codigo }}<ng-container *ngIf="cliente.ruc"> · {{ cliente.ruc }}</ng-container></span>
                           </button>
@@ -69,6 +70,10 @@
                             <span>No se encontraron coincidencias.</span>
                           </div>
                         </div>
+                      </div>
+
+                      <div class="rsv-v2-selection-note" *ngIf="selectedCliente && selectedCliente.contacto">
+                        Nombre comercial: <strong>{{ selectedCliente.contacto }}</strong>
                       </div>
     
                       <div class="rsv-v2-selection-note" *ngIf="!selectedCliente && agenciaSearchTerm.trim().length >= 2 && !agenciaSearchLoading">
@@ -175,7 +180,6 @@
                   <div class="col-12 mb-2">
                     <label class="form-label">Forma de Pago <span class="text-danger">*</span></label>
                     <select class="form-control form-control-sm" [(ngModel)]="form.formaPago" name="formaPago" required (ngModelChange)="onHeaderChange()">
-                      <option value="">Seleccione forma de pago</option>
                       <option *ngFor="let forma of formasPagoApi" [ngValue]="forma.codigo">{{ forma.descripcion }}</option>
                     </select>
                   </div>

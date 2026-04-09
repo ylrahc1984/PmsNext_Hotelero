@@ -8,8 +8,6 @@ import Swal from 'sweetalert2';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { CanDeactivateReservaCreate } from 'src/app/core/guards/can-deactivate-reserva-create.guard';
-import { FormaPagoService } from '../../../administracion/forma-pago/forma-pago.service';
-import { FormaPago } from '../../../administracion/forma-pago/forma-pago.models';
 import { MonedaService, MonedaUI } from '../../../administracion/monedas/moneda.service';
 import { ListaPrecioService } from '../../../catalogos/listas-precios/lista-precio.service';
 import { ListaPrecioUI } from '../../../catalogos/listas-precios/lista-precio.models';
@@ -54,6 +52,11 @@ import {
 } from './reserva-tours.mapper';
 import { ReservaToursV2Service } from './reserva-tours-v2.service';
 
+type FormaPagoLocalOption = {
+  codigo      : string;
+  descripcion : string;
+};
+
 @Component({
   selector: 'app-reserva-create-v2',
   standalone: true,
@@ -75,34 +78,34 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
   detalleForm: DetalleForm = buildInitialDetalleForm();
   actividadForm: ActividadDetalleForm = buildInitialActividadDetalleForm();
   agenciaSearchTerm = '';
-  agenciaSearchResults: ClienteUI[] = [];
   agenciaSearchOpen = false;
-
-  idiomas: IdiomaDto[] = [];
+  
   get listaPreciosDisponibles(): ListaPrecioUI[] {
     return this.listasPreciosAsignadas.length ? this.listasPreciosAsignadas : this.listaPreciosVigentes;
   }
   get listaPreciosParaActividad(): ListaPrecioUI[] {
     return this.listaPreciosDisponibles;
   }
-
-  formasReservacion: FormaReservaDto[] = [];
-  formasPagoApi: FormaPago[] = [];
-  listaPrecios: ListaPrecioUI[] = [];
-  listaPreciosVigentes: ListaPrecioUI[] = [];
-  listasPreciosAsignadas: ListaPrecioUI[] = [];
-  planesTarifas: PlanTarifaUI[] = [];
-  monedas: MonedaUI[] = [];
-  servicios: ServicioUI[] = [];
-  serviciosPrecio: ServicioPrecioApiItem[] = [];
-  tiposPax: TipoPaxUI[] = [];
+  
+  agenciaSearchResults            : ClienteUI[] = [];
+  idiomas                         : IdiomaDto[] = [];
+  formasReservacion               : FormaReservaDto[] = [];
+  formasPagoApi                   : FormaPagoLocalOption[] = [];
+  listaPrecios                    : ListaPrecioUI[] = [];
+  listaPreciosVigentes            : ListaPrecioUI[] = [];
+  listasPreciosAsignadas          : ListaPrecioUI[] = [];
+  planesTarifas                   : PlanTarifaUI[] = [];
+  monedas                         : MonedaUI[] = [];
+  servicios                       : ServicioUI[] = [];
+  serviciosPrecio                 : ServicioPrecioApiItem[] = [];
+  tiposPax                        : TipoPaxUI[] = [];
+  contactosCliente                : ClienteContactoUI[] = [];
 
   showClienteModal = false;
   showContactoRapidoModal = false;
   showDetalleModal = false;
   showActividadModal = false;
   selectedCliente: ClienteUI | null = null;
-  contactosCliente: ClienteContactoUI[] = [];
 
   contactosLoading = false;
   serviciosLoading = false;
@@ -126,26 +129,25 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
   private agenciaSearchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private agenciaSearchBlurTimer: ReturnType<typeof setTimeout> | null = null;
 
-  protected router = inject(Router);
-  private route = inject(ActivatedRoute);
-  private authService = inject(AuthService);
-  private formaPagoService = inject(FormaPagoService);
-  private monedaService = inject(MonedaService);
-  private listaPrecioService = inject(ListaPrecioService);
-  private planesTarifasService = inject(PlanesTarifasService);
-  private clienteService = inject(ClienteService);
-  private tarifasClienteService = inject(TarifasClienteService);
-  private tipoPaxService = inject(TipoPaxService);
-  private serviciosService = inject(ServiciosService);
-  private idiomasService = inject(IdiomasService);
-  private formaReservasService = inject(FormaReservasService);
-  private tarifaService = inject(ReservaCreateTarifaService);
-  private contactoRapidoService = inject(ReservaContactoRapidoService);
-  private reservaToursService = inject(ReservaToursV2Service);
+  protected router                     = inject(Router);
+  private route                        = inject(ActivatedRoute);
+  private authService                  = inject(AuthService);
+  private monedaService                = inject(MonedaService);
+  private listaPrecioService           = inject(ListaPrecioService);
+  private planesTarifasService         = inject(PlanesTarifasService);
+  private clienteService               = inject(ClienteService);
+  private tarifasClienteService        = inject(TarifasClienteService);
+  private tipoPaxService               = inject(TipoPaxService);
+  private serviciosService             = inject(ServiciosService);
+  private idiomasService               = inject(IdiomasService);
+  private formaReservasService         = inject(FormaReservasService);
+  private tarifaService                = inject(ReservaCreateTarifaService);
+  private contactoRapidoService        = inject(ReservaContactoRapidoService);
+  private reservaToursService          = inject(ReservaToursV2Service);
   private listaPreciosAsignadasCodigos = new Set<string>();
-  private tarifasClienteRequestId = 0;
+  private tarifasClienteRequestId      = 0;
 
-  private clienteDetailRequestId = 0;
+  private clienteDetailRequestId       = 0;
 
   private resolveTipoServicioValue(value: unknown, fallback = ''): string {
     const normalized = safeString(value || fallback).trim().toUpperCase();
@@ -362,12 +364,12 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
     console.log('payload completo:', payload);
     console.table(
       detalleServicios.map((item) => ({
-        linea: item.linea,
-        codServicio: item.codServicio,
-        nomServicio: item.nomServicio,
-        planTarifa: item.planTarifa,
-        codPlan: payload.codPlan,
-        codLstPrecio: item.codLstPrecio
+        linea           : item.linea,
+        codServicio     : item.codServicio,
+        nomServicio     : item.nomServicio,
+        planTarifa      : item.planTarifa,
+        codPlan         : payload.codPlan,
+        codLstPrecio    : item.codLstPrecio
       }))
     );
     console.groupEnd();
@@ -961,7 +963,8 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
     }
     const codigo = safeString(cliente.codigo).trim();
     const nombre = safeString(cliente.nombre).trim();
-    return [codigo, nombre].filter(Boolean).join(' - ');
+    const contacto = safeString(cliente.contacto).trim();
+    return [codigo, nombre].filter(Boolean).join(' - ') || codigo || contacto;
   }
 
   private shouldClearSelectedCliente(nextTerm: string): boolean {
@@ -1317,17 +1320,16 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
   }
 
   private cargarFormasPago(): void {
-    this.formaPagoService.getAll().subscribe({
-      next: (res) => {
-        this.formasPagoApi = res ?? [];
-        if (this.formasPagoApi.length > 0 && !this.form.formaPago) {
-          this.form.formaPago = this.formasPagoApi[0].codigo;
-        }
-      },
-      error: () => {
-        this.formasPagoApi = [];
-      }
-    });
+    this.formasPagoApi = [
+      { codigo: 'EFECT', descripcion: 'EFECTIVO' },
+      { codigo: 'TARJE', descripcion: 'TARJETA' },
+      { codigo: 'PREPA', descripcion: 'PREPAGO' },
+      { codigo: 'CREDI', descripcion: 'CREDITO' }
+    ];
+
+    if (this.formasPagoApi.length > 0 && !safeString(this.form.formaPago).trim()) {
+      this.form.formaPago = this.formasPagoApi[0].codigo;
+    }
   }
 
   private cargarMonedas(): void {

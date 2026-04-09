@@ -193,13 +193,15 @@ export class ClienteService {
     const zona = (apiData.MPV00_Zona ?? apiData.MPV00_ZONA ?? '').trim();
     const contactos = this.mapContactos(apiData.contactos);
     const contactoPrincipal = this.resolveContactoPrincipal(apiData, contactos);
+    const nombreComercial = (apiData.MPV00_Contacto ?? '').toString().trim();
+    const nombreContacto = contactoPrincipal.nomContacto || nombreComercial;
     const totalContactos = apiData.TotalContactos ?? contactos.length ?? (contactoPrincipal.nomContacto ? 1 : 0);
     return {
       codigo                : apiData.MPV00_CodClien,
       nombre                : apiData.MPV00_NomClien,
       ruc                   : apiData.MPV00_RucClien,
-      contacto              : contactoPrincipal.nomContacto || apiData.MPV00_Contacto || '',
-      nombreContacto        : contactoPrincipal.nomContacto || apiData.MPV00_Contacto || '',
+      contacto              : nombreComercial || nombreContacto,
+      nombreContacto        : nombreContacto,
       contactoPrincipal     : contactoPrincipal.nomContacto,
       emailPrincipal        : contactoPrincipal.email,
       telefonoPrincipal     : contactoPrincipal.telefono1 || contactoPrincipal.movil,
@@ -231,7 +233,8 @@ export class ClienteService {
   private mapFromDetalleApi(apiData: ClienteDetalleDto, contactosDto?: ClienteContactoDto[] | null): ClienteUI {
     const contactos = this.mapContactos(contactosDto);
     const contactoPrincipal = contactos.find((item) => item.principal) ?? contactos[0] ?? null;
-    const contactoNombre = contactoPrincipal?.nomContacto || (apiData.contacto ?? '').toString().trim();
+    const nombreComercial = (apiData.contacto ?? '').toString().trim();
+    const contactoNombre = contactoPrincipal?.nomContacto || nombreComercial;
     const totalContactos =
       contactos.length ||
       (contactoNombre || (apiData.email ?? '').toString().trim() || (apiData.telefono1 ?? '').toString().trim() ? 1 : 0);
@@ -243,7 +246,7 @@ export class ClienteService {
       codigo              : (apiData.codigo ?? '').toString().trim(),
       nombre              : (apiData.nombreCli ?? '').toString().trim(),
       ruc                 : (apiData.ruc ?? '').toString().trim(),
-      contacto            : contactoNombre,
+      contacto            : nombreComercial || contactoNombre,
       nombreContacto      : contactoNombre,
       contactoPrincipal   : contactoPrincipal?.nomContacto || '',
       emailPrincipal      : contactoPrincipal?.email || '',

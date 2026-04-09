@@ -81,7 +81,10 @@
               </td>
               <td class="text-nowrap">{{ reserva.PRV01_FecCreacion | date:'dd/MM/yyyy' }}</td>
               <td>{{ reserva.PRV01_NomCliente }}</td>
-              <td>{{ reserva.MPV00_NomClien }}</td>
+              <td>
+                <div>{{ reserva.MPV00_NomClien }}</div>
+                <small class="text-muted" *ngIf="reserva.MPV00_Contacto">{{ reserva.MPV00_Contacto }}</small>
+              </td>
               <td>
                 <span class="badge rounded-pill" [ngClass]="getServiciosBadge(getCantidadServicios(reserva))">
                   <i class="feather icon-layers me-1"></i>

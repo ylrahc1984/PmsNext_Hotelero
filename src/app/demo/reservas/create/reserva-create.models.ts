@@ -49,38 +49,38 @@ export interface ActividadPaxForm {
 }
 
 export interface Tarifa {
-  tipoPax?: string;
-  tipo: string;
-  precio: number;
-  cantidad: number;
-  total: number;
+  tipoPax     ?: string;
+  tipo        : string;
+  precio      : number;
+  cantidad    : number;
+  total       : number;
 }
 
 export interface ActividadDetalle {
-  codServicio: string;
-  nomServicio: string;
-  tipoServicio?: string;
-  reglaPrecioID: number;
-  tarifas: Tarifa[];
-  totalLinea: number;
+  codServicio       : string;
+  nomServicio       : string;
+  tipoServicio      ?: string;
+  reglaPrecioID     : number;
+  tarifas           : Tarifa[];
+  totalLinea        : number;
 }
 
 export interface ActividadDetalleForm {
-  codPlan?: string;
-  planTarifa?: string;
-  codLstPrecio?: string;
-  codServicio: string;
-  nomServicio: string;
-  tipoServicio: string;
-  fechaServicio: string;
-  horaPickup: string;
-  horaInicio?: string;
-  observaciones?: string;
-  pickups: ActividadPickupForm[];
-  detallesPax: ActividadPaxForm[];
-  actividades?: ActividadDetalle[];
-  totalGeneral?: number;
-  montoServicio: number;
+  codPlan           ?: string;
+  planTarifa        ?: string;
+  codLstPrecio      ?: string;
+  codServicio       : string;
+  nomServicio       : string;
+  tipoServicio      : string;
+  fechaServicio     : string;
+  horaPickup        : string;
+  horaInicio        ?: string;
+  observaciones     ?: string;
+  pickups           : ActividadPickupForm[];
+  detallesPax       : ActividadPaxForm[];
+  actividades       ?: ActividadDetalle[];
+  totalGeneral      ?: number;
+  montoServicio     : number;
 }
 
 // No se usa DetalleForm para la API, pero se mantiene para el modal local

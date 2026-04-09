@@ -8,6 +8,7 @@ export interface Reserva {
   PRV01_CodReserva              : string;
   PRV01_CodAgencia              : string;
   MPV00_NomClien                : string;
+  MPV00_Contacto                : string;
   PRV01_NomCliente              : string;
   PRV01_TelCliente              : string;
   PRV01_EmailCliente            : string;
@@ -49,6 +50,7 @@ export interface DetalleReservaPendienteDto {
   PRV01_EmailCliente      : string;
   PRV01_CodAgencia        : string;
   MPV00_NomAgencia        : string;
+  MPV00_Contacto          : string;
   PRV01_Estado            : string;
   PRV01_Folio             : any;
   PRV02_TipoServicio      : string;
@@ -101,6 +103,7 @@ export interface ReservaDetalleDisponible {
   email               : string;
   agencia             : string;
   nombreAgencia       : string;
+  contacto            : string;
   estadoReserva       : string;
   folio               : string;
   tipoServicio        : string;
@@ -296,6 +299,7 @@ export class ReservasService {
       email                 : apiData.PRV01_EmailCliente,
       agencia               : apiData.PRV01_CodAgencia,
       nombreAgencia         : apiData.MPV00_NomAgencia,
+      contacto              : apiData.MPV00_Contacto,
       estadoReserva         : apiData.PRV01_Estado,
       folio                 : typeof apiData.PRV01_Folio === 'object' ? '' : String(apiData.PRV01_Folio || ''),
       tipoServicio          : apiData.PRV02_TipoServicio,
