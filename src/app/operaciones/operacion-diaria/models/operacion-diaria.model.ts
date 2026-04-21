@@ -11,6 +11,13 @@ export interface BloqueHora {
   detalles      : OperacionDetalle[];
 }
 
+export interface BloqueHoraAgrupado {
+  bloqueHora          : string;
+  totalesHora         : TotalesHora;
+  reservas            : ReservaOperacionAgrupada[];
+  cantidadReservas    : number;
+}
+
 export interface TotalesHora {
   totalHora         : number;
   paxHora           : number;
@@ -46,6 +53,40 @@ export interface OperacionDetalle {
   chofer                  : string | null;
   usuario                 : string;
   observacionOperacion    : string | null;
+}
+
+export interface ServicioResumen {
+  codServicio       : string;
+  nomServicio       : string;
+}
+
+export interface ReservaOperacionAgrupada {
+  reservaKey                    : string;
+  numeroReserva                 : string;
+  fechaServicio                 : string;
+  cliente                       : string;
+  agencia                       : string;
+  codAgencia                    : string;
+  pickupPrincipal               : string;
+  pickupReferencia              : string;
+  usuarioResponsable            : string;
+  servicios                     : ServicioResumen[];
+  serviciosPreview              : ServicioResumen[];
+  serviciosExtraCount           : number;
+  cantidadServicios             : number;
+  paxTotal                      : number;
+  totalReserva                  : number;
+  estadoOperacionLabel          : string;
+  estadoOperacionBadge          : string;
+  estadoFacturacionLabel        : string;
+  estadoFacturacionBadge        : string;
+  estadoTransporteLabel         : string;
+  estadoTransporteBadge         : string;
+  indicadorConChofer            : boolean;
+  indicadorObservacionCliente   : boolean;
+  indicadorObservacionOperacion : boolean;
+  detallePrincipal              : OperacionDetalle;
+  detalles                      : OperacionDetalle[];
 }
 
 export interface ResumenActividadHora {

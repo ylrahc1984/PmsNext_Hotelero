@@ -13,9 +13,10 @@ import { EmpresaContextService } from 'src/app/core/services/empresa-context.ser
 import { environment } from 'src/environments/environment';
 import {
   ActualizarObservacionOperacionPayload,
-  BloqueHora,
+  BloqueHoraAgrupado,
   OperacionDetalle,
   OperacionDiariaResponse,
+  ReservaOperacionAgrupada,
   ResumenActividadHora
 } from './models/operacion-diaria.model';
 
@@ -35,6 +36,7 @@ interface OperacionDiariaViewState {
   loading   : boolean;
   error     : string | null;
   data      : OperacionDiariaResponse | null;
+  bloques   : BloqueHoraAgrupado[];
 }
 
 interface PrintVoucherPayload {
@@ -75,11 +77,13 @@ export class OperacionDiariaComponent implements OnInit {
 
   readonly autoRefresh = false;
   readonly observacionMaxLength = 500;
+  readonly servicePreviewLimit = 3;
   readonly pageSizes = [25, 50, 100];
   selectedBloqueHora = '';
   page = 1;
   pageSize = 50;
   totalRegistros = 0;
+  expandedReservas = new Set<string>();
   checkingIn = new Set<number | string>();
   printingVouchers = new Set<number | string>();
   observacionModalOpen = false;
@@ -123,11 +127,13 @@ export class OperacionDiariaComponent implements OnInit {
             this.manualRefresh$.next();
           }
           this.resumenPorHora = this.buildResumenMap(data?.resumenActividadPorHora ?? []);
-          this.syncSelectedBloqueHora(data?.bloques ?? []);
-          return { loading: false, error: null, data };
+          const bloques = this.buildBloquesAgrupados(data?.bloques ?? []);
+          this.syncSelectedBloqueHora(bloques);
+          this.syncExpandedReservas(bloques);
+          return { loading: false, error: null, data, bloques };
         }),
-        startWith({ loading: true, error: null, data: null }),
-        catchError(() => of({ loading: false, error: 'No se pudo cargar la operacion diaria.', data: null }))
+        startWith({ loading: true, error: null, data: null, bloques: [] }),
+        catchError(() => of({ loading: false, error: 'No se pudo cargar la operacion diaria.', data: null, bloques: [] }))
       )
     ),
     shareReplay({ bufferSize: 1, refCount: true })
@@ -192,19 +198,19 @@ export class OperacionDiariaComponent implements OnInit {
     return this.resumenPorHora.get(hora) ?? [];
   }
 
-  getBloquesHoraDisponibles(data: OperacionDiariaResponse | null | undefined): string[] {
-    return (data?.bloques ?? [])
+  getBloquesHoraDisponibles(bloques: BloqueHoraAgrupado[] | null | undefined): string[] {
+    return (bloques ?? [])
       .map((bloque) => (bloque.bloqueHora ?? '').toString().trim())
       .filter((hora, index, arr) => !!hora && arr.indexOf(hora) === index);
   }
 
-  getBloquesFiltrados(data: OperacionDiariaResponse | null | undefined): BloqueHora[] {
-    const bloques = data?.bloques ?? [];
+  getBloquesFiltrados(bloques: BloqueHoraAgrupado[] | null | undefined): BloqueHoraAgrupado[] {
+    const source = bloques ?? [];
     if (!this.selectedBloqueHora) {
-      return bloques;
+      return source;
     }
 
-    return bloques.filter((bloque) => (bloque.bloqueHora ?? '').toString().trim() === this.selectedBloqueHora);
+    return source.filter((bloque) => (bloque.bloqueHora ?? '').toString().trim() === this.selectedBloqueHora);
   }
 
   setBloqueHoraFilter(hora: string): void {
@@ -219,6 +225,25 @@ export class OperacionDiariaComponent implements OnInit {
 
   isBloqueHoraSelected(hora: string): boolean {
     return this.selectedBloqueHora === (hora ?? '').toString().trim();
+  }
+
+  toggleReservaExpansion(reserva: ReservaOperacionAgrupada): void {
+    const key = (reserva?.reservaKey ?? '').toString().trim();
+    if (!key) {
+      return;
+    }
+
+    if (this.expandedReservas.has(key)) {
+      this.expandedReservas.delete(key);
+    } else {
+      this.expandedReservas.add(key);
+    }
+    this.cdr.markForCheck();
+  }
+
+  isReservaExpanded(reserva: ReservaOperacionAgrupada): boolean {
+    const key = (reserva?.reservaKey ?? '').toString().trim();
+    return key ? this.expandedReservas.has(key) : false;
   }
 
   get observacionControl() {
@@ -559,8 +584,12 @@ export class OperacionDiariaComponent implements OnInit {
     return 'chip--otro';
   }
 
-  trackByBloque(index: number, bloque: BloqueHora): string {
+  trackByBloque(index: number, bloque: BloqueHoraAgrupado): string {
     return bloque.bloqueHora || `bloque-${index}`;
+  }
+
+  trackByReserva(index: number, reserva: ReservaOperacionAgrupada): string {
+    return reserva.reservaKey || `reserva-${index}`;
   }
 
   trackByDetalle(index: number, detalle: OperacionDetalle): number | string {
@@ -646,7 +675,135 @@ export class OperacionDiariaComponent implements OnInit {
     return mapByHora;
   }
 
-  private syncSelectedBloqueHora(bloques: BloqueHora[]): void {
+  private buildBloquesAgrupados(rawBloques: OperacionDiariaResponse['bloques']): BloqueHoraAgrupado[] {
+    return (rawBloques ?? []).map((bloque) => {
+      const reservas = this.groupDetallesByReserva(bloque?.detalles ?? []);
+      return {
+        bloqueHora: bloque?.bloqueHora ?? '',
+        totalesHora: bloque?.totalesHora ?? { totalHora: 0, paxHora: 0, cantidadServicios: 0 },
+        reservas,
+        cantidadReservas: reservas.length
+      };
+    });
+  }
+
+  private groupDetallesByReserva(detalles: OperacionDetalle[]): ReservaOperacionAgrupada[] {
+    const grouped = new Map<string, OperacionDetalle[]>();
+
+    (detalles ?? []).forEach((detalle) => {
+      const key = this.buildReservaKey(detalle);
+      if (!grouped.has(key)) {
+        grouped.set(key, []);
+      }
+      grouped.get(key)!.push(detalle);
+    });
+
+    return Array.from(grouped.entries()).map(([reservaKey, reservaDetalles]) =>
+      this.buildReservaAgrupada(reservaKey, reservaDetalles)
+    );
+  }
+
+  private buildReservaKey(detalle: OperacionDetalle): string {
+    const codReserva = (detalle?.prV02_CodReserva ?? '').toString().trim();
+    const fechaServicio = (detalle?.prV02_FecServicio ?? '').toString().trim();
+    const cliente = (detalle?.cliente ?? '').toString().trim();
+    const fallback = detalle?.prV02_ID ?? `${fechaServicio}-${cliente}`;
+    return codReserva || `${fallback}`;
+  }
+
+  private buildReservaAgrupada(reservaKey: string, detalles: OperacionDetalle[]): ReservaOperacionAgrupada {
+    const sortedDetalles = [...detalles].sort((a, b) => this.toNumber(a?.prV02_ID) - this.toNumber(b?.prV02_ID));
+    const principal = sortedDetalles[0];
+
+    const servicesByCode = new Map<string, { codServicio: string; nomServicio: string }>();
+    sortedDetalles.forEach((detalle) => {
+      const codServicio = (detalle?.codServicio ?? '').toString().trim();
+      const nomServicio = (detalle?.nomServicio ?? '').toString().trim();
+      const key = `${codServicio}-${nomServicio}`;
+      if (!servicesByCode.has(key)) {
+        servicesByCode.set(key, { codServicio, nomServicio });
+      }
+    });
+    const servicios = Array.from(servicesByCode.values());
+    const serviciosPreview = servicios.slice(0, this.servicePreviewLimit);
+    const serviciosExtraCount = Math.max(0, servicios.length - serviciosPreview.length);
+
+    const paxTotal = sortedDetalles.reduce((acc, item) => acc + this.toNumber(item?.totalPax), 0);
+    const totalReserva = sortedDetalles.reduce((acc, item) => acc + this.toNumber(item?.totalServicio), 0);
+
+    const estados = sortedDetalles.map((item) => (item?.estado ?? '').toString().trim().toUpperCase()).filter(Boolean);
+    const hasAllFacturado = sortedDetalles.length > 0 && sortedDetalles.every((item) => this.isReservaFacturada(item));
+    const hasAnyFacturado = sortedDetalles.some((item) => this.isReservaFacturada(item));
+    const hasAllTransporte = sortedDetalles.length > 0 && sortedDetalles.every((item) => this.isTransporteAsignado(item));
+    const hasAnyTransporte = sortedDetalles.some((item) => this.isTransporteAsignado(item));
+
+    const estadoOperacion = this.resolveEstadoOperacionConsolidado(estados);
+    const estadoFacturacion = this.resolveEstadoFacturacionConsolidado(hasAllFacturado, hasAnyFacturado);
+    const estadoTransporte = this.resolveEstadoTransporteConsolidado(hasAllTransporte, hasAnyTransporte);
+
+    return {
+      reservaKey,
+      numeroReserva: (principal?.prV02_CodReserva ?? '').toString().trim(),
+      fechaServicio: (principal?.prV02_FecServicio ?? '').toString().trim(),
+      cliente: (principal?.cliente ?? '').toString().trim(),
+      agencia: (principal?.agencia ?? '').toString().trim(),
+      codAgencia: (principal?.codAgencia ?? '').toString().trim(),
+      pickupPrincipal: (principal?.lugarPickup ?? '').toString().trim(),
+      pickupReferencia: (principal?.formaPago ?? '').toString().trim(),
+      usuarioResponsable: (principal?.usuario ?? '').toString().trim(),
+      servicios,
+      serviciosPreview,
+      serviciosExtraCount,
+      cantidadServicios: sortedDetalles.length,
+      paxTotal,
+      totalReserva,
+      estadoOperacionLabel: estadoOperacion.label,
+      estadoOperacionBadge: estadoOperacion.badge,
+      estadoFacturacionLabel: estadoFacturacion.label,
+      estadoFacturacionBadge: estadoFacturacion.badge,
+      estadoTransporteLabel: estadoTransporte.label,
+      estadoTransporteBadge: estadoTransporte.badge,
+      indicadorConChofer: sortedDetalles.some((item) => this.hasTexto(item?.chofer)),
+      indicadorObservacionCliente: sortedDetalles.some((item) => this.hasObservacion(item)),
+      indicadorObservacionOperacion: sortedDetalles.some((item) => this.hasObservacionOperacion(item)),
+      detallePrincipal: principal,
+      detalles: sortedDetalles
+    };
+  }
+
+  private resolveEstadoOperacionConsolidado(estados: string[]): { label: string; badge: string } {
+    const unique = Array.from(new Set(estados));
+    if (!unique.length) {
+      return { label: 'Sin estado', badge: 'bg-secondary' };
+    }
+    if (unique.length === 1) {
+      const estado = unique[0];
+      return { label: estado, badge: this.getEstadoBadge(estado) };
+    }
+    return { label: 'Mixto', badge: 'bg-secondary' };
+  }
+
+  private resolveEstadoFacturacionConsolidado(allFacturado: boolean, anyFacturado: boolean): { label: string; badge: string } {
+    if (allFacturado) {
+      return { label: 'Facturado', badge: 'bg-success' };
+    }
+    if (anyFacturado) {
+      return { label: 'Parcial', badge: 'bg-info' };
+    }
+    return { label: 'Pendiente', badge: 'bg-warning text-dark' };
+  }
+
+  private resolveEstadoTransporteConsolidado(allTransporte: boolean, anyTransporte: boolean): { label: string; badge: string } {
+    if (allTransporte) {
+      return { label: 'Asignado', badge: 'bg-success' };
+    }
+    if (anyTransporte) {
+      return { label: 'Parcial', badge: 'bg-info' };
+    }
+    return { label: 'Sin asignar', badge: 'bg-secondary' };
+  }
+
+  private syncSelectedBloqueHora(bloques: BloqueHoraAgrupado[]): void {
     if (!this.selectedBloqueHora) {
       return;
     }
@@ -656,6 +813,25 @@ export class OperacionDiariaComponent implements OnInit {
       this.selectedBloqueHora = '';
       this.cdr.markForCheck();
     }
+  }
+
+  private syncExpandedReservas(bloques: BloqueHoraAgrupado[]): void {
+    if (!this.expandedReservas.size) {
+      return;
+    }
+
+    const availableKeys = new Set<string>();
+    bloques.forEach((bloque) => {
+      bloque.reservas.forEach((reserva) => {
+        availableKeys.add(reserva.reservaKey);
+      });
+    });
+
+    this.expandedReservas.forEach((key) => {
+      if (!availableKeys.has(key)) {
+        this.expandedReservas.delete(key);
+      }
+    });
   }
 
   private loadChoferes(): void {

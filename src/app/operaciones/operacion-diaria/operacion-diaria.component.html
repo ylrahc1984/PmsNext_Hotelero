@@ -56,330 +56,380 @@
         </div>
       </form>
 
-      <ng-container *ngIf="vm$ | async as filterVm">
-        <div *ngIf="filterVm.data?.bloques?.length" class="hour-filter-panel">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <div class="hour-filter-panel__title">Bloques por hora</div>
-            <button
-              type="button"
-              class="btn btn-primary btn-sm d-flex align-items-center gap-2"
-              routerLink="/operaciones/reservas/nueva-v2"
-              aria-label="Nueva Reserva"
-            >
-              <i class="feather icon-plus"></i>
-              <span>Nueva Reserva</span>
-            </button>
-          </div>
+      @if (vm$ | async; as filterVm) {
+        @if (filterVm.bloques.length) {
+          <div class="hour-filter-panel">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="hour-filter-panel__title">Bloques por hora</div>
+              <button
+                type="button"
+                class="btn btn-primary btn-sm d-flex align-items-center gap-2"
+                routerLink="/operaciones/reservas/nueva-v2"
+                aria-label="Nueva Reserva"
+              >
+                <i class="feather icon-plus"></i>
+                <span>Nueva Reserva</span>
+              </button>
+            </div>
 
-          <div class="hour-filter-chips">
-            <button
-              type="button"
-              class="hour-filter-chip"
-              [class.is-active]="!selectedBloqueHora"
-              (click)="setBloqueHoraFilter('')"
-            >
-              Todo
-            </button>
+            <div class="hour-filter-chips">
+              <button
+                type="button"
+                class="hour-filter-chip"
+                [class.is-active]="!selectedBloqueHora"
+                (click)="setBloqueHoraFilter('')"
+              >
+                Todo
+              </button>
 
-            <button
-              type="button"
-              class="hour-filter-chip"
-              *ngFor="let hora of getBloquesHoraDisponibles(filterVm.data)"
-              [class.is-active]="isBloqueHoraSelected(hora)"
-              (click)="setBloqueHoraFilter(hora)"
-            >
-              {{ hora }}
-            </button>
+              @for (hora of getBloquesHoraDisponibles(filterVm.bloques); track hora) {
+                <button
+                  type="button"
+                  class="hour-filter-chip"
+                  [class.is-active]="isBloqueHoraSelected(hora)"
+                  (click)="setBloqueHoraFilter(hora)"
+                >
+                  {{ hora }}
+                </button>
+              }
+            </div>
           </div>
-        </div>
-      </ng-container>
+        }
+      }
     </div>
   </div>
 
-  <ng-container *ngIf="vm$ | async as vm">
-    <div *ngIf="vm.loading" class="card status-card">
-      <div class="card-body d-flex align-items-center gap-2">
-        <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
-        <span>Consultando operacion diaria...</span>
-      </div>
-    </div>
-
-    <div *ngIf="vm.error" class="alert alert-danger">{{ vm.error }}</div>
-
-    <div *ngIf="!vm.loading && !vm.error && (vm.data?.totalRegistros ?? 0) === 0" class="card status-card">
-      <div class="card-body text-center text-muted">No hay registros para los filtros seleccionados.</div>
-    </div>
-
-    <div *ngIf="!vm.loading && !vm.error && (vm.data?.totalRegistros ?? 0) > 0" class="hourly-grid">
-      <div class="card hour-card" *ngFor="let bloque of getBloquesFiltrados(vm.data); trackBy: trackByBloque">
-        <div class="card-header hour-card__header">
-          <div class="hour-title">{{ bloque.bloqueHora }}</div>
-          <div class="hour-metrics">
-            <div class="metric">
-              <span>Total</span>
-              <strong>{{ bloque.totalesHora.totalHora | number: '1.2-2' }}</strong>
-            </div>
-            <div class="metric">
-              <span>Pax</span>
-              <strong>{{ bloque.totalesHora.paxHora }}</strong>
-            </div>
-            <div class="metric">
-              <span>Servicios</span>
-              <strong>{{ bloque.totalesHora.cantidadServicios }}</strong>
-            </div>
-          </div>
+  @if (vm$ | async; as vm) {
+    @if (vm.loading) {
+      <div class="card status-card">
+        <div class="card-body d-flex align-items-center gap-2">
+          <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+          <span>Consultando operacion diaria...</span>
         </div>
+      </div>
+    }
 
-        <div class="card-body">
-          <div class="table-responsive">
-            <table class="table table-sm table-hover align-middle">
-              <thead>
-                <tr>
-                  <th>Reserva</th>
-                  <th>Cliente</th>
-                  <th>Pickup</th>
-                  <th>Servicio</th>
-                  <th class="text-center">Pax</th>
-                  <th class="text-end">Total</th>
-                  <th>Estado</th>
-                  <th>Facturado</th>
-                  <th>Transporte</th>
-                  <th>Usuario</th>
-                  <th class="text-end">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let detalle of bloque.detalles; trackBy: trackByDetalle">
-                  <td>
-                    <div class="fw-semibold">#{{ detalle.prV02_CodReserva }}</div>
-                    <div class="text-muted small">{{ detalle.prV02_FecServicio | date:'dd/MM/yyyy' }}</div>
-                  </td>
-                  <td>
-                    <div class="fw-semibold">{{ detalle.cliente }}</div>
-                    <div class="text-muted small">{{ detalle.agencia }}</div>
-                  </td>
-                  <td>
-                    <div class="fw-semibold">{{ detalle.lugarPickup }}</div>
-                    <div class="text-muted small">{{ detalle.formaPago }}</div>
-                  </td>
-                  <td>
-                    <div class="d-flex flex-wrap align-items-center gap-2">
-                      <span class="service-chip fw-bold" [ngClass]="getServiceColor(detalle.codServicio)">
-                        {{ detalle.nomServicio }}
-                      </span>
-                    </div>
-                    <div class="text-muted small">{{ detalle.planTarifa }} - {{ detalle.tipoTarifa }}</div>
-                  </td>
-                  <td class="text-center fw-semibold">{{ detalle.totalPax }}</td>
-                  <td class="text-end fw-semibold">{{ detalle.totalServicio | number: '1.2-2' }}</td>
-                  <td>
-                    <span class="badge estado-badge" [ngClass]="getEstadoBadge(detalle.estado)">
-                      {{ detalle.estado }}
-                    </span>
-                  </td>
-                  <td>
-                    <span class="badge" [ngClass]="detalle.facturado === 1 ? 'bg-success' : 'bg-warning text-dark'">
-                      {{ detalle.facturado === 1 ? 'Facturado' : 'Pendiente' }}
-                    </span>
-                  </td>
-                  <td>
-                    <span class="badge" [ngClass]="getTransporteBadge(detalle)">
-                      {{ getEstadoTransporte(detalle) }}
-                    </span>
-                  </td>
-                  <td>
-                    <div class="fw-semibold">{{ detalle.usuario }}</div>
-                    <div class="indicator-row">
-                      <i
-                        *ngIf="isTransporteAsignado(detalle)"
-                        class="feather icon-check-circle text-success"
-                        title="Procesado"
-                        aria-hidden="true"
-                      ></i>
-                      <i
-                        *ngIf="detalle.chofer"
-                        class="feather icon-truck text-primary"
-                        title="Con chofer"
-                        aria-hidden="true"
-                      ></i>
-                      <i
-                        *ngIf="detalle.observacion && detalle.observacion.trim().length"
-                        class="feather icon-alert-circle text-warning"
-                        [ngbPopover]="detalle.observacion"
-                        popoverTitle="Observacion"
-                        container="body"
-                        triggers="hover focus"
-                        title="Observacion"
-                        aria-label="Observacion"
-                        tabindex="0"
-                      ></i>
-                      <i
-                        *ngIf="detalle.observacionOperacion && detalle.observacionOperacion.trim().length"
-                        class="feather icon-alert-circle indicator-row__icon--operacion"
-                        [ngbPopover]="detalle.observacionOperacion"
-                        popoverTitle="Observacion Operacion"
-                        container="body"
-                        triggers="hover focus"
-                        title="Observacion Operacion"
-                        aria-label="Observacion Operacion"
-                        tabindex="0"
-                      ></i>
-                    </div>
-                  </td>
-                  <td class="text-end action-cell">
-                    <div ngbDropdown container="body" placement="bottom-end" class="action-menu">
-                      <button type="button" ngbDropdownToggle class="action-toggle" aria-label="Abrir acciones">
-                        <span class="action-toggle__icon">
-                          <i class="feather icon-more-horizontal" aria-hidden="true"></i>
-                        </span>
-                        <i class="feather icon-chevron-down action-toggle__caret" aria-hidden="true"></i>
-                      </button>
-                      <div ngbDropdownMenu class="dropdown-menu action-dropdown">
-                        <div class="action-dropdown__section-title">Navegacion</div>
-                        <button
-                          type="button"
-                          ngbDropdownItem
-                          class="dropdown-item action-item"
-                          (click)="onVerDetalleReserva(detalle)"
-                          [disabled]="!detalle.prV02_CodReserva"
-                        >
-                          <span class="action-item__icon action-item__icon--primary">
-                            <i class="feather icon-eye" aria-hidden="true"></i>
-                          </span>
-                          <span class="action-item__content">
-                            <span class="action-item__label">Ver detalle reserva</span>
-                          </span>
-                        </button>
+    @if (vm.error) {
+      <div class="alert alert-danger">{{ vm.error }}</div>
+    }
 
-                        <div class="action-dropdown__divider"></div>
-                        <div class="action-dropdown__section-title">Operaciones</div>
-                        <button
-                          type="button"
-                          ngbDropdownItem
-                          class="dropdown-item action-item"
-                          (click)="onCheckIn(detalle)"
-                          [disabled]="isCheckingIn(detalle) || isCheckInRealizado(detalle)"
-                        >
-                          <span class="action-item__icon action-item__icon--success">
-                            <i class="feather icon-log-in" aria-hidden="true"></i>
-                          </span>
-                          <span class="action-item__content">
-                            <span class="action-item__label">Check In</span>
-                          </span>
-                        </button>
-                        <button
-                          type="button"
-                          ngbDropdownItem
-                          class="dropdown-item action-item"
-                          (click)="onPrintVoucher(detalle)"
-                          [disabled]="isPrintingVoucher(detalle)"
-                        >
-                          <span class="action-item__icon action-item__icon--sky">
-                            <i class="feather icon-printer" aria-hidden="true"></i>
-                          </span>
-                          <span class="action-item__content">
-                            <span class="action-item__label">{{ isPrintingVoucher(detalle) ? 'Imprimiendo...' : 'Imprimir Voucher' }}</span>
-                          </span>
-                        </button>
-                        <button
-                          type="button"
-                          ngbDropdownItem
-                          class="dropdown-item action-item"
-                          (click)="onEditarObservacion(detalle)"
-                          [disabled]="!detalle.prV02_CodReserva"
-                        >
-                          <span class="action-item__icon action-item__icon--slate">
-                            <i class="feather icon-message-square" aria-hidden="true"></i>
-                          </span>
-                          <span class="action-item__content">
-                            <span class="action-item__label">{{ hasObservacionOperacion(detalle) ? 'Actualizar comentario' : 'Agregar comentario' }}</span>
-                          </span>
-                        </button>
-                        <button
-                          type="button"
-                          ngbDropdownItem
-                          class="dropdown-item action-item"
-                          (click)="onFacturarReserva(detalle)"
-                          [disabled]="!detalle.prV02_CodReserva || !detalle.codAgencia || isReservaFacturada(detalle)"
-                        >
-                          <span class="action-item__icon action-item__icon--amber">
-                            <i class="feather icon-file-text" aria-hidden="true"></i>
-                          </span>
-                          <span class="action-item__content">
-                            <span class="action-item__label">Facturar Reserva</span>
-                          </span>
-                        </button>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+    @if (!vm.loading && !vm.error && (vm.data?.totalRegistros ?? 0) === 0) {
+      <div class="card status-card">
+        <div class="card-body text-center text-muted">No hay registros para los filtros seleccionados.</div>
+      </div>
+    }
 
-          <div *ngIf="getResumenPorHora(bloque.bloqueHora).length" class="resumen-actividad">
-            <div class="resumen-title">Resumen Actividad</div>
-            <div class="resumen-items">
-              <div class="resumen-item" *ngFor="let resumen of getResumenPorHora(bloque.bloqueHora); trackBy: trackByResumen">
-                <span class="service-chip" [ngClass]="getServiceColor(resumen.codServicio)">
-                  {{ resumen.nomServicio }}
-                </span>
-                <span class="resumen-meta">Pax: {{ resumen.paxActividadHora }}</span>
-                <span class="resumen-meta">Total: {{ resumen.totalActividadHora | number: '1.2-2' }}</span>
-                <span class="resumen-meta">Servicios: {{ resumen.cantidadServicios }}</span>
+    @if (!vm.loading && !vm.error && (vm.data?.totalRegistros ?? 0) > 0) {
+      <div class="hourly-grid">
+        @for (bloque of getBloquesFiltrados(vm.bloques); track trackByBloque($index, bloque)) {
+          <div class="card hour-card">
+            <div class="card-header hour-card__header">
+              <div class="hour-title">{{ bloque.bloqueHora }}</div>
+              <div class="hour-metrics">
+                <div class="metric">
+                  <span>Total</span>
+                  <strong>{{ bloque.totalesHora.totalHora | number: '1.2-2' }}</strong>
+                </div>
+                <div class="metric">
+                  <span>Pax</span>
+                  <strong>{{ bloque.totalesHora.paxHora }}</strong>
+                </div>
+                <div class="metric">
+                  <span>Servicios</span>
+                  <strong>{{ bloque.totalesHora.cantidadServicios }}</strong>
+                </div>
+                <div class="metric">
+                  <span>Reservas</span>
+                  <strong>{{ bloque.cantidadReservas }}</strong>
+                </div>
               </div>
             </div>
+
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle tabla-reservas">
+                  <thead>
+                    <tr>
+                      <th>Reserva</th>
+                      <th>Cliente</th>
+                      <th>Pickup</th>
+                      <th>Servicios</th>
+                      <th class="text-end">Cantidad / Total</th>
+                      <th class="px-1">Estado</th>
+                      <th class="px-1">Facturado</th>
+                      <th class="px-1">Transporte</th>
+                      <th class="px-1">Usuario</th>
+                      <th class="text-end">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (reserva of bloque.reservas; track trackByReserva($index, reserva)) {
+                      <tr class="reserva-row" [class.is-expanded]="isReservaExpanded(reserva)">
+                        <td>
+                          <div class="fw-semibold">#{{ reserva.numeroReserva }}</div>
+                          <div class="text-muted small">{{ reserva.fechaServicio | date:'dd/MM/yyyy' }}</div>
+                        </td>
+                        <td>
+                          <div class="fw-semibold">{{ reserva.cliente }}</div>
+                          <div class="text-muted small">{{ reserva.agencia || 'Sin canal' }}</div>
+                        </td>
+                        <td>
+                          <div class="fw-semibold">{{ reserva.pickupPrincipal || 'Sin pickup' }}</div>
+                          <div class="text-muted small">{{ reserva.pickupReferencia || 'Sin referencia' }}</div>
+                        </td>
+                        <td>
+                          <div class="services-overview">
+                            <div class="services-overview__count">{{ reserva.cantidadServicios }} servicios</div>
+                            <div class="services-overview__chips">
+                              @for (servicio of reserva.serviciosPreview; track servicio.codServicio + '-' + servicio.nomServicio) {
+                                <span class="service-chip fw-bold" [ngClass]="getServiceColor(servicio.codServicio)">
+                                  {{ servicio.nomServicio }}
+                                </span>
+                              }
+                              @if (reserva.serviciosExtraCount > 0) {
+                                <span class="service-chip chip--otro">+{{ reserva.serviciosExtraCount }}</span>
+                              }
+                            </div>
+                          </div>
+                        </td>
+                        <td class="text-end">
+                          <div class="fw-semibold">Cantidad: {{ reserva.paxTotal }}</div>
+                          <div class="text-muted small">{{ reserva.totalReserva | number: '1.2-2' }}</div>
+                        </td>
+                        <td class="px-1 text-nowrap">
+                          <span class="badge estado-badge" [ngClass]="reserva.estadoOperacionBadge">{{ reserva.estadoOperacionLabel }}</span>
+                        </td>
+                        <td class="px-1 text-nowrap">
+                          <span class="badge estado-badge" [ngClass]="reserva.estadoFacturacionBadge">{{ reserva.estadoFacturacionLabel }}</span>
+                        </td>
+                        <td class="px-1 text-nowrap">
+                          <span class="badge estado-badge" [ngClass]="reserva.estadoTransporteBadge">{{ reserva.estadoTransporteLabel }}</span>
+                        </td>
+                        <td class="px-1">
+                          <div class="fw-semibold user-summary">{{ reserva.usuarioResponsable || 'Sin usuario' }}</div>
+                          <div class="indicator-row">
+                            @if (reserva.indicadorConChofer) {
+                              <i class="feather icon-truck text-primary" title="Con chofer" aria-hidden="true"></i>
+                            }
+                            @if (reserva.indicadorObservacionCliente) {
+                              <i class="feather icon-alert-circle text-warning" title="Con observacion" aria-hidden="true"></i>
+                            }
+                            @if (reserva.indicadorObservacionOperacion) {
+                              <i class="feather icon-alert-circle indicator-row__icon--operacion" title="Con observacion operacion" aria-hidden="true"></i>
+                            }
+                          </div>
+                        </td>
+                        <td class="text-end action-cell">
+                          <div class="d-inline-flex align-items-center gap-1">
+                            <div ngbDropdown container="body" placement="bottom-end" class="action-menu">
+                              <button type="button" ngbDropdownToggle class="action-toggle" aria-label="Abrir acciones de reserva">
+                                <span class="action-toggle__icon">
+                                  <i class="feather icon-more-horizontal" aria-hidden="true"></i>
+                                </span>
+                                <i class="feather icon-chevron-down action-toggle__caret" aria-hidden="true"></i>
+                              </button>
+                              <div ngbDropdownMenu class="dropdown-menu action-dropdown">
+                                <div class="action-dropdown__section-title">Reserva</div>
+                                <button
+                                  type="button"
+                                  ngbDropdownItem
+                                  class="dropdown-item action-item"
+                                  (click)="onVerDetalleReserva(reserva.detallePrincipal)"
+                                  [disabled]="!reserva.detallePrincipal.prV02_CodReserva"
+                                >
+                                  <span class="action-item__icon action-item__icon--primary">
+                                    <i class="feather icon-eye" aria-hidden="true"></i>
+                                  </span>
+                                  <span class="action-item__content">
+                                    <span class="action-item__label">Ver detalle reserva</span>
+                                  </span>
+                                </button>
+                                <button
+                                  type="button"
+                                  ngbDropdownItem
+                                  class="dropdown-item action-item"
+                                  (click)="onEditarObservacion(reserva.detallePrincipal)"
+                                  [disabled]="!reserva.detallePrincipal.prV02_CodReserva"
+                                >
+                                  <span class="action-item__icon action-item__icon--slate">
+                                    <i class="feather icon-message-square" aria-hidden="true"></i>
+                                  </span>
+                                  <span class="action-item__content">
+                                    <span class="action-item__label">{{ hasObservacionOperacion(reserva.detallePrincipal) ? 'Actualizar comentario' : 'Agregar comentario' }}</span>
+                                  </span>
+                                </button>
+
+                                <div class="action-dropdown__divider"></div>
+                                <div class="action-dropdown__section-title">Operaciones</div>
+                                <button
+                                  type="button"
+                                  ngbDropdownItem
+                                  class="dropdown-item action-item"
+                                  (click)="onCheckIn(reserva.detallePrincipal)"
+                                  [disabled]="isCheckingIn(reserva.detallePrincipal) || isCheckInRealizado(reserva.detallePrincipal)"
+                                >
+                                  <span class="action-item__icon action-item__icon--success">
+                                    <i class="feather icon-log-in" aria-hidden="true"></i>
+                                  </span>
+                                  <span class="action-item__content">
+                                    <span class="action-item__label">Check In</span>
+                                  </span>
+                                </button>
+                                <button
+                                  type="button"
+                                  ngbDropdownItem
+                                  class="dropdown-item action-item"
+                                  (click)="onPrintVoucher(reserva.detallePrincipal)"
+                                  [disabled]="isPrintingVoucher(reserva.detallePrincipal)"
+                                >
+                                  <span class="action-item__icon action-item__icon--sky">
+                                    <i class="feather icon-printer" aria-hidden="true"></i>
+                                  </span>
+                                  <span class="action-item__content">
+                                    <span class="action-item__label">{{ isPrintingVoucher(reserva.detallePrincipal) ? 'Imprimiendo...' : 'Imprimir Voucher' }}</span>
+                                  </span>
+                                </button>
+                                <button
+                                  type="button"
+                                  ngbDropdownItem
+                                  class="dropdown-item action-item"
+                                  (click)="onFacturarReserva(reserva.detallePrincipal)"
+                                  [disabled]="!reserva.detallePrincipal.prV02_CodReserva || !reserva.detallePrincipal.codAgencia || isReservaFacturada(reserva.detallePrincipal)"
+                                >
+                                  <span class="action-item__icon action-item__icon--amber">
+                                    <i class="feather icon-file-text" aria-hidden="true"></i>
+                                  </span>
+                                  <span class="action-item__content">
+                                    <span class="action-item__label">Facturar Reserva</span>
+                                  </span>
+                                </button>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              class="btn btn-link btn-sm text-muted p-0"
+                              [attr.aria-expanded]="isReservaExpanded(reserva)"
+                              [attr.aria-label]="isReservaExpanded(reserva) ? 'Contraer detalles' : 'Expandir detalles'"
+                              (click)="toggleReservaExpansion(reserva)"
+                            >
+                              <i class="feather" [ngClass]="isReservaExpanded(reserva) ? 'icon-chevron-up' : 'icon-chevron-down'" aria-hidden="true"></i>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+
+                      @if (isReservaExpanded(reserva)) {
+                        <tr class="detalle-expand-row">
+                          <td colspan="10">
+                            <div class="detalle-expand-card">
+                              <div class="detalle-expand-title">Detalle de servicios</div>
+                              <div class="table-responsive">
+                                <table class="table table-sm align-middle table-detalles">
+                                  <thead>
+                                    <tr>
+                                      <th>Servicio</th>
+                                      <th class="text-center">Pax</th>
+                                      <th class="text-end">Total</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    @for (detalle of reserva.detalles; track trackByDetalle($index, detalle)) {
+                                      <tr>
+                                        <td>
+                                          <div class="d-flex flex-wrap align-items-center gap-2">
+                                            <span class="service-chip fw-bold" [ngClass]="getServiceColor(detalle.codServicio)">
+                                              {{ detalle.nomServicio }}
+                                            </span>
+                                          </div>
+                                          <div class="text-muted small">{{ detalle.planTarifa }} - {{ detalle.tipoTarifa }}</div>
+                                        </td>
+                                        <td class="text-center fw-semibold">{{ detalle.totalPax }}</td>
+                                        <td class="text-end fw-semibold">{{ detalle.totalServicio | number: '1.2-2' }}</td>
+                                      </tr>
+                                    }
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      }
+                    }
+                  </tbody>
+                </table>
+              </div>
+
+              @if (getResumenPorHora(bloque.bloqueHora).length) {
+                <div class="resumen-actividad">
+                  <div class="resumen-title">Resumen Actividad</div>
+                  <div class="resumen-items">
+                    @for (resumen of getResumenPorHora(bloque.bloqueHora); track trackByResumen($index, resumen)) {
+                      <div class="resumen-item">
+                        <span class="service-chip" [ngClass]="getServiceColor(resumen.codServicio)">
+                          {{ resumen.nomServicio }}
+                        </span>
+                        <span class="resumen-meta">Pax: {{ resumen.paxActividadHora }}</span>
+                        <span class="resumen-meta">Total: {{ resumen.totalActividadHora | number: '1.2-2' }}</span>
+                        <span class="resumen-meta">Servicios: {{ resumen.cantidadServicios }}</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="pagination-bar">
+        <div class="pagination-summary">
+          Mostrando {{ pageStart }}-{{ pageEnd }} de {{ vm.data?.totalRegistros }}
+        </div>
+        <div class="page-size">
+          <label>Mostrar</label>
+          <select [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)" class="form-control">
+            <option *ngFor="let size of pageSizes" [value]="size">{{ size }}</option>
+          </select>
+          <span>por pagina</span>
+        </div>
+        <div class="pagination-controls">
+          <button class="btn btn-light" type="button" (click)="changePage(-1)" [disabled]="page === 1">
+            <i class="feather icon-chevron-left"></i>
+          </button>
+          <span>Pagina {{ page }} de {{ totalPaginas(vm.data?.totalRegistros ?? 0) }}</span>
+          <button
+            class="btn btn-light"
+            type="button"
+            (click)="changePage(1)"
+            [disabled]="page === totalPaginas(vm.data?.totalRegistros ?? 0)"
+          >
+            <i class="feather icon-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+    }
+
+    @if (vm.data?.totalesGenerales) {
+      <div class="card total-card">
+        <div class="card-body">
+          <div class="total-grid">
+            <div>
+              <div class="total-label">Total General</div>
+              <div class="total-value">{{ vm.data.totalesGenerales.totalGeneral | number: '1.2-2' }}</div>
+            </div>
+            <div>
+              <div class="total-label">Total Pax General</div>
+              <div class="total-value">{{ vm.data.totalesGenerales.totalPaxGeneral }}</div>
+            </div>
+            <div>
+              <div class="total-label">Total Servicios</div>
+              <div class="total-value">{{ vm.data.totalesGenerales.totalServicios }}</div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-
-    <div *ngIf="!vm.loading && !vm.error && (vm.data?.totalRegistros ?? 0) > 0" class="pagination-bar">
-      <div class="pagination-summary">
-        Mostrando {{ pageStart }}-{{ pageEnd }} de {{ vm.data?.totalRegistros }}
-      </div>
-      <div class="page-size">
-        <label>Mostrar</label>
-        <select [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)" class="form-control">
-          <option *ngFor="let size of pageSizes" [value]="size">{{ size }}</option>
-        </select>
-        <span>por pagina</span>
-      </div>
-      <div class="pagination-controls">
-        <button class="btn btn-light" type="button" (click)="changePage(-1)" [disabled]="page === 1">
-          <i class="feather icon-chevron-left"></i>
-        </button>
-        <span>Pagina {{ page }} de {{ totalPaginas(vm.data?.totalRegistros ?? 0) }}</span>
-        <button
-          class="btn btn-light"
-          type="button"
-          (click)="changePage(1)"
-          [disabled]="page === totalPaginas(vm.data?.totalRegistros ?? 0)"
-        >
-          <i class="feather icon-chevron-right"></i>
-        </button>
-      </div>
-    </div>
-
-    <div *ngIf="vm.data?.totalesGenerales" class="card total-card">
-      <div class="card-body">
-        <div class="total-grid">
-          <div>
-            <div class="total-label">Total General</div>
-            <div class="total-value">{{ vm.data.totalesGenerales.totalGeneral | number: '1.2-2' }}</div>
-          </div>
-          <div>
-            <div class="total-label">Total Pax General</div>
-            <div class="total-value">{{ vm.data.totalesGenerales.totalPaxGeneral }}</div>
-          </div>
-          <div>
-            <div class="total-label">Total Servicios</div>
-            <div class="total-value">{{ vm.data.totalesGenerales.totalServicios }}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </ng-container>
+    }
+  }
 
   <div
     *ngIf="observacionModalOpen"
