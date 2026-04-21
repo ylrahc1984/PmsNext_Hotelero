@@ -32,11 +32,67 @@
           <div class="row align-items-end">
             <div class="col-md-2 mb-2">
               <label class="form-label small text-muted">Fecha desde</label>
-              <input type="date" class="form-control form-control-sm" [(ngModel)]="filtros.fechaDesde" (change)="applyFilters()">
+              <div class="input-group input-group-sm position-relative">
+                <input
+                  type="text"
+                  class="form-control form-control-sm"
+                  [(ngModel)]="filtros.fechaDesde"
+                  placeholder="dd/MM/yyyy"
+                  maxlength="10"
+                  inputmode="text"
+                  autocomplete="off"
+                  (input)="onFechaInput('fechaDesde', $any($event.target).value)"
+                  (blur)="onFechaBlur('fechaDesde')"
+                >
+                <button
+                  class="btn btn-outline-secondary"
+                  type="button"
+                  title="Abrir calendario"
+                  (click)="openNativeDatePicker('fechaDesde')"
+                >
+                  <i class="feather icon-calendar"></i>
+                </button>
+                <input
+                  #fechaDesdeNativePicker
+                  type="date"
+                  class="rsv-native-date-anchor"
+                  tabindex="-1"
+                  aria-hidden="true"
+                  (change)="onNativeDateSelected('fechaDesde', $any($event.target).value)"
+                >
+              </div>
             </div>
             <div class="col-md-2 mb-2">
               <label class="form-label small text-muted">Fecha hasta</label>
-              <input type="date" class="form-control form-control-sm" [(ngModel)]="filtros.fechaHasta" (change)="applyFilters()">
+              <div class="input-group input-group-sm position-relative">
+                <input
+                  type="text"
+                  class="form-control form-control-sm"
+                  [(ngModel)]="filtros.fechaHasta"
+                  placeholder="dd/MM/yyyy"
+                  maxlength="10"
+                  inputmode="text"
+                  autocomplete="off"
+                  (input)="onFechaInput('fechaHasta', $any($event.target).value)"
+                  (blur)="onFechaBlur('fechaHasta')"
+                >
+                <button
+                  class="btn btn-outline-secondary"
+                  type="button"
+                  title="Abrir calendario"
+                  (click)="openNativeDatePicker('fechaHasta')"
+                >
+                  <i class="feather icon-calendar"></i>
+                </button>
+                <input
+                  #fechaHastaNativePicker
+                  type="date"
+                  class="rsv-native-date-anchor"
+                  tabindex="-1"
+                  aria-hidden="true"
+                  (change)="onNativeDateSelected('fechaHasta', $any($event.target).value)"
+                >
+              </div>
             </div>
             <div class="col-md-6 mb-2">
               <label class="form-label small text-muted">Búsqueda</label>

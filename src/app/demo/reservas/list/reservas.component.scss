@@ -1,2 +1,12 @@
 /* reservas.component.scss */
 /* Estilos de botones movidos a src/styles.scss para unificar el proyecto. */
+
+.rsv-native-date-anchor {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+	pointer-events: none;
+	border: 0;
+	padding: 0;
+}
