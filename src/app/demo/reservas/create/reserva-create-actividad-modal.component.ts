@@ -10,6 +10,7 @@ import { ActividadDetalleForm, ActividadPickupForm } from './reserva-create.mode
 import { PickupRapidoModalSavePayload, ReservaCreatePickupRapidoModalComponent } from './reserva-create-pickup-rapido-modal.component';
 import { ReservaPickupRapidoService } from './reserva-pickup-rapido.service';
 import { FISCAL_CONFIG } from 'src/app/core/config/fiscal.config';
+import { calculateFiscalTotals } from 'src/app/core/config/fiscal.utils';
 import { safeJsonParse, safeJsonStringify } from './reserva-create.utils';
 import { ServicioUI } from '../../catalogos/servicios/servicios.service';
 import { PlanTarifaUI } from '../../catalogos/listas-precios/planes-tarifas.service';
@@ -555,7 +556,11 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
 
         this.pickupLookupLoading = true;
         return this.listaPickupService.getAll(term).pipe(
-          map((items) => (items ?? []).slice(0, 20)),
+          map((items) =>
+            (items ?? [])
+              .filter((item) => Number(item?.CR11_Estado ?? 0) === 1)
+              .slice(0, 20)
+          ),
           catchError(() => of([])),
           finalize(() => {
             this.pickupLookupLoading = false;
@@ -657,14 +662,20 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
       ? this.roundCurrency(Math.min(this.descuentoMontoInput, this.subTotal))
       : 0;
 
-    this.neto = this.roundCurrency(Math.max(0, this.subTotal - this.descuento));
-    this.impuesto = this.roundCurrency(this.neto * FISCAL_CONFIG.taxRate);
-    this.montoServicio = this.roundCurrency(this.neto + this.impuesto);
+    const totals = calculateFiscalTotals(this.subTotal, this.descuento, '0', {
+      pricesIncludeTax: FISCAL_CONFIG.pricesIncludeTax,
+      taxRate: FISCAL_CONFIG.taxRate,
+      redondeoDecimales: 2
+    });
 
-    this.form.controls.totalGeneral.setValue(this.neto, { emitEvent: false });
+    this.neto = totals.neto;
+    this.impuesto = totals.iva;
+    this.montoServicio = totals.total;
+
+    this.form.controls.totalGeneral.setValue(this.montoServicio, { emitEvent: false });
     if (this.actividadForm) {
-      this.actividadForm.montoServicio = this.neto;
-      this.actividadForm.totalGeneral = this.neto;
+      this.actividadForm.montoServicio = this.montoServicio;
+      this.actividadForm.totalGeneral = this.montoServicio;
     }
   }
 

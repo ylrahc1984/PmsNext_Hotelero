@@ -13,6 +13,7 @@ import {
   DocumentoPago
 } from './documento-detalle.interface';
 import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
+import { FISCAL_CONFIG } from 'src/app/core/config/fiscal.config';
 
 type DocumentoResumen = {
   subtotal: number;
@@ -364,15 +365,33 @@ export class DocumentoDetalleComponent implements OnInit {
   private getLineaImpuestoValue(item: DocumentoDetalleItem, base: number): number {
     const impuesto = this.toNumber(item.impuesto);
     if (impuesto) return impuesto;
+
     const porImp = this.toNumber(item.porImp);
-    return base * (porImp / 100);
+    const taxRate = porImp > 0 ? porImp : 13;
+
+    if (FISCAL_CONFIG.pricesIncludeTax) {
+      // Precios incluyen impuestos - el impuesto ya está incluido en el precio
+      // Calcular el impuesto como base * (taxRate / (100 + taxRate))
+      const factor = 1 + (taxRate / 100);
+      return base - (base / factor);
+    } else {
+      // Precios no incluyen impuestos - calcular impuesto normalmente
+      return base * (taxRate / 100);
+    }
   }
 
   private getLineaTotalValue(item: DocumentoDetalleItem, base: number, impuesto: number): number {
     const total = this.toNumber(item.total);
     if (total) return total;
     const extra = this.toNumber(item.mtoImpVarios);
-    return base + impuesto + extra;
+
+    if (FISCAL_CONFIG.pricesIncludeTax) {
+      // Precios incluyen impuestos - el total es la base (que ya incluye impuestos) + extra
+      return base + extra;
+    } else {
+      // Precios no incluyen impuestos - total es base + impuesto + extra
+      return base + impuesto + extra;
+    }
   }
 
   private toNumber(value: unknown): number {

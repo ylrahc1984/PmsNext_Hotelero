@@ -60,7 +60,6 @@
                             (mousedown)="onAgenciaSuggestionMouseDown(cliente, $event)">
                             <span class="rsv-v2-agencia-dropdown__title">{{ cliente.contacto }}</span>
                             <span class="rsv-v2-agencia-dropdown__title">{{ cliente.nombre }}</span>
-                            <span class="rsv-v2-agencia-dropdown__meta">{{ cliente.codigo }}<ng-container *ngIf="cliente.ruc"> · {{ cliente.ruc }}</ng-container></span>
                           </button>
                           <div class="rsv-v2-agencia-dropdown__state" *ngIf="agenciaSearchLoading && agenciaSearchResults.length === 0">
                             <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>

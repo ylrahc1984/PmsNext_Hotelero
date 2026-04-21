@@ -3,6 +3,7 @@ import { buildInitialReservaCreateForm } from '../reserva-create.builders';
 import { DetalleForm, DetallePaxForm, ReservaCreateForm } from '../reserva-create.models';
 import { formatDateToApiDate, normalizeReservaEstado, normalizeTimeInputValue, safeNumber, safeString, toDateInputValue } from '../reserva-create.utils';
 import { FISCAL_CONFIG } from 'src/app/core/config/fiscal.config';
+import { calculateTaxFromNetAmount as calculateFiscalTaxFromNetAmount, splitTaxInclusiveAmount } from 'src/app/core/config/fiscal.utils';
 import {
   ReservaCreateV2Draft,
   ReservaCreateV2HeaderDraft,
@@ -54,19 +55,7 @@ function calculateTaxFromNetAmount(
   directo: string,
   options?: Partial<ReservaDraftCalculationOptions>
 ): { neto: number; iva: number; total: number } {
-  const settings = getCalculationOptions(options);
-  const neto = roundCurrency(netAmount, settings.redondeoDecimales);
-
-  if (normalizeDirecto(directo) === '1') {
-    return { neto, iva: 0, total: neto };
-  }
-
-  const iva = roundCurrency(neto * safeNumber(settings.taxRate), settings.redondeoDecimales);
-  return {
-    neto,
-    iva,
-    total: roundCurrency(neto + iva, settings.redondeoDecimales)
-  };
+  return calculateFiscalTaxFromNetAmount(netAmount, directo, getCalculationOptions(options));
 }
 
 function splitConfiguredAmount(
@@ -74,20 +63,7 @@ function splitConfiguredAmount(
   directo: string,
   options?: Partial<ReservaDraftCalculationOptions>
 ): { neto: number; iva: number; total: number } {
-  const settings = getCalculationOptions(options);
-  const amount = roundCurrency(configuredAmount, settings.redondeoDecimales);
-
-  if (!settings.pricesIncludeTax) {
-    return calculateTaxFromNetAmount(amount, directo, settings);
-  }
-
-  if (!safeNumber(settings.taxRate)) {
-    return calculateTaxFromNetAmount(amount, directo, settings);
-  }
-
-  const divisor = 1 + safeNumber(settings.taxRate);
-  const neto = roundCurrency(amount / divisor, settings.redondeoDecimales);
-  return calculateTaxFromNetAmount(neto, directo, settings);
+  return splitTaxInclusiveAmount(configuredAmount, directo, getCalculationOptions(options));
 }
 
 function normalizeTipoPax(code: string): string {

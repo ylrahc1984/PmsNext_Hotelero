@@ -42,6 +42,8 @@ import {
 } from 'src/app/finanzas/services/reservas-facturacion.service';
 import { ReservasService } from 'src/app/demo/reservas/services/reservas.service';
 import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
+import { calculateFiscalTotals } from 'src/app/core/config/fiscal.utils';
+import { FISCAL_CONFIG } from 'src/app/core/config/fiscal.config';
 import type {
   ConfirmarFacturaPayload,
   ConfirmarFacturaResponse,
@@ -637,13 +639,29 @@ export class NuevaFacturaComponent implements OnInit {
       const descuento = subtotal * (porDescu / 100);
       const base = subtotal - descuento;
       const impuestoRate = porImp > 0 ? porImp : 13;
-      const impuesto = base * (impuestoRate / 100);
-      const total = base + impuesto;
+
+      let neto: number;
+      let impuesto: number;
+      let total: number;
+
+      if (FISCAL_CONFIG.pricesIncludeTax) {
+        // Precios incluyen impuestos - extraer el impuesto del precio
+        const taxRate = impuestoRate / 100;
+        const factor = 1 + taxRate;
+        neto = base / factor;
+        impuesto = base - neto;
+        total = base; // El total ya incluye impuestos
+      } else {
+        // Precios no incluyen impuestos - calcular impuesto sobre el neto
+        neto = base;
+        impuesto = neto * (impuestoRate / 100);
+        total = neto + impuesto;
+      }
 
       return {
         subtotal    : this.round(subtotal),
         descuento   : this.round(descuento),
-        base        : this.round(base),
+        base        : this.round(neto),
         impuesto    : this.round(impuesto),
         total       : this.round(total)
       };

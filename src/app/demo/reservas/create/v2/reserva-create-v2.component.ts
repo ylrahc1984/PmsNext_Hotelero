@@ -26,6 +26,7 @@ import { ServicioPrecioApiItem } from '../reserva-create.tarifa.models';
 import { showAlertWithFocusRestore } from '../reserva-create.alert';
 import { buildInitialActividadDetalleForm, buildInitialDetalleForm, buildInitialReservaCreateForm } from '../reserva-create.builders';
 import { FISCAL_CONFIG } from 'src/app/core/config/fiscal.config';
+import { calculateFiscalTotals, calculateTaxFromNetAmount } from 'src/app/core/config/fiscal.utils';
 import { ReservaCreateActividadModalComponent, ActividadModalSavePayload } from '../reserva-create-actividad-modal.component';
 import { ReservaCreateClienteModalComponent } from '../reserva-create-cliente-modal.component';
 import { ContactoRapidoModalSavePayload, ReservaCreateContactoRapidoModalComponent } from '../reserva-create-contacto-rapido-modal.component';
@@ -1145,8 +1146,11 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
 
   private recalculateServiciosForDirecto(): void {
     const directo = this.form.directo || '0';
-    const taxRate = safeNumber(FISCAL_CONFIG.taxRate);
-    const removeTax = directo === '1';
+    const settings = {
+      pricesIncludeTax: FISCAL_CONFIG.pricesIncludeTax,
+      taxRate: FISCAL_CONFIG.taxRate,
+      redondeoDecimales: 2
+    };
     this.draft = {
       ...this.draft,
       servicios: (this.draft.servicios ?? []).map((line) => {
@@ -1155,15 +1159,14 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
             (line.pasajeros ?? []).reduce((sum, pax) => sum + safeNumber(pax.subtotalNeto), 0)
         );
         const descuento = roundTo2(Math.min(Math.max(0, safeNumber(line.descuento)), lineSubtotal));
-        const neto = roundTo2(Math.max(0, lineSubtotal - descuento));
-        const impuesto = removeTax ? 0 : roundTo2(neto * taxRate);
-        const montoServicio = roundTo2(neto + impuesto);
+        const lineTotals = calculateFiscalTotals(lineSubtotal, descuento, directo, settings);
 
         const pasajeros = (line.pasajeros ?? []).map((pax) => {
           const cantidad = safeNumber(pax.cantidad);
           const subtotalNeto = roundTo2(safeNumber(pax.subtotalNeto));
-          const subtotalIVA = removeTax ? 0 : roundTo2(subtotalNeto * taxRate);
-          const subtotalTotal = roundTo2(subtotalNeto + subtotalIVA);
+          const paxTotals = calculateTaxFromNetAmount(subtotalNeto, directo, settings);
+          const subtotalIVA = paxTotals.iva;
+          const subtotalTotal = paxTotals.total;
           const precioUnitarioNeto =
             cantidad > 0 ? roundTo2(subtotalNeto / cantidad) : roundTo2(safeNumber(pax.precioUnitarioNeto));
           const precioUnitarioIVA = cantidad > 0 ? roundTo2(subtotalIVA / cantidad) : 0;
@@ -1184,9 +1187,9 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
           ...line,
           subTotal: lineSubtotal,
           descuento,
-          neto,
-          impuesto,
-          montoServicio,
+          neto: lineTotals.neto,
+          impuesto: lineTotals.iva,
+          montoServicio: lineTotals.total,
           pasajeros
         };
       })
