@@ -248,6 +248,20 @@
                                   type="button"
                                   ngbDropdownItem
                                   class="dropdown-item action-item"
+                                  (click)="onEditarReserva(reserva)"
+                                  [disabled]="!canEditarReserva(reserva)"
+                                >
+                                  <span class="action-item__icon action-item__icon--primary">
+                                    <i class="feather icon-edit-2" aria-hidden="true"></i>
+                                  </span>
+                                  <span class="action-item__content">
+                                    <span class="action-item__label">Editar Reserva</span>
+                                  </span>
+                                </button>
+                                <button
+                                  type="button"
+                                  ngbDropdownItem
+                                  class="dropdown-item action-item"
                                   (click)="onEditarObservacion(reserva.detallePrincipal)"
                                   [disabled]="!reserva.detallePrincipal.prV02_CodReserva"
                                 >

@@ -449,6 +449,49 @@ export class OperacionDiariaComponent implements OnInit {
     });
   }
 
+  canEditarReserva(reserva: ReservaOperacionAgrupada | null | undefined): boolean {
+    const detalles = reserva?.detalles ?? [];
+    if (!detalles.length) {
+      return false;
+    }
+
+    const codReserva = (reserva?.numeroReserva ?? '').toString().trim();
+    if (!codReserva) {
+      return false;
+    }
+
+    const hasFacturada = detalles.some((detalle) => this.isReservaFacturada(detalle));
+    const hasChk = detalles.some((detalle) => this.isCheckInRealizado(detalle));
+    return !hasFacturada && !hasChk;
+  }
+
+  onEditarReserva(reserva: ReservaOperacionAgrupada): void {
+    const codReserva = (reserva?.numeroReserva ?? '').toString().trim();
+    if (!codReserva) {
+      Swal.fire({
+        title: 'Reserva inválida',
+        text: 'No se pudo determinar el código de la reserva para editar.',
+        icon: 'warning'
+      });
+      return;
+    }
+
+    if (!this.canEditarReserva(reserva)) {
+      Swal.fire({
+        title: 'Edición no permitida',
+        text: 'La reserva no se puede editar porque está facturada o tiene estado CHK.',
+        icon: 'info'
+      });
+      return;
+    }
+
+    this.router.navigate(['/operaciones/reservas', codReserva, 'editar-v2'], {
+      queryParams: {
+        origen: 'operacion-diaria'
+      }
+    });
+  }
+
   isPrintingVoucher(detalle: OperacionDetalle): boolean {
     return this.printingVouchers.has(this.getDetalleKey(detalle));
   }

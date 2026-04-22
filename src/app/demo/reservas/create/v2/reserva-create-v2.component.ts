@@ -31,7 +31,7 @@ import { ReservaCreateActividadModalComponent, ActividadModalSavePayload } from 
 import { ReservaCreateClienteModalComponent } from '../reserva-create-cliente-modal.component';
 import { ContactoRapidoModalSavePayload, ReservaCreateContactoRapidoModalComponent } from '../reserva-create-contacto-rapido-modal.component';
 import { ReservaCreateDetalleModalComponent } from '../reserva-create-detalle-modal.component';
-import { ActividadDetalleForm, DetalleForm, DetallePaxForm, ReservaCreateForm } from '../reserva-create.models';
+import { ActividadDetalleForm, ActividadPickupForm, DetalleForm, DetallePaxForm, ReservaCreateForm } from '../reserva-create.models';
 import { normalizeTimeInputValue, safeNumber, safeString } from '../reserva-create.utils';
 import { ReservaContactoRapidoService } from './reserva-contacto-rapido.service';
 import { ReservaCreateV2Draft, ReservaDraftServiceLine } from './reserva-create-v2.models';
@@ -627,6 +627,7 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
       this.actividadForm = buildInitialActividadDetalleForm();
       this.actividadForm.codPlan = this.form.codPlan || this.resolveDefaultPlanId();
       this.actividadForm.codLstPrecio = this.form.codLstPrecio || this.resolveDefaultListaPrecio();
+      this.applyActividadDefaultsFromLastDetalle();
     }
 
     if (this.selectedCliente?.codigo) {
@@ -1239,23 +1240,7 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
   }
 
   private mapDraftServiceLineToActividadForm(line: ReservaDraftServiceLine): ActividadDetalleForm {
-    const pickup = line.origenTexto || line.origenPlaceId || line.origenGoogle
-      ? {
-          direccion     : line.origenTexto,
-          zona          : line.zonaOrigen,
-          google        : line.origenGoogle,
-          placeId       : line.origenPlaceId,
-          lat           : line.origenLat,
-          lng           : line.origenLng
-        }
-      : {
-          direccion     : line.destinoTexto,
-          zona          : line.zonaDestino,
-          google        : line.destinoGoogle,
-          placeId       : line.destinoPlaceId,
-          lat           : line.destinoLat,
-          lng           : line.destinoLng
-        };
+    const pickup = this.mapDraftServiceLineToActividadPickup(line);
 
     const selectedPlan = line.planTarifa || line.codPlan;
     return {
@@ -1292,6 +1277,69 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
       ],
       totalGeneral: line.neto,
       montoServicio: line.neto
+    };
+  }
+
+  private applyActividadDefaultsFromLastDetalle(): void {
+    const baseDetalle = this.resolveLastDetalleForActividadDefaults();
+    if (!baseDetalle) {
+      return;
+    }
+
+    const fechaServicio = safeString(baseDetalle.fecServicio).trim();
+    const horaInicio =
+      normalizeTimeInputValue(baseDetalle.horaServicio, { zeroAsEmpty: true }) ||
+      normalizeTimeInputValue(baseDetalle.horaPickup, { zeroAsEmpty: true });
+    const horaPickup =
+      normalizeTimeInputValue(baseDetalle.horaPickup, { zeroAsEmpty: true }) ||
+      normalizeTimeInputValue(baseDetalle.horaServicio, { zeroAsEmpty: true });
+
+    if (fechaServicio) {
+      this.actividadForm.fechaServicio = fechaServicio;
+    }
+    if (horaInicio) {
+      this.actividadForm.horaInicio = horaInicio;
+    }
+    if (horaPickup) {
+      this.actividadForm.horaPickup = horaPickup;
+    }
+
+    this.actividadForm.pickups = [this.mapDraftServiceLineToActividadPickup(baseDetalle)];
+  }
+
+  private resolveLastDetalleForActividadDefaults(): ReservaDraftServiceLine | null {
+    const ordered = [...(this.detalles ?? [])].sort((a, b) => a.linea - b.linea);
+    if (!ordered.length) {
+      return null;
+    }
+
+    const lastActividad = [...ordered].reverse().find((item) => item.source === 'actividad');
+    if (lastActividad) {
+      return lastActividad;
+    }
+
+    return ordered[ordered.length - 1] ?? null;
+  }
+
+  private mapDraftServiceLineToActividadPickup(line: ReservaDraftServiceLine): ActividadPickupForm {
+    if (line.origenTexto || line.origenPlaceId || line.origenGoogle) {
+      return {
+        direccion : line.origenTexto,
+        zona      : line.zonaOrigen,
+        google    : line.origenGoogle,
+        placeId   : line.origenPlaceId,
+        lat       : line.origenLat,
+        lng       : line.origenLng
+      };
+    }
+
+    return {
+      direccion : line.destinoTexto,
+      zona      : line.zonaDestino,
+      google    : line.destinoGoogle,
+      placeId   : line.destinoPlaceId,
+      lat       : line.destinoLat,
+      lng       : line.destinoLng
     };
   }
   private async cargarListasPrecios(): Promise<void> {

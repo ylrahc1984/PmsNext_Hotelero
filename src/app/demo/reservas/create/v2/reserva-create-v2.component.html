@@ -229,6 +229,8 @@
                     <th class="text-end">Subtotal</th>
                     <th class="text-end">Descuento</th>
                     <th class="text-end">Neto</th>
+                    <th class="text-end">Impuesto</th>
+                    <th class="text-end">Total</th>
                     <th class="text-end">Acciones</th>
                   </tr>
                 </thead>
@@ -258,6 +260,8 @@
                       </span>
                     </td>
                     <td class="text-end fw-semibold">{{ detalle.neto | number:'1.2-2' }}</td>
+                    <td class="text-end">{{ detalle.impuesto | number:'1.2-2' }}</td>
+                    <td class="text-end fw-semibold">{{ detalle.montoServicio | number:'1.2-2' }}</td>
                     <td>
                       <div class="d-flex justify-content-end gap-2">
                         <button class="btn btn-outline-info btn-sm rsv-icon-btn" type="button" (click)="editarLinea(detalle)" title="Editar servicio">
@@ -270,7 +274,7 @@
                     </td>
                   </tr>
                   <tr *ngIf="detalles.length === 0">
-                    <td colspan="11" class="text-center text-muted py-4">Aún no hay servicios agregados.</td>
+                    <td colspan="13" class="text-center text-muted py-4">Aún no hay servicios agregados.</td>
                   </tr>
                 </tbody>
               </table>

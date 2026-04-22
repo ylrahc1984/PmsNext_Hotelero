@@ -10,7 +10,7 @@
 }
 
 .filter-card .card-body {
-  padding: 0.9rem 1rem;
+  padding: 0.72rem 1rem;
 }
 
 .filter-card .form-label {
@@ -18,14 +18,14 @@
 }
 
 .hour-filter-panel {
-  padding-top: 0.65rem;
+  padding-top: 0.5rem;
   border-top: 1px solid #e6eaf2;
 }
 
 .hour-filter-panel__title {
   font-weight: 700;
   color: #64748b;
-  margin-bottom: 0.45rem;
+  margin-bottom: 0.35rem;
 }
 
 .hour-filter-chips {
@@ -39,7 +39,8 @@
   border-radius: 999px;
   background: #ffffff;
   color: #475569;
-  padding: 0.32rem 0.7rem;
+  padding: 0.24rem 0.65rem;
+  font-size: 0.78rem;
 }
 
 .hour-filter-chip.is-active {
@@ -84,13 +85,13 @@
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  padding: 0.65rem 1rem;
+  padding: 0.5rem 0.9rem;
   background: linear-gradient(90deg, #f7f9ff 0%, #f1f5fb 100%);
   border-bottom: 1px solid #e6eaf2;
 }
 
 .hour-title {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
   letter-spacing: 0.03em;
   color: #1f2a44;
@@ -103,19 +104,19 @@
 
 .metric span {
   display: block;
-  font-size: 0.6rem;
+  font-size: 0.56rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: #7b879d;
 }
 
 .metric strong {
-  font-size: 0.92rem;
+  font-size: 0.84rem;
   color: #1f2a44;
 }
 
 .hour-card .table thead th {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: #6b7690;
@@ -131,17 +132,17 @@
 }
 
 .hour-card .table tbody td {
-  padding-top: 0.35rem;
-  padding-bottom: 0.35rem;
-  font-size: 0.82rem;
+  padding-top: 0.28rem;
+  padding-bottom: 0.28rem;
+  font-size: 0.78rem;
 }
 
 .service-chip {
   display: inline-flex;
   align-items: center;
-  padding: 0.15rem 0.55rem;
+  padding: 0.12rem 0.5rem;
   border-radius: 999px;
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 600;
   border: 1px solid transparent;
   white-space: nowrap;
@@ -172,17 +173,15 @@
 }
 
 .estado-badge {
-  padding: 0.2rem 0.5rem;
+  padding: 0.14rem 0.42rem;
   font-weight: 600;
   border-radius: 999px;
+  font-size: 0.7rem;
 }
 
 .indicator-row {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  margin-top: 0.2rem;
-  font-size: 0.9rem;
 }
 
 .indicator-row .icon-alert-circle {
@@ -369,18 +368,18 @@
 
 .resumen-actividad {
   margin-top: 1rem;
-  padding: 0.75rem 1rem;
+  padding: 0.6rem 0.9rem;
   border-radius: 12px;
   background: #f8fafc;
   border: 1px solid #eef1f6;
 }
 
 .resumen-title {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: #7b879d;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
 }
 
 .resumen-items {
@@ -397,7 +396,7 @@
 }
 
 .resumen-meta {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: #5f6b81;
   font-weight: 600;
 }
@@ -408,14 +407,14 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.75rem 1rem;
+  padding: 0.6rem 0.9rem;
   border-radius: 12px;
   border: 1px solid #eef1f6;
   background: #ffffff;
 }
 
 .pagination-summary {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #5f6b81;
   font-weight: 600;
 }
