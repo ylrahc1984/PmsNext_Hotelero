@@ -241,7 +241,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
       if (existente) {
         existente.detalles.push(detalle);
         existente.cantidad += 1;
-        existente.paxTotal = pax;
+        existente.paxTotal += pax;
         existente.ultimoIndice = index;
         existente.mostrarInfoReserva = existente.mostrarInfoReserva || necesitaInfoReserva;
         existente.horaPickup = this.obtenerHoraMasTemprana(existente.horaPickup, horaPickupDetalle);
@@ -369,10 +369,11 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
   }
 
   toggleSeleccion(detalle: DetalleDisponibleUI, checked: boolean): void {
+    const selectionKey = this.getDetalleSelectionKey(detalle);
     if (checked) {
-      this.detallesSeleccionados.add(detalle.key);
+      this.detallesSeleccionados.add(selectionKey);
     } else {
-      this.detallesSeleccionados.delete(detalle.key);
+      this.detallesSeleccionados.delete(selectionKey);
     }
   }
 
@@ -388,15 +389,14 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
       }
     });
 
-    const seleccionadosMap = new Map<string, DetalleDisponibleUI>();
+    const seleccionados: DetalleDisponibleUI[] = [];
     agrupaciones.forEach((detalles) => {
-      const agrupacionSeleccionada = detalles.some(det => this.detallesSeleccionados.has(det.key));
+      const agrupacionSeleccionada = detalles.some((det) => this.detallesSeleccionados.has(this.getDetalleSelectionKey(det)));
       if (agrupacionSeleccionada) {
-        detalles.forEach(det => seleccionadosMap.set(det.key, det));
+        seleccionados.push(...detalles);
       }
     });
 
-    const seleccionados = Array.from(seleccionadosMap.values());
     if (!seleccionados.length || this.estadoBloqueado) {
       return;
     }
@@ -454,7 +454,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
 
     seleccionados.forEach(det => {
       // Obtener origen/destino editados o usar los originales
-      const editados = this.origenDestinoEditados.get(det.key);
+      const editados = this.origenDestinoEditados.get(this.getDetalleSelectionKey(det));
       const origenOT = editados?.origenOT || det.origen;
       const destinoOT = editados?.destinoOT || det.destino;
       
@@ -654,6 +654,22 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
 
           // Verificar si hubo errores en los detalles
           if (resultado.errores && resultado.errores.length > 0) {
+            console.group('⚠️ Errores al guardar detalles OT');
+            resultado.errores.forEach((item: any, idx: number) => {
+              const err = item?.error;
+              console.error(`Detalle con error #${idx + 1}`, {
+                operacion: item?.operacion,
+                linea: item?.dto?.linea,
+                codReserva: item?.dto?.codReserva,
+                idDetReserva: item?.dto?.idDetReserva,
+                status: err?.status,
+                title: err?.error?.title,
+                errors: err?.error?.errors,
+                rawError: err
+              });
+            });
+            console.groupEnd();
+
             Swal.fire({
               title: 'Guardado con advertencias',
               html: `
@@ -734,6 +750,9 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
             confirmButtonText: 'Aceptar'
           });
 
+          if (error?.error?.errors) {
+            console.error('📌 Errores de validación backend (guardar OT):', error.error.errors);
+          }
           console.error('Error guardando orden:', error);
         }
       });
@@ -827,14 +846,15 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
    * El cambio se almacena temporalmente hasta que se ejecute "Agregar Seleccionados".
    */
   updateOrigenOT(detalle: DetalleDisponibleUI, nuevoOrigen: string): void {
-    if (!this.origenDestinoEditados.has(detalle.key)) {
+    const selectionKey = this.getDetalleSelectionKey(detalle);
+    if (!this.origenDestinoEditados.has(selectionKey)) {
       // Primera edición, inicializar con valores originales
-      this.origenDestinoEditados.set(detalle.key, {
+      this.origenDestinoEditados.set(selectionKey, {
         origenOT: detalle.origen,
         destinoOT: detalle.destino
       });
     }
-    const editado = this.origenDestinoEditados.get(detalle.key)!;
+    const editado = this.origenDestinoEditados.get(selectionKey)!;
     editado.origenOT = nuevoOrigen;
   }
 
@@ -843,14 +863,15 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
    * El cambio se almacena temporalmente hasta que se ejecute "Agregar Seleccionados".
    */
   updateDestinoOT(detalle: DetalleDisponibleUI, nuevoDestino: string): void {
-    if (!this.origenDestinoEditados.has(detalle.key)) {
+    const selectionKey = this.getDetalleSelectionKey(detalle);
+    if (!this.origenDestinoEditados.has(selectionKey)) {
       // Primera edición, inicializar con valores originales
-      this.origenDestinoEditados.set(detalle.key, {
+      this.origenDestinoEditados.set(selectionKey, {
         origenOT: detalle.origen,
         destinoOT: detalle.destino
       });
     }
-    const editado = this.origenDestinoEditados.get(detalle.key)!;
+    const editado = this.origenDestinoEditados.get(selectionKey)!;
     editado.destinoOT = nuevoDestino;
   }
 
@@ -858,14 +879,23 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
    * Obtiene el origen de la OT (editado o original) para mostrar en el input.
    */
   getOrigenOT(detalle: DetalleDisponibleUI): string {
-    return this.origenDestinoEditados.get(detalle.key)?.origenOT || detalle.origen;
+    return this.origenDestinoEditados.get(this.getDetalleSelectionKey(detalle))?.origenOT || detalle.origen;
   }
 
   /**
    * Obtiene el destino de la OT (editado o original) para mostrar en el input.
    */
   getDestinoOT(detalle: DetalleDisponibleUI): string {
-    return this.origenDestinoEditados.get(detalle.key)?.destinoOT || detalle.destino;
+    return this.origenDestinoEditados.get(this.getDetalleSelectionKey(detalle))?.destinoOT || detalle.destino;
+  }
+
+  getDetalleSelectionKey(detalle: DetalleDisponibleUI): string {
+    const base = (detalle?.key || `${detalle?.codReserva || ''}-${detalle?.id || 0}`).toString().trim();
+    const hora = this.normalizeHora(detalle?.hora) || 'sin-hora';
+    const origen = this.slugify((detalle?.origen || '').toString());
+    const destino = this.slugify((detalle?.destino || '').toString());
+    const remanente = detalle?.esRemanente ? 'R' : 'N';
+    return `${base}::${hora}::${origen}::${destino}::${remanente}`;
   }
 
   moverDetalle(index: number, direccion: 'up' | 'down'): void {

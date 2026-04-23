@@ -380,6 +380,12 @@
 
 // ==================== PANEL RESUMEN ====================
 .ot-panel-resumen {
+  .panel-body {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
   .resumen-info {
     .resumen-strip {
       display: grid;
@@ -490,8 +496,15 @@
   }
   
   .orden-secuencia {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+
     .secuencia-list {
-      max-height: 250px;
+      flex: 1 1 auto;
+      min-height: 0;
+      max-height: none;
       overflow-y: auto;
       
       &::-webkit-scrollbar {

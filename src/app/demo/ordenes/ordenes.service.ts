@@ -768,13 +768,17 @@ export class OrdenesService {
    * Guarda un detalle individual de la orden (POST).
    */
   guardarDetalle(dto: OrdenTrabajoDetalleDTO): Observable<any> {
-    console.log(`📝 Guardando detalle línea ${dto.linea}:`, { codOT: dto.codOT, servicio: dto.nomServicio });
+    const issues = this.validarDetalleDTO(dto);
+    this.logDetallePayload('POST', dto, issues);
     
     return this.http.post(this.apiDetalleUrl, dto).pipe(
       tap(response => console.log(`✅ Detalle línea ${dto.linea} guardado:`, response)),
       catchError(error => {
         console.error(`❌ Error al guardar detalle línea ${dto.linea}:`, error);
-        return throwError(() => new Error(error.error?.respuesta || 'Error al guardar detalle'));
+        if (error?.error?.errors) {
+          console.error(`📌 Validaciones backend línea ${dto.linea}:`, error.error.errors);
+        }
+        return throwError(() => error);
       })
     );
   }
@@ -783,13 +787,17 @@ export class OrdenesService {
    * Actualiza un detalle existente de la orden (PUT).
    */
   actualizarDetalle(dto: OrdenTrabajoDetalleDTO): Observable<any> {
-    console.log(`🔄 Actualizando detalle ID ${dto.id}, línea ${dto.linea}:`, { codOT: dto.codOT, servicio: dto.nomServicio });
+    const issues = this.validarDetalleDTO(dto);
+    this.logDetallePayload('PUT', dto, issues);
     
     return this.http.put(this.apiDetalleUrl, dto).pipe(
       tap(response => console.log(`✅ Detalle ID ${dto.id} actualizado:`, response)),
       catchError(error => {
         console.error(`❌ Error al actualizar detalle ID ${dto.id}:`, error);
-        return throwError(() => new Error(error.error?.respuesta || 'Error al actualizar detalle'));
+        if (error?.error?.errors) {
+          console.error(`📌 Validaciones backend detalle ID ${dto.id}:`, error.error.errors);
+        }
+        return throwError(() => error);
       })
     );
   }
@@ -1201,34 +1209,130 @@ export class OrdenesService {
     linea     : number, 
     operador  : string
   ): OrdenTrabajoDetalleDTO {
+    const totalPax = this.toSafeNumber(detalle.pax, 0);
+    const adultos = this.toSafeNumber(detalle.adultos, 0);
+    const ninos = this.toSafeNumber(detalle.ninos, 0);
+    const horaPickupNormalizada = this.normalizeHoraPax(detalle.horaPickup);
+    const horaServicioNormalizada = this.normalizeHoraPax(detalle.hora);
+    const horaPax = horaPickupNormalizada || horaServicioNormalizada;
+
     return {
       tipo            : 0,
       id              : 0, // Se genera en el backend
-      codOT           ,
-      linea           ,
-      codReserva      : detalle.reservaId,
-      idDetReserva    : detalle.detalleReservaId || 0,
-      codServicio     : detalle.servicioId || '',
-      nomServicio     : detalle.servicio,
-      origenTexto     : detalle.origenOT || detalle.origenReserva || '',
-      destinoTexto    : detalle.destinoOT || detalle.destinoReserva || '',
-      origenPlaceId   : detalle.origenPlaceId || '',
-      destinoPlaceId  : detalle.destinoPlaceId || '',
-      origenLat       : detalle.origenLat || 0,
-      origenLng       : detalle.origenLng || 0,
-      destinoLat      : detalle.destinoLat || 0,
-      destinoLng      : detalle.destinoLng || 0,
-      horaPax         : detalle.horaPickup || '',
-      adultos         : detalle.adultos || 0,
-      ninos           : detalle.ninos || 0,
-      totalPax        : detalle.pax,
-      boleta          : detalle.boleta || '',
-      voucher         : detalle.voucher || '',
-      agenciaCobro    : detalle.agencia || '',
-      estado          : 'PENDIENTE',
-      observacion     : detalle.observaciones || '',
-      operador        ,
+      codOT           : String(codOT || '').trim(),
+      linea           : this.toSafeNumber(linea, 0),
+      codReserva      : String(detalle.reservaId || '').trim(),
+      idDetReserva    : this.toSafeNumber(detalle.detalleReservaId, 0),
+      codServicio     : String(detalle.servicioId || '').trim(),
+      nomServicio     : String(detalle.servicio || '').trim(),
+      origenTexto     : String(detalle.origenOT || detalle.origenReserva || '').trim(),
+      destinoTexto    : String(detalle.destinoOT || detalle.destinoReserva || '').trim(),
+      origenPlaceId   : String(detalle.origenPlaceId || '').trim(),
+      destinoPlaceId  : String(detalle.destinoPlaceId || '').trim(),
+      origenLat       : this.toSafeNumber(detalle.origenLat, 0),
+      origenLng       : this.toSafeNumber(detalle.origenLng, 0),
+      destinoLat      : this.toSafeNumber(detalle.destinoLat, 0),
+      destinoLng      : this.toSafeNumber(detalle.destinoLng, 0),
+      horaPax,
+      adultos,
+      ninos,
+      totalPax        : totalPax > 0 ? totalPax : adultos + ninos,
+      boleta          : String(detalle.boleta || '').trim(),
+      voucher         : String(detalle.voucher || '').trim(),
+      agenciaCobro    : String(detalle.agencia || '').trim(),
+      estado          : 'PEN',
+      observacion     : String(detalle.observaciones || '').trim(),
+      operador        : String(operador || '').trim(),
       respuesta       : ''
     };
+  }
+
+  private normalizeHoraPax(value: string | null | undefined): string {
+    const raw = String(value ?? '').trim();
+    if (!raw) {
+      return '';
+    }
+
+    // Formatos directos: H:mm, HH:mm, H:mm:ss, HH:mm:ss
+    const timeMatch = raw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (timeMatch) {
+      const horas = Number(timeMatch[1]);
+      const minutos = Number(timeMatch[2]);
+      if (horas >= 0 && horas <= 23 && minutos >= 0 && minutos <= 59) {
+        return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`;
+      }
+      return '';
+    }
+
+    // Formato 12h: hh:mm AM/PM
+    const amPmMatch = raw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*([AaPp][Mm])$/);
+    if (amPmMatch) {
+      let horas = Number(amPmMatch[1]);
+      const minutos = Number(amPmMatch[2]);
+      const meridiem = amPmMatch[3].toUpperCase();
+      if (horas >= 1 && horas <= 12 && minutos >= 0 && minutos <= 59) {
+        if (meridiem === 'AM' && horas === 12) horas = 0;
+        if (meridiem === 'PM' && horas !== 12) horas += 12;
+        return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`;
+      }
+      return '';
+    }
+
+    // Timestamp ISO: 2026-04-23T14:35:00
+    const isoMatch = raw.match(/[T\s](\d{2}):(\d{2})(?::\d{2})?/);
+    if (isoMatch) {
+      const horas = Number(isoMatch[1]);
+      const minutos = Number(isoMatch[2]);
+      if (horas >= 0 && horas <= 23 && minutos >= 0 && minutos <= 59) {
+        return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`;
+      }
+    }
+
+    return '';
+  }
+
+  private validarDetalleDTO(dto: OrdenTrabajoDetalleDTO): string[] {
+    const issues: string[] = [];
+    if (!dto.codOT?.trim()) issues.push('codOT vacío');
+    if (!dto.codReserva?.trim()) issues.push('codReserva vacío');
+    if (!dto.idDetReserva || dto.idDetReserva <= 0) issues.push('idDetReserva inválido (<= 0)');
+    if (!dto.codServicio?.trim()) issues.push('codServicio vacío');
+    if (!dto.nomServicio?.trim()) issues.push('nomServicio vacío');
+    if (!dto.origenTexto?.trim()) issues.push('origenTexto vacío');
+    if (!dto.destinoTexto?.trim()) issues.push('destinoTexto vacío');
+    if (!dto.horaPax?.trim()) issues.push('horaPax vacío');
+    if (!Number.isFinite(dto.totalPax) || dto.totalPax <= 0) issues.push('totalPax inválido (<= 0)');
+    if (!dto.estado?.trim()) issues.push('estado vacío');
+    if (!dto.operador?.trim()) issues.push('operador vacío');
+    return issues;
+  }
+
+  private logDetallePayload(method: 'POST' | 'PUT', dto: OrdenTrabajoDetalleDTO, issues: string[]): void {
+    console.groupCollapsed(`📦 [${method}] orden-trabajo/detalle línea ${dto.linea}`);
+    console.log('Payload:', dto);
+    console.log('Tipos:', {
+      tipo: typeof dto.tipo,
+      id: typeof dto.id,
+      codOT: typeof dto.codOT,
+      linea: typeof dto.linea,
+      codReserva: typeof dto.codReserva,
+      idDetReserva: typeof dto.idDetReserva,
+      codServicio: typeof dto.codServicio,
+      nomServicio: typeof dto.nomServicio,
+      origenTexto: typeof dto.origenTexto,
+      destinoTexto: typeof dto.destinoTexto,
+      horaPax: typeof dto.horaPax,
+      adultos: typeof dto.adultos,
+      ninos: typeof dto.ninos,
+      totalPax: typeof dto.totalPax,
+      estado: typeof dto.estado,
+      operador: typeof dto.operador
+    });
+    if (issues.length) {
+      console.warn('⚠️ Validaciones previas fallidas:', issues);
+    } else {
+      console.log('✅ Validación previa OK');
+    }
+    console.groupEnd();
   }
 }
