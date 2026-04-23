@@ -23,7 +23,7 @@ interface ResumenOrdenAgrupado {
   key                 : string;
   detalles            : OrdenTrabajoDetalle[];
   cantidad            : number;
-  paxTotal            : number;
+  paxTotal            : number; // Pax operativo del tramo (max pax entre servicios del grupo)
   hora                : string;
   horaPickup          : string;
   fechaServicio       : string;
@@ -196,11 +196,11 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
   }
 
   get totalPax(): number {
-    return this.detallesOrden.reduce((sum, d) => sum + d.pax, 0);
+    return this.detallesOrdenAgrupados.reduce((sum, grupo) => sum + (grupo.paxTotal || 0), 0);
   }
 
   get totalPagarSugerido(): number {
-    return this.detallesOrden.reduce((sum, d) => sum + d.pax * 20, 0);
+    return this.totalPax * 20;
   }
 
   get detallesDisponiblesFiltrados(): DetalleDisponibleUI[] {
@@ -208,7 +208,12 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     if (!filtroHora) {
       return this.detallesDisponibles;
     }
-    return this.detallesDisponibles.filter((detalle) => this.obtenerHoraReferenciaDetalle(detalle) === filtroHora);
+    const filtrados = this.detallesDisponibles.filter((detalle) => this.obtenerHoraReferenciaDetalle(detalle) === filtroHora);
+    if (!filtrados.length && this.detallesDisponibles.length) {
+      this.selectedTime = null;
+      return this.detallesDisponibles;
+    }
+    return filtrados;
   }
 
   get detallesDisponiblesVisibles(): DetalleDisponibleUI[] {
@@ -224,9 +229,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     return this.getAgrupacionesPorReserva().counts.get(key) ?? 0;
   }
 
-  trackDetalleDisponible(_: number, detalle: DetalleDisponibleUI): string {
-    return detalle.key || `${detalle.codReserva}-${detalle.id}`;
-  }
+  trackDetalleDisponible = (_: number, detalle: DetalleDisponibleUI): string => this.buildAgrupacionKey(detalle);
 
   get detallesOrdenAgrupados(): ResumenOrdenAgrupado[] {
     const agrupaciones = new Map<string, ResumenOrdenAgrupado>();
@@ -241,17 +244,19 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
       if (existente) {
         existente.detalles.push(detalle);
         existente.cantidad += 1;
-        existente.paxTotal += pax;
+        // En transporte se usa pax operativo del tramo, no suma por servicio.
+        existente.paxTotal = Math.max(existente.paxTotal, pax);
         existente.ultimoIndice = index;
         existente.mostrarInfoReserva = existente.mostrarInfoReserva || necesitaInfoReserva;
         existente.horaPickup = this.obtenerHoraMasTemprana(existente.horaPickup, horaPickupDetalle);
+        existente.hora = this.obtenerHoraMasTemprana(existente.hora, horaPickupDetalle);
       } else {
         agrupaciones.set(clave, {
           key: clave,
           detalles: [detalle],
           cantidad: 1,
           paxTotal: pax,
-          hora: detalle.hora,
+          hora: horaPickupDetalle,
           horaPickup: horaPickupDetalle,
           fechaServicio: detalle.fechaServicio,
           origenOT: detalle.origenOT,
@@ -293,18 +298,27 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
     }
 
     const counts = new Map<string, number>();
-    const visibles: DetalleDisponibleUI[] = [];
-    const seen = new Set<string>();
+    const grupos = new Map<string, { item: DetalleDisponibleUI; paxMax: number }>();
     const detallesOrdenados = [...this.detallesDisponiblesFiltrados].sort((a, b) => this.compararDetallesPorHora(a, b));
 
     detallesOrdenados.forEach((detalle) => {
       const key = this.buildAgrupacionKey(detalle);
       counts.set(key, (counts.get(key) ?? 0) + 1);
-      if (!seen.has(key)) {
-        visibles.push(detalle);
-        seen.add(key);
+      const grupo = grupos.get(key);
+      const paxActual = Number(detalle.pax ?? 0);
+      if (!grupo) {
+        grupos.set(key, { item: detalle, paxMax: Number.isFinite(paxActual) ? paxActual : 0 });
+        return;
+      }
+      if (Number.isFinite(paxActual) && paxActual > grupo.paxMax) {
+        grupo.paxMax = paxActual;
       }
     });
+
+    const visibles: DetalleDisponibleUI[] = Array.from(grupos.values()).map((grupo) => ({
+      ...grupo.item,
+      pax: grupo.paxMax
+    }));
 
     this.agrupacionesPorReservaCache = { visibles, counts };
     return this.agrupacionesPorReservaCache;
@@ -327,23 +341,45 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
 
   private buildAgrupacionKey(detalle: DetalleDisponibleUI): string {
     const fechaNormalizada = this.normalizeFecha(detalle.fechaServicio);
-    const horaNormalizada = this.normalizeHora(detalle.hora);
-    const base = detalle.codReserva || detalle.key || `${detalle.id}`;
-    return `${base}::${fechaNormalizada}::${horaNormalizada}`;
+    const codReserva = (detalle.codReserva || '').toString().trim() || `${detalle.id}`;
+    const horaServicio = this.normalizeHora(detalle.hora);
+    const horaPickup = this.normalizeHora(detalle.horaPickup);
+    return `${codReserva}::${fechaNormalizada}::${horaServicio}::${horaPickup}`;
   }
 
   private buildAgrupacionKeyOrdenDetalle(detalle: OrdenTrabajoDetalle): string {
     const fechaNormalizada = this.normalizeFecha(detalle.fechaServicio);
-    const horaNormalizada = this.normalizeHora(detalle.hora);
+    const horaNormalizada = this.normalizeHora(detalle.horaPickup || detalle.hora);
+    const origenNormalizado = this.normalizeTexto(detalle.origenOT || detalle.origenReserva || '');
+    const destinoNormalizado = this.normalizeTexto(detalle.destinoOT || detalle.destinoReserva || '');
     const base =
       detalle.reservaId ||
       (detalle.detalleReservaId ? `${detalle.detalleReservaId}` : undefined) ||
       `${detalle.id}`;
-    return `${base}::${fechaNormalizada}::${horaNormalizada}`;
+    return `${base}::${fechaNormalizada}::${horaNormalizada}::${origenNormalizado}::${destinoNormalizado}`;
   }
 
   private invalidarAgrupacionesPorReserva(): void {
     this.agrupacionesPorReservaCache = null;
+  }
+
+  private calcularPaxOperativoDisponibles(detalles: DetalleDisponibleUI[]): number {
+    if (!detalles.length) {
+      return 0;
+    }
+    const paxPorGrupo = new Map<string, number>();
+    detalles.forEach((detalle) => {
+      const key = this.buildAgrupacionKey(detalle);
+      const paxActual = Number(detalle.pax ?? 0);
+      const paxPrevio = paxPorGrupo.get(key) ?? 0;
+      paxPorGrupo.set(key, Math.max(paxPrevio, Number.isFinite(paxActual) ? paxActual : 0));
+    });
+
+    let total = 0;
+    paxPorGrupo.forEach((pax) => {
+      total += pax;
+    });
+    return total;
   }
 
   get estadosDisponibles(): EstadoOrdenOption[] {
@@ -407,7 +443,7 @@ export class OrdenTrabajoFormComponent implements OnInit, OnDestroy {
       const vehiculo = suplidor?.vehiculos.find(v => v.codigo === this.selectedVehiculoId);
       
       if (vehiculo) {
-        const totalPaxSeleccionados = seleccionados.reduce((sum, det) => sum + (det.pax || 0), 0);
+        const totalPaxSeleccionados = this.calcularPaxOperativoDisponibles(seleccionados);
         const capacidadDisponible = vehiculo.capacidadDisponible;
         
         if (totalPaxSeleccionados > capacidadDisponible) {
