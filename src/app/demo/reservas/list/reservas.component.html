@@ -119,13 +119,13 @@
           <thead class="table-light">
             <tr>
               <th>Reserva / Boleta</th>
-              <th>Fecha</th>
+              <th>Fecha Servicio</th>
               <th>Cliente Final</th>
               <th>Agencia / Comisionista</th>
-              <th>Cantidad de Servicios</th>
               <th>Estado de la Reserva</th>
               <th>Forma de Pago</th>
               <th>Total Reserva</th>
+              <th>Fecha Creación</th>
               <th>Usuario</th>
               <th>Acciones</th>
             </tr>
@@ -135,17 +135,11 @@
               <td>
                 <div class="fw-semibold font-monospace">#{{ reserva.PRV01_CodReserva }}</div>
               </td>
-              <td class="text-nowrap">{{ reserva.PRV01_FecCreacion | date:'dd/MM/yyyy' }}</td>
+              <td class="text-nowrap">{{ reserva.PRV02_FecServicio | date:'dd/MM/yyyy' }}</td>
               <td>{{ reserva.PRV01_NomCliente }}</td>
               <td>
                 <div>{{ reserva.MPV00_NomClien }}</div>
                 <small class="text-muted" *ngIf="reserva.MPV00_Contacto">{{ reserva.MPV00_Contacto }}</small>
-              </td>
-              <td>
-                <span class="badge rounded-pill" [ngClass]="getServiciosBadge(getCantidadServicios(reserva))">
-                  <i class="feather icon-layers me-1"></i>
-                  {{ getCantidadServicios(reserva) }} servicio{{ getCantidadServicios(reserva) > 1 ? 's' : '' }}
-                </span>
               </td>
               <td>
                 <span class="badge rounded-pill" [ngClass]="getEstadoBadge(reserva.PRV01_Estado)" [attr.title]="reserva.PRV01_Estado">
@@ -154,6 +148,7 @@
               </td>
               <td>{{ reserva.PRV01_FormaPago }}</td>
               <td class="text-end">{{ reserva.PRV01_TotalRsv | number:'1.2-2' }}</td>
+              <td class="text-nowrap">{{ reserva.PRV01_FecCreacion | date:'dd/MM/yyyy' }}</td>
               <td>{{ reserva.PRV01_Operador }}</td>
               <td>
                 <div class="dropdown" ngbDropdown container="body" [placement]="'bottom-end'">

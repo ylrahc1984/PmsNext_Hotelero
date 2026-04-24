@@ -170,6 +170,7 @@ export class ReservasComponent implements OnInit, OnDestroy {
         this.agencias = Array.from(new Set(this.reservas.map((r) => r.PRV01_CodAgencia).filter(Boolean)));
         this.applyLocalFilters();
         this.loading = false;
+        
       },
       error: () => {
         this.errorMsg = 'Error al cargar reservas';

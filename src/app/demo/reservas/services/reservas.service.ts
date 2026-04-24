@@ -17,6 +17,7 @@ export interface Reserva {
   PRV01_FormaPago               : string;
   PRV01_CodLstPrecio            : string;
   PRV01_CodPlan                 : string;
+  PRV02_FecServicio             : string;
   PRV01_FecCreacion             : string;
   PRV01_FecConfirma             : string;
   PRV01_FecAnulada              : string;
