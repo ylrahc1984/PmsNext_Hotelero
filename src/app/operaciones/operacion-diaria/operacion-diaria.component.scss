@@ -179,6 +179,12 @@
   font-size: 0.7rem;
 }
 
+.checkin-cell {
+  width: 1%;
+  text-align: center;
+  white-space: nowrap;
+}
+
 .indicator-row {
   display: flex;
   align-items: center;
@@ -313,12 +319,6 @@
   background: #edf4ff;
   border-color: #d7e6ff;
   color: #2563eb;
-}
-
-.action-item__icon--success {
-  background: #eafaf1;
-  border-color: #ccefdc;
-  color: #15803d;
 }
 
 .action-item__icon--sky {

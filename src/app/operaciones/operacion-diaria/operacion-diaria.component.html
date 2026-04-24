@@ -158,6 +158,7 @@
                       <th class="px-1">Estado</th>
                       <th class="px-1">Facturado</th>
                       <th class="px-1">Transporte</th>
+                      <th class="text-center">CheckIn</th>
                       <th class="px-1">Usuario</th>
                       <th class="text-end">Acciones</th>
                     </tr>
@@ -199,11 +200,44 @@
                         <td class="px-1 text-nowrap">
                           <span class="badge estado-badge" [ngClass]="reserva.estadoOperacionBadge">{{ reserva.estadoOperacionLabel }}</span>
                         </td>
+ 
                         <td class="px-1 text-nowrap">
                           <span class="badge estado-badge" [ngClass]="reserva.estadoFacturacionBadge">{{ reserva.estadoFacturacionLabel }}</span>
                         </td>
                         <td class="px-1 text-nowrap">
                           <span class="badge estado-badge" [ngClass]="reserva.estadoTransporteBadge">{{ reserva.estadoTransporteLabel }}</span>
+                        </td>
+                        <td class="checkin-cell">
+                          <button
+                            type="button"
+                            class="checkin-switch"
+                            style="display: inline-flex; align-items: center; gap: 0.35rem; border: 0; background: transparent; padding: 0; font-size: 0.68rem; font-weight: 700; line-height: 1;"
+                            [style.cursor]="isCheckingIn(reserva.detallePrincipal) || !reserva.detallePrincipal.prV02_CodReserva ? 'default' : 'pointer'"
+                            [style.color]="isCheckInRealizado(reserva.detallePrincipal) ? '#15803d' : (isCheckingIn(reserva.detallePrincipal) ? '#2563eb' : '#64748b')"
+                            [class.is-on]="isCheckInRealizado(reserva.detallePrincipal)"
+                            [class.is-loading]="isCheckingIn(reserva.detallePrincipal)"
+                            [disabled]="isCheckingIn(reserva.detallePrincipal) || !reserva.detallePrincipal.prV02_CodReserva"
+                            [attr.aria-checked]="isCheckInRealizado(reserva.detallePrincipal)"
+                            [attr.aria-label]="isCheckInRealizado(reserva.detallePrincipal) ? 'Revertir Check In' : 'Marcar Check In'"
+                            role="switch"
+                            (click)="onCheckIn(reserva.detallePrincipal)"
+                          >
+                            <span
+                              class="checkin-switch__track"
+                              style="display: inline-flex; align-items: center; width: 2.6rem; height: 1.42rem; padding: 0.14rem; border-radius: 999px; box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.14); transition: background-color 0.2s ease;"
+                              [style.background-color]="isCheckInRealizado(reserva.detallePrincipal) ? '#22c55e' : (isCheckingIn(reserva.detallePrincipal) ? '#bfdbfe' : '#d8dee8')"
+                            >
+                              <span
+                                class="checkin-switch__thumb"
+                                style="display: inline-flex; align-items: center; justify-content: center; width: 1.14rem; height: 1.14rem; border-radius: 999px; background: #ffffff; color: #2563eb; box-shadow: 0 2px 5px rgba(15, 23, 42, 0.22); transition: transform 0.2s ease;"
+                                [style.transform]="isCheckInRealizado(reserva.detallePrincipal) ? 'translateX(1.18rem)' : 'translateX(0)'"
+                              >
+                                @if (isCheckingIn(reserva.detallePrincipal)) {
+                                  <span class="spinner-border spinner-border-sm" style="width: 0.76rem; height: 0.76rem; border-width: 0.12rem;" aria-hidden="true"></span>
+                                }
+                              </span>
+                            </span>
+                          </button>
                         </td>
                         <td class="px-1">
                           <div class="fw-semibold user-summary">{{ reserva.usuarioResponsable || 'Sin usuario' }}</div>
@@ -212,10 +246,26 @@
                               <i class="feather icon-truck text-primary" title="Con chofer" aria-hidden="true"></i>
                             }
                             @if (reserva.indicadorObservacionCliente) {
-                              <i class="feather icon-alert-circle text-warning" title="Con observacion" aria-hidden="true"></i>
+                              <button
+                                type="button"
+                                class="btn btn-link p-0 lh-1 text-warning"
+                                title="Ver observacion del cliente"
+                                aria-label="Ver observacion del cliente"
+                                (click)="openObservacionDetalle(reserva, 'cliente')"
+                              >
+                                <i class="feather icon-alert-circle" aria-hidden="true"></i>
+                              </button>
                             }
                             @if (reserva.indicadorObservacionOperacion) {
-                              <i class="feather icon-alert-circle indicator-row__icon--operacion" title="Con observacion operacion" aria-hidden="true"></i>
+                              <button
+                                type="button"
+                                class="btn btn-link p-0 lh-1 indicator-row__icon--operacion"
+                                title="Ver observacion operacion"
+                                aria-label="Ver observacion operacion"
+                                (click)="onEditarObservacion(getDetalleObservacionOperacion(reserva))"
+                              >
+                                <i class="feather icon-alert-circle" aria-hidden="true"></i>
+                              </button>
                             }
                           </div>
                         </td>
@@ -279,20 +329,6 @@
                                   type="button"
                                   ngbDropdownItem
                                   class="dropdown-item action-item"
-                                  (click)="onCheckIn(reserva.detallePrincipal)"
-                                  [disabled]="isCheckingIn(reserva.detallePrincipal) || isCheckInRealizado(reserva.detallePrincipal)"
-                                >
-                                  <span class="action-item__icon action-item__icon--success">
-                                    <i class="feather icon-log-in" aria-hidden="true"></i>
-                                  </span>
-                                  <span class="action-item__content">
-                                    <span class="action-item__label">Check In</span>
-                                  </span>
-                                </button>
-                                <button
-                                  type="button"
-                                  ngbDropdownItem
-                                  class="dropdown-item action-item"
                                   (click)="onPrintVoucher(reserva.detallePrincipal)"
                                   [disabled]="isPrintingVoucher(reserva.detallePrincipal)"
                                 >
@@ -334,7 +370,7 @@
 
                       @if (isReservaExpanded(reserva)) {
                         <tr class="detalle-expand-row">
-                          <td colspan="10">
+                          <td colspan="11">
                             <div class="detalle-expand-card">
                               <div class="detalle-expand-title">Detalle de servicios</div>
                               <div class="table-responsive">
@@ -444,6 +480,71 @@
       </div>
     }
   }
+
+  <div
+    *ngIf="observacionDetalleModalOpen"
+    class="observacion-modal-backdrop"
+    (click)="closeObservacionDetalle()"
+  >
+    <div
+      class="observacion-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="observacion-detalle-modal-title"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="observacion-modal__header">
+        <div>
+          <div class="observacion-modal__eyebrow">{{ observacionesDetalleEyebrow }}</div>
+          <h3 id="observacion-detalle-modal-title" class="observacion-modal__title">
+            {{ observacionesDetalleTitulo }}
+          </h3>
+          <p class="observacion-modal__subtitle">{{ observacionesDetalleTexto }}</p>
+        </div>
+
+        <button
+          type="button"
+          class="observacion-modal__close"
+          (click)="closeObservacionDetalle()"
+          aria-label="Cerrar modal"
+        >
+          <i class="feather icon-x" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div *ngIf="observacionDetalleReserva as reserva" class="observacion-modal__context">
+        <div class="observacion-context-card">
+          <span class="observacion-context-card__label">Reserva</span>
+          <strong>#{{ reserva.numeroReserva }}</strong>
+          <small>{{ reserva.fechaServicio | date:'dd/MM/yyyy' }}</small>
+        </div>
+        <div class="observacion-context-card">
+          <span class="observacion-context-card__label">Cliente</span>
+          <strong>{{ reserva.cliente }}</strong>
+          <small>{{ reserva.agencia || 'Sin canal' }}</small>
+        </div>
+        <div class="observacion-context-card">
+          <span class="observacion-context-card__label">Pickup</span>
+          <strong>{{ reserva.pickupPrincipal || 'Sin pickup' }}</strong>
+          <small>{{ reserva.pickupReferencia || 'Sin referencia' }}</small>
+        </div>
+      </div>
+
+      <div class="observacion-modal__form">
+        @for (detalle of getObservacionesDetalle(); track trackByDetalle($index, detalle)) {
+          <div class="observacion-context-card mb-2">
+            <span class="observacion-context-card__label">Comentario:</span>
+            <strong>{{ getObservacionDetalleTexto(detalle) }}</strong>
+            
+          </div>
+        }
+
+        <div class="observacion-modal__actions">
+          <button type="button" class="btn btn-primary" (click)="closeObservacionDetalle()">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div
     *ngIf="observacionModalOpen"

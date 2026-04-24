@@ -87,8 +87,11 @@ export class OperacionDiariaComponent implements OnInit {
   checkingIn = new Set<number | string>();
   printingVouchers = new Set<number | string>();
   observacionModalOpen = false;
+  observacionDetalleModalOpen = false;
   savingObservacion = false;
   observacionDetalleSeleccionado: OperacionDetalle | null = null;
+  observacionDetalleReserva: ReservaOperacionAgrupada | null = null;
+  observacionDetalleTipo: 'cliente' | 'operacion' = 'cliente';
   private observacionOriginal = '';
   choferes: ChoferOption[] = [];
   choferesLoading = false;
@@ -295,25 +298,28 @@ export class OperacionDiariaComponent implements OnInit {
   }
 
   onCheckIn(detalle: OperacionDetalle): void {
-    if (!detalle?.prV02_CodReserva || this.isCheckInRealizado(detalle)) {
+    if (!detalle?.prV02_CodReserva || this.isCheckingIn(detalle)) {
       return;
     }
+    const nextChecked = !this.isCheckInRealizado(detalle);
     Swal.fire({
-      title: 'Confirmar Check In',
-      text: `Desea marcar la reserva ${detalle.prV02_CodReserva} como Check In?`,
+      title: nextChecked ? 'Confirmar Check In' : 'Revertir Check In',
+      text: nextChecked
+        ? `Desea marcar la reserva ${detalle.prV02_CodReserva} como Check In?`
+        : `Desea volver la reserva ${detalle.prV02_CodReserva} a estado pendiente?`,
       icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'Si, continuar',
+      confirmButtonText: nextChecked ? 'Si, continuar' : 'Si, revertir',
       cancelButtonText: 'Cancelar'
     }).then((result) => {
       if (!result.isConfirmed) {
         return;
       }
-      this.executeCheckIn(detalle);
+      this.executeCheckIn(detalle, nextChecked);
     });
   }
 
-  private executeCheckIn(detalle: OperacionDetalle): void {
+  private executeCheckIn(detalle: OperacionDetalle, checked: boolean): void {
     const key = this.getDetalleKey(detalle);
     const operador = this.getOperador();
     const baseApiUrl = (environment.apiUrl ?? '').toString().replace(/\/+$/, '');
@@ -323,14 +329,16 @@ export class OperacionDiariaComponent implements OnInit {
     this.http
       .post(url, {
         codReserva: detalle.prV02_CodReserva,
-        operador
+        operador,
+        checkIn: checked,
+        estado: checked ? 'CHK' : 'PEN'
       })
       .pipe(finalize(() => this.checkingIn.delete(key)))
       .subscribe({
         next: () => {
-          detalle.estado = 'CHK';
+          detalle.estado = checked ? 'CHK' : 'PEN';
           Swal.fire({
-            title: 'Check In realizado',
+            title: checked ? 'Check In realizado' : 'Check In revertido',
             text: `Reserva ${detalle.prV02_CodReserva} actualizada.`,
             icon: 'success',
             timer: 1800,
@@ -342,7 +350,7 @@ export class OperacionDiariaComponent implements OnInit {
           console.error('Error haciendo check in:', error);
           Swal.fire({
             title: 'Error',
-            text: 'No se pudo hacer Check In de la reserva.',
+            text: checked ? 'No se pudo hacer Check In de la reserva.' : 'No se pudo revertir el Check In de la reserva.',
             icon: 'error'
           });
         }
@@ -502,6 +510,49 @@ export class OperacionDiariaComponent implements OnInit {
 
   hasObservacionOperacion(detalle: OperacionDetalle | null | undefined): boolean {
     return this.hasTexto(detalle?.observacionOperacion);
+  }
+
+  get observacionesDetalleTitulo(): string {
+    return this.observacionDetalleTipo === 'cliente' ? 'Observaciones del cliente' : 'Observaciones de operación';
+  }
+
+  get observacionesDetalleEyebrow(): string {
+    return this.observacionDetalleTipo === 'cliente' ? 'Cliente' : 'Recepción';
+  }
+
+  get observacionesDetalleTexto(): string {
+    return this.observacionDetalleTipo === 'cliente'
+      ? 'Mensajes registrados en la reserva para atención del cliente.'
+      : 'Comentarios operativos registrados para el equipo de recepción.';
+  }
+
+  getObservacionesDetalle(): OperacionDetalle[] {
+    const detalles = this.observacionDetalleReserva?.detalles ?? [];
+    return detalles.filter((detalle) =>
+      this.observacionDetalleTipo === 'cliente' ? this.hasObservacion(detalle) : this.hasObservacionOperacion(detalle)
+    );
+  }
+
+  getObservacionDetalleTexto(detalle: OperacionDetalle): string {
+    const value = this.observacionDetalleTipo === 'cliente' ? detalle?.observacion : detalle?.observacionOperacion;
+    return (value ?? '').toString().trim();
+  }
+
+  getDetalleObservacionOperacion(reserva: ReservaOperacionAgrupada): OperacionDetalle {
+    return reserva.detalles.find((detalle) => this.hasObservacionOperacion(detalle)) ?? reserva.detallePrincipal;
+  }
+
+  openObservacionDetalle(reserva: ReservaOperacionAgrupada, tipo: 'cliente' | 'operacion'): void {
+    this.observacionDetalleReserva = reserva;
+    this.observacionDetalleTipo = tipo;
+    this.observacionDetalleModalOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  closeObservacionDetalle(): void {
+    this.observacionDetalleModalOpen = false;
+    this.observacionDetalleReserva = null;
+    this.cdr.markForCheck();
   }
 
   onEditarObservacion(detalle: OperacionDetalle): void {
