@@ -1,5 +1,47 @@
 <div class="dashboard-top">
-  <app-welcome-card [userName]="userName"></app-welcome-card>
+  <div class="dashboard-top__main">
+    <app-welcome-card [userName]="userName"></app-welcome-card>
+
+    <section class="exchange-card" aria-label="Tipo de cambio">
+      <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-2">
+        <div>
+          <span class="exchange-card__eyebrow">Tipo de cambio</span>
+          <h3 class="exchange-card__title">
+            {{ tipoCambio?.monedaBase || 'COL' }} → {{ tipoCambio?.monedaReferencia || 'USD' }}
+          </h3>
+        </div>
+        <span class="exchange-card__date">
+          @if (tipoCambio?.fecha) {
+            {{ tipoCambio?.fecha | date:'dd/MM/yyyy' }}
+          } @else {
+            Hoy
+          }
+        </span>
+      </div>
+
+      @if (tipoCambioLoading) {
+        <div class="exchange-card__notice d-flex align-items-center gap-2">
+          <i class="feather icon-loader"></i>
+          Actualizando tipo de cambio
+        </div>
+      } @else {
+        <div class="d-flex align-items-center flex-wrap gap-4">
+          <div class="exchange-card__metric">
+            <span>Compra</span>
+            <strong>{{ (tipoCambio?.compra ?? 0) | number:'1.2-4' }}</strong>
+          </div>
+          <div class="exchange-card__metric">
+            <span>Venta</span>
+            <strong>{{ (tipoCambio?.venta ?? 0) | number:'1.2-4' }}</strong>
+          </div>
+        </div>
+      }
+
+      @if (tipoCambioError) {
+        <div class="exchange-card__notice">{{ tipoCambioError }}</div>
+      }
+    </section>
+  </div>
 
   <app-weather-card
     [weather]="weather"

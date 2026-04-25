@@ -407,13 +407,14 @@
                             class="form-control form-control-sm text-end"
                             formControlName="monto"
                             inputmode="decimal"
+                            pattern="^\d{1,3}(,\d{3})*(\.\d{0,2})?$|^\d*(\.\d{0,2})?$"
                             placeholder="0.00"
                             (focus)="onPagoMontoFocus($event, i)"
                             (blur)="onPagoMontoBlur($event, i)"
                           >
                         </td>
                         <td>
-                          <select class="form-control form-control-sm" formControlName="moneda">
+                          <select class="form-control form-control-sm" formControlName="moneda" (change)="onPagoMonedaChange(i)">
                             <option *ngIf="monedasLoading" value="" disabled>Cargando monedas...</option>
                             <option *ngIf="!monedasLoading && monedas.length === 0" value="" disabled>No hay monedas</option>
                             <option *ngFor="let moneda of monedas" [value]="moneda.codMoneda">

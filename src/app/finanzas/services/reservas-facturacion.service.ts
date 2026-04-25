@@ -219,8 +219,25 @@ export class ReservasFacturacionService {
       neto: this.readNumber(item, normalized, 'prV02_Neto', 'PRV02_Neto', 'neto', 'montoNeto'),
       totalPax: this.readNumber(item, normalized, 'prV02_TotalPax', 'PRV02_TotalPax', 'totalPax', 'pax'),
       porDescuento: this.readNumber(item, normalized, 'prV02_PorDescuento', 'PRV02_PorDescuento', 'porDescuento', 'descuento'),
-      impuesto: this.readNumber(item, normalized, 'prV02_Impuesto', 'PRV02_Impuesto', 'impuesto'),
-      total: this.readNumber(item, normalized, 'prV02_MontoServicio')
+      impuesto: this.readNumber(
+        item,
+        normalized,
+        'prV02_Impuesto',
+        'PRV02_Impuesto',
+        'prV02_Impuestos',
+        'PRV02_Impuestos',
+        'impuesto',
+        'impuestos'
+      ),
+      total: this.readNumber(
+        item,
+        normalized,
+        'prV02_MontoServicio',
+        'PRV02_MontoServicio',
+        'montoServicio',
+        'total',
+        'montoTotal'
+      )
     };
   }
 

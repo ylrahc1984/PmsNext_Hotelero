@@ -18,6 +18,50 @@
   margin-bottom: 20px;
 }
 
+.dashboard-top__main {
+  display: grid;
+  gap: 14px;
+}
+
+.exchange-card {
+  padding: 10px 18px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 16px;
+}
+
+.exchange-card__eyebrow,
+.exchange-card__metric span,
+.exchange-card__date,
+.exchange-card__notice {
+  color: var(--color-text-soft);
+  font-size: 0.82rem;
+}
+
+.exchange-card__eyebrow {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.exchange-card__title {
+  margin: 0;
+  color: var(--color-primary-dark);
+  font-weight: 700;
+}
+
+.exchange-card__metric span,
+.exchange-card__metric strong {
+  display: block;
+}
+
+.exchange-card__metric strong {
+  color: var(--color-primary-dark);
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
 :host ::ng-deep .card {
   border: 1px solid rgba(148, 163, 184, 0.16);
   border-radius: 16px;

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -11,6 +11,7 @@ import { DashboardService } from './dashboard.service';
 import { Weather } from './models/weather.model';
 import { WelcomeCardComponent } from './components/welcome-card/welcome-card.component';
 import { WeatherCardComponent } from './components/weather-card/weather-card.component';
+import { TipoCambio, TipoCambioService } from '../administracion/tipo-cambio/tipo-cambio.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -23,6 +24,7 @@ import { WeatherCardComponent } from './components/weather-card/weather-card.com
 export class DashboardComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly authService = inject(AuthService);
+  private readonly cdr = inject(ChangeDetectorRef);
   readonly defaultCity = 'San Jose';
   readonly userName = this.resolveUserName();
 
@@ -33,6 +35,9 @@ export class DashboardComponent implements OnInit {
   weather               : Weather | null = null;
   loading               = false;
   weatherError          : string | null = null;
+  tipoCambio            : TipoCambio | null = null;
+  tipoCambioLoading     = false;
+  tipoCambioError       : string | null = null;
 
   sales = [
     {
@@ -76,10 +81,12 @@ export class DashboardComponent implements OnInit {
   private reservasService = inject(ReservasService);
   private ordenesService = inject(OrdenesService);
   private dashboardService = inject(DashboardService);
+  private tipoCambioService = inject(TipoCambioService);
 
   ngOnInit() {
     this.calculateMetrics();
     this.bindWeatherState();
+    this.loadTipoCambio();
     this.dashboardService.loadWeather(this.defaultCity);
   }
 
@@ -114,19 +121,51 @@ export class DashboardComponent implements OnInit {
   private bindWeatherState(): void {
     this.dashboardService.weather$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((weather) => {
       this.weather = weather;
+      this.cdr.markForCheck();
     });
 
     this.dashboardService.loading$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((loading) => {
       this.loading = loading;
+      this.cdr.markForCheck();
     });
 
     this.dashboardService.error$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((error) => {
       this.weatherError = error;
+      this.cdr.markForCheck();
     });
+  }
+
+  private loadTipoCambio(): void {
+    this.tipoCambioLoading = true;
+    this.tipoCambioError = null;
+
+    this.tipoCambioService
+      .fetchTipoCambio(this.getTodayDisplayDate(), 'usd')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (items) => {
+          this.tipoCambio = items[0] ?? this.tipoCambioService.getActual() ?? null;
+          this.tipoCambioLoading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.tipoCambio = this.tipoCambioService.getActual() ?? null;
+          this.tipoCambioLoading = false;
+          this.tipoCambioError = 'No se pudo actualizar';
+          this.cdr.markForCheck();
+        }
+      });
   }
 
   private resolveUserName(): string {
     const user = this.authService.getCurrentUser();
     return String(user?.nombreUsu ?? user?.usuario ?? 'Usuario').trim() || 'Usuario';
+  }
+
+  private getTodayDisplayDate(): string {
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    return `${day}/${month}/${now.getFullYear()}`;
   }
 }

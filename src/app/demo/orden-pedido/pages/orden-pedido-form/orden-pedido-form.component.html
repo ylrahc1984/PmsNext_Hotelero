@@ -169,10 +169,6 @@
                 readonly
               >
             </div>
-            <div class="col-12">
-              <label class="form-label op-label">Observaciones</label>
-              <input class="form-control" formControlName="observaciones" placeholder="Observaciones generales">
-            </div>
           </div>
         </section>
 
@@ -335,14 +331,15 @@
                           class="form-control text-end"
                           formControlName="monto"
                           inputmode="decimal"
-                          pattern="^\\d{1,3}(,\\d{3})*(\\.\\d{0,2})?$|^\\d*(\\.\\d{0,2})?$"
+                          pattern="^\d{1,3}(,\d{3})*(\.\d{0,2})?$|^\d*(\.\d{0,2})?$"
                           placeholder="0.00"
-                          (blur)="formatPagoMonto(i)"
+                          (focus)="onPagoMontoFocus($event, i)"
+                          (blur)="onPagoMontoBlur($event, i)"
                         >
                       </div>
                       <div class="col-lg-2 col-md-4">
                         <label class="form-label op-label">Moneda</label>
-                        <select class="form-control" formControlName="moneda">
+                        <select class="form-control" formControlName="moneda" (change)="onPagoMonedaChange(i)">
                           <option *ngFor="let moneda of monedasCatalogo" [value]="moneda.codMoneda">
                             {{ moneda.codMoneda }}
                           </option>
@@ -370,41 +367,16 @@
             <section class="op-card">
               <div class="op-card__header">
                 <div class="d-flex align-items-center gap-2">
-                  <i class="feather icon-shield text-muted"></i>
-                  <h6 class="op-section-title mb-0">Exoneración</h6>
-                </div>
-                <div class="form-check form-switch m-0">
-                  <input class="form-check-input" id="exoneracionActiva" type="checkbox" formControlName="exoneracionActiva">
-                  <label class="form-check-label" for="exoneracionActiva">Aplicar</label>
+                  <i class="feather icon-edit-3 text-muted"></i>
+                  <h6 class="op-section-title mb-0">Observaciones</h6>
                 </div>
               </div>
-
-              <div class="row g-3" formGroupName="exoneracion" *ngIf="form.controls.exoneracionActiva.value">
-                <div class="col-lg-3 col-md-6">
-                  <label class="form-label op-label">Tipo Documento</label>
-                  <input class="form-control" formControlName="tipoDocumentoEX1" placeholder="Tipo documento">
-                </div>
-                <div class="col-lg-3 col-md-6">
-                  <label class="form-label op-label">Número Documento</label>
-                  <input class="form-control" formControlName="numeroDocumento" placeholder="Número documento">
-                </div>
-                <div class="col-lg-4 col-md-6">
-                  <label class="form-label op-label">Institución</label>
-                  <input class="form-control" formControlName="nombreInstitucion" placeholder="Institución">
-                </div>
-                <div class="col-lg-1 col-md-3">
-                  <label class="form-label op-label">Tarifa %</label>
-                  <input type="number" class="form-control text-end" formControlName="tarifaExonerada" min="0" step="0.01">
-                </div>
-                <div class="col-lg-1 col-md-3">
-                  <label class="form-label op-label">Monto</label>
-                  <input type="number" class="form-control text-end" formControlName="montoExoneracion" min="0" step="0.01">
-                </div>
-              </div>
-
-              <div class="op-empty-note" *ngIf="!form.controls.exoneracionActiva.value">
-                La exoneración es opcional. Actívela si el documento requiere descuento tributario.
-              </div>
+              <textarea
+                class="form-control"
+                formControlName="observaciones"
+                rows="1"
+                placeholder="Observaciones generales"
+              ></textarea>
             </section>
           </div>
 

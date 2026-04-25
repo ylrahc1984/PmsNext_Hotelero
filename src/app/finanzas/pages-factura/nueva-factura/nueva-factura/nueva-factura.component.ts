@@ -153,6 +153,7 @@ export class NuevaFacturaComponent implements OnInit {
   private suppressListaPrecioChange   = false;
   private singlePagoAutoMonto         : number | null = null;
   private tiposDocumentoBase          : DocumentoDto[] = [];
+  private readonly pagoMonedaAnterior = new WeakMap<FormGroup<PagoForm>, string>();
 
   monedas                 : MonedaUI[] = [];
   monedasLoading          = false;
@@ -318,6 +319,7 @@ export class NuevaFacturaComponent implements OnInit {
     const pendingAmount = this.getPendingAmountForNewPago();
     const group = this.createPagoGroup();
     this.pagosArray.push(group);
+    this.pagoMonedaAnterior.set(group, group.controls.moneda.value);
     this.syncPagosDefaults();
     this.populatePagoPendingAmount(group, pendingAmount);
     this.updateCalculos();
@@ -348,11 +350,40 @@ export class NuevaFacturaComponent implements OnInit {
 
     const rawValue = input?.value ?? group.controls.monto.value;
     const monto = this.round(this.toNumber(rawValue));
-    group.controls.monto.setValue(monto);
+    this.setPagoMontoFormatted(group, monto);
 
     if (input) {
-      input.value = monto > 0 ? this.formatAmountWithThousands(monto) : '';
+      input.value = group.controls.monto.value.toString();
     }
+
+    this.updateCalculos();
+    this.cdr.markForCheck();
+  }
+
+  onPagoMonedaChange(index: number): void {
+    const group = this.pagosArray.at(index);
+    if (!group) {
+      return;
+    }
+
+    const nextCurrency = (group.controls.moneda.value || '').toString().trim();
+    const previousCurrency = this.pagoMonedaAnterior.get(group) || nextCurrency;
+
+    if (!nextCurrency || previousCurrency === nextCurrency) {
+      this.pagoMonedaAnterior.set(group, nextCurrency);
+      return;
+    }
+
+    const currentAmount = this.toNumber(group.controls.monto.value);
+    const wasAutoAmount = this.pagosArray.length === 1 && this.singlePagoAutoMonto === this.round(currentAmount);
+    const amountInDocCurrency = this.convertAmountToDocCurrency(currentAmount, previousCurrency);
+    const convertedAmount = this.convertAmountFromDocCurrency(amountInDocCurrency, nextCurrency);
+
+    this.setPagoMontoFormatted(group, convertedAmount);
+    this.pagoMonedaAnterior.set(group, nextCurrency);
+    this.singlePagoAutoMonto = wasAutoAmount ? this.round(convertedAmount) : null;
+    this.updateCalculos();
+    this.cdr.markForCheck();
   }
 
   onPagoVencimientoBlur(index: number): void {
@@ -588,7 +619,7 @@ export class NuevaFacturaComponent implements OnInit {
       frmPago       : this.fb.nonNullable.control(''),
       tipo          : this.fb.nonNullable.control(''),
       tCambio       : this.fb.nonNullable.control(this.form.controls.tCambio.value),
-      monto         : this.fb.nonNullable.control(0),
+      monto         : this.fb.nonNullable.control<number | string>('0.00'),
       moneda        : this.fb.nonNullable.control(this.form.controls.moneda.value),
       referencia    : this.fb.nonNullable.control(''),
       numTarjeta    : this.fb.nonNullable.control(''),
@@ -775,7 +806,7 @@ export class NuevaFacturaComponent implements OnInit {
   private populatePagoPendingAmount(group: FormGroup<PagoForm>, pendingAmount: number): void {
     const currency = group.controls.moneda.value;
     const monto = this.convertAmountFromDocCurrency(pendingAmount, currency);
-    group.controls.monto.setValue(this.round(monto), { emitEvent: false });
+    this.setPagoMontoFormatted(group, monto);
   }
 
   private enforceSinglePagoAutoMonto(): void {
@@ -788,9 +819,14 @@ export class NuevaFacturaComponent implements OnInit {
     const currentMonto = this.round(this.toNumber(group.controls.monto.value));
     const autoMonto = this.round(this.convertAmountFromDocCurrency(this.resumen.total, currency));
     if (this.singlePagoAutoMonto === null || this.singlePagoAutoMonto === currentMonto) {
-      group.controls.monto.setValue(autoMonto, { emitEvent: false });
+      this.setPagoMontoFormatted(group, autoMonto);
       this.singlePagoAutoMonto = autoMonto;
     }
+  }
+
+  private setPagoMontoFormatted(group: FormGroup<PagoForm>, amount: number): void {
+    const rounded = this.round(amount);
+    group.controls.monto.setValue(this.formatAmountWithThousands(rounded), { emitEvent: false });
   }
 
   private cargarMonedas(): void {
@@ -1456,12 +1492,12 @@ export class NuevaFacturaComponent implements OnInit {
 
   private buildPayload(): ConfirmarFacturaPayload {
     const value = this.form.getRawValue();
-    const fechaDocu = this.formatDate(value.fechaDocu);
+    const fechaDocu = this.formatDateForSql(value.fechaDocu);
     const detalle = this.detalleArray.controls.map((group, index) => {
       const raw = group.getRawValue();
       return {
         orden           : index + 1,
-        fechaConsumo    : this.formatDate(raw.fechaConsumo || value.fechaDocu),
+        fechaConsumo    : this.formatDateForSql(raw.fechaConsumo || value.fechaDocu),
         codProdu        : raw.codProdu,
         areaProdu       : raw.areaProdu,
         descripcion     : raw.descripcion,
@@ -1509,8 +1545,8 @@ export class NuevaFacturaComponent implements OnInit {
       nomCliente        : value.nomCliente,
       condicionVenta    : value.condicionVenta,
       codReserva        : value.codReserva,
-      fechaInicio       : this.formatDate(value.fechaInicio),
-      fechaFin          : this.formatDate(value.fechaFin),
+      fechaInicio       : this.formatDateForSql(value.fechaInicio),
+      fechaFin          : this.formatDateForSql(value.fechaFin),
       voucherRsv        : value.voucherRsv,
       nProveedor        : value.nProveedor,
       habitacion        : value.habitacion,
@@ -1593,13 +1629,21 @@ export class NuevaFacturaComponent implements OnInit {
     return '000000';
   }
 
-  private formatDate(value: string): string {
+  private formatDateForSql(value: string): string {
     const trimmed = (value || '').toString().trim();
     if (!trimmed) return '';
+
     const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
     if (isoMatch) {
-      return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
+      return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
     }
+
+    const slashMatch = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(trimmed);
+    if (slashMatch) {
+      const [, day, month, year] = slashMatch;
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+
     return trimmed;
   }
 
@@ -1682,6 +1726,8 @@ export class NuevaFacturaComponent implements OnInit {
       if (defaultMoneda && (!moneda || !this.monedas.some((m) => m.codMoneda === moneda))) {
         group.controls.moneda.setValue(defaultMoneda, { emitEvent: false });
       }
+
+      this.pagoMonedaAnterior.set(group, group.controls.moneda.value);
     });
 
     this.syncPagoTipos();

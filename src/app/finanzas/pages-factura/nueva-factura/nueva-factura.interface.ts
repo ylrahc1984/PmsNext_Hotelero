@@ -32,7 +32,7 @@ export type PagoForm = {
   frmPago         : FormControl<string>;
   tipo            : FormControl<string>;
   tCambio         : FormControl<number>;
-  monto           : FormControl<number>;
+  monto           : FormControl<number | string>;
   moneda          : FormControl<string>;
   referencia      : FormControl<string>;
   numTarjeta      : FormControl<string>;

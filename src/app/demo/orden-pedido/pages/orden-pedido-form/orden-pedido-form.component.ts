@@ -53,28 +53,29 @@ import { OrdenPedidoService } from '../../services/orden-pedido.service';
   styleUrls: ['./orden-pedido-form.component.scss']
 })
 export class OrdenPedidoFormComponent implements OnInit {
-  private readonly fb = inject(NonNullableFormBuilder);
-  private readonly router = inject(Router);
-  private readonly route = inject(ActivatedRoute);
-  private readonly authService = inject(AuthService);
-  private readonly actividadComercialService = inject(ActividadComercialService);
-  private readonly clienteService = inject(ClienteService);
-  private readonly planesTarifasService = inject(PlanesTarifasService);
-  private readonly listaPrecioService = inject(ListaPrecioService);
-  private readonly monedaService = inject(MonedaService);
-  private readonly formaPagoService = inject(FormaPagoService);
-  private readonly tipoCambioService = inject(TipoCambioService);
-  private readonly usuarioService = inject(UsuarioService);
-  private readonly empresaContext = inject(EmpresaContextService);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly ordenPedidoService = inject(OrdenPedidoService);
-  private readonly reservasFacturacionService = inject(ReservasFacturacionService);
-  private readonly reservasService = inject(ReservasService);
+  private readonly fb                           = inject(NonNullableFormBuilder);
+  private readonly router                       = inject(Router);
+  private readonly route                        = inject(ActivatedRoute);
+  private readonly authService                  = inject(AuthService);
+  private readonly actividadComercialService    = inject(ActividadComercialService);
+  private readonly clienteService               = inject(ClienteService);
+  private readonly planesTarifasService         = inject(PlanesTarifasService);
+  private readonly listaPrecioService           = inject(ListaPrecioService);
+  private readonly monedaService                = inject(MonedaService);
+  private readonly formaPagoService             = inject(FormaPagoService);
+  private readonly tipoCambioService            = inject(TipoCambioService);
+  private readonly usuarioService               = inject(UsuarioService);
+  private readonly empresaContext               = inject(EmpresaContextService);
+  private readonly destroyRef                   = inject(DestroyRef);
+  private readonly ordenPedidoService           = inject(OrdenPedidoService);
+  private readonly reservasFacturacionService   = inject(ReservasFacturacionService);
+  private readonly reservasService              = inject(ReservasService);
 
   private clienteActividadCedula = '';
   private singlePagoAutoMonto: number | null = null;
   private previousListaPrecio = '';
   private suppressListaPrecioChange = false;
+  private readonly pagoMonedaAnterior = new WeakMap<FormGroup, string>();
   
   readonly empresa = this.empresaContext.empresa;
   readonly tiposDocumento = [
@@ -232,7 +233,7 @@ export class OrdenPedidoFormComponent implements OnInit {
       numTarjeta        : this.fb.control(''),
       referencia        : this.fb.control(''),
       moneda            : this.fb.control(this.form.controls.moneda.value || ''),
-      monto             : this.fb.control(0),
+      monto             : this.fb.control('0.00'),
       montoOri          : this.fb.control(0),
       tCambio           : this.fb.control(this.getHeaderTipoCambio()),
       vencimiento       : this.fb.control(this.formatDateForApi(this.form.controls.fecNDP.value)),
@@ -240,6 +241,7 @@ export class OrdenPedidoFormComponent implements OnInit {
       turno             : this.fb.control('')
     });
     this.pagosArray.push(group);
+    this.pagoMonedaAnterior.set(group, this.cleanText(group.get('moneda')?.value));
     this.syncPagosFormaPago();
     this.populatePagoPendingAmount(group, pending);
     this.updateTotalPago();
@@ -250,6 +252,60 @@ export class OrdenPedidoFormComponent implements OnInit {
       return;
     }
     this.pagosArray.removeAt(index);
+    this.updateTotalPago();
+  }
+
+  onPagoMontoFocus(event: FocusEvent, index: number): void {
+    const input = event.target as HTMLInputElement | null;
+    const group = this.pagosArray.at(index);
+    if (!input || !group) {
+      return;
+    }
+
+    const monto = this.round(this.toNumber(group.get('monto')?.value));
+    input.value = monto > 0 ? monto.toFixed(2) : '';
+  }
+
+  onPagoMontoBlur(event: FocusEvent, index: number): void {
+    const input = event.target as HTMLInputElement | null;
+    const group = this.pagosArray.at(index);
+    if (!group) {
+      return;
+    }
+
+    const monto = this.round(this.toNumber(input?.value ?? group.get('monto')?.value));
+    this.setPagoMontoFormatted(group, monto);
+
+    if (input) {
+      input.value = this.cleanText(group.get('monto')?.value);
+    }
+
+    this.updateTotalPago();
+  }
+
+  onPagoMonedaChange(index: number): void {
+    const group = this.pagosArray.at(index);
+    if (!group) {
+      return;
+    }
+
+    const nextCurrency = this.cleanText(group.get('moneda')?.value);
+    const previousCurrency = this.pagoMonedaAnterior.get(group) || nextCurrency;
+
+    if (!nextCurrency || previousCurrency === nextCurrency) {
+      this.pagoMonedaAnterior.set(group, nextCurrency);
+      return;
+    }
+
+    const rate = this.getPagoTipoCambio(group);
+    const currentAmount = this.toNumber(group.get('monto')?.value);
+    const wasAutoAmount = this.pagosArray.length === 1 && this.singlePagoAutoMonto === this.round(currentAmount);
+    const amountInDocCurrency = this.convertAmountToDocCurrency(currentAmount, previousCurrency, rate);
+    const convertedAmount = this.convertAmountFromDocCurrency(amountInDocCurrency, nextCurrency, rate);
+
+    this.setPagoMontoFormatted(group, convertedAmount);
+    this.pagoMonedaAnterior.set(group, nextCurrency);
+    this.singlePagoAutoMonto = wasAutoAmount ? this.round(convertedAmount) : null;
     this.updateTotalPago();
   }
 
@@ -980,12 +1036,9 @@ export class OrdenPedidoFormComponent implements OnInit {
       .filter((item) => this.toNumber(item.saldoPendiente) > 0)
       .forEach((item) => {
         const saldo = this.toNumber(item.saldoPendiente);
-        const totalPax = this.toNumber(item.totalPax);
-        const subTotal = this.toNumber(item.subTotal);
-        const neto = this.toNumber(item.neto);
-        const impuestoMonto = this.toNumber(item.impuesto);
-        const porImp = neto > 0 ? (impuestoMonto / neto) * 100 : 0;
-        const precioUnit = totalPax > 0 ? subTotal / totalPax : 0;
+        const porImp = this.getReservaTaxRate(item);
+        const precioBase = this.getReservaPrecioBaseParaOrden(item, porImp);
+        const precioUnit = saldo > 0 ? precioBase / saldo : 0;
 
         const group = this.createDetalleGroup();
         group.patchValue(
@@ -998,7 +1051,7 @@ export class OrdenPedidoFormComponent implements OnInit {
             planTarifa        : (item.planTarifario || this.form.controls.planTarifario.value || '').toString(),
             canProdu          : saldo,
             saldoPendiente    : saldo,
-            pUndLst           : this.round(precioUnit),
+            pUndLst           : Number(precioUnit.toFixed(6)),
             porDescu          : this.toNumber(item.porDescuento),
             porImpu           : this.round(porImp)
           },
@@ -1016,6 +1069,26 @@ export class OrdenPedidoFormComponent implements OnInit {
       });
 
     this.recalculateTotals();
+  }
+
+  private getReservaTaxRate(item: ReservaPendienteDetalle): number {
+    const neto = this.toNumber(item.neto);
+    const subTotal = this.toNumber(item.subTotal);
+    const total = this.toNumber(item.total);
+    const impuesto = this.toNumber(item.impuesto) || Math.max(total - subTotal, 0);
+    const base = neto > 0 ? neto : subTotal;
+
+    return base > 0 && impuesto > 0 ? (impuesto / base) * 100 : 0;
+  }
+
+  private getReservaPrecioBaseParaOrden(item: ReservaPendienteDetalle, porImp: number): number {
+    const subTotal = this.toNumber(item.subTotal);
+    if (!FISCAL_CONFIG.pricesIncludeTax) {
+      return subTotal;
+    }
+
+    const taxRate = porImp > 0 ? porImp / 100 : FISCAL_CONFIG.taxRate;
+    return subTotal * (1 + taxRate);
   }
 
   private setModoReserva(active: boolean): void {
@@ -1384,6 +1457,7 @@ export class OrdenPedidoFormComponent implements OnInit {
 
     this.pagosArray.controls.forEach((group) => {
       group.controls['moneda'].setValue(selectedMoneda, { emitEvent: false });
+      this.pagoMonedaAnterior.set(group, selectedMoneda);
     });
     this.updateTotalPago();
   }
@@ -1525,13 +1599,6 @@ export class OrdenPedidoFormComponent implements OnInit {
     const formatted = rounded.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     group.get('monto')?.setValue(formatted, { emitEvent: false });
     group.get('montoOri')?.setValue(rounded, { emitEvent: false });
-  }
-
-  formatPagoMonto(index: number): void {
-    const group = this.pagosArray.at(index);
-    const monto = this.toNumber(group?.get('monto')?.value);
-    this.setPagoMontoFormatted(group, monto);
-    this.updateTotalPago();
   }
 
   private getExoneracionRate(): number {
