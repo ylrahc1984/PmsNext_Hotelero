@@ -1,6 +1,6 @@
 export interface FiscalConfig {
   pricesIncludeTax            : boolean;
-  taxRate           : number;
+  taxRate                     : number;
 }
 
 export const FISCAL_CONFIG: FiscalConfig = {

@@ -21,6 +21,7 @@ import { PuntoVentaUI } from 'src/app/demo/administracion/usuarios/usuario.model
 import { UsuarioService } from 'src/app/demo/administracion/usuarios/usuario.service';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
+import { FISCAL_CONFIG } from 'src/app/core/config/fiscal.config';
 import { NuevaFacturaClienteModalComponent } from 'src/app/finanzas/pages-factura/nueva-factura/nueva-factura-cliente-modal/nueva-factura-cliente-modal.component';
 import { ReservaPendienteModalComponent } from 'src/app/finanzas/pages-factura/nueva-factura/reserva-pendiente-modal/reserva-pendiente-modal.component';
 import { SelectorServiciosModalComponent } from 'src/app/finanzas/pages-factura/nueva-factura/selector-servicios-modal/selector-servicios-modal.component';
@@ -505,6 +506,7 @@ export class OrdenPedidoFormComponent implements OnInit {
   private recalculateTotals(): void {
     let subtotal = 0;
     let impuestoBruto = 0;
+    const pricesIncludeTax = FISCAL_CONFIG.pricesIncludeTax;
 
     this.detalleArray.controls.forEach((group) => {
       const cantidad = this.toNumber(group.get('canProdu')?.value);
@@ -512,11 +514,28 @@ export class OrdenPedidoFormComponent implements OnInit {
       const porDescuento = this.toNumber(group.get('porDescu')?.value);
       const porImpuesto = this.toNumber(group.get('porImpu')?.value);
 
-      const bruto = cantidad * precio;
-      const mtoDescu = bruto * (porDescuento / 100);
-      const totalNeto = bruto - mtoDescu;
-      const mtoImpu = totalNeto * (porImpuesto / 100);
-      const mtoTotal = totalNeto + mtoImpu;
+      const subtotalBruto = cantidad * precio;
+      const descuentoBruto = subtotalBruto * (porDescuento / 100);
+      const baseBruta = Math.max(0, subtotalBruto - descuentoBruto);
+      const taxRate = porImpuesto / 100;
+
+      let mtoDescu: number;
+      let totalNeto: number;
+      let mtoImpu: number;
+      let mtoTotal: number;
+
+      if (pricesIncludeTax && taxRate > 0) {
+        const factor = 1 + taxRate;
+        mtoDescu = descuentoBruto / factor;
+        totalNeto = baseBruta / factor;
+        mtoImpu = baseBruta - totalNeto;
+        mtoTotal = baseBruta;
+      } else {
+        mtoDescu = descuentoBruto;
+        totalNeto = baseBruta;
+        mtoImpu = totalNeto * taxRate;
+        mtoTotal = totalNeto + mtoImpu;
+      }
 
       group.patchValue(
         {
@@ -1211,33 +1230,57 @@ export class OrdenPedidoFormComponent implements OnInit {
       cActividad          : this.normalizeCodigoActividad(this.clienteCodigoActividad),
       pageNumber          : 1,
       pageSize            : 10,
-      respuesta           : ''
+      respuesta           : '',
+      exoneracion         : this.form.controls.exoneracionActiva.value ? this.mapExoneracion() : null
     };
   }
 
   private buildDetallePayload(moneda: string, tCambio: number): OrdenPedidoDetalleItem[] {
     const detalleRaw = this.detalleArray.getRawValue().map((item) => item as Record<string, unknown>);
     const exoneracionTarifa = this.getExoneracionRate();
+    const pricesIncludeTax = FISCAL_CONFIG.pricesIncludeTax;
     const lineas = detalleRaw.map((item) => {
       const canProdu = this.toNumber(item['canProdu']);
       const pUndLst = this.round(this.toNumber(item['pUndLst']));
       const porDescu = this.toNumber(item['porDescu']);
       const porImpu = this.toNumber(item['porImpu']);
-      const totSinImp = this.round(canProdu * pUndLst);
-      const mtoDescu = this.round(totSinImp * (porDescu / 100));
-      const totalNeto = this.round(totSinImp - mtoDescu);
-      const mtoImpuBruto = this.round(totalNeto * (porImpu / 100));
+      const subtotalBruto = canProdu * pUndLst;
+      const descuentoBruto = subtotalBruto * (porDescu / 100);
+      const baseBruta = Math.max(0, subtotalBruto - descuentoBruto);
+      const taxRate = porImpu / 100;
+
+      let uniSinImp: number;
+      let totSinImp: number;
+      let mtoDescu: number;
+      let totalNeto: number;
+      let mtoImpuBruto: number;
+
+      if (pricesIncludeTax && taxRate > 0) {
+        const factor = 1 + taxRate;
+        uniSinImp = canProdu > 0 ? pUndLst / factor : pUndLst;
+        totSinImp = subtotalBruto / factor;
+        mtoDescu = descuentoBruto / factor;
+        totalNeto = baseBruta / factor;
+        mtoImpuBruto = baseBruta - totalNeto;
+      } else {
+        uniSinImp = pUndLst;
+        totSinImp = subtotalBruto;
+        mtoDescu = descuentoBruto;
+        totalNeto = baseBruta;
+        mtoImpuBruto = totalNeto * taxRate;
+      }
 
       return {
         item,
         canProdu,
         pUndLst,
+        uniSinImp: this.round(uniSinImp),
         porDescu,
         porImpu,
-        totSinImp,
-        mtoDescu,
-        totalNeto,
-        mtoImpuBruto
+        totSinImp: this.round(totSinImp),
+        mtoDescu: this.round(mtoDescu),
+        totalNeto: this.round(totalNeto),
+        mtoImpuBruto: this.round(mtoImpuBruto)
       };
     });
 
@@ -1267,7 +1310,7 @@ export class OrdenPedidoFormComponent implements OnInit {
         uMedida         : this.cleanText(raw['uMedida']) || 'Unid',
         canProdu        : linea.canProdu,
         pUndLst         : linea.pUndLst,
-        uniSinImp       : linea.pUndLst,
+        uniSinImp       : linea.uniSinImp,
         totSinImp       : linea.totSinImp,
         porDescu        : linea.porDescu,
         mtoDescu        : linea.mtoDescu,

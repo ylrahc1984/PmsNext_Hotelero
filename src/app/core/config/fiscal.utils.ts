@@ -1,6 +1,6 @@
 export interface FiscalCalculationOptions {
-  pricesIncludeTax: boolean;
-  taxRate: number;
+  pricesIncludeTax  : boolean;
+  taxRate           : number;
   redondeoDecimales?: number;
 }
 

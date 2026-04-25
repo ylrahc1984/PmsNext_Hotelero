@@ -41,6 +41,7 @@ export interface ReservaPendienteDetalle {
   totalPax        : number;
   porDescuento    : number;
   impuesto        : number;
+  total           : number;
 }
 
 type ApiRecord = Record<string, unknown>;
@@ -218,7 +219,8 @@ export class ReservasFacturacionService {
       neto: this.readNumber(item, normalized, 'prV02_Neto', 'PRV02_Neto', 'neto', 'montoNeto'),
       totalPax: this.readNumber(item, normalized, 'prV02_TotalPax', 'PRV02_TotalPax', 'totalPax', 'pax'),
       porDescuento: this.readNumber(item, normalized, 'prV02_PorDescuento', 'PRV02_PorDescuento', 'porDescuento', 'descuento'),
-      impuesto: this.readNumber(item, normalized, 'prV02_Impuesto', 'PRV02_Impuesto', 'impuesto')
+      impuesto: this.readNumber(item, normalized, 'prV02_Impuesto', 'PRV02_Impuesto', 'impuesto'),
+      total: this.readNumber(item, normalized, 'prV02_MontoServicio')
     };
   }
 

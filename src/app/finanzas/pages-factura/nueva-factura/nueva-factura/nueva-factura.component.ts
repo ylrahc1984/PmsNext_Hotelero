@@ -72,24 +72,24 @@ import { C } from '@angular/cdk/scrolling-module.d-C_w4tIrZ';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NuevaFacturaComponent implements OnInit {
-  private readonly fb = inject(FormBuilder);
-  private readonly http = inject(HttpClient);
-  private readonly router = inject(Router);
-  private readonly route = inject(ActivatedRoute);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly cdr = inject(ChangeDetectorRef);
-  private readonly monedaService = inject(MonedaService);
-  private readonly authService = inject(AuthService);
-  private readonly empresaContext = inject(EmpresaContextService);
-  private readonly clienteService = inject(ClienteService);
-  private readonly usuarioService = inject(UsuarioService);
-  private readonly formaPagoService = inject(FormaPagoService);
-  private readonly planesTarifasService = inject(PlanesTarifasService);
-  private readonly listaPrecioService = inject(ListaPrecioService);
-  private readonly reservasFacturacionService = inject(ReservasFacturacionService);
-  private readonly reservasService = inject(ReservasService);
-  private readonly tipoCambioService = inject(TipoCambioService);
-  private readonly auth = inject(AuthService);
+  private readonly fb                            = inject(FormBuilder);
+  private readonly http                          = inject(HttpClient);
+  private readonly router                        = inject(Router);
+  private readonly route                         = inject(ActivatedRoute);
+  private readonly destroyRef                    = inject(DestroyRef);
+  private readonly cdr                           = inject(ChangeDetectorRef);
+  private readonly monedaService                 = inject(MonedaService);
+  private readonly authService                   = inject(AuthService);
+  private readonly empresaContext                = inject(EmpresaContextService);
+  private readonly clienteService                = inject(ClienteService);
+  private readonly usuarioService                = inject(UsuarioService);
+  private readonly formaPagoService              = inject(FormaPagoService);
+  private readonly planesTarifasService          = inject(PlanesTarifasService);
+  private readonly listaPrecioService            = inject(ListaPrecioService);
+  private readonly reservasFacturacionService    = inject(ReservasFacturacionService);
+  private readonly reservasService               = inject(ReservasService);
+  private readonly tipoCambioService             = inject(TipoCambioService);
+  private readonly auth                          = inject(AuthService);
 
   private readonly apiUrl = `${environment.apiUrl}/facturacion/confirmar`;
 
@@ -129,11 +129,11 @@ export class NuevaFacturaComponent implements OnInit {
   });
 
   readonly lineasCalculo: LineaCalculo[] = [];
-  resumen: TotalesResumen = { subtotal: 0, descuento: 0, impuesto: 0, total: 0 };
+  resumen                   : TotalesResumen = { subtotal: 0, descuento: 0, impuesto: 0, total: 0 };
 
-  mostrarPagos = true;
-  pagosTotal = 0;
-  pagosValid = true;
+  mostrarPagos              = true;
+  pagosTotal                = 0;
+  pagosValid                = true;
 
   selectedCliente           : ClienteUI | null = null;
   clienteSearchResults      : ClienteUI[] = [];
@@ -629,62 +629,68 @@ export class NuevaFacturaComponent implements OnInit {
   }
 
   private updateCalculos(): void {
-    const lineas: LineaCalculo[] = this.detalleArray.controls.map((group) => {
+    const lineas: LineaCalculo[] = [];
+    const pricesIncludeTax = FISCAL_CONFIG.pricesIncludeTax;
+    let resumenSubtotal = 0;
+    let resumenDescuento = 0;
+    let resumenImpuesto = 0;
+    let resumenTotal = 0;
+
+    for (const group of this.detalleArray.controls) {
       const cantidad = this.toNumber(group.controls.cantidad.value);
       const precio = this.toNumber(group.controls.pUndLst.value);
       const porDescu = this.toNumber(group.controls.porDescu.value);
       const porImp = this.toNumber(group.controls.porImp.value);
 
-      const subtotal = cantidad * precio;
-      const descuento = subtotal * (porDescu / 100);
-      const base = subtotal - descuento;
-      const impuestoRate = porImp > 0 ? porImp : 13;
+      const subtotalBruto = cantidad * precio;
+      const descuentoBruto = subtotalBruto * (porDescu / 100);
+      const baseBruta = Math.max(0, subtotalBruto - descuentoBruto);
+      const taxRate = (porImp > 0 ? porImp : 13) / 100;
 
+      let subtotal: number;
+      let descuento: number;
       let neto: number;
       let impuesto: number;
       let total: number;
 
-      if (FISCAL_CONFIG.pricesIncludeTax) {
-        // Precios incluyen impuestos - extraer el impuesto del precio
-        const taxRate = impuestoRate / 100;
+      if (pricesIncludeTax && taxRate > 0) {
+        // Precios incluyen impuestos: mostrar subtotal/descuento netos y conservar el total bruto.
         const factor = 1 + taxRate;
-        neto = base / factor;
-        impuesto = base - neto;
-        total = base; // El total ya incluye impuestos
+        subtotal = subtotalBruto / factor;
+        descuento = descuentoBruto / factor;
+        neto = baseBruta / factor;
+        impuesto = baseBruta - neto;
+        total = baseBruta;
       } else {
-        // Precios no incluyen impuestos - calcular impuesto sobre el neto
-        neto = base;
-        impuesto = neto * (impuestoRate / 100);
+        subtotal = subtotalBruto;
+        descuento = descuentoBruto;
+        neto = baseBruta;
+        impuesto = neto * taxRate;
         total = neto + impuesto;
       }
 
-      return {
+      const linea = {
         subtotal    : this.round(subtotal),
         descuento   : this.round(descuento),
         base        : this.round(neto),
         impuesto    : this.round(impuesto),
         total       : this.round(total)
       };
-    });
+
+      resumenSubtotal += linea.subtotal;
+      resumenDescuento += linea.descuento;
+      resumenImpuesto += linea.impuesto;
+      resumenTotal += linea.total;
+      lineas.push(linea);
+    }
 
     this.lineasCalculo.splice(0, this.lineasCalculo.length, ...lineas);
 
-    const resumen = lineas.reduce(
-      (acc, item) => {
-        acc.subtotal += item.subtotal;
-        acc.descuento += item.descuento;
-        acc.impuesto += item.impuesto;
-        acc.total += item.total;
-        return acc;
-      },
-      { subtotal: 0, descuento: 0, impuesto: 0, total: 0 }
-    );
-
     this.resumen = {
-      subtotal    : this.round(resumen.subtotal),
-      descuento   : this.round(resumen.descuento),
-      impuesto    : this.round(resumen.impuesto),
-      total       : this.round(resumen.total)
+      subtotal    : this.round(resumenSubtotal),
+      descuento   : this.round(resumenDescuento),
+      impuesto    : this.round(resumenImpuesto),
+      total       : this.round(resumenTotal)
     };
 
     this.enforceSinglePagoAutoMonto();
@@ -1149,7 +1155,8 @@ export class NuevaFacturaComponent implements OnInit {
         const neto = this.toNumber(item.neto);
         const impuestoMonto = this.toNumber(item.impuesto);
         const porImp = neto > 0 ? (impuestoMonto / neto) * 100 : 0;
-        const precioUnitario = saldo > 0 ? Number((subTotal / saldo).toFixed(6)) : 0;
+        const precioBase = this.getReservaPrecioBaseParaFactura(item, porImp);
+        const precioUnitario = saldo > 0 ? Number((precioBase / saldo).toFixed(6)) : 0;
 
         const group = this.createDetalleGroup(index + 1);
         group.patchValue(
@@ -1161,7 +1168,7 @@ export class NuevaFacturaComponent implements OnInit {
             uMedida         : (item.uMedida || '').toString(),
             cantidad        : saldo,
             pUndLst         : precioUnitario,
-            uniSinImp       : precioUnitario,
+            uniSinImp       : saldo > 0 ? Number((subTotal / saldo).toFixed(6)) : 0,
             porDescu        : this.toNumber(item.porDescuento),
             porImp          : this.round(porImp),
             comanda         : (item.id ?? '').toString(),
@@ -1187,6 +1194,16 @@ export class NuevaFacturaComponent implements OnInit {
     this.reindexDetalle();
     this.updateCalculos();
     this.cdr.markForCheck();
+  }
+
+  private getReservaPrecioBaseParaFactura(item: ReservaPendienteDetalle, porImp: number): number {
+    const subTotal = this.toNumber(item.subTotal);
+    if (!FISCAL_CONFIG.pricesIncludeTax) {
+      return subTotal;
+    }
+
+    const taxRate = porImp > 0 ? porImp / 100 : FISCAL_CONFIG.taxRate;
+    return subTotal * (1 + taxRate);
   }
 
   private setModoReserva(active: boolean): void {
