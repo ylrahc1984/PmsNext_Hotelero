@@ -64,6 +64,32 @@
   font-size: 0.98rem;
 }
 
+.rsv-descuento-modal {
+  z-index: 1060;
+}
+
+.rsv-descuento-modal + .modal-backdrop {
+  z-index: 1055;
+}
+
+.rsv-descuento-modal .modal-content {
+  border: 0;
+  border-radius: 12px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+}
+
+.rsv-descuento-modal .modal-header {
+  align-items: center;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+.rsv-descuento-modal .modal-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
 
 .rsv-v2-contact-hub__header {
   display: flex;

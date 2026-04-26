@@ -316,7 +316,7 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
   onComboActivoChange(): void {
     if (this.comboActivo && this.porDescuentoInput === 0 && this.descuentoMontoInput === 0) {
       this.porDescuentoInput = 5;
-      this.descuentoMontoInput = this.roundCurrency(this.subTotal * 0.05);
+      this.descuentoMontoInput = this.roundCurrency(this.getTotalFinalSinDescuento() * 0.05);
     }
     if (!this.comboActivo) {
       this.porDescuentoInput = 0;
@@ -328,15 +328,16 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
   onPorDescuentoInputChange(val: number | string): void {
     const pct = Math.min(100, Math.max(0, Number(val ?? 0) || 0));
     this.porDescuentoInput = pct;
-    this.descuentoMontoInput = this.roundCurrency(this.subTotal * pct / 100);
+    this.descuentoMontoInput = this.roundCurrency(this.getTotalFinalSinDescuento() * pct / 100);
     this.calcularTotales();
   }
 
   onDescuentoMontoInputChange(val: number | string): void {
-    const monto = Math.min(this.subTotal, Math.max(0, Number(val ?? 0) || 0));
+    const totalFinalSinDescuento = this.getTotalFinalSinDescuento();
+    const monto = Math.min(totalFinalSinDescuento, Math.max(0, Number(val ?? 0) || 0));
     this.descuentoMontoInput = monto;
-    this.porDescuentoInput = this.subTotal > 0
-      ? this.roundCurrency((monto / this.subTotal) * 100)
+    this.porDescuentoInput = totalFinalSinDescuento > 0
+      ? this.roundCurrency((monto / totalFinalSinDescuento) * 100)
       : 0;
     this.calcularTotales();
   }
@@ -657,12 +658,16 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
       this.porDescuentoInput = 0;
       this.descuentoMontoInput = 0;
     }
+    const totalFinalSinDescuento = this.getTotalFinalSinDescuento();
     this.porDescuento = descuentoActivo ? this.porDescuentoInput : 0;
     this.descuento = descuentoActivo
-      ? this.roundCurrency(Math.min(this.descuentoMontoInput, this.subTotal))
+      ? this.roundCurrency(Math.min(this.descuentoMontoInput, totalFinalSinDescuento))
+      : 0;
+    const descuentoBase = descuentoActivo
+      ? this.convertFinalDiscountToBaseDiscount(this.descuento)
       : 0;
 
-    const totals = calculateFiscalTotals(this.subTotal, this.descuento, '0', {
+    const totals = calculateFiscalTotals(this.subTotal, descuentoBase, '0', {
       pricesIncludeTax: FISCAL_CONFIG.pricesIncludeTax,
       taxRate: FISCAL_CONFIG.taxRate,
       redondeoDecimales: 2
@@ -1142,6 +1147,23 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
 
   private roundCurrency(value: number): number {
     return Math.round((Number(value ?? 0) + Number.EPSILON) * 100) / 100;
+  }
+
+  private getTotalFinalSinDescuento(): number {
+    const totals = calculateFiscalTotals(this.subTotal, 0, '0', {
+      pricesIncludeTax: FISCAL_CONFIG.pricesIncludeTax,
+      taxRate: FISCAL_CONFIG.taxRate,
+      redondeoDecimales: 2
+    });
+    return totals.total;
+  }
+
+  private convertFinalDiscountToBaseDiscount(finalDiscount: number): number {
+    const totalSinDescuento = this.getTotalFinalSinDescuento();
+    if (this.subTotal <= 0 || totalSinDescuento <= 0) {
+      return 0;
+    }
+    return this.roundCurrency(Math.min(this.subTotal, Math.max(0, finalDiscount) * (this.subTotal / totalSinDescuento)));
   }
 
   private resolvePickupRapidoError(error: unknown): string {

@@ -13,7 +13,7 @@ export type DetalleForm = {
   uMedida             : FormControl<string>;
   pUndLst             : FormControl<number>;
   uniSinImp           : FormControl<number>;
-  porDescu            : FormControl<number>;
+  porDescu            : FormControl<number | string>;
   porImp              : FormControl<number>;
   porExonera          : FormControl<number>;
   mtoImpVarios        : FormControl<number>;
@@ -75,7 +75,7 @@ export type NuevaFacturaForm = {
 export interface LineaCalculo {
   subtotal    : number;
   descuento   : number;
-  base        : number;
+  neto        : number;
   impuesto    : number;
   total       : number;
 }
@@ -83,6 +83,7 @@ export interface LineaCalculo {
 export interface TotalesResumen {
   subtotal    : number;
   descuento   : number;
+  neto        : number;
   impuesto    : number;
   total       : number;
 }

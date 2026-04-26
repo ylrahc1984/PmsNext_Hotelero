@@ -198,6 +198,18 @@
                 <span class="badge bg-light text-dark border ms-2">{{ cantidadServicios }}</span>
               </div>
               <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-2 px-3 py-2" (click)="abrirModalDescuentoGlobal()" [disabled]="detalles.length === 0">
+                  <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-success bg-opacity-10" style="width: 22px; height: 22px;">
+                    <i class="feather icon-percent text-success"></i>
+                  </span>
+                  <span>Descuento global</span>
+                </button>
+                <button *ngIf="hayDescuentosAplicados" type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2 px-3 py-2" (click)="desaplicarDescuentos()">
+                  <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-secondary bg-opacity-10" style="width: 22px; height: 22px;">
+                    <i class="feather icon-rotate-ccw text-secondary"></i>
+                  </span>
+                  <span>Quitar descuentos</span>
+                </button>
                 <button type="button" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2 px-3 py-2" (click)="abrirModalDetalle()">
                   <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-white bg-opacity-25" style="width: 22px; height: 22px;">
                     <i class="feather icon-navigation-2 text-white fs-6"></i>
@@ -264,6 +276,18 @@
                     <td class="text-end fw-semibold">{{ detalle.montoServicio | number:'1.2-2' }}</td>
                     <td>
                       <div class="d-flex justify-content-end gap-2">
+                        <button class="btn btn-outline-success btn-sm rsv-icon-btn" type="button" (click)="abrirModalDescuentoLinea(detalle)" title="Aplicar descuento a esta línea">
+                          <i class="feather icon-percent"></i>
+                        </button>
+                        <button
+                          *ngIf="detalle.descuento > 0 || detalle.porDescuento > 0"
+                          class="btn btn-outline-secondary btn-sm rsv-icon-btn"
+                          type="button"
+                          (click)="quitarDescuentoLinea(detalle)"
+                          title="Quitar descuento de esta línea"
+                        >
+                          <i class="feather icon-rotate-ccw"></i>
+                        </button>
                         <button class="btn btn-outline-info btn-sm rsv-icon-btn" type="button" (click)="editarLinea(detalle)" title="Editar servicio">
                           <i class="feather icon-edit"></i>
                         </button>
@@ -292,6 +316,20 @@
 
               <div class="rsv-total-reserva text-end" aria-label="Resumen total reserva">
                 <div class="rsv-total-reserva__rows">
+                  <div class="rsv-total-reserva__row">
+                    <span class="rsv-total-reserva__row-label">Subtotal</span>
+                    <span class="rsv-total-reserva__row-value">
+                      {{ subtotalReserva | number:'1.2-2' }}
+                      <span class="rsv-total-reserva__currency" *ngIf="form.moneda">{{ form.moneda }}</span>
+                    </span>
+                  </div>
+                  <div class="rsv-total-reserva__row">
+                    <span class="rsv-total-reserva__row-label">Descuento</span>
+                    <span class="rsv-total-reserva__row-value text-danger">
+                      -{{ totalDescuentoReserva | number:'1.2-2' }}
+                      <span class="rsv-total-reserva__currency" *ngIf="form.moneda">{{ form.moneda }}</span>
+                    </span>
+                  </div>
                   <div class="rsv-total-reserva__row">
                     <span class="rsv-total-reserva__row-label">Total Neto</span>
                     <span class="rsv-total-reserva__row-value">
@@ -338,6 +376,67 @@
     </app-card>
   </div>
 </div>
+
+<div class="modal fade show rsv-descuento-modal" tabindex="-1" role="dialog" *ngIf="showDescuentoGlobalModal" style="display: block;">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Aplicar descuento global</h5>
+        <button type="button" class="btn-close" aria-label="Cerrar" (click)="cerrarModalDescuentoGlobal()"></button>
+      </div>
+      <div class="modal-body">
+        <div class="btn-group w-100 mb-3" role="group" aria-label="Tipo de descuento">
+          <button type="button" class="btn" [ngClass]="descuentoGlobalModo === 'monto' ? 'btn-primary' : 'btn-outline-primary'" (click)="descuentoGlobalModo = 'monto'">Monto fijo</button>
+          <button type="button" class="btn" [ngClass]="descuentoGlobalModo === 'porcentaje' ? 'btn-primary' : 'btn-outline-primary'" (click)="descuentoGlobalModo = 'porcentaje'">Porcentaje</button>
+        </div>
+        <label class="form-label">{{ descuentoGlobalModo === 'monto' ? 'Monto a descontar del total final' : 'Porcentaje de descuento' }}</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text" *ngIf="descuentoGlobalModo === 'monto'">{{ form.moneda || '$' }}</span>
+          <input type="number" min="0" step="0.01" class="form-control text-end" [(ngModel)]="descuentoGlobalValor" name="descuentoGlobalValor">
+          <span class="input-group-text" *ngIf="descuentoGlobalModo === 'porcentaje'">%</span>
+        </div>
+        <div class="text-danger small mt-2" *ngIf="descuentoGlobalError">{{ descuentoGlobalError }}</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary btn-sm" (click)="cerrarModalDescuentoGlobal()">Cancelar</button>
+        <button type="button" class="btn btn-primary btn-sm" (click)="aplicarDescuentoGlobal()">Aplicar descuento</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade show" *ngIf="showDescuentoGlobalModal"></div>
+
+<div class="modal fade show rsv-descuento-modal" tabindex="-1" role="dialog" *ngIf="showDescuentoLineaModal" style="display: block;">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Aplicar descuento por línea</h5>
+        <button type="button" class="btn-close" aria-label="Cerrar" (click)="cerrarModalDescuentoLinea()"></button>
+      </div>
+      <div class="modal-body">
+        <div class="small text-muted mb-2" *ngIf="descuentoLineaSeleccionada">
+          Línea #{{ descuentoLineaSeleccionada.linea }} - {{ descuentoLineaSeleccionada.nomServicio }}
+        </div>
+        <div class="btn-group w-100 mb-3" role="group" aria-label="Tipo de descuento por línea">
+          <button type="button" class="btn" [ngClass]="descuentoLineaModo === 'monto' ? 'btn-primary' : 'btn-outline-primary'" (click)="descuentoLineaModo = 'monto'">Monto fijo</button>
+          <button type="button" class="btn" [ngClass]="descuentoLineaModo === 'porcentaje' ? 'btn-primary' : 'btn-outline-primary'" (click)="descuentoLineaModo = 'porcentaje'">Porcentaje</button>
+        </div>
+        <label class="form-label">{{ descuentoLineaModo === 'monto' ? 'Monto a descontar del total final de la línea' : 'Porcentaje de descuento' }}</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text" *ngIf="descuentoLineaModo === 'monto'">{{ form.moneda || '$' }}</span>
+          <input type="number" min="0" step="0.01" class="form-control text-end" [(ngModel)]="descuentoLineaValor" name="descuentoLineaValor">
+          <span class="input-group-text" *ngIf="descuentoLineaModo === 'porcentaje'">%</span>
+        </div>
+        <div class="text-danger small mt-2" *ngIf="descuentoLineaError">{{ descuentoLineaError }}</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary btn-sm" (click)="cerrarModalDescuentoLinea()">Cancelar</button>
+        <button type="button" class="btn btn-primary btn-sm" (click)="aplicarDescuentoLinea()">Aplicar descuento</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade show" *ngIf="showDescuentoLineaModal"></div>
 
 <app-reserva-create-cliente-modal
   [open]="showClienteModal"

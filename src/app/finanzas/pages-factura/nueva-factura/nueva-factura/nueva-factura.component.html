@@ -252,6 +252,27 @@
                   <i class="feather icon-clipboard" *ngIf="!reservaLoading"></i>
                   Facturar desde Reserva
                 </button>
+                <button
+                  class="btn btn-sm btn-outline-success"
+                  type="button"
+                  (click)="abrirModalDescuentoGlobal()"
+                  [disabled]="locked || detalleArray.length === 0"
+                  title="Aplicar descuento a todas las lineas"
+                >
+                  <i class="feather icon-percent me-1"></i>
+                  Descuento global
+                </button>
+                <button
+                  class="btn btn-sm btn-outline-secondary"
+                  type="button"
+                  *ngIf="hasDescuentoAplicado"
+                  (click)="revertirDescuentoGlobal()"
+                  [disabled]="locked || detalleArray.length === 0"
+                  title="Revertir descuento aplicado"
+                >
+                  <i class="feather icon-rotate-ccw me-1"></i>
+                  Revertir descuento
+                </button>
               </div>
             </div>
 
@@ -264,14 +285,16 @@
               <table class="table table-sm table-bordered align-middle nueva-factura__table table-compact">
                 <colgroup>
                   <col style="width: 12%">
-                  <col style="width: 28%">
-                  <col style="width: 10%">
-                  <col style="width: 10%">
-                  <col style="width: 10%">
+                  <col style="width: 22%">
+                  <col style="width: 8%">
+                  <col style="width: 8%">
+                  <col style="width: 8%">
                   <col style="width: 7%">
-                  <col style="width: 10%">
-                  <col style="width: 10%">
-                  <col style="width: 3%">
+                  <col style="width: 8%">
+                  <col style="width: 8%">
+                  <col style="width: 8%">
+                  <col style="width: 5%">
+                  <col style="width: 5%">
                 </colgroup>
                 <thead class="table-light">
                   <tr>
@@ -281,8 +304,10 @@
                     <th class="text-end">Precio</th>
                     <th class="text-end">SubTotal</th>
                     <th class="text-end">%Desc</th>
+                    <th class="text-end">Neto</th>
                     <th class="text-end">Impuesto</th>
                     <th class="text-end total-col">Total</th>
+                    <th class="text-center">Descuento</th>
                     <th class="text-center">Eliminar</th>
                   </tr>
                 </thead>
@@ -325,7 +350,19 @@
                       {{ getLineaSubTotal(i) | number: '1.2-2' }}
                     </td>
                     <td>
-                      <input type="number" class="form-control form-control-sm text-end" formControlName="porDescu" min="0" step="0.01">
+                      <input
+                        type="text"
+                        class="form-control form-control-sm text-end"
+                        formControlName="porDescu"
+                        inputmode="decimal"
+                        pattern="^\d{1,3}(,\d{3})*(\.\d{0,2})?$|^\d*(\.\d{0,2})?$"
+                        placeholder="0.00"
+                        (focus)="onDetalleDescuentoFocus($event, i)"
+                        (blur)="onDetalleDescuentoBlur($event, i)"
+                      >
+                    </td>
+                    <td class="text-end">
+                      {{ getLineaNeto(i) | number: '1.2-2' }}
                     </td>
                     <td class="text-end">
                       {{ getLineaImpuesto(i) | number: '1.2-2' }}
@@ -334,13 +371,24 @@
                       {{ getLineaTotal(i) | number: '1.2-2' }}
                     </td>
                     <td class="text-center">
+                      <button
+                        class="btn btn-sm btn-outline-success"
+                        type="button"
+                        (click)="abrirModalDescuentoLinea(i)"
+                        [disabled]="locked"
+                        title="Aplicar descuento a esta linea"
+                      >
+                        <i class="feather icon-percent"></i>
+                      </button>
+                    </td>
+                    <td class="text-center">
                       <button class="btn btn-sm btn-outline-danger" type="button" (click)="removeDetalle(i)" [disabled]="locked">
                         <i class="feather icon-trash-2"></i>
                       </button>
                     </td>
                   </tr>
                   <tr *ngIf="detalleArray.length === 0">
-                    <td colspan="9" class="text-center text-muted">Agrega al menos un servicio.</td>
+                    <td colspan="11" class="text-center text-muted">Agrega al menos un servicio.</td>
                   </tr>
                 </tbody>
               </table>
@@ -478,6 +526,10 @@
                   <strong>{{ resumen.descuento | number:'1.2-2' }}</strong>
                 </div>
                 <div class="nf-totales__row">
+                  <span>Neto</span>
+                  <strong>{{ resumen.neto | number:'1.2-2' }}</strong>
+                </div>
+                <div class="nf-totales__row">
                   <span>Impuestos</span>
                   <strong>{{ resumen.impuesto | number:'1.2-2' }}</strong>
                 </div>
@@ -524,6 +576,196 @@
   (close)="cerrarModalServicios()"
   (servicioSelected)="onServicioSelected($event)"
 ></app-selector-servicios-modal>
+
+<div class="modal-backdrop fade show" *ngIf="showDescuentoModal"></div>
+<div class="modal fade show d-block" *ngIf="showDescuentoModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Aplicar descuento global</h5>
+        <button type="button" class="btn-close" aria-label="Close" (click)="cerrarModalDescuentoGlobal()"></button>
+      </div>
+      <div class="modal-body">
+        <div class="nf-discount-type">
+          <label class="nf-discount-option" [class.nf-discount-option--active]="descuentoGlobalTipo === 'porcentaje'">
+            <input
+              type="radio"
+              name="descuentoGlobalTipo"
+              value="porcentaje"
+              [checked]="descuentoGlobalTipo === 'porcentaje'"
+              (change)="setDescuentoGlobalTipo('porcentaje')"
+            >
+            <span>
+              <strong>Porcentaje</strong>
+              <small>Aplica el mismo porcentaje a cada linea.</small>
+            </span>
+          </label>
+          <label class="nf-discount-option" [class.nf-discount-option--active]="descuentoGlobalTipo === 'monto'">
+            <input
+              type="radio"
+              name="descuentoGlobalTipo"
+              value="monto"
+              [checked]="descuentoGlobalTipo === 'monto'"
+              (change)="setDescuentoGlobalTipo('monto')"
+            >
+            <span>
+              <strong>Monto fijo</strong>
+              <small>Reduce el total final y calcula la base contable por linea.</small>
+            </span>
+          </label>
+        </div>
+
+        <label class="form-label nf-label mt-3">
+          {{ descuentoGlobalTipo === 'porcentaje' ? 'Porcentaje de descuento' : 'Monto de descuento' }}
+        </label>
+        <div class="input-group">
+          <span class="input-group-text" *ngIf="descuentoGlobalTipo === 'porcentaje'">%</span>
+          <input
+            type="number"
+            class="form-control"
+            min="0"
+            [max]="descuentoGlobalTipo === 'porcentaje' ? 100 : resumen.total"
+            step="0.01"
+            [value]="descuentoGlobalValor"
+            (input)="setDescuentoGlobalValor($any($event.target).value)"
+            placeholder="0.00"
+          >
+        </div>
+        <div class="nf-discount-preview">
+          <div>
+            <span>Subtotal actual</span>
+            <strong>{{ resumen.subtotal | number:'1.2-2' }}</strong>
+          </div>
+          <div>
+            <span>Total actual</span>
+            <strong>{{ resumen.total | number:'1.2-2' }}</strong>
+          </div>
+          <div>
+            <span>Lineas afectadas</span>
+            <strong>{{ detalleArray.length }}</strong>
+          </div>
+        </div>
+        <div class="alert alert-danger py-2 mt-3 mb-0" *ngIf="descuentoGlobalError">
+          <i class="feather icon-alert-circle me-1"></i>
+          {{ descuentoGlobalError }}
+        </div>
+      </div>
+      <div class="modal-footer d-flex justify-content-between flex-wrap gap-2">
+        <div class="d-flex gap-2 flex-wrap">
+          <button type="button" class="btn btn-outline-secondary" (click)="cerrarModalDescuentoGlobal()">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            class="btn btn-outline-danger"
+            *ngIf="hasDescuentoAplicado"
+            (click)="revertirDescuentoGlobal()"
+          >
+            Revertir descuento
+          </button>
+        </div>
+        <button type="button" class="btn btn-primary" (click)="aplicarDescuentoGlobal()">
+          Aplicar descuento
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="showDescuentoLineaModal"></div>
+<div class="modal fade show d-block" *ngIf="showDescuentoLineaModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Aplicar descuento por linea</h5>
+        <button type="button" class="btn-close" aria-label="Close" (click)="cerrarModalDescuentoLinea()"></button>
+      </div>
+      <div class="modal-body">
+        <div class="nf-discount-line-title">
+          {{ descuentoLineaIndex !== null ? getLineaDescripcion(descuentoLineaIndex) : 'Linea seleccionada' }}
+        </div>
+
+        <div class="nf-discount-type">
+          <label class="nf-discount-option" [class.nf-discount-option--active]="descuentoLineaTipo === 'porcentaje'">
+            <input
+              type="radio"
+              name="descuentoLineaTipo"
+              value="porcentaje"
+              [checked]="descuentoLineaTipo === 'porcentaje'"
+              (change)="setDescuentoLineaTipo('porcentaje')"
+            >
+            <span>
+              <strong>Porcentaje</strong>
+              <small>Aplica el porcentaje solo a esta linea.</small>
+            </span>
+          </label>
+          <label class="nf-discount-option" [class.nf-discount-option--active]="descuentoLineaTipo === 'monto'">
+            <input
+              type="radio"
+              name="descuentoLineaTipo"
+              value="monto"
+              [checked]="descuentoLineaTipo === 'monto'"
+              (change)="setDescuentoLineaTipo('monto')"
+            >
+            <span>
+              <strong>Monto fijo</strong>
+              <small>Reduce el total final de esta linea.</small>
+            </span>
+          </label>
+        </div>
+
+        <label class="form-label nf-label mt-3">
+          {{ descuentoLineaTipo === 'porcentaje' ? 'Porcentaje de descuento' : 'Monto de descuento' }}
+        </label>
+        <div class="input-group">
+          <span class="input-group-text" *ngIf="descuentoLineaTipo === 'porcentaje'">%</span>
+          <input
+            type="number"
+            class="form-control"
+            min="0"
+            [max]="descuentoLineaTipo === 'porcentaje' ? 100 : (descuentoLineaIndex !== null ? getLineaTotalSinDescuento(descuentoLineaIndex) : 0)"
+            step="0.01"
+            [value]="descuentoLineaValor"
+            (input)="setDescuentoLineaValor($any($event.target).value)"
+            placeholder="0.00"
+          >
+        </div>
+        <div class="nf-discount-preview">
+          <div>
+            <span>Subtotal linea</span>
+            <strong>{{ descuentoLineaIndex !== null ? (getLineaSubtotalBase(descuentoLineaIndex) | number:'1.2-2') : '0.00' }}</strong>
+          </div>
+          <div>
+            <span>Total linea</span>
+            <strong>{{ descuentoLineaIndex !== null ? (getLineaTotalSinDescuento(descuentoLineaIndex) | number:'1.2-2') : '0.00' }}</strong>
+          </div>
+        </div>
+        <div class="alert alert-danger py-2 mt-3 mb-0" *ngIf="descuentoLineaError">
+          <i class="feather icon-alert-circle me-1"></i>
+          {{ descuentoLineaError }}
+        </div>
+      </div>
+      <div class="modal-footer d-flex justify-content-between flex-wrap gap-2">
+        <div class="d-flex gap-2 flex-wrap">
+          <button type="button" class="btn btn-outline-secondary" (click)="cerrarModalDescuentoLinea()">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            class="btn btn-outline-danger"
+            *ngIf="hasDescuentoLineaSeleccionada"
+            (click)="quitarDescuentoLinea()"
+          >
+            Quitar descuento
+          </button>
+        </div>
+        <button type="button" class="btn btn-primary" (click)="aplicarDescuentoLinea()">
+          Aplicar descuento
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="modal-backdrop fade show" *ngIf="showConfirmModal"></div>
 <div class="modal fade show d-block" *ngIf="showConfirmModal" tabindex="-1" role="dialog">

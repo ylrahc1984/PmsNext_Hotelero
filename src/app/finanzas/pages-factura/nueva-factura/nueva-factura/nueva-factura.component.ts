@@ -129,7 +129,7 @@ export class NuevaFacturaComponent implements OnInit {
   });
 
   readonly lineasCalculo: LineaCalculo[] = [];
-  resumen                   : TotalesResumen = { subtotal: 0, descuento: 0, impuesto: 0, total: 0 };
+  resumen                   : TotalesResumen = { subtotal: 0, descuento: 0, neto: 0, impuesto: 0, total: 0 };
 
   mostrarPagos              = true;
   pagosTotal                = 0;
@@ -142,6 +142,16 @@ export class NuevaFacturaComponent implements OnInit {
   showClienteModal          = false;
   showServicioModal         = false;
   showReservaModal          = false;
+  showDescuentoModal        = false;
+  descuentoGlobalTipo       : 'porcentaje' | 'monto' = 'porcentaje';
+  descuentoGlobalValor      = 0;
+  descuentoGlobalError      : string | null = null;
+  descuentoGlobalSnapshot   : number[] | null = null;
+  showDescuentoLineaModal   = false;
+  descuentoLineaTipo        : 'porcentaje' | 'monto' = 'porcentaje';
+  descuentoLineaValor       = 0;
+  descuentoLineaError       : string | null = null;
+  descuentoLineaIndex       : number | null = null;
   modoReserva               = false;
   reservaActual             : string | null = null;
   reservaLoading            = false;
@@ -307,6 +317,10 @@ export class NuevaFacturaComponent implements OnInit {
     return this.detalleArray.controls.some((group) => group.controls.cantidad.invalid);
   }
 
+  get hasDescuentoAplicado(): boolean {
+    return this.detalleArray.controls.some((group) => this.toNumber(group.controls.porDescu.value) > 0);
+  }
+
   removeDetalle(index: number): void {
     if (this.locked) return;
     this.detalleArray.removeAt(index);
@@ -354,6 +368,35 @@ export class NuevaFacturaComponent implements OnInit {
 
     if (input) {
       input.value = group.controls.monto.value.toString();
+    }
+
+    this.updateCalculos();
+    this.cdr.markForCheck();
+  }
+
+  onDetalleDescuentoFocus(event: FocusEvent, index: number): void {
+    const input = event.target as HTMLInputElement | null;
+    const group = this.detalleArray.at(index);
+    if (!input || !group) {
+      return;
+    }
+    const descuento = this.round(this.toNumber(group.controls.porDescu.value));
+    input.value = descuento > 0 ? descuento.toFixed(2) : '';
+  }
+
+  onDetalleDescuentoBlur(event: FocusEvent, index: number): void {
+    const input = event.target as HTMLInputElement | null;
+    const group = this.detalleArray.at(index);
+    if (!group) {
+      return;
+    }
+
+    const rawValue = input?.value ?? group.controls.porDescu.value;
+    const descuento = this.round(this.toNumber(rawValue));
+    this.setDetalleDescuentoFormatted(group, descuento);
+
+    if (input) {
+      input.value = group.controls.porDescu.value.toString();
     }
 
     this.updateCalculos();
@@ -441,12 +484,36 @@ export class NuevaFacturaComponent implements OnInit {
     return this.lineasCalculo[index]?.subtotal ?? 0;
   }
 
+  getLineaNeto(index: number): number {
+    return this.lineasCalculo[index]?.neto ?? 0;
+  }
+
   getLineaImpuesto(index: number): number {
     return this.lineasCalculo[index]?.impuesto ?? 0;
   }
 
   getLineaTotal(index: number): number {
     return this.lineasCalculo[index]?.total ?? 0;
+  }
+
+  getLineaDescripcion(index: number): string {
+    const group = this.detalleArray.at(index);
+    return group?.controls.descripcion.value || `Linea ${index + 1}`;
+  }
+
+  getLineaSubtotalBase(index: number): number {
+    const group = this.detalleArray.at(index);
+    return group ? this.round(this.getDetalleLineaSubtotalBase(group)) : 0;
+  }
+
+  getLineaTotalSinDescuento(index: number): number {
+    const group = this.detalleArray.at(index);
+    return group ? this.round(this.getDetalleLineaTotalSinDescuento(group)) : 0;
+  }
+
+  get hasDescuentoLineaSeleccionada(): boolean {
+    const group = this.getDescuentoLineaGroup();
+    return group ? this.toNumber(group.controls.porDescu.value) > 0 : false;
   }
 
   public abrirModalClientes(): void {
@@ -480,6 +547,191 @@ export class NuevaFacturaComponent implements OnInit {
 
   public cerrarModalReserva(): void {
     this.showReservaModal = false;
+    this.cdr.markForCheck();
+  }
+
+  public abrirModalDescuentoGlobal(): void {
+    if (this.locked || this.detalleArray.length === 0) return;
+    this.descuentoGlobalTipo = 'porcentaje';
+    this.descuentoGlobalValor = 0;
+    this.descuentoGlobalError = null;
+    this.showDescuentoModal = true;
+    this.cdr.markForCheck();
+  }
+
+  public cerrarModalDescuentoGlobal(): void {
+    this.showDescuentoModal = false;
+    this.descuentoGlobalError = null;
+    this.cdr.markForCheck();
+  }
+
+  public setDescuentoGlobalTipo(tipo: 'porcentaje' | 'monto'): void {
+    this.descuentoGlobalTipo = tipo;
+    this.descuentoGlobalValor = 0;
+    this.descuentoGlobalError = null;
+  }
+
+  public setDescuentoGlobalValor(value: string | number): void {
+    this.descuentoGlobalValor = this.toNumber(value);
+    this.descuentoGlobalError = null;
+  }
+
+  public aplicarDescuentoGlobal(): void {
+    if (this.locked) return;
+
+    const valor = this.round(this.toNumber(this.descuentoGlobalValor));
+    const subtotal = this.getDetalleSubtotalBase();
+    const totalSinDescuento = this.getDetalleTotalSinDescuento();
+
+    if (this.detalleArray.length === 0 || subtotal <= 0) {
+      this.descuentoGlobalError = 'Agregue lineas con subtotal mayor a cero antes de aplicar descuento.';
+      return;
+    }
+
+    if (valor < 0) {
+      this.descuentoGlobalError = 'El descuento no puede ser negativo.';
+      return;
+    }
+
+    this.descuentoGlobalSnapshot = this.detalleArray.controls.map((group) => {
+      return this.toNumber(group.controls.porDescu.value);
+    });
+
+    if (this.descuentoGlobalTipo === 'porcentaje') {
+      if (valor > 100) {
+        this.descuentoGlobalError = 'El porcentaje no puede ser mayor a 100%.';
+        return;
+      }
+
+      this.detalleArray.controls.forEach((group) => {
+        this.setDetalleDescuentoFormatted(group, valor);
+      });
+    } else {
+      if (valor > this.round(totalSinDescuento)) {
+        this.descuentoGlobalError = 'El monto no puede superar el total del documento.';
+        return;
+      }
+
+      this.detalleArray.controls.forEach((group) => {
+        const lineTotal = this.getDetalleLineaTotalSinDescuento(group);
+        const lineDiscountOnTotal = totalSinDescuento > 0 ? valor * (lineTotal / totalSinDescuento) : 0;
+        const percent = this.getDetalleLineaPorcentajeDesdeDescuentoTotal(group, lineDiscountOnTotal);
+        this.setDetalleDescuentoFormatted(group, percent);
+      });
+    }
+
+    this.showDescuentoModal = false;
+    this.descuentoGlobalError = null;
+    this.updateCalculos();
+    this.cdr.markForCheck();
+  }
+
+  public revertirDescuentoGlobal(): void {
+    if (this.locked || this.detalleArray.length === 0) return;
+
+    const snapshot = this.descuentoGlobalSnapshot;
+    this.detalleArray.controls.forEach((group, index) => {
+      const previousValue = snapshot && snapshot.length === this.detalleArray.length
+        ? snapshot[index] ?? 0
+        : 0;
+      this.setDetalleDescuentoFormatted(group, previousValue);
+    });
+
+    this.descuentoGlobalSnapshot = null;
+    this.showDescuentoModal = false;
+    this.descuentoGlobalError = null;
+    this.updateCalculos();
+    this.cdr.markForCheck();
+  }
+
+  public abrirModalDescuentoLinea(index: number): void {
+    if (this.locked) return;
+    const group = this.detalleArray.at(index);
+    if (!group) return;
+
+    this.descuentoLineaIndex = index;
+    this.descuentoLineaTipo = 'porcentaje';
+    this.descuentoLineaValor = this.toNumber(group.controls.porDescu.value);
+    this.descuentoLineaError = null;
+    this.showDescuentoLineaModal = true;
+    this.cdr.markForCheck();
+  }
+
+  public cerrarModalDescuentoLinea(): void {
+    this.showDescuentoLineaModal = false;
+    this.descuentoLineaError = null;
+    this.descuentoLineaIndex = null;
+    this.cdr.markForCheck();
+  }
+
+  public setDescuentoLineaTipo(tipo: 'porcentaje' | 'monto'): void {
+    this.descuentoLineaTipo = tipo;
+    this.descuentoLineaValor = 0;
+    this.descuentoLineaError = null;
+  }
+
+  public setDescuentoLineaValor(value: string | number): void {
+    this.descuentoLineaValor = this.toNumber(value);
+    this.descuentoLineaError = null;
+  }
+
+  public aplicarDescuentoLinea(): void {
+    if (this.locked) return;
+
+    const group = this.getDescuentoLineaGroup();
+    if (!group) {
+      this.descuentoLineaError = 'Seleccione una linea valida para aplicar descuento.';
+      return;
+    }
+
+    const valor = this.round(this.toNumber(this.descuentoLineaValor));
+    const lineSubtotal = this.getDetalleLineaSubtotalBase(group);
+    const lineTotal = this.getDetalleLineaTotalSinDescuento(group);
+
+    if (lineSubtotal <= 0 || lineTotal <= 0) {
+      this.descuentoLineaError = 'La linea debe tener subtotal mayor a cero.';
+      return;
+    }
+
+    if (valor < 0) {
+      this.descuentoLineaError = 'El descuento no puede ser negativo.';
+      return;
+    }
+
+    if (this.descuentoLineaTipo === 'porcentaje') {
+      if (valor > 100) {
+        this.descuentoLineaError = 'El porcentaje no puede ser mayor a 100%.';
+        return;
+      }
+      this.setDetalleDescuentoFormatted(group, valor);
+    } else {
+      if (valor > this.round(lineTotal)) {
+        this.descuentoLineaError = 'El monto no puede superar el total de la linea.';
+        return;
+      }
+
+      const percent = this.getDetalleLineaPorcentajeDesdeDescuentoTotal(group, valor);
+      this.setDetalleDescuentoFormatted(group, percent);
+    }
+
+    this.showDescuentoLineaModal = false;
+    this.descuentoLineaError = null;
+    this.descuentoLineaIndex = null;
+    this.updateCalculos();
+    this.cdr.markForCheck();
+  }
+
+  public quitarDescuentoLinea(): void {
+    if (this.locked) return;
+
+    const group = this.getDescuentoLineaGroup();
+    if (!group) return;
+
+    this.setDetalleDescuentoFormatted(group, 0);
+    this.showDescuentoLineaModal = false;
+    this.descuentoLineaError = null;
+    this.descuentoLineaIndex = null;
+    this.updateCalculos();
     this.cdr.markForCheck();
   }
 
@@ -598,7 +850,7 @@ export class NuevaFacturaComponent implements OnInit {
       uMedida               : this.fb.nonNullable.control(''),
       pUndLst               : this.fb.nonNullable.control(0),
       uniSinImp             : this.fb.nonNullable.control(0),
-      porDescu              : this.fb.nonNullable.control(0),
+      porDescu              : this.fb.nonNullable.control<number | string>('0.00'),
       porImp                : this.fb.nonNullable.control(0),
       porExonera            : this.fb.nonNullable.control(0),
       mtoImpVarios          : this.fb.nonNullable.control(0),
@@ -644,7 +896,7 @@ export class NuevaFacturaComponent implements OnInit {
         cantidad          : 1,
         pUndLst           : Number(servicio.precioUnitario ?? 0) || 0,
         uniSinImp         : Number(servicio.precioUnitario ?? 0) || 0,
-        porDescu          : 0,
+        porDescu          : '0.00',
         porImp            : 0,
         fechaConsumo      : this.form.controls.fechaDocu.value,
         lstPrecio         : this.form.controls.listaPrecio.value,
@@ -664,6 +916,7 @@ export class NuevaFacturaComponent implements OnInit {
     const pricesIncludeTax = FISCAL_CONFIG.pricesIncludeTax;
     let resumenSubtotal = 0;
     let resumenDescuento = 0;
+    let resumenNeto = 0;
     let resumenImpuesto = 0;
     let resumenTotal = 0;
 
@@ -703,13 +956,14 @@ export class NuevaFacturaComponent implements OnInit {
       const linea = {
         subtotal    : this.round(subtotal),
         descuento   : this.round(descuento),
-        base        : this.round(neto),
+        neto        : this.round(neto),
         impuesto    : this.round(impuesto),
         total       : this.round(total)
       };
 
       resumenSubtotal += linea.subtotal;
       resumenDescuento += linea.descuento;
+      resumenNeto += linea.neto;
       resumenImpuesto += linea.impuesto;
       resumenTotal += linea.total;
       lineas.push(linea);
@@ -720,6 +974,7 @@ export class NuevaFacturaComponent implements OnInit {
     this.resumen = {
       subtotal    : this.round(resumenSubtotal),
       descuento   : this.round(resumenDescuento),
+      neto        : this.round(resumenNeto),
       impuesto    : this.round(resumenImpuesto),
       total       : this.round(resumenTotal)
     };
@@ -736,6 +991,75 @@ export class NuevaFacturaComponent implements OnInit {
 
     this.syncPagoTipos();
     this.syncPuntoVentaLock();
+  }
+
+  private getDetalleSubtotalBase(): number {
+    return this.detalleArray.controls.reduce((sum, group) => {
+      return sum + this.getDetalleLineaSubtotalBase(group);
+    }, 0);
+  }
+
+  private getDetalleTotalSinDescuento(): number {
+    return this.detalleArray.controls.reduce((sum, group) => {
+      return sum + this.getDetalleLineaTotalSinDescuento(group);
+    }, 0);
+  }
+
+  private getDescuentoLineaGroup(): FormGroup<DetalleForm> | null {
+    if (this.descuentoLineaIndex === null) {
+      return null;
+    }
+    return this.detalleArray.at(this.descuentoLineaIndex) ?? null;
+  }
+
+  private getDetalleLineaSubtotalBase(group: FormGroup<DetalleForm>): number {
+    const cantidad = this.toNumber(group.controls.cantidad.value);
+    const precio = this.toNumber(group.controls.pUndLst.value);
+    const subtotalBruto = cantidad * precio;
+
+    if (!FISCAL_CONFIG.pricesIncludeTax) {
+      return subtotalBruto;
+    }
+
+    const taxRate = this.getDetalleLineaTaxRate(group);
+    return taxRate > 0 ? subtotalBruto / (1 + taxRate) : subtotalBruto;
+  }
+
+  private getDetalleLineaTotalSinDescuento(group: FormGroup<DetalleForm>): number {
+    const cantidad = this.toNumber(group.controls.cantidad.value);
+    const precio = this.toNumber(group.controls.pUndLst.value);
+    const subtotalBruto = cantidad * precio;
+
+    if (FISCAL_CONFIG.pricesIncludeTax) {
+      return subtotalBruto;
+    }
+
+    return subtotalBruto * (1 + this.getDetalleLineaTaxRate(group));
+  }
+
+  private getDetalleLineaPorcentajeDesdeDescuentoTotal(
+    group: FormGroup<DetalleForm>,
+    descuentoTotal: number
+  ): number {
+    const cantidad = this.toNumber(group.controls.cantidad.value);
+    const precio = this.toNumber(group.controls.pUndLst.value);
+    const subtotalBruto = cantidad * precio;
+
+    if (subtotalBruto <= 0) {
+      return 0;
+    }
+
+    if (FISCAL_CONFIG.pricesIncludeTax) {
+      return (descuentoTotal / subtotalBruto) * 100;
+    }
+
+    const descuentoSubtotal = descuentoTotal / (1 + this.getDetalleLineaTaxRate(group));
+    return (descuentoSubtotal / subtotalBruto) * 100;
+  }
+
+  private getDetalleLineaTaxRate(group: FormGroup<DetalleForm>): number {
+    const porImp = this.toNumber(group.controls.porImp.value);
+    return (porImp > 0 ? porImp : 13) / 100;
   }
 
   private getDocCurrency(): string {
@@ -827,6 +1151,11 @@ export class NuevaFacturaComponent implements OnInit {
   private setPagoMontoFormatted(group: FormGroup<PagoForm>, amount: number): void {
     const rounded = this.round(amount);
     group.controls.monto.setValue(this.formatAmountWithThousands(rounded), { emitEvent: false });
+  }
+
+  private setDetalleDescuentoFormatted(group: FormGroup<DetalleForm>, percent: number): void {
+    const bounded = Math.min(Math.max(0, this.round(percent)), 100);
+    group.controls.porDescu.setValue(bounded.toFixed(2), { emitEvent: false });
   }
 
   private cargarMonedas(): void {
@@ -1205,7 +1534,7 @@ export class NuevaFacturaComponent implements OnInit {
             cantidad        : saldo,
             pUndLst         : precioUnitario,
             uniSinImp       : saldo > 0 ? Number((subTotal / saldo).toFixed(6)) : 0,
-            porDescu        : this.toNumber(item.porDescuento),
+            porDescu        : this.round(this.toNumber(item.porDescuento)).toFixed(2),
             porImp          : this.round(porImp),
             comanda         : (item.id ?? '').toString(),
             saldoPendiente  : saldo,
@@ -1613,6 +1942,10 @@ export class NuevaFacturaComponent implements OnInit {
 
   private round(value: number): number {
     return Math.round(value * 100) / 100;
+  }
+
+  private roundPercent(value: number): number {
+    return Math.round(value * 1000000) / 1000000;
   }
 
   private normalizeCodigoActividad(value: string | null | undefined): string {

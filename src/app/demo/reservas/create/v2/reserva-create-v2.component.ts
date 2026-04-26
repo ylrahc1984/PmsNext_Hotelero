@@ -26,7 +26,7 @@ import { ServicioPrecioApiItem } from '../reserva-create.tarifa.models';
 import { showAlertWithFocusRestore } from '../reserva-create.alert';
 import { buildInitialActividadDetalleForm, buildInitialDetalleForm, buildInitialReservaCreateForm } from '../reserva-create.builders';
 import { FISCAL_CONFIG } from 'src/app/core/config/fiscal.config';
-import { calculateFiscalTotals, calculateTaxFromNetAmount } from 'src/app/core/config/fiscal.utils';
+import { calculateTaxFromNetAmount } from 'src/app/core/config/fiscal.utils';
 import { ReservaCreateActividadModalComponent, ActividadModalSavePayload } from '../reserva-create-actividad-modal.component';
 import { ReservaCreateClienteModalComponent } from '../reserva-create-cliente-modal.component';
 import { ContactoRapidoModalSavePayload, ReservaCreateContactoRapidoModalComponent } from '../reserva-create-contacto-rapido-modal.component';
@@ -57,6 +57,8 @@ type FormaPagoLocalOption = {
   codigo      : string;
   descripcion : string;
 };
+
+type DescuentoModo = 'porcentaje' | 'monto';
 
 @Component({
   selector: 'app-reserva-create-v2',
@@ -106,6 +108,8 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
   showContactoRapidoModal = false;
   showDetalleModal = false;
   showActividadModal = false;
+  showDescuentoGlobalModal = false;
+  showDescuentoLineaModal = false;
   selectedCliente: ClienteUI | null = null;
 
   contactosLoading = false;
@@ -118,6 +122,13 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
   detalleServicioSearch = '';
   reglaTarifaError = '';
   allowManualPricing = false;
+  descuentoGlobalModo: DescuentoModo = 'monto';
+  descuentoGlobalValor: number | null = null;
+  descuentoGlobalError = '';
+  descuentoLineaModo: DescuentoModo = 'monto';
+  descuentoLineaValor: number | null = null;
+  descuentoLineaError = '';
+  descuentoLineaSeleccionada: ReservaDraftServiceLine | null = null;
 
   editingDetalleLinea: number | null = null;
   editingActividadLinea: number | null = null;
@@ -250,6 +261,14 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
     return this.draftTotals.totalServicios;
   }
 
+  get subtotalReserva(): number {
+    return roundTo2(this.detalles.reduce((sum, item) => sum + safeNumber(item?.subTotal), 0));
+  }
+
+  get totalDescuentoReserva(): number {
+    return roundTo2(this.detalles.reduce((sum, item) => sum + safeNumber(item?.descuento), 0));
+  }
+
   get totalNetoReserva(): number {
     return this.draftTotals.totalNeto;
   }
@@ -260,6 +279,10 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
 
   get cantidadServicios(): number {
     return this.detalles.length;
+  }
+
+  get hayDescuentosAplicados(): boolean {
+    return this.detalles.some((item) => safeNumber(item?.descuento) > 0 || safeNumber(item?.porDescuento) > 0);
   }
 
   get selectedContactoCliente(): ClienteContactoUI | null {
@@ -697,6 +720,164 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
       this.reindexDraftServicios();
       this.syncDraftHeader();
     });
+  }
+
+  abrirModalDescuentoGlobal(): void {
+    if (!this.detalles.length) {
+      this.showAlert('Atención', 'Agregue al menos un servicio antes de aplicar descuento.', 'warning');
+      return;
+    }
+    this.descuentoGlobalModo = 'monto';
+    this.descuentoGlobalValor = null;
+    this.descuentoGlobalError = '';
+    this.showDescuentoGlobalModal = true;
+  }
+
+  cerrarModalDescuentoGlobal(): void {
+    this.showDescuentoGlobalModal = false;
+    this.descuentoGlobalError = '';
+  }
+
+  aplicarDescuentoGlobal(): void {
+    const valor = safeNumber(this.descuentoGlobalValor);
+    if (valor <= 0) {
+      this.descuentoGlobalError = 'Ingrese un descuento mayor a cero.';
+      return;
+    }
+
+    const totalSinDescuento = this.getTotalDocumentoSinDescuento();
+    if (totalSinDescuento <= 0) {
+      this.descuentoGlobalError = 'No hay base disponible para aplicar descuento.';
+      return;
+    }
+
+    if (this.descuentoGlobalModo === 'porcentaje' && valor > 100) {
+      this.descuentoGlobalError = 'El porcentaje no puede ser mayor a 100.';
+      return;
+    }
+
+    if (this.descuentoGlobalModo === 'monto' && valor > totalSinDescuento) {
+      this.descuentoGlobalError = 'El monto no puede superar el total del documento.';
+      return;
+    }
+
+    let descuentoFinalPendiente = this.descuentoGlobalModo === 'monto'
+      ? roundTo2(valor)
+      : roundTo2(totalSinDescuento * valor / 100);
+
+    const descuentoFinalTotal = descuentoFinalPendiente;
+    const serviciosConBase = this.detalles.filter((line) => this.getLineTotalSinDescuento(line) > 0);
+    this.draft = {
+      ...this.draft,
+      servicios: this.detalles.map((line) => {
+        if (!serviciosConBase.some((item) => item.linea === line.linea)) {
+          return this.recalculateDraftServiceLineTotals(line, 0, 0);
+        }
+
+        const isLast = line.linea === serviciosConBase[serviciosConBase.length - 1]?.linea;
+        const lineTotalSinDescuento = this.getLineTotalSinDescuento(line);
+        const descuentoFinalLinea = this.descuentoGlobalModo === 'monto'
+          ? isLast
+            ? descuentoFinalPendiente
+            : roundTo2(descuentoFinalTotal * (lineTotalSinDescuento / totalSinDescuento))
+          : roundTo2(lineTotalSinDescuento * valor / 100);
+
+        if (this.descuentoGlobalModo === 'monto') {
+          descuentoFinalPendiente = roundTo2(Math.max(0, descuentoFinalPendiente - descuentoFinalLinea));
+        }
+
+        const descuentoBase = this.convertFinalDiscountToBaseDiscount(line, descuentoFinalLinea);
+        const porcentaje = safeNumber(line.subTotal) > 0 ? roundTo2((descuentoBase / safeNumber(line.subTotal)) * 100) : 0;
+        return this.recalculateDraftServiceLineTotals(line, descuentoBase, porcentaje);
+      })
+    };
+
+    this.syncDraftHeader();
+    this.cerrarModalDescuentoGlobal();
+  }
+
+  desaplicarDescuentos(): void {
+    if (!this.hayDescuentosAplicados) {
+      return;
+    }
+    this.draft = {
+      ...this.draft,
+      servicios: this.detalles.map((line) => this.recalculateDraftServiceLineTotals(line, 0, 0))
+    };
+    this.syncDraftHeader();
+  }
+
+  abrirModalDescuentoLinea(detalle: ReservaDraftServiceLine): void {
+    this.descuentoLineaSeleccionada = detalle;
+    this.descuentoLineaModo = 'monto';
+    this.descuentoLineaValor = null;
+    this.descuentoLineaError = '';
+    this.showDescuentoLineaModal = true;
+  }
+
+  cerrarModalDescuentoLinea(): void {
+    this.showDescuentoLineaModal = false;
+    this.descuentoLineaSeleccionada = null;
+    this.descuentoLineaError = '';
+  }
+
+  aplicarDescuentoLinea(): void {
+    const line = this.descuentoLineaSeleccionada;
+    if (!line) {
+      this.descuentoLineaError = 'Seleccione una línea válida.';
+      return;
+    }
+
+    const valor = safeNumber(this.descuentoLineaValor);
+    if (valor <= 0) {
+      this.descuentoLineaError = 'Ingrese un descuento mayor a cero.';
+      return;
+    }
+
+    const totalLineaSinDescuento = this.getLineTotalSinDescuento(line);
+    if (totalLineaSinDescuento <= 0) {
+      this.descuentoLineaError = 'La línea no tiene base disponible para descuento.';
+      return;
+    }
+
+    if (this.descuentoLineaModo === 'porcentaje' && valor > 100) {
+      this.descuentoLineaError = 'El porcentaje no puede ser mayor a 100.';
+      return;
+    }
+
+    if (this.descuentoLineaModo === 'monto' && valor > totalLineaSinDescuento) {
+      this.descuentoLineaError = 'El monto no puede superar el total de la línea.';
+      return;
+    }
+
+    const descuentoFinal = this.descuentoLineaModo === 'monto'
+      ? roundTo2(valor)
+      : roundTo2(totalLineaSinDescuento * valor / 100);
+    const descuentoBase = this.convertFinalDiscountToBaseDiscount(line, descuentoFinal);
+    const porcentaje = safeNumber(line.subTotal) > 0 ? roundTo2((descuentoBase / safeNumber(line.subTotal)) * 100) : 0;
+
+    this.draft = {
+      ...this.draft,
+      servicios: this.detalles.map((item) =>
+        item.linea === line.linea
+          ? this.recalculateDraftServiceLineTotals(item, descuentoBase, porcentaje)
+          : item
+      )
+    };
+    this.syncDraftHeader();
+    this.cerrarModalDescuentoLinea();
+  }
+
+  quitarDescuentoLinea(detalle: ReservaDraftServiceLine): void {
+    this.draft = {
+      ...this.draft,
+      servicios: this.detalles.map((item) =>
+        item.linea === detalle.linea
+          ? this.recalculateDraftServiceLineTotals(item, 0, 0)
+          : item
+      )
+    };
+    this.syncDraftHeader();
   }
 
   onActividadServicioChange(codServicio: string): void {
@@ -1160,7 +1341,8 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
             (line.pasajeros ?? []).reduce((sum, pax) => sum + safeNumber(pax.subtotalNeto), 0)
         );
         const descuento = roundTo2(Math.min(Math.max(0, safeNumber(line.descuento)), lineSubtotal));
-        const lineTotals = calculateFiscalTotals(lineSubtotal, descuento, directo, settings);
+        const lineNeto = roundTo2(Math.max(0, lineSubtotal - descuento));
+        const lineTotals = calculateTaxFromNetAmount(lineNeto, directo, settings);
 
         const pasajeros = (line.pasajeros ?? []).map((pax) => {
           const cantidad = safeNumber(pax.cantidad);
@@ -1195,6 +1377,57 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
         };
       })
     };
+  }
+
+  private recalculateDraftServiceLineTotals(
+    line: ReservaDraftServiceLine,
+    descuentoBase = safeNumber(line.descuento),
+    porDescuento = safeNumber(line.porDescuento)
+  ): ReservaDraftServiceLine {
+    const settings = {
+      pricesIncludeTax: FISCAL_CONFIG.pricesIncludeTax,
+      taxRate: FISCAL_CONFIG.taxRate,
+      redondeoDecimales: 2
+    };
+    const subTotal = roundTo2(
+      safeNumber(line.subTotal) ||
+        (line.pasajeros ?? []).reduce((sum, pax) => sum + safeNumber(pax.subtotalNeto), 0)
+    );
+    const descuento = roundTo2(Math.min(Math.max(0, descuentoBase), subTotal));
+    const neto = roundTo2(Math.max(0, subTotal - descuento));
+    const totals = calculateTaxFromNetAmount(neto, this.form.directo || '0', settings);
+
+    return {
+      ...line,
+      subTotal,
+      porDescuento: descuento > 0 ? roundTo2(porDescuento) : 0,
+      descuento,
+      neto: totals.neto,
+      impuesto: totals.iva,
+      montoServicio: totals.total
+    };
+  }
+
+  private getLineTotalSinDescuento(line: ReservaDraftServiceLine): number {
+    const settings = {
+      pricesIncludeTax: FISCAL_CONFIG.pricesIncludeTax,
+      taxRate: FISCAL_CONFIG.taxRate,
+      redondeoDecimales: 2
+    };
+    const subTotal = roundTo2(safeNumber(line.subTotal));
+    if (subTotal <= 0) return 0;
+    return calculateTaxFromNetAmount(subTotal, this.form.directo || '0', settings).total;
+  }
+
+  private getTotalDocumentoSinDescuento(): number {
+    return roundTo2(this.detalles.reduce((sum, line) => sum + this.getLineTotalSinDescuento(line), 0));
+  }
+
+  private convertFinalDiscountToBaseDiscount(line: ReservaDraftServiceLine, finalDiscount: number): number {
+    const subTotal = roundTo2(safeNumber(line.subTotal));
+    const totalSinDescuento = this.getLineTotalSinDescuento(line);
+    if (subTotal <= 0 || totalSinDescuento <= 0) return 0;
+    return roundTo2(Math.min(subTotal, Math.max(0, finalDiscount) * (subTotal / totalSinDescuento)));
   }
 
   private mapDraftServiceLineToDetalleForm(line: ReservaDraftServiceLine): DetalleForm {

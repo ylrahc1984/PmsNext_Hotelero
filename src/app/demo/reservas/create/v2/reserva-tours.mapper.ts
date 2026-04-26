@@ -533,27 +533,38 @@ export function mapActividadSavePayloadToDraftServiceLines(
     baseLines.reduce((sum, line) => sum + safeNumber(line.subTotal), 0),
     settings.redondeoDecimales
   );
-  const descuentoTotalSolicitado = roundCurrency(
-    Math.min(safeNumber(saveData?.descuentoMonto), subTotalGeneral),
+  const totalGeneralSinDescuento = roundCurrency(
+    baseLines.reduce((sum, line) => sum + calculateTaxFromNetAmount(line.subTotal, directo, settings).total, 0),
     settings.redondeoDecimales
   );
-  const hayDescuento = descuentoTotalSolicitado > 0 && subTotalGeneral > 0;
-  const descuentoTotal = hayDescuento
+  const descuentoTotalSolicitado = roundCurrency(
+    Math.min(safeNumber(saveData?.descuentoMonto), totalGeneralSinDescuento),
+    settings.redondeoDecimales
+  );
+  const hayDescuento = descuentoTotalSolicitado > 0 && totalGeneralSinDescuento > 0;
+  const descuentoFinalTotal = hayDescuento
     ? descuentoTotalSolicitado
     : roundCurrency(settings.descuentoDefault, settings.redondeoDecimales);
-  let descuentoPendiente = descuentoTotal;
+  let descuentoFinalPendiente = descuentoFinalTotal;
 
   return baseLines.map((line, index) => {
-    const descuento =
-      hayDescuento && subTotalGeneral > 0
+    const lineTotalSinDescuento = calculateTaxFromNetAmount(line.subTotal, directo, settings).total;
+    const descuentoFinalLinea =
+      hayDescuento && totalGeneralSinDescuento > 0
         ? index === baseLines.length - 1
-          ? roundCurrency(descuentoPendiente, settings.redondeoDecimales)
-          : roundCurrency((line.subTotal / subTotalGeneral) * descuentoTotal, settings.redondeoDecimales)
+          ? roundCurrency(descuentoFinalPendiente, settings.redondeoDecimales)
+          : roundCurrency((lineTotalSinDescuento / totalGeneralSinDescuento) * descuentoFinalTotal, settings.redondeoDecimales)
         : roundCurrency(settings.descuentoDefault, settings.redondeoDecimales);
-    descuentoPendiente = roundCurrency(Math.max(0, descuentoPendiente - descuento), settings.redondeoDecimales);
+    descuentoFinalPendiente = roundCurrency(Math.max(0, descuentoFinalPendiente - descuentoFinalLinea), settings.redondeoDecimales);
 
+    const descuento = lineTotalSinDescuento > 0
+      ? roundCurrency(Math.min(line.subTotal, descuentoFinalLinea * (line.subTotal / lineTotalSinDescuento)), settings.redondeoDecimales)
+      : 0;
     const neto = roundCurrency(Math.max(0, line.subTotal - descuento), settings.redondeoDecimales);
     const split = calculateTaxFromNetAmount(neto, directo, settings);
+    const porDescuento = line.subTotal > 0
+      ? roundCurrency((descuento / line.subTotal) * 100, settings.redondeoDecimales)
+      : 0;
 
     return {
       linea             : lineaInicial + line.index,
@@ -589,7 +600,7 @@ export function mapActividadSavePayloadToDraftServiceLines(
       montoServicio      : split.total,
       codSuplidor        : '',
       subTotal           : line.subTotal,
-      porDescuento       : safeNumber(saveData?.porDescuento),
+      porDescuento,
       descuento,
       neto               : split.neto,
       impuesto           : split.iva,
