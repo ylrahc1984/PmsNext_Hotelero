@@ -510,7 +510,9 @@ export function mapActividadSavePayloadToDraftServiceLines(
   const settings = getCalculationOptions(options);
   const pickup = (saveData?.pickups ?? [])[0];
 
-  const activityItems = (saveData?.payload ?? []).filter((item) => safeNumber(item?.montoServicio) > 0);
+  const activityItems = (saveData?.payload ?? []).filter((item) =>
+    (item?.detallesPax ?? []).some((pax) => safeNumber(pax?.cantidad) > 0)
+  );
   const baseLines = activityItems.map((item, index) => {
     const pasajeros = (item.detallesPax ?? [])
       .map((pax) => buildPassengerLineFromTotal(pax.tipoPax, pax.cantidad, pax.precioNeto, directo, settings))

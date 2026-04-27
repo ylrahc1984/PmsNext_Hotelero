@@ -270,7 +270,7 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
   }
 
   get serviciosSeleccionados(): ActividadDetalle[] {
-    return this.resumenActividades.filter((item) => (Number(item?.totalLinea ?? 0) || 0) > 0);
+    return this.resumenActividades.filter((item) => this.hasActividadCantidad(item));
   }
 
   get isSubmitting(): boolean {
@@ -647,7 +647,7 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     }
 
     this.captureCurrentPageState();
-    const serviciosSeleccionados = this.getAllActividadesValue().filter((actividad) => (Number(actividad.totalLinea ?? 0) || 0) > 0);
+    const serviciosSeleccionados = this.getAllActividadesValue().filter((actividad) => this.hasActividadCantidad(actividad));
     this.subTotal = this.roundCurrency(
       serviciosSeleccionados.reduce((sum, actividad) => sum + (Number(actividad.totalLinea ?? 0) || 0), 0)
     );
@@ -691,7 +691,7 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     const actividades = this.getAllActividadesValue();
 
     return actividades
-      .filter((actividad) => Number(actividad.totalLinea ?? 0) > 0)
+      .filter((actividad) => this.hasActividadCantidad(actividad))
       .map((actividad) => {
         const detallesPax = (actividad.tarifas ?? [])
           .filter((tarifa) => Number(tarifa.cantidad ?? 0) > 0)
@@ -1479,13 +1479,16 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
       totalLinea: Number(actividad.totalLinea ?? 0) || 0
     };
 
-    const hasQty = normalized.tarifas.some((tarifa) => Number(tarifa.cantidad ?? 0) > 0);
-    if (!hasQty || normalized.totalLinea <= 0) {
+    if (!this.hasActividadCantidad(normalized)) {
       this.actividadesStateMap.delete(key);
       return;
     }
 
     this.actividadesStateMap.set(key, normalized);
+  }
+
+  private hasActividadCantidad(actividad: ActividadDetalle | null | undefined): boolean {
+    return (actividad?.tarifas ?? []).some((tarifa) => Number(tarifa.cantidad ?? 0) > 0);
   }
 
   private getActividadFromState(codServicio: string): ActividadDetalle | undefined {
