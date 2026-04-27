@@ -17,7 +17,9 @@ import {
   OperacionDetalle,
   OperacionDiariaResponse,
   ReservaOperacionAgrupada,
-  ResumenActividadHora
+  ResumenActividadHora,
+  TotalesGenerales,
+  TotalesHora
 } from './models/operacion-diaria.model';
 
 interface ChoferOption {
@@ -129,11 +131,20 @@ export class OperacionDiariaComponent implements OnInit {
             this.page = totalPages;
             this.manualRefresh$.next();
           }
-          this.resumenPorHora = this.buildResumenMap(data?.resumenActividadPorHora ?? []);
           const bloques = this.buildBloquesAgrupados(data?.bloques ?? []);
+          const totalesGenerales = this.buildTotalesGenerales(bloques);
+          const resumenActividadPorHora = this.buildResumenActividadPorHora(data?.bloques ?? []);
+          const dataSinCanceladas = data
+            ? {
+                ...data,
+                totalesGenerales,
+                resumenActividadPorHora
+              }
+            : data;
+          this.resumenPorHora = this.buildResumenMap(resumenActividadPorHora);
           this.syncSelectedBloqueHora(bloques);
           this.syncExpandedReservas(bloques);
-          return { loading: false, error: null, data, bloques };
+          return { loading: false, error: null, data: dataSinCanceladas, bloques };
         }),
         startWith({ loading: true, error: null, data: null, bloques: [] }),
         catchError(() => of({ loading: false, error: 'No se pudo cargar la operacion diaria.', data: null, bloques: [] }))
@@ -772,11 +783,12 @@ export class OperacionDiariaComponent implements OnInit {
   private buildBloquesAgrupados(rawBloques: OperacionDiariaResponse['bloques']): BloqueHoraAgrupado[] {
     return (rawBloques ?? []).map((bloque) => {
       const reservas = this.groupDetallesByReserva(bloque?.detalles ?? []);
+      const activeDetalles = this.getDetallesActivos(bloque?.detalles ?? []);
       return {
         bloqueHora: bloque?.bloqueHora ?? '',
-        totalesHora: bloque?.totalesHora ?? { totalHora: 0, paxHora: 0, cantidadServicios: 0 },
+        totalesHora: this.buildTotalesHora(activeDetalles),
         reservas,
-        cantidadReservas: reservas.length
+        cantidadReservas: reservas.filter((reserva) => !this.isReservaCancelada(reserva)).length
       };
     });
   }
@@ -822,8 +834,9 @@ export class OperacionDiariaComponent implements OnInit {
     const serviciosPreview = servicios.slice(0, this.servicePreviewLimit);
     const serviciosExtraCount = Math.max(0, servicios.length - serviciosPreview.length);
 
-    const paxTotal = sortedDetalles.reduce((acc, item) => acc + this.toNumber(item?.totalPax), 0);
-    const totalReserva = sortedDetalles.reduce((acc, item) => acc + this.toNumber(item?.totalServicio), 0);
+    const activeDetalles = this.getDetallesActivos(sortedDetalles);
+    const paxTotal = activeDetalles.reduce((acc, item) => acc + this.toNumber(item?.totalPax), 0);
+    const totalReserva = activeDetalles.reduce((acc, item) => acc + this.toNumber(item?.totalServicio), 0);
 
     const estados = sortedDetalles.map((item) => (item?.estado ?? '').toString().trim().toUpperCase()).filter(Boolean);
     const hasAllFacturado = sortedDetalles.length > 0 && sortedDetalles.every((item) => this.isReservaFacturada(item));
@@ -848,7 +861,7 @@ export class OperacionDiariaComponent implements OnInit {
       servicios,
       serviciosPreview,
       serviciosExtraCount,
-      cantidadServicios: sortedDetalles.length,
+      cantidadServicios: activeDetalles.length,
       paxTotal,
       totalReserva,
       estadoOperacionLabel: estadoOperacion.label,
@@ -895,6 +908,69 @@ export class OperacionDiariaComponent implements OnInit {
       return { label: 'Parcial', badge: 'bg-info' };
     }
     return { label: 'Sin asignar', badge: 'bg-secondary' };
+  }
+
+  private buildTotalesHora(detalles: OperacionDetalle[]): TotalesHora {
+    return {
+      totalHora: detalles.reduce((acc, detalle) => acc + this.toNumber(detalle?.totalServicio), 0),
+      paxHora: detalles.reduce((acc, detalle) => acc + this.toNumber(detalle?.totalPax), 0),
+      cantidadServicios: detalles.length
+    };
+  }
+
+  private buildTotalesGenerales(bloques: BloqueHoraAgrupado[]): TotalesGenerales {
+    return bloques.reduce<TotalesGenerales>(
+      (acc, bloque) => ({
+        totalGeneral: acc.totalGeneral + this.toNumber(bloque?.totalesHora?.totalHora),
+        totalPaxGeneral: acc.totalPaxGeneral + this.toNumber(bloque?.totalesHora?.paxHora),
+        totalServicios: acc.totalServicios + this.toNumber(bloque?.totalesHora?.cantidadServicios)
+      }),
+      { totalGeneral: 0, totalPaxGeneral: 0, totalServicios: 0 }
+    );
+  }
+
+  private buildResumenActividadPorHora(rawBloques: OperacionDiariaResponse['bloques']): ResumenActividadHora[] {
+    const grouped = new Map<string, ResumenActividadHora>();
+
+    (rawBloques ?? []).forEach((bloque) => {
+      const bloqueHora = (bloque?.bloqueHora ?? '').toString().trim();
+      this.getDetallesActivos(bloque?.detalles ?? []).forEach((detalle) => {
+        const codServicio = (detalle?.codServicio ?? '').toString().trim();
+        const nomServicio = (detalle?.nomServicio ?? '').toString().trim();
+        const key = `${bloqueHora}|${codServicio}|${nomServicio}`;
+        const current =
+          grouped.get(key) ??
+          ({
+            bloqueHora,
+            codServicio,
+            nomServicio,
+            totalActividadHora: 0,
+            paxActividadHora: 0,
+            cantidadServicios: 0
+          } satisfies ResumenActividadHora);
+
+        current.totalActividadHora += this.toNumber(detalle?.totalServicio);
+        current.paxActividadHora += this.toNumber(detalle?.totalPax);
+        current.cantidadServicios += 1;
+        grouped.set(key, current);
+      });
+    });
+
+    return Array.from(grouped.values());
+  }
+
+  private getDetallesActivos(detalles: OperacionDetalle[]): OperacionDetalle[] {
+    return (detalles ?? []).filter((detalle) => !this.isDetalleCancelado(detalle));
+  }
+
+  private isReservaCancelada(reserva: ReservaOperacionAgrupada): boolean {
+    const detalles = reserva?.detalles ?? [];
+    return detalles.length > 0 && detalles.every((detalle) => this.isDetalleCancelado(detalle));
+  }
+
+  private isDetalleCancelado(detalle: OperacionDetalle | null | undefined): boolean {
+    const estado = (detalle?.estado ?? '').toString().trim().toUpperCase();
+    return estado === 'CAN';
   }
 
   private syncSelectedBloqueHora(bloques: BloqueHoraAgrupado[]): void {
