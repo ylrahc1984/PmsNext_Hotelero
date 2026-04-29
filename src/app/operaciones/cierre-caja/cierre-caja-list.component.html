@@ -18,7 +18,7 @@
     <div class="col-12 col-md-4">
       <div class="card cc-summary-card">
         <div class="card-body">
-          <div class="cc-summary-label">Abiertos</div>
+          <div class="cc-summary-label">Cierres encontrados</div>
           <div class="cc-summary-value">{{ abiertosCount }}</div>
         </div>
       </div>
@@ -26,7 +26,7 @@
     <div class="col-12 col-md-4">
       <div class="card cc-summary-card">
         <div class="card-body">
-          <div class="cc-summary-label">Cerrados</div>
+          <div class="cc-summary-label">Puntos de venta</div>
           <div class="cc-summary-value">{{ cerradosCount }}</div>
         </div>
       </div>
@@ -34,7 +34,7 @@
     <div class="col-12 col-md-4">
       <div class="card cc-summary-card">
         <div class="card-body">
-          <div class="cc-summary-label">Diferencia acumulada</div>
+          <div class="cc-summary-label">Fondo de caja acumulado</div>
           <div class="cc-summary-value">₡ {{ diferenciaAcumulada | number:'1.2-2' }}</div>
         </div>
       </div>
@@ -48,22 +48,18 @@
           <label class="form-label">Fecha</label>
           <input type="date" class="form-control" formControlName="fecha">
         </div>
-        <div class="col-12 col-md-3">
-          <label class="form-label">Estado</label>
-          <select class="form-control" formControlName="estado">
-            <option *ngFor="let item of estados" [value]="item.value">{{ item.label }}</option>
-          </select>
-        </div>
-        <div class="col-12 col-md-4">
+        <div class="col-12 col-md-5">
           <label class="form-label">Punto de venta</label>
-          <select class="form-control" formControlName="pntVenta">
+          <select class="form-control" formControlName="pntVenta" [disabled]="puntosVentaLoading">
             <option value="">Todos</option>
+            <option value="" *ngIf="puntosVentaLoading" disabled>Cargando puntos de venta...</option>
+            <option value="" *ngIf="!puntosVentaLoading && puntosVenta.length === 0" disabled>Sin puntos de venta</option>
             <option *ngFor="let item of puntosVenta" [value]="item.codigo">
               {{ item.codigo }} - {{ item.descripcion }}
             </option>
           </select>
         </div>
-        <div class="col-12 col-md-2 d-grid gap-2">
+        <div class="col-12 col-md-4 d-grid gap-2">
           <button type="button" class="btn btn-outline-primary" (click)="applyFilters()">Buscar</button>
           <button type="button" class="btn btn-outline-secondary" (click)="resetFilters()">Limpiar</button>
         </div>
@@ -83,35 +79,23 @@
         <table class="table align-middle">
           <thead>
             <tr>
+              <th>Num. cierre</th>
               <th>Fecha</th>
-              <th>Punto de venta</th>
-              <th>Caja / Turno</th>
-              <th>Apertura</th>
-              <th>Sistema</th>
-              <th>Declarado</th>
-              <th>Diferencia</th>
-              <th>Estado</th>
-              <th class="text-end">Acción</th>
+              <th>Hora</th>
+              <th>Pnt. venta</th>
+              <th>Usuario</th>
+              <th class="text-end">Fondo caja</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let item of cierres">
+              <td>{{ item.numCierre }}</td>
               <td>{{ item.fecha }}</td>
+              <td>{{ item.hora }}</td>
               <td>{{ item.pntVenta || 'N/D' }}</td>
-              <td>{{ item.caja || '-' }} / {{ item.turno || '-' }}</td>
-              <td>₡ {{ item.montoApertura | number:'1.2-2' }}</td>
-              <td>₡ {{ item.totalSistema | number:'1.2-2' }}</td>
-              <td>₡ {{ item.totalDeclarado | number:'1.2-2' }}</td>
-              <td [class.text-danger]="item.diferenciaTotal < 0" [class.text-success]="item.diferenciaTotal > 0">
-                ₡ {{ item.diferenciaTotal | number:'1.2-2' }}
-              </td>
-              <td>
-                <span [class]="getEstadoBadgeClass(item)">{{ item.estado }}</span>
-              </td>
+              <td>{{ item.usuario || '-' }}</td>
               <td class="text-end">
-                <button type="button" class="btn btn-sm btn-outline-primary" (click)="abrirRegistro(item)">
-                  {{ item.estado === 'ABIERTO' ? 'Continuar' : 'Ver' }}
-                </button>
+                ₡ {{ item.fondoCaja | number:'1.2-2' }}
               </td>
             </tr>
           </tbody>

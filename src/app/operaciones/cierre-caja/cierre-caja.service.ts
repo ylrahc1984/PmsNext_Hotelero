@@ -1,18 +1,33 @@
-import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { Observable, of, throwError } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 
 import {
   CierreCajaEstado,
   CierreCajaLinea,
   CierreCajaListFilters,
   CierreCajaRecord,
-  CierreCajaUpsertInput
+  CierreCajaUpsertInput,
+  Denominacion,
+  DenominacionBatchItem,
+  DenominacionResumen,
+  EjecutarCierrePayload,
+  ReporteCierreEncabezado,
+  TmpFormaPago,
+  TmpFormaPagoPayload
 } from './models/cierre-caja.model';
+import { environment } from 'src/environments/environment.prod';  
 
 @Injectable({ providedIn: 'root' })
 export class CierreCajaService {
+  private readonly http = inject(HttpClient);
   private readonly storageKey = 'ope_cierre_caja_records_v1';
-
+  private readonly denominacionApiUrl = `${environment.apiUrl}/denominacion`;
+  private readonly tmpFormaPagoApiUrl = 'http://localhost:5000/api/tmpformapago';
+  private readonly ejecutarCierreApiUrl = 'http://localhost:5000/api/ejecutar-cierre';
+  private readonly reporteCierreApiUrl = 'http://localhost:5000/api/reporte-cierre';
+ 
   list(filters?: CierreCajaListFilters): Observable<CierreCajaRecord[]> {
     const normalized = this.readAll()
       .filter((item) => this.matchesFilters(item, filters))
@@ -96,6 +111,70 @@ export class CierreCajaService {
 
   close(id: string, input: CierreCajaUpsertInput): Observable<CierreCajaRecord> {
     return this.update(id, { ...input, estado: 'CERRADO' satisfies CierreCajaEstado });
+  }
+
+  inicializarDenominaciones(): Observable<unknown> {
+    return this.http.post<unknown>(`${this.denominacionApiUrl}/inicializar`, {}).pipe(
+      catchError((error) => this.handleHttpError(error, 'No se pudieron inicializar las denominaciones.'))
+    );
+  }
+
+  getDenominaciones(): Observable<Denominacion[]> {
+    return this.http.get<unknown>(this.denominacionApiUrl).pipe(
+      map((response) => this.normalizeDenominaciones(response)),
+      catchError((error) => this.handleHttpError(error, 'No se pudieron cargar las denominaciones.'))
+    );
+  }
+
+  getDenominacionesResumen(): Observable<DenominacionResumen> {
+    return this.http.get<unknown>(`${this.denominacionApiUrl}/resumen`).pipe(
+      map((response) => this.normalizeDenominacionResumen(response)),
+      catchError((error) => this.handleHttpError(error, 'No se pudo cargar el resumen de denominaciones.'))
+    );
+  }
+
+  updateDenominacionesBatch(payload: DenominacionBatchItem[]): Observable<unknown> {
+    return this.http.post<unknown>(`${this.denominacionApiUrl}/batch`, payload).pipe(
+      catchError((error) => this.handleHttpError(error, 'No se pudieron actualizar las denominaciones.'))
+    );
+  }
+
+  crearTmpFormaPago(payload: TmpFormaPagoPayload): Observable<unknown> {
+    return this.http.post<unknown>(`${this.tmpFormaPagoApiUrl}/crear`, payload).pipe(
+      catchError((error) => this.handleHttpError(error, 'No se pudo crear la tabla temporal de formas de pago.'))
+    );
+  }
+
+  consultarTmpFormaPago(operador: string): Observable<TmpFormaPago[]> {
+    return this.http.get<unknown>(`${this.tmpFormaPagoApiUrl}/consultar/${encodeURIComponent(operador)}`).pipe(
+      map((response) => this.normalizeTmpFormasPago(response)),
+      catchError((error) => this.handleHttpError(error, 'No se pudieron consultar las formas de pago temporales.'))
+    );
+  }
+
+  actualizarTmpFormaPago(payload: TmpFormaPagoPayload): Observable<unknown> {
+    return this.http.put<unknown>(`${this.tmpFormaPagoApiUrl}/actualizar`, payload).pipe(
+      catchError((error) => this.handleHttpError(error, 'No se pudo actualizar la forma de pago temporal.'))
+    );
+  }
+
+  ejecutarCierre(payload: EjecutarCierrePayload): Observable<unknown> {
+    return this.http.post<unknown>(this.ejecutarCierreApiUrl, payload).pipe(
+      catchError((error) => this.handleHttpError(error, 'No se pudo ejecutar el cierre de caja.'))
+    );
+  }
+
+  getReporteEncabezados(filters: CierreCajaListFilters): Observable<ReporteCierreEncabezado[]> {
+    let params = new HttpParams().set('fecha', this.formatDateForApi(filters.fecha));
+    const pntVenta = this.cleanText(filters.pntVenta);
+    if (pntVenta) {
+      params = params.set('pntVenta', pntVenta);
+    }
+
+    return this.http.get<unknown>(`${this.reporteCierreApiUrl}/encabezados`, { params }).pipe(
+      map((response) => this.normalizeReporteEncabezados(response)),
+      catchError((error) => this.handleHttpError(error, 'No se pudieron consultar los cierres de caja.'))
+    );
   }
 
   private matchesFilters(item: CierreCajaRecord, filters?: CierreCajaListFilters): boolean {
@@ -193,8 +272,115 @@ export class CierreCajaService {
     return `CC-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
   }
 
+  private normalizeDenominacionResumen(response: unknown): DenominacionResumen {
+    const raw = this.unwrapResponse(response) as any;
+    const denominaciones = this.normalizeDenominaciones(raw?.denominaciones ?? raw?.Denominaciones ?? []);
+    const totalMonedaNacional =
+      this.toNumber(raw?.totalMonedaNacional ?? raw?.TotalMonedaNacional) ||
+      this.round(denominaciones.reduce((sum, item) => sum + item.totalMN, 0));
+    const totalMonedaExtranjera =
+      this.toNumber(raw?.totalMonedaExtranjera ?? raw?.TotalMonedaExtranjera) ||
+      this.round(denominaciones.reduce((sum, item) => sum + item.totalME, 0));
+
+    return {
+      totalMonedaNacional,
+      totalMonedaExtranjera,
+      totalGeneral: this.toNumber(raw?.totalGeneral ?? raw?.TotalGeneral) || this.round(totalMonedaNacional + totalMonedaExtranjera),
+      denominaciones
+    };
+  }
+
+  private normalizeDenominaciones(response: unknown): Denominacion[] {
+    const raw = this.unwrapResponse(response);
+    const list = Array.isArray(raw) ? raw : [];
+    return list.map((item: any) => {
+      const mon = this.cleanText(item.MON ?? item.mon).toUpperCase();
+      const valor = this.toNumber(item.VALOR ?? item.valor);
+      const cantidad = this.toNumber(item.CANTIDAD ?? item.cantidad);
+      const mp = this.toNumber(item.MP ?? item.mp);
+      const computedTotal = this.round(valor * cantidad);
+
+      return {
+        orden: this.toNumber(item.ORDEN ?? item.orden),
+        nombre: this.cleanText(item.NOMBRE ?? item.nombre),
+        mon,
+        valor,
+        cantidad,
+        totalMN: this.toNumber(item.TOTALMN ?? item.totalMN ?? item.totalMn) || (mp === 1 || mon === 'COL' ? computedTotal : 0),
+        totalME: this.toNumber(item.TOTALME ?? item.totalME ?? item.totalMe) || (mp === 0 || mon !== 'COL' ? computedTotal : 0),
+        mp
+      };
+    }).sort((a, b) => a.orden - b.orden);
+  }
+
+  private normalizeTmpFormasPago(response: unknown): TmpFormaPago[] {
+    const raw = this.unwrapResponse(response);
+    const list = Array.isArray(raw) ? raw : [];
+    return list.map((item: any) => ({
+      frmPago: this.cleanText(item.FrmPago ?? item.frmPago),
+      descripcion: this.cleanText(item.Descripcion ?? item.descripcion),
+      moneda: this.cleanText(item.Moneda ?? item.moneda).toUpperCase(),
+      total: this.toNumber(item.Total ?? item.total),
+      valor: this.cleanText(item.Valor ?? item.valor)
+    }));
+  }
+
+  private normalizeReporteEncabezados(response: unknown): ReporteCierreEncabezado[] {
+    const raw = this.unwrapResponse(response);
+    const list = Array.isArray(raw) ? raw : [];
+    return list.map((item: any) => ({
+      numCierre: this.cleanText(item.MPV20_NumCierre),
+      fecha: this.formatDateForInput(this.cleanText(item.MPV20_Fecha)),
+      hora: this.cleanText(item.MPV20_Hora),
+      pntVenta: this.cleanText(item.MPV20_PntVenta),
+      usuario: this.cleanText(item.MPV20_Usuario || item.MA01_Usuario),
+      fondoCaja: this.toNumber(item.MPV20_FondoCaja)
+    }));
+  }
+
+  private unwrapResponse(response: unknown): unknown {
+    if (response && typeof response === 'object') {
+      return (response as any).data ?? (response as any).datos ?? response;
+    }
+    return response;
+  }
+
+  private handleHttpError(error: HttpErrorResponse, fallback: string): Observable<never> {
+    const apiMessage = (error.error && (error.error.mensaje || error.error.respuesta || error.error.message)) as
+      | string
+      | undefined;
+    return throwError(() => new Error(apiMessage || error.message || fallback));
+  }
+
   private cleanText(value: unknown): string {
     return String(value ?? '').trim();
+  }
+
+  private formatDateForApi(value: unknown): string {
+    const raw = this.cleanText(value);
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(raw)) {
+      return raw;
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      const [year, month, day] = raw.split('-');
+      return `${day}/${month}/${year}`;
+    }
+    return raw;
+  }
+
+  private formatDateForInput(value: unknown): string {
+    const raw = this.cleanText(value);
+    if (!raw) {
+      return '';
+    }
+    if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+      return raw.slice(0, 10);
+    }
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(raw)) {
+      const [day, month, year] = raw.split('/');
+      return `${year}-${month}-${day}`;
+    }
+    return raw;
   }
 
   private toNumber(value: unknown): number {

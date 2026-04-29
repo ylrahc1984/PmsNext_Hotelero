@@ -24,6 +24,221 @@
   min-width: 180px;
 }
 
+.cc-denom-card .card-body {
+  padding: 0.9rem;
+}
+
+.cc-denom-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.cc-denom-title {
+  min-width: 0;
+}
+
+.cc-denom-title > span {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 0.55rem;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.cc-denom-title h5 {
+  margin: 0.3rem 0 0.05rem;
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.cc-denom-title p {
+  line-height: 1.25;
+}
+
+.cc-denom-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.cc-denom-saving {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.cc-denom-actions .btn {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.cc-denom-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 0.65rem;
+}
+
+.cc-denom-summary > div {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  background: #f8fafc;
+}
+
+.cc-denom-summary span {
+  display: block;
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.cc-denom-summary strong {
+  display: block;
+  margin-top: 0.1rem;
+  color: #0f172a;
+  font-size: 0.98rem;
+}
+
+.cc-denom-panels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.cc-denom-panel {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.cc-denom-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  background: #f8fafc;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.cc-denom-panel-header h6 {
+  margin: 0.15rem 0 0;
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.cc-denom-panel-header strong {
+  color: #0f172a;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.cc-currency-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  height: 20px;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #075985;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.cc-currency-pill-usd {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.cc-denom-list {
+  display: grid;
+}
+
+.cc-denom-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) 78px minmax(96px, max-content);
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.42rem 0.75rem;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.cc-denom-row:last-child {
+  border-bottom: 0;
+}
+
+.cc-denom-row input {
+  min-width: 0;
+  height: 32px;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+
+.cc-denom-row strong {
+  justify-self: end;
+  color: #0f172a;
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+.cc-payment-row {
+  grid-template-columns: minmax(120px, 1fr) 108px minmax(108px, max-content);
+}
+
+.cc-denom-name {
+  min-width: 0;
+}
+
+.cc-denom-name span,
+.cc-denom-name small {
+  display: block;
+}
+
+.cc-denom-name span {
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 0.86rem;
+  line-height: 1.1;
+}
+
+.cc-denom-name small {
+  margin-top: 0.05rem;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.cc-denom-empty {
+  border: 1px dashed rgba(15, 23, 42, 0.18);
+  border-radius: 8px;
+  padding: 1rem;
+  color: #64748b;
+  text-align: center;
+  background: #f8fafc;
+}
+
 @media (max-width: 767.98px) {
   .cc-actions {
     flex-direction: column-reverse;
@@ -31,5 +246,41 @@
 
   .cc-actions .btn {
     width: 100%;
+  }
+
+  .cc-denom-actions {
+    flex-direction: column;
+  }
+
+  .cc-denom-actions .btn {
+    width: 100%;
+  }
+
+  .cc-denom-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .cc-denom-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 0.65rem;
+  }
+
+  .cc-denom-panels {
+    grid-template-columns: 1fr;
+  }
+
+  .cc-denom-row {
+    grid-template-columns: minmax(96px, 1fr) 72px minmax(88px, max-content);
+    gap: 0.5rem;
+    padding: 0.42rem 0.65rem;
+  }
+
+  .cc-payment-row {
+    grid-template-columns: minmax(96px, 1fr) 92px minmax(92px, max-content);
+  }
+
+  .cc-denom-panel-header {
+    padding: 0.5rem 0.65rem;
   }
 }

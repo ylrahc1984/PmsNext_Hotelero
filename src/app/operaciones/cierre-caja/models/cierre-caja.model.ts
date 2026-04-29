@@ -38,6 +38,15 @@ export interface CierreCajaListFilters {
   usuario?: string;
 }
 
+export interface ReporteCierreEncabezado {
+  numCierre: string;
+  fecha: string;
+  hora: string;
+  pntVenta: string;
+  usuario: string;
+  fondoCaja: number;
+}
+
 export interface CierreCajaUpsertInput {
   usuario: string;
   operador: string;
@@ -51,4 +60,57 @@ export interface CierreCajaUpsertInput {
   estado?: CierreCajaEstado;
   observaciones?: string;
   lineas: CierreCajaLinea[];
+}
+
+export interface Denominacion {
+  orden: number;
+  nombre: string;
+  mon: string;
+  valor: number;
+  cantidad: number;
+  totalMN: number;
+  totalME: number;
+  mp: number;
+}
+
+export interface DenominacionResumen {
+  totalMonedaNacional: number;
+  totalMonedaExtranjera: number;
+  totalGeneral: number;
+  denominaciones: Denominacion[];
+}
+
+export interface DenominacionBatchItem {
+  id: number;
+  cantidad: number;
+  monPrincip: number;
+}
+
+export interface TmpFormaPago {
+  frmPago: string;
+  descripcion: string;
+  moneda: string;
+  total: number;
+  valor: string;
+}
+
+export interface TmpFormaPagoPayload {
+  proceso: number;
+  codFrmPago: string;
+  moneda: string;
+  valor: number;
+  operador: string;
+  respuesta: string;
+}
+
+export interface EjecutarCierrePayload {
+  nomTabla: string;
+  fechaIng: string;
+  pntVenta: string;
+  fechaCie: string;
+  concepto: string;
+  fondo: number;
+  usuario: string;
+  usuCierre: string;
+  respuesta: string;
 }

@@ -2,7 +2,6 @@
   <div class="card cc-form-hero">
     <div class="card-body d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
       <div>
-        <p class="text-muted text-uppercase small fw-semibold mb-2">Operaciones</p>
         <h2 class="mb-1">{{ isNew ? 'Apertura de Caja' : 'Gestión de Cierre de Caja' }}</h2>
         <p class="text-muted mb-0">
           {{ isNew ? 'Registra la apertura del turno y deja lista la caja.' : 'Actualiza el conteo por forma de pago y cierra el turno.' }}
@@ -43,7 +42,13 @@
           </div>
           <div class="col-12 col-md-3">
             <label class="form-label">Monto apertura</label>
-            <input type="number" class="form-control" formControlName="montoApertura" min="0" step="0.01">
+            <input
+              type="text"
+              class="form-control text-end"
+              formControlName="montoApertura"
+              inputmode="decimal"
+              (blur)="formatMontoAperturaInput($event)"
+            >
           </div>
           <div class="col-12 col-md-3">
             <label class="form-label">Caja</label>
@@ -69,60 +74,218 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card cc-denom-card" *ngIf="showCierreSections">
       <div class="card-body">
-        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2 mb-3">
-          <div>
-            <h5 class="mb-1">Resumen por Forma de Pago</h5>
+        <div class="cc-denom-toolbar">
+          <div class="cc-denom-title">
+            <span>Conteo físico</span>
+            <h5>Conteo de Denominaciones</h5>
             <p class="text-muted mb-0 small">
-              En esta primera versión el monto sistema puede ajustarse manualmente hasta integrar los movimientos automáticos.
+              Registra la cantidad física por moneda y billete antes de confirmar el cierre.
             </p>
+          </div>
+          <div class="cc-denom-actions">
+            <span class="cc-denom-saving" *ngIf="isSavingDenominaciones">Guardando...</span>
+            <button
+              type="button"
+              class="btn btn-outline-primary"
+              (click)="inicializarDenominaciones()"
+              [disabled]="isClosed || isLoadingDenominaciones || isSavingDenominaciones"
+            >
+              Inicializar conteo
+            </button>
           </div>
         </div>
 
-        <div class="table-responsive">
-          <table class="table align-middle">
-            <thead>
-              <tr>
-                <th>Forma de pago</th>
-                <th>Tipo</th>
-                <th class="text-end">Monto sistema</th>
-                <th class="text-end">Monto declarado</th>
-                <th class="text-end">Diferencia</th>
-              </tr>
-            </thead>
-            <tbody formArrayName="lineas">
-              <tr *ngFor="let group of lineasArray.controls; let i = index" [formGroupName]="i">
-                <td>
-                  <div class="fw-semibold">{{ group.get('frmPago')?.value }}</div>
-                  <div class="text-muted small">{{ group.get('descripcion')?.value }}</div>
-                </td>
-                <td>{{ group.get('tipoPago')?.value || '-' }}</td>
-                <td>
-                  <input type="number" class="form-control text-end" formControlName="montoSistema" min="0" step="0.01">
-                </td>
-                <td>
-                  <input type="number" class="form-control text-end" formControlName="montoDeclarado" min="0" step="0.01">
-                </td>
-                <td class="text-end fw-semibold" [class.text-danger]="getLineDifference(i) < 0" [class.text-success]="getLineDifference(i) > 0">
-                  ₡ {{ getLineDifference(i) | number:'1.2-2' }}
-                </td>
-              </tr>
-              <tr *ngIf="lineasArray.length === 0">
-                <td colspan="5" class="text-center text-muted py-4">No hay formas de pago cargadas.</td>
-              </tr>
-            </tbody>
-            <tfoot>
-              <tr>
-                <th colspan="2" class="text-end">Totales</th>
-                <th class="text-end">₡ {{ totalSistema | number:'1.2-2' }}</th>
-                <th class="text-end">₡ {{ totalDeclarado | number:'1.2-2' }}</th>
-                <th class="text-end" [class.text-danger]="diferenciaTotal < 0" [class.text-success]="diferenciaTotal > 0">
-                  ₡ {{ diferenciaTotal | number:'1.2-2' }}
-                </th>
-              </tr>
-            </tfoot>
-          </table>
+        <div class="alert alert-warning py-2" *ngIf="denominacionesError">
+          {{ denominacionesError }}
+        </div>
+
+        <div class="cc-denom-summary">
+          <div>
+            <span>Moneda nacional</span>
+            <strong>₡ {{ totalDenominacionMN | number:'1.2-2' }}</strong>
+          </div>
+          <div>
+            <span>Moneda extranjera</span>
+            <strong>$ {{ totalDenominacionME | number:'1.2-2' }}</strong>
+          </div>
+        </div>
+
+        <div *ngIf="isLoadingDenominaciones" class="text-muted py-3">
+          Cargando denominaciones...
+        </div>
+
+        <div *ngIf="!isLoadingDenominaciones">
+          <div *ngIf="denominaciones.length > 0; else denominacionesVacias" class="cc-denom-panels">
+            <section class="cc-denom-panel">
+              <div class="cc-denom-panel-header">
+                <div>
+                  <span class="cc-currency-pill">COL</span>
+                  <h6>Colones</h6>
+                </div>
+                <strong>₡ {{ totalDenominacionMN | number:'1.2-2' }}</strong>
+              </div>
+
+              <div class="cc-denom-list">
+                <div class="cc-denom-row" *ngFor="let item of denominacionesColones; trackBy: trackDenominacion">
+                  <div class="cc-denom-name">
+                    <span>{{ item.nombre }}</span>
+                    <small>₡ {{ item.valor | number:'1.2-2' }}</small>
+                  </div>
+                  <input
+                    type="text"
+                    class="form-control text-end"
+                    inputmode="numeric"
+                    [value]="formatNumberInput(item.cantidad, 0)"
+                    (input)="updateDenominacionCantidad(item, $event)"
+                    (blur)="formatDenominacionCantidadInput(item, $event)"
+                    [disabled]="isClosed"
+                  >
+                  <strong>₡ {{ item.totalMN | number:'1.2-2' }}</strong>
+                </div>
+              </div>
+            </section>
+
+            <section class="cc-denom-panel">
+              <div class="cc-denom-panel-header">
+                <div>
+                  <span class="cc-currency-pill cc-currency-pill-usd">USD</span>
+                  <h6>Dólares</h6>
+                </div>
+                <strong>$ {{ totalDenominacionME | number:'1.2-2' }}</strong>
+              </div>
+
+              <div class="cc-denom-list">
+                <div class="cc-denom-row" *ngFor="let item of denominacionesDolares; trackBy: trackDenominacion">
+                  <div class="cc-denom-name">
+                    <span>{{ item.nombre }}</span>
+                    <small>$ {{ item.valor | number:'1.2-2' }}</small>
+                  </div>
+                  <input
+                    type="text"
+                    class="form-control text-end"
+                    inputmode="numeric"
+                    [value]="formatNumberInput(item.cantidad, 0)"
+                    (input)="updateDenominacionCantidad(item, $event)"
+                    (blur)="formatDenominacionCantidadInput(item, $event)"
+                    [disabled]="isClosed"
+                  >
+                  <strong>$ {{ item.totalME | number:'1.2-2' }}</strong>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <ng-template #denominacionesVacias>
+            <div class="cc-denom-empty">
+              Inicializa el conteo para cargar las denominaciones disponibles.
+            </div>
+          </ng-template>
+        </div>
+      </div>
+    </div>
+
+    <div class="card cc-denom-card" *ngIf="showCierreSections">
+      <div class="card-body">
+        <div class="cc-denom-toolbar">
+          <div class="cc-denom-title">
+            <span>Declaración</span>
+            <h5>Resumen por Forma de Pago</h5>
+            <p class="text-muted mb-0 small">
+              Detalle temporal por forma de pago y moneda para declarar el cierre.
+            </p>
+          </div>
+          <div class="cc-denom-actions">
+            <span class="cc-denom-saving" *ngIf="isSavingTmpFormasPago">Guardando...</span>
+          </div>
+        </div>
+
+        <div class="alert alert-warning py-2" *ngIf="tmpFormasPagoError">
+          {{ tmpFormasPagoError }}
+        </div>
+
+        <div class="cc-denom-summary">
+          <div>
+            <span>Total colones</span>
+            <strong>₡ {{ totalTmpFormaPagoColones | number:'1.2-2' }}</strong>
+          </div>
+          <div>
+            <span>Total dólares</span>
+            <strong>$ {{ totalTmpFormaPagoDolares | number:'1.2-2' }}</strong>
+          </div>
+        </div>
+
+        <div *ngIf="isLoadingTmpFormasPago" class="text-muted py-3">
+          Cargando formas de pago...
+        </div>
+
+        <div *ngIf="!isLoadingTmpFormasPago">
+          <div *ngIf="tmpFormasPago.length > 0; else formasPagoVacias" class="cc-denom-panels">
+            <section class="cc-denom-panel">
+              <div class="cc-denom-panel-header">
+                <div>
+                  <span class="cc-currency-pill">COL</span>
+                  <h6>Colones</h6>
+                </div>
+                <strong>₡ {{ totalTmpFormaPagoColones | number:'1.2-2' }}</strong>
+              </div>
+
+              <div class="cc-denom-list">
+                <div class="cc-denom-row cc-payment-row" *ngFor="let item of tmpFormasPagoColones; trackBy: trackTmpFormaPago">
+                  <div class="cc-denom-name">
+                    <span>{{ item.frmPago }}</span>
+                    <small>{{ item.descripcion }}</small>
+                  </div>
+                  <input
+                    type="text"
+                    class="form-control text-end"
+                    inputmode="decimal"
+                    [value]="getTmpFormaPagoInputValue(item)"
+                    (input)="updateTmpFormaPagoTotal(item, $event)"
+                    (blur)="formatTmpFormaPagoTotalInput(item, $event)"
+                    [disabled]="isClosed"
+                  >
+                  <strong>₡ {{ item.total | number:'1.2-2' }}</strong>
+                </div>
+              </div>
+            </section>
+
+            <section class="cc-denom-panel">
+              <div class="cc-denom-panel-header">
+                <div>
+                  <span class="cc-currency-pill cc-currency-pill-usd">USD</span>
+                  <h6>Dólares</h6>
+                </div>
+                <strong>$ {{ totalTmpFormaPagoDolares | number:'1.2-2' }}</strong>
+              </div>
+
+              <div class="cc-denom-list">
+                <div class="cc-denom-row cc-payment-row" *ngFor="let item of tmpFormasPagoDolares; trackBy: trackTmpFormaPago">
+                  <div class="cc-denom-name">
+                    <span>{{ item.frmPago }}</span>
+                    <small>{{ item.descripcion }}</small>
+                  </div>
+                  <input
+                    type="text"
+                    class="form-control text-end"
+                    inputmode="decimal"
+                    [value]="getTmpFormaPagoInputValue(item)"
+                    (input)="updateTmpFormaPagoTotal(item, $event)"
+                    (blur)="formatTmpFormaPagoTotalInput(item, $event)"
+                    [disabled]="isClosed"
+                  >
+                  <strong>$ {{ item.total | number:'1.2-2' }}</strong>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <ng-template #formasPagoVacias>
+            <div class="cc-denom-empty">
+              No hay formas de pago cargadas para el operador actual.
+            </div>
+          </ng-template>
         </div>
       </div>
     </div>

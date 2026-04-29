@@ -9,7 +9,7 @@ import { PuntoVentaUI } from 'src/app/demo/administracion/usuarios/usuario.model
 import { UsuarioService } from 'src/app/demo/administracion/usuarios/usuario.service';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { CierreCajaService } from './cierre-caja.service';
-import { CierreCajaRecord } from './models/cierre-caja.model';
+import { ReporteCierreEncabezado } from './models/cierre-caja.model';
 
 @Component({
   selector: 'app-cierre-caja-list',
@@ -27,18 +27,12 @@ export class CierreCajaListComponent implements OnInit {
 
   readonly filtrosForm = this.fb.group({
     fecha: this.fb.control(this.getTodayIsoDate()),
-    estado: this.fb.control(''),
     pntVenta: this.fb.control('')
   });
 
-  readonly estados = [
-    { value: '', label: 'Todos' },
-    { value: 'ABIERTO', label: 'Abiertos' },
-    { value: 'CERRADO', label: 'Cerrados' }
-  ];
-
-  cierres: CierreCajaRecord[] = [];
+  cierres: ReporteCierreEncabezado[] = [];
   puntosVenta: PuntoVentaUI[] = [];
+  puntosVentaLoading = false;
   isLoading = false;
   currentUsuario = '';
 
@@ -56,7 +50,6 @@ export class CierreCajaListComponent implements OnInit {
   resetFilters(): void {
     this.filtrosForm.reset({
       fecha: this.getTodayIsoDate(),
-      estado: '',
       pntVenta: ''
     });
     this.loadCierres();
@@ -66,42 +59,64 @@ export class CierreCajaListComponent implements OnInit {
     void this.router.navigate(['/operaciones/cierre-caja/nuevo']);
   }
 
-  abrirRegistro(item: CierreCajaRecord): void {
-    void this.router.navigate(['/operaciones/cierre-caja', item.id]);
-  }
-
   get abiertosCount(): number {
-    return this.cierres.filter((item) => item.estado === 'ABIERTO').length;
+    return this.cierres.length;
   }
 
   get cerradosCount(): number {
-    return this.cierres.filter((item) => item.estado === 'CERRADO').length;
+    return this.puntosVenta.length;
   }
 
   get diferenciaAcumulada(): number {
-    return this.round(this.cierres.reduce((sum, item) => sum + this.toNumber(item.diferenciaTotal), 0));
-  }
-
-  getEstadoBadgeClass(item: CierreCajaRecord): string {
-    if (item.estado === 'CERRADO') {
-      return 'badge bg-success-subtle text-success border border-success-subtle';
-    }
-    if (item.estado === 'ANULADO') {
-      return 'badge bg-danger-subtle text-danger border border-danger-subtle';
-    }
-    return 'badge bg-warning-subtle text-warning border border-warning-subtle';
+    return this.round(this.cierres.reduce((sum, item) => sum + this.toNumber(item.fondoCaja), 0));
   }
 
   private loadPuntosVenta(): void {
-    const request$ = this.currentUsuario
-      ? this.usuarioService.getPuntosVentaUsuario(this.currentUsuario)
-      : this.usuarioService.getPuntosVenta();
+    if (!this.currentUsuario) {
+      this.loadPuntosVentaCatalogo();
+      return;
+    }
 
-    request$
+    this.puntosVentaLoading = true;
+    this.usuarioService
+      .getPuntosVentaUsuario(this.currentUsuario)
       .pipe(catchError(() => of([] as PuntoVentaUI[])))
       .subscribe((data) => {
-        this.puntosVenta = [...(data ?? [])].sort((a, b) => a.orden - b.orden);
+        const puntosVenta = this.sortPuntosVenta(data);
+        if (puntosVenta.length > 0) {
+          this.applyPuntosVentaCatalogo(puntosVenta);
+          this.puntosVentaLoading = false;
+          return;
+        }
+
+        this.loadPuntosVentaCatalogo();
       });
+  }
+
+  private loadPuntosVentaCatalogo(): void {
+    this.puntosVentaLoading = true;
+    this.usuarioService
+      .getPuntosVenta()
+      .pipe(
+        catchError(() => of([] as PuntoVentaUI[])),
+        finalize(() => (this.puntosVentaLoading = false))
+      )
+      .subscribe((data) => {
+        this.applyPuntosVentaCatalogo(this.sortPuntosVenta(data));
+      });
+  }
+
+  private applyPuntosVentaCatalogo(puntosVenta: PuntoVentaUI[]): void {
+    this.puntosVenta = puntosVenta;
+
+    const current = this.filtrosForm.controls.pntVenta.value;
+    if (current && !this.puntosVenta.some((item) => item.codigo === current)) {
+      this.filtrosForm.controls.pntVenta.setValue('', { emitEvent: false });
+    }
+  }
+
+  private sortPuntosVenta(data: PuntoVentaUI[] | null | undefined): PuntoVentaUI[] {
+    return [...(data ?? [])].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
   }
 
   private loadCierres(): void {
@@ -109,10 +124,8 @@ export class CierreCajaListComponent implements OnInit {
     const value = this.filtrosForm.getRawValue();
 
     this.cierreCajaService
-      .list({
-        usuario: this.currentUsuario,
+      .getReporteEncabezados({
         fecha: value.fecha,
-        estado: value.estado,
         pntVenta: value.pntVenta
       })
       .pipe(finalize(() => (this.isLoading = false)))
