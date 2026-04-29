@@ -17,16 +17,17 @@ import {
   TmpFormaPago,
   TmpFormaPagoPayload
 } from './models/cierre-caja.model';
-import { environment } from 'src/environments/environment.prod';  
+import { environment } from 'src/environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class CierreCajaService {
   private readonly http = inject(HttpClient);
   private readonly storageKey = 'ope_cierre_caja_records_v1';
-  private readonly denominacionApiUrl = `${environment.apiUrl}/denominacion`;
-  private readonly tmpFormaPagoApiUrl = 'http://localhost:5000/api/tmpformapago';
-  private readonly ejecutarCierreApiUrl = 'http://localhost:5000/api/ejecutar-cierre';
-  private readonly reporteCierreApiUrl = 'http://localhost:5000/api/reporte-cierre';
+  private readonly baseApiUrl = (environment.apiUrl ?? '').toString().replace(/\/+$/, '');
+  private readonly denominacionApiUrl = `${this.baseApiUrl}/denominacion`;
+  private readonly tmpFormaPagoApiUrl = `${this.baseApiUrl}/tmpformapago`;
+  private readonly ejecutarCierreApiUrl = `${this.baseApiUrl}/ejecutar-cierre`;
+  private readonly reporteCierreApiUrl = `${this.baseApiUrl}/reporte-cierre`;
  
   list(filters?: CierreCajaListFilters): Observable<CierreCajaRecord[]> {
     const normalized = this.readAll()
