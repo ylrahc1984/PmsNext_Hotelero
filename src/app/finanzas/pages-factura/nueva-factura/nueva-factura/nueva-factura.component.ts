@@ -13,14 +13,15 @@ import { CommonModule } from '@angular/common';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
-import { forkJoin } from 'rxjs';
-import { distinctUntilChanged, finalize, startWith, debounceTime } from 'rxjs/operators';
+import { forkJoin, of } from 'rxjs';
+import { catchError, distinctUntilChanged, finalize, startWith, debounceTime, switchMap } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { environment } from 'src/environments/environment';
 import { ClienteUI } from 'src/app/demo/catalogos/agencias-comisionistas/cliente.models';
-import { ClienteService } from 'src/app/demo/catalogos/agencias-comisionistas/cliente.service';
+import { ClienteService, SelectOption } from 'src/app/demo/catalogos/agencias-comisionistas/cliente.service';
+import { ActividadComercialService } from 'src/app/demo/catalogos/agencias-comisionistas/actividad-comercial/actividad-comercial.service';
 import { NuevaFacturaClienteModalComponent } from '../nueva-factura-cliente-modal/nueva-factura-cliente-modal.component';
 import { MonedaService, MonedaUI } from 'src/app/demo/administracion/monedas/moneda.service';
 import { AuthService } from 'src/app/core/services/auth.service';
@@ -82,6 +83,7 @@ export class NuevaFacturaComponent implements OnInit {
   private readonly authService                   = inject(AuthService);
   private readonly empresaContext                = inject(EmpresaContextService);
   private readonly clienteService                = inject(ClienteService);
+  private readonly actividadComercialService     = inject(ActividadComercialService);
   private readonly usuarioService                = inject(UsuarioService);
   private readonly formaPagoService              = inject(FormaPagoService);
   private readonly planesTarifasService          = inject(PlanesTarifasService);
@@ -128,6 +130,18 @@ export class NuevaFacturaComponent implements OnInit {
     pagos                 : this.fb.array<FormGroup<PagoForm>>([])
   });
 
+  readonly nuevoClienteForm = this.fb.group({
+    nombreCli            : ['', [Validators.required]],
+    ruc                  : ['', [Validators.required, Validators.pattern(/^[0-9]+$/)]],
+    direccion            : [''],
+    email                : ['', [Validators.required, Validators.email, Validators.pattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)]],
+    telefono1            : [''],
+    tCliente             : ['', [Validators.required]],
+    enviarCorreo         : [false],
+    actividadCodigoAMH   : [''],
+    actividadDescripcion : ['']
+  });
+
   readonly lineasCalculo: LineaCalculo[] = [];
   resumen                   : TotalesResumen = { subtotal: 0, descuento: 0, neto: 0, impuesto: 0, total: 0 };
 
@@ -140,6 +154,7 @@ export class NuevaFacturaComponent implements OnInit {
   clienteSearchLoading      = false;
   clienteSearchError        : string | null = null;
   showClienteModal          = false;
+  showNuevoClienteModal     = false;
   showServicioModal         = false;
   showReservaModal          = false;
   showDescuentoModal        = false;
@@ -182,6 +197,11 @@ export class NuevaFacturaComponent implements OnInit {
 
   listasPrecio             : ListaPrecioUI[] = [];
   listasPrecioLoading      = false;
+
+  tipoClienteOptions       : SelectOption[] = [];
+  tipoClienteOptionsLoading = false;
+  nuevoClienteSaving       = false;
+  nuevoClienteError        : string | null = null;
 
   isSubmitting             = false;
   showConfirmModal         = false;
@@ -272,6 +292,13 @@ export class NuevaFacturaComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(() => this.loadTipoCambio());
+
+    this.nuevoClienteForm.controls.enviarCorreo.valueChanges
+      .pipe(startWith(this.nuevoClienteForm.controls.enviarCorreo.value), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.syncNuevoClienteActividadValidators();
+        this.cdr.markForCheck();
+      });
 
   }
 
@@ -522,6 +549,22 @@ export class NuevaFacturaComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
+  public abrirModalNuevoCliente(): void {
+    if (this.locked) return;
+    this.nuevoClienteError = null;
+    this.showNuevoClienteModal = true;
+    this.resetNuevoClienteForm();
+    this.loadTipoIdentificacionOptionsParaNuevoCliente();
+    this.cdr.markForCheck();
+  }
+
+  public cerrarModalNuevoCliente(): void {
+    if (this.nuevoClienteSaving) return;
+    this.showNuevoClienteModal = false;
+    this.nuevoClienteError = null;
+    this.cdr.markForCheck();
+  }
+
   public abrirModalServicios(): void {
     if (this.locked || this.modoReserva) return;
     const codLista = (this.form.controls.listaPrecio.value || '').toString().trim();
@@ -767,13 +810,134 @@ export class NuevaFacturaComponent implements OnInit {
         nomCliente        : cliente.nombre,
         rucCliente        : cliente.ruc,
         correoCliente     : cliente.email || '',
-        codigoActividad   : this.normalizeCodigoActividad(cliente.codigoActividad),
+        codigoActividad   : this.formatCodigoActividadDisplay(cliente.codigoActividad),
       },
       { emitEvent: false }
     );
     this.syncTiposDocumentoCliente(cliente.enviarCorreo);
     this.cdr.markForCheck();
     this.clearClienteSearchResults();
+  }
+
+  public guardarNuevoCliente(): void {
+    if (this.locked || this.nuevoClienteSaving) return;
+    this.syncNuevoClienteActividadValidators();
+    this.nuevoClienteForm.markAllAsTouched();
+    if (this.nuevoClienteForm.invalid) {
+      this.nuevoClienteError = 'Complete los campos requeridos antes de guardar el cliente.';
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const raw = this.nuevoClienteForm.getRawValue();
+    const nombre = (raw.nombreCli || '').toString().trim();
+    const ruc = (raw.ruc || '').toString().trim();
+    const email = (raw.email || '').toString().trim();
+    const telefono1 = (raw.telefono1 || '').toString().trim();
+    const enviarCorreo = !!raw.enviarCorreo;
+    const codigoActividadRaw = this.normalizeCodigoAmhInput(raw.actividadCodigoAMH);
+    const codigoActividad = this.formatCodigoActividadDisplay(codigoActividadRaw);
+    const cliente = this.buildNuevoClienteUI({
+      nombre,
+      ruc,
+      direccion: (raw.direccion || '').toString().trim(),
+      email,
+      telefono1,
+      tCliente: (raw.tCliente || '').toString().trim(),
+      enviarCorreo,
+      codigoActividad: enviarCorreo ? codigoActividad : ''
+    });
+    const clientePayload = this.clienteService.buildPayloadFromUI(cliente, 1);
+    const actividadPayload = this.actividadComercialService.buildPayload(
+      {
+        id: 0,
+        cedula: ruc,
+        codigoAMH: codigoActividadRaw,
+        descripcion: (raw.actividadDescripcion || '').toString().trim(),
+        principal: 1
+      },
+      1
+    );
+
+    this.nuevoClienteSaving = true;
+    this.nuevoClienteError = null;
+    this.clienteService
+      .crearCliente(clientePayload)
+      .pipe(
+        switchMap((response) => {
+          if (!enviarCorreo) {
+            return of(response);
+          }
+          return this.actividadComercialService.crearActividad(actividadPayload).pipe(switchMap(() => of(response)));
+        }),
+        switchMap((response) => {
+          const codigo = this.extractCodigoClienteFromResponse(response?.respuesta);
+          if (codigo) {
+            return this.clienteService.getClienteByCodigo(codigo).pipe(catchError(() => of(null)));
+          }
+          return of(null);
+        }),
+        switchMap((clientePorCodigo) => {
+          if (clientePorCodigo) {
+            return of(clientePorCodigo);
+          }
+          return this.clienteService.getClientes(1, 20, nombre).pipe(
+            switchMap((response) => {
+              const nuevoCliente =
+                (response.data ?? []).find((item) => item.ruc.trim() === ruc) ??
+                (response.data ?? []).find((item) => item.nombre.trim().toLowerCase() === nombre.toLowerCase()) ??
+                null;
+              return of(nuevoCliente);
+            })
+          );
+        }),
+        finalize(() => {
+          this.nuevoClienteSaving = false;
+          this.cdr.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (clienteCreado) => {
+          if (!clienteCreado) {
+            this.nuevoClienteError = 'El cliente fue creado, pero no se pudo recuperar automaticamente. Busquelo por nombre o cedula.';
+            return;
+          }
+          const clienteSeleccionable: ClienteUI = {
+            ...clienteCreado,
+            codigoActividad: this.formatCodigoActividadDisplay(clienteCreado.codigoActividad || (enviarCorreo ? codigoActividad : ''))
+          };
+          this.showNuevoClienteModal = false;
+          this.onClienteSelected(clienteSeleccionable);
+        },
+        error: (error: unknown) => {
+          this.nuevoClienteError = this.resolveErrorMessage(error, 'No se pudo crear el cliente.');
+        }
+      });
+  }
+
+  public onNuevoClienteRucInput(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const sanitized = (input?.value || '').replace(/\D/g, '');
+    if (input && input.value !== sanitized) {
+      input.value = sanitized;
+    }
+    this.nuevoClienteForm.controls.ruc.setValue(sanitized, { emitEvent: false });
+  }
+
+  public onNuevoClienteEmailBlur(): void {
+    const normalized = (this.nuevoClienteForm.controls.email.value || '').toString().trim().toLowerCase();
+    this.nuevoClienteForm.controls.email.setValue(normalized, { emitEvent: false });
+    this.nuevoClienteForm.controls.email.updateValueAndValidity({ emitEvent: false });
+  }
+
+  public onNuevoClienteCodigoAmhInput(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const sanitized = this.normalizeCodigoAmhInput(input?.value);
+    if (input && input.value !== sanitized) {
+      input.value = sanitized;
+    }
+    this.nuevoClienteForm.controls.actividadCodigoAMH.setValue(sanitized, { emitEvent: false });
   }
 
   public limpiarSeleccionCliente(): void {
@@ -785,7 +949,7 @@ export class NuevaFacturaComponent implements OnInit {
         nomCliente          : '',
         rucCliente          : '',
         correoCliente       : '',
-        codigoActividad     : this.normalizeCodigoActividad(''),
+        codigoActividad     : '',
       },
       { emitEvent: false }
     );
@@ -1441,7 +1605,7 @@ export class NuevaFacturaComponent implements OnInit {
           nomCliente        : cliente.nombre,
           rucCliente        : cliente.ruc,
           correoCliente     : cliente.email || '',
-          codigoActividad   : this.normalizeCodigoActividad(cliente.codigoActividad),
+          codigoActividad   : this.formatCodigoActividadDisplay(cliente.codigoActividad),
 
         },
         { emitEvent: false }
@@ -1454,7 +1618,7 @@ export class NuevaFacturaComponent implements OnInit {
           nomCliente        : '',
           rucCliente        : '',
           correoCliente     : '',
-          codigoActividad   : this.normalizeCodigoActividad('')
+          codigoActividad   : ''
 
         },
         { emitEvent: false }
@@ -1506,6 +1670,157 @@ export class NuevaFacturaComponent implements OnInit {
     this.clienteSearchResults = [];
     this.clienteSearchLoading = false;
     this.clienteSearchError = null;
+  }
+
+  private resetNuevoClienteForm(): void {
+    this.nuevoClienteForm.reset(
+      {
+        nombreCli: '',
+        ruc: '',
+        direccion: '',
+        email: '',
+        telefono1: '',
+        tCliente: this.tipoClienteOptions[0]?.value?.toString() || '',
+        enviarCorreo: false,
+        actividadCodigoAMH: '',
+        actividadDescripcion: ''
+      },
+      { emitEvent: false }
+    );
+    this.syncNuevoClienteActividadValidators();
+  }
+
+  private loadTipoIdentificacionOptionsParaNuevoCliente(): void {
+    if (this.tipoClienteOptions.length || this.tipoClienteOptionsLoading) {
+      return;
+    }
+    this.tipoClienteOptionsLoading = true;
+    this.clienteService
+      .getTipoIdentificacionOptions()
+      .pipe(
+        finalize(() => {
+          this.tipoClienteOptionsLoading = false;
+          this.cdr.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (options) => {
+          this.tipoClienteOptions = options ?? [];
+          const current = this.nuevoClienteForm.controls.tCliente.value;
+          if (!current && this.tipoClienteOptions[0]?.value) {
+            this.nuevoClienteForm.controls.tCliente.setValue(this.tipoClienteOptions[0].value.toString(), { emitEvent: false });
+          }
+        },
+        error: () => {
+          this.tipoClienteOptions = [];
+        }
+      });
+  }
+
+  private syncNuevoClienteActividadValidators(): void {
+    const requiereActividad = !!this.nuevoClienteForm.controls.enviarCorreo.value;
+    const codigoControl = this.nuevoClienteForm.controls.actividadCodigoAMH;
+    const descripcionControl = this.nuevoClienteForm.controls.actividadDescripcion;
+    if (requiereActividad) {
+      codigoControl.setValidators([Validators.required, Validators.pattern(/^(?=.*\d)[0-9.]+$/)]);
+      descripcionControl.setValidators([Validators.required]);
+    } else {
+      codigoControl.clearValidators();
+      descripcionControl.clearValidators();
+      codigoControl.setValue('', { emitEvent: false });
+      descripcionControl.setValue('', { emitEvent: false });
+    }
+    codigoControl.updateValueAndValidity({ emitEvent: false });
+    descripcionControl.updateValueAndValidity({ emitEvent: false });
+  }
+
+  private normalizeCodigoAmhInput(value: string | null | undefined): string {
+    return (value ?? '').toString().replace(/[^0-9.]/g, '');
+  }
+
+  private buildNuevoClienteUI(value: {
+    nombre: string;
+    ruc: string;
+    direccion: string;
+    email: string;
+    telefono1: string;
+    tCliente: string;
+    enviarCorreo: boolean;
+    codigoActividad: string;
+  }): ClienteUI {
+    const contacto = {
+      id: 0,
+      nomContacto: value.nombre,
+      cargo: '',
+      email: value.email,
+      telefono1: value.telefono1,
+      telefono2: '',
+      movil: value.telefono1,
+      ext: '',
+      principal: true,
+      activo: true,
+      observacion: '',
+      accion: 'I',
+      operador: this.getOperador(),
+      fechaRegistro: null
+    };
+
+    return {
+      codigo: '',
+      nombre: value.nombre,
+      ruc: value.ruc,
+      contacto: value.nombre,
+      nombreContacto: value.nombre,
+      contactoPrincipal: value.nombre,
+      emailPrincipal: value.email,
+      telefonoPrincipal: value.telefono1,
+      cargoPrincipal: '',
+      direccion: value.direccion,
+      provincia: '',
+      ciudad: '',
+      pais: '',
+      zona: '',
+      email: value.email,
+      telefono1: value.telefono1,
+      telefono2: '',
+      fax: '',
+      tipoCli: 'AGE',
+      mtoCredito: 0,
+      idProvincia: '',
+      idCanton: '',
+      idDistrito: '',
+      tCliente: value.tCliente,
+      enviarCorreo: value.enviarCorreo,
+      totalContactos: 1,
+      contactos: [contacto],
+      operador: this.getOperador(),
+      codigoActividad: value.codigoActividad,
+      nombreActividad: ''
+    };
+  }
+
+  private extractCodigoClienteFromResponse(respuesta: string | undefined): string {
+    const text = (respuesta || '').toString().trim();
+    if (!text) {
+      return '';
+    }
+    const explicitMatch = /(?:codigo|cliente)\s*[:=]\s*([A-Za-z0-9_-]+)/i.exec(text);
+    if (explicitMatch?.[1]) {
+      return explicitMatch[1].trim();
+    }
+    return /^[A-Za-z0-9_-]{1,20}$/.test(text) ? text : '';
+  }
+
+  private resolveErrorMessage(error: unknown, fallback: string): string {
+    if (error instanceof HttpErrorResponse) {
+      const body = error.error;
+      if (typeof body === 'string' && body.trim()) {
+        return body.trim();
+      }
+      return body?.mensaje || body?.respuesta || error.message || fallback;
+    }
+    return error instanceof Error ? error.message : fallback;
   }
 
   private aplicarDetalleReserva(detalles: ReservaPendienteDetalle[]): void {
@@ -1960,6 +2275,10 @@ export class NuevaFacturaComponent implements OnInit {
     }
 
     return '000000';
+  }
+
+  private formatCodigoActividadDisplay(value: string | null | undefined): string {
+    return (value ?? '').toString().trim();
   }
 
   private formatDateForSql(value: string): string {

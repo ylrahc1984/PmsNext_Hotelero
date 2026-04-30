@@ -154,6 +154,16 @@
             <div class="nf-client-card">
               <div class="nf-client-card__header">
                 <div class="nf-client-card__title">Datos del Cliente</div>
+                <button
+                  class="btn btn-sm btn-outline-success nf-client-card__new"
+                  type="button"
+                  (click)="abrirModalNuevoCliente()"
+                  [disabled]="locked"
+                  title="Crear cliente"
+                >
+                  <i class="feather icon-user-plus me-1"></i>
+                  Nuevo cliente
+                </button>
               </div>
 
               <div class="row nf-client-row">
@@ -560,6 +570,142 @@
   (close)="showClienteModal = false"
   (clienteSelected)="onClienteSelected($event)"
 ></app-nueva-factura-cliente-modal>
+
+<div class="modal-backdrop fade show" *ngIf="showNuevoClienteModal"></div>
+<div class="modal fade show d-block" *ngIf="showNuevoClienteModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document">
+    <div class="modal-content nf-new-client-modal">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title">Crear cliente</h5>
+          <div class="text-muted small">Registro rapido para facturacion</div>
+        </div>
+        <button type="button" class="btn-close" aria-label="Close" (click)="cerrarModalNuevoCliente()"></button>
+      </div>
+      <div class="modal-body">
+        <form [formGroup]="nuevoClienteForm" class="nf-new-client-form">
+          <div class="nf-modal-section">
+            <div class="nf-modal-section__title">Datos principales</div>
+            <div class="row g-3">
+              <div class="col-md-8">
+                <label class="form-label nf-label">Nombre del cliente</label>
+                <input
+                  class="form-control"
+                  formControlName="nombreCli"
+                  placeholder="Nombre legal o comercial"
+                  [class.is-invalid]="nuevoClienteForm.controls.nombreCli.invalid && nuevoClienteForm.controls.nombreCli.touched"
+                >
+              </div>
+              <div class="col-md-4">
+                <label class="form-label nf-label">Cedula</label>
+                <input
+                  class="form-control"
+                  formControlName="ruc"
+                  placeholder="Identificacion"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  (input)="onNuevoClienteRucInput($event)"
+                  [class.is-invalid]="nuevoClienteForm.controls.ruc.invalid && nuevoClienteForm.controls.ruc.touched"
+                >
+              </div>
+              <div class="col-md-8">
+                <label class="form-label nf-label">Direccion</label>
+                <input class="form-control" formControlName="direccion" placeholder="Direccion fiscal o comercial">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label nf-label">Tipo cliente</label>
+                <select
+                  class="form-control"
+                  formControlName="tCliente"
+                  [class.is-invalid]="nuevoClienteForm.controls.tCliente.invalid && nuevoClienteForm.controls.tCliente.touched"
+                >
+                  <option value="" disabled>Seleccione un tipo</option>
+                  <option *ngIf="tipoClienteOptionsLoading" value="" disabled>Cargando tipos...</option>
+                  <option *ngIf="!tipoClienteOptionsLoading && tipoClienteOptions.length === 0" value="" disabled>No hay tipos disponibles</option>
+                  <option *ngFor="let tipo of tipoClienteOptions" [value]="tipo.value">
+                    {{ tipo.value }} - {{ tipo.label }}
+                  </option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label nf-label">Correo electronico</label>
+                <input
+                  type="email"
+                  class="form-control"
+                  formControlName="email"
+                  placeholder="correo@empresa.com"
+                  autocomplete="email"
+                  (blur)="onNuevoClienteEmailBlur()"
+                  [class.is-invalid]="nuevoClienteForm.controls.email.invalid && nuevoClienteForm.controls.email.touched"
+                >
+              </div>
+              <div class="col-md-3">
+                <label class="form-label nf-label">Telefono</label>
+                <input class="form-control" formControlName="telefono1" placeholder="Telefono principal">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label nf-label">Comprobante</label>
+                <label class="nf-invoice-toggle" [class.nf-invoice-toggle--active]="nuevoClienteForm.controls.enviarCorreo.value">
+                  <input type="checkbox" formControlName="enviarCorreo">
+                  <span>
+                    <strong>{{ nuevoClienteForm.controls.enviarCorreo.value ? 'Factura Electronica' : 'Tiquete Electronico' }}</strong>
+                    <small>{{ nuevoClienteForm.controls.enviarCorreo.value ? 'Requiere actividad MH' : 'Sin actividad MH' }}</small>
+                  </span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="nf-modal-section nf-modal-section--activity" *ngIf="nuevoClienteForm.controls.enviarCorreo.value">
+            <div class="nf-modal-section__title">Actividad comercial MH</div>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label nf-label">Codigo AMH</label>
+                <input
+                  class="form-control"
+                  formControlName="actividadCodigoAMH"
+                  placeholder="000000"
+                  maxlength="20"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  (input)="onNuevoClienteCodigoAmhInput($event)"
+                  [class.is-invalid]="nuevoClienteForm.controls.actividadCodigoAMH.invalid && nuevoClienteForm.controls.actividadCodigoAMH.touched"
+                >
+              </div>
+              <div class="col-md-8">
+                <label class="form-label nf-label">Descripcion</label>
+                <input
+                  class="form-control"
+                  formControlName="actividadDescripcion"
+                  placeholder="Descripcion de la actividad"
+                  [class.is-invalid]="nuevoClienteForm.controls.actividadDescripcion.invalid && nuevoClienteForm.controls.actividadDescripcion.touched"
+                >
+              </div>
+            </div>
+            <div class="nf-modal-note">
+              Esta actividad se guardara como principal y se usara como codigo de actividad comercial del documento.
+            </div>
+          </div>
+
+          <div class="alert alert-danger mb-0" *ngIf="nuevoClienteError">
+            <i class="feather icon-alert-circle me-1"></i>
+            {{ nuevoClienteError }}
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer d-flex justify-content-between flex-wrap gap-2">
+        <button type="button" class="btn btn-outline-secondary" (click)="cerrarModalNuevoCliente()" [disabled]="nuevoClienteSaving">
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-primary" (click)="guardarNuevoCliente()" [disabled]="nuevoClienteSaving">
+          <span *ngIf="nuevoClienteSaving" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+          <i *ngIf="!nuevoClienteSaving" class="feather icon-save me-1"></i>
+          Guardar cliente
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <app-reserva-pendiente-modal
   *ngIf="showReservaModal"
