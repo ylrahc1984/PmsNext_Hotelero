@@ -1,0 +1,336 @@
+<div class="cc-detail-page">
+  <div class="card cc-detail-hero">
+    <div class="card-body">
+      <div class="cc-detail-hero-inner">
+        <div>
+          <p class="text-muted text-uppercase small fw-semibold mb-2">Operaciones / Cierre de caja</p>
+          <h2 class="mb-1">Detalle del cierre {{ numCierre }}</h2>
+          <p class="text-muted mb-0" *ngIf="reporte">
+            {{ reporte.nombreEmpresa || 'Empresa' }} · RUC {{ reporte.rucEmpresa || 'N/D' }}
+          </p>
+        </div>
+        <div class="cc-detail-actions">
+          <button type="button" class="btn btn-outline-secondary" (click)="volver()">Volver</button>
+          <button type="button" class="btn btn-primary" (click)="imprimirPdf()" [disabled]="isPrinting || !reporte">
+            <i class="ti ti-printer"></i>
+            <span>{{ isPrinting ? 'Generando...' : 'Imprimir PDF' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="isLoading" class="card">
+    <div class="card-body text-muted">Cargando detalle del cierre...</div>
+  </div>
+
+  <div *ngIf="!isLoading && errorMessage" class="alert alert-danger mb-0">
+    {{ errorMessage }}
+  </div>
+
+  <ng-container *ngIf="!isLoading && !errorMessage && reporte as data">
+    <div class="card">
+      <div class="card-body">
+        <div class="cc-header-grid">
+          <div>
+            <span>Número de cierre</span>
+            <strong>{{ data.encabezado.numCierre || numCierre }}</strong>
+          </div>
+          <div>
+            <span>Tipo</span>
+            <strong>{{ data.encabezado.tipoCierre || 'Cierre de caja' }}</strong>
+          </div>
+          <div>
+            <span>Punto de venta</span>
+            <strong>{{ data.encabezado.puntoVenta || 'N/D' }}</strong>
+          </div>
+          <div>
+            <span>Usuario</span>
+            <strong>{{ data.encabezado.usuario || 'N/D' }}</strong>
+          </div>
+          <div>
+            <span>Apertura</span>
+            <strong>{{ data.encabezado.fechaApertura || 'N/D' }} {{ data.encabezado.horaApertura }}</strong>
+          </div>
+          <div>
+            <span>Cierre</span>
+            <strong>{{ data.encabezado.fechaCierre || 'N/D' }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cc-kpi-grid">
+      <div class="card cc-kpi-card">
+        <div class="card-body">
+          <span>Venta final</span>
+          <strong>$ {{ data.resumen.totalVentasFinal | number:'1.2-2' }}</strong>
+          <small>Neto $ {{ data.resumen.totalVentasNeto | number:'1.2-2' }}</small>
+        </div>
+      </div>
+      <div class="card cc-kpi-card">
+        <div class="card-body">
+          <span>Notas de pedido</span>
+          <strong>$ {{ data.resumen.totalNotasPedido | number:'1.2-2' }}</strong>
+          <small>{{ data.resumen.cantidadNotasPedido | number:'1.0-0' }} registros</small>
+        </div>
+      </div>
+      <div class="card cc-kpi-card">
+        <div class="card-body">
+          <span>Documentos</span>
+          <strong>{{ data.resumen.totalDocumentos | number:'1.0-0' }}</strong>
+          <small>{{ documentos.length }} ventas · {{ notasCredito.length }} NC</small>
+        </div>
+      </div>
+      <div class="card cc-kpi-card">
+        <div class="card-body">
+          <span>Efectivo en caja</span>
+          <strong>₡ {{ data.resumen.efectivoEnCaja | number:'1.2-2' }}</strong>
+          <small>Fondo ₡ {{ data.resumen.fondoCaja | number:'1.2-2' }}</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <div class="cc-section-title">
+          <div>
+            <span>Resumen financiero</span>
+            <h5>Totales del cierre</h5>
+          </div>
+        </div>
+        <div class="cc-summary-grid">
+          <div><span>Ventas bruto</span><strong>$ {{ data.resumen.totalVentasBruto | number:'1.2-2' }}</strong></div>
+          <div><span>Descuentos</span><strong>$ {{ data.resumen.totalDescuentos | number:'1.2-2' }}</strong></div>
+          <div><span>Impuestos</span><strong>$ {{ data.resumen.totalImpuestos | number:'1.2-2' }}</strong></div>
+          <div><span>Venta neta final</span><strong>$ {{ data.resumen.ventaNetaFinal | number:'1.2-2' }}</strong></div>
+          <div><span>Total dólares</span><strong>$ {{ data.resumen.totalDolares | number:'1.2-2' }}</strong></div>
+          <div><span>Efectivo MN</span><strong>₡ {{ data.resumen.totalEfectivoMN | number:'1.2-2' }}</strong></div>
+          <div><span>Efectivo ME</span><strong>$ {{ data.resumen.totalEfectivoME | number:'1.2-2' }}</strong></div>
+          <div><span>Notas crédito</span><strong>$ {{ data.resumen.totalNotasCredito | number:'1.2-2' }}</strong></div>
+        </div>
+
+        <div class="cc-payment-chips" *ngIf="totalesPorFormaPago.length > 0">
+          <div *ngFor="let item of totalesPorFormaPago">
+            <span>{{ item.descripcion }}</span>
+            <strong>{{ item.total | number:'1.2-2' }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <div class="cc-tabs" role="tablist">
+          <button type="button" [class.active]="activeTab === 'documentos'" (click)="setTab('documentos')">
+            Documentos <span>{{ documentos.length }}</span>
+          </button>
+          <button type="button" [class.active]="activeTab === 'notasPedido'" (click)="setTab('notasPedido')">
+            Notas pedido <span>{{ notasPedido.length }}</span>
+          </button>
+          <button type="button" [class.active]="activeTab === 'pagos'" (click)="setTab('pagos')">
+            Pagos <span>{{ pagosDocumentos.length + pagosNotasPedido.length + resumenFormasPago.length }}</span>
+          </button>
+          <button type="button" [class.active]="activeTab === 'denominaciones'" (click)="setTab('denominaciones')">
+            Denominaciones <span>{{ denominaciones.length }}</span>
+          </button>
+        </div>
+
+        <section *ngIf="activeTab === 'documentos'" class="cc-tab-panel">
+          <div class="cc-section-title">
+            <div>
+              <span>Ventas facturadas</span>
+              <h5>Documentos del cierre</h5>
+            </div>
+            <strong>$ {{ data.resumen.totalVentasFinal | number:'1.2-2' }}</strong>
+          </div>
+
+          <div *ngIf="documentos.length === 0" class="cc-empty">No hay documentos en este cierre.</div>
+          <div *ngIf="documentos.length > 0" class="table-responsive">
+            <table class="table table-sm align-middle cc-data-table">
+              <thead>
+                <tr>
+                  <th>Documento</th>
+                  <th>Fecha</th>
+                  <th>Cliente</th>
+                  <th>Mozo</th>
+                  <th>Moneda</th>
+                  <th class="text-end">Subtotal</th>
+                  <th class="text-end">Desc.</th>
+                  <th class="text-end">Impuesto</th>
+                  <th class="text-end">Total</th>
+                  <th class="text-end">Pago</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of documentos; trackBy: trackByDocumento">
+                  <td>
+                    <strong>{{ item.tipoDocumento }}-{{ item.serie }}</strong>
+                    <small>{{ item.numeroDocumento }}</small>
+                  </td>
+                  <td>{{ item.fechaDocumento }} {{ item.hora }}</td>
+                  <td>
+                    <strong>{{ item.nombreCliente || 'N/D' }}</strong>
+                    <small>{{ item.codCliente }} · {{ item.rucCliente }}</small>
+                  </td>
+                  <td>{{ item.codMozo || '-' }}</td>
+                  <td>{{ item.moneda }}</td>
+                  <td class="text-end">{{ item.subTotal | number:'1.2-2' }}</td>
+                  <td class="text-end">{{ item.descuento | number:'1.2-2' }}</td>
+                  <td class="text-end">{{ item.impuesto | number:'1.2-2' }}</td>
+                  <td class="text-end fw-semibold">{{ item.totalDocumento | number:'1.2-2' }}</td>
+                  <td class="text-end fw-semibold">{{ item.totalPago | number:'1.2-2' }}</td>
+                  <td><span [class]="estadoClass(item.estado)">{{ item.estado || 'N/D' }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section *ngIf="activeTab === 'notasPedido'" class="cc-tab-panel">
+          <div class="cc-section-title">
+            <div>
+              <span>Pedidos abiertos</span>
+              <h5>Notas de pedido</h5>
+            </div>
+            <strong>$ {{ data.resumen.totalNotasPedido | number:'1.2-2' }}</strong>
+          </div>
+
+          <div *ngIf="notasPedido.length === 0" class="cc-empty">No hay notas de pedido en este cierre.</div>
+          <div *ngIf="notasPedido.length > 0" class="table-responsive">
+            <table class="table table-sm align-middle cc-data-table">
+              <thead>
+                <tr>
+                  <th>Nota</th>
+                  <th>Fecha</th>
+                  <th>Cliente</th>
+                  <th>Vendedor</th>
+                  <th>Items</th>
+                  <th class="text-end">Subtotal</th>
+                  <th class="text-end">Impuesto</th>
+                  <th class="text-end">Total</th>
+                  <th class="text-end">Pago</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of notasPedido; trackBy: trackByNotaPedido">
+                  <td>
+                    <strong>{{ item.tipoNDP }}-{{ item.serieNDP }}</strong>
+                    <small>{{ item.numeroNDP }}</small>
+                  </td>
+                  <td>{{ item.fechaDocumento }} {{ item.hora }}</td>
+                  <td>
+                    <strong>{{ item.nombreCliente || 'N/D' }}</strong>
+                    <small>{{ item.codCliente }} · {{ item.rucCliente }}</small>
+                  </td>
+                  <td>{{ item.codVendedor || item.operador || '-' }}</td>
+                  <td>{{ item.cantidadItems | number:'1.0-0' }}</td>
+                  <td class="text-end">{{ item.subTotal | number:'1.2-2' }}</td>
+                  <td class="text-end">{{ item.impuesto | number:'1.2-2' }}</td>
+                  <td class="text-end fw-semibold">{{ item.totalDocumento | number:'1.2-2' }}</td>
+                  <td class="text-end fw-semibold">{{ item.totalPago | number:'1.2-2' }}</td>
+                  <td><span [class]="estadoClass(item.estadoDocumento)">{{ item.estadoDocumento || 'N/D' }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section *ngIf="activeTab === 'pagos'" class="cc-tab-panel">
+          <div class="cc-split-grid">
+            <div class="cc-panel">
+              <div class="cc-panel-header">
+                <h6>Formas de pago documentos</h6>
+                <strong>{{ totalPagosDocumentos | number:'1.2-2' }}</strong>
+              </div>
+              <div *ngIf="pagosDocumentos.length === 0" class="cc-empty cc-empty-compact">Sin pagos de documentos.</div>
+              <div *ngFor="let item of pagosDocumentos; trackBy: trackByPago" class="cc-pay-row">
+                <div><strong>{{ item.codFormaPago }}</strong><span>{{ item.descFormaPago }}</span></div>
+                <span>{{ item.moneda }}</span>
+                <strong>{{ item.monto | number:'1.2-2' }}</strong>
+              </div>
+            </div>
+
+            <div class="cc-panel">
+              <div class="cc-panel-header">
+                <h6>Formas de pago notas pedido</h6>
+                <strong>{{ totalPagosNotasPedido | number:'1.2-2' }}</strong>
+              </div>
+              <div *ngIf="pagosNotasPedido.length === 0" class="cc-empty cc-empty-compact">Sin pagos de notas de pedido.</div>
+              <div *ngFor="let item of pagosNotasPedido; trackBy: trackByPago" class="cc-pay-row">
+                <div><strong>{{ item.codFormaPago }}</strong><span>{{ item.descFormaPago }}</span></div>
+                <span>{{ item.moneda }}</span>
+                <strong>{{ item.monto | number:'1.2-2' }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="cc-panel cc-panel-wide">
+            <div class="cc-panel-header">
+              <h6>Resumen declarado por forma de pago</h6>
+            </div>
+            <div *ngIf="resumenFormasPago.length === 0" class="cc-empty cc-empty-compact">Sin resumen declarado.</div>
+            <div class="table-responsive" *ngIf="resumenFormasPago.length > 0">
+              <table class="table table-sm align-middle cc-data-table mb-0">
+                <thead>
+                  <tr>
+                    <th>Código</th>
+                    <th>Forma de pago</th>
+                    <th>Tipo</th>
+                    <th>Medio</th>
+                    <th>Moneda</th>
+                    <th class="text-end">Total</th>
+                    <th>Detalles</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let item of resumenFormasPago; trackBy: trackByResumenPago">
+                    <td>{{ item.codFormaPago }}</td>
+                    <td>{{ item.descFormaPago }}</td>
+                    <td>{{ item.tipoFormaPago || '-' }}</td>
+                    <td>{{ item.medioPago || '-' }}</td>
+                    <td>{{ item.moneda }}</td>
+                    <td class="text-end fw-semibold">{{ item.total | number:'1.2-2' }}</td>
+                    <td>{{ item.detalles || '-' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section *ngIf="activeTab === 'denominaciones'" class="cc-tab-panel">
+          <div class="cc-split-grid">
+            <div class="cc-panel">
+              <div class="cc-panel-header">
+                <h6>Conteo en colones</h6>
+                <strong>₡ {{ totalDenominacionesMN | number:'1.2-2' }}</strong>
+              </div>
+              <div *ngFor="let item of denominaciones; trackBy: trackByDenominacion">
+                <div class="cc-denom-row" *ngIf="item.totalMonedaNacional > 0">
+                  <div><strong>{{ item.denominacion }}</strong><span>{{ item.moneda }} · Cant. {{ item.cantidad | number:'1.0-0' }}</span></div>
+                  <strong>₡ {{ item.totalMonedaNacional | number:'1.2-2' }}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="cc-panel">
+              <div class="cc-panel-header">
+                <h6>Conteo en dólares</h6>
+                <strong>$ {{ totalDenominacionesME | number:'1.2-2' }}</strong>
+              </div>
+              <div *ngFor="let item of denominaciones; trackBy: trackByDenominacion">
+                <div class="cc-denom-row" *ngIf="item.totalMonedaExtranjera > 0">
+                  <div><strong>{{ item.denominacion }}</strong><span>{{ item.moneda }} · Cant. {{ item.cantidad | number:'1.0-0' }}</span></div>
+                  <strong>$ {{ item.totalMonedaExtranjera | number:'1.2-2' }}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </ng-container>
+</div>

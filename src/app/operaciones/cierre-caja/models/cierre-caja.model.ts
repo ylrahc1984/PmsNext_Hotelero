@@ -47,6 +47,134 @@ export interface ReporteCierreEncabezado {
   fondoCaja: number;
 }
 
+export interface CierreCajaReporteEncabezado {
+  numCierre: string;
+  fechaApertura: string;
+  horaApertura: string;
+  fechaCierre: string;
+  puntoVenta: string;
+  tipoCierre: string;
+  usuario: string;
+  fondoCaja: number;
+}
+
+export interface CierreCajaDocumento {
+  tipoDocumento: string;
+  serie: string;
+  numeroDocumento: string;
+  fechaDocumento: string;
+  hora: string;
+  codCliente: string;
+  rucCliente: string;
+  nombreCliente: string;
+  numMesa: string;
+  numPax: number;
+  codMozo: string;
+  moneda: string;
+  tipoCambio: number;
+  subTotal: number;
+  descuento: number;
+  neto: number;
+  impuesto: number;
+  exonerado: number;
+  propinas: number;
+  totalDocumento: number;
+  totalPago: number;
+  estado: string;
+  usuarioCreacion: string;
+}
+
+export interface CierreCajaNotaPedido {
+  tipoNDP: string;
+  serieNDP: string;
+  numeroNDP: string;
+  puntoVenta: string;
+  fechaDocumento: string;
+  hora: string;
+  codVendedor: string;
+  codCliente: string;
+  rucCliente: string;
+  nombreCliente: string;
+  direccionCliente: string;
+  moneda: string;
+  tipoCambio: number;
+  exonerado: number;
+  subTotal: number;
+  impuesto: number;
+  totalDocumento: number;
+  totalPago: number;
+  estadoDocumento: string;
+  cantidadItems: number;
+  numReferencia: string;
+  observaciones: string;
+  operador: string;
+}
+
+export interface CierreCajaFormaPagoReporte {
+  codFormaPago: string;
+  descFormaPago: string;
+  moneda: string;
+  monto: number;
+}
+
+export interface CierreCajaDenominacionReporte {
+  numCierre: string;
+  codDenominacion: string;
+  denominacion: string;
+  moneda: string;
+  cantidad: number;
+  totalMonedaNacional: number;
+  totalMonedaExtranjera: number;
+}
+
+export interface CierreCajaResumenFormaPago {
+  numCierre: string;
+  codFormaPago: string;
+  descFormaPago: string;
+  tipoFormaPago: string;
+  medioPago: string;
+  moneda: string;
+  total: number;
+  detalles: string;
+}
+
+export interface CierreCajaResumenReporte {
+  totalVentasBruto: number;
+  totalDescuentos: number;
+  totalVentasNeto: number;
+  totalImpuestos: number;
+  totalVentasFinal: number;
+  totalNotasCredito: number;
+  totalNotasPedido: number;
+  ventaNetaFinal: number;
+  totalSoles: number;
+  totalDolares: number;
+  totalesPorFormaPago: Record<string, number>;
+  cantidadFacturas: number;
+  cantidadBoletas: number;
+  cantidadNotasCredito: number;
+  cantidadNotasPedido: number;
+  totalDocumentos: number;
+  totalEfectivoMN: number;
+  totalEfectivoME: number;
+  fondoCaja: number;
+  efectivoEnCaja: number;
+}
+
+export interface CierreCajaReporteDetalle {
+  encabezado: CierreCajaReporteEncabezado;
+  documentos: CierreCajaDocumento[];
+  notasCredito: CierreCajaDocumento[];
+  formasPagoDocumentos: CierreCajaFormaPagoReporte[];
+  denominaciones: CierreCajaDenominacionReporte[];
+  resumenFormasPago: CierreCajaResumenFormaPago[];
+  notasPedido: CierreCajaNotaPedido[];
+  formasPagoNotasPedido: CierreCajaFormaPagoReporte[];
+  resumen: CierreCajaResumenReporte;
+  nombreEmpresa: string;
+  rucEmpresa: string;
+}
+
 export interface CierreCajaUpsertInput {
   usuario: string;
   operador: string;

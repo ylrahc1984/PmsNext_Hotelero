@@ -85,6 +85,7 @@
               <th>Pnt. venta</th>
               <th>Usuario</th>
               <th class="text-end">Fondo caja</th>
+              <th class="text-end cc-actions-col">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -96,6 +97,29 @@
               <td>{{ item.usuario || '-' }}</td>
               <td class="text-end">
                 ₡ {{ item.fondoCaja | number:'1.2-2' }}
+              </td>
+              <td class="text-end">
+                <div class="cc-row-actions">
+                  <button
+                    type="button"
+                    class="btn btn-outline-primary btn-sm"
+                    (click)="verDetalle(item)"
+                    title="Ver detalle"
+                  >
+                    <i class="ti ti-eye"></i>
+                    <span>Ver</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    (click)="imprimirCierre(item)"
+                    [disabled]="isPrinting(item)"
+                    title="Imprimir PDF"
+                  >
+                    <i class="ti ti-printer"></i>
+                    <span>{{ isPrinting(item) ? 'Generando...' : 'PDF' }}</span>
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>

@@ -35,6 +35,7 @@ export class CierreCajaListComponent implements OnInit {
   puntosVentaLoading = false;
   isLoading = false;
   currentUsuario = '';
+  printingCierres = new Set<string>();
 
   ngOnInit(): void {
     const user = this.authService.getCurrentUser();
@@ -57,6 +58,38 @@ export class CierreCajaListComponent implements OnInit {
 
   nuevaApertura(): void {
     void this.router.navigate(['/operaciones/cierre-caja/nuevo']);
+  }
+
+  verDetalle(item: ReporteCierreEncabezado): void {
+    const numCierre = this.cleanText(item.numCierre);
+    if (!numCierre) {
+      return;
+    }
+
+    void this.router.navigate(['/operaciones/cierre-caja', numCierre, 'detalle']);
+  }
+
+  imprimirCierre(item: ReporteCierreEncabezado): void {
+    const numCierre = this.cleanText(item.numCierre);
+    if (!numCierre || this.printingCierres.has(numCierre)) {
+      return;
+    }
+
+    this.printingCierres.add(numCierre);
+    this.cierreCajaService
+      .getCierreCajaPdf(numCierre)
+      .pipe(finalize(() => this.printingCierres.delete(numCierre)))
+      .subscribe({
+        next: (blob) => this.openPdfBlob(blob, `Cierre_Caja_${numCierre}.pdf`),
+        error: (error: unknown) => {
+          window.alert(error instanceof Error ? error.message : 'No se pudo generar el PDF del cierre de caja.');
+        }
+      });
+  }
+
+  isPrinting(item: ReporteCierreEncabezado): boolean {
+    const numCierre = this.cleanText(item.numCierre);
+    return !!numCierre && this.printingCierres.has(numCierre);
   }
 
   get abiertosCount(): number {
@@ -146,5 +179,27 @@ export class CierreCajaListComponent implements OnInit {
 
   private round(value: number): number {
     return Math.round((this.toNumber(value) + Number.EPSILON) * 100) / 100;
+  }
+
+  private cleanText(value: unknown): string {
+    return String(value ?? '').trim();
+  }
+
+  private openPdfBlob(blob: Blob, filename: string): void {
+    const pdfBlob = new Blob([blob], { type: 'application/pdf' });
+    const objectUrl = URL.createObjectURL(pdfBlob);
+    const opened = window.open(objectUrl, '_blank', 'noopener');
+
+    if (!opened) {
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = filename;
+      link.rel = 'noopener';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
   }
 }

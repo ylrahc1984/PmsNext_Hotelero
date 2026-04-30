@@ -35,3 +35,23 @@
   text-align: center;
   color: #64748b;
 }
+
+.cc-actions-col {
+  width: 180px;
+}
+
+.cc-row-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.cc-row-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-width: 72px;
+}

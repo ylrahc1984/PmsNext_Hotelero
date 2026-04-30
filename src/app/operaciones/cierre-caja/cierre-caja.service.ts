@@ -13,6 +13,12 @@ import {
   DenominacionBatchItem,
   DenominacionResumen,
   EjecutarCierrePayload,
+  CierreCajaDenominacionReporte,
+  CierreCajaDocumento,
+  CierreCajaFormaPagoReporte,
+  CierreCajaNotaPedido,
+  CierreCajaReporteDetalle,
+  CierreCajaResumenFormaPago,
   ReporteCierreEncabezado,
   TmpFormaPago,
   TmpFormaPagoPayload
@@ -28,6 +34,8 @@ export class CierreCajaService {
   private readonly tmpFormaPagoApiUrl = `${this.baseApiUrl}/tmpformapago`;
   private readonly ejecutarCierreApiUrl = `${this.baseApiUrl}/ejecutar-cierre`;
   private readonly reporteCierreApiUrl = `${this.baseApiUrl}/reporte-cierre`;
+  private readonly cierreCajaPdfApiUrl = `${this.baseApiUrl}/generar-cierre-caja-pdf/Pdf`;
+  private readonly cierreCajaReporteApiUrl = `${this.baseApiUrl}/generar-cierre-caja-pdf/Reporte`;
  
   list(filters?: CierreCajaListFilters): Observable<CierreCajaRecord[]> {
     const normalized = this.readAll()
@@ -175,6 +183,19 @@ export class CierreCajaService {
     return this.http.get<unknown>(`${this.reporteCierreApiUrl}/encabezados`, { params }).pipe(
       map((response) => this.normalizeReporteEncabezados(response)),
       catchError((error) => this.handleHttpError(error, 'No se pudieron consultar los cierres de caja.'))
+    );
+  }
+
+  getCierreCajaPdf(numCierre: string): Observable<Blob> {
+    return this.http
+      .get(`${this.cierreCajaPdfApiUrl}/${encodeURIComponent(numCierre)}`, { responseType: 'blob' })
+      .pipe(catchError((error) => this.handleHttpError(error, 'No se pudo generar el PDF del cierre de caja.')));
+  }
+
+  getCierreCajaReporte(numCierre: string): Observable<CierreCajaReporteDetalle> {
+    return this.http.get<unknown>(`${this.cierreCajaReporteApiUrl}/${encodeURIComponent(numCierre)}`).pipe(
+      map((response) => this.normalizeCierreCajaReporte(response)),
+      catchError((error) => this.handleHttpError(error, 'No se pudo consultar el detalle del cierre de caja.'))
     );
   }
 
@@ -337,6 +358,162 @@ export class CierreCajaService {
       usuario: this.cleanText(item.MPV20_Usuario || item.MA01_Usuario),
       fondoCaja: this.toNumber(item.MPV20_FondoCaja)
     }));
+  }
+
+  private normalizeCierreCajaReporte(response: unknown): CierreCajaReporteDetalle {
+    const raw = this.unwrapResponse(response) as any;
+    const encabezado = raw?.encabezado ?? {};
+    const resumen = raw?.resumen ?? {};
+
+    return {
+      encabezado: {
+        numCierre: this.cleanText(encabezado.numCierre),
+        fechaApertura: this.formatDateForInput(this.cleanText(encabezado.fechaApertura)),
+        horaApertura: this.cleanText(encabezado.horaApertura),
+        fechaCierre: this.formatDateForInput(this.cleanText(encabezado.fechaCierre)),
+        puntoVenta: this.cleanText(encabezado.puntoVenta),
+        tipoCierre: this.cleanText(encabezado.tipoCierre),
+        usuario: this.cleanText(encabezado.usuario),
+        fondoCaja: this.toNumber(encabezado.fondoCaja)
+      },
+      documentos: this.normalizeReporteDocumentos(raw?.documentos),
+      notasCredito: this.normalizeReporteDocumentos(raw?.notasCredito),
+      formasPagoDocumentos: this.normalizeReporteFormasPago(raw?.formasPagoDocumentos),
+      denominaciones: this.normalizeReporteDenominaciones(raw?.denominaciones),
+      resumenFormasPago: this.normalizeReporteResumenFormasPago(raw?.resumenFormasPago),
+      notasPedido: this.normalizeReporteNotasPedido(raw?.notasPedido),
+      formasPagoNotasPedido: this.normalizeReporteFormasPago(raw?.formasPagoNotasPedido),
+      resumen: {
+        totalVentasBruto: this.toNumber(resumen.totalVentasBruto),
+        totalDescuentos: this.toNumber(resumen.totalDescuentos),
+        totalVentasNeto: this.toNumber(resumen.totalVentasNeto),
+        totalImpuestos: this.toNumber(resumen.totalImpuestos),
+        totalVentasFinal: this.toNumber(resumen.totalVentasFinal),
+        totalNotasCredito: this.toNumber(resumen.totalNotasCredito),
+        totalNotasPedido: this.toNumber(resumen.totalNotasPedido),
+        ventaNetaFinal: this.toNumber(resumen.ventaNetaFinal),
+        totalSoles: this.toNumber(resumen.totalSoles),
+        totalDolares: this.toNumber(resumen.totalDolares),
+        totalesPorFormaPago: this.normalizeNumberRecord(resumen.totalesPorFormaPago),
+        cantidadFacturas: this.toNumber(resumen.cantidadFacturas),
+        cantidadBoletas: this.toNumber(resumen.cantidadBoletas),
+        cantidadNotasCredito: this.toNumber(resumen.cantidadNotasCredito),
+        cantidadNotasPedido: this.toNumber(resumen.cantidadNotasPedido),
+        totalDocumentos: this.toNumber(resumen.totalDocumentos),
+        totalEfectivoMN: this.toNumber(resumen.totalEfectivoMN),
+        totalEfectivoME: this.toNumber(resumen.totalEfectivoME),
+        fondoCaja: this.toNumber(resumen.fondoCaja),
+        efectivoEnCaja: this.toNumber(resumen.efectivoEnCaja)
+      },
+      nombreEmpresa: this.cleanText(raw?.nombreEmpresa),
+      rucEmpresa: this.cleanText(raw?.rucEmpresa)
+    };
+  }
+
+  private normalizeReporteDocumentos(value: unknown): CierreCajaDocumento[] {
+    const list = Array.isArray(value) ? value : [];
+    return list.map((item: any) => ({
+      tipoDocumento: this.cleanText(item.tipoDocumento),
+      serie: this.cleanText(item.serie),
+      numeroDocumento: this.cleanText(item.numeroDocumento),
+      fechaDocumento: this.formatDateForInput(this.cleanText(item.fechaDocumento)),
+      hora: this.cleanText(item.hora),
+      codCliente: this.cleanText(item.codCliente),
+      rucCliente: this.cleanText(item.rucCliente),
+      nombreCliente: this.cleanText(item.nombreCliente),
+      numMesa: this.cleanText(item.numMesa),
+      numPax: this.toNumber(item.numPax),
+      codMozo: this.cleanText(item.codMozo),
+      moneda: this.cleanText(item.moneda),
+      tipoCambio: this.toNumber(item.tipoCambio),
+      subTotal: this.toNumber(item.subTotal),
+      descuento: this.toNumber(item.descuento),
+      neto: this.toNumber(item.neto),
+      impuesto: this.toNumber(item.impuesto),
+      exonerado: this.toNumber(item.exonerado),
+      propinas: this.toNumber(item.propinas),
+      totalDocumento: this.toNumber(item.totalDocumento),
+      totalPago: this.toNumber(item.totalPago),
+      estado: this.cleanText(item.estado),
+      usuarioCreacion: this.cleanText(item.usuarioCreacion)
+    }));
+  }
+
+  private normalizeReporteNotasPedido(value: unknown): CierreCajaNotaPedido[] {
+    const list = Array.isArray(value) ? value : [];
+    return list.map((item: any) => ({
+      tipoNDP: this.cleanText(item.tipoNDP),
+      serieNDP: this.cleanText(item.serieNDP),
+      numeroNDP: this.cleanText(item.numeroNDP),
+      puntoVenta: this.cleanText(item.puntoVenta),
+      fechaDocumento: this.formatDateForInput(this.cleanText(item.fechaDocumento)),
+      hora: this.cleanText(item.hora),
+      codVendedor: this.cleanText(item.codVendedor),
+      codCliente: this.cleanText(item.codCliente),
+      rucCliente: this.cleanText(item.rucCliente),
+      nombreCliente: this.cleanText(item.nombreCliente),
+      direccionCliente: this.cleanText(item.direccionCliente),
+      moneda: this.cleanText(item.moneda),
+      tipoCambio: this.toNumber(item.tipoCambio),
+      exonerado: this.toNumber(item.exonerado),
+      subTotal: this.toNumber(item.subTotal),
+      impuesto: this.toNumber(item.impuesto),
+      totalDocumento: this.toNumber(item.totalDocumento),
+      totalPago: this.toNumber(item.totalPago),
+      estadoDocumento: this.cleanText(item.estadoDocumento),
+      cantidadItems: this.toNumber(item.cantidadItems),
+      numReferencia: this.cleanText(item.numReferencia),
+      observaciones: this.cleanText(item.observaciones),
+      operador: this.cleanText(item.operador)
+    }));
+  }
+
+  private normalizeReporteFormasPago(value: unknown): CierreCajaFormaPagoReporte[] {
+    const list = Array.isArray(value) ? value : [];
+    return list.map((item: any) => ({
+      codFormaPago: this.cleanText(item.codFormaPago),
+      descFormaPago: this.cleanText(item.descFormaPago),
+      moneda: this.cleanText(item.moneda),
+      monto: this.toNumber(item.monto)
+    }));
+  }
+
+  private normalizeReporteDenominaciones(value: unknown): CierreCajaDenominacionReporte[] {
+    const list = Array.isArray(value) ? value : [];
+    return list.map((item: any) => ({
+      numCierre: this.cleanText(item.numCierre),
+      codDenominacion: this.cleanText(item.codDenominacion),
+      denominacion: this.cleanText(item.denominacion),
+      moneda: this.cleanText(item.moneda),
+      cantidad: this.toNumber(item.cantidad),
+      totalMonedaNacional: this.toNumber(item.totalMonedaNacional),
+      totalMonedaExtranjera: this.toNumber(item.totalMonedaExtranjera)
+    }));
+  }
+
+  private normalizeReporteResumenFormasPago(value: unknown): CierreCajaResumenFormaPago[] {
+    const list = Array.isArray(value) ? value : [];
+    return list.map((item: any) => ({
+      numCierre: this.cleanText(item.numCierre),
+      codFormaPago: this.cleanText(item.codFormaPago),
+      descFormaPago: this.cleanText(item.descFormaPago),
+      tipoFormaPago: this.cleanText(item.tipoFormaPago),
+      medioPago: this.cleanText(item.medioPago),
+      moneda: this.cleanText(item.moneda),
+      total: this.toNumber(item.total),
+      detalles: this.cleanText(item.detalles)
+    }));
+  }
+
+  private normalizeNumberRecord(value: unknown): Record<string, number> {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return {};
+    }
+
+    return Object.entries(value as Record<string, unknown>).reduce<Record<string, number>>((acc, [key, amount]) => {
+      acc[this.cleanText(key)] = this.toNumber(amount);
+      return acc;
+    }, {});
   }
 
   private unwrapResponse(response: unknown): unknown {

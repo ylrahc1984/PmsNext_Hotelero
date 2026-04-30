@@ -80,6 +80,11 @@ const routes: Routes = [
         loadComponent: () => import('./operaciones/cierre-caja/cierre-caja-form.component').then((c) => c.CierreCajaFormComponent)
       },
       {
+        path: 'cierre-caja/:numCierre/detalle',
+        loadComponent: () =>
+          import('./operaciones/cierre-caja/cierre-caja-detalle.component').then((c) => c.CierreCajaDetalleComponent)
+      },
+      {
         path: 'cierre-caja/:id',
         loadComponent: () => import('./operaciones/cierre-caja/cierre-caja-form.component').then((c) => c.CierreCajaFormComponent)
       },
