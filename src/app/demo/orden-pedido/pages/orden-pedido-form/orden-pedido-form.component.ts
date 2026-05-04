@@ -351,6 +351,10 @@ export class OrdenPedidoFormComponent implements OnInit {
     void this.router.navigate(['/demo/ordenes-pedido']);
   }
 
+  irOperacionDiaria(): void {
+    void this.router.navigate(['/operaciones/operacion-diaria']);
+  }
+
   abrirModalClientes(): void {
     if (this.isSubmitting) {
       return;
@@ -894,6 +898,7 @@ export class OrdenPedidoFormComponent implements OnInit {
       producto          : this.fb.control('', { validators: [Validators.required] }),
       area              : this.fb.control('TOURS'),
       uMedida           : this.fb.control('Unid'),
+      uMedidaDos        : this.fb.control(''),
       lstPrecio         : this.fb.control(this.form.controls.listaPrecio.value),
       planTarifa        : this.fb.control(this.form.controls.planTarifario.value),
       canProdu          : this.fb.control(1, { validators: [Validators.required, Validators.min(0.01)] }),
@@ -1294,9 +1299,10 @@ export class OrdenPedidoFormComponent implements OnInit {
       .filter((item) => this.toNumber(item.saldoPendiente) > 0)
       .forEach((item) => {
         const saldo = this.toNumber(item.saldoPendiente);
+        const cantidadOriginal = this.toNumber(item.totalPax) || saldo;
         const porImp = this.getReservaTaxRate(item);
         const precioBase = this.getReservaPrecioBaseParaOrden(item, porImp);
-        const precioUnit = saldo > 0 ? precioBase / saldo : 0;
+        const precioUnit = cantidadOriginal > 0 ? precioBase / cantidadOriginal : 0;
 
         const group = this.createDetalleGroup();
         group.patchValue(
@@ -1305,6 +1311,7 @@ export class OrdenPedidoFormComponent implements OnInit {
             producto          : (item.nomServicio || '').toString(),
             area              : (item.codGrupo || 'TOURS').toString(),
             uMedida           : (item.uMedida || 'Unid').toString(),
+            uMedidaDos        : item.id ? item.id.toString() : '',
             lstPrecio         : (item.codLstPrecio || this.form.controls.listaPrecio.value || '').toString(),
             planTarifa        : (item.planTarifario || this.form.controls.planTarifario.value || '').toString(),
             canProdu          : saldo,
@@ -1656,7 +1663,7 @@ export class OrdenPedidoFormComponent implements OnInit {
         moneda          ,
         tCambio         ,
         orden           : index + 1,
-        uMedidaDos      : '',
+        uMedidaDos      : this.cleanText(raw['uMedidaDos']),
         canProduDos     : 0,
         lstPrecio       : this.cleanText(raw['lstPrecio']) || this.cleanText(this.form.controls.listaPrecio.value),
         planTarifa      : this.cleanText(raw['planTarifa']) || this.cleanText(this.form.controls.planTarifario.value)

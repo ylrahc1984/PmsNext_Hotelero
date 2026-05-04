@@ -487,6 +487,10 @@
               <p class="op-section-subtitle mb-0">Revise la información y confirme la acción a ejecutar.</p>
             </div>
             <div class="op-form-actions__buttons">
+              <button class="btn btn-outline-secondary op-action-btn" type="button" (click)="irOperacionDiaria()" [disabled]="isSubmitting">
+                <i class="feather icon-arrow-left me-2"></i>
+                No facturar y volver a Operacion Diaria
+              </button>
               <button class="btn btn-outline-secondary op-action-btn" type="button" (click)="volverListado()" [disabled]="isSubmitting">
                 <i class="feather icon-x me-2"></i>
                 Cancelar y volver al listado

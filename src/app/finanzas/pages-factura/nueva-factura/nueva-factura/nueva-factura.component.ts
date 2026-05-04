@@ -1831,12 +1831,13 @@ export class NuevaFacturaComponent implements OnInit {
       .filter((item) => this.toNumber(item.saldoPendiente) > 0)
       .forEach((item, index) => {
         const saldo = this.toNumber(item.saldoPendiente);
+        const cantidadOriginal = this.toNumber(item.totalPax) || saldo;
         const subTotal = this.toNumber(item.subTotal);
         const neto = this.toNumber(item.neto);
         const impuestoMonto = this.toNumber(item.impuesto);
         const porImp = neto > 0 ? (impuestoMonto / neto) * 100 : 0;
         const precioBase = this.getReservaPrecioBaseParaFactura(item, porImp);
-        const precioUnitario = saldo > 0 ? Number((precioBase / saldo).toFixed(6)) : 0;
+        const precioUnitario = cantidadOriginal > 0 ? Number((precioBase / cantidadOriginal).toFixed(6)) : 0;
 
         const group = this.createDetalleGroup(index + 1);
         group.patchValue(
@@ -1848,7 +1849,7 @@ export class NuevaFacturaComponent implements OnInit {
             uMedida         : (item.uMedida || '').toString(),
             cantidad        : saldo,
             pUndLst         : precioUnitario,
-            uniSinImp       : saldo > 0 ? Number((subTotal / saldo).toFixed(6)) : 0,
+            uniSinImp       : cantidadOriginal > 0 ? Number((subTotal / cantidadOriginal).toFixed(6)) : 0,
             porDescu        : this.round(this.toNumber(item.porDescuento)).toFixed(2),
             porImp          : this.round(porImp),
             comanda         : (item.id ?? '').toString(),
