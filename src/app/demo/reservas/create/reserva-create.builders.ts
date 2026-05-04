@@ -17,6 +17,7 @@ export function buildInitialReservaCreateForm(now: Date = new Date()): ReservaCr
     idioma: '',
     formaReservacion: '',
     formaPago: '',
+    folio: '',
     codLstPrecio: '',
     codPlan: '',
     moneda: '',

@@ -11,6 +11,7 @@ export interface ReservaCreateForm {
   idioma                : string;
   formaReservacion      : string;
   formaPago             : string;
+  folio                 : string;
   codLstPrecio          : string;
   codPlan               : string;
   moneda                : string;

@@ -990,7 +990,7 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
         ...this.form,
         codReserva: this.codReservaActual || this.draft.header?.codReserva || '',
         totalRsv: this.totalRack,
-        folio: this.draft.header?.folio || '',
+        folio: safeString(this.form.folio),
         operador: this.getOperador()
       }
     };

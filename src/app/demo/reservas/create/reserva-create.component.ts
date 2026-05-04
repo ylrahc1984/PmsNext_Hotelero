@@ -512,6 +512,7 @@ export class ReservaCreateComponent implements OnInit, CanDeactivateReservaCreat
           idioma: idiomaCodigo ?? '',
           formaReservacion: formaCodigo ?? '',
           formaPago: safeString((res as any).PRV01_FormaPago),
+          folio: safeString((res as any).PRV01_Folio),
           codLstPrecio: codLstPrecioApi,
           codPlan: codPlanCodigo ?? safeString(codPlanRaw),
           moneda: safeString((res as any).PRV01_Moneda),

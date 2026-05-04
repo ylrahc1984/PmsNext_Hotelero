@@ -198,20 +198,20 @@
                     Limpiar selección
                   </button>
                 </div>
-                <div class="col-md-8">
+                <div class="col-md-4">
                   <label class="form-label nf-label">Nombre</label>
                   <div class="nf-input-wrap">
                     <input class="form-control form-control-sm" formControlName="nomCliente" placeholder="Nombre del cliente" [readonly]="locked">
                   </div>
                 </div>
-              </div>
-              <div class="row nf-client-row">
                 <div class="col-md-4">
                   <label class="form-label nf-label">Cédula</label>
                   <div class="nf-input-wrap">
                     <input class="form-control form-control-sm" formControlName="rucCliente" placeholder="Cédula" [readonly]="locked">
                   </div>
                 </div>
+              </div>
+              <div class="row nf-client-row">
                 <div class="col-md-4">
                   <label class="form-label nf-label">Correo electrónico</label>
                   <div class="nf-input-wrap">
@@ -222,6 +222,12 @@
                   <label class="form-label nf-label">Código actividad comercial</label>
                   <div class="nf-input-wrap">
                     <input class="form-control form-control-sm" formControlName="codigoActividad" placeholder="Código actividad" [readonly]="locked">
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label nf-label">Números de Voucher</label>
+                  <div class="nf-input-wrap">
+                    <input class="form-control form-control-sm" formControlName="master" placeholder="Números de voucher" [readonly]="locked">
                   </div>
                 </div>
               </div>

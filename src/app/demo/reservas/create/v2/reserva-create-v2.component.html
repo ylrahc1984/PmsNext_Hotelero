@@ -182,6 +182,17 @@
                       <option *ngFor="let forma of formasPagoApi" [ngValue]="forma.codigo">{{ forma.descripcion }}</option>
                     </select>
                   </div>
+                  <div class="col-12 mb-2">
+                    <label class="form-label">Números de Voucher</label>
+                    <input
+                      type="text"
+                      class="form-control form-control-sm"
+                      [(ngModel)]="form.folio"
+                      name="folio"
+                      maxlength="100"
+                      autocomplete="off"
+                      (ngModelChange)="onHeaderChange()">
+                  </div>
                   <input type="hidden" [(ngModel)]="form.moneda" name="moneda">
                 </div>
               </div>
