@@ -37,6 +37,8 @@ import {
 } from '../../interfaces/orden-pedido.interface';
 import { OrdenPedidoService } from '../../services/orden-pedido.service';
 
+type OrdenPedidoOrigen = 'orden-pedido-list' | 'reserva-detalle';
+
 @Component({
   selector: 'app-orden-pedido-form',
   standalone: true,
@@ -153,6 +155,8 @@ export class OrdenPedidoFormComponent implements OnInit {
   clienteSearchLoading           = false;
   clienteSearchError             = '';
   pagosValid                     = true;
+  ordenPedidoOrigen              : OrdenPedidoOrigen = 'orden-pedido-list';
+  reservaDetalleOrigen           : 'reservas' | 'operacion-diaria' | 'otro' = 'reservas';
   
 
   ngOnInit(): void {
@@ -690,7 +694,7 @@ export class OrdenPedidoFormComponent implements OnInit {
               icon: 'success',
               confirmButtonText: 'Aceptar'
             }).then(() => {
-              void this.router.navigate(['/demo/ordenes-pedido']);
+              this.navigateAfterSuccess();
             });
             return;
           }
@@ -1218,6 +1222,9 @@ export class OrdenPedidoFormComponent implements OnInit {
 
   private initReservaFromQuery(): void {
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      this.ordenPedidoOrigen = this.parseOrdenPedidoOrigen(params.get('origen'));
+      this.reservaDetalleOrigen = this.parseReservaDetalleOrigen(params.get('origenDetalle'));
+
       const codReserva = (params.get('codReserva') ?? '').toString().trim();
       const codAgencia = (params.get('codAgencia') ?? '').toString().trim();
 
@@ -1259,6 +1266,34 @@ export class OrdenPedidoFormComponent implements OnInit {
           }
         });
     });
+  }
+
+  private parseOrdenPedidoOrigen(value: string | null): OrdenPedidoOrigen {
+    const normalized = (value ?? '').toString().trim().toLowerCase();
+    if (normalized === 'reserva-detalle' || normalized === 'reservadetalle') {
+      return 'reserva-detalle';
+    }
+    return 'orden-pedido-list';
+  }
+
+  private parseReservaDetalleOrigen(value: string | null): 'reservas' | 'operacion-diaria' | 'otro' {
+    const normalized = (value ?? '').toString().trim().toLowerCase();
+    if (normalized === 'operacion-diaria' || normalized === 'operaciondiaria') {
+      return 'operacion-diaria';
+    }
+    if (normalized === 'reservas') {
+      return 'reservas';
+    }
+    return 'otro';
+  }
+
+  private navigateAfterSuccess(): void {
+    if (this.ordenPedidoOrigen === 'reserva-detalle') {
+      void this.router.navigate(['/operaciones/operacion-diaria']);
+      return;
+    }
+
+    void this.router.navigate(['/demo/ordenes-pedido']);
   }
 
   private aplicarClienteReserva(cliente: ClienteUI | null, codAgencia: string): void {

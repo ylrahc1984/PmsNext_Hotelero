@@ -86,7 +86,11 @@ export class OrdenPedidoListComponent implements OnInit {
   }
 
   nuevaOrden(): void {
-    void this.router.navigate(['/demo/ordenes-pedido/nuevo']);
+    void this.router.navigate(['/demo/ordenes-pedido/nuevo'], {
+      queryParams: {
+        origen: 'orden-pedido-list'
+      }
+    });
   }
 
   verDetalle(item: OrdenPedidoListadoItem): void {

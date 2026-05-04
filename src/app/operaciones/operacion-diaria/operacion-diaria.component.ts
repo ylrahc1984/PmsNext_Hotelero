@@ -443,7 +443,8 @@ export class OperacionDiariaComponent implements OnInit {
     this.router.navigate(['/finanzas/nueva-factura'], {
       queryParams: {
         codReserva,
-        codAgencia
+        codAgencia,
+        origen: 'operacion-diaria'
       }
     });
   }

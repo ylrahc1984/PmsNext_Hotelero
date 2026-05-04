@@ -56,6 +56,8 @@ import type {
 } from '../nueva-factura.interface';
 import { C } from '@angular/cdk/scrolling-module.d-C_w4tIrZ';
 
+type FacturaOrigen = 'consulta-documentos' | 'operacion-diaria' | 'reserva-detalle';
+
 @Component({
   selector: 'app-nueva-factura',
   standalone: true,
@@ -171,6 +173,8 @@ export class NuevaFacturaComponent implements OnInit {
   reservaActual             : string | null = null;
   reservaLoading            = false;
   reservaErrorMessage       : string | null = null;
+  facturaOrigen             : FacturaOrigen = 'consulta-documentos';
+  reservaDetalleOrigen      : 'reservas' | 'operacion-diaria' | 'otro' = 'reservas';
 
   @ViewChildren('cantidadInput') cantidadInputs?: QueryList<ElementRef<HTMLInputElement>>;
 
@@ -997,7 +1001,7 @@ export class NuevaFacturaComponent implements OnInit {
 
     this.locked = true;
     this.form.disable({ emitEvent: false });
-    this.router.navigate(['/finanzas/consulta-documentos']);
+    this.navigateAfterSuccess();
   }
 
   private createDetalleGroup(orden: number): FormGroup<DetalleForm> {
@@ -1548,6 +1552,9 @@ export class NuevaFacturaComponent implements OnInit {
 
   private initReservaFromQuery(): void {
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      this.facturaOrigen = this.parseFacturaOrigen(params.get('origen'));
+      this.reservaDetalleOrigen = this.parseReservaDetalleOrigen(params.get('origenDetalle'));
+
       const codReserva = (params.get('codReserva') ?? '').toString().trim();
       const codAgencia = (params.get('codAgencia') ?? '').toString().trim();
 
@@ -1594,6 +1601,49 @@ export class NuevaFacturaComponent implements OnInit {
           }
         });
     });
+  }
+
+  private parseFacturaOrigen(value: string | null): FacturaOrigen {
+    const normalized = (value ?? '').toString().trim().toLowerCase();
+    if (normalized === 'operacion-diaria' || normalized === 'operaciondiaria') {
+      return 'operacion-diaria';
+    }
+    if (normalized === 'reserva-detalle' || normalized === 'reservadetalle') {
+      return 'reserva-detalle';
+    }
+    return 'consulta-documentos';
+  }
+
+  private parseReservaDetalleOrigen(value: string | null): 'reservas' | 'operacion-diaria' | 'otro' {
+    const normalized = (value ?? '').toString().trim().toLowerCase();
+    if (normalized === 'operacion-diaria' || normalized === 'operaciondiaria') {
+      return 'operacion-diaria';
+    }
+    if (normalized === 'reservas') {
+      return 'reservas';
+    }
+    return 'otro';
+  }
+
+  private navigateAfterSuccess(): void {
+    if (this.facturaOrigen === 'operacion-diaria') {
+      void this.router.navigate(['/operaciones/operacion-diaria']);
+      return;
+    }
+
+    if (this.facturaOrigen === 'reserva-detalle') {
+      const codReserva = (this.reservaActual || this.form.controls.codReserva.value || '').toString().trim();
+      if (codReserva) {
+        const queryParams: Record<string, string> = { facturado: '1' };
+        if (this.reservaDetalleOrigen !== 'otro') {
+          queryParams['origen'] = this.reservaDetalleOrigen;
+        }
+        void this.router.navigate(['/operaciones/reservas', codReserva, 'detalle'], { queryParams });
+        return;
+      }
+    }
+
+    void this.router.navigate(['/finanzas/consulta-documentos']);
   }
 
   private aplicarClienteReserva(cliente: ClienteUI | null, codAgencia: string): void {

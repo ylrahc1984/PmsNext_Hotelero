@@ -373,11 +373,16 @@ export class ReservaDetalleComponent implements OnInit, OnDestroy {
     }
   }
 
-  private buildReservaQueryParams(): { codReserva: string; codAgencia?: string } {
+  private buildReservaQueryParams(): { codReserva: string; codAgencia?: string; origen: string; origenDetalle: string } {
     const codAgencia = (this.reserva?.PRV01_CodAgencia ?? '').toString().trim();
+    const baseParams = {
+      codReserva: this.codReserva,
+      origen: 'reserva-detalle',
+      origenDetalle: this.origenVista
+    };
     return codAgencia
-      ? { codReserva: this.codReserva, codAgencia }
-      : { codReserva: this.codReserva };
+      ? { ...baseParams, codAgencia }
+      : baseParams;
   }
 
   private parseFacturadoFlag(value: unknown): boolean {
