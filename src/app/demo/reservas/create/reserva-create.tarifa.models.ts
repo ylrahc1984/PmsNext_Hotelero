@@ -83,14 +83,26 @@ export interface DetallePrecioServicioApiItem {
   Moneda?: string;
   Precios: Array<{
     tipoPax?: string | null;
+    TipoPax?: string | null;
+    tipoPaxCodigo?: string | null;
+    TipoPaxCodigo?: string | null;
     descripcion?: string | null;
+    Descripcion?: string | null;
     precio: number;
+    Precio?: number | null;
+    precioBase?: number | null;
+    PrecioBase?: number | null;
     precioExtra?: number | null;
+    PrecioExtra?: number | null;
     maxPax?: number | null;
+    CantPaxMax?: number | null;
     comision?: number | null;
+    Comision?: number | null;
     montoComision?: number | null;
+    MontoComision?: number | null;
     // Compatibilidad con variantes anteriores.
     tipo?: string | null;
+    Tipo?: string | null;
     extra?: number | null;
     max?: number | null;
   }>;

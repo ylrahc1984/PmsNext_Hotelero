@@ -847,7 +847,7 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     const currentPlan = (this.form.controls.codPlan.value || '').toString().trim();
     const currentLista = (this.form.controls.codLstPrecio.value || '').toString().trim();
     const nextPlan = currentPlan || this.resolveDefaultCodPlan();
-    const nextLista = currentLista || this.resolveDefaultCodLstPrecio();
+    const nextLista = this.isListaPrecioDisponible(currentLista) ? currentLista : this.resolveDefaultCodLstPrecio();
     this.form.patchValue({ codPlan: nextPlan, codLstPrecio: nextLista }, { emitEvent: false });
   }
 
@@ -860,7 +860,7 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
 
   private resolveDefaultCodLstPrecio(): string {
     const fromInput = (this.actividadForm?.codLstPrecio || '').toString().trim();
-    if (fromInput) return fromInput;
+    if (this.isListaPrecioDisponible(fromInput)) return fromInput;
     const first = this.listaPrecios?.[0];
     return first ? String(first.codigo) : '';
   }
@@ -868,13 +868,24 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
   private buildActividadFromApi(apiItem: DetallePrecioServicioApiItem, codServicioFallback: string): ActividadDetalle {
     const modoPrecio = this.getModoPrecioPorPlan(this.form.controls.codPlan.value);
     const apiTarifas = (apiItem?.Precios ?? []).map((row, index) => {
-      const tipoPax = this.normalizeTipoPaxCode(row?.tipoPax || row?.tipo || this.tarifaDefaults[index]?.tipoPax || '');
-      const tipo = (row?.descripcion || this.mapTipoPaxToLabel(tipoPax) || tipoPax).toString().trim();
-      const precioBase = modoPrecio === 'N' ? row?.montoComision : row?.precio;
+      const record = (row ?? {}) as Record<string, unknown>;
+      const tipoPax = this.normalizeTipoPaxCode(
+        this.readFirstString(record, ['tipoPax', 'TipoPax', 'tipo', 'Tipo', 'tipoPaxCodigo', 'TipoPaxCodigo']) ||
+        this.tarifaDefaults[index]?.tipoPax ||
+        ''
+      );
+      const tipo = (
+        this.readFirstString(record, ['descripcion', 'Descripcion', 'desTipoPax', 'DesTipoPax']) ||
+        this.mapTipoPaxToLabel(tipoPax) ||
+        tipoPax
+      ).toString().trim();
+      const precioBase = modoPrecio === 'N'
+        ? this.readFirstNumber(record, ['montoComision', 'MontoComision', 'comision', 'Comision'])
+        : this.readFirstNumber(record, ['precio', 'Precio', 'precioBase', 'PrecioBase']);
       return {
         tipoPax,
         tipo,
-        precio: Number(precioBase ?? 0) || 0,
+        precio: precioBase,
         cantidad: 0,
         total: 0
       };
@@ -892,6 +903,32 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
       tarifas,
       totalLinea: 0
     };
+  }
+
+  private isListaPrecioDisponible(codigo: string): boolean {
+    const normalized = (codigo || '').toString().trim();
+    if (!normalized) return false;
+    return (this.listaPrecios ?? []).some((item) => (item?.codigo ?? '').toString().trim() === normalized);
+  }
+
+  private readFirstString(record: Record<string, unknown>, keys: string[]): string {
+    for (const key of keys) {
+      const value = record[key];
+      if (value !== null && value !== undefined && `${value}`.trim()) {
+        return `${value}`.trim();
+      }
+    }
+    return '';
+  }
+
+  private readFirstNumber(record: Record<string, unknown>, keys: string[]): number {
+    for (const key of keys) {
+      const parsed = Number(record[key] ?? NaN);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+    return 0;
   }
 
   private buildActividadFallback(codServicio: string, actividadActual?: ActividadDetalle): ActividadDetalle {
