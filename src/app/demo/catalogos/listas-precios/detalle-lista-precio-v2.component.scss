@@ -513,14 +513,14 @@
   color: #111827;
 }
 
-.precio-neto-input {
+.precio-comision-input[readonly] {
   background: #f3f4f6;
-  font-weight: 500;
-  color: #374151;
+  cursor: not-allowed;
 }
 
-.precio-neto-input[readonly] {
-  cursor: not-allowed;
+.precio-neto-input {
+  font-weight: 500;
+  color: #374151;
 }
 
 .field-hint {

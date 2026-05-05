@@ -583,8 +583,8 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
 
   // Construye el form group para una fila de precios.
   private buildPrecioFormGroup(reglaId: number, precio: PrecioTipoPaxVm): FormGroup {
-    const porcentaje = this.normalizePercent(precio.porcentajeComision.value);
-    const neto = this.calculateNeto(precio.precio.value, porcentaje);
+    const neto = this.normalizeMonto(precio.montoComision.value);
+    const porcentaje = this.calculatePorcentajeComision(precio.precio.value, neto);
     const form = this.fb.group({
       precio: [precio.precio.value],
       paxExtra: [precio.paxExtra.value],
@@ -598,8 +598,8 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
 
   // Sincroniza form group con la vm de precios.
   private patchPrecioFormGroup(form: FormGroup, precio: PrecioTipoPaxVm): void {
-    const porcentaje = this.normalizePercent(precio.porcentajeComision.value);
-    const neto = this.calculateNeto(precio.precio.value, porcentaje);
+    const neto = this.normalizeMonto(precio.montoComision.value);
+    const porcentaje = this.calculatePorcentajeComision(precio.precio.value, neto);
     form.patchValue(
       {
         precio: precio.precio.value,
@@ -614,7 +614,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
 
   // Vincula cambios del form con la regla.
   private bindPrecioFormGroup(reglaId: number, tipoPax: TipoPax, form: FormGroup): void {
-    ['precio', 'porcentajeComision', 'paxExtra', 'cantPaxMax'].forEach((controlName) => {
+    ['precio', 'montoComision', 'paxExtra', 'cantPaxMax'].forEach((controlName) => {
       const control = form.get(controlName);
       if (!control) {
         return;
@@ -626,7 +626,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     this.handlePrecioFormChange(reglaId, tipoPax, form);
   }
 
-  // Calcula neto y actualiza vm a partir del form.
+  // Calcula porcentaje y actualiza vm a partir del form.
   private handlePrecioFormChange(reglaId: number, tipoPax: TipoPax, form: FormGroup): void {
     const raw = form.getRawValue() as {
       precio: unknown;
@@ -636,11 +636,11 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
       montoComision: unknown;
     };
     const precioRack = this.toNumber(raw.precio, 0);
-    const porcentaje = this.normalizePercent(raw.porcentajeComision);
-    const neto = this.calculateNeto(precioRack, porcentaje);
+    const neto = this.normalizeMonto(raw.montoComision);
+    const porcentaje = this.calculatePorcentajeComision(precioRack, neto);
 
-    if (this.toNumber(raw.montoComision, 0) !== neto) {
-      form.patchValue({ montoComision: neto }, { emitEvent: false });
+    if (this.normalizePercent(raw.porcentajeComision) !== porcentaje) {
+      form.patchValue({ porcentajeComision: porcentaje }, { emitEvent: false });
     }
 
     this.updatePrecioFromForm(reglaId, tipoPax, {
@@ -690,14 +690,14 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     });
   }
 
-  // Recalcula el neto para todos los precios.
-  private recalculateNetoForRegla(reglaId: number): ReglaPrecioVm | null {
+  // Recalcula la comision para todos los precios.
+  private recalculateComisionForRegla(reglaId: number): ReglaPrecioVm | null {
     const updated = this.updateRegla(reglaId, (current) => {
       const precios = current.precios.map((precio) => {
         const porcentajeField = precio.porcentajeComision;
         const montoField = precio.montoComision;
-        const porcentaje = this.normalizePercent(porcentajeField.value);
-        const neto = this.calculateNeto(precio.precio.value, porcentaje);
+        const neto = this.normalizeMonto(montoField.value);
+        const porcentaje = this.calculatePorcentajeComision(precio.precio.value, neto);
         return {
           ...precio,
           porcentajeComision: this.updateField(porcentajeField, porcentaje),
@@ -717,7 +717,13 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
       updated.precios.forEach((precio) => {
         const form = byTipo?.get(precio.tipoPax);
         if (form) {
-          form.patchValue({ montoComision: precio.montoComision.value }, { emitEvent: false });
+          form.patchValue(
+            {
+              porcentajeComision: precio.porcentajeComision.value,
+              montoComision: precio.montoComision.value
+            },
+            { emitEvent: false }
+          );
         }
       });
     }
@@ -732,7 +738,7 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
       return;
     }
 
-    const recalculated = this.recalculateNetoForRegla(reglaId) ?? regla;
+    const recalculated = this.recalculateComisionForRegla(reglaId) ?? regla;
     const validated = this.validatePrecios(recalculated);
     if (validated.preciosError) {
       this.updateRegla(reglaId, () => validated);
@@ -974,7 +980,16 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
 
   // Valida campos de precio individuales.
   private validatePrecio(precio: PrecioTipoPaxVm): PrecioTipoPaxVm {
-    const precioError = precio.precio.value < 0 ? 'Precio >= 0.' : '';
+    const precioRack = this.toNumber(precio.precio.value, 0);
+    const neto = this.normalizeMonto(precio.montoComision.value);
+    let precioError = precioRack < 0 ? 'Precio >= 0.' : '';
+    let netoError = neto < 0 ? 'Precio neto >= 0.' : '';
+    if (!precioError && precioRack <= 0 && neto > 0) {
+      precioError = 'Precio rack > 0.';
+    }
+    if (!netoError && precioRack > 0 && neto > precioRack) {
+      netoError = 'Precio neto <= rack.';
+    }
     const paxExtraError = precio.paxExtra.value < 0 ? 'PaxExtra >= 0.' : '';
     const cantError = precio.cantPaxMax.value <= 0 ? 'CantPaxMax > 0.' : '';
 
@@ -982,7 +997,8 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
       ...precio,
       precio: { ...precio.precio, error: precioError },
       paxExtra: { ...precio.paxExtra, error: paxExtraError },
-      cantPaxMax: { ...precio.cantPaxMax, error: cantError }
+      cantPaxMax: { ...precio.cantPaxMax, error: cantError },
+      montoComision: { ...precio.montoComision, error: netoError }
     };
   }
 
@@ -992,7 +1008,10 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     const precios = regla.precios.map((precio) => {
       const validated = this.validatePrecio(precio);
       const hasFieldError = Boolean(
-        validated.precio.error || validated.paxExtra.error || validated.cantPaxMax.error
+        validated.precio.error ||
+          validated.paxExtra.error ||
+          validated.cantPaxMax.error ||
+          validated.montoComision.error
       );
       if (hasFieldError) {
         hasError = true;
@@ -1068,12 +1087,12 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     };
   }
 
-  // Normaliza porcentaje y neto para un precio.
+  // Normaliza neto y calcula porcentaje para un precio.
   private normalizePrecio(precio: PrecioTipoPaxVm, resetOriginal: boolean): PrecioTipoPaxVm {
     const porcentajeField = precio.porcentajeComision;
-    const porcentaje = this.normalizePercent(porcentajeField.value);
     const montoField = precio.montoComision;
-    const neto = this.calculateNeto(precio.precio.value, porcentaje);
+    const neto = this.normalizeMonto(montoField.value);
+    const porcentaje = this.calculatePorcentajeComision(precio.precio.value, neto);
     return {
       ...precio,
       porcentajeComision: this.setFieldValue(porcentajeField, porcentaje, resetOriginal),
@@ -1297,20 +1316,28 @@ export class DetalleListaPrecioV2Component implements OnInit, OnDestroy {
     return this.toNumber(value ?? 0, 0);
   }
 
-  // Calcula precio neto desde rack y porcentaje.
-  private calculateNeto(precioRack: number, porcentaje: number): number {
-    const rack = this.toNumber(precioRack, 0);
-    const percent = this.normalizePercent(porcentaje);
-    const neto = rack - (rack * percent) / 100;
-    return this.roundToZero(neto);
+  // Normaliza precio neto a numero.
+  private normalizeMonto(value: unknown): number {
+    return this.toNumber(value ?? 0, 0);
   }
 
-  // Redondea sin decimales.
-  private roundToZero(value: number): number {
+  // Calcula porcentaje de comision desde rack y neto.
+  private calculatePorcentajeComision(precioRack: number, precioNeto: number): number {
+    const rack = this.toNumber(precioRack, 0);
+    const neto = this.normalizeMonto(precioNeto);
+    if (rack <= 0) {
+      return 0;
+    }
+    const porcentaje = ((rack - neto) / rack) * 100;
+    return this.roundToTwo(porcentaje);
+  }
+
+  // Redondea a dos decimales.
+  private roundToTwo(value: number): number {
     if (!Number.isFinite(value)) {
       return 0;
     }
-    return Math.round(value);
+    return Math.round(value * 100) / 100;
   }
 
   // Convierte HH:mm(:ss) a segundos.
