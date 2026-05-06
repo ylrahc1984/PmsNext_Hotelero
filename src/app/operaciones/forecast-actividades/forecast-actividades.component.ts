@@ -2,8 +2,10 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { debounceTime, finalize } from 'rxjs';
+import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
 
+import { ClienteService } from 'src/app/demo/catalogos/agencias-comisionistas/cliente.service';
+import { ClienteUI } from 'src/app/demo/catalogos/agencias-comisionistas/cliente.models';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { ForecastActividadesService } from './forecast-actividades.service';
 import {
@@ -37,10 +39,12 @@ interface ForecastVistaOption {
 export class ForecastActividadesComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly forecastService = inject(ForecastActividadesService);
+  private readonly clienteService = inject(ClienteService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly capacidadBaseDefault = 15;
+  private readonly agenciaSearchMinLength = 2;
 
   readonly today = this.toDateInput(new Date());
   readonly vistaOptions: ForecastVistaOption[] = [
@@ -54,7 +58,7 @@ export class ForecastActividadesComponent implements OnInit {
     fechaFin: [this.toDateInput(this.addDays(new Date(), 6)), Validators.required],
     vista: ['semana' as ForecastVistaRango],
     busquedaActividad: [''],
-    agencia: [''],
+    agenciaId: [''],
     bloqueHora: [''],
     soloNoProcesados: [false],
     soloAltaSaturacion: [false],
@@ -66,7 +70,13 @@ export class ForecastActividadesComponent implements OnInit {
   error: string | null = null;
   lastUpdatedAt: Date | null = null;
 
-  agenciasDisponibles: string[] = [];
+  agenciaSearchTerm = '';
+  agenciaSearchResults: ClienteUI[] = [];
+  agenciaSearchOpen = false;
+  agenciaSearchLoading = false;
+  agenciaSearchError: string | null = null;
+  selectedAgencia: ClienteUI | null = null;
+
   bloquesHoraDisponibles: string[] = [];
   fechasVisibles: string[] = [];
   filasVisibles: ForecastMatrizActividad[] = [];
@@ -76,10 +86,24 @@ export class ForecastActividadesComponent implements OnInit {
   matrixMinWidthPx = 680;
 
   private matrizBase: ForecastMatrizResultado = this.emptyMatrix();
+  private agenciaSearchRequestId = 0;
+  private agenciaSearchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private agenciaSearchBlurTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
     this.form.valueChanges.pipe(debounceTime(120), takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.applyLocalFilters();
+    });
+
+    this.form.controls.busquedaActividad.valueChanges
+      .pipe(debounceTime(320), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.consultar();
+      });
+
+    this.destroyRef.onDestroy(() => {
+      this.clearAgenciaSearchBlurTimer();
+      this.cancelAgenciaSearchRequests();
     });
 
     this.consultar();
@@ -112,6 +136,8 @@ export class ForecastActividadesComponent implements OnInit {
       .getForecastActividades({
         fechaInicio,
         fechaFin,
+        busqueda: this.textValue(this.form.controls.busquedaActividad.value),
+        agenciaId: this.textValue(this.form.controls.agenciaId.value),
         page: 1,
         pageSize: 500
       })
@@ -126,7 +152,6 @@ export class ForecastActividadesComponent implements OnInit {
           this.hasLoaded = true;
           this.lastUpdatedAt = new Date();
           this.matrizBase = this.transformarRespuestaAMatriz(response, fechaInicio, fechaFin);
-          this.agenciasDisponibles = [...this.matrizBase.agencias];
           this.bloquesHoraDisponibles = [...this.matrizBase.bloquesHora];
           this.ensureSelectedFilters();
           this.applyLocalFilters();
@@ -176,6 +201,95 @@ export class ForecastActividadesComponent implements OnInit {
 
   get vistaCompacta(): boolean {
     return this.form.controls.vistaCompacta.value;
+  }
+
+  onAgenciaSearchInput(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    this.agenciaSearchTerm = this.textValue(input?.value);
+    this.clearAgenciaSearchBlurTimer();
+
+    if (this.shouldClearSelectedAgencia(this.agenciaSearchTerm)) {
+      this.clearSelectedAgenciaState();
+      this.consultar();
+    }
+
+    const term = this.agenciaSearchTerm.trim();
+    if (this.agenciaSearchDebounceTimer) {
+      clearTimeout(this.agenciaSearchDebounceTimer);
+      this.agenciaSearchDebounceTimer = null;
+    }
+
+    if (term.length < this.agenciaSearchMinLength) {
+      this.cancelAgenciaSearchRequests();
+      this.agenciaSearchResults = [];
+      this.agenciaSearchOpen = false;
+      this.agenciaSearchError = null;
+      return;
+    }
+
+    this.agenciaSearchDebounceTimer = setTimeout(() => {
+      this.buscarAgenciasDirecto(term);
+    }, 280);
+  }
+
+  onAgenciaSearchFocus(): void {
+    this.clearAgenciaSearchBlurTimer();
+    if (this.agenciaSearchResults.length && this.agenciaSearchTerm.trim().length >= this.agenciaSearchMinLength) {
+      this.agenciaSearchOpen = true;
+    }
+  }
+
+  onAgenciaSearchBlur(): void {
+    this.clearAgenciaSearchBlurTimer();
+    this.agenciaSearchBlurTimer = setTimeout(() => {
+      this.agenciaSearchOpen = false;
+      this.cdr.markForCheck();
+    }, 180);
+  }
+
+  onAgenciaSearchEnter(event: Event): void {
+    event.preventDefault();
+    this.clearAgenciaSearchBlurTimer();
+    if (this.agenciaSearchResults.length) {
+      this.seleccionarAgenciaBusqueda(this.agenciaSearchResults[0]);
+      return;
+    }
+
+    const term = this.agenciaSearchTerm.trim();
+    if (term.length >= this.agenciaSearchMinLength) {
+      this.buscarAgenciasDirecto(term);
+    }
+  }
+
+  onAgenciaSuggestionMouseDown(cliente: ClienteUI, event: MouseEvent): void {
+    event.preventDefault();
+    this.seleccionarAgenciaBusqueda(cliente);
+  }
+
+  limpiarAgenciaSeleccionada(): void {
+    this.agenciaSearchTerm = '';
+    this.cancelAgenciaSearchRequests();
+    this.agenciaSearchResults = [];
+    this.agenciaSearchOpen = false;
+    this.agenciaSearchError = null;
+    this.clearSelectedAgenciaState();
+    this.consultar();
+  }
+
+  trackByAgencia(_: number, cliente: ClienteUI): string {
+    return cliente.codigo;
+  }
+
+  formatAgenciaLabel(cliente: ClienteUI | null): string {
+    if (!cliente) return '';
+
+    const codigo = this.textValue(cliente.codigo);
+    const nombre = this.textValue(cliente.nombre || cliente.contacto, 'Agencia sin nombre');
+    return [codigo, nombre].filter(Boolean).join(' - ');
+  }
+
+  getAgenciaDisplayName(cliente: ClienteUI): string {
+    return this.textValue(cliente.contacto || cliente.nombre, 'Agencia sin nombre');
   }
 
   get hasRows(): boolean {
@@ -241,10 +355,99 @@ export class ForecastActividadesComponent implements OnInit {
     return bloque.key;
   }
 
+  private buscarAgenciasDirecto(term: string): void {
+    const normalized = this.textValue(term);
+    if (normalized.length < this.agenciaSearchMinLength) {
+      this.agenciaSearchResults = [];
+      this.agenciaSearchOpen = false;
+      this.agenciaSearchLoading = false;
+      this.agenciaSearchError = null;
+      return;
+    }
+
+    const currentRequest = ++this.agenciaSearchRequestId;
+    this.agenciaSearchLoading = true;
+    this.agenciaSearchError = null;
+    this.cdr.markForCheck();
+
+    this.clienteService
+      .getClientes(1, 8, normalized)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          if (currentRequest !== this.agenciaSearchRequestId || this.agenciaSearchTerm.trim() !== normalized) {
+            return;
+          }
+
+          this.agenciaSearchResults = response.data ?? [];
+          this.agenciaSearchOpen = true;
+          this.agenciaSearchLoading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          if (currentRequest !== this.agenciaSearchRequestId) {
+            return;
+          }
+
+          this.agenciaSearchResults = [];
+          this.agenciaSearchOpen = true;
+          this.agenciaSearchLoading = false;
+          this.agenciaSearchError = 'No se pudo buscar agencias.';
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  private seleccionarAgenciaBusqueda(cliente: ClienteUI): void {
+    const agenciaId = this.textValue(cliente.codigo);
+    if (!agenciaId) return;
+
+    this.clearAgenciaSearchBlurTimer();
+    this.cancelAgenciaSearchRequests();
+    this.selectedAgencia = cliente;
+    this.agenciaSearchTerm = this.formatAgenciaLabel(cliente);
+    this.agenciaSearchResults = [];
+    this.agenciaSearchOpen = false;
+    this.agenciaSearchError = null;
+    this.form.controls.agenciaId.setValue(agenciaId, { emitEvent: false });
+    this.consultar();
+  }
+
+  private shouldClearSelectedAgencia(nextTerm: string): boolean {
+    if (!this.selectedAgencia && !this.form.controls.agenciaId.value) {
+      return false;
+    }
+
+    const normalizedTerm = this.textValue(nextTerm);
+    const selectedLabel = this.formatAgenciaLabel(this.selectedAgencia);
+    const selectedCode = this.textValue(this.selectedAgencia?.codigo || this.form.controls.agenciaId.value);
+    return normalizedTerm !== selectedLabel && normalizedTerm !== selectedCode;
+  }
+
+  private clearSelectedAgenciaState(): void {
+    this.selectedAgencia = null;
+    this.form.controls.agenciaId.setValue('', { emitEvent: false });
+  }
+
+  private clearAgenciaSearchBlurTimer(): void {
+    if (this.agenciaSearchBlurTimer) {
+      clearTimeout(this.agenciaSearchBlurTimer);
+      this.agenciaSearchBlurTimer = null;
+    }
+  }
+
+  private cancelAgenciaSearchRequests(): void {
+    if (this.agenciaSearchDebounceTimer) {
+      clearTimeout(this.agenciaSearchDebounceTimer);
+      this.agenciaSearchDebounceTimer = null;
+    }
+
+    this.agenciaSearchRequestId += 1;
+    this.agenciaSearchLoading = false;
+  }
+
   private applyLocalFilters(): void {
     const filtros = {
-      busquedaActividad: this.normalizeSearchValue(this.form.controls.busquedaActividad.value),
-      agencia: this.textValue(this.form.controls.agencia.value),
       bloqueHora: this.textValue(this.form.controls.bloqueHora.value),
       soloNoProcesados: this.form.controls.soloNoProcesados.value,
       soloAltaSaturacion: this.form.controls.soloAltaSaturacion.value
@@ -254,11 +457,6 @@ export class ForecastActividadesComponent implements OnInit {
     const rows: ForecastMatrizActividad[] = [];
 
     for (const fila of filasBase) {
-      const searchText = this.normalizeSearchValue(`${fila.nomServicio} ${fila.codServicio}`);
-      if (filtros.busquedaActividad && !searchText.includes(filtros.busquedaActividad)) {
-        continue;
-      }
-
       const fechas = fila.fechas.map((celda) => {
         const bloquesFiltrados = celda.bloques.filter((bloque) => this.matchBloqueFilters(bloque, filtros));
         const totalPax = this.sumBy(bloquesFiltrados, (item) => item.totalPax);
@@ -288,7 +486,7 @@ export class ForecastActividadesComponent implements OnInit {
       });
     }
 
-    rows.sort((a, b) => b.totalPax - a.totalPax || a.nomServicio.localeCompare(b.nomServicio, 'es'));
+    rows.sort((a, b) => this.compareActividadByNombre(a, b));
 
     this.fechasVisibles = [...this.matrizBase.fechas];
     this.filasVisibles = rows;
@@ -300,19 +498,11 @@ export class ForecastActividadesComponent implements OnInit {
   private matchBloqueFilters(
     bloque: ForecastBloqueOperativo,
     filters: {
-      busquedaActividad: string;
-      agencia: string;
       bloqueHora: string;
       soloNoProcesados: boolean;
       soloAltaSaturacion: boolean;
     }
   ): boolean {
-    if (filters.agencia) {
-      const targetAgencia = this.normalizeSearchValue(filters.agencia);
-      const hasAgencia = bloque.agencias.some((item) => this.normalizeSearchValue(item).includes(targetAgencia));
-      if (!hasAgencia) return false;
-    }
-
     if (filters.bloqueHora && bloque.hora !== filters.bloqueHora) {
       return false;
     }
@@ -330,16 +520,10 @@ export class ForecastActividadesComponent implements OnInit {
 
   private ensureSelectedFilters(): void {
     const patch: Partial<{
-      agencia: string;
       bloqueHora: string;
     }> = {};
 
-    const agencia = this.form.controls.agencia.value;
     const bloqueHora = this.form.controls.bloqueHora.value;
-
-    if (agencia && !this.agenciasDisponibles.includes(agencia)) {
-      patch.agencia = '';
-    }
 
     if (bloqueHora && !this.bloquesHoraDisponibles.includes(bloqueHora)) {
       patch.bloqueHora = '';
@@ -443,7 +627,7 @@ export class ForecastActividadesComponent implements OnInit {
       });
     }
 
-    filas.sort((a, b) => b.totalPax - a.totalPax || a.nomServicio.localeCompare(b.nomServicio, 'es'));
+    filas.sort((a, b) => this.compareActividadByNombre(a, b));
 
     return {
       fechas,
@@ -601,6 +785,13 @@ export class ForecastActividadesComponent implements OnInit {
     const aMinutes = this.parseHourToMinutes(a);
     const bMinutes = this.parseHourToMinutes(b);
     return aMinutes - bMinutes || a.localeCompare(b);
+  }
+
+  private compareActividadByNombre(a: ForecastMatrizActividad, b: ForecastMatrizActividad): number {
+    return (
+      a.nomServicio.localeCompare(b.nomServicio, 'es', { sensitivity: 'base' }) ||
+      a.codServicio.localeCompare(b.codServicio, 'es', { sensitivity: 'base' })
+    );
   }
 
   private parseHourToMinutes(value: string): number {

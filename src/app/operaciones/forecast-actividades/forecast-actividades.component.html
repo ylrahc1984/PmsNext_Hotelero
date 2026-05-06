@@ -51,10 +51,58 @@
 
           <div class="control-field">
             <label class="form-label">Agencia</label>
-            <select class="form-select" formControlName="agencia">
-              <option value="">Todas</option>
-              <option *ngFor="let agencia of agenciasDisponibles" [value]="agencia">{{ agencia }}</option>
-            </select>
+            <div class="position-relative">
+              <div class="input-group">
+                <input
+                  type="text"
+                  class="form-control"
+                  [value]="agenciaSearchTerm"
+                  placeholder="Escriba para buscar agencia..."
+                  autocomplete="off"
+                  (input)="onAgenciaSearchInput($event)"
+                  (focus)="onAgenciaSearchFocus()"
+                  (blur)="onAgenciaSearchBlur()"
+                  (keydown.enter)="onAgenciaSearchEnter($event)"
+                />
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary agency-search__clear"
+                  *ngIf="agenciaSearchTerm || selectedAgencia"
+                  (click)="limpiarAgenciaSeleccionada()"
+                  aria-label="Limpiar agencia"
+                >
+                  <i class="feather icon-x"></i>
+                </button>
+              </div>
+
+              <div
+                class="list-group shadow-sm"
+                style="position: absolute; top: calc(100% + 0.25rem); left: 0; right: 0; z-index: 20; max-height: 220px; overflow-y: auto;"
+                *ngIf="agenciaSearchOpen"
+              >
+                <button
+                  type="button"
+                  class="list-group-item list-group-item-action d-grid gap-1"
+                  *ngFor="let agencia of agenciaSearchResults; trackBy: trackByAgencia"
+                  (mousedown)="onAgenciaSuggestionMouseDown(agencia, $event)"
+                >
+                  <strong>{{ getAgenciaDisplayName(agencia) }}</strong>
+                  <small>{{ agencia.codigo }} - {{ agencia.nombre }}</small>
+                </button>
+
+                <div class="p-2 d-flex align-items-center gap-2 small text-muted" *ngIf="agenciaSearchLoading && agenciaSearchResults.length === 0">
+                  <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                  <span>Buscando agencias...</span>
+                </div>
+
+                <div class="p-2 small text-muted" *ngIf="!agenciaSearchLoading && agenciaSearchResults.length === 0">
+                  <span>{{ agenciaSearchError || 'No se encontraron coincidencias.' }}</span>
+                </div>
+              </div>
+            </div>
+            <small class="d-block mt-1 text-muted" *ngIf="selectedAgencia">
+              Filtro activo: {{ selectedAgencia.codigo }}
+            </small>
           </div>
 
           <div class="control-field">
