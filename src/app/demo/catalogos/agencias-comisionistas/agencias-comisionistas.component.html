@@ -64,7 +64,7 @@
               <div class="entity-meta" *ngIf="cliente.cargoPrincipal">{{ cliente.cargoPrincipal }}</div>
             </td>
             <td>{{ getTelefonoLabel(cliente) }}</td>
-            <td>{{ getEmailLabel(cliente) }}</td>
+            <td>{{ cliente.email }}</td>
             <td><span class="badge bg-light text-dark">{{ getTipoLabel(cliente.tipoCli) }}</span></td>
             <td class="text-center">
               <span [ngClass]="getComprobanteBadgeClass(cliente)">
