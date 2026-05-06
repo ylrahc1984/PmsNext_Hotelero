@@ -3,6 +3,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { finalize } from 'rxjs/operators';
+import Swal from 'sweetalert2';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { OrdenPedidoListadoItem } from '../../interfaces/orden-pedido.interface';
@@ -49,6 +50,7 @@ export class OrdenPedidoListComponent implements OnInit {
   totalSubtotalVisible = 0;
   totalImpuestoVisible = 0;
   totalGeneralVisible = 0;
+  anulatingKeys = new Set<string>();
 
   ngOnInit(): void {
     this.loadOrdenes();
@@ -107,6 +109,71 @@ export class OrdenPedidoListComponent implements OnInit {
     }
 
     void this.router.navigate(['/demo/ordenes-pedido/detalle', tipOrden, serie, numero]);
+  }
+
+  async anularOrden(item: OrdenPedidoListadoItem): Promise<void> {
+    const tipOrden = (item.tipOrden ?? '').toString().trim();
+    const serie = (item.serie ?? '').toString().trim() || '000';
+    const numero = (item.numero ?? '').toString().trim();
+    const key = this.getRowKey(item);
+
+    if (!tipOrden || !numero || this.isAnulando(item) || this.isOrdenAnulada(item)) {
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: 'Anular orden de pedido',
+      html: `Esta acción anulará la orden <strong>${tipOrden} ${serie}-${numero}</strong>.<br>No continúe si no está seguro.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, anular',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#dc3545',
+      reverseButtons: true,
+      focusCancel: true
+    });
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
+    this.anulatingKeys.add(key);
+
+    this.ordenPedidoService
+      .anularOrden(tipOrden, serie, numero)
+      .pipe(
+        finalize(() => {
+          this.anulatingKeys.delete(key);
+        })
+      )
+      .subscribe({
+        next: (response) => {
+          void Swal.fire({
+            title: 'Orden anulada',
+            text: response?.respuesta || 'La orden de pedido fue anulada correctamente.',
+            icon: 'success',
+            timer: 1800,
+            showConfirmButton: false
+          });
+          this.loadOrdenes();
+        },
+        error: (error: Error) => {
+          void Swal.fire({
+            title: 'No se pudo anular',
+            text: error.message || 'No se pudo anular la orden de pedido.',
+            icon: 'error'
+          });
+        }
+      });
+  }
+
+  isAnulando(item: OrdenPedidoListadoItem): boolean {
+    return this.anulatingKeys.has(this.getRowKey(item));
+  }
+
+  isOrdenAnulada(item: OrdenPedidoListadoItem): boolean {
+    const estado = (item.estado || '').toUpperCase();
+    return estado.includes('ANU') || estado.includes('CANCEL');
   }
 
   getEstadoBadgeClass(item: OrdenPedidoListadoItem): string {

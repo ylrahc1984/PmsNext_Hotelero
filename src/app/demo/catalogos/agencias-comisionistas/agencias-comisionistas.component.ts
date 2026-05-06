@@ -161,4 +161,12 @@ export class AgenciasComisionistasComponent implements OnInit {
   getEmailLabel(cliente: ClienteUI): string {
     return cliente.emailPrincipal || cliente.email || 'N/D';
   }
+
+  getComprobanteLabel(cliente: ClienteUI): string {
+    return cliente.enviarCorreo ? 'Factura electronica' : 'Tiquete electronico';
+  }
+
+  getComprobanteBadgeClass(cliente: ClienteUI): string {
+    return cliente.enviarCorreo ? 'badge bg-success-subtle text-success border border-success-subtle' : 'badge bg-info-subtle text-info border border-info-subtle';
+  }
 }

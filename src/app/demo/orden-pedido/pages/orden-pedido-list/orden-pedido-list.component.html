@@ -115,9 +115,21 @@
                         </td>
                         <td>{{ item.operador || 'N/D' }}</td>
                         <td class="text-center">
-                          <button class="btn btn-sm btn-outline-primary" type="button" (click)="verDetalle(item)" title="Ver detalle">
-                            <i class="feather icon-eye"></i>
-                          </button>
+                          <div class="btn-group btn-group-sm" role="group" aria-label="Acciones de orden">
+                            <button class="btn btn-outline-primary" type="button" (click)="verDetalle(item)" title="Ver detalle">
+                              <i class="feather icon-eye"></i>
+                            </button>
+                            <button
+                              class="btn btn-outline-danger"
+                              type="button"
+                              (click)="anularOrden(item)"
+                              [disabled]="isAnulando(item) || isOrdenAnulada(item)"
+                              title="Anular orden"
+                            >
+                              <span *ngIf="isAnulando(item)" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                              <i *ngIf="!isAnulando(item)" class="feather icon-x-circle"></i>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     </ng-container>

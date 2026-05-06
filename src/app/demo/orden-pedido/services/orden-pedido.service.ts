@@ -88,6 +88,24 @@ export class OrdenPedidoService {
     );
   }
 
+  anularOrden(tipOrden: string, serie: string, numero: string): Observable<{ respuesta?: string }> {
+    const tip = this.clean(tipOrden);
+    const normalizedSerie = this.clean(serie) || '000';
+    const normalizedNumero = this.clean(numero);
+
+    return this.http
+      .delete(`${this.apiUrl}/${encodeURIComponent(tip)}/${encodeURIComponent(`${normalizedSerie}-${normalizedNumero}`)}`, {
+        responseType: 'text'
+      })
+      .pipe(
+        map((response) => this.parseCreateResponse(response)),
+        catchError((error: HttpErrorResponse) => {
+          const message = error.error?.mensaje || error.error?.respuesta || error.message || 'No se pudo anular la orden.';
+          return throwError(() => new Error(message));
+        })
+      );
+  }
+
   getOrdenCompleta(tipNDP: string, serieNDP: string, numNDP: string): Observable<OrdenPedidoCompletaResponse> {
     const tip = this.clean(tipNDP);
     const serie = this.clean(serieNDP) || '000';
