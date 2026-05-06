@@ -137,6 +137,16 @@
                 <td colspan="12" class="text-center text-muted">No hay resultados para los filtros aplicados.</td>
               </tr>
             </tbody>
+            <tfoot class="table-light" *ngIf="vm.notas.length">
+              <tr class="fw-semibold">
+                <td colspan="6" class="text-end">Total mostrado</td>
+                <td class="text-end">{{ vm.subtotalVisible | number:'1.2-2' }}</td>
+                <td class="text-end">{{ vm.impuestoVisible | number:'1.2-2' }}</td>
+                <td class="text-end">{{ vm.totalVisible | number:'1.2-2' }}</td>
+                <td>{{ vm.monedaResumen || 'N/D' }}</td>
+                <td colspan="2"></td>
+              </tr>
+            </tfoot>
           </table>
         </div>
 

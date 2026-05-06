@@ -45,6 +45,10 @@ export class OrdenPedidoListComponent implements OnInit {
   totalPages = 1;
   pageStart = 0;
   pageEnd = 0;
+  totalItemsVisible = 0;
+  totalSubtotalVisible = 0;
+  totalImpuestoVisible = 0;
+  totalGeneralVisible = 0;
 
   ngOnInit(): void {
     this.loadOrdenes();
@@ -159,6 +163,7 @@ export class OrdenPedidoListComponent implements OnInit {
       .subscribe({
         next: (response) => {
           this.ordenes = response.datos;
+          this.updateVisibleTotals();
           this.totalRecords = response.paginacion.totalRegistros;
           this.pageNumber = response.paginacion.paginaActual || this.pageNumber;
           this.pageSize = response.paginacion.pageSize || this.pageSize;
@@ -172,9 +177,21 @@ export class OrdenPedidoListComponent implements OnInit {
           this.totalPages = 1;
           this.pageStart = 0;
           this.pageEnd = 0;
+          this.updateVisibleTotals();
           this.errorMessage = error.message || 'No se pudieron cargar las ordenes de pedido.';
         }
       });
+  }
+
+  private updateVisibleTotals(): void {
+    this.totalItemsVisible = this.sumOrdenes((item) => item.items);
+    this.totalSubtotalVisible = this.sumOrdenes((item) => item.subtotal);
+    this.totalImpuestoVisible = this.sumOrdenes((item) => item.impuesto);
+    this.totalGeneralVisible = this.sumOrdenes((item) => item.total);
+  }
+
+  private sumOrdenes(accessor: (item: OrdenPedidoListadoItem) => number): number {
+    return this.ordenes.reduce((sum, item) => sum + (Number(accessor(item)) || 0), 0);
   }
 
   private getRowKey(item: OrdenPedidoListadoItem): string {

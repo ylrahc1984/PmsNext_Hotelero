@@ -23,6 +23,9 @@ type ConsultaDocumentosForm = {
 interface ConsultaDocumentosViewModel {
   documentos: Documento[];
   totalRegistros: number;
+  totalDocuVisible: number;
+  totalPagoVisible: number;
+  monedaResumen: string;
   pageNumber: number;
   pageSize: number;
   totalPages: number;
@@ -65,6 +68,9 @@ export class ConsultaDocumentosComponent implements OnInit {
   private readonly vmSubject = new BehaviorSubject<ConsultaDocumentosViewModel>({
     documentos: [],
     totalRegistros: 0,
+    totalDocuVisible: 0,
+    totalPagoVisible: 0,
+    monedaResumen: '',
     pageNumber: 1,
     pageSize: DEFAULT_PAGE_SIZE,
     totalPages: 1,
@@ -111,6 +117,9 @@ export class ConsultaDocumentosComponent implements OnInit {
     this.vmSubject.next({
       documentos: [],
       totalRegistros: 0,
+      totalDocuVisible: 0,
+      totalPagoVisible: 0,
+      monedaResumen: '',
       pageNumber: 1,
       pageSize: DEFAULT_PAGE_SIZE,
       totalPages: 1,
@@ -263,6 +272,9 @@ export class ConsultaDocumentosComponent implements OnInit {
   private updateVmSuccess(response: ConsultaDocumentosResponse, pageNumber: number, pageSize: number): void {
     const totalRegistros = response?.totalRegistros ?? 0;
     const documentos = response?.detalle ?? [];
+    const totalDocuVisible = this.sumDocumentos(documentos, (documento) => documento.PPV00_TotalDocu);
+    const totalPagoVisible = this.sumDocumentos(documentos, (documento) => documento.PPV00_TotalPago);
+    const monedaResumen = this.resolveMonedaResumen(documentos);
     const totalPages = Math.max(1, Math.ceil(totalRegistros / pageSize));
     const pageStart = totalRegistros === 0 ? 0 : (pageNumber - 1) * pageSize + 1;
     const pageEnd = totalRegistros === 0 ? 0 : Math.min(pageStart + pageSize - 1, totalRegistros);
@@ -270,6 +282,9 @@ export class ConsultaDocumentosComponent implements OnInit {
     this.vmSubject.next({
       documentos,
       totalRegistros,
+      totalDocuVisible,
+      totalPagoVisible,
+      monedaResumen,
       pageNumber,
       pageSize,
       totalPages,
@@ -286,6 +301,9 @@ export class ConsultaDocumentosComponent implements OnInit {
     this.vmSubject.next({
       documentos: [],
       totalRegistros: 0,
+      totalDocuVisible: 0,
+      totalPagoVisible: 0,
+      monedaResumen: '',
       pageNumber,
       pageSize,
       totalPages,
@@ -300,6 +318,16 @@ export class ConsultaDocumentosComponent implements OnInit {
   private normalize(value: string): string | undefined {
     const trimmed = value.trim();
     return trimmed.length > 0 ? trimmed : undefined;
+  }
+
+  private sumDocumentos(documentos: Documento[], accessor: (documento: Documento) => number): number {
+    return documentos.reduce((sum, documento) => sum + (Number(accessor(documento)) || 0), 0);
+  }
+
+  private resolveMonedaResumen(documentos: Documento[]): string {
+    const monedas = [...new Set(documentos.map((documento) => (documento.PPV00_Moneda ?? '').toString().trim()).filter(Boolean))];
+    if (monedas.length === 0) return '';
+    return monedas.length === 1 ? monedas[0] : 'Mixta';
   }
 
   private formatDateToApi(value?: string): string | undefined {

@@ -129,6 +129,16 @@
                     </tr>
                   </ng-container>
                 </tbody>
+                <tfoot *ngIf="!isLoading && ordenes.length">
+                  <tr class="fw-semibold table-light">
+                    <td colspan="6" class="text-end">Total mostrado</td>
+                    <td class="text-end">{{ totalItemsVisible | number:'1.0-0' }}</td>
+                    <td class="text-end">{{ totalSubtotalVisible | number:'1.2-2' }}</td>
+                    <td class="text-end">{{ totalImpuestoVisible | number:'1.2-2' }}</td>
+                    <td class="text-end">{{ totalGeneralVisible | number:'1.2-2' }}</td>
+                    <td colspan="3"></td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
 

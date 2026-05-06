@@ -167,9 +167,18 @@
                 </td>
               </tr>
               <tr *ngIf="!vm.loading && vm.hasSearched && vm.documentos.length === 0">
-                <td colspan="10" class="text-center text-muted">No hay resultados para los filtros aplicados.</td>
+                <td colspan="11" class="text-center text-muted">No hay resultados para los filtros aplicados.</td>
               </tr>
             </tbody>
+            <tfoot class="table-light" *ngIf="vm.documentos.length">
+              <tr class="fw-semibold">
+                <td colspan="4" class="text-end">Total mostrado</td>
+                <td class="text-end">{{ vm.totalDocuVisible | number:'1.2-2' }}</td>
+                <td class="text-end">{{ vm.totalPagoVisible | number:'1.2-2' }}</td>
+                <td>{{ vm.monedaResumen || 'N/D' }}</td>
+                <td colspan="4"></td>
+              </tr>
+            </tfoot>
           </table>
         </div>
 

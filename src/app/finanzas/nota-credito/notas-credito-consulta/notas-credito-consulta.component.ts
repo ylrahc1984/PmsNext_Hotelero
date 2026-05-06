@@ -19,6 +19,10 @@ type NotasCreditoForm = {
 interface NotasCreditoViewModel {
   notas: NotaCredito[];
   totalRegistros: number;
+  subtotalVisible: number;
+  impuestoVisible: number;
+  totalVisible: number;
+  monedaResumen: string;
   pageNumber: number;
   pageSize: number;
   totalPages: number;
@@ -59,6 +63,10 @@ export class NotasCreditoConsultaComponent implements OnInit {
   private readonly vmSubject = new BehaviorSubject<NotasCreditoViewModel>({
     notas: [],
     totalRegistros: 0,
+    subtotalVisible: 0,
+    impuestoVisible: 0,
+    totalVisible: 0,
+    monedaResumen: '',
     pageNumber: 1,
     pageSize: DEFAULT_PAGE_SIZE,
     totalPages: 1,
@@ -190,6 +198,10 @@ export class NotasCreditoConsultaComponent implements OnInit {
   private updateVmSuccess(response: NotaCreditoResponse, pageNumber: number, pageSize: number): void {
     const totalRegistros = response?.paginacion?.totalRegistros ?? 0;
     const notas = response?.datos ?? [];
+    const subtotalVisible = this.sumNotas(notas, (nota) => nota.PFD07_SubTotal);
+    const impuestoVisible = this.sumNotas(notas, (nota) => nota.PFD07_Impuesto);
+    const totalVisible = this.sumNotas(notas, (nota) => nota.PFD07_Total);
+    const monedaResumen = this.resolveMonedaResumen(notas);
     const responsePageSize = Number(response?.paginacion?.pageSize ?? 0);
     const size = responsePageSize > 0 ? responsePageSize : pageSize;
     const totalPages = Math.max(1, Math.ceil(totalRegistros / size));
@@ -199,6 +211,10 @@ export class NotasCreditoConsultaComponent implements OnInit {
     this.vmSubject.next({
       notas,
       totalRegistros,
+      subtotalVisible,
+      impuestoVisible,
+      totalVisible,
+      monedaResumen,
       pageNumber,
       pageSize: size,
       totalPages,
@@ -216,6 +232,10 @@ export class NotasCreditoConsultaComponent implements OnInit {
     this.vmSubject.next({
       notas: [],
       totalRegistros: 0,
+      subtotalVisible: 0,
+      impuestoVisible: 0,
+      totalVisible: 0,
+      monedaResumen: '',
       pageNumber,
       pageSize,
       totalPages,
@@ -230,6 +250,16 @@ export class NotasCreditoConsultaComponent implements OnInit {
 
   private normalize(value: string): string {
     return (value ?? '').toString().trim();
+  }
+
+  private sumNotas(notas: NotaCredito[], accessor: (nota: NotaCredito) => number): number {
+    return notas.reduce((sum, nota) => sum + (Number(accessor(nota)) || 0), 0);
+  }
+
+  private resolveMonedaResumen(notas: NotaCredito[]): string {
+    const monedas = [...new Set(notas.map((nota) => this.normalize(nota.PFD07_Moneda)).filter(Boolean))];
+    if (monedas.length === 0) return '';
+    return monedas.length === 1 ? monedas[0] : 'Mixta';
   }
 
   private formatDateToApi(value: string): string {
