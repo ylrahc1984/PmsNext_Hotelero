@@ -58,6 +58,7 @@ export interface OperacionDetalle {
 export interface ServicioResumen {
   codServicio       : string;
   nomServicio       : string;
+  paxTotal          : number;
 }
 
 export interface ReservaOperacionAgrupada {

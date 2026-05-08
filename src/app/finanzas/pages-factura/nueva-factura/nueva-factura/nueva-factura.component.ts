@@ -41,7 +41,7 @@ import {
   ReservaPendienteDetalle,
   ReservasFacturacionService
 } from 'src/app/finanzas/services/reservas-facturacion.service';
-import { ReservasService } from 'src/app/demo/reservas/services/reservas.service';
+import { Reserva, ReservasService } from 'src/app/demo/reservas/services/reservas.service';
 import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
 import { calculateFiscalTotals } from 'src/app/core/config/fiscal.utils';
 import { FISCAL_CONFIG } from 'src/app/core/config/fiscal.config';
@@ -1522,8 +1522,8 @@ export class NuevaFacturaComponent implements OnInit {
 
     forkJoin({
       detalle: this.reservasFacturacionService.getDetalle(codReserva),
-      cliente: this.clienteService.getClienteByCodigo(codAgencia)
-      
+      cliente: this.clienteService.getClienteByCodigo(codAgencia),
+      reserva: this.reservasService.getReservaByCod(codReserva)
     })
       .pipe(
         finalize(() => {
@@ -1533,9 +1533,10 @@ export class NuevaFacturaComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
-        next: ({ detalle, cliente }) => {
+        next: ({ detalle, cliente, reserva }) => {
           this.reservaActual = codReserva;
           this.form.controls.codReserva.setValue(codReserva, { emitEvent: false });
+          this.aplicarVoucherReserva(reserva);
           this.aplicarClienteReserva(cliente, codAgencia);
           this.aplicarCatalogosReserva(detalle ?? []);
           this.setModoReserva(true);
@@ -1548,6 +1549,46 @@ export class NuevaFacturaComponent implements OnInit {
           this.cdr.markForCheck();
         }
       });
+  }
+
+  private aplicarVoucherReserva(reserva: Reserva | null | undefined): void {
+    const voucher = this.resolveReservaVoucher(reserva);
+    if (!voucher) {
+      return;
+    }
+
+    this.form.controls.master.setValue(voucher, { emitEvent: false });
+  }
+
+  private resolveReservaVoucher(reserva: Reserva | null | undefined): string {
+    const record = (reserva ?? {}) as Reserva & Record<string, unknown>;
+    const candidates = [
+      record.PRV01_Folio,
+      record['prV01_Folio'],
+      record['folio'],
+      record['Folio'],
+      record['master'],
+      record['Master'],
+      record['PRV01_Master'],
+      record['prV01_Master']
+    ];
+
+    for (const value of candidates) {
+      const normalized = this.toCleanString(value);
+      if (normalized) {
+        return normalized;
+      }
+    }
+
+    return '';
+  }
+
+  private toCleanString(value: unknown): string {
+    if (value === null || value === undefined || typeof value === 'object') {
+      return '';
+    }
+
+    return value.toString().trim();
   }
 
   private initReservaFromQuery(): void {

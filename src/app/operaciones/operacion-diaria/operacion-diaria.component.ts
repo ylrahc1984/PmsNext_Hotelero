@@ -787,7 +787,7 @@ export class OperacionDiariaComponent implements OnInit {
       const activeDetalles = this.getDetallesActivos(bloque?.detalles ?? []);
       return {
         bloqueHora: bloque?.bloqueHora ?? '',
-        totalesHora: this.buildTotalesHora(activeDetalles),
+        totalesHora: this.buildTotalesHora(activeDetalles, reservas),
         reservas,
         cantidadReservas: reservas.filter((reserva) => !this.isReservaCancelada(reserva)).length
       };
@@ -821,22 +821,25 @@ export class OperacionDiariaComponent implements OnInit {
   private buildReservaAgrupada(reservaKey: string, detalles: OperacionDetalle[]): ReservaOperacionAgrupada {
     const sortedDetalles = [...detalles].sort((a, b) => this.toNumber(a?.prV02_ID) - this.toNumber(b?.prV02_ID));
     const principal = sortedDetalles[0];
+    const activeDetalles = this.getDetallesActivos(sortedDetalles);
 
-    const servicesByCode = new Map<string, { codServicio: string; nomServicio: string }>();
-    sortedDetalles.forEach((detalle) => {
+    const servicesByCode = new Map<string, { codServicio: string; nomServicio: string; paxTotal: number }>();
+    activeDetalles.forEach((detalle) => {
       const codServicio = (detalle?.codServicio ?? '').toString().trim();
       const nomServicio = (detalle?.nomServicio ?? '').toString().trim();
       const key = `${codServicio}-${nomServicio}`;
-      if (!servicesByCode.has(key)) {
-        servicesByCode.set(key, { codServicio, nomServicio });
+      const current = servicesByCode.get(key);
+      if (current) {
+        current.paxTotal += this.toNumber(detalle?.totalPax);
+      } else {
+        servicesByCode.set(key, { codServicio, nomServicio, paxTotal: this.toNumber(detalle?.totalPax) });
       }
     });
     const servicios = Array.from(servicesByCode.values());
     const serviciosPreview = servicios.slice(0, this.servicePreviewLimit);
     const serviciosExtraCount = Math.max(0, servicios.length - serviciosPreview.length);
 
-    const activeDetalles = this.getDetallesActivos(sortedDetalles);
-    const paxTotal = activeDetalles.reduce((acc, item) => acc + this.toNumber(item?.totalPax), 0);
+    const paxTotal = activeDetalles.reduce((acc, item) => Math.max(acc, this.toNumber(item?.totalPax)), 0);
     const totalReserva = activeDetalles.reduce((acc, item) => acc + this.toNumber(item?.totalServicio), 0);
 
     const estados = sortedDetalles.map((item) => (item?.estado ?? '').toString().trim().toUpperCase()).filter(Boolean);
@@ -911,10 +914,10 @@ export class OperacionDiariaComponent implements OnInit {
     return { label: 'Sin asignar', badge: 'bg-secondary' };
   }
 
-  private buildTotalesHora(detalles: OperacionDetalle[]): TotalesHora {
+  private buildTotalesHora(detalles: OperacionDetalle[], reservas: ReservaOperacionAgrupada[]): TotalesHora {
     return {
       totalHora: detalles.reduce((acc, detalle) => acc + this.toNumber(detalle?.totalServicio), 0),
-      paxHora: detalles.reduce((acc, detalle) => acc + this.toNumber(detalle?.totalPax), 0),
+      paxHora: reservas.reduce((acc, reserva) => acc + this.toNumber(reserva?.paxTotal), 0),
       cantidadServicios: detalles.length
     };
   }

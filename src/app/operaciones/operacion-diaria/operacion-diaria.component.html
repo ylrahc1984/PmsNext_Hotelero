@@ -185,6 +185,7 @@
                               @for (servicio of reserva.serviciosPreview; track servicio.codServicio + '-' + servicio.nomServicio) {
                                 <span class="service-chip fw-bold" [ngClass]="getServiceColor(servicio.codServicio)">
                                   {{ servicio.nomServicio }}
+                                  <span class="ms-1 opacity-75">{{ servicio.paxTotal }} pax</span>
                                 </span>
                               }
                               @if (reserva.serviciosExtraCount > 0) {
