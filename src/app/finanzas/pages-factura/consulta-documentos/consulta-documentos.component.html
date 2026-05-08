@@ -157,10 +157,12 @@
                         type="button"
                         ngbDropdownItem
                         class="dropdown-item"
-                        disabled
+                        (click)="crearNotaCredito(documento)"
+                        [disabled]="!canCrearNotaCredito(documento)"
+                        [title]="getNotaCreditoDisabledReason(documento)"
                       >
                         <i class="feather icon-file-minus" aria-hidden="true"></i>
-                        <span>Nota crédito (próximamente)</span>
+                        <span>Nota crédito</span>
                       </button>
                     </div>
                   </div>

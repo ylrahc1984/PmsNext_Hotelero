@@ -94,6 +94,41 @@
   margin-bottom: 6px;
 }
 
+.op-filter-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  width: 100%;
+}
+
+.op-filter-field {
+  min-width: 0;
+}
+
+.op-filter-field--tipo {
+  flex: 0 0 180px;
+}
+
+.op-filter-field--date {
+  flex: 0 0 150px;
+}
+
+.op-filter-field--cliente {
+  flex: 1 1 260px;
+}
+
+.op-filter-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.op-filter-actions .btn {
+  min-height: 40px;
+  padding-left: 18px;
+  padding-right: 18px;
+}
+
 .op-table thead th {
   background: #f8fafc;
   color: #334155;
@@ -138,6 +173,21 @@
 }
 
 @media (max-width: 767.98px) {
+  .op-filter-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .op-filter-field--tipo,
+  .op-filter-field--date,
+  .op-filter-field--cliente {
+    flex-basis: auto;
+  }
+
+  .op-filter-actions {
+    justify-content: flex-end;
+  }
+
   .op-pagination {
     align-items: flex-start;
     flex-direction: column;

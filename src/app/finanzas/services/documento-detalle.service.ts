@@ -4,13 +4,18 @@ import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
 import { environment } from 'src/environments/environment';
-import { DocumentoDetalleResponse } from '../pages-factura/documento-detalle/documento-detalle.interface';
+import {
+  CambioFormaPagoPayload,
+  CambioFormaPagoResponse,
+  DocumentoDetalleResponse
+} from '../pages-factura/documento-detalle/documento-detalle.interface';
 
 @Injectable({ providedIn: 'root' })
 export class DocumentoDetalleService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/facturacion/consultar`;
   private readonly pdfUrl = `${environment.apiUrl}/facturas`;
+  private readonly cambioFormaPagoUrl = `${environment.apiUrl}/cambio-forma-pago`;
 
   getDetalle(tipoDocu: string, serie: string, numero: string): Observable<DocumentoDetalleResponse> {
     const safeTipo = encodeURIComponent(tipoDocu);
@@ -34,6 +39,15 @@ export class DocumentoDetalleService {
     return this.http.get(url, { responseType: 'blob' }).pipe(
       catchError((error: HttpErrorResponse) => {
         const message = error.error?.mensaje || error.error?.respuesta || error.message || 'Error al obtener el PDF del documento';
+        return throwError(() => new Error(message));
+      })
+    );
+  }
+
+  cambiarFormaPago(payload: CambioFormaPagoPayload): Observable<CambioFormaPagoResponse> {
+    return this.http.post<CambioFormaPagoResponse>(this.cambioFormaPagoUrl, payload).pipe(
+      catchError((error: HttpErrorResponse) => {
+        const message = error.error?.mensaje || error.error?.respuesta || error.message || 'No se pudo cambiar la forma de pago.';
         return throwError(() => new Error(message));
       })
     );

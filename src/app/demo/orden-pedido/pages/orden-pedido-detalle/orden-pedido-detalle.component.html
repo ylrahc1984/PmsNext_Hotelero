@@ -26,6 +26,11 @@
 
         <div *ngIf="errorMsg" class="alert alert-danger mb-3">{{ errorMsg }}</div>
 
+        <div *ngIf="cambioFormaPagoSuccess" class="alert alert-success mb-3">
+          <i class="feather icon-check-circle me-1"></i>
+          {{ cambioFormaPagoSuccess }}
+        </div>
+
         <ng-container *ngIf="!loading && encabezado as h">
           <section class="op-hero">
             <div class="op-hero__main">
@@ -248,7 +253,20 @@
                 <h6 class="op-panel__title mb-0">Pagos / Formas de Pago</h6>
                 <p class="op-panel__subtitle mb-0">Distribución de pagos y referencias.</p>
               </div>
-              <span class="op-chip">{{ formasPago.length }} pagos</span>
+              <div class="d-flex align-items-center flex-wrap gap-2">
+                <span class="op-chip">{{ formasPago.length }} pagos</span>
+                <button
+                  class="btn btn-sm btn-outline-primary"
+                  type="button"
+                  (click)="abrirCambioFormaPago()"
+                  [disabled]="loading || formasPagoLoading || formasPago.length === 0"
+                  title="Editar forma de pago"
+                >
+                  <span *ngIf="formasPagoLoading" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                  <i *ngIf="!formasPagoLoading" class="feather icon-edit-2 me-1"></i>
+                  Editar forma de pago
+                </button>
+              </div>
             </header>
 
             <div class="table-responsive op-table-wrap">
@@ -290,3 +308,130 @@
     </app-card>
   </div>
 </div>
+
+<div class="modal fade show d-block" *ngIf="showCambioFormaPagoModal" tabindex="-1" role="dialog" aria-modal="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl" role="document">
+    <div class="modal-content cambio-pago-modal">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title mb-0">
+            <i class="feather icon-credit-card me-1"></i>
+            Editar forma de pago
+          </h5>
+          <small class="text-muted">Pedido {{ documentoCodigo || numero }} · {{ cliente?.nomCliente || encabezado?.nomCliente || 'Cliente' }}</small>
+        </div>
+        <button
+          type="button"
+          class="btn-close"
+          aria-label="Cerrar"
+          (click)="cerrarCambioFormaPago()"
+          [disabled]="cambioFormaPagoSaving"
+        ></button>
+      </div>
+
+      <form [formGroup]="cambioFormaPagoForm" (ngSubmit)="guardarCambioFormaPago()">
+        <div class="modal-body">
+          <div *ngIf="cambioFormaPagoError" class="alert alert-danger py-2" role="alert">
+            <i class="feather icon-alert-triangle me-1"></i>
+            {{ cambioFormaPagoError }}
+          </div>
+
+          <div class="cambio-pago-context">
+            <div>
+              <span class="text-muted small">Total pedido</span>
+              <strong>{{ totalGeneral | number:'1.2-2' }} {{ monedaDocumento || '' }}</strong>
+            </div>
+            <div>
+              <span class="text-muted small">Total pagos</span>
+              <strong>{{ totalPagadoVista | number:'1.2-2' }}</strong>
+            </div>
+            <div>
+              <span class="text-muted small">Operador</span>
+              <strong>{{ operadorActual || 'N/D' }}</strong>
+            </div>
+          </div>
+
+          <div class="table-responsive mt-3">
+            <table class="table table-sm table-bordered align-middle cambio-pago-table">
+              <thead class="table-light">
+                <tr>
+                  <th style="min-width: 220px;">Forma pago</th>
+                  <th style="width: 95px;">Moneda</th>
+                  <th style="width: 130px;" class="text-end">Monto</th>
+                  <th style="min-width: 160px;">Referencia</th>
+                  <th style="min-width: 140px;">Tarjeta</th>
+                  <th style="width: 130px;">Vencimiento</th>
+                </tr>
+              </thead>
+              <tbody formArrayName="pagos">
+                <tr *ngFor="let group of cambioPagoArray.controls; let i = index" [formGroupName]="i">
+                  <td>
+                    <select
+                      class="form-control form-control-sm"
+                      formControlName="frmPago"
+                      (change)="onCambioFrmPagoChange(i)"
+                      [class.is-invalid]="group.controls.frmPago.invalid && group.controls.frmPago.touched"
+                    >
+                      <option *ngIf="formasPagoLoading" value="" disabled>Cargando formas de pago...</option>
+                      <option *ngIf="!formasPagoLoading && formasPagoCatalogo.length === 0" value="" disabled>No hay formas de pago</option>
+                      <option *ngFor="let fp of formasPagoCatalogo" [value]="fp.codigo">
+                        {{ fp.codigo }} - {{ fp.descripcion }}
+                      </option>
+                    </select>
+                  </td>
+                  <td>
+                    <input class="form-control form-control-sm" formControlName="moneda" readonly>
+                  </td>
+                  <td>
+                    <input class="form-control form-control-sm text-end" formControlName="monto" readonly>
+                  </td>
+                  <td>
+                    <input class="form-control form-control-sm" formControlName="referencia" maxlength="50" placeholder="Referencia">
+                  </td>
+                  <td>
+                    <input class="form-control form-control-sm" formControlName="numTarjeta" maxlength="30" placeholder="Tarjeta">
+                  </td>
+                  <td>
+                    <input class="form-control form-control-sm" formControlName="vencimiento" maxlength="20" placeholder="MM/yyyy">
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mt-3">
+            <label for="cambio-forma-pago-pedido-motivo" class="form-label">
+              Motivo del cambio <span class="text-danger">*</span>
+            </label>
+            <textarea
+              id="cambio-forma-pago-pedido-motivo"
+              class="form-control"
+              rows="3"
+              formControlName="motivo"
+              maxlength="250"
+              placeholder="Describe por qué se corrige la forma de pago"
+              [class.is-invalid]="cambioFormaPagoForm.controls.motivo.invalid && cambioFormaPagoForm.controls.motivo.touched"
+            ></textarea>
+            <div class="invalid-feedback d-block" *ngIf="cambioFormaPagoForm.controls.motivo.invalid && cambioFormaPagoForm.controls.motivo.touched">
+              El motivo es obligatorio y debe tener al menos 5 caracteres.
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer d-flex justify-content-between flex-wrap gap-2">
+          <button type="button" class="btn btn-outline-secondary" (click)="cerrarCambioFormaPago()" [disabled]="cambioFormaPagoSaving">
+            <i class="feather icon-x me-1"></i>
+            Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary" [disabled]="!cambioFormaPagoPuedeGuardar">
+            <span *ngIf="cambioFormaPagoSaving" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+            <i *ngIf="!cambioFormaPagoSaving" class="feather icon-save me-1"></i>
+            Guardar cambio
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="showCambioFormaPagoModal"></div>

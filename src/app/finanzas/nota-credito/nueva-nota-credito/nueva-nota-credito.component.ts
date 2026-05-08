@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { finalize } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import Swal from 'sweetalert2';
@@ -81,6 +81,7 @@ type DocumentoRecord = Record<string, unknown>;
 })
 export class NuevaNotaCreditoComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
+  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly notasService = inject(NotasCreditoService);
   private readonly documentoService = inject(DocumentoDetalleService);
@@ -135,6 +136,7 @@ export class NuevaNotaCreditoComponent implements OnInit {
       });
     this.cargarMotivosAnulacion();
     this.cargarTiposNotaCredito();
+    this.initDocumentoOrigenFromRoute();
   }
 
   get detalleArray(): FormArray<FormGroup<DetalleNCForm>> {
@@ -276,6 +278,14 @@ export class NuevaNotaCreditoComponent implements OnInit {
         next: (response) => {
           const normalized = this.normalizeDocumentoResponse(response ?? {});
           const header = normalized.encabezado;
+          const validationMessage = this.validateDocumentoParaNotaCredito(header);
+          if (validationMessage) {
+            this.clearDocumentoOrigen();
+            this.errorMessage = validationMessage;
+            void Swal.fire({ title: 'Documento no permitido', text: validationMessage, icon: 'warning' });
+            return;
+          }
+
           const moneda = this.readString(header, 'ppV00_Moneda', 'PPV00_Moneda');
           const tCambio = this.readNumber(header, 'ppV00_TCambio', 'PPV00_TCambio', 'tCambio');
           this.rucCliente = this.readString(header, 'ppV00_RucCliente', 'PPV00_RucCliente');
@@ -317,6 +327,18 @@ export class NuevaNotaCreditoComponent implements OnInit {
           void Swal.fire({ title: 'Error', text: this.errorMessage, icon: 'error' });
         }
       });
+  }
+
+  private initDocumentoOrigenFromRoute(): void {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      const tipo = (params.get('tipoDocu') ?? '').toString().trim();
+      const serie = (params.get('serie') ?? '000').toString().trim() || '000';
+      const numero = (params.get('numero') ?? '').toString().trim();
+      if (!tipo || !numero) {
+        return;
+      }
+      this.cargarDocumentoOrigen(tipo, serie, numero);
+    });
   }
 
   private createDetalleGroup(raw: DocumentoRecord, orden: number, moneda: string, tCambio: number): FormGroup<DetalleNCForm> {
@@ -534,6 +556,51 @@ export class NuevaNotaCreditoComponent implements OnInit {
       encabezado: this.toRecord(data['encabezado'] ?? data['cabecera'] ?? data['header'] ?? data),
       detalle: this.toRecordArray(data['detalle'] ?? data['detalles'] ?? data['lineas'] ?? [])
     };
+  }
+
+  private validateDocumentoParaNotaCredito(header: DocumentoRecord): string {
+    const estadoDocumento = this.readString(header, 'estadoDocu', 'ppV00_EstadoDocumento', 'PPV00_EstadoDocumento').toUpperCase();
+    const estadoElectronico = this.readString(
+      header,
+      'estadoElectronico',
+      'ppV15_EstadoElectronico',
+      'PPV15_EstadoElectronico'
+    ).toUpperCase();
+
+    if (this.isDocumentoAnulado(estadoDocumento)) {
+      return 'No se puede aplicar nota de crédito a un documento anulado.';
+    }
+    if (estadoElectronico === 'RECHAZADO') {
+      return 'No se puede aplicar nota de crédito a un documento rechazado.';
+    }
+    if (estadoElectronico !== 'ACEPTADO') {
+      return 'La nota de crédito solo aplica para documentos aceptados.';
+    }
+    return '';
+  }
+
+  private isDocumentoAnulado(estadoDocumento: string): boolean {
+    return estadoDocumento === 'A' || estadoDocumento.includes('ANU') || estadoDocumento.includes('CANCEL');
+  }
+
+  private clearDocumentoOrigen(): void {
+    this.rucCliente = '';
+    this.detalleArray.clear();
+    this.resumen = { subtotal: 0, impuesto: 0, total: 0 };
+    this.form.patchValue(
+      {
+        codCliente: '',
+        nomCliente: '',
+        tipDocCli: '',
+        serieDocCli: '',
+        numDocCli: '',
+        nElectronico: '',
+        moneda: '',
+        tCambio: 0
+      },
+      { emitEvent: false }
+    );
+    this.cdr.markForCheck();
   }
 
   private toRecord(value: unknown): DocumentoRecord {

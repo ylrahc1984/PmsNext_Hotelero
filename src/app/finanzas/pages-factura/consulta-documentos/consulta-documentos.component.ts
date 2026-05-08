@@ -161,6 +161,46 @@ export class ConsultaDocumentosComponent implements OnInit {
     this.router.navigate(['/finanzas/documento', documento.PPV00_TipoDocu, serie, documento.PPV00_NumDocu]);
   }
 
+  crearNotaCredito(documento: Documento): void {
+    if (!this.canCrearNotaCredito(documento)) {
+      return;
+    }
+    const serie = documento.PPV00_Serie || '000';
+    this.router.navigate(['/finanzas/notas-credito/nueva'], {
+      queryParams: {
+        tipoDocu: documento.PPV00_TipoDocu,
+        serie,
+        numero: documento.PPV00_NumDocu,
+        origen: 'consulta-documentos'
+      }
+    });
+  }
+
+  canCrearNotaCredito(documento: Documento): boolean {
+    const estadoDocumento = (documento.PPV00_EstadoDocumento || '').toString().trim().toUpperCase();
+    const estadoElectronico = (documento.PPV15_EstadoElectronico || '').toString().trim().toUpperCase();
+    return !this.isDocumentoAnulado(estadoDocumento) && estadoElectronico === 'ACEPTADO' || estadoElectronico === 'ABIERTO' ;
+  }
+
+  getNotaCreditoDisabledReason(documento: Documento): string {
+    const estadoDocumento = (documento.PPV00_EstadoDocumento || '').toString().trim().toUpperCase();
+    const estadoElectronico = (documento.PPV15_EstadoElectronico || '').toString().trim().toUpperCase();
+    if (this.isDocumentoAnulado(estadoDocumento)) {
+      return 'No se puede aplicar nota de crédito a un documento anulado.';
+    }
+    if (estadoElectronico === 'RECHAZADO') {
+      return 'No se puede aplicar nota de crédito a un documento rechazado.';
+    }
+    if (estadoElectronico !== 'ACEPTADO') {
+      return 'La nota de crédito solo aplica para documentos aceptados.';
+    }
+    return 'Aplicar nota de crédito';
+  }
+
+  private isDocumentoAnulado(estadoDocumento: string): boolean {
+    return estadoDocumento === 'A' || estadoDocumento.includes('ANU') || estadoDocumento.includes('CANCEL');
+  }
+
   imprimirDocumento(documento: Documento): void {
     const tipo = documento.PPV00_TipoDocu;
     const serie = documento.PPV00_Serie || '000';

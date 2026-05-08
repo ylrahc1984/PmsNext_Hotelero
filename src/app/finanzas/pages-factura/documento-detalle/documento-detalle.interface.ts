@@ -81,6 +81,33 @@ export interface DocumentoPago {
   vencimiento?: string;
 }
 
+export interface CambioFormaPagoPayload {
+  tipoDocu: string;
+  serie: string;
+  numDocu: string;
+  pagos: CambioFormaPagoPago[];
+  operador: string;
+  motivo: string;
+}
+
+export interface CambioFormaPagoPago {
+  orden: number;
+  frmPago: string;
+  tipo: string;
+  numTarjeta: string;
+  referencia: string;
+  moneda: string;
+  monto: number;
+  tCambio: number;
+  vencimiento: string;
+}
+
+export interface CambioFormaPagoResponse {
+  mensaje?: string;
+  respuesta?: string;
+  data?: unknown;
+}
+
 export interface DocumentoImpuesto {
   ordenLinea?: number;
   ordenImp?: number;

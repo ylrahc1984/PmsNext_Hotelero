@@ -432,6 +432,47 @@
   color: var(--op-text-muted);
 }
 
+.cambio-pago-modal .modal-header {
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.cambio-pago-modal .modal-title {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.cambio-pago-context {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.cambio-pago-context > div {
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  background: #ffffff;
+}
+
+.cambio-pago-context span,
+.cambio-pago-context strong {
+  display: block;
+}
+
+.cambio-pago-context strong {
+  margin-top: 0.15rem;
+  font-size: 0.95rem;
+}
+
+.cambio-pago-table .form-control {
+  min-height: 31px;
+}
+
+.cambio-pago-table input[readonly] {
+  background: #f8f9fa;
+}
+
 @media (max-width: 1199.98px) {
   .op-hero {
     grid-template-columns: 1fr;
@@ -493,5 +534,9 @@
 
   .op-product-name {
     min-width: 170px;
+  }
+
+  .cambio-pago-context {
+    grid-template-columns: 1fr;
   }
 }

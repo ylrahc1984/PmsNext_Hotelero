@@ -1,12 +1,15 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormArray, FormControl, FormGroup, NonNullableFormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { finalize } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { DocumentoDetalleService } from '../../services/documento-detalle.service';
 import {
+  CambioFormaPagoPayload,
   DocumentoDetalleItem,
   DocumentoDetalleResponse,
   DocumentoEncabezado,
@@ -14,12 +17,32 @@ import {
 } from './documento-detalle.interface';
 import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
 import { FISCAL_CONFIG } from 'src/app/core/config/fiscal.config';
+import { FormaPago } from 'src/app/demo/administracion/forma-pago/forma-pago.models';
+import { FormaPagoService } from 'src/app/demo/administracion/forma-pago/forma-pago.service';
+import { AuthService } from 'src/app/core/services/auth.service';
 
 type DocumentoResumen = {
   subtotal: number;
   descuento: number;
   impuesto: number;
   total: number;
+};
+
+type CambioPagoForm = {
+  orden: FormControl<number>;
+  frmPago: FormControl<string>;
+  tipo: FormControl<string>;
+  moneda: FormControl<string>;
+  monto: FormControl<number>;
+  tCambio: FormControl<number>;
+  referencia: FormControl<string>;
+  numTarjeta: FormControl<string>;
+  vencimiento: FormControl<string>;
+};
+
+type CambioFormaPagoForm = {
+  motivo: FormControl<string>;
+  pagos: FormArray<FormGroup<CambioPagoForm>>;
 };
 
 @Component({
@@ -31,6 +54,7 @@ type DocumentoResumen = {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DocumentoDetalleComponent implements OnInit {
+  private readonly fb = inject(NonNullableFormBuilder);
   tipoDocu = '';
   serieDocu = '';
   numeroDocu = '';
@@ -45,19 +69,32 @@ export class DocumentoDetalleComponent implements OnInit {
   loading = false;
   errorMsg: string | null = null;
   busyPdf = false;
+  showCambioFormaPagoModal = false;
+  formasPago: FormaPago[] = [];
+  formasPagoLoading = false;
+  cambioFormaPagoSaving = false;
+  cambioFormaPagoError: string | null = null;
+  cambioFormaPagoSuccess: string | null = null;
 
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly detalleService = inject(DocumentoDetalleService);
+  private readonly formaPagoService = inject(FormaPagoService);
+  private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly empresaContext = inject(EmpresaContextService);
 
   readonly empresa = this.empresaContext.empresa;
+  readonly cambioFormaPagoForm: FormGroup<CambioFormaPagoForm> = this.fb.group({
+    motivo: this.fb.control('', { validators: [Validators.required, Validators.minLength(5), Validators.maxLength(250)] }),
+    pagos: this.fb.array<FormGroup<CambioPagoForm>>([])
+  });
 
   private activeRequest?: Subscription;
 
   ngOnInit(): void {
+    this.cargarFormasPago();
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const tipo = (params.get('tipo') ?? '').toString().trim();
       const serie = (params.get('serie') ?? '000').toString().trim();
@@ -102,6 +139,83 @@ export class DocumentoDetalleComponent implements OnInit {
 
   reload(): void {
     this.fetchDetalle();
+  }
+
+  get cambioPagoArray(): FormArray<FormGroup<CambioPagoForm>> {
+    return this.cambioFormaPagoForm.controls.pagos;
+  }
+
+  get cambioFormaPagoPuedeGuardar(): boolean {
+    return (
+      this.cambioFormaPagoForm.valid &&
+      this.cambioPagoArray.length > 0 &&
+      !this.cambioFormaPagoSaving &&
+      !this.formasPagoLoading
+    );
+  }
+
+  get operadorActual(): string {
+    return this.authService.getCurrentUser()?.usuario ?? '';
+  }
+
+  abrirCambioFormaPago(): void {
+    if (this.loading || !this.encabezado || this.pagos.length === 0) return;
+    this.cambioFormaPagoError = null;
+    this.cambioFormaPagoSuccess = null;
+    this.rebuildCambioFormaPagoForm();
+    this.showCambioFormaPagoModal = true;
+    if (!this.formasPago.length && !this.formasPagoLoading) {
+      this.cargarFormasPago();
+    }
+    this.cdr.markForCheck();
+  }
+
+  cerrarCambioFormaPago(): void {
+    if (this.cambioFormaPagoSaving) return;
+    this.showCambioFormaPagoModal = false;
+    this.cambioFormaPagoError = null;
+    this.cdr.markForCheck();
+  }
+
+  onCambioFrmPagoChange(index: number): void {
+    const group = this.cambioPagoArray.at(index);
+    if (!group) return;
+    const codigo = group.controls.frmPago.value;
+    const tipo = this.formasPago.find((fp) => fp.codigo === codigo)?.tipoPago ?? '';
+    group.controls.tipo.setValue(tipo, { emitEvent: false });
+  }
+
+  guardarCambioFormaPago(): void {
+    this.cambioFormaPagoForm.markAllAsTouched();
+    this.cambioFormaPagoError = null;
+    if (!this.cambioFormaPagoPuedeGuardar) {
+      this.cambioFormaPagoError = 'Complete la forma de pago y el motivo antes de guardar.';
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const payload = this.buildCambioFormaPagoPayload();
+    console.log('POST cambio-forma-pago payload', payload);
+    this.cambioFormaPagoSaving = true;
+    this.detalleService
+      .cambiarFormaPago(payload)
+      .pipe(
+        finalize(() => {
+          this.cambioFormaPagoSaving = false;
+          this.cdr.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (response) => {
+          this.cambioFormaPagoSuccess = response?.mensaje || response?.respuesta || 'Forma de pago actualizada correctamente.';
+          this.showCambioFormaPagoModal = false;
+          this.fetchDetalle();
+        },
+        error: (error: unknown) => {
+          this.cambioFormaPagoError = this.getErrorMessage(error, 'No se pudo cambiar la forma de pago.');
+        }
+      });
   }
 
   imprimirDocumento(): void {
@@ -424,14 +538,92 @@ export class DocumentoDetalleComponent implements OnInit {
     return trimmed;
   }
 
-  private getErrorMessage(error: unknown): string {
+  private cargarFormasPago(): void {
+    this.formasPagoLoading = true;
+    this.formaPagoService
+      .getAll()
+      .pipe(
+        finalize(() => {
+          this.formasPagoLoading = false;
+          this.cdr.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (response) => {
+          this.formasPago = (response ?? []).slice().sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+          this.syncCambioPagoTipos();
+        },
+        error: () => {
+          this.formasPago = [];
+        }
+      });
+  }
+
+  private rebuildCambioFormaPagoForm(): void {
+    this.cambioPagoArray.clear();
+    this.pagos.forEach((pago, index) => {
+      this.cambioPagoArray.push(this.createCambioPagoGroup(pago, index));
+    });
+    this.cambioFormaPagoForm.controls.motivo.setValue('', { emitEvent: false });
+    this.cambioFormaPagoForm.markAsPristine();
+    this.cambioFormaPagoForm.markAsUntouched();
+    this.syncCambioPagoTipos();
+  }
+
+  private createCambioPagoGroup(pago: DocumentoPago, index: number): FormGroup<CambioPagoForm> {
+    return this.fb.group({
+      orden: this.fb.control(this.toNumber(pago.orden || index + 1)),
+      frmPago: this.fb.control((pago.frmPago ?? '').toString(), { validators: [Validators.required] }),
+      tipo: this.fb.control((pago.tipo ?? '').toString()),
+      moneda: this.fb.control((pago.moneda ?? '').toString()),
+      monto: this.fb.control(this.toNumber(pago.monto)),
+      tCambio: this.fb.control(this.toNumber(pago.tCambio)),
+      referencia: this.fb.control((pago.referencia ?? '').toString(), { validators: [Validators.maxLength(50)] }),
+      numTarjeta: this.fb.control((pago.numTarjeta ?? '').toString(), { validators: [Validators.maxLength(30)] }),
+      vencimiento: this.fb.control((pago.vencimiento ?? '').toString(), { validators: [Validators.maxLength(20)] })
+    });
+  }
+
+  private syncCambioPagoTipos(): void {
+    if (!this.formasPago.length || this.cambioPagoArray.length === 0) return;
+    this.cambioPagoArray.controls.forEach((group) => {
+      const codigo = group.controls.frmPago.value;
+      const tipo = this.formasPago.find((fp) => fp.codigo === codigo)?.tipoPago ?? group.controls.tipo.value;
+      group.controls.tipo.setValue(tipo, { emitEvent: false });
+    });
+  }
+
+  private buildCambioFormaPagoPayload(): CambioFormaPagoPayload {
+    const raw = this.cambioFormaPagoForm.getRawValue();
+    return {
+      tipoDocu: this.encabezado?.tipDocu || this.tipoDocu,
+      serie: this.encabezado?.serie || this.serieDocu || '000',
+      numDocu: this.encabezado?.numero || this.numeroDocu,
+      pagos: raw.pagos.map((pago, index) => ({
+        orden: this.toNumber(pago.orden || index + 1),
+        frmPago: (pago.frmPago || '').trim(),
+        tipo: (pago.tipo || '').trim(),
+        numTarjeta: (pago.numTarjeta || '').trim(),
+        referencia: (pago.referencia || '').trim(),
+        moneda: (pago.moneda || '').trim(),
+        monto: this.toNumber(pago.monto),
+        tCambio: this.toNumber(pago.tCambio),
+        vencimiento: (pago.vencimiento || '').trim()
+      })),
+      operador: this.operadorActual,
+      motivo: raw.motivo.trim()
+    };
+  }
+
+  private getErrorMessage(error: unknown, fallback = 'No se pudo cargar el detalle del documento.'): string {
     if (error instanceof Error) {
       return error.message;
     }
     if (typeof error === 'string') {
       return error;
     }
-    return 'No se pudo cargar el detalle del documento.';
+    return fallback;
   }
 
   private openPdfBlob(blob: Blob, filename: string): void {

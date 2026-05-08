@@ -99,6 +99,33 @@ export interface OrdenPedidoCompletaFormaPago {
   vencimiento     : string;
 }
 
+export interface CambioFormaPagoPedidoPayload {
+  tipoDocu: string;
+  serie: string;
+  numDocu: string;
+  pagos: CambioFormaPagoPedidoPago[];
+  operador: string;
+  motivo: string;
+}
+
+export interface CambioFormaPagoPedidoPago {
+  orden: number;
+  frmPago: string;
+  tipo: string;
+  numTarjeta: string;
+  referencia: string;
+  moneda: string;
+  monto: number;
+  tCambio: number;
+  vencimiento: string;
+}
+
+export interface CambioFormaPagoPedidoResponse {
+  mensaje?: string;
+  respuesta?: string;
+  data?: unknown;
+}
+
 export interface OrdenPedidoCompletaCliente {
   codCliente    : string;
   nomCliente    : string;

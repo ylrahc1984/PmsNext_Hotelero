@@ -91,3 +91,56 @@
   border-top: 1px dashed #dee2e6;
   font-weight: 600;
 }
+
+:host .cambio-pago-modal .modal-header {
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+}
+
+:host .cambio-pago-modal .modal-title {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+:host .cambio-pago-context {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+:host .cambio-pago-context > div {
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  background: #ffffff;
+}
+
+:host .cambio-pago-context span,
+:host .cambio-pago-context strong {
+  display: block;
+}
+
+:host .cambio-pago-context strong {
+  margin-top: 0.15rem;
+  font-size: 0.95rem;
+}
+
+:host .cambio-pago-table .form-control,
+:host .cambio-pago-table .form-select {
+  min-height: 31px;
+}
+
+:host .cambio-pago-table input[readonly] {
+  background: #f8f9fa;
+}
+
+@media (max-width: 767.98px) {
+  :host .doc-total__value {
+    justify-content: flex-start;
+    font-size: 1.3rem;
+  }
+
+  :host .cambio-pago-context {
+    grid-template-columns: 1fr;
+  }
+}

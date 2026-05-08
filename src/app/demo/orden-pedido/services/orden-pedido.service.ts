@@ -5,6 +5,8 @@ import { catchError, map } from 'rxjs/operators';
 
 import { environment } from 'src/environments/environment';
 import {
+  CambioFormaPagoPedidoPayload,
+  CambioFormaPagoPedidoResponse,
   OrdenPedidoCompletaCliente,
   OrdenPedidoCompletaDetalleItem,
   OrdenPedidoCompletaEncabezado,
@@ -23,6 +25,7 @@ type ApiRecord = Record<string, unknown>;
 export class OrdenPedidoService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/nota-pedido`;
+  private readonly cambioFormaPagoPedidoUrl = `${environment.apiUrl}/cambio-forma-pago-pedido`;
 
   getOrdenes(filters: OrdenPedidoFiltro): Observable<OrdenPedidoListadoResponse> {
     let params = new HttpParams()
@@ -128,6 +131,15 @@ export class OrdenPedidoService {
           return throwError(() => new Error(message));
         })
       );
+  }
+
+  cambiarFormaPagoPedido(payload: CambioFormaPagoPedidoPayload): Observable<CambioFormaPagoPedidoResponse> {
+    return this.http.post<CambioFormaPagoPedidoResponse>(this.cambioFormaPagoPedidoUrl, payload).pipe(
+      catchError((error: HttpErrorResponse) => {
+        const message = error.error?.mensaje || error.error?.respuesta || error.message || 'No se pudo cambiar la forma de pago del pedido.';
+        return throwError(() => new Error(message));
+      })
+    );
   }
 
   private mapListadoItem(item: ApiRecord): OrdenPedidoListadoItem {
