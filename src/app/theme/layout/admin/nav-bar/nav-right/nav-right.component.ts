@@ -8,6 +8,7 @@ import { NgbDropdownConfig } from '@ng-bootstrap/ng-bootstrap';
 // project import
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { AuthService } from 'src/app/core/services/auth.service';
+import { LockScreenService } from 'src/app/core/services/lock-screen.service';
 
 @Component({
   selector: 'app-nav-right',
@@ -20,6 +21,7 @@ export class NavRightComponent {
   user$ = inject(AuthService).currentUser$;
 
   private authService = inject(AuthService);
+  private lockScreenService = inject(LockScreenService);
 
   constructor() {
     const config = inject(NgbDropdownConfig);
@@ -28,5 +30,9 @@ export class NavRightComponent {
 
   onLogout(): void {
     this.authService.logout().subscribe();
+  }
+
+  onLockScreen(): void {
+    this.lockScreenService.requestLock();
   }
 }

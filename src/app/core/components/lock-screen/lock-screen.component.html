@@ -1,0 +1,60 @@
+<ng-container *ngIf="state$ | async as state">
+  <section class="lock-screen" *ngIf="state.locked" aria-modal="true" role="dialog">
+    <div class="lock-screen__panel">
+      <div class="lock-screen__brand">
+        <div class="lock-screen__icon">
+          <i class="feather icon-lock"></i>
+        </div>
+        <div>
+          <p class="lock-screen__eyebrow">Sesión protegida</p>
+          <h2>{{ state.setupMode ? 'Definir PIN local' : 'Pantalla bloqueada' }}</h2>
+        </div>
+      </div>
+
+      <div class="lock-screen__user" *ngIf="user$ | async as user">
+        <span>{{ user?.nombre || user?.usuario || 'Usuario' }}</span>
+        <small>{{ state.setupMode ? 'Cree un PIN temporal para bloquear esta sesión.' : 'Ingrese el PIN temporal para continuar.' }}</small>
+      </div>
+
+      <form *ngIf="state.setupMode; else unlockTemplate" [formGroup]="pinForm" (ngSubmit)="savePin()" class="lock-screen__form">
+        <label>
+          PIN
+          <input type="password" inputmode="numeric" autocomplete="off" maxlength="6" formControlName="pin" autofocus />
+        </label>
+
+        <label>
+          Confirmar PIN
+          <input type="password" inputmode="numeric" autocomplete="off" maxlength="6" formControlName="confirmPin" />
+        </label>
+
+        <p class="lock-screen__error" *ngIf="errorMessage">{{ errorMessage }}</p>
+
+        <button type="submit" class="btn btn-primary" [disabled]="saving">
+          <i class="feather icon-lock"></i>
+          {{ saving ? 'Bloqueando...' : 'Bloquear' }}
+        </button>
+      </form>
+
+      <ng-template #unlockTemplate>
+        <form [formGroup]="unlockForm" (ngSubmit)="unlock()" class="lock-screen__form">
+          <label>
+            PIN
+            <input type="password" inputmode="numeric" autocomplete="off" maxlength="6" formControlName="pin" autofocus />
+          </label>
+
+          <p class="lock-screen__error" *ngIf="errorMessage">{{ errorMessage }}</p>
+
+          <button type="submit" class="btn btn-primary" [disabled]="unlocking">
+            <i class="feather icon-unlock"></i>
+            {{ unlocking ? 'Validando...' : 'Desbloquear' }}
+          </button>
+        </form>
+      </ng-template>
+
+      <button type="button" class="lock-screen__logout" (click)="logout()">
+        <i class="feather icon-log-out"></i>
+        Cerrar sesión
+      </button>
+    </div>
+  </section>
+</ng-container>

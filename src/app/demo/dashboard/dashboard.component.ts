@@ -159,7 +159,8 @@ export class DashboardComponent implements OnInit {
 
   private resolveUserName(): string {
     const user = this.authService.getCurrentUser();
-    return String(user?.nombreUsu ?? user?.usuario ?? 'Usuario').trim() || 'Usuario';
+    const name = String(user?.nombreUsu ?? user?.usuario ?? 'Usuario').trim() || 'Usuario';
+    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
   }
 
   private getTodayDisplayDate(): string {

@@ -1,0 +1,133 @@
+.lock-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background:
+    linear-gradient(135deg, rgba(16, 24, 40, 0.94), rgba(28, 37, 54, 0.9)),
+    url('/assets/images/layout/img-profile-bg.jpg') center/cover;
+}
+
+.lock-screen__panel {
+  width: min(100%, 420px);
+  padding: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.32);
+}
+
+.lock-screen__brand {
+  display: flex;
+  gap: 0.875rem;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.lock-screen__icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 8px;
+  background: #eef4ff;
+  color: #1d4ed8;
+  font-size: 1.4rem;
+}
+
+.lock-screen__eyebrow {
+  margin: 0 0 0.15rem;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.lock-screen__user {
+  display: grid;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  padding: 0.875rem;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #1f2937;
+}
+
+.lock-screen__user span {
+  font-weight: 700;
+}
+
+.lock-screen__user small {
+  color: #64748b;
+}
+
+.lock-screen__form {
+  display: grid;
+  gap: 0.875rem;
+}
+
+.lock-screen__form label {
+  display: grid;
+  gap: 0.35rem;
+  color: #334155;
+  font-weight: 600;
+}
+
+.lock-screen__form input {
+  width: 100%;
+  height: 42px;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #111827;
+  font-size: 1rem;
+}
+
+.lock-screen__form input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 0.18rem rgba(37, 99, 235, 0.14);
+  outline: 0;
+}
+
+.lock-screen__form .btn {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+}
+
+.lock-screen__error {
+  margin: 0;
+  color: #b91c1c;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.lock-screen__logout {
+  display: inline-flex;
+  gap: 0.45rem;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 0.875rem;
+  padding: 0.55rem 0.75rem;
+  border: 0;
+  background: transparent;
+  color: #475569;
+  font-weight: 600;
+}
+
+.lock-screen__logout:hover {
+  color: #0f172a;
+}

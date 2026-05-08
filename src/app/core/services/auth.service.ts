@@ -106,6 +106,8 @@ export class AuthService {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user_info');
+    sessionStorage.removeItem('ope_tours_lock_screen_locked');
+    sessionStorage.removeItem('ope_tours_lock_screen_pin_hash');
     if (this.refreshTimer) {
       clearTimeout(this.refreshTimer);
     }
