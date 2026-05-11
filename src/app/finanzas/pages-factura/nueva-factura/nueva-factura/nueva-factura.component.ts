@@ -2356,14 +2356,17 @@ export class NuevaFacturaComponent implements OnInit {
   }
 
   private normalizeCodigoActividad(value: string | null | undefined): string {
-    const normalized = (value ?? '').toString().trim();
+    const normalized = (value ?? '').toString().trim().replace(/[^0-9.]/g, '');
     if (!normalized) {
       return '000000';
     }
 
-    const digitsOnly = normalized.replace(/\D/g, '');
-    if (digitsOnly.length >= 1 && digitsOnly.length <= 6) {
-      return digitsOnly.padStart(6, '0');
+    if (normalized.includes('.')) {
+      return normalized;
+    }
+
+    if (normalized.length >= 1 && normalized.length <= 6) {
+      return normalized.padStart(6, '0');
     }
 
     return '000000';

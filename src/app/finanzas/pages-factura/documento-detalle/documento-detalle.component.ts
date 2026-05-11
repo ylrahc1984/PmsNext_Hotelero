@@ -386,7 +386,7 @@ export class DocumentoDetalleComponent implements OnInit {
   }
 
   private mapDetalle(raw: any): DocumentoDetalleItem {
-    return {
+    const item: DocumentoDetalleItem = {
       orden: this.toNumber(raw?.orden ?? raw?.ppV01_Orden ?? raw?.PPV01_Orden),
       fechaConsumo: this.formatDate(raw?.fechaConsumo ?? raw?.ppV01_FechaConsumo ?? raw?.PPV01_FechaConsumo ?? ''),
       lstPrecio: raw?.lstPrecio ?? raw?.ppV01_LstPrecio ?? raw?.PPV01_LstPrecio ?? '',
@@ -417,8 +417,22 @@ export class DocumentoDetalleComponent implements OnInit {
       pntVenta: raw?.pntVenta ?? raw?.ppV01_PntVenta ?? raw?.PPV01_PntVenta ?? '',
       mozo: raw?.mozo ?? raw?.ppV01_Mozo ?? raw?.PPV01_Mozo ?? '',
       numHabita: raw?.numHabita ?? raw?.ppV01_NumHabita ?? raw?.PPV01_NumHabita ?? '',
+      subtotal: this.toOptionalNumber(raw?.subtotal ?? raw?.subTotal ?? raw?.ppV01_SubTotal ?? raw?.PPV01_SubTotal),
+      descuento: this.toOptionalNumber(raw?.descuento ?? raw?.ppV01_Descuento ?? raw?.PPV01_Descuento),
+      neto: this.toOptionalNumber(raw?.neto ?? raw?.ppV01_Neto ?? raw?.PPV01_Neto ?? raw?.ppV01_TotalNeto ?? raw?.PPV01_TotalNeto),
       total: this.toNumber(raw?.total ?? raw?.ppV01_Precio ?? raw?.PPV01_Precio ?? raw?.ppV01_TotalNeto ?? raw?.PPV01_TotalNeto ?? raw?.monto),
       impuesto: this.toNumber(raw?.impuesto ?? raw?.ppV01_Impuestos ?? raw?.PPV01_Impuestos ?? 0)
+    };
+
+    const subtotal = this.coalesceNumber(item.subtotal, this.calcularLineaSubtotal(item));
+    const descuento = this.getLineaDescuento(item, subtotal);
+    const neto = this.coalesceNumber(item.neto, subtotal - descuento);
+
+    return {
+      ...item,
+      subtotal: this.round(subtotal),
+      descuento: this.round(descuento),
+      neto: this.round(neto)
     };
   }
 
@@ -468,12 +482,27 @@ export class DocumentoDetalleComponent implements OnInit {
   }
 
   private getLineaSubtotal(item: DocumentoDetalleItem): number {
-    return this.toNumber(item.cantidad) * this.toNumber(item.pUndLst);
+    return this.coalesceNumber(item.subtotal, this.calcularLineaSubtotal(item));
   }
 
   private getLineaDescuento(item: DocumentoDetalleItem, subtotal: number): number {
+    if (Number.isFinite(item.descuento)) {
+      return item.descuento as number;
+    }
     const porDescu = this.toNumber(item.porDescu);
     return subtotal * (porDescu / 100);
+  }
+
+  private calcularLineaSubtotal(item: DocumentoDetalleItem): number {
+    const subtotalBruto = this.toNumber(item.cantidad) * this.toNumber(item.pUndLst);
+    if (!FISCAL_CONFIG.pricesIncludeTax) {
+      return subtotalBruto;
+    }
+
+    const porImp = this.toNumber(item.porImp);
+    const taxRate = porImp > 0 ? porImp : 13;
+    const factor = 1 + taxRate / 100;
+    return factor > 0 ? subtotalBruto / factor : subtotalBruto;
   }
 
   private getLineaImpuestoValue(item: DocumentoDetalleItem, base: number): number {
@@ -483,15 +512,7 @@ export class DocumentoDetalleComponent implements OnInit {
     const porImp = this.toNumber(item.porImp);
     const taxRate = porImp > 0 ? porImp : 13;
 
-    if (FISCAL_CONFIG.pricesIncludeTax) {
-      // Precios incluyen impuestos - el impuesto ya está incluido en el precio
-      // Calcular el impuesto como base * (taxRate / (100 + taxRate))
-      const factor = 1 + (taxRate / 100);
-      return base - (base / factor);
-    } else {
-      // Precios no incluyen impuestos - calcular impuesto normalmente
-      return base * (taxRate / 100);
-    }
+    return base * (taxRate / 100);
   }
 
   private getLineaTotalValue(item: DocumentoDetalleItem, base: number, impuesto: number): number {
@@ -499,13 +520,7 @@ export class DocumentoDetalleComponent implements OnInit {
     if (total) return total;
     const extra = this.toNumber(item.mtoImpVarios);
 
-    if (FISCAL_CONFIG.pricesIncludeTax) {
-      // Precios incluyen impuestos - el total es la base (que ya incluye impuestos) + extra
-      return base + extra;
-    } else {
-      // Precios no incluyen impuestos - total es base + impuesto + extra
-      return base + impuesto + extra;
-    }
+    return base + impuesto + extra;
   }
 
   private toNumber(value: unknown): number {

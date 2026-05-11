@@ -65,16 +65,24 @@
                     <select
                       class="form-select form-select-sm"
                       formControlName="motivoAnulacion"
+                      [class.is-invalid]="form.controls.motivoAnulacion.invalid && form.controls.motivoAnulacion.touched"
                     >
                       <option value="">Seleccione...</option>
                       <option *ngFor="let motivo of motivosAnulacion; trackBy: trackByMotivo" [value]="motivo.CPV04_IDMotivo">
                         {{ motivo.CPV04_Descripcion }}
                       </option>
                     </select>
+                    <div class="invalid-feedback">Seleccione el motivo de anulacion.</div>
                   </div>
                   <div class="col-md-6">
                     <label class="form-label nc-label">Observación</label>
-                    <input class="form-control form-control-sm" formControlName="observacion" placeholder="Observación">
+                    <input
+                      class="form-control form-control-sm"
+                      formControlName="observacion"
+                      placeholder="Observación"
+                      [class.is-invalid]="form.controls.observacion.invalid && form.controls.observacion.touched"
+                    >
+                    <div class="invalid-feedback">Ingrese el motivo de anulacion de al menos 5 caracteres.</div>
                   </div>
                 </div>
               </div>

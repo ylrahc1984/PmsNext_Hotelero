@@ -99,8 +99,8 @@ export class NuevaNotaCreditoComponent implements OnInit {
     serieNC: this.fb.nonNullable.control('', { validators: [Validators.required] }),
     numNC: this.fb.nonNullable.control('', { validators: [Validators.required] }),
     fecha: this.fb.nonNullable.control(this.getTodayIsoDate(), { validators: [Validators.required] }),
-    motivoAnulacion: this.fb.nonNullable.control(''),
-    observacion: this.fb.nonNullable.control(''),
+    motivoAnulacion: this.fb.nonNullable.control('', { validators: [Validators.required] }),
+    observacion: this.fb.nonNullable.control('', { validators: [Validators.required, Validators.minLength(5)] }),
     codCliente: this.fb.nonNullable.control('', { validators: [Validators.required] }),
     nomCliente: this.fb.nonNullable.control('', { validators: [Validators.required] }),
     tipDocCli: this.fb.nonNullable.control('', { validators: [Validators.required] }),
@@ -194,9 +194,24 @@ export class NuevaNotaCreditoComponent implements OnInit {
     };
   }
 
-  guardarNotaCredito(): void {
+  async guardarNotaCredito(): Promise<void> {
     if (!this.canSave) {
       this.form.markAllAsTouched();
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const confirm = await Swal.fire({
+      title: 'Confirmar nota de credito',
+      text: 'Se registrara la nota de credito para el documento seleccionado. Desea continuar?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Si, guardar',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true
+    });
+
+    if (!confirm.isConfirmed) {
       return;
     }
 
@@ -316,7 +331,6 @@ export class NuevaNotaCreditoComponent implements OnInit {
             const group = this.createDetalleGroup(item, index + 1, moneda, tCambio);
             this.bindDetalleRecalculo(group);
             this.detalleArray.push(group);
-            this.recalcularGrupo(group);
           });
 
           this.calcularTotales();
@@ -343,15 +357,8 @@ export class NuevaNotaCreditoComponent implements OnInit {
 
   private createDetalleGroup(raw: DocumentoRecord, orden: number, moneda: string, tCambio: number): FormGroup<DetalleNCForm> {
     const cantidad = this.readNumberNullable(raw, 'ppV01_Cantidad', 'PPV01_Cantidad') ?? 1;
-    const precioUnit =
-      this.readNumberNullable(raw, 'ppV01_PUndLst', 'PPV01_PUndLst', 'ppV01_PrecioUnit', 'PPV01_PrecioUnit') ?? 0;
-    const subtotalRaw =
-      this.readNumberNullable(raw, 'ppV01_TotalNeto', 'PPV01_TotalNeto', 'ppV01_PrecioSinImp', 'PPV01_PrecioSinImp') ??
-      cantidad * precioUnit;
-    const subtotal = subtotalRaw;
-    const impuesto = this.readNumber(raw, 'ppV01_Impuestos', 'PPV01_Impuestos');
-    const porImpto = subtotal > 0 ? (impuesto / subtotal) * 100 : 0;
-    const total = subtotal + impuesto;
+    const lineAmounts = this.resolveDetalleOrigenAmounts(raw, cantidad);
+    const precioUnit = cantidad > 0 ? lineAmounts.subtotal / cantidad : 0;
 
     return this.fb.nonNullable.group({
       pfD08_TipNC: this.fb.nonNullable.control(this.form.controls.tipNC.value),
@@ -363,13 +370,13 @@ export class NuevaNotaCreditoComponent implements OnInit {
       pfD08_Cantidad: this.fb.nonNullable.control(cantidad),
       pfD08_UndMedida: this.fb.nonNullable.control(this.readString(raw, 'ppV01_UMedida', 'PPV01_UMedida')),
       pfD08_Exento: this.fb.nonNullable.control(this.readNumber(raw, 'ppV01_MtoExonera', 'PPV01_MtoExonera')),
-      pfD08_SubTotal: this.fb.nonNullable.control(this.round(subtotal)),
+      pfD08_SubTotal: this.fb.nonNullable.control(this.round(lineAmounts.subtotal)),
       pfD08_MtoIndi: this.fb.nonNullable.control(precioUnit),
-      pfD08_PorImpto: this.fb.nonNullable.control(this.round(porImpto)),
-      pfD08_MtoImpto: this.fb.nonNullable.control(this.round(impuesto)),
-      pfD08_Total: this.fb.nonNullable.control(this.round(total)),
+      pfD08_PorImpto: this.fb.nonNullable.control(this.round(lineAmounts.porImpto)),
+      pfD08_MtoImpto: this.fb.nonNullable.control(this.round(lineAmounts.impuesto)),
+      pfD08_Total: this.fb.nonNullable.control(this.round(lineAmounts.total)),
       pfD08_Incluido: this.fb.nonNullable.control(0),
-      pfD08_Grabado: this.fb.nonNullable.control(porImpto > 0 ? 1 : 0),
+      pfD08_Grabado: this.fb.nonNullable.control(lineAmounts.porImpto > 0 ? 1 : 0),
       pfD08_Moneda: this.fb.nonNullable.control(moneda),
       pfD08_Tcambio: this.fb.nonNullable.control(tCambio),
       pfD08_Orden: this.fb.nonNullable.control(orden),
@@ -377,6 +384,45 @@ export class NuevaNotaCreditoComponent implements OnInit {
       pfD08_CCosto: this.fb.nonNullable.control(this.readString(raw, 'ppV01_Area', 'PPV01_Area')),
       pfD08_Operador: this.fb.nonNullable.control(this.getOperador())
     });
+  }
+
+  private resolveDetalleOrigenAmounts(raw: DocumentoRecord, cantidad: number): { subtotal: number; impuesto: number; total: number; porImpto: number } {
+    const precioUnit =
+      this.readNumberNullable(raw, 'ppV01_UniSinImp', 'PPV01_UniSinImp', 'ppV01_PrecioSinImp', 'PPV01_PrecioSinImp') ??
+      this.readNumberNullable(raw, 'uniSinImp', 'precioSinImp') ??
+      0;
+    const subtotalCandidate =
+      this.readNumberNullable(raw, 'subtotal', 'subTotal', 'ppV01_SubTotal', 'PPV01_SubTotal', 'ppV01_Neto', 'PPV01_Neto') ??
+      undefined;
+    const totalCandidate = this.readNumberNullable(
+      raw,
+      'total',
+      'monto',
+      'ppV01_Total',
+      'PPV01_Total',
+      'ppV01_Precio',
+      'PPV01_Precio',
+      'ppV01_TotalNeto',
+      'PPV01_TotalNeto'
+    );
+    const impuestoCandidate = this.readNumberNullable(raw, 'impuesto', 'ppV01_Impuestos', 'PPV01_Impuestos') ?? 0;
+    const porImptoCandidate = this.readNumberNullable(raw, 'porImp', 'ppV01_PorImp', 'PPV01_PorImp') ?? 0;
+
+    const subtotal =
+      subtotalCandidate ??
+      (totalCandidate !== undefined ? Math.max(totalCandidate - impuestoCandidate, 0) : cantidad * precioUnit);
+    const impuesto =
+      impuestoCandidate ||
+      (porImptoCandidate > 0 ? subtotal * (porImptoCandidate / 100) : 0);
+    const total = totalCandidate ?? subtotal + impuesto;
+    const porImpto = subtotal > 0 ? (impuesto / subtotal) * 100 : porImptoCandidate;
+
+    return {
+      subtotal: this.round(subtotal),
+      impuesto: this.round(impuesto),
+      total: this.round(total),
+      porImpto: this.round(porImpto)
+    };
   }
 
   private bindDetalleRecalculo(group: FormGroup<DetalleNCForm>): void {
@@ -416,9 +462,9 @@ export class NuevaNotaCreditoComponent implements OnInit {
       const item = group.getRawValue();
       const cantidad = this.toNumber(item.pfD08_Cantidad);
       const precioUnit = this.toNumber(item.pfD08_MtoIndi);
-      const subtotal = this.round(cantidad * precioUnit);
-      const impuesto = this.round(subtotal * (this.toNumber(item.pfD08_PorImpto) / 100));
-      const total = this.round(subtotal + impuesto);
+      const subtotal = this.round(item.pfD08_SubTotal);
+      const impuesto = this.round(item.pfD08_MtoImpto);
+      const total = this.round(item.pfD08_Total);
       const incluido = this.toNumber(item.pfD08_Incluido);
       const grabado = this.toNumber(item.pfD08_Grabado);
 

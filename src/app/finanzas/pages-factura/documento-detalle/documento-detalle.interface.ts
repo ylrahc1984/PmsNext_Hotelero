@@ -65,6 +65,9 @@ export interface DocumentoDetalleItem {
   pntVenta?: string;
   mozo?: string;
   numHabita?: string;
+  subtotal?: number;
+  descuento?: number;
+  neto?: number;
   total?: number;
   impuesto?: number;
 }

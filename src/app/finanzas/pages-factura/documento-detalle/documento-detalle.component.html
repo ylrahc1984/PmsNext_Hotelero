@@ -261,7 +261,9 @@
                     <th>Descripción</th>
                     <th class="text-end">Cantidad</th>
                     <th class="text-end">Precio</th>
+                    <th class="text-end">Subtotal</th>
                     <th class="text-end">%Desc</th>
+                    <th class="text-end">Neto</th>
                     <th class="text-end">Impuesto</th>
                     <th class="text-end">Total</th>
                   </tr>
@@ -281,12 +283,14 @@
                     </td>
                     <td class="text-end">{{ d.cantidad | number:'1.2-2' }}</td>
                     <td class="text-end">{{ d.pUndLst | number:'1.2-2' }}</td>
+                    <td class="text-end">{{ d.subtotal | number:'1.2-2' }}</td>
                     <td class="text-end">{{ d.porDescu | number:'1.2-2' }}</td>
+                    <td class="text-end">{{ d.neto | number:'1.2-2' }}</td>
                     <td class="text-end">{{ getLineaImpuesto(d) | number:'1.2-2' }}</td>
                     <td class="text-end">{{ getLineaTotal(d) | number:'1.2-2' }}</td>
                   </tr>
                   <tr *ngIf="detalle.length === 0">
-                    <td colspan="8" class="text-center text-muted py-3">No hay líneas registradas.</td>
+                    <td colspan="10" class="text-center text-muted py-3">No hay líneas registradas.</td>
                   </tr>
                 </tbody>
               </table>
