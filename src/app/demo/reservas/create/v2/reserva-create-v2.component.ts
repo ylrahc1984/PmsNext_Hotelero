@@ -1476,6 +1476,22 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
     const pickup = this.mapDraftServiceLineToActividadPickup(line);
 
     const selectedPlan = line.planTarifa || line.codPlan;
+    const displayPasajeros = (line.pasajeros ?? []).map((pax) => {
+      const precioUnitario = FISCAL_CONFIG.pricesIncludeTax
+        ? safeNumber(pax.precioUnitarioTotal) || safeNumber(pax.precioUnitarioNeto)
+        : safeNumber(pax.precioUnitarioNeto);
+      const total = FISCAL_CONFIG.pricesIncludeTax
+        ? safeNumber(pax.subtotalTotal) || safeNumber(pax.subtotalNeto)
+        : safeNumber(pax.subtotalNeto);
+
+      return {
+        pax,
+        precioUnitario,
+        total
+      };
+    });
+    const totalLinea = FISCAL_CONFIG.pricesIncludeTax ? safeNumber(line.montoServicio) : safeNumber(line.neto);
+
     return {
       codPlan           : selectedPlan,
       planTarifa        : selectedPlan || this.resolvePlanTarifarioNombre(selectedPlan),
@@ -1488,28 +1504,29 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
       horaInicio        : line.horaServicio || line.horaPickup || '',
       observaciones     : line.observacion,
       pickups           : [pickup],
-      detallesPax       : (line.pasajeros ?? []).map((pax) => ({
+      detallesPax       : displayPasajeros.map(({ pax, precioUnitario }) => ({
         tipoPax         : pax.tipoPax,
         cantidad        : pax.cantidad,
-        precioUnitario  : pax.precioUnitarioNeto
+        precioUnitario
       })),
       actividades: [
         {
           codServicio     : line.codServicio,
           nomServicio     : line.nomServicio,
           reglaPrecioID   : line.idReglaPrecio,
-          tarifas         : (line.pasajeros ?? []).map((pax) => ({
+          tarifas         : displayPasajeros.map(({ pax, precioUnitario, total }) => ({
             tipoPax   : pax.tipoPax,
             tipo      : pax.tipoPax,
-            precio    : pax.precioUnitarioNeto,
+            precio    : precioUnitario,
             cantidad  : pax.cantidad,
-            total     : pax.subtotalNeto
+            total
           })),
-          totalLinea: line.neto
+          totalLinea,
+          totalConImpuesto: line.montoServicio
         }
       ],
-      totalGeneral: line.neto,
-      montoServicio: line.neto
+      totalGeneral: line.montoServicio,
+      montoServicio: line.montoServicio
     };
   }
 

@@ -64,6 +64,7 @@ export interface ActividadDetalle {
   reglaPrecioID     : number;
   tarifas           : Tarifa[];
   totalLinea        : number;
+  totalConImpuesto ?: number;
 }
 
 export interface ActividadDetalleForm {

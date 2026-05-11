@@ -255,7 +255,7 @@
                         <div class="summary-item__actions">
                           <span class="summary-item__value">
                             <span *ngIf="selectedListaPrecio?.simbolo">{{ selectedListaPrecio?.simbolo }}</span>
-                            {{ actividad.totalLinea | number:'1.2-2' }}
+                            {{ getActividadTotalConImpuesto(actividad) | number:'1.2-2' }}
                           </span>
                           <button
                             type="button"

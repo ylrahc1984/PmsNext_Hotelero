@@ -36,6 +36,7 @@ export interface ActividadDetalle {
   reglaPrecioID     : number;
   tarifas           : Tarifa[];
   totalLinea        : number;
+  totalConImpuesto ?: number;
 }
 
 export interface ActividadDetallePayload {
@@ -307,6 +308,24 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
 
     const ordered = this.getOrderedTipoPaxCodes(Array.from(counts.keys()));
     return ordered.filter((tipo) => counts.has(tipo)).map((tipo) => `${counts.get(tipo)} ${tipo}`).join(' · ');
+  }
+
+  getActividadTotalConImpuesto(actividad: ActividadDetalle): number {
+    const totalGuardado = this.roundCurrency(Number(actividad?.totalConImpuesto ?? 0) || 0);
+    if (totalGuardado > 0) {
+      return totalGuardado;
+    }
+
+    const subtotal = this.roundCurrency(Number(actividad?.totalLinea ?? 0) || 0);
+    if (subtotal <= 0) {
+      return 0;
+    }
+
+    return calculateFiscalTotals(subtotal, 0, '0', {
+      pricesIncludeTax: FISCAL_CONFIG.pricesIncludeTax,
+      taxRate: FISCAL_CONFIG.taxRate,
+      redondeoDecimales: 2
+    }).total;
   }
 
   recalcularTotales(): void {
@@ -651,6 +670,7 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     this.subTotal = this.roundCurrency(
       serviciosSeleccionados.reduce((sum, actividad) => sum + (Number(actividad.totalLinea ?? 0) || 0), 0)
     );
+    const totalFinalSinDescuento = this.getTotalFinalSinDescuento(serviciosSeleccionados);
 
     const descuentoActivo = this.comboActivo && serviciosSeleccionados.length >= 2;
     if (!descuentoActivo) {
@@ -658,7 +678,6 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
       this.porDescuentoInput = 0;
       this.descuentoMontoInput = 0;
     }
-    const totalFinalSinDescuento = this.getTotalFinalSinDescuento();
     this.porDescuento = descuentoActivo ? this.porDescuentoInput : 0;
     this.descuento = descuentoActivo
       ? this.roundCurrency(Math.min(this.descuentoMontoInput, totalFinalSinDescuento))
@@ -674,8 +693,8 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     });
 
     this.neto = totals.neto;
-    this.impuesto = totals.iva;
-    this.montoServicio = totals.total;
+    this.impuesto = totalFinalSinDescuento > 0 ? this.roundCurrency(Math.max(0, totalFinalSinDescuento - this.descuento - this.neto)) : totals.iva;
+    this.montoServicio = totalFinalSinDescuento > 0 ? this.roundCurrency(Math.max(0, totalFinalSinDescuento - this.descuento)) : totals.total;
 
     this.form.controls.totalGeneral.setValue(this.montoServicio, { emitEvent: false });
     if (this.actividadForm) {
@@ -972,7 +991,8 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     return {
       ...base,
       tarifas,
-      totalLinea
+      totalLinea,
+      totalConImpuesto: Number(existing.totalConImpuesto ?? 0) || 0
     };
   }
 
@@ -1107,7 +1127,8 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
         tipoServicio: this.resolveTipoServicioValue(item.tipoServicio),
         reglaPrecioID: Number(item.reglaPrecioID ?? 0) || 0,
         tarifas: this.normalizeTarifas(item.tarifas),
-        totalLinea: Number(item.totalLinea ?? 0) || 0
+        totalLinea: Number(item.totalLinea ?? 0) || 0,
+        totalConImpuesto: Number(item.totalConImpuesto ?? 0) || 0
       }));
   }
 
@@ -1186,7 +1207,15 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
     return Math.round((Number(value ?? 0) + Number.EPSILON) * 100) / 100;
   }
 
-  private getTotalFinalSinDescuento(): number {
+  private getTotalFinalSinDescuento(actividades?: ActividadDetalle[]): number {
+    const selected = actividades ?? this.getAllActividadesValue().filter((actividad) => this.hasActividadCantidad(actividad));
+    const totalPorActividad = this.roundCurrency(
+      selected.reduce((sum, actividad) => sum + this.getActividadTotalConImpuesto(actividad), 0)
+    );
+    if (totalPorActividad > 0) {
+      return totalPorActividad;
+    }
+
     const totals = calculateFiscalTotals(this.subTotal, 0, '0', {
       pricesIncludeTax: FISCAL_CONFIG.pricesIncludeTax,
       taxRate: FISCAL_CONFIG.taxRate,
@@ -1441,7 +1470,8 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
       tipoServicio: this.resolveTipoServicioValue(item.tipoServicio),
       reglaPrecioID: Number(item.reglaPrecioID ?? 0) || 0,
       tarifas: this.normalizeTarifas(item.tarifas),
-      totalLinea: Number(item.totalLinea ?? 0) || 0
+      totalLinea: Number(item.totalLinea ?? 0) || 0,
+      totalConImpuesto: Number(item.totalConImpuesto ?? 0) || 0
     }));
   }
 
@@ -1521,7 +1551,36 @@ export class ReservaCreateActividadModalComponent implements OnChanges, OnDestro
       return;
     }
 
-    this.actividadesStateMap.set(key, normalized);
+    const previous = this.actividadesStateMap.get(key);
+    const currentTotalConImpuesto = Number(actividad.totalConImpuesto ?? 0) || 0;
+    const previousTotalConImpuesto = Number(previous?.totalConImpuesto ?? 0) || 0;
+    const totalConImpuesto =
+      currentTotalConImpuesto > 0
+        ? currentTotalConImpuesto
+        : previousTotalConImpuesto > 0 && this.sameTarifaQuantities(previous?.tarifas ?? [], normalized.tarifas)
+          ? previousTotalConImpuesto
+          : 0;
+
+    this.actividadesStateMap.set(key, {
+      ...normalized,
+      totalConImpuesto
+    });
+  }
+
+  private sameTarifaQuantities(previous: Tarifa[], current: Tarifa[]): boolean {
+    const previousByTipo = new Map<string, number>();
+    for (const tarifa of previous ?? []) {
+      previousByTipo.set(this.resolveTarifaTipoPax(tarifa), this.normalizeCantidad(tarifa.cantidad));
+    }
+
+    for (const tarifa of current ?? []) {
+      const tipoPax = this.resolveTarifaTipoPax(tarifa);
+      if ((previousByTipo.get(tipoPax) ?? 0) !== this.normalizeCantidad(tarifa.cantidad)) {
+        return false;
+      }
+    }
+
+    return previousByTipo.size === (current ?? []).length;
   }
 
   private hasActividadCantidad(actividad: ActividadDetalle | null | undefined): boolean {
