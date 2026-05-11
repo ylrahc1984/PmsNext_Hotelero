@@ -54,6 +54,44 @@
           <button type="submit" class="btn btn-primary">Buscar</button>
           <button type="button" class="btn btn-outline-secondary" (click)="setHoy()">Hoy</button>
         </div>
+
+        <section class="exchange-inline w-100 border rounded bg-light px-2 py-1" aria-label="Tipo de cambio">
+          <div class="d-flex align-items-center justify-content-between gap-2">
+            <div>
+              <span class="d-block text-muted text-uppercase fw-bold small">Tipo de cambio</span>
+              <strong class="small">{{ tipoCambio?.monedaBase || 'COL' }} → {{ tipoCambio?.monedaReferencia || 'USD' }}</strong>
+            </div>
+            <span class="text-muted small">
+              @if (tipoCambio?.fecha) {
+                {{ tipoCambio?.fecha | date:'dd/MM/yyyy' }}
+              } @else {
+                Hoy
+              }
+            </span>
+          </div>
+
+          @if (tipoCambioLoading) {
+            <div class="d-flex align-items-center gap-2 text-muted small">
+              <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+              Actualizando
+            </div>
+          } @else {
+            <div class="d-flex align-items-center justify-content-between gap-2">
+              <div>
+                <span class="d-block text-muted small">Compra</span>
+                <strong class="text-dark">{{ (tipoCambio?.compra ?? 0) | number:'1.2-4' }}</strong>
+              </div>
+              <div>
+                <span class="d-block text-muted small">Venta</span>
+                <strong class="text-dark">{{ (tipoCambio?.venta ?? 0) | number:'1.2-4' }}</strong>
+              </div>
+            </div>
+          }
+
+          @if (tipoCambioError) {
+            <div class="text-danger small">{{ tipoCambioError }}</div>
+          }
+        </section>
       </form>
 
       @if (vm$ | async; as filterVm) {

@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Observable, Subject, catchError, debounceTime, filter, finalize, map, merge, of, shareReplay, startWith, switchMap } from 'rxjs';
@@ -11,6 +12,7 @@ import { OperacionDiariaService, OperacionDiariaParams } from './operacion-diari
 import { AuthService } from 'src/app/core/services/auth.service';
 import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
 import { environment } from 'src/environments/environment';
+import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
 import {
   ActualizarObservacionOperacionPayload,
   BloqueHoraAgrupado,
@@ -59,6 +61,7 @@ interface PrintVoucherPayload {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class OperacionDiariaComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(FormBuilder);
   private readonly operacionDiariaService = inject(OperacionDiariaService);
   private readonly http = inject(HttpClient);
@@ -66,6 +69,7 @@ export class OperacionDiariaComponent implements OnInit {
   private readonly empresaContext = inject(EmpresaContextService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly router = inject(Router);
+  private readonly tipoCambioService = inject(TipoCambioService);
 
   readonly today = this.toDateInput(new Date());
 
@@ -98,6 +102,9 @@ export class OperacionDiariaComponent implements OnInit {
   choferes: ChoferOption[] = [];
   choferesLoading = false;
   choferesError = '';
+  tipoCambio: TipoCambio | null = null;
+  tipoCambioLoading = false;
+  tipoCambioError: string | null = null;
   private choferCodes = new Set<string>();
 
   private readonly manualRefresh$ = new Subject<void>();
@@ -155,6 +162,7 @@ export class OperacionDiariaComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadChoferes();
+    this.loadTipoCambio();
   }
 
   buscar(): void {
@@ -1035,6 +1043,35 @@ export class OperacionDiariaComponent implements OnInit {
           }));
         this.choferCodes = new Set(this.choferes.map((chofer) => chofer.code));
       });
+  }
+
+  private loadTipoCambio(): void {
+    this.tipoCambioLoading = true;
+    this.tipoCambioError = null;
+
+    this.tipoCambioService
+      .fetchTipoCambio(this.getTodayDisplayDate(), 'usd')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (items) => {
+          this.tipoCambio = items[0] ?? this.tipoCambioService.getActual() ?? null;
+          this.tipoCambioLoading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.tipoCambio = this.tipoCambioService.getActual() ?? null;
+          this.tipoCambioLoading = false;
+          this.tipoCambioError = 'No se pudo actualizar';
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  private getTodayDisplayDate(): string {
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    return `${day}/${month}/${now.getFullYear()}`;
   }
 
   private toDateInput(date: Date): string {
