@@ -87,6 +87,13 @@ const routes: Routes = [
           )
       },
       {
+        path: 'notas-credito/detalle/:tipo/:serie/:numero',
+        loadComponent: () =>
+          import('./nota-credito/nota-credito-detalle/nota-credito-detalle.component').then(
+            (c) => c.NotaCreditoDetalleComponent
+          )
+      },
+      {
         path: 'notas-credito',
         loadComponent: () =>
           import('./nota-credito/notas-credito-consulta/notas-credito-consulta.component').then(

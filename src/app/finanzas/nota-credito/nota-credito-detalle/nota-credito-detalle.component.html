@@ -1,0 +1,216 @@
+<div class="nota-detalle">
+  <app-card [customHeader]="true">
+    <div class="nota-detalle__hero">
+      <div>
+        <div class="nota-detalle__eyebrow">Finanzas · Clientes</div>
+        <h4 class="nota-detalle__title">Detalle Nota de Crédito</h4>
+        <p class="nota-detalle__subtitle">Visualización completa del documento y sus movimientos asociados</p>
+      </div>
+
+      <div class="nota-detalle__actions">
+        <span class="nota-detalle__document-badge">{{ documentoCodigo || 'NCC' }}</span>
+        <button type="button" class="btn btn-light nota-detalle__icon-btn" title="Volver" aria-label="Volver" (click)="volver()">
+          <i class="feather icon-chevron-left" aria-hidden="true"></i>
+        </button>
+        <button type="button" class="btn btn-outline-secondary nota-detalle__action-btn" title="Imprimir" (click)="imprimir()">
+          <i class="feather icon-printer" aria-hidden="true"></i>
+          <span>Imprimir</span>
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary nota-detalle__action-btn"
+          title="PDF"
+          [disabled]="loading || generandoPdf"
+          (click)="descargarPdf()"
+        >
+          <span *ngIf="generandoPdf" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          <i *ngIf="!generandoPdf" class="feather icon-file-text" aria-hidden="true"></i>
+          <span>{{ generandoPdf ? 'Generando...' : 'PDF' }}</span>
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="loading" class="nota-detalle__loading">
+      <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+      <div>
+        <strong>Cargando detalle</strong>
+        <span>Consultando información documental y movimientos asociados...</span>
+      </div>
+    </div>
+
+    <div *ngIf="errorMsg" class="alert alert-danger mt-3">
+      <i class="feather icon-alert-triangle me-2" aria-hidden="true"></i>
+      {{ errorMsg }}
+    </div>
+
+    <div *ngIf="!loading && !errorMsg && !encabezado" class="nota-detalle__empty">
+      <div class="nota-detalle__empty-icon">
+        <i class="feather icon-file-minus" aria-hidden="true"></i>
+      </div>
+      <h5>No se encontró información</h5>
+      <p>No hay datos disponibles para la nota de crédito solicitada.</p>
+    </div>
+
+    <ng-container *ngIf="!loading && encabezado as h">
+      <section class="nota-detalle__section">
+        <div class="nota-detalle__section-header">
+          <div>
+            <h5>Información General</h5>
+            <span>Datos de identificación y relación documental</span>
+          </div>
+        </div>
+
+        <div class="nota-detalle__info-grid">
+          <div class="nota-field nota-field--wide">
+            <span>Cliente</span>
+            <strong>{{ h.PFD07_NomCliente || '—' }}</strong>
+          </div>
+          <div class="nota-field">
+            <span>Código Cliente</span>
+            <strong>{{ h.PFD07_CodCliente || '—' }}</strong>
+          </div>
+          <div class="nota-field">
+            <span>Fecha</span>
+            <strong>{{ h.PFD07_FechaNotaCredito | date:'dd/MM/yyyy' }}</strong>
+          </div>
+          <div class="nota-field">
+            <span>Moneda</span>
+            <strong>{{ h.PFD07_Moneda || '—' }}</strong>
+          </div>
+          <div class="nota-field">
+            <span>Tipo Documento</span>
+            <strong>{{ h.PFD07_TipDocCli || '—' }}</strong>
+          </div>
+          <div class="nota-field">
+            <span>Documento Relacionado</span>
+            <strong>{{ h.PFD07_NElectronico || '—' }}</strong>
+          </div>
+          <div class="nota-field">
+            <span>Tipo NC</span>
+            <strong>{{ h.PFD07_IdNC || '—' }}</strong>
+          </div>
+          <div class="nota-field">
+            <span>Operador</span>
+            <strong>{{ h.PFD07_Operador || 'N/D' }}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="nota-detalle__kpis">
+        <div class="nota-kpi nota-kpi--subtotal">
+          <div class="nota-kpi__icon"><i class="feather icon-layers" aria-hidden="true"></i></div>
+          <div>
+            <span>SubTotal</span>
+            <strong>{{ subtotal | currency:currencyCode:'symbol':'1.2-2' }}</strong>
+            <small>{{ moneda }}</small>
+          </div>
+        </div>
+        <div class="nota-kpi nota-kpi--tax">
+          <div class="nota-kpi__icon"><i class="feather icon-percent" aria-hidden="true"></i></div>
+          <div>
+            <span>Impuesto</span>
+            <strong>{{ impuesto | currency:currencyCode:'symbol':'1.2-2' }}</strong>
+            <small>{{ moneda }}</small>
+          </div>
+        </div>
+        <div class="nota-kpi nota-kpi--total">
+          <div class="nota-kpi__icon"><i class="feather icon-credit-card" aria-hidden="true"></i></div>
+          <div>
+            <span>Total</span>
+            <strong>{{ total | currency:currencyCode:'symbol':'1.2-2' }}</strong>
+            <small>{{ moneda }}</small>
+          </div>
+        </div>
+      </section>
+
+      <section class="nota-detalle__section">
+        <div class="nota-detalle__section-header">
+          <div>
+            <h5>Detalle de Artículos</h5>
+            <span>{{ detalle.length }} líneas asociadas a la nota de crédito</span>
+          </div>
+        </div>
+
+        <div class="nota-table-wrap">
+          <table class="table table-hover align-middle mb-0 nota-table">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Artículo</th>
+                <th class="text-end">Cantidad</th>
+                <th>Unidad</th>
+                <th class="text-end">Precio Unitario</th>
+                <th class="text-end">SubTotal</th>
+                <th class="text-end">IVA %</th>
+                <th class="text-end">Impuesto</th>
+                <th class="text-end">Total</th>
+                <th>Centro Costo</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of detalle; trackBy: trackByDetalle">
+                <td class="font-monospace">{{ item.PFD08_Codigo || '—' }}</td>
+                <td class="nota-table__article">{{ item.PFD08_Articulo || '—' }}</td>
+                <td class="text-end">{{ number(item.PFD08_Cantidad) | number:'1.2-2' }}</td>
+                <td>{{ item.PFD08_UndMedida || '—' }}</td>
+                <td class="text-end">{{ number(item.PFD08_MtoIndi) | currency:currencyCode:'symbol':'1.2-2' }}</td>
+                <td class="text-end">{{ number(item.PFD08_SubTotal) | currency:currencyCode:'symbol':'1.2-2' }}</td>
+                <td class="text-end">{{ number(item.PFD08_PorImpto) | number:'1.2-2' }}</td>
+                <td class="text-end">{{ number(item.PFD08_MtoImpto) | currency:currencyCode:'symbol':'1.2-2' }}</td>
+                <td class="text-end fw-semibold">{{ number(item.PFD08_Total) | currency:currencyCode:'symbol':'1.2-2' }}</td>
+                <td>{{ item.PFD08_CCosto || '—' }}</td>
+                <td>
+                  <span class="nota-tax-badge" [class.nota-tax-badge--exempt]="!isGravado(item)">
+                    {{ isGravado(item) ? 'GRAVADO' : 'EXENTO' }}
+                  </span>
+                </td>
+              </tr>
+              <tr *ngIf="detalle.length === 0">
+                <td colspan="11" class="text-center text-muted py-4">No hay artículos registrados.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="nota-detalle__bottom-grid">
+        <section class="nota-detalle__section">
+          <div class="nota-detalle__section-header">
+            <div>
+              <h5>Impuestos</h5>
+              <span>Resumen fiscal aplicado</span>
+            </div>
+          </div>
+
+          <div class="nota-mini-table">
+            <div class="nota-mini-table__row nota-mini-table__head">
+              <span>Impuesto</span>
+              <span>%</span>
+              <span>Monto</span>
+            </div>
+            <div class="nota-mini-table__row" *ngFor="let imp of impuestos; trackBy: trackByImpuesto">
+              <strong>{{ imp.PFD09_Descripcion || 'Impuesto' }}</strong>
+              <span>{{ number(imp.PFD09_PorImpu) | number:'1.2-2' }}</span>
+              <span>{{ number(imp.PFD09_Monto) | currency:currencyCode:'symbol':'1.2-2' }}</span>
+            </div>
+            <div class="nota-mini-table__empty" *ngIf="impuestos.length === 0">No hay impuestos registrados.</div>
+          </div>
+        </section>
+
+        <section class="nota-detalle__section nota-comments">
+          <div class="nota-detalle__section-header">
+            <div>
+              <h5>Comentarios</h5>
+              <span>Observaciones del documento</span>
+            </div>
+          </div>
+          <div class="nota-comments__body">
+            <i class="feather icon-message-square" aria-hidden="true"></i>
+            <p>{{ h.PFD07_Comentario || 'Sin comentarios registrados' }}</p>
+          </div>
+        </section>
+      </div>
+    </ng-container>
+  </app-card>
+</div>

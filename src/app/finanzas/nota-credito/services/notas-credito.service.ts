@@ -4,7 +4,11 @@ import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
 import { environment } from 'src/environments/environment';
-import { NotaCreditoRequest, NotaCreditoResponse } from 'src/app/finanzas/nota-credito/interfaces/notas-credito.interface';
+import {
+  NotaCreditoDetalleResponse,
+  NotaCreditoRequest,
+  NotaCreditoResponse
+} from 'src/app/finanzas/nota-credito/interfaces/notas-credito.interface';
 
 @Injectable({ providedIn: 'root' })
 export class NotasCreditoService {
@@ -55,6 +59,37 @@ export class NotasCreditoService {
       catchError((error: HttpErrorResponse) => {
         const message =
           error.error?.mensaje || error.error?.respuesta || error.message || 'Error al crear la nota de crédito';
+        return throwError(() => new Error(message));
+      })
+    );
+  }
+
+  getDetalleNotaCredito(tipo: string, serie: string, numero: string): Observable<NotaCreditoDetalleResponse> {
+    const safeTipo = encodeURIComponent((tipo ?? '').toString().trim().toLowerCase());
+    const safeSerie = encodeURIComponent((serie ?? '').toString().trim());
+    const safeNumero = encodeURIComponent((numero ?? '').toString().trim());
+    const url = `${this.apiBaseUrl}/notacredito-cliente/${safeTipo}/${safeSerie}/${safeNumero}`;
+
+    return this.http.get<NotaCreditoDetalleResponse>(url).pipe(
+      map((response) => response ?? {}),
+      catchError((error: HttpErrorResponse) => {
+        const message =
+          error.error?.mensaje || error.error?.respuesta || error.message || 'Error al cargar el detalle de la nota de crédito';
+        return throwError(() => new Error(message));
+      })
+    );
+  }
+
+  getNotaCreditoPdf(tipo: string, serie: string, numero: string): Observable<Blob> {
+    const safeTipo = encodeURIComponent((tipo ?? '').toString().trim().toLowerCase());
+    const safeSerie = encodeURIComponent((serie ?? '').toString().trim());
+    const safeNumero = encodeURIComponent((numero ?? '').toString().trim());
+    const url = `${this.baseUrl}/${safeTipo}/${safeSerie}/${safeNumero}/pdf`;
+
+    return this.http.get(url, { responseType: 'blob' }).pipe(
+      catchError((error: HttpErrorResponse) => {
+        const message =
+          error.error?.mensaje || error.error?.respuesta || error.message || 'No se pudo generar el PDF de la nota de crédito';
         return throwError(() => new Error(message));
       })
     );

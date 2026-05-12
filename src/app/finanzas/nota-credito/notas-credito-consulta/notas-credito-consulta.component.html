@@ -111,6 +111,17 @@
                         type="button"
                         ngbDropdownItem
                         class="dropdown-item"
+                        title="Ver detalle"
+                        (click)="verDetalle(nota)"
+                      >
+                        <i class="feather icon-eye" aria-hidden="true"></i>
+                        <span>Ver detalle</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        ngbDropdownItem
+                        class="dropdown-item"
                         (click)="verPdf(nota)"
                       >
                         <i class="feather icon-printer" aria-hidden="true"></i>

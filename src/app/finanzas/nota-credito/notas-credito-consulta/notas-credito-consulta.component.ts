@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { BehaviorSubject, Subscription } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -9,7 +8,6 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { NotasCreditoService } from 'src/app/finanzas/nota-credito/services/notas-credito.service';
 import { NotaCredito, NotaCreditoResponse } from 'src/app/finanzas/nota-credito/interfaces/notas-credito.interface';
-import { environment } from 'src/environments/environment';
 
 type NotasCreditoForm = {
   fechaDesde: FormControl<string>;
@@ -47,11 +45,10 @@ const DEFAULT_TIP_NC = 'NCC';
 })
 export class NotasCreditoConsultaComponent implements OnInit {
   private readonly fb = inject(NonNullableFormBuilder);
+  private readonly router = inject(Router);
   private readonly notasService = inject(NotasCreditoService);
-  private readonly http = inject(HttpClient);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
-  private readonly apiBaseUrl = this.resolveApiBaseUrl();
 
   readonly pageSizeOptions = [10, 20, 50];
   private readonly defaultDateRange = this.getDefaultDateRange();
@@ -138,11 +135,8 @@ export class NotasCreditoConsultaComponent implements OnInit {
       return;
     }
 
-    const url = `${this.apiBaseUrl}/notas-credito/${encodeURIComponent(tipo)}/${encodeURIComponent(
-      serie
-    )}/${encodeURIComponent(numero)}/pdf`;
-    this.http
-      .get(url, { responseType: 'blob' })
+    this.notasService
+      .getNotaCreditoPdf(tipo, serie, numero)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (blob) => this.openPdfBlob(blob, `Nota_Credito_${tipo}_${serie}_${numero}.pdf`),
@@ -152,6 +146,19 @@ export class NotasCreditoConsultaComponent implements OnInit {
 
   anularNota(_nota: NotaCredito): void {
     window.alert('Funcionalidad de anulación pendiente.');
+  }
+
+  verDetalle(nota: NotaCredito): void {
+    const tipo = this.normalize(nota.PFD07_TipNotaCredito || DEFAULT_TIP_NC).toUpperCase();
+    const serie = this.normalize(nota.PFD07_SerieNotaCredito);
+    const numero = this.normalize(nota.PFD07_NumNotaCredito);
+
+    if (!tipo || !serie || !numero) {
+      window.alert('No se pudo abrir el detalle. Datos incompletos.');
+      return;
+    }
+
+    this.router.navigate(['/finanzas/notas-credito/detalle', tipo, serie, numero]);
   }
 
   trackByNota(index: number, nota: NotaCredito): string {
@@ -308,11 +315,6 @@ export class NotasCreditoConsultaComponent implements OnInit {
       return error;
     }
     return 'Ocurrió un error inesperado al consultar notas de crédito.';
-  }
-
-  private resolveApiBaseUrl(): string {
-    const rawBaseUrl = (environment.apiUrl || environment.baseUrl || '').toString().trim();
-    return rawBaseUrl.replace(/\/+$/, '');
   }
 
   private openPdfBlob(blob: Blob, filename: string): void {
