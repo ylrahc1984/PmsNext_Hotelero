@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
 import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { BehaviorSubject, Subscription } from 'rxjs';
@@ -47,6 +48,7 @@ const DEFAULT_TIP_NC = 'NCC';
 export class NotasCreditoConsultaComponent implements OnInit {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly notasService = inject(NotasCreditoService);
+  private readonly http = inject(HttpClient);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly apiBaseUrl = this.resolveApiBaseUrl();
@@ -127,7 +129,7 @@ export class NotasCreditoConsultaComponent implements OnInit {
   }
 
   verPdf(_nota: NotaCredito): void {
-    const tipo = this.normalize(_nota.PFD07_TipNotaCredito);
+    const tipo = this.normalize(_nota.PFD07_TipNotaCredito || DEFAULT_TIP_NC).toLowerCase();
     const serie = this.normalize(_nota.PFD07_SerieNotaCredito);
     const numero = this.normalize(_nota.PFD07_NumNotaCredito);
 
@@ -139,10 +141,13 @@ export class NotasCreditoConsultaComponent implements OnInit {
     const url = `${this.apiBaseUrl}/notas-credito/${encodeURIComponent(tipo)}/${encodeURIComponent(
       serie
     )}/${encodeURIComponent(numero)}/pdf`;
-    const opened = window.open(url, '_blank', 'noopener');
-    if (!opened) {
-      window.location.href = url;
-    }
+    this.http
+      .get(url, { responseType: 'blob' })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (blob) => this.openPdfBlob(blob, `Nota_Credito_${tipo}_${serie}_${numero}.pdf`),
+        error: () => window.alert('No se pudo generar el PDF de la nota de crédito.')
+      });
   }
 
   anularNota(_nota: NotaCredito): void {
@@ -308,5 +313,23 @@ export class NotasCreditoConsultaComponent implements OnInit {
   private resolveApiBaseUrl(): string {
     const rawBaseUrl = (environment.apiUrl || environment.baseUrl || '').toString().trim();
     return rawBaseUrl.replace(/\/+$/, '');
+  }
+
+  private openPdfBlob(blob: Blob, filename: string): void {
+    const pdfBlob = new Blob([blob], { type: 'application/pdf' });
+    const objectUrl = URL.createObjectURL(pdfBlob);
+    const opened = window.open(objectUrl, '_blank', 'noopener');
+
+    if (!opened) {
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = filename;
+      link.rel = 'noopener';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
   }
 }

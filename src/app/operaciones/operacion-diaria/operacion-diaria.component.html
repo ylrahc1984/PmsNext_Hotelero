@@ -368,14 +368,14 @@
                                   type="button"
                                   ngbDropdownItem
                                   class="dropdown-item action-item"
-                                  (click)="onPrintVoucher(reserva.detallePrincipal)"
-                                  [disabled]="isPrintingVoucher(reserva.detallePrincipal)"
+                                  (click)="onPrintVoucher(reserva)"
+                                  [disabled]="isPrintingVoucher(reserva)"
                                 >
                                   <span class="action-item__icon action-item__icon--sky">
                                     <i class="feather icon-printer" aria-hidden="true"></i>
                                   </span>
                                   <span class="action-item__content">
-                                    <span class="action-item__label">{{ isPrintingVoucher(reserva.detallePrincipal) ? 'Imprimiendo...' : 'Imprimir Voucher' }}</span>
+                                    <span class="action-item__label">{{ isPrintingVoucher(reserva) ? 'Imprimiendo...' : 'Imprimir Voucher' }}</span>
                                   </span>
                                 </button>
                                 <button

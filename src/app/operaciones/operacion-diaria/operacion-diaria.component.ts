@@ -4,7 +4,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, inje
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { Observable, Subject, catchError, debounceTime, filter, finalize, map, merge, of, shareReplay, startWith, switchMap } from 'rxjs';
+import { Observable, Subject, catchError, concatMap, debounceTime, filter, finalize, from, map, merge, of, shareReplay, startWith, switchMap, toArray } from 'rxjs';
 import Swal from 'sweetalert2';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
@@ -46,10 +46,12 @@ interface OperacionDiariaViewState {
 interface PrintVoucherPayload {
   empresa           : string;
   fechaActividad    : string;
+  horaActividad     : string;
   servicio          : string;
   numeroTicket      : number;
-  numeroReserva     : number;
+  numeroReserva     : string;
   totalPax          : number;
+  printerName       : string;
 }
 
 @Component({
@@ -376,13 +378,13 @@ export class OperacionDiariaComponent implements OnInit {
       });
   }
 
-  onPrintVoucher(detalle: OperacionDetalle): void {
-    const payload = this.buildVoucherPayload(detalle);
-    if (!payload) {
+  onPrintVoucher(reserva: ReservaOperacionAgrupada): void {
+    const payloads = this.buildVoucherPayloads(reserva);
+    if (!payloads.length) {
       return;
     }
 
-    const key = this.getDetalleKey(detalle);
+    const key = this.getReservaPrintKey(reserva);
     if (this.printingVouchers.has(key)) {
       return;
     }
@@ -393,18 +395,24 @@ export class OperacionDiariaComponent implements OnInit {
     const baseApiUrl = (environment.apiUrl ?? '').toString().replace(/\/+$/, '');
     const url = `${baseApiUrl}/vouchers/print-reserva`;
 
-    this.http
-      .post(url, payload, { responseType: 'blob' as const })
+    from(payloads)
       .pipe(
+        concatMap((payload) => this.http.post(url, payload)),
+        toArray(),
         finalize(() => {
           this.printingVouchers.delete(key);
           this.cdr.markForCheck();
         })
       )
       .subscribe({
-        next: (data) => {
-          const reserva = payload.numeroReserva ? payload.numeroReserva.toString() : 'Reserva';
-          this.openPdfBlob(data, `Voucher_Reserva_${reserva}.pdf`);
+        next: () => {
+          Swal.fire({
+            title: 'Voucher enviado',
+            text: payloads.length === 1 ? 'Se envió 1 voucher a impresión.' : `Se enviaron ${payloads.length} vouchers a impresión.`,
+            icon: 'success',
+            timer: 1800,
+            showConfirmButton: false
+          });
         },
         error: (error) => {
           console.error('Error imprimiendo voucher:', error);
@@ -520,8 +528,8 @@ export class OperacionDiariaComponent implements OnInit {
     });
   }
 
-  isPrintingVoucher(detalle: OperacionDetalle): boolean {
-    return this.printingVouchers.has(this.getDetalleKey(detalle));
+  isPrintingVoucher(reserva: ReservaOperacionAgrupada): boolean {
+    return this.printingVouchers.has(this.getReservaPrintKey(reserva));
   }
 
   hasObservacion(detalle: OperacionDetalle | null | undefined): boolean {
@@ -716,6 +724,11 @@ export class OperacionDiariaComponent implements OnInit {
 
   private getDetalleKey(detalle: OperacionDetalle): number | string {
     return detalle.prV02_ID ?? detalle.prV02_CodReserva ?? 'detalle';
+  }
+
+  private getReservaPrintKey(reserva: ReservaOperacionAgrupada): string {
+    const reservaKey = (reserva?.reservaKey ?? reserva?.numeroReserva ?? '').toString().trim();
+    return reservaKey || `reserva-${reserva?.detallePrincipal ? this.getDetalleKey(reserva.detallePrincipal) : 'detalle'}`;
   }
 
   private hasTexto(value: string | null | undefined): boolean {
@@ -1081,70 +1094,99 @@ export class OperacionDiariaComponent implements OnInit {
     return `${yyyy}-${mm}-${dd}`;
   }
 
-  private buildVoucherPayload(detalle: OperacionDetalle): PrintVoucherPayload | null {
-    const empresa = this.getEmpresaCodigo();
+  private buildVoucherPayloads(reserva: ReservaOperacionAgrupada): PrintVoucherPayload[] {
+    const empresa = this.getEmpresaNombre();
     if (!empresa) {
       Swal.fire({
         title: 'Empresa no definida',
         text: 'No se pudo determinar la empresa activa para imprimir el voucher.',
         icon: 'warning'
       });
-      return null;
+      return [];
     }
 
-    const numeroTicket = Number(detalle?.prV02_ID);
-    if (!Number.isFinite(numeroTicket)) {
-      Swal.fire({
-        title: 'Ticket inválido',
-        text: 'No se pudo determinar el número de ticket para imprimir el voucher.',
-        icon: 'warning'
-      });
-      return null;
-    }
-
-    const rawReserva = (detalle?.prV02_CodReserva ?? '').toString().trim();
-    if (!rawReserva) {
+    const numeroReserva = (reserva?.numeroReserva ?? reserva?.detallePrincipal?.prV02_CodReserva ?? '').toString().trim();
+    if (!numeroReserva) {
       Swal.fire({
         title: 'Reserva inválida',
         text: 'No se pudo determinar el número de reserva para imprimir el voucher.',
         icon: 'warning'
       });
-      return null;
+      return [];
     }
 
-    const numeroReserva = Number(rawReserva);
-    if (!Number.isFinite(numeroReserva)) {
+    const servicios = this.buildVoucherServices(reserva);
+    if (!servicios.length) {
       Swal.fire({
-        title: 'Reserva inválida',
-        text: 'El número de reserva no es numérico.',
+        title: 'Servicios no definidos',
+        text: 'No se encontraron servicios activos para imprimir el voucher.',
         icon: 'warning'
       });
-      return null;
+      return [];
     }
 
-    const fechaActividad = this.buildFechaActividad(detalle);
-    if (!fechaActividad) {
-      Swal.fire({
-        title: 'Fecha inválida',
-        text: 'No se pudo determinar la fecha de actividad para imprimir el voucher.',
-        icon: 'warning'
+    const payloads: PrintVoucherPayload[] = [];
+    for (const servicio of servicios) {
+      const fechaActividad = this.buildFechaActividad(servicio.detalle);
+      const horaActividad = this.buildHoraActividad(servicio.detalle);
+      if (!fechaActividad || !horaActividad) {
+        Swal.fire({
+          title: 'Fecha inválida',
+          text: 'No se pudo determinar la fecha u hora de actividad para imprimir el voucher.',
+          icon: 'warning'
+        });
+        return [];
+      }
+
+      payloads.push({
+        empresa,
+        fechaActividad,
+        horaActividad,
+        servicio: servicio.nombre,
+        numeroTicket: 0,
+        numeroReserva,
+        totalPax: servicio.totalPax,
+        printerName: 'TIQUETE'
       });
-      return null;
     }
 
-    return {
-      empresa,
-      fechaActividad,
-      servicio: (detalle?.nomServicio ?? detalle?.codServicio ?? '').toString().trim(),
-      numeroTicket,
-      numeroReserva,
-      totalPax: this.toNumber(detalle?.totalPax)
-    };
+    return payloads;
   }
 
-  private getEmpresaCodigo(): string {
+  private buildVoucherServices(
+    reserva: ReservaOperacionAgrupada
+  ): Array<{ key: string; nombre: string; totalPax: number; detalle: OperacionDetalle }> {
+    const grouped = new Map<string, { key: string; nombre: string; totalPax: number; detalle: OperacionDetalle }>();
+    const detalles = this.getDetallesActivos(reserva?.detalles ?? []);
+
+    detalles.forEach((detalle) => {
+      const codServicio = (detalle?.codServicio ?? '').toString().trim();
+      const nomServicio = (detalle?.nomServicio ?? '').toString().trim();
+      const nombre = nomServicio || codServicio;
+      if (!nombre) {
+        return;
+      }
+
+      const key = `${codServicio}-${nomServicio}`;
+      const current = grouped.get(key);
+      if (current) {
+        current.totalPax += this.toNumber(detalle?.totalPax);
+      } else {
+        grouped.set(key, {
+          key,
+          nombre,
+          totalPax: this.toNumber(detalle?.totalPax),
+          detalle
+        });
+      }
+    });
+
+    return Array.from(grouped.values());
+  }
+
+  private getEmpresaNombre(): string {
     const empresa = this.empresaContext.getSnapshot();
-    return (empresa?.MA04_Unidad ?? '').toString().trim();
+    return (empresa?.MA04_Nombre ?? empresa?.MA04_RazonSocial ?? '').toString().trim();
   }
 
   private buildFechaActividad(detalle: OperacionDetalle): string | null {
@@ -1152,8 +1194,36 @@ export class OperacionDiariaComponent implements OnInit {
     if (!baseDate) {
       return null;
     }
-    const dateWithTime = this.applyHoraServicio(baseDate, detalle?.prV02_HoraServicio);
-    return dateWithTime.toISOString();
+    return this.toDisplayDate(baseDate);
+  }
+
+  private toDisplayDate(date: Date): string {
+    const dd = date.getDate().toString().padStart(2, '0');
+    const mm = (date.getMonth() + 1).toString().padStart(2, '0');
+    const yyyy = date.getFullYear().toString().padStart(4, '0');
+    return `${dd}/${mm}/${yyyy}`;
+  }
+
+  private buildHoraActividad(detalle: OperacionDetalle): string | null {
+    const raw = (detalle?.prV02_HoraServicio ?? '').toString().trim();
+    if (!raw) {
+      return null;
+    }
+
+    const parts = raw.split(':');
+    if (parts.length < 2) {
+      return null;
+    }
+
+    const hh = Number(parts[0]);
+    const mm = Number(parts[1]);
+    const ss = Number(parts[2] ?? 0);
+
+    if (!Number.isFinite(hh) || !Number.isFinite(mm) || !Number.isFinite(ss)) {
+      return null;
+    }
+
+    return `${hh.toString().padStart(2, '0')}:${mm.toString().padStart(2, '0')}:${ss.toString().padStart(2, '0')}`;
   }
 
   private parseFechaServicio(value: string | null | undefined): Date | null {
@@ -1237,30 +1307,4 @@ export class OperacionDiariaComponent implements OnInit {
     return Number.isFinite(parsed) ? parsed : 0;
   }
 
-  private openPdfBlob(blob: Blob, filename: string): void {
-    try {
-      const pdfBlob = new Blob([blob], { type: 'application/pdf' });
-      const objectUrl = URL.createObjectURL(pdfBlob);
-      const opened = window.open(objectUrl, '_blank', 'noopener');
-
-      if (!opened) {
-        const link = document.createElement('a');
-        link.href = objectUrl;
-        link.download = filename;
-        link.rel = 'noopener';
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-      }
-
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
-    } catch (err) {
-      console.error('Error abriendo voucher PDF', err);
-      Swal.fire({
-        title: 'Error',
-        text: 'No se pudo abrir el voucher en PDF.',
-        icon: 'error'
-      });
-    }
-  }
 }
