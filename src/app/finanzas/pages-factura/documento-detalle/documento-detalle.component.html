@@ -53,12 +53,26 @@
             type="button"
             (click)="imprimirDocumento()"
             [disabled]="loading || busyPdf || !encabezado?.numeroConsecutivo"
-            title="Imprimir documento"
-            aria-label="Imprimir documento"
+            title="Imprimir PDF"
+            aria-label="Imprimir PDF"
           >
             <span class="rsv-action-btn__icon">
               <span *ngIf="busyPdf" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
               <i *ngIf="!busyPdf" class="feather icon-printer"></i>
+            </span>
+          </button>
+
+          <button
+            class="btn btn-outline-primary rsv-action-btn rsv-action-btn--outline rsv-action-btn--compact"
+            type="button"
+            (click)="imprimirDocumentoPos()"
+            [disabled]="loading || busyPos || !encabezado"
+            title="Imprimir POS"
+            aria-label="Imprimir POS"
+          >
+            <span class="rsv-action-btn__icon">
+              <span *ngIf="busyPos" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+              <i *ngIf="!busyPos" class="fas fa-print"></i>
             </span>
           </button>
         </div>

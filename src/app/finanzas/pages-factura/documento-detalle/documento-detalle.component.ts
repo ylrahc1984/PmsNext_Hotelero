@@ -20,6 +20,8 @@ import { FISCAL_CONFIG } from 'src/app/core/config/fiscal.config';
 import { FormaPago } from 'src/app/demo/administracion/forma-pago/forma-pago.models';
 import { FormaPagoService } from 'src/app/demo/administracion/forma-pago/forma-pago.service';
 import { AuthService } from 'src/app/core/services/auth.service';
+import { QzPrintService } from 'src/app/core/services/qz-print.service';
+import { PosDocumentPrintBuilder } from 'src/app/core/printing/pos-document-print.builder';
 
 type DocumentoResumen = {
   subtotal: number;
@@ -69,6 +71,7 @@ export class DocumentoDetalleComponent implements OnInit {
   loading = false;
   errorMsg: string | null = null;
   busyPdf = false;
+  busyPos = false;
   showCambioFormaPagoModal = false;
   formasPago: FormaPago[] = [];
   formasPagoLoading = false;
@@ -81,6 +84,8 @@ export class DocumentoDetalleComponent implements OnInit {
   private readonly detalleService = inject(DocumentoDetalleService);
   private readonly formaPagoService = inject(FormaPagoService);
   private readonly authService = inject(AuthService);
+  private readonly qzPrintService = inject(QzPrintService);
+  private readonly posDocumentPrintBuilder = inject(PosDocumentPrintBuilder);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly empresaContext = inject(EmpresaContextService);
@@ -243,6 +248,32 @@ export class DocumentoDetalleComponent implements OnInit {
           window.alert(message);
         }
       });
+  }
+
+  async imprimirDocumentoPos(): Promise<void> {
+    if (this.busyPos || !this.encabezado) return;
+
+    this.busyPos = true;
+    this.cdr.markForCheck();
+
+    try {
+      const empresa = this.empresa();
+      const commands = this.posDocumentPrintBuilder.build({
+        empresaNombre: (empresa?.MA04_Nombre ?? empresa?.MA04_RazonSocial ?? '').toString().trim(),
+        empresaRuc: (empresa?.MA04_Ruc ?? '').toString().trim(),
+        encabezado: this.encabezado,
+        detalle: this.detalle,
+        pagos: this.pagos,
+        resumen: this.resumen
+      });
+
+      await this.qzPrintService.printRaw(commands);
+    } catch (error: unknown) {
+      window.alert(this.getErrorMessage(error, 'No se pudo imprimir el documento en POS.'));
+    } finally {
+      this.busyPos = false;
+      this.cdr.markForCheck();
+    }
   }
 
   trackByDetalle(index: number, item: DocumentoDetalleItem): string {
