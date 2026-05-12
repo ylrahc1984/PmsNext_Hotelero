@@ -4,13 +4,14 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, inje
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { Observable, Subject, catchError, concatMap, debounceTime, filter, finalize, from, map, merge, of, shareReplay, startWith, switchMap, toArray } from 'rxjs';
+import { Observable, Subject, catchError, debounceTime, filter, finalize, map, merge, of, shareReplay, startWith, switchMap } from 'rxjs';
 import Swal from 'sweetalert2';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { OperacionDiariaService, OperacionDiariaParams } from './operacion-diaria.service';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
+import { QzPrintService } from 'src/app/core/services/qz-print.service';
 import { environment } from 'src/environments/environment';
 import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
 import {
@@ -43,15 +44,15 @@ interface OperacionDiariaViewState {
   bloques   : BloqueHoraAgrupado[];
 }
 
-interface PrintVoucherPayload {
+interface PosVoucher {
   empresa           : string;
-  fechaActividad    : string;
-  horaActividad     : string;
+  fechaHoraEmision  : string;
+  fechaHoraActividad: string;
   servicio          : string;
-  numeroTicket      : number;
+  numeroTicket      : string;
   numeroReserva     : string;
-  totalPax          : number;
-  printerName       : string;
+  paxIndex          : number;
+  totalPaxServicio  : number;
 }
 
 @Component({
@@ -72,6 +73,7 @@ export class OperacionDiariaComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly router = inject(Router);
   private readonly tipoCambioService = inject(TipoCambioService);
+  private readonly qzPrintService = inject(QzPrintService);
 
   readonly today = this.toDateInput(new Date());
 
@@ -378,9 +380,9 @@ export class OperacionDiariaComponent implements OnInit {
       });
   }
 
-  onPrintVoucher(reserva: ReservaOperacionAgrupada): void {
-    const payloads = this.buildVoucherPayloads(reserva);
-    if (!payloads.length) {
+  async imprimirVoucher(reserva: ReservaOperacionAgrupada): Promise<void> {
+    const vouchers = this.buildVoucherPayloads(reserva);
+    if (!vouchers.length) {
       return;
     }
 
@@ -392,37 +394,30 @@ export class OperacionDiariaComponent implements OnInit {
     this.printingVouchers.add(key);
     this.cdr.markForCheck();
 
-    const baseApiUrl = (environment.apiUrl ?? '').toString().replace(/\/+$/, '');
-    const url = `${baseApiUrl}/vouchers/print-reserva`;
+    try {
+      for (const voucher of vouchers) {
+        await this.qzPrintService.printRaw(this.buildVoucherCommands(voucher));
+        await this.sleep(300);
+      }
 
-    from(payloads)
-      .pipe(
-        concatMap((payload) => this.http.post(url, payload)),
-        toArray(),
-        finalize(() => {
-          this.printingVouchers.delete(key);
-          this.cdr.markForCheck();
-        })
-      )
-      .subscribe({
-        next: () => {
-          Swal.fire({
-            title: 'Voucher enviado',
-            text: payloads.length === 1 ? 'Se envió 1 voucher a impresión.' : `Se enviaron ${payloads.length} vouchers a impresión.`,
-            icon: 'success',
-            timer: 1800,
-            showConfirmButton: false
-          });
-        },
-        error: (error) => {
-          console.error('Error imprimiendo voucher:', error);
-          Swal.fire({
-            title: 'Error',
-            text: 'No se pudo imprimir el voucher.',
-            icon: 'error'
-          });
-        }
+      Swal.fire({
+        title: 'Voucher impreso',
+        text: vouchers.length === 1 ? 'Se imprimió 1 voucher POS.' : `Se imprimieron ${vouchers.length} vouchers POS.`,
+        icon: 'success',
+        timer: 1800,
+        showConfirmButton: false
       });
+    } catch (error) {
+      console.error('Error imprimiendo voucher POS:', error);
+      Swal.fire({
+        title: 'Error de impresión POS',
+        text: this.getPrintErrorMessage(error),
+        icon: 'error'
+      });
+    } finally {
+      this.printingVouchers.delete(key);
+      this.cdr.markForCheck();
+    }
   }
 
   onFacturarReserva(detalle: OperacionDetalle): void {
@@ -1094,7 +1089,37 @@ export class OperacionDiariaComponent implements OnInit {
     return `${yyyy}-${mm}-${dd}`;
   }
 
-  private buildVoucherPayloads(reserva: ReservaOperacionAgrupada): PrintVoucherPayload[] {
+  buildVoucherCommands(voucher: PosVoucher): string[] {
+    const separator = '--------------------------------';
+
+    return [
+      '\x1B\x40',
+      '\x1B\x61\x01',
+      '\x1B\x45\x01',
+      '\x1D\x21\x01',
+      `${this.toPosText(voucher.empresa)}\n`,
+      '\x1D\x21\x00',
+      '\x1B\x45\x00',
+      `${voucher.fechaHoraEmision}\n\n`,
+      '\x1B\x45\x01',
+      '\x1D\x21\x11',
+      `${this.toPosText(voucher.servicio)}\n`,
+      '\x1D\x21\x00',
+      '\x1B\x45\x00',
+      `${separator}\n\n`,
+      '\x1B\x61\x00',
+      '\x1B\x45\x01',
+      `TIQUETE #${voucher.numeroTicket}\n`,
+      '\x1B\x45\x00',
+      `\n(${voucher.paxIndex} de ${voucher.totalPaxServicio} REG.)\n\n`,
+      `Reserva #${this.toPosText(voucher.numeroReserva)}\n\n`,
+      `Fecha/hora actividad: ${voucher.fechaHoraActividad}\n\n`,
+      `${separator}\n\n\n\n`,
+      '\x1D\x56\x41\x00'
+    ];
+  }
+
+  private buildVoucherPayloads(reserva: ReservaOperacionAgrupada): PosVoucher[] {
     const empresa = this.getEmpresaNombre();
     if (!empresa) {
       Swal.fire({
@@ -1125,11 +1150,13 @@ export class OperacionDiariaComponent implements OnInit {
       return [];
     }
 
-    const payloads: PrintVoucherPayload[] = [];
+    const fechaHoraEmision = this.toDisplayDateTime(new Date());
+    const vouchers: PosVoucher[] = [];
+    let ticketSequence = 1;
+
     for (const servicio of servicios) {
-      const fechaActividad = this.buildFechaActividad(servicio.detalle);
-      const horaActividad = this.buildHoraActividad(servicio.detalle);
-      if (!fechaActividad || !horaActividad) {
+      const fechaHoraActividad = this.buildFechaHoraActividad(servicio.detalle);
+      if (!fechaHoraActividad) {
         Swal.fire({
           title: 'Fecha inválida',
           text: 'No se pudo determinar la fecha u hora de actividad para imprimir el voucher.',
@@ -1138,19 +1165,23 @@ export class OperacionDiariaComponent implements OnInit {
         return [];
       }
 
-      payloads.push({
-        empresa,
-        fechaActividad,
-        horaActividad,
-        servicio: servicio.nombre,
-        numeroTicket: 0,
-        numeroReserva,
-        totalPax: servicio.totalPax,
-        printerName: 'TIQUETE'
-      });
+      const totalPaxServicio = Math.max(1, Math.trunc(servicio.totalPax));
+      for (let paxIndex = 1; paxIndex <= totalPaxServicio; paxIndex++) {
+        vouchers.push({
+          empresa,
+          fechaHoraEmision,
+          fechaHoraActividad,
+          servicio: servicio.nombre,
+          numeroTicket: `${numeroReserva}-${ticketSequence.toString().padStart(2, '0')}`,
+          numeroReserva,
+          paxIndex,
+          totalPaxServicio
+        });
+        ticketSequence++;
+      }
     }
 
-    return payloads;
+    return vouchers;
   }
 
   private buildVoucherServices(
@@ -1189,41 +1220,24 @@ export class OperacionDiariaComponent implements OnInit {
     return (empresa?.MA04_Nombre ?? empresa?.MA04_RazonSocial ?? '').toString().trim();
   }
 
-  private buildFechaActividad(detalle: OperacionDetalle): string | null {
+  private buildFechaHoraActividad(detalle: OperacionDetalle): string | null {
     const baseDate = this.parseFechaServicio(detalle?.prV02_FecServicio);
     if (!baseDate) {
       return null;
     }
-    return this.toDisplayDate(baseDate);
+
+    return this.toDisplayDateTime(this.applyHoraServicio(baseDate, detalle?.prV02_HoraServicio));
   }
 
-  private toDisplayDate(date: Date): string {
+  private toDisplayDateTime(date: Date): string {
     const dd = date.getDate().toString().padStart(2, '0');
     const mm = (date.getMonth() + 1).toString().padStart(2, '0');
     const yyyy = date.getFullYear().toString().padStart(4, '0');
-    return `${dd}/${mm}/${yyyy}`;
-  }
-
-  private buildHoraActividad(detalle: OperacionDetalle): string | null {
-    const raw = (detalle?.prV02_HoraServicio ?? '').toString().trim();
-    if (!raw) {
-      return null;
-    }
-
-    const parts = raw.split(':');
-    if (parts.length < 2) {
-      return null;
-    }
-
-    const hh = Number(parts[0]);
-    const mm = Number(parts[1]);
-    const ss = Number(parts[2] ?? 0);
-
-    if (!Number.isFinite(hh) || !Number.isFinite(mm) || !Number.isFinite(ss)) {
-      return null;
-    }
-
-    return `${hh.toString().padStart(2, '0')}:${mm.toString().padStart(2, '0')}:${ss.toString().padStart(2, '0')}`;
+    const hours = date.getHours();
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHour = (hours % 12 || 12).toString().padStart(2, '0');
+    return `${dd}-${mm}-${yyyy} ${displayHour}:${minutes} ${period}`;
   }
 
   private parseFechaServicio(value: string | null | undefined): Date | null {
@@ -1300,6 +1314,31 @@ export class OperacionDiariaComponent implements OnInit {
     const next = new Date(base);
     next.setHours(hh, mm, ss, 0);
     return next;
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => window.setTimeout(resolve, ms));
+  }
+
+  private getPrintErrorMessage(error: unknown): string {
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+
+    if (typeof error === 'string' && error.trim()) {
+      return error.trim();
+    }
+
+    return 'No se pudo imprimir el voucher POS. Verifique QZ Tray y la impresora TIQUETE.';
+  }
+
+  private toPosText(value: string | number | null | undefined): string {
+    return (value ?? '')
+      .toString()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^\x20-\x7E]/g, '')
+      .trim();
   }
 
   private toNumber(value: unknown): number {
