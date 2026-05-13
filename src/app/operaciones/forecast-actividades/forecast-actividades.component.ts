@@ -45,6 +45,30 @@ export class ForecastActividadesComponent implements OnInit {
 
   private readonly capacidadBaseDefault = 15;
   private readonly agenciaSearchMinLength = 2;
+  private readonly ordenServiciosForecast = new Map<string, number>([
+    ['00001', 1],
+    ['00036', 2],
+    ['00038', 3],
+    ['00026', 4],
+    ['00027', 5],
+    ['00002', 6],
+    ['00035', 7],
+    ['00033', 8],
+    ['00041', 9],
+    ['00004', 10],
+    ['00032', 11],
+    ['00030', 12],
+    ['00018', 13],
+    ['00031', 14],
+    ['00028', 15],
+    ['00000', 16],
+    ['00037', 17],
+    ['00003', 18],
+    ['00034', 19],
+    ['00013', 20],
+    ['00039', 21],
+    ['00014', 22]
+  ]);
 
   readonly today = this.toDateInput(new Date());
   readonly vistaOptions: ForecastVistaOption[] = [
@@ -788,10 +812,27 @@ export class ForecastActividadesComponent implements OnInit {
   }
 
   private compareActividadByNombre(a: ForecastMatrizActividad, b: ForecastMatrizActividad): number {
+    const ordenA = this.getOrdenServicioForecast(a.codServicio);
+    const ordenB = this.getOrdenServicioForecast(b.codServicio);
+
+    if (ordenA !== ordenB) {
+      return ordenA - ordenB;
+    }
+
     return (
       a.nomServicio.localeCompare(b.nomServicio, 'es', { sensitivity: 'base' }) ||
       a.codServicio.localeCompare(b.codServicio, 'es', { sensitivity: 'base' })
     );
+  }
+
+  private getOrdenServicioForecast(codServicio: string): number {
+    const normalizedCode = this.normalizeServicioCode(codServicio);
+    return this.ordenServiciosForecast.get(normalizedCode) ?? Number.MAX_SAFE_INTEGER;
+  }
+
+  private normalizeServicioCode(codServicio: string): string {
+    const normalized = this.textValue(codServicio);
+    return /^\d+$/.test(normalized) ? normalized.padStart(5, '0') : normalized;
   }
 
   private parseHourToMinutes(value: string): number {
