@@ -1,0 +1,289 @@
+<div class="centro-operacional" *ngIf="vm$ | async as vm">
+  <section class="ops-hero" [ngClass]="getLevelClass(vm.nivelDia)">
+    <div>
+      <span class="ops-hero__eyebrow">OPERACIONES / CENTRO DE CONTROL</span>
+      <h2>Centro Operacional</h2>
+      <p>Lectura ejecutiva de carga, saturacion, pasajeros y flujo operativo por bloques horarios.</p>
+    </div>
+    <div class="ops-hero__level">
+      <span>Nivel operacional del dia</span>
+      <strong>{{ vm.nivelDiaLabel }}</strong>
+    </div>
+  </section>
+
+  <form class="ops-filters" [formGroup]="filtersForm">
+    <label>
+      <span>Fecha inicio</span>
+      <input type="date" class="form-control" formControlName="fechaInicio" />
+    </label>
+    <label>
+      <span>Fecha fin</span>
+      <input type="date" class="form-control" formControlName="fechaFin" />
+    </label>
+    <label class="ops-filters__search">
+      <span>Busqueda</span>
+      <input type="search" class="form-control" formControlName="busqueda" placeholder="Reserva, cliente, servicio" />
+    </label>
+    <label>
+      <span>Agencia</span>
+      <input type="text" class="form-control" formControlName="agenciaId" placeholder="Codigo agencia" />
+    </label>
+    <label>
+      <span>Chofer</span>
+      <input type="text" class="form-control" formControlName="choferId" placeholder="Codigo chofer" />
+    </label>
+    <div class="ops-filters__actions">
+      <button type="button" class="btn btn-light" (click)="clearFilters()">
+        <i class="feather icon-x"></i>
+      </button>
+      <button type="button" class="btn btn-primary" (click)="reload()">
+        <i class="feather icon-refresh-cw"></i>
+      </button>
+    </div>
+  </form>
+
+  <div class="ops-error" *ngIf="error$ | async as error">
+    <i class="feather icon-alert-circle"></i>
+    <span>{{ error }}</span>
+  </div>
+
+  <ng-container *ngIf="loading$ | async; else dashboardContent">
+    <section class="kpi-grid">
+      <div class="kpi-card skeleton" *ngFor="let item of skeletonKpis"></div>
+    </section>
+    <section class="timeline-card skeleton skeleton--wide"></section>
+    <section class="ops-grid">
+      <div class="skeleton skeleton--panel"></div>
+      <div class="skeleton skeleton--panel"></div>
+    </section>
+  </ng-container>
+
+  <ng-template #dashboardContent>
+    <section class="kpi-grid">
+      <article class="kpi-card" *ngFor="let kpi of vm.kpis; trackBy: trackByKpi" [ngClass]="getLevelClass(kpi.tone)">
+        <span class="kpi-card__icon"><i [class]="kpi.icon"></i></span>
+        <div>
+          <strong>{{ kpi.value }}</strong>
+          <span>{{ kpi.label }}</span>
+          <small>{{ kpi.detail }}</small>
+        </div>
+      </article>
+    </section>
+
+    <section class="timeline-card">
+      <div class="section-heading">
+        <div>
+          <span>Timeline operacional</span>
+          <h5>Flujo por bloque horario</h5>
+        </div>
+        <strong>{{ vm.totalRegistros }} registros</strong>
+      </div>
+      <div class="timeline-strip" *ngIf="vm.timeline.length; else emptyTimeline">
+        <article class="time-block" *ngFor="let block of vm.timeline; trackBy: trackByTimeline" [ngClass]="getLevelClass(block.nivel)">
+          <div class="time-block__head">
+            <strong>{{ block.bloqueHora }}</strong>
+            <span>{{ block.cantidadServicios }} srv</span>
+          </div>
+          <div class="time-block__metric">
+            <strong>{{ block.paxHora }}</strong>
+            <span>pax</span>
+          </div>
+          <div class="time-block__bar"><span [style.width.%]="block.intensidad"></span></div>
+          <small>{{ block.totalHora | currency: 'USD':'symbol':'1.2-2' }}</small>
+        </article>
+      </div>
+      <ng-template #emptyTimeline>
+        <div class="empty-state">No hay bloques operacionales para los filtros seleccionados.</div>
+      </ng-template>
+    </section>
+
+    <section class="ops-alerts">
+      <div class="ops-alerts__title">
+        <i class="feather icon-zap"></i>
+        Alertas operativas
+      </div>
+      <div class="ops-alerts__list">
+        <span *ngFor="let alerta of vm.alertas">{{ alerta }}</span>
+      </div>
+    </section>
+
+    <section class="ops-grid">
+      <article class="heatmap-panel">
+        <div class="section-heading">
+          <div>
+            <span>Heatmap operacional</span>
+            <h5>Actividad vs bloque horario</h5>
+          </div>
+        </div>
+        <div class="heatmap" *ngIf="vm.heatmap.length; else emptyHeatmap">
+          <div class="heatmap__header" [style.gridTemplateColumns]="'minmax(160px, 1.4fr) repeat(' + vm.heatmapColumns.length + ', minmax(72px, 1fr))'">
+            <span>Actividad</span>
+            <strong *ngFor="let hour of vm.heatmapColumns">{{ hour }}</strong>
+          </div>
+          <div class="heatmap__row" *ngFor="let row of vm.heatmap" [style.gridTemplateColumns]="'minmax(160px, 1.4fr) repeat(' + vm.heatmapColumns.length + ', minmax(72px, 1fr))'">
+            <div class="heatmap__activity">
+              <strong>{{ row.nomServicio }}</strong>
+              <span>{{ row.totalPax }} pax · {{ row.totalServicios }} srv</span>
+            </div>
+            <div class="heatmap__cell" *ngFor="let cell of row.cells; trackBy: trackByCell" [ngClass]="getLevelClass(cell.nivel)">
+              <strong>{{ cell.paxActividadHora }}</strong>
+              <span>{{ cell.cantidadServicios }} srv</span>
+            </div>
+          </div>
+        </div>
+        <ng-template #emptyHeatmap>
+          <div class="empty-state">Sin actividades para construir el mapa de calor.</div>
+        </ng-template>
+      </article>
+
+      <article class="activity-panel">
+        <div class="section-heading">
+          <div>
+            <span>Matriz de actividades</span>
+            <h5>Servicios con mayor presion operativa</h5>
+          </div>
+        </div>
+        <div class="activity-list" *ngIf="vm.actividades.length; else emptyActivities">
+          <article class="activity-card" *ngFor="let activity of vm.actividades; trackBy: trackByActivity" [ngClass]="getLevelClass(activity.nivel)">
+            <div class="activity-card__head">
+              <div>
+                <strong>{{ activity.nomServicio }}</strong>
+                <span>{{ activity.codServicio }}</span>
+              </div>
+              <span class="level-pill">{{ activity.totalPax }} pax</span>
+            </div>
+            <div class="activity-card__metrics">
+              <span>{{ activity.totalServicios }} servicios</span>
+              <span>{{ activity.totalIngreso | currency: 'USD':'symbol':'1.2-2' }}</span>
+              <span>{{ activity.trend }}</span>
+            </div>
+            <div class="mini-timeline">
+              <div class="mini-row" *ngFor="let bar of activity.bars">
+                <span>{{ bar.bloqueHora }}</span>
+                <div><i [ngClass]="getLevelClass(bar.nivel)" [style.width.%]="bar.width"></i></div>
+                <strong>{{ bar.paxActividadHora }} pax</strong>
+              </div>
+            </div>
+            <footer>Bloque mas fuerte: <strong>{{ activity.peakHour }}</strong></footer>
+          </article>
+        </div>
+        <ng-template #emptyActivities>
+          <div class="empty-state">No hay actividades operativas en el rango seleccionado.</div>
+        </ng-template>
+      </article>
+    </section>
+
+    <section class="detail-panel matrix-detail-panel">
+      <div class="matrix-detail-head">
+        <div>
+          <span>Matriz Operacional del Dia</span>
+          <h5>Distribucion operacional por actividad y bloque horario</h5>
+        </div>
+        <div class="matrix-detail-head__badges">
+          <span>{{ vm.matrizOperacional.length }} actividades</span>
+          <strong>{{ vm.kpis[0].value }} pax</strong>
+        </div>
+      </div>
+
+      <div class="operation-matrix" *ngIf="vm.matrizOperacional.length; else emptyDetails">
+        <div class="operation-matrix__scroll">
+          <div
+            class="operation-matrix__header"
+            [style.gridTemplateColumns]="'minmax(220px, 1.25fr) repeat(' + vm.heatmapColumns.length + ', minmax(118px, 1fr)) minmax(136px, 0.7fr)'"
+          >
+            <span>Actividad</span>
+            <strong *ngFor="let hour of vm.heatmapColumns">{{ hour }}</strong>
+            <strong>Total</strong>
+          </div>
+
+          <article class="operation-row-shell" *ngFor="let row of vm.matrizOperacional; trackBy: trackByMatrixRow" [ngClass]="getLevelClass(row.nivel)">
+            <button
+              type="button"
+              class="operation-row"
+              [class.is-open]="isActivityExpanded(row)"
+              [style.gridTemplateColumns]="'minmax(220px, 1.25fr) repeat(' + vm.heatmapColumns.length + ', minmax(118px, 1fr)) minmax(136px, 0.7fr)'"
+              (click)="toggleActivity(row)"
+            >
+              <div class="operation-row__activity">
+                <i class="feather" [ngClass]="isActivityExpanded(row) ? 'icon-chevron-down' : 'icon-chevron-right'"></i>
+                <div>
+                  <strong>{{ row.nomServicio }}</strong>
+                  <span>{{ row.codServicio }} · Pico {{ row.peakHour }}</span>
+                </div>
+              </div>
+
+              <div class="operation-cell" *ngFor="let cell of row.cells; trackBy: trackByMatrixCell" [ngClass]="getLevelClass(cell.nivel)">
+                <strong>{{ cell.paxActividadHora }} <span>pax</span></strong>
+                <div class="operation-cell__bar">
+                  <i [style.width.%]="cell.intensidad"></i>
+                </div>
+                <small>{{ cell.cantidadServicios }} servicios</small>
+              </div>
+
+              <div class="operation-total">
+                <strong>{{ row.totalPax }} pax</strong>
+                <span>{{ row.totalServicios }} servicios</span>
+              </div>
+            </button>
+
+            <div class="operation-row-detail" *ngIf="isActivityExpanded(row)">
+              <div class="operation-row-detail__summary">
+                <span>Reservas de {{ row.nomServicio }}</span>
+                <strong>{{ row.detalles.length }} registros operativos</strong>
+              </div>
+              <div class="operation-row-detail__grid" *ngIf="row.detalles.length; else emptyActivityDetail">
+                <article class="reservation-card reservation-card--matrix" *ngFor="let item of row.detalles">
+                  <div>
+                    <strong>{{ item.prV02_CodReserva }}</strong>
+                    <span>{{ item.cliente || 'Cliente sin nombre' }}</span>
+                  </div>
+                  <div><span>Hora</span><strong>{{ item.bloqueHora || item.prV02_HoraServicio || '-' }}</strong></div>
+                  <div><span>Agencia</span><strong>{{ item.agencia || item.codAgencia || '-' }}</strong></div>
+                  <div><span>Pickup</span><strong>{{ item.lugarPickup || '-' }}</strong></div>
+                  <div><span>Chofer</span><strong>{{ item.chofer || '-' }}</strong></div>
+                  <div><span>Obs.</span><strong>{{ item.observacionOperacion || item.observacion || '-' }}</strong></div>
+                </article>
+              </div>
+              <ng-template #emptyActivityDetail>
+                <div class="empty-state empty-state--compact">No hay reservas detalladas para esta actividad.</div>
+              </ng-template>
+            </div>
+          </article>
+        </div>
+
+        <div class="operation-mobile-list">
+          <article class="operation-mobile-card" *ngFor="let row of vm.matrizOperacional; trackBy: trackByMatrixRow" [ngClass]="getLevelClass(row.nivel)">
+            <button type="button" (click)="toggleActivity(row)">
+              <div>
+                <strong>{{ row.nomServicio }}</strong>
+                <span>{{ row.totalServicios }} servicios · Pico {{ row.peakHour }}</span>
+              </div>
+              <b>{{ row.totalPax }} pax</b>
+            </button>
+            <div class="operation-mobile-card__bars">
+              <span *ngFor="let cell of row.cells; trackBy: trackByMatrixCell" [ngClass]="getLevelClass(cell.nivel)">
+                <small>{{ cell.bloqueHora }}</small>
+                <i [style.width.%]="cell.intensidad"></i>
+                <strong>{{ cell.paxActividadHora }}</strong>
+              </span>
+            </div>
+            <div class="operation-row-detail" *ngIf="isActivityExpanded(row)">
+              <article class="reservation-card reservation-card--matrix" *ngFor="let item of row.detalles">
+                <div>
+                  <strong>{{ item.prV02_CodReserva }}</strong>
+                  <span>{{ item.cliente || 'Cliente sin nombre' }}</span>
+                </div>
+                <div><span>Agencia</span><strong>{{ item.agencia || item.codAgencia || '-' }}</strong></div>
+                <div><span>Pickup</span><strong>{{ item.lugarPickup || '-' }}</strong></div>
+                <div><span>Chofer</span><strong>{{ item.chofer || '-' }}</strong></div>
+              </article>
+            </div>
+          </article>
+        </div>
+      </div>
+      <ng-template #emptyDetails>
+        <div class="empty-state">No hay detalle operacional para mostrar.</div>
+      </ng-template>
+    </section>
+  </ng-template>
+</div>

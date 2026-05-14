@@ -55,6 +55,14 @@ export const NavigationItems: NavigationItem[] = [
             classes: 'nav-item'
           },
           {
+            id: 'centro-operacional',
+            title: 'Centro Operacional',
+            type: 'item',
+            url: '/operaciones/centro-operacional',
+            icon: 'feather icon-monitor',
+            classes: 'nav-item'
+          },
+          {
             id: 'reservas',
             title: 'Reservas',
             type: 'item',

@@ -266,13 +266,15 @@
                     </span>
                   </div>
 
-                  <div class="hour-block__meta">{{ bloque.totalPax }} pax · {{ bloque.cantidadServicios }} srv</div>
-
-                  <div class="hour-block__occupancy">
-                    <div class="hour-block__bar">
-                      <span [style.width.%]="getOcupacionWidth(bloque.porcentajeOcupacion)"></span>
-                    </div>
-                    <strong>{{ bloque.porcentajeOcupacion | number: '1.0-0' }}%</strong>
+                  <div class="hour-block__meta">
+                    <span>{{ bloque.totalPax }} pax</span>
+                    <span>{{ bloque.cantidadServicios }} srv</span>
+                    <span class="hour-block__occupancy">
+                      <span class="hour-block__bar">
+                        <span [style.width.%]="getOcupacionWidth(bloque.porcentajeOcupacion)"></span>
+                      </span>
+                      <strong>{{ bloque.porcentajeOcupacion | number: '1.0-0' }}%</strong>
+                    </span>
                   </div>
                 </button>
               </ng-container>

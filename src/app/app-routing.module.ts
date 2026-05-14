@@ -72,6 +72,11 @@ const routes: Routes = [
           import('./operaciones/forecast-actividades/forecast-actividades.component').then((c) => c.ForecastActividadesComponent)
       },
       {
+        path: 'centro-operacional',
+        loadComponent: () =>
+          import('./pages/operaciones/centro-operacional/centro-operacional.component').then((c) => c.CentroOperacionalComponent)
+      },
+      {
         path: 'cierre-caja',
         loadComponent: () => import('./operaciones/cierre-caja/cierre-caja-list.component').then((c) => c.CierreCajaListComponent)
       },

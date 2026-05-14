@@ -397,9 +397,9 @@
   border-radius: 11px;
   border: 1px solid var(--chip-border, #d7e3f6);
   background: var(--chip-surface, #f5f9ff);
-  padding: 0.44rem 0.52rem;
+  padding: 0.38rem 0.48rem;
   display: grid;
-  gap: 0.3rem;
+  gap: 0.22rem;
   color: #1f334f;
   transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.2s ease;
 }
@@ -466,25 +466,30 @@
 }
 
 .hour-block__meta {
-  font-size: 0.74rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.32rem;
+  font-size: 0.7rem;
   color: #334155;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .hour-block__occupancy {
-  display: grid;
-  grid-template-columns: 1fr auto;
+  display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.26rem;
+  margin-left: auto;
 }
 
 .hour-block__occupancy strong {
-  font-size: 0.72rem;
-  color: #293e5f;
+  font-size: 0.7rem;
+  color: #1e3a8a;
 }
 
 .hour-block__bar {
-  height: 6px;
+  width: 1.75rem;
+  height: 4px;
   border-radius: 99px;
   background: rgba(15, 23, 42, 0.12);
   overflow: hidden;
