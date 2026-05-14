@@ -32,8 +32,8 @@ interface ChoferOption {
 
 interface ChoferApiResponse {
   datos: Array<{
-    MRV12_CodChofer: string;
-    MRV12_NombreCompleto: string;
+    MRV12_CodChofer       : string;
+    MRV12_NombreCompleto  : string;
   }>;
 }
 
@@ -110,6 +110,7 @@ export class OperacionDiariaComponent implements OnInit {
   tipoCambioLoading = false;
   tipoCambioError: string | null = null;
   private choferCodes = new Set<string>();
+  private readonly excludedVoucherServiceCodes = new Set(['00013', '00039']);
 
   private readonly manualRefresh$ = new Subject<void>();
   private readonly autoRefresh$ = this.form.valueChanges.pipe(
@@ -1155,6 +1156,10 @@ export class OperacionDiariaComponent implements OnInit {
     let ticketSequence = 1;
 
     for (const servicio of servicios) {
+      if (this.shouldSkipVoucherPrint(servicio.codServicio)) {
+        continue;
+      }
+
       const fechaHoraActividad = this.buildFechaHoraActividad(servicio.detalle);
       if (!fechaHoraActividad) {
         Swal.fire({
@@ -1186,8 +1191,8 @@ export class OperacionDiariaComponent implements OnInit {
 
   private buildVoucherServices(
     reserva: ReservaOperacionAgrupada
-  ): Array<{ key: string; nombre: string; totalPax: number; detalle: OperacionDetalle }> {
-    const grouped = new Map<string, { key: string; nombre: string; totalPax: number; detalle: OperacionDetalle }>();
+  ): Array<{ key: string; codServicio: string; nombre: string; totalPax: number; detalle: OperacionDetalle }> {
+    const grouped = new Map<string, { key: string; codServicio: string; nombre: string; totalPax: number; detalle: OperacionDetalle }>();
     const detalles = this.getDetallesActivos(reserva?.detalles ?? []);
 
     detalles.forEach((detalle) => {
@@ -1205,6 +1210,7 @@ export class OperacionDiariaComponent implements OnInit {
       } else {
         grouped.set(key, {
           key,
+          codServicio,
           nombre,
           totalPax: this.toNumber(detalle?.totalPax),
           detalle
@@ -1213,6 +1219,11 @@ export class OperacionDiariaComponent implements OnInit {
     });
 
     return Array.from(grouped.values());
+  }
+
+  private shouldSkipVoucherPrint(codServicio: string | null | undefined): boolean {
+    const code = (codServicio ?? '').toString().trim().toUpperCase();
+    return this.excludedVoucherServiceCodes.has(code);
   }
 
   private getEmpresaNombre(): string {
