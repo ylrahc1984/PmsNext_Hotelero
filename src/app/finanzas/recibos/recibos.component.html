@@ -1,1 +1,139 @@
-<h1>recibos.component</h1>
+<div class="row">
+  <div class="col-12">
+    <app-card cardTitle="Recibos">
+      <div class="recibos-header">
+        <div>
+          <p class="eyebrow">Finanzas</p>
+          <h4>Recibos</h4>
+          <p class="subtitle">Control de recibos emitidos por cobranzas y pagos aplicados.</p>
+        </div>
+
+        <div class="header-actions">
+          <div class="stat">
+            <span class="stat-label">Registros</span>
+            <strong class="stat-value">{{ totalRegistros() }}</strong>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Pendientes</span>
+            <strong class="stat-value">{{ recibosPendientes() }}</strong>
+          </div>
+          <button class="btn btn-primary" type="button" (click)="nuevoRecibo()">
+            <i class="feather icon-plus me-1"></i>
+            Nuevo recibo
+          </button>
+        </div>
+      </div>
+
+      <form class="filters-grid" [formGroup]="filtersForm" (ngSubmit)="buscar()">
+        <div class="filter-group filter-group--wide">
+          <label for="busqueda">Buscar</label>
+          <div class="input-icon">
+            <i class="feather icon-search"></i>
+            <input
+              id="busqueda"
+              type="text"
+              class="form-control"
+              placeholder="Número, cliente o referencia"
+              formControlName="busqueda"
+            >
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <label for="fechaInicio">Desde</label>
+          <input id="fechaInicio" type="date" class="form-control" formControlName="fechaInicio">
+        </div>
+
+        <div class="filter-group">
+          <label for="fechaFin">Hasta</label>
+          <input id="fechaFin" type="date" class="form-control" formControlName="fechaFin">
+        </div>
+
+        <div class="filter-group">
+          <label for="estado">Estado</label>
+          <select id="estado" class="form-control" formControlName="estado">
+            <option value="">Todos</option>
+            <option value="Aplicado">Aplicado</option>
+            <option value="Pendiente">Pendiente</option>
+            <option value="Anulado">Anulado</option>
+          </select>
+        </div>
+
+        <div class="filter-actions">
+          <button class="btn btn-primary" type="submit">
+            <i class="feather icon-filter"></i>
+            Buscar
+          </button>
+          <button class="btn btn-light" type="button" (click)="limpiar()">
+            <i class="feather icon-rotate-ccw"></i>
+            Limpiar
+          </button>
+        </div>
+      </form>
+
+      <div class="summary-strip">
+        <div class="summary-item">
+          <span>Total aplicado</span>
+          <strong>{{ montoTotal() | number:'1.2-2' }}</strong>
+        </div>
+        <button class="btn btn-outline-secondary" type="button" (click)="verDepositos()">
+          <i class="feather icon-download me-1"></i>
+          Ver depósitos
+        </button>
+      </div>
+
+      <div class="table-wrapper">
+        <div class="table-responsive">
+          <table class="table table-hover recibos-table table-compact">
+            <thead>
+              <tr>
+                <th>Recibo</th>
+                <th>Fecha</th>
+                <th>Cliente</th>
+                <th>Referencia</th>
+                <th>Moneda</th>
+                <th class="text-end">Monto</th>
+                <th>Estado</th>
+                <th class="text-end">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let recibo of filteredRecibos(); trackBy: trackByRecibo">
+                <td>
+                  <div class="cell-main">{{ recibo.numero }}</div>
+                </td>
+                <td>{{ recibo.fecha | date:'dd/MM/yyyy' }}</td>
+                <td>{{ recibo.cliente }}</td>
+                <td>{{ recibo.referencia }}</td>
+                <td>
+                  <span class="badge-soft badge-neutral">{{ recibo.moneda }}</span>
+                </td>
+                <td class="text-end">{{ recibo.monto | number:'1.2-2' }}</td>
+                <td>
+                  <span class="badge-soft" [ngClass]="getEstadoClass(recibo.estado)">
+                    {{ recibo.estado }}
+                  </span>
+                </td>
+                <td class="text-end">
+                  <div class="row-actions">
+                    <button class="btn btn-sm btn-outline-secondary" type="button" title="Ver detalle">
+                      <i class="feather icon-eye"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" type="button" title="Imprimir">
+                      <i class="feather icon-printer"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div *ngIf="filteredRecibos().length === 0" class="empty-state">
+          <i class="feather icon-file-text"></i>
+          <p>No hay recibos para los filtros aplicados.</p>
+        </div>
+      </div>
+    </app-card>
+  </div>
+</div>
