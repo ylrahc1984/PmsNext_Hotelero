@@ -1,6 +1,7 @@
 // angular import
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
+import { RouterModule } from '@angular/router';
 
 // bootstrap import
 import { NgbDropdownConfig } from '@ng-bootstrap/ng-bootstrap';
@@ -12,7 +13,7 @@ import { LockScreenService } from 'src/app/core/services/lock-screen.service';
 
 @Component({
   selector: 'app-nav-right',
-  imports: [CommonModule, SharedModule],
+  imports: [CommonModule, RouterModule, SharedModule],
   templateUrl: './nav-right.component.html',
   styleUrls: ['./nav-right.component.scss'],
   providers: [NgbDropdownConfig]

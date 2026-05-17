@@ -1,0 +1,79 @@
+<section class="about-page">
+  <header class="about-hero">
+    <div>
+      <span class="about-eyebrow">Producto empresarial</span>
+      <h1>Acerca de {{ branding.productName }}</h1>
+      <p>
+        Plataforma operativa para la gestion de reservas, tours, finanzas y reportes, desarrollada por
+        <a [href]="branding.companyUrl" target="_blank" rel="noopener noreferrer">{{ branding.companyName }}</a>.
+      </p>
+    </div>
+    <div class="about-version" aria-label="Version actual">
+      <span>Version</span>
+      <strong>{{ appVersion }}</strong>
+    </div>
+  </header>
+
+  <div class="about-grid">
+    <article class="about-panel about-panel--primary">
+      <div class="about-panel__icon">
+        <i class="feather icon-layers" aria-hidden="true"></i>
+      </div>
+      <div>
+        <h2>{{ branding.productName }}</h2>
+        <p>
+          Sistema centralizado para equipos de operacion turistica que necesitan trazabilidad, control financiero
+          y visibilidad diaria de sus procesos.
+        </p>
+      </div>
+    </article>
+
+    <article class="about-panel">
+      <div class="about-panel__icon">
+        <i class="feather icon-code" aria-hidden="true"></i>
+      </div>
+      <div>
+        <h2>{{ branding.companyName }}</h2>
+        <p>
+          Empresa responsable del desarrollo, evolucion y soporte tecnologico de esta plataforma.
+        </p>
+        <a class="about-link" [href]="branding.companyUrl" target="_blank" rel="noopener noreferrer">
+          Visitar {{ branding.companyName }}
+          <i class="feather icon-external-link" aria-hidden="true"></i>
+        </a>
+      </div>
+    </article>
+
+    <article class="about-panel">
+      <div class="about-panel__icon">
+        <i class="feather icon-shield" aria-hidden="true"></i>
+      </div>
+      <div>
+        <h2>Identidad del sistema</h2>
+        <dl class="about-facts">
+          <div>
+            <dt>Producto</dt>
+            <dd>{{ branding.productName }}</dd>
+          </div>
+          <div>
+            <dt>Version</dt>
+            <dd>{{ appVersion }}</dd>
+          </div>
+          <div>
+            <dt>Desarrollador</dt>
+            <dd>{{ branding.companyName }}</dd>
+          </div>
+          <div>
+            <dt>Sitio web</dt>
+            <dd>{{ branding.companyUrl }}</dd>
+          </div>
+        </dl>
+      </div>
+    </article>
+  </div>
+
+  <footer class="about-footer">
+    <span>&copy; {{ currentYear }} {{ branding.companyName }}</span>
+    <span>{{ branding.productName }} es parte del ecosistema tecnologico de {{ branding.companyName }}.</span>
+  </footer>
+</section>

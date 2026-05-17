@@ -49,6 +49,18 @@ const routes: Routes = [
     ]
   },
   {
+    path: 'acerca-de-pmsnext',
+    component: AdminComponent,
+    canActivate: [AuthGuard],
+    canActivateChild: [AuthGuard],
+    children: [
+      {
+        path: '',
+        loadComponent: () => import('./pages/acerca-de-pmsnext/acerca-de-pmsnext.component').then((c) => c.AcercaDePmsnextComponent)
+      }
+    ]
+  },
+  {
     path: 'operaciones',
     component: AdminComponent,
     canActivate: [AuthGuard],
