@@ -91,6 +91,10 @@
           ¿No tiene cuenta?
           <a [routerLink]="['/register']">Registrarse</a>
         </p>
+        <div class="auth-branding">
+          Tecnología por
+          <a [href]="branding.companyUrl" target="_blank" rel="noopener noreferrer">{{ branding.companyName }}</a>
+        </div>
       </div>
     </div>
   </div>

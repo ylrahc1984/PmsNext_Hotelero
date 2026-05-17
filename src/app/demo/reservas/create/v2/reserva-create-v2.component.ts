@@ -1625,7 +1625,8 @@ export class ReservaCreateV2Component implements OnInit, CanDeactivateReservaCre
       { codigo: 'EFECT', descripcion: 'EFECTIVO' },
       { codigo: 'TARJE', descripcion: 'TARJETA' },
       { codigo: 'PREPA', descripcion: 'PREPAGO' },
-      { codigo: 'CREDI', descripcion: 'CREDITO' }
+      { codigo: 'CREDI', descripcion: 'CREDITO' },
+      { codigo: 'CPL', descripcion: 'CPL' },
     ];
 
     if (this.formasPagoApi.length > 0 && !safeString(this.form.formaPago).trim()) {

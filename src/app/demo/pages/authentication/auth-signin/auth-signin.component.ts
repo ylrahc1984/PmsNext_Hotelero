@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { Router, RouterModule } from '@angular/router';
  
 import {AuthService} from 'src/app/core/services/auth.service';
+import { APP_BRANDING } from 'src/app/core/config/app-branding';
 
 @Component({
   selector: 'app-auth-signin',
@@ -20,6 +21,7 @@ export class AuthSigninComponent implements OnInit {
   isLoading = false;
   errorMessage = '';
   showPassword = false;
+  readonly branding = APP_BRANDING;
   logoSrc = 'assets/images/logo-empresa_2.jpg';
   private logoFallbackSrc = 'assets/images/logo_empresa_2.jpg';
   private logoTriedFallback = false;

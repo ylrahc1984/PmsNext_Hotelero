@@ -6,6 +6,7 @@ import { filter } from 'rxjs/operators';
 
 // project import
 import { environment } from 'src/environments/environment';
+import { APP_BRANDING } from 'src/app/core/config/app-branding';
 import { NavigationItem, NavigationItems } from '../navigation';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { NavGroupComponent } from './nav-group/nav-group.component';
@@ -23,7 +24,8 @@ export class NavContentComponent {
 
   // public method
   // version
-  title = 'Demo application for version numbering';
+  readonly branding = APP_BRANDING;
+  title = 'Application version';
   currentApplicationVersion = environment.appVersion;
 
   navigations!: NavigationItem[];

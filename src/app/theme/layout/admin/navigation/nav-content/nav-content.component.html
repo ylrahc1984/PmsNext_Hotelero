@@ -1,6 +1,6 @@
 <!--  vertical layouts -->
 <ng-scrollbar style="height: calc(100vh - 70px)" exclude="'#mobile-collapse1'" visibility="hover">
-  <div class="navbar-content">
+  <div class="navbar-content nav-content-shell">
     <ul class="nav pcoded-inner-navbar" (clickOutside)="fireOutClick()">
       @for (item of navigations; track item) {
         @if (item.type === 'item') {
@@ -11,8 +11,15 @@
         }
       }
     </ul>
-    <div class="version">
-      <label for="version" disabled class="pe-auto">v{{ currentApplicationVersion }}</label>
+    <div class="sidebar-branding" aria-label="Informacion de marca">
+      <div class="sidebar-branding__product">
+        <span class="sidebar-branding__name">PmsNext</span>
+        <span class="sidebar-branding__version">v{{ currentApplicationVersion }}</span>
+      </div>
+      <a class="sidebar-branding__company" [href]="branding.companyUrl" target="_blank" rel="noopener noreferrer">
+        <span>DiriaLabs</span>
+        <i class="feather icon-external-link" aria-hidden="true"></i>
+      </a>
     </div>
   </div>
 </ng-scrollbar>

@@ -68,3 +68,21 @@ form {
   }
 }
 
+.auth-branding {
+  border-top: 1px solid #eef1f5;
+  color: #7b8794;
+  font-size: 0.8125rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+}
+
+.auth-branding a {
+  color: #244f8f;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-branding a:hover {
+  color: #16345f;
+  text-decoration: underline;
+}
