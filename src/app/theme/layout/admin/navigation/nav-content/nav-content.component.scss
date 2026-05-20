@@ -14,6 +14,30 @@
   padding-top: 14px;
 }
 
+.sidebar-branding__active-company {
+  align-items: center;
+  color: #ffffff;
+  display: flex;
+  gap: 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.2;
+  margin-bottom: 8px;
+  min-width: 0;
+}
+
+.sidebar-branding__active-company i {
+  color: #8fc3ff;
+  flex: 0 0 auto;
+  font-size: 0.875rem;
+}
+
+.sidebar-branding__active-company span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .sidebar-branding__product {
   align-items: baseline;
   display: flex;

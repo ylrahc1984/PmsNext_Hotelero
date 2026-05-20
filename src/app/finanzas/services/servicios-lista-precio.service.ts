@@ -10,6 +10,25 @@ export interface ServicioListaPrecioApiItem {
   ReglaPrecioID: number;
   CodServicio: string;
   NomServicio: string;
+  CodGrupo?: string;
+  codGrupo?: string;
+  MPV01_CodGrupo?: string;
+  mpV01_CodGrupo?: string;
+  AreaProdu?: string;
+  areaProdu?: string;
+  Area?: string;
+  area?: string;
+  UMedida?: string;
+  MPV01_UMedida?: string;
+  mpV01_UMedida?: string;
+  uMedida?: string;
+  unidadMedida?: string;
+  PorImp?: number | string | null;
+  PorImpuesto?: number | string | null;
+  PPV01_PorImp?: number | string | null;
+  porImp?: number | string | null;
+  porImpuesto?: number | string | null;
+  Impuesto?: number | string | null;
   Moneda?: string;
   Precios: Array<{
     tipoPax?: string | null;
@@ -32,6 +51,10 @@ export interface ServicioListaPrecioItem {
   nombreServicio: string;
   precioUnitario: number;
   moneda: string;
+  areaProdu: string;
+  area: string;
+  uMedida: string;
+  porImp: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -90,8 +113,31 @@ export class ServiciosListaPrecioService {
       codigoServicio: (item.CodServicio || '').toString().trim(),
       nombreServicio: (item.NomServicio || item.CodServicio || '').toString().trim(),
       precioUnitario,
-      moneda: (item.Moneda || '').toString().trim().toUpperCase()
+      moneda: (item.Moneda || '').toString().trim().toUpperCase(),
+      areaProdu: this.readString(item, 'AreaProdu', 'areaProdu', 'MPV01_CodGrupo', 'mpV01_CodGrupo', 'CodGrupo', 'codGrupo'),
+      area: this.readString(item, 'Area', 'area', 'MPV01_CodGrupo', 'mpV01_CodGrupo', 'CodGrupo', 'codGrupo'),
+      uMedida: this.readString(item, 'UMedida', 'uMedida', 'MPV01_UMedida', 'mpV01_UMedida', 'unidadMedida'),
+      porImp: this.toNumber(this.readValue(item, 'PorImp', 'porImp', 'PorImpuesto', 'porImpuesto', 'PPV01_PorImp', 'Impuesto'))
     };
+  }
+
+  private readString(item: ServicioListaPrecioApiItem, ...keys: string[]): string {
+    const value = this.readValue(item, ...keys);
+    return (value ?? '').toString().trim();
+  }
+
+  private readValue(
+    item: ServicioListaPrecioApiItem,
+    ...keys: string[]
+  ): string | number | null | undefined {
+    const record = item as unknown as Record<string, unknown>;
+    for (const key of keys) {
+      const value = record[key];
+      if (value !== undefined && value !== null && value !== '') {
+        return value as string | number | null | undefined;
+      }
+    }
+    return undefined;
   }
 
   private normalizeTipoPax(value?: string | null): string {

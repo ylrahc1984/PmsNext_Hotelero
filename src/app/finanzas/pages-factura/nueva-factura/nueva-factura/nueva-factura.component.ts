@@ -43,6 +43,8 @@ import {
 } from 'src/app/finanzas/services/reservas-facturacion.service';
 import { Reserva, ReservasService } from 'src/app/demo/reservas/services/reservas.service';
 import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
+import { ServiciosService } from 'src/app/demo/catalogos/servicios/servicios.service';
+import { CentroCostoService } from 'src/app/demo/administracion/centro-costo/centro-costo.service';
 import { calculateFiscalTotals } from 'src/app/core/config/fiscal.utils';
 import { FISCAL_CONFIG } from 'src/app/core/config/fiscal.config';
 import type {
@@ -57,6 +59,13 @@ import type {
 import { C } from '@angular/cdk/scrolling-module.d-C_w4tIrZ';
 
 type FacturaOrigen = 'consulta-documentos' | 'operacion-diaria' | 'reserva-detalle';
+
+interface ServicioDetalleCatalogInfo {
+  areaProdu: string;
+  area: string;
+  uMedida: string;
+  porImp: number;
+}
 
 @Component({
   selector: 'app-nueva-factura',
@@ -93,6 +102,8 @@ export class NuevaFacturaComponent implements OnInit {
   private readonly reservasFacturacionService    = inject(ReservasFacturacionService);
   private readonly reservasService               = inject(ReservasService);
   private readonly tipoCambioService             = inject(TipoCambioService);
+  private readonly serviciosService              = inject(ServiciosService);
+  private readonly centroCostoService            = inject(CentroCostoService);
   private readonly auth                          = inject(AuthService);
 
   private readonly apiUrl = `${environment.apiUrl}/facturacion/confirmar`;
@@ -1054,29 +1065,110 @@ export class NuevaFacturaComponent implements OnInit {
   }
 
   private addDetalleFromServicio(servicio: ServicioListaPrecioItem): void {
-    const orden = this.detalleArray.length + 1;
-    const group = this.createDetalleGroup(orden);
-    group.patchValue(
-      {
-        reglaPrecioId     : Number(servicio.reglaPrecioId ?? 0) || 0,
-        codProdu          : (servicio.codigoServicio || '').toString(),
-        descripcion       : (servicio.nombreServicio || '').toString(),
-        cantidad          : 1,
-        pUndLst           : Number(servicio.precioUnitario ?? 0) || 0,
-        uniSinImp         : Number(servicio.precioUnitario ?? 0) || 0,
-        porDescu          : '0.00',
-        porImp            : 0,
-        fechaConsumo      : this.form.controls.fechaDocu.value,
-        lstPrecio         : this.form.controls.listaPrecio.value,
-        planTarifa        : this.form.controls.planTarifario.value,
-        pntVenta          : this.form.controls.pntVenta.value
-      },
-      { emitEvent: false }
+    this.resolveServicioCatalogInfo(servicio)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((catalogInfo) => {
+        const orden = this.detalleArray.length + 1;
+        const group = this.createDetalleGroup(orden);
+        const precioUnitario = Number(servicio.precioUnitario ?? 0) || 0;
+        const porImp = this.toNumber(catalogInfo.porImp);
+        group.patchValue(
+          {
+            reglaPrecioId     : Number(servicio.reglaPrecioId ?? 0) || 0,
+            codProdu          : (servicio.codigoServicio || '').toString(),
+            areaProdu         : catalogInfo.areaProdu,
+            descripcion       : (servicio.nombreServicio || '').toString(),
+            cantidad          : 1,
+            uMedida           : catalogInfo.uMedida,
+            pUndLst           : precioUnitario,
+            uniSinImp         : this.getUnitPriceWithoutTax(precioUnitario, porImp),
+            porDescu          : '0.00',
+            porImp            : porImp,
+            fechaConsumo      : this.form.controls.fechaDocu.value,
+            lstPrecio         : this.form.controls.listaPrecio.value,
+            planTarifa        : this.form.controls.planTarifario.value,
+            area              : catalogInfo.area,
+            pntVenta          : this.form.controls.pntVenta.value
+          },
+          { emitEvent: false }
+        );
+        this.detalleArray.push(group);
+        this.updateCalculos();
+        this.cdr.markForCheck();
+        this.focusCantidadInput(orden - 1);
+      });
+  }
+
+  private resolveServicioCatalogInfo(servicio: ServicioListaPrecioItem) {
+    const base = this.buildServicioCatalogInfo(servicio);
+    const hasRequiredData = !!base.areaProdu && !!base.area && !!base.uMedida && base.porImp > 0;
+    if (hasRequiredData) {
+      return of(base);
+    }
+
+    const codServicio = (servicio.codigoServicio || '').toString().trim();
+    if (!codServicio) {
+      return of(this.applyServicioCatalogDefaults(base));
+    }
+
+    return this.serviciosService.getServicioByCodigo(codServicio).pipe(
+      catchError(() => of(null)),
+      switchMap((servicioCatalogo) => {
+        const catalogInfo = this.applyServicioCatalogDefaults({
+          areaProdu: base.areaProdu || (servicioCatalogo?.codGrupo || '').toString().trim(),
+          area: base.area || base.areaProdu || (servicioCatalogo?.codGrupo || '').toString().trim(),
+          uMedida: base.uMedida || (servicioCatalogo?.uMedida || '').toString().trim(),
+          porImp: base.porImp
+        });
+
+        if (catalogInfo.porImp > 0 || !catalogInfo.areaProdu) {
+          return of(catalogInfo);
+        }
+
+        return this.centroCostoService.getByCodigo(catalogInfo.areaProdu).pipe(
+          switchMap((centroCosto) =>
+            of({
+              ...catalogInfo,
+              porImp: this.resolveCentroCostoTaxPercent(centroCosto?.impuesto, centroCosto?.impuestoValor)
+            })
+          ),
+          catchError(() => of({ ...catalogInfo, porImp: this.getDefaultTaxPercent() }))
+        );
+      })
     );
-    this.detalleArray.push(group);
-    this.updateCalculos();
-    this.cdr.markForCheck();
-    this.focusCantidadInput(orden - 1);
+  }
+
+  private buildServicioCatalogInfo(servicio: ServicioListaPrecioItem): ServicioDetalleCatalogInfo {
+    const areaProdu = (servicio.areaProdu || '').toString().trim();
+    const area = (servicio.area || areaProdu).toString().trim();
+    return {
+      areaProdu,
+      area,
+      uMedida: (servicio.uMedida || '').toString().trim(),
+      porImp: this.toNumber(servicio.porImp)
+    };
+  }
+
+  private applyServicioCatalogDefaults(info: ServicioDetalleCatalogInfo): ServicioDetalleCatalogInfo {
+    const areaProdu = info.areaProdu.trim();
+    return {
+      areaProdu,
+      area: (info.area || areaProdu).trim(),
+      uMedida: info.uMedida.trim() || 'Unid',
+      porImp: this.toNumber(info.porImp)
+    };
+  }
+
+  private resolveCentroCostoTaxPercent(impuesto?: number, impuestoValor?: number): number {
+    const taxPercent = this.toNumber(impuestoValor);
+    if (taxPercent > 0) {
+      return taxPercent;
+    }
+    return this.toNumber(impuesto) > 0 ? this.getDefaultTaxPercent() : 0;
+  }
+
+  private getDefaultTaxPercent(): number {
+    return this.round(FISCAL_CONFIG.taxRate * 100);
   }
 
   private updateCalculos(): void {
@@ -1094,10 +1186,14 @@ export class NuevaFacturaComponent implements OnInit {
       const porDescu = this.toNumber(group.controls.porDescu.value);
       const porImp = this.toNumber(group.controls.porImp.value);
 
+      if (!this.modoReserva) {
+        this.syncDirectDetalleUnitPriceWithoutTax(group, precio, porImp);
+      }
+
       const subtotalBruto = cantidad * precio;
       const descuentoBruto = subtotalBruto * (porDescu / 100);
       const baseBruta = Math.max(0, subtotalBruto - descuentoBruto);
-      const taxRate = (porImp > 0 ? porImp : 13) / 100;
+      const taxRate = this.getDetalleTaxRatePercent(group) / 100;
 
       let subtotal: number;
       let descuento: number;
@@ -1226,8 +1322,43 @@ export class NuevaFacturaComponent implements OnInit {
   }
 
   private getDetalleLineaTaxRate(group: FormGroup<DetalleForm>): number {
+    return this.getDetalleTaxRatePercent(group) / 100;
+  }
+
+  private getDetalleTaxRatePercent(group: FormGroup<DetalleForm>): number {
     const porImp = this.toNumber(group.controls.porImp.value);
-    return (porImp > 0 ? porImp : 13) / 100;
+    if (porImp > 0) {
+      return porImp;
+    }
+
+    return this.modoReserva ? 13 : 0;
+  }
+
+  private syncDirectDetalleUnitPriceWithoutTax(
+    group: FormGroup<DetalleForm>,
+    precio: number,
+    porImp: number
+  ): void {
+    const unitPriceWithoutTax = this.getUnitPriceWithoutTax(precio, porImp);
+    if (this.toNumber(group.controls.uniSinImp.value) === unitPriceWithoutTax) {
+      return;
+    }
+
+    group.controls.uniSinImp.setValue(unitPriceWithoutTax, { emitEvent: false });
+  }
+
+  private getUnitPriceWithoutTax(precio: number, porImp: number): number {
+    const safePrice = this.toNumber(precio);
+    const taxRate = this.toNumber(porImp) / 100;
+    if (!FISCAL_CONFIG.pricesIncludeTax || taxRate <= 0) {
+      return this.roundUnitPrice(safePrice);
+    }
+
+    return this.roundUnitPrice(safePrice / (1 + taxRate));
+  }
+
+  private roundUnitPrice(value: number): number {
+    return Math.round(this.toNumber(value) * 1000000) / 1000000;
   }
 
   private getDocCurrency(): string {
@@ -2231,6 +2362,12 @@ export class NuevaFacturaComponent implements OnInit {
     const fechaDocu = this.formatDateForSql(value.fechaDocu);
     const detalle = this.detalleArray.controls.map((group, index) => {
       const raw = group.getRawValue();
+      const pUndLst = this.toNumber(raw.pUndLst);
+      const porImp = this.toNumber(raw.porImp);
+      const uniSinImp = this.modoReserva
+        ? this.toNumber(raw.uniSinImp || raw.pUndLst)
+        : this.getUnitPriceWithoutTax(pUndLst, porImp);
+
       return {
         orden           : index + 1,
         fechaConsumo    : this.formatDateForSql(raw.fechaConsumo || value.fechaDocu),
@@ -2239,10 +2376,10 @@ export class NuevaFacturaComponent implements OnInit {
         descripcion     : raw.descripcion,
         cantidad        : this.toNumber(raw.cantidad),
         uMedida         : raw.uMedida,
-        pUndLst         : this.toNumber(raw.pUndLst),
-        uniSinImp       : this.toNumber(raw.uniSinImp || raw.pUndLst),
+        pUndLst         ,
+        uniSinImp       ,
         porDescu        : this.toNumber(raw.porDescu),
-        porImp          : this.toNumber(raw.porImp),
+        porImp          ,
         porExonera      : this.toNumber(raw.porExonera),
         mtoImpVarios    : this.toNumber(raw.mtoImpVarios),
         almacen         : raw.almacen,

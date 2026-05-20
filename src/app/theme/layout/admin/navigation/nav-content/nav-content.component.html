@@ -12,6 +12,10 @@
       }
     </ul>
     <div class="sidebar-branding" aria-label="Informacion de marca">
+      <div class="sidebar-branding__active-company" [title]="empresaNombre">
+        <i class="feather icon-briefcase" aria-hidden="true"></i>
+        <span>{{ empresaNombre }}</span>
+      </div>
       <div class="sidebar-branding__product">
         <span class="sidebar-branding__name">PmsNext</span>
         <span class="sidebar-branding__version">v{{ currentApplicationVersion }}</span>

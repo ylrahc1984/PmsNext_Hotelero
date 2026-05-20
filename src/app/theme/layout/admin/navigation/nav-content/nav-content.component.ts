@@ -7,6 +7,7 @@ import { filter } from 'rxjs/operators';
 // project import
 import { environment } from 'src/environments/environment';
 import { APP_BRANDING } from 'src/app/core/config/app-branding';
+import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
 import { NavigationItem, NavigationItems } from '../navigation';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { NavGroupComponent } from './nav-group/nav-group.component';
@@ -21,10 +22,12 @@ import { NavItemComponent } from './nav-item/nav-item.component';
 export class NavContentComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly router = inject(Router);
+  private readonly empresaContext = inject(EmpresaContextService);
 
   // public method
   // version
   readonly branding = APP_BRANDING;
+  readonly empresa = this.empresaContext.empresa;
   title = 'Application version';
   currentApplicationVersion = environment.appVersion;
 
@@ -55,6 +58,11 @@ export class NavContentComponent {
 
   onRootSectionChange(sectionId: string | null) {
     this.expandedRootId = sectionId;
+  }
+
+  get empresaNombre(): string {
+    const empresa = this.empresa();
+    return (empresa?.MA04_Nombre || empresa?.MA04_RazonSocial || 'Empresa no seleccionada').trim();
   }
 
   private syncExpandedRootWithUrl(url: string) {
