@@ -1,0 +1,53 @@
+@import '../../shared/finance';
+
+.config-layout {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+}
+
+h2 {
+  font-size: 0.95rem;
+  font-weight: 800;
+  margin: 0 0 14px;
+}
+
+.form-grid {
+  display: grid;
+  gap: 14px;
+}
+
+label span {
+  color: #667085;
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.form-control,
+.form-select {
+  border-color: #e5eaf1;
+  border-radius: 8px;
+}
+
+.switch-row {
+  align-items: center;
+  border: 1px solid #edf1f6;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  padding: 12px;
+
+  small {
+    color: #667085;
+    display: block;
+  }
+}
+
+@media (max-width: 991px) {
+  .config-layout {
+    grid-template-columns: 1fr;
+  }
+}

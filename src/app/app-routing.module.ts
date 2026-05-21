@@ -370,6 +370,12 @@ const routes: Routes = [
   {
     canActivate: [AuthGuard],
     canActivateChild: [AuthGuard],
+    path: 'comisiones',
+    loadChildren: () => import('./pages/comisiones/comisiones.routes').then((m) => m.COMISIONES_ROUTES)
+  },
+  {
+    canActivate: [AuthGuard],
+    canActivateChild: [AuthGuard],
     path: 'finanzas',
     loadChildren: () => import('./finanzas/finanzas.module').then((m) => m.FinanzasModule)
   },

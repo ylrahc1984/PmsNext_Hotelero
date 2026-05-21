@@ -1,0 +1,127 @@
+<section class="commission-shell">
+  <header class="commission-page-header">
+    <div>
+      <h1>Motor de Reglas de Comisión</h1>
+      <p>Administración financiera de reglas jerárquicas de comisión</p>
+    </div>
+  </header>
+
+  <div class="kpi-grid">
+    <app-resumen-card label="Total Reglas" [value]="count(totalReglas())" detail="Capas del motor" icon="feather icon-layers" />
+    <app-resumen-card label="Reglas Activas" [value]="count(reglasActivas())" detail="Disponibles para resolver" icon="feather icon-check-circle" />
+    <app-resumen-card label="Reglas Globales" [value]="count(reglasGlobales())" detail="Fallback financiero" icon="feather icon-globe" />
+    <app-resumen-card label="Reglas Específicas" [value]="count(reglasEspecificas())" detail="Agencia + servicio" icon="feather icon-crosshair" />
+    <app-resumen-card label="Prioridad Máxima" [value]="count(prioridadMaxima())" detail="Mayor precedencia" icon="feather icon-zap" />
+  </div>
+
+  <app-regla-preview
+    [codAgencia]="previewAgency()"
+    [codServicio]="previewService()"
+    [fecha]="previewDate()"
+    [regla]="previewRule()"
+    [loading]="previewLoading()"
+    (codAgenciaChange)="previewAgency.set($event)"
+    (codServicioChange)="previewService.set($event)"
+    (fechaChange)="previewDate.set($event)"
+    (simulate)="simulateRule()"
+  />
+
+  <div class="finance-card finance-section toolbar-card">
+    <app-filtros-reglas
+      [search]="search()"
+      [agency]="agencyFilter()"
+      [agencyLabel]="selectedAgencyLabel()"
+      [service]="serviceFilter()"
+      [status]="status()"
+      [type]="typeFilter()"
+      [priority]="priorityFilter()"
+      [loading]="loading()"
+      (searchChange)="search.set($event)"
+      (agencyChange)="agencyFilter.set($event)"
+      (openAgencyPicker)="openAgencyModal()"
+      (clearAgency)="clearAgencyFilter()"
+      (serviceChange)="serviceFilter.set($event)"
+      (statusChange)="status.set($event)"
+      (typeChange)="typeFilter.set($event)"
+      (priorityChange)="priorityFilter.set($event)"
+      (refresh)="loadReglas()"
+      (newRule)="openNew()"
+    />
+  </div>
+
+  <div class="rules-grid">
+    @for (regla of filtradas(); track regla.AD17_Id || $index) {
+      <app-regla-card
+        [regla]="regla"
+        [agenciaNombre]="nombreAgencia(regla)"
+        [servicioNombre]="nombreServicio(regla)"
+        (edit)="edit($event)"
+        (toggle)="toggleEstado($event)"
+      />
+    } @empty {
+      <div class="finance-empty">
+        {{ agencyFilter() ? 'No hay reglas registradas para los filtros seleccionados.' : 'Seleccione una agencia comisionable para consultar las reglas.' }}
+        <button class="btn btn-link btn-sm" type="button" (click)="clearFilters()">Limpiar filtros</button>
+      </div>
+    }
+  </div>
+
+  @if (agencyModalOpen()) {
+    <div class="modal-backdrop" (click)="closeAgencyModal()"></div>
+    <section class="agency-modal" role="dialog" aria-modal="true" aria-label="Seleccionar agencia">
+      <header>
+        <div>
+          <span>Filtro de agencia</span>
+          <h2>Agencias comisionables</h2>
+        </div>
+        <button class="btn btn-light btn-sm icon-btn" type="button" (click)="closeAgencyModal()">
+          <i class="feather icon-x"></i>
+        </button>
+      </header>
+
+      <div class="agency-modal-search">
+        <i class="feather icon-search"></i>
+        <input
+          class="form-control"
+          [ngModel]="agencyModalSearch()"
+          (ngModelChange)="agencyModalSearch.set($event)"
+          placeholder="Buscar por codigo, nombre u observacion"
+          autocomplete="off"
+        />
+      </div>
+
+      <div class="agency-list">
+        @if (loadingAgencies()) {
+          <div class="agency-empty">Cargando agencias...</div>
+        } @else {
+          @for (agencia of filteredAgenciasComisionables(); track agencia.aD15_Id || agencia.aD15_CodAgencia) {
+            <article class="agency-row">
+              <div>
+                <strong>{{ agencia.aD15_CodAgencia }}</strong>
+                <span>{{ nombreAgenciaComisionable(agencia) || 'Sin nombre registrado' }}</span>
+                @if (agencia.aD15_Observaciones) {
+                  <small>{{ agencia.aD15_Observaciones }}</small>
+                }
+              </div>
+              <button class="btn btn-primary btn-sm" type="button" (click)="selectAgencyFilter(agencia)">Seleccionar</button>
+            </article>
+          } @empty {
+            <div class="agency-empty">No hay agencias comisionables que coincidan con la busqueda.</div>
+          }
+        }
+      </div>
+
+      <footer>
+        <button class="btn btn-outline-secondary btn-sm" type="button" (click)="closeAgencyModal()">Cancelar</button>
+      </footer>
+    </section>
+  }
+
+  <app-regla-form
+    [open]="drawerOpen()"
+    [empresaId]="getEmpresaId()"
+    [selected]="selectedRegla()"
+    (close)="closeDrawer()"
+    (save)="save($event)"
+  />
+</section>

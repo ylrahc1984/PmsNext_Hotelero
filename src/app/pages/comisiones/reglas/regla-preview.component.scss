@@ -1,0 +1,80 @@
+@import '../shared/finance';
+
+.preview-card {
+  @include finance-card;
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 14px;
+}
+
+.preview-head {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+
+  span {
+    color: #667085;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  h2 {
+    font-size: 1rem;
+    font-weight: 800;
+    margin: 2px 0 0;
+  }
+}
+
+.preview-form {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr 1fr 160px;
+}
+
+.form-control {
+  border-color: #e5eaf1;
+  border-radius: 8px;
+  font-size: 0.84rem;
+}
+
+.preview-result {
+  background: #f8fafc;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+
+  span {
+    color: #667085;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  strong {
+    color: #172033;
+  }
+
+  b {
+    color: #047857;
+    font-size: 1.15rem;
+    margin-right: 10px;
+  }
+
+  em {
+    color: #667085;
+    font-style: normal;
+  }
+
+  &.muted {
+    color: #667085;
+  }
+}
+
+@media (max-width: 900px) {
+  .preview-form {
+    grid-template-columns: 1fr;
+  }
+}

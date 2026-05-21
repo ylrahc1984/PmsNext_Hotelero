@@ -1,0 +1,55 @@
+<section class="commission-shell">
+  <header class="commission-page-header">
+    <div>
+      <h1>Servicios Comisionables</h1>
+      <p>Administración financiera de servicios sujetos a comisión</p>
+    </div>
+  </header>
+
+  <div class="kpi-grid">
+    <app-resumen-card label="Total Servicios" [value]="count(totalServicios())" detail="Configuraciones" icon="feather icon-layers" />
+    <app-resumen-card label="Comisionables" [value]="count(comisionables())" detail="Elegibles para calculo" icon="feather icon-check-circle" />
+    <app-resumen-card label="No Comisionables" [value]="count(noComisionables())" detail="Excluidos del motor" icon="feather icon-slash" />
+    <app-resumen-card label="Overrides Activos" [value]="count(overridesActivos())" detail="Excepciones permitidas" icon="feather icon-unlock" />
+  </div>
+
+  <div class="finance-card finance-section toolbar-card">
+    <app-servicio-comisionable-toolbar
+      [search]="search()"
+      [status]="status()"
+      [commissionStatus]="commissionStatus()"
+      [overrideStatus]="overrideStatus()"
+      [loading]="loading()"
+      (searchChange)="search.set($event)"
+      (statusChange)="status.set($event)"
+      (commissionStatusChange)="commissionStatus.set($event)"
+      (overrideStatusChange)="overrideStatus.set($event)"
+      (refresh)="loadServicios()"
+      (newConfig)="openNew()"
+    />
+  </div>
+
+  <div class="service-grid">
+    @for (servicio of filtrados(); track servicio.AD16_Id || $index) {
+      <app-servicio-comisionable-card
+        [servicio]="servicio"
+        [nombreServicio]="nombreServicio(servicio)"
+        (edit)="edit($event)"
+        (toggle)="toggleEstado($event)"
+      />
+    } @empty {
+      <div class="finance-empty">
+        No hay servicios que coincidan con los filtros.
+        <button class="btn btn-link btn-sm" type="button" (click)="clearFilters()">Limpiar filtros</button>
+      </div>
+    }
+  </div>
+
+  <app-servicio-comisionable-drawer
+    [open]="drawerOpen()"
+    [empresaId]="getEmpresaId()"
+    [selected]="selectedServicio()"
+    (close)="closeDrawer()"
+    (save)="save($event)"
+  />
+</section>

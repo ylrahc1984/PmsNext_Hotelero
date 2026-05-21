@@ -1,0 +1,34 @@
+<section class="commission-shell">
+  <header class="commission-page-header">
+    <div>
+      <h1>Auditoria de comisiones</h1>
+      <p>Activity log financiero con operador, accion, tabla afectada y cambios.</p>
+    </div>
+  </header>
+
+  <article class="finance-card finance-section mb-3">
+    <input class="form-control audit-search" [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Buscar operador, accion, tabla o cambio" />
+  </article>
+
+  <article class="finance-card finance-section">
+    <ol class="audit-timeline">
+      @for (log of filtrados(); track log.AD24_Id || $index) {
+        <li>
+          <span class="marker"></span>
+          <div class="audit-content">
+            <div class="audit-head">
+              <div>
+                <strong>{{ text(log, ['AD24_Accion', 'accion']) }}</strong>
+                <small>{{ text(log, ['AD24_Fecha', 'fecha']) }} · {{ text(log, ['AD24_Operador', 'operador']) }}</small>
+              </div>
+              <span class="table-badge">{{ text(log, ['AD24_TablaAfectada', 'tablaAfectada']) }}</span>
+            </div>
+            <p>{{ text(log, ['AD24_Cambios', 'cambios', 'AD24_ValorNuevo'], 'Sin detalle de cambio.') }}</p>
+          </div>
+        </li>
+      } @empty {
+        <div class="finance-empty">No hay eventos de auditoria para mostrar.</div>
+      }
+    </ol>
+  </article>
+</section>

@@ -303,6 +303,86 @@ export const NavigationItems: NavigationItem[] = [
             classes: 'nav-item'
           },
           {
+            id: 'comisiones-financieras',
+            title: 'Comisiones',
+            type: 'collapse',
+            icon: 'feather icon-percent',
+            children: [
+              {
+                id: 'comisiones-dashboard',
+                title: 'Dashboard',
+                type: 'item',
+                url: '/comisiones/dashboard',
+                icon: 'feather icon-grid',
+                classes: 'nav-item'
+              },
+              {
+                id: 'comisiones-reglas',
+                title: 'Reglas',
+                type: 'item',
+                url: '/comisiones/reglas',
+                icon: 'feather icon-sliders',
+                classes: 'nav-item'
+              },
+              {
+                id: 'comisiones-calculadas',
+                title: 'Calculadas',
+                type: 'item',
+                url: '/comisiones/calculadas',
+                icon: 'feather icon-cpu',
+                classes: 'nav-item'
+              },
+              {
+                id: 'comisiones-liquidaciones',
+                title: 'Liquidaciones',
+                type: 'item',
+                url: '/comisiones/liquidaciones',
+                icon: 'feather icon-layers',
+                classes: 'nav-item'
+              },
+              {
+                id: 'comisiones-auditoria',
+                title: 'Auditoria',
+                type: 'item',
+                url: '/comisiones/auditoria',
+                icon: 'feather icon-activity',
+                classes: 'nav-item'
+              },
+              {
+                id: 'comisiones-configuracion',
+                title: 'Configuracion',
+                type: 'collapse',
+                icon: 'feather icon-settings',
+                children: [
+                  {
+                    id: 'comisiones-config-general',
+                    title: 'General',
+                    type: 'item',
+                    url: '/comisiones/configuracion/general',
+                    icon: 'feather icon-sliders',
+                    classes: 'nav-item'
+                  },
+                  {
+                    id: 'comisiones-config-agencias',
+                    title: 'Agencias',
+                    type: 'item',
+                    url: '/comisiones/configuracion/agencias',
+                    icon: 'feather icon-briefcase',
+                    classes: 'nav-item'
+                  },
+                  {
+                    id: 'comisiones-config-servicios',
+                    title: 'Servicios',
+                    type: 'item',
+                    url: '/comisiones/configuracion/servicios',
+                    icon: 'feather icon-tag',
+                    classes: 'nav-item'
+                  }
+                ]
+              }
+            ]
+          },
+          {
             id: 'configuracion-finanzas',
             title: 'Configuracion',
             type: 'item',

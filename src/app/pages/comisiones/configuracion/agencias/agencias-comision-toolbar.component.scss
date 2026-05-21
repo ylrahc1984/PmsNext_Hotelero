@@ -1,0 +1,40 @@
+.agency-toolbar {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto minmax(280px, 1fr) 170px auto;
+}
+
+.search-field {
+  position: relative;
+
+  i {
+    color: #667085;
+    left: 12px;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  input {
+    padding-left: 36px;
+  }
+}
+
+.form-control,
+.form-select {
+  border-color: #e5eaf1;
+  border-radius: 8px;
+  font-size: 0.83rem;
+}
+
+.icon-btn {
+  height: 34px;
+  width: 38px;
+}
+
+@media (max-width: 991px) {
+  .agency-toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+}

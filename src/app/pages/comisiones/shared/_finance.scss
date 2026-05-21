@@ -1,0 +1,139 @@
+$commission-bg: #f6f8fb;
+$commission-surface: #ffffff;
+$commission-border: #e5eaf1;
+$commission-text: #172033;
+$commission-muted: #667085;
+$commission-blue: #2563eb;
+$commission-navy: #1e3a8a;
+$commission-green: #16a34a;
+$commission-orange: #f97316;
+$commission-red: #dc2626;
+$commission-gray: #64748b;
+
+@mixin finance-shell {
+  color: $commission-text;
+  background: $commission-bg;
+  min-height: calc(100vh - 120px);
+  padding: 18px;
+}
+
+@mixin finance-card {
+  background: $commission-surface;
+  border: 1px solid $commission-border;
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+@mixin finance-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  margin: 0;
+}
+
+.commission-shell {
+  @include finance-shell;
+}
+
+.commission-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+
+  h1 {
+    @include finance-title;
+  }
+
+  p {
+    color: $commission-muted;
+    font-size: 0.86rem;
+    margin: 4px 0 0;
+  }
+}
+
+.finance-card {
+  @include finance-card;
+}
+
+.finance-section {
+  padding: 16px;
+}
+
+.finance-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.finance-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.finance-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.82rem;
+
+  th {
+    color: $commission-muted;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 10px 12px;
+    text-transform: uppercase;
+    background: #f8fafc;
+    border-bottom: 1px solid $commission-border;
+  }
+
+  td {
+    padding: 11px 12px;
+    border-bottom: 1px solid #edf1f6;
+    vertical-align: middle;
+  }
+
+  tr:hover td {
+    background: #f9fbff;
+  }
+}
+
+.finance-empty {
+  border: 1px dashed $commission-border;
+  border-radius: 8px;
+  color: $commission-muted;
+  padding: 28px;
+  text-align: center;
+}
+
+.metric {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+
+  span {
+    color: $commission-muted;
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  strong {
+    font-size: 1.2rem;
+  }
+}
+
+@media (max-width: 991px) {
+  .commission-shell {
+    padding: 12px;
+  }
+
+  .commission-page-header,
+  .finance-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

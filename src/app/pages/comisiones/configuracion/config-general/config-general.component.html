@@ -1,0 +1,66 @@
+<section class="commission-shell">
+  <header class="commission-page-header">
+    <div>
+      <h1>Configuracion general</h1>
+      <p>Parametros financieros que controlan corte, base de calculo y liquidacion.</p>
+    </div>
+    <button class="btn btn-primary btn-sm" type="button" (click)="guardar()">
+      <i class="feather icon-save me-1"></i>
+      Guardar configuracion
+    </button>
+  </header>
+
+  <form class="config-layout" [formGroup]="form">
+    <article class="finance-card finance-section">
+      <h2>Corte financiero</h2>
+      <div class="form-grid">
+        <label>
+          <span>Tipo corte</span>
+          <select class="form-select" formControlName="aD14_TipoCorte">
+            <option value="SEMANAL">Semanal</option>
+            <option value="QUINCENAL">Quincenal</option>
+            <option value="MENSUAL">Mensual</option>
+          </select>
+        </label>
+        <label>
+          <span>Dia corte</span>
+          <input class="form-control" type="number" min="1" max="31" formControlName="aD14_DiaCorte" />
+        </label>
+        <label>
+          <span>Moneda base</span>
+          <select class="form-select" formControlName="aD14_MonedaBase">
+            <option value="USD">USD</option>
+            <option value="CRC">CRC</option>
+            <option value="EUR">EUR</option>
+          </select>
+        </label>
+      </div>
+    </article>
+
+    <article class="finance-card finance-section">
+      <h2>Base de calculo</h2>
+      <div class="form-grid">
+        <label>
+          <span>Base calculo</span>
+          <select class="form-select" formControlName="aD14_BaseCalculo">
+            <option value="SUBTOTAL">SUBTOTAL</option>
+            <option value="NETO">NETO</option>
+            <option value="TOTAL">TOTAL</option>
+          </select>
+        </label>
+        <div class="switch-row">
+          <div><strong>Requiere factura pagada</strong><small>Bloquea comisiones no cobradas.</small></div>
+          <input class="form-check-input" type="checkbox" formControlName="aD14_RequiereFacturaPagada" />
+        </div>
+        <div class="switch-row">
+          <div><strong>Incluye impuestos</strong><small>Usa importes con impuesto en la base.</small></div>
+          <input class="form-check-input" type="checkbox" formControlName="aD14_IncluyeImpuestos" />
+        </div>
+        <div class="switch-row">
+          <div><strong>Permite liquidacion parcial</strong><small>Autoriza ciclos por segmentos.</small></div>
+          <input class="form-check-input" type="checkbox" formControlName="aD14_PermiteLiquidacionParcial" />
+        </div>
+      </div>
+    </article>
+  </form>
+</section>

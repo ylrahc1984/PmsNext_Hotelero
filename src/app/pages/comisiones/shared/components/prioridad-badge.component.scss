@@ -1,0 +1,22 @@
+.prioridad-badge {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 5px 9px;
+}
+
+.is-alta {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.is-media {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.is-baja {
+  color: #475569;
+  background: #e2e8f0;
+}

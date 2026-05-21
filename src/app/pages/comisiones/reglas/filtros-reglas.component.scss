@@ -1,0 +1,69 @@
+@import '../shared/finance';
+
+.rules-toolbar {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto minmax(220px, 1fr) minmax(190px, 240px) 150px 130px 130px 130px auto;
+}
+
+.search-field {
+  position: relative;
+
+  i {
+    color: #667085;
+    left: 12px;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  input {
+    padding-left: 34px;
+  }
+}
+
+.form-control,
+.form-select {
+  border-color: #e5eaf1;
+  border-radius: 8px;
+  font-size: 0.84rem;
+}
+
+.agency-filter {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.agency-picker {
+  align-items: center;
+  display: flex;
+  gap: 7px;
+  justify-content: flex-start;
+  min-width: 0;
+
+  span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.icon-btn {
+  aspect-ratio: 1;
+  width: 34px;
+}
+
+@media (max-width: 1300px) {
+  .rules-toolbar {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .rules-toolbar {
+    grid-template-columns: 1fr;
+  }
+}

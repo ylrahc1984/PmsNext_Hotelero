@@ -1,0 +1,75 @@
+@if (open) {
+  <div class="drawer-backdrop" (click)="close.emit()"></div>
+  <aside class="drawer-panel">
+    <header>
+      <div>
+        <span>{{ selected ? 'Edicion' : 'Nuevo servicio' }}</span>
+        <h2>Servicio comisionable</h2>
+      </div>
+      <button class="btn btn-light btn-sm" type="button" (click)="close.emit()">
+        <i class="feather icon-x"></i>
+      </button>
+    </header>
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <section class="form-section">
+        <h3>Servicio</h3>
+        <label>
+          <span>Buscar servicio</span>
+          <input class="form-control" formControlName="servicioSearch" placeholder="Codigo o nombre de servicio" autocomplete="off" />
+        </label>
+        @if (searchingServicios()) {
+          <small class="hint">Buscando servicios...</small>
+        }
+        @if (checkingDuplicate()) {
+          <small class="hint">Validando configuracion existente...</small>
+        }
+        @if (servicios().length) {
+          <div class="suggestions">
+            @for (servicio of servicios(); track servicio.codReceta) {
+              <button type="button" (click)="selectServicio(servicio)">
+                <strong>{{ servicio.codReceta }}</strong>
+                <span>{{ servicio.nomReceta }}</span>
+              </button>
+            }
+          </div>
+        }
+        @if (isInvalid('aD16_CodServicio')) {
+          <small class="error">Seleccione un servicio valido.</small>
+        }
+        @if (duplicateMessage()) {
+          <div class="duplicate-alert">{{ duplicateMessage() }}</div>
+        }
+      </section>
+
+      <section class="form-section">
+        <h3>Configuracion</h3>
+        <div class="switch-row">
+          <div>
+            <strong>Comisionable</strong>
+            <small>Incluye este servicio en el motor financiero.</small>
+          </div>
+          <input class="form-check-input" type="checkbox" formControlName="aD16_Comisionable" />
+        </div>
+
+        <div class="switch-row">
+          <div>
+            <strong>Permite override</strong>
+            <small>Autoriza excepciones controladas por reglas.</small>
+          </div>
+          <input class="form-check-input" type="checkbox" formControlName="aD16_PermiteOverride" />
+        </div>
+      </section>
+
+      <section class="form-section">
+        <h3>Observaciones</h3>
+        <textarea class="form-control" rows="4" formControlName="aD16_Observaciones" placeholder="Notas financieras, excepciones o restricciones"></textarea>
+      </section>
+
+      <footer>
+        <button class="btn btn-outline-secondary" type="button" (click)="close.emit()">Cancelar</button>
+        <button class="btn btn-primary" type="submit" [disabled]="checkingDuplicate() || !!duplicateMessage()">Guardar</button>
+      </footer>
+    </form>
+  </aside>
+}

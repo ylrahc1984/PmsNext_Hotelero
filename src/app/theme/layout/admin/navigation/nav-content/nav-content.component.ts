@@ -32,7 +32,7 @@ export class NavContentComponent {
   currentApplicationVersion = environment.appVersion;
 
   navigations!: NavigationItem[];
-  wrapperWidth: number;
+  wrapperWidth: number = 0;
   windowWidth = window.innerWidth;
   expandedRootId: string | null = null;
 

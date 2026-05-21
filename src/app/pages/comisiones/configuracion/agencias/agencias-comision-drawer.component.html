@@ -1,0 +1,101 @@
+@if (open) {
+  <div class="drawer-backdrop" (click)="close.emit()"></div>
+  <aside class="drawer-panel">
+    <header>
+      <div>
+        <span>{{ selected ? 'Edicion' : 'Nueva configuracion' }}</span>
+        <h2>Agencia comisionable</h2>
+      </div>
+      <button class="btn btn-light btn-sm" type="button" (click)="close.emit()">
+        <i class="feather icon-x"></i>
+      </button>
+    </header>
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <section class="form-section">
+        <h3>Agencia</h3>
+        <label>
+          <span>Buscar agencia</span>
+          <input class="form-control" formControlName="agenciaSearch" placeholder="Codigo o nombre de agencia" autocomplete="off" />
+        </label>
+        @if (searchingClientes()) {
+          <small class="hint">Buscando agencias...</small>
+        }
+        @if (checkingDuplicate()) {
+          <small class="hint">Validando configuracion existente...</small>
+        }
+        @if (clientes().length) {
+          <div class="suggestions">
+            @for (cliente of clientes(); track cliente.codigo) {
+              <button type="button" (click)="selectCliente(cliente)">
+                <strong>{{ cliente.codigo }}</strong>
+                <span>{{ cliente.nombre }}</span>
+              </button>
+            }
+          </div>
+        }
+        @if (isInvalid('aD15_CodAgencia')) {
+          <small class="error">Seleccione una agencia valida.</small>
+        }
+        @if (duplicateMessage()) {
+          <div class="duplicate-alert">{{ duplicateMessage() }}</div>
+        }
+      </section>
+
+      <section class="form-section">
+        <h3>Configuracion comision</h3>
+        <div class="switch-row">
+          <div>
+            <strong>Comisiona</strong>
+            <small>Habilita el calculo para esta agencia.</small>
+          </div>
+          <input class="form-check-input" type="checkbox" formControlName="aD15_Comisiona" />
+        </div>
+
+        <div class="two-cols">
+          <label>
+            <span>Tipo comision</span>
+            <select class="form-select" formControlName="aD15_TipoComisionDefault">
+              <option value="PORCENTAJE">PORCENTAJE</option>
+              <option value="FIJO">FIJO</option>
+            </select>
+          </label>
+          <label>
+            <span>Valor comision</span>
+            <input class="form-control" type="number" min="0.01" step="0.01" formControlName="aD15_ValorDefault" />
+          </label>
+        </div>
+        @if (isInvalid('aD15_TipoComisionDefault') || isInvalid('aD15_ValorDefault')) {
+          <small class="error">Tipo y valor mayor a cero son obligatorios.</small>
+        }
+      </section>
+
+      <section class="form-section">
+        <h3>Vigencia</h3>
+        <div class="two-cols">
+          <label>
+            <span>Fecha inicio</span>
+            <input class="form-control" type="date" formControlName="aD15_FechaInicio" />
+          </label>
+          <label>
+            <span>Fecha fin</span>
+            <input class="form-control" type="date" formControlName="aD15_FechaFin" />
+          </label>
+        </div>
+        @if (hasInvalidDates()) {
+          <small class="error">La fecha fin debe ser mayor o igual a la fecha inicio.</small>
+        }
+      </section>
+
+      <section class="form-section">
+        <h3>Observaciones</h3>
+        <textarea class="form-control" rows="4" formControlName="aD15_Observaciones" placeholder="Notas financieras, excepciones o contexto de vigencia"></textarea>
+      </section>
+
+      <footer>
+        <button class="btn btn-outline-secondary" type="button" (click)="close.emit()">Cancelar</button>
+        <button class="btn btn-primary" type="submit" [disabled]="checkingDuplicate() || !!duplicateMessage()">Guardar</button>
+      </footer>
+    </form>
+  </aside>
+}

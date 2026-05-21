@@ -1,0 +1,144 @@
+<section class="commission-console">
+  <header class="console-header">
+    <div>
+      <span class="eyebrow">Consola financiera</span>
+      <h1>Preview analitico de comisiones</h1>
+      <p>Validacion financiera de reglas, documentos, servicios, tipo pax y montos antes de generar liquidaciones.</p>
+    </div>
+    <div class="header-status">
+      <span>Operador</span>
+      <strong>{{ filters().empresaId }} · {{ selectedSummary().totalRegistros }} seleccionados</strong>
+    </div>
+  </header>
+
+  <app-comision-kpi-strip [items]="kpis()" />
+
+  <form class="filter-panel" (ngSubmit)="generarPreview()">
+    <div class="filter-grid">
+      <label>
+        <span>Empresa</span>
+        <select [ngModel]="filters().empresaId" name="empresaId" (ngModelChange)="updateFilter('empresaId', +$event)">
+          <option [ngValue]="1">Empresa 1</option>
+        </select>
+      </label>
+
+      <label>
+        <span>Fecha inicio</span>
+        <input type="date" [ngModel]="filters().fechaInicio" name="fechaInicio" (ngModelChange)="updateFilter('fechaInicio', $event)" />
+      </label>
+
+      <label>
+        <span>Fecha fin</span>
+        <input type="date" [ngModel]="filters().fechaFin" name="fechaFin" (ngModelChange)="updateFilter('fechaFin', $event)" />
+      </label>
+
+      <label>
+        <span>Agencia</span>
+        <input
+          type="search"
+          list="agencias-preview"
+          [ngModel]="filters().agencia"
+          name="agencia"
+          placeholder="Codigo o nombre"
+          (ngModelChange)="updateFilter('agencia', $event)"
+        />
+        <datalist id="agencias-preview">
+          @for (option of agenciaOptions(); track option) {
+            <option [value]="option"></option>
+          }
+        </datalist>
+      </label>
+
+      <label>
+        <span>Servicio</span>
+        <input
+          type="search"
+          list="servicios-preview"
+          [ngModel]="filters().servicio"
+          name="servicio"
+          placeholder="Codigo o servicio"
+          (ngModelChange)="updateFilter('servicio', $event)"
+        />
+        <datalist id="servicios-preview">
+          @for (option of servicioOptions(); track option) {
+            <option [value]="option"></option>
+          }
+        </datalist>
+      </label>
+
+    </div>
+
+    <button class="btn btn-primary btn-sm generate-btn" type="submit" [disabled]="loading()">
+      {{ loading() ? 'Generando...' : 'Generar Preview' }}
+    </button>
+  </form>
+
+  <div class="financial-toolbar">
+    <div class="toolbar-left">
+      <button class="btn btn-outline-secondary btn-sm" type="button" (click)="selectAll()" [disabled]="!visibleGridRows().length">
+        Seleccionar Todo
+      </button>
+      <button class="btn btn-outline-secondary btn-sm" type="button" (click)="clearSelection()" [disabled]="!selectedSummary().totalRegistros">
+        Limpiar Seleccion
+      </button>
+      <button class="btn btn-outline-secondary btn-sm" type="button" (click)="exportExcel()" [disabled]="!visibleGridRows().length">
+        Exportar Excel
+      </button>
+      <button class="btn btn-outline-secondary btn-sm" type="button" (click)="generarComisiones()">
+        Generar Comisiones
+      </button>
+      <button class="btn btn-outline-secondary btn-sm" type="button" (click)="recalcular()" [disabled]="loading()">
+        Recalcular
+      </button>
+    </div>
+    <div class="toolbar-summary">
+      <strong>{{ selectedSummary().totalRegistros }}</strong>
+      <span>lineas seleccionadas</span>
+    </div>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="console-alert error">{{ errorMessage() }}</div>
+  }
+
+  @if (actionMessage()) {
+    <div class="console-alert info">{{ actionMessage() }}</div>
+  }
+
+  <section class="grid-shell">
+    <ag-grid-angular
+      class="financial-grid"
+      [modules]="gridModules"
+      [theme]="gridTheme"
+      [rowData]="visibleGridRows()"
+      [columnDefs]="columnDefs"
+      [defaultColDef]="defaultColDef"
+      [rowSelection]="rowSelection"
+      [suppressRowClickSelection]="true"
+      [pinnedBottomRowData]="pinnedBottomRowData()"
+      [rowHeight]="38"
+      [headerHeight]="38"
+      [tooltipShowDelay]="250"
+      [enableBrowserTooltips]="true"
+      [loading]="loading()"
+      [rowClass]="rowClass"
+      (gridReady)="onGridReady($event)"
+      (selectionChanged)="onSelectionChanged()"
+    />
+
+    @if (!rows().length && !loading()) {
+      <div class="empty-state">
+        <strong>Sin preview generado</strong>
+        <span>Seleccione el rango financiero y ejecute Generar Preview para cargar la consola.</span>
+      </div>
+    }
+  </section>
+
+  <footer class="totals-footer">
+    <span>Registros seleccionados: <strong>{{ selectedSummary().totalRegistros }}</strong></span>
+    <span>Monto base: <strong>{{ selectedSummary().totalMontoBase | number: '1.2-2' }}</strong></span>
+    <span>Comision: <strong>{{ selectedSummary().totalMontoComision | number: '1.2-2' }}</strong></span>
+    <span>Documentos: <strong>{{ selectedSummary().documentos }}</strong></span>
+    <span>Agencias: <strong>{{ selectedSummary().agencias }}</strong></span>
+  </footer>
+</section>

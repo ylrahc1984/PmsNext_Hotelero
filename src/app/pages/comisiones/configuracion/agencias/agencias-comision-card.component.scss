@@ -1,0 +1,126 @@
+@import '../../shared/finance';
+
+.agency-card {
+  @include finance-card;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease;
+
+  &:hover {
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+    transform: translateY(-2px);
+  }
+}
+
+.card-head,
+.badge-row,
+footer {
+  align-items: flex-start;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.code {
+  color: #667085;
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+h2 {
+  color: #172033;
+  font-size: 0.94rem;
+  font-weight: 800;
+  margin: 2px 0 0;
+}
+
+.state-badge,
+.type-badge,
+.commission-badge {
+  align-items: center;
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.68rem;
+  font-weight: 800;
+  gap: 5px;
+  padding: 6px 9px;
+  white-space: nowrap;
+}
+
+.state-badge {
+  background: #dcfce7;
+  color: #15803d;
+
+  &.inactive {
+    background: #e2e8f0;
+    color: #475569;
+  }
+}
+
+.type-badge {
+  background: #dbeafe;
+  color: #1d4ed8;
+
+  &.fixed {
+    background: #ede9fe;
+    color: #6d28d9;
+  }
+}
+
+.commission-badge {
+  background: #ecfdf5;
+  color: #047857;
+
+  &.no {
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+}
+
+.value-box {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 12px;
+
+  span {
+    color: #667085;
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  strong {
+    color: #172033;
+    font-size: 1.28rem;
+  }
+}
+
+.validity {
+  border-top: 1px solid #edf1f6;
+  padding-top: 10px;
+
+  span {
+    color: #667085;
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  strong {
+    font-size: 0.8rem;
+  }
+}
+
+p {
+  color: #667085;
+  font-size: 0.8rem;
+  margin: 0;
+  min-height: 38px;
+}

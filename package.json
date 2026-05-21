@@ -28,6 +28,8 @@
     "@angular/router": "20.0.5",
     "@ng-bootstrap/ng-bootstrap": "19.0.0",
     "@popperjs/core": "2.11.8",
+    "ag-grid-angular": "^35.3.0",
+    "ag-grid-community": "^35.3.0",
     "apexcharts": "4.7.0",
     "bootstrap": "5.3.7",
     "ng-apexcharts": "1.16.0",

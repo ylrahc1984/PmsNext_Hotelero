@@ -1,0 +1,91 @@
+<section class="commission-shell">
+  <header class="commission-page-header">
+    <div>
+      <h1>Liquidaciones</h1>
+      <p>Vista master/detail para controlar cierre, pago, anulacion y trazabilidad.</p>
+    </div>
+    <button class="btn btn-primary btn-sm" type="button">
+      <i class="feather icon-plus me-1"></i>
+      Nueva liquidacion
+    </button>
+  </header>
+
+  <div class="master-detail">
+    <aside class="finance-card liquidacion-list">
+      @for (item of liquidaciones(); track item.AD22_Id || $index) {
+        <button class="liquidacion-item" [class.active]="selected()?.AD22_Id === item.AD22_Id" type="button" (click)="select(item)">
+          <div>
+            <strong>{{ text(item, ['AD22_NumeroLiquidacion', 'numeroLiquidacion']) }}</strong>
+            <span>{{ text(item, ['AD22_NombreAgencia', 'nombreAgencia']) }}</span>
+          </div>
+          <div class="text-end">
+            <span>{{ money(item, ['AD22_Total', 'total']) }}</span>
+            <app-estado-badge [estado]="text(item, ['AD22_Estado', 'estado'], 'BORRADOR')" />
+          </div>
+        </button>
+      } @empty {
+        <div class="finance-empty">No hay liquidaciones.</div>
+      }
+    </aside>
+
+    <main class="finance-card finance-section detail-panel">
+      @if (selected(); as item) {
+        <div class="detail-header">
+          <div>
+            <span>Liquidacion</span>
+            <h2>{{ text(item, ['AD22_NumeroLiquidacion', 'numeroLiquidacion']) }}</h2>
+            <p>{{ text(item, ['AD22_NombreAgencia', 'nombreAgencia']) }}</p>
+          </div>
+          <app-estado-badge [estado]="text(item, ['AD22_Estado', 'estado'], 'BORRADOR')" />
+        </div>
+
+        <div class="totals-grid">
+          <div><span>Subtotal</span><strong>{{ money(item, ['AD22_Subtotal', 'subtotal']) }}</strong></div>
+          <div><span>Impuestos</span><strong>{{ money(item, ['AD22_Impuestos', 'impuestos']) }}</strong></div>
+          <div><span>Total</span><strong>{{ money(item, ['AD22_Total', 'total']) }}</strong></div>
+        </div>
+
+        <div class="action-bar">
+          <button class="btn btn-outline-primary btn-sm" type="button" (click)="cerrar()">Cerrar</button>
+          <button class="btn btn-success btn-sm" type="button" (click)="pagar()">Pagar</button>
+          <button class="btn btn-outline-danger btn-sm" type="button" (click)="anular()">Anular</button>
+          <a class="btn btn-outline-secondary btn-sm" [routerLink]="['/comisiones/liquidaciones', item.AD22_Id]">Detalle completo</a>
+        </div>
+
+        <div class="detail-content">
+          <section>
+            <h3>Documentos</h3>
+            <table class="finance-table">
+              <thead>
+                <tr>
+                  <th>Documento</th>
+                  <th>Servicio</th>
+                  <th>Base</th>
+                  <th>Comision</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (detalle of detalles(); track detalle.AD23_Id || $index) {
+                  <tr>
+                    <td>{{ text(detalle, ['AD23_NumeroDocumento', 'numeroDocumento']) }}</td>
+                    <td>{{ text(detalle, ['AD23_NombreServicio', 'nombreServicio']) }}</td>
+                    <td>{{ money(detalle, ['AD23_MontoBase', 'montoBase']) }}</td>
+                    <td class="fw-semibold">{{ money(detalle, ['AD23_MontoComision', 'montoComision']) }}</td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="4"><div class="finance-empty">Sin documentos liquidados.</div></td></tr>
+                }
+              </tbody>
+            </table>
+          </section>
+          <section>
+            <h3>Timeline financiero</h3>
+            <app-timeline-liquidacion [items]="timeline()" />
+          </section>
+        </div>
+      } @else {
+        <div class="finance-empty">Seleccione una liquidacion.</div>
+      }
+    </main>
+  </div>
+</section>

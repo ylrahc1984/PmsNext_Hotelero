@@ -1,0 +1,51 @@
+<section class="commission-shell">
+  <header class="commission-page-header">
+    <div>
+      <h1>Comisiones por Agencia</h1>
+      <p>Administración financiera de agencias comisionables</p>
+    </div>
+  </header>
+
+  <div class="kpi-grid">
+    <app-resumen-card label="Total Agencias" [value]="count(totalAgencias())" detail="Configuraciones" icon="feather icon-briefcase" />
+    <app-resumen-card label="Activas" [value]="count(activas())" detail="Disponibles para calculo" icon="feather icon-check-circle" />
+    <app-resumen-card label="Inactivas" [value]="count(inactivas())" detail="Fuera de vigencia operativa" icon="feather icon-slash" />
+    <app-resumen-card label="Comisionables" [value]="count(comisionables())" detail="Con calculo habilitado" icon="feather icon-percent" />
+  </div>
+
+  <div class="finance-card finance-section toolbar-card">
+    <app-agencias-comision-toolbar
+      [search]="search()"
+      [status]="status()"
+      [loading]="loading()"
+      (searchChange)="search.set($event)"
+      (statusChange)="status.set($event)"
+      (refresh)="loadAgencias()"
+      (newConfig)="openNew()"
+    />
+  </div>
+
+  <div class="agency-grid">
+    @for (agencia of filtradas(); track agencia.aD15_Id || $index) {
+      <app-agencia-comision-card
+        [agencia]="agencia"
+        [nombreAgencia]="nombreAgencia(agencia)"
+        (edit)="edit($event)"
+        (toggle)="toggleEstado($event)"
+      />
+    } @empty {
+      <div class="finance-empty">
+        No hay agencias que coincidan con los filtros.
+        <button class="btn btn-link btn-sm" type="button" (click)="clearFilters()">Limpiar filtros</button>
+      </div>
+    }
+  </div>
+
+  <app-agencias-comision-drawer
+    [open]="drawerOpen()"
+    [empresaId]="getEmpresaId()"
+    [selected]="selectedAgencia()"
+    (close)="closeDrawer()"
+    (save)="save($event)"
+  />
+</section>

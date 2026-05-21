@@ -1,0 +1,66 @@
+.kpi-strip {
+  background: #ffffff;
+  border: 1px solid #dde3ea;
+  border-radius: 8px;
+  display: grid;
+  gap: 0;
+  grid-template-columns: repeat(6, minmax(128px, 1fr));
+  overflow: hidden;
+}
+
+.kpi-cell {
+  border-right: 1px solid #e7ebf0;
+  min-width: 0;
+  padding: 12px 14px;
+}
+
+.kpi-cell:last-child {
+  border-right: 0;
+}
+
+.kpi-cell span,
+.kpi-cell small {
+  color: #667085;
+  display: block;
+  font-size: 0.74rem;
+  line-height: 1.15;
+}
+
+.kpi-cell strong {
+  color: #1f2937;
+  display: block;
+  font-size: clamp(1rem, 1.4vw, 1.35rem);
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.2;
+  margin-top: 4px;
+  white-space: nowrap;
+}
+
+.kpi-cell small {
+  margin-top: 3px;
+}
+
+@media (max-width: 1280px) {
+  .kpi-strip {
+    grid-template-columns: repeat(3, minmax(160px, 1fr));
+  }
+
+  .kpi-cell:nth-child(3n) {
+    border-right: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .kpi-strip {
+    grid-template-columns: repeat(2, minmax(150px, 1fr));
+  }
+
+  .kpi-cell:nth-child(3n) {
+    border-right: 1px solid #e7ebf0;
+  }
+
+  .kpi-cell:nth-child(2n) {
+    border-right: 0;
+  }
+}

@@ -1,0 +1,40 @@
+.estado-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+  padding: 5px 9px;
+  white-space: nowrap;
+}
+
+.is-pendiente {
+  color: #9a3412;
+  background: #ffedd5;
+}
+
+.is-liquidado {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.is-pagado {
+  color: #15803d;
+  background: #dcfce7;
+}
+
+.is-anulado {
+  color: #b91c1c;
+  background: #fee2e2;
+}
+
+.is-borrador {
+  color: #475569;
+  background: #e2e8f0;
+}
+
+.is-cerrado {
+  color: #1e3a8a;
+  background: #dbeafe;
+}

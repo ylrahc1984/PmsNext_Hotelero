@@ -1,0 +1,128 @@
+@if (open) {
+  <div class="drawer-backdrop" (click)="close.emit()"></div>
+  <aside class="drawer-panel">
+    <header>
+      <div>
+        <span>{{ selected ? 'Edicion' : 'Nueva regla' }}</span>
+        <h2>Regla de comisión</h2>
+      </div>
+      <button class="btn btn-light btn-sm" type="button" (click)="close.emit()">
+        <i class="feather icon-x"></i>
+      </button>
+    </header>
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <section class="form-section">
+        <h3>Contexto regla</h3>
+        @if (isGlobalRule()) {
+          <div class="global-note">Esta regla aplicará globalmente.</div>
+        }
+        <label>
+          <span>Agencia</span>
+          <div class="search-action">
+            <input class="form-control" formControlName="agenciaSearch" placeholder="Buscar agencia" autocomplete="off" />
+            <button class="btn btn-outline-secondary btn-sm" type="button" (click)="clearAgencia()">Global</button>
+          </div>
+        </label>
+        @if (searchingAgencias()) {
+          <small class="hint">Buscando agencias...</small>
+        }
+        @if (agencias().length) {
+          <div class="suggestions">
+            @for (agencia of agencias(); track agencia.aD15_Id || agencia.aD15_CodAgencia) {
+              <button type="button" (click)="selectAgencia(agencia)">
+                <strong>{{ agencia.aD15_CodAgencia }}</strong>
+                <span>{{ nombreAgencia(agencia) }}</span>
+              </button>
+            }
+          </div>
+        }
+
+        <label>
+          <span>Servicio</span>
+          <div class="search-action">
+            <input class="form-control" formControlName="servicioSearch" placeholder="Buscar servicio" autocomplete="off" />
+            <button class="btn btn-outline-secondary btn-sm" type="button" (click)="clearServicio()">Global</button>
+          </div>
+        </label>
+        @if (searchingServicios()) {
+          <small class="hint">Buscando servicios...</small>
+        }
+        @if (servicios().length) {
+          <div class="suggestions">
+            @for (servicio of servicios(); track servicio.AD16_Id || servicio.AD16_CodServicio) {
+              <button type="button" (click)="selectServicio(servicio)">
+                <strong>{{ servicio.AD16_CodServicio }}</strong>
+                <span>{{ nombreServicio(servicio) }}</span>
+              </button>
+            }
+          </div>
+        }
+
+        <label>
+          <span>Tipo pax</span>
+          <select class="form-select" formControlName="aD17_TipPax">
+            <option value="">Todos los tipos pax</option>
+            @for (tipo of tiposPax(); track tipo.code) {
+              <option [value]="tipo.code">{{ tipo.code }} - {{ tipo.label || tipo.code }}</option>
+            }
+          </select>
+        </label>
+        @if (loadingTiposPax()) {
+          <small class="hint">Cargando tipos pax...</small>
+        }
+      </section>
+
+      <section class="form-section">
+        <h3>Configuración comisión</h3>
+        <div class="two-cols">
+          <label>
+            <span>Tipo comisión</span>
+            <select class="form-select" formControlName="aD17_TipoComision">
+              <option value="PORCENTAJE">PORCENTAJE</option>
+              <option value="FIJO">FIJO</option>
+            </select>
+          </label>
+          <label>
+            <span>Valor</span>
+            <input class="form-control" type="number" min="0.01" step="0.01" formControlName="aD17_ValorComision" />
+          </label>
+        </div>
+        <label>
+          <span>Prioridad</span>
+          <input class="form-control" type="number" min="1" step="1" formControlName="aD17_Prioridad" />
+        </label>
+        @if (isInvalid('aD17_TipoComision') || isInvalid('aD17_ValorComision') || isInvalid('aD17_Prioridad')) {
+          <small class="error">Tipo, valor mayor a cero y prioridad mayor a cero son obligatorios.</small>
+        }
+      </section>
+
+      <section class="form-section">
+        <h3>Vigencia</h3>
+        <div class="two-cols">
+          <label>
+            <span>Fecha inicio</span>
+            <input class="form-control" type="date" formControlName="aD17_FechaInicio" />
+          </label>
+          <label>
+            <span>Fecha fin</span>
+            <input class="form-control" type="date" formControlName="aD17_FechaFin" />
+          </label>
+        </div>
+        @if (hasInvalidDates()) {
+          <small class="error">La fecha fin debe ser mayor o igual a la fecha inicio.</small>
+        }
+      </section>
+
+      <section class="form-section">
+        <h3>Observaciones</h3>
+        <textarea class="form-control" rows="1" formControlName="aD17_Observaciones" placeholder="Notas de jerarquia, excepciones o vigencia"></textarea>
+      </section>
+
+      <footer>
+        <button class="btn btn-outline-secondary" type="button" (click)="close.emit()">Cancelar</button>
+        <button class="btn btn-primary" type="submit">Guardar</button>
+      </footer>
+    </form>
+  </aside>
+}

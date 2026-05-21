@@ -1,0 +1,38 @@
+@import '../finance';
+
+.resumen-card {
+  @include finance-card;
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+}
+
+.resumen-icon {
+  align-items: center;
+  background: #eef4ff;
+  border-radius: 8px;
+  color: #2563eb;
+  display: inline-flex;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+span {
+  color: #667085;
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+strong {
+  color: #172033;
+  display: block;
+  font-size: 1.05rem;
+}
+
+small {
+  color: #667085;
+}

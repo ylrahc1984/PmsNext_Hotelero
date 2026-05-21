@@ -1,0 +1,75 @@
+<section class="commission-shell">
+  <header class="commission-page-header">
+    <div>
+      <h1>Comisiones</h1>
+      <p>Resumen financiero de reglas, calculos, liquidaciones y pagos.</p>
+    </div>
+    <button class="btn btn-primary btn-sm" type="button">
+      <i class="feather icon-refresh-cw me-1"></i>
+      Actualizar
+    </button>
+  </header>
+
+  <div class="dashboard-grid">
+    <app-resumen-card label="Comision pendiente" [value]="money(totalPendiente())" detail="Por liquidar" icon="feather icon-clock" />
+    <app-resumen-card label="Total liquidado" [value]="money(totalLiquidado())" detail="Periodo consultado" icon="feather icon-file-text" />
+    <app-resumen-card label="Documentos calculados" [value]="count(comisiones().length)" detail="Motor de comisiones" icon="feather icon-cpu" />
+    <app-resumen-card label="Liquidaciones" [value]="count(liquidaciones().length)" detail="Ciclos financieros" icon="feather icon-layers" />
+  </div>
+
+  <div class="dashboard-panels">
+    <article class="finance-card finance-section">
+      <div class="finance-toolbar">
+        <h2>Ultimas comisiones calculadas</h2>
+      </div>
+      <div class="table-responsive">
+        <table class="finance-table">
+          <thead>
+            <tr>
+              <th>Documento</th>
+              <th>Agencia</th>
+              <th>Servicio</th>
+              <th>Monto</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of comisiones().slice(0, 6); track item.AD21_Id || $index) {
+              <tr>
+                <td>{{ text(item, ['AD21_NumeroDocumento', 'numeroDocumento']) }}</td>
+                <td>{{ text(item, ['AD21_NombreAgencia', 'nombreAgencia']) }}</td>
+                <td>{{ text(item, ['AD21_NombreServicio', 'nombreServicio']) }}</td>
+                <td class="fw-semibold">{{ money(+text(item, ['AD21_MontoComision', 'montoComision'], '0')) }}</td>
+                <td><app-estado-badge [estado]="text(item, ['AD21_Estado', 'estado'], 'PENDIENTE')" /></td>
+              </tr>
+            } @empty {
+              <tr><td colspan="5"><div class="finance-empty">Sin comisiones calculadas.</div></td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <article class="finance-card finance-section">
+      <div class="finance-toolbar">
+        <h2>Control de liquidaciones</h2>
+      </div>
+      <div class="liquidacion-stack">
+        @for (item of liquidaciones().slice(0, 5); track item.AD22_Id || $index) {
+          <div class="liquidacion-row">
+            <div>
+              <strong>{{ text(item, ['AD22_NumeroLiquidacion', 'numeroLiquidacion']) }}</strong>
+              <span>{{ text(item, ['AD22_NombreAgencia', 'nombreAgencia']) }}</span>
+            </div>
+            <div class="text-end">
+              <strong>{{ money(+text(item, ['AD22_Total', 'total'], '0')) }}</strong>
+              <app-estado-badge [estado]="text(item, ['AD22_Estado', 'estado'], 'BORRADOR')" />
+            </div>
+          </div>
+        } @empty {
+          <div class="finance-empty">No hay liquidaciones registradas.</div>
+        }
+      </div>
+    </article>
+  </div>
+</section>

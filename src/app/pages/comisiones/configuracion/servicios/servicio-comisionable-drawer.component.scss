@@ -1,0 +1,144 @@
+.drawer-backdrop {
+  background: rgba(15, 23, 42, 0.34);
+  inset: 0;
+  position: fixed;
+  z-index: 1040;
+}
+
+.drawer-panel {
+  background: #ffffff;
+  box-shadow: -16px 0 40px rgba(15, 23, 42, 0.16);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-width: 520px;
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: min(520px, 100vw);
+  z-index: 1041;
+}
+
+header {
+  align-items: flex-start;
+  border-bottom: 1px solid #e5eaf1;
+  display: flex;
+  justify-content: space-between;
+  padding: 18px;
+
+  span {
+    color: #667085;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  h2 {
+    font-size: 1.1rem;
+    font-weight: 800;
+    margin: 2px 0 0;
+  }
+}
+
+form {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  overflow: auto;
+  padding: 16px;
+}
+
+.form-section {
+  border: 1px solid #edf1f6;
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+h3 {
+  font-size: 0.9rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+label span {
+  color: #667085;
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.form-control {
+  border-color: #e5eaf1;
+  border-radius: 8px;
+  font-size: 0.84rem;
+}
+
+.switch-row {
+  align-items: center;
+  background: #f8fafc;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  padding: 12px;
+
+  small {
+    color: #667085;
+    display: block;
+  }
+}
+
+.suggestions {
+  border: 1px solid #e5eaf1;
+  border-radius: 8px;
+  display: grid;
+  max-height: 220px;
+  overflow: auto;
+
+  button {
+    background: #ffffff;
+    border: 0;
+    border-bottom: 1px solid #edf1f6;
+    display: grid;
+    gap: 2px;
+    padding: 10px 12px;
+    text-align: left;
+
+    &:hover {
+      background: #f8fafc;
+    }
+  }
+
+  span {
+    color: #667085;
+    font-size: 0.78rem;
+  }
+}
+
+.hint {
+  color: #667085;
+}
+
+.error,
+.duplicate-alert {
+  color: #b91c1c;
+  font-size: 0.78rem;
+}
+
+.duplicate-alert {
+  background: #fee2e2;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+footer {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: auto;
+  padding-top: 4px;
+}
