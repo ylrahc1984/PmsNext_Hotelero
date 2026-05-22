@@ -288,7 +288,9 @@
                               <button
                                 type="button"
                                 class="btn btn-link p-0 lh-1 text-warning"
-                                title="Ver observacion del cliente"
+                                [ngbTooltip]="getObservacionTooltip(reserva, 'cliente')"
+                                container="body"
+                                placement="top"
                                 aria-label="Ver observacion del cliente"
                                 (click)="openObservacionDetalle(reserva, 'cliente')"
                               >
@@ -299,7 +301,9 @@
                               <button
                                 type="button"
                                 class="btn btn-link p-0 lh-1 indicator-row__icon--operacion"
-                                title="Ver observacion operacion"
+                                [ngbTooltip]="getObservacionTooltip(reserva, 'operacion')"
+                                container="body"
+                                placement="top"
                                 aria-label="Ver observacion operacion"
                                 (click)="onEditarObservacion(getDetalleObservacionOperacion(reserva))"
                               >

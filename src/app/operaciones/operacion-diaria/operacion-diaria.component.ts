@@ -562,6 +562,16 @@ export class OperacionDiariaComponent implements OnInit {
     return (value ?? '').toString().trim();
   }
 
+  getObservacionTooltip(reserva: ReservaOperacionAgrupada, tipo: 'cliente' | 'operacion'): string {
+    const detalles = reserva?.detalles ?? [];
+    const observaciones = detalles
+      .map((detalle) => (tipo === 'cliente' ? detalle?.observacion : detalle?.observacionOperacion))
+      .map((value) => (value ?? '').toString().trim())
+      .filter((value, index, arr) => !!value && arr.indexOf(value) === index);
+
+    return observaciones.join('\n');
+  }
+
   getDetalleObservacionOperacion(reserva: ReservaOperacionAgrupada): OperacionDetalle {
     return reserva.detalles.find((detalle) => this.hasObservacionOperacion(detalle)) ?? reserva.detallePrincipal;
   }
