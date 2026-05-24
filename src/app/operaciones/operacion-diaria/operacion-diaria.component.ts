@@ -91,7 +91,7 @@ export class OperacionDiariaComponent implements OnInit {
   readonly pageSizes = [25, 50, 100];
   selectedBloqueHora = '';
   page = 1;
-  pageSize = 50;
+  pageSize = 100;
   totalRegistros = 0;
   expandedReservas = new Set<string>();
   checkingIn = new Set<number | string>();
