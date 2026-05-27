@@ -11,36 +11,36 @@ $Menu-collapsed-width: 80px;
 
 // color list for build layouts
 // temp variables
-$theme-color: linear-gradient(-135deg, #1de9b6 0%, #1dc4e9 100%);
-$theme-color2: linear-gradient(-135deg, #899fd4 0%, #a389d4 100%);
-$primary-color: #04a9f5;
+$theme-color: linear-gradient(135deg, #2563eb 0%, #00d8b4 100%);
+$theme-color2: linear-gradient(135deg, #0e3a44 0%, #2dd4bf 100%);
+$primary-color: #2563eb;
 $warning-color: #f4c22b;
 $danger-color: #f44236;
-$success-color: #1de9b6;
+$success-color: #00d8b4;
 $purple-color: #a389d4;
-$info-color: #3ebfea;
-$secondary-color: #748892;
+$info-color: #2dd4bf;
+$secondary-color: #64748b;
 $default-color: #d6d6d6;
 $light-color: #f2f2f2;
-$dark-color: #37474f;
+$dark-color: #0b1d2a;
 $inverse-color: $dark-color;
-$theme-border: #eaeaea;
+$theme-border: rgba(148, 163, 184, 0.16);
 $white: #fff;
 
 // header
-$brand-background: #3f4d67;
-$header-dark-background: #3f4d67;
+$brand-background: #22314d;
+$header-dark-background: #22314d;
 $header-dark-text-color: #fff;
 $header-light-background: #fff;
-$header-light-text-color: #3f4d67;
+$header-light-text-color: #0f172a;
 
 // Menu
-$menu-caption-color: #14171d;
-$menu-dark-background: #3f4d67;
-$menu-dark-text-color: #a9b7d0;
+$menu-caption-color: #d9e4f7;
+$menu-dark-background: #22314d;
+$menu-dark-text-color: #b8c4d9;
 $menu-light-background: #fff;
-$menu-light-text-color: #3f4d67;
-$menu-active-color: #04a9f5;
+$menu-light-text-color: #0f172a;
+$menu-active-color: #00d8b4;
 
 // dark layout colors
 $dark-layout: #212224;
@@ -63,9 +63,9 @@ $color-title-color: $primary-color, #ff5252, #9575cd, #23b7e5, color.adjust($dar
 
 $theme-font-family: 'Open Sans', sans-serif;
 $theme-font-size: 14px;
-$theme-background: #f4f7fa;
-$theme-font-color: #888;
-$theme-heading-color: #111;
+$theme-background: #f4f7fb;
+$theme-font-color: #64748b;
+$theme-heading-color: #0f172a;
 
 $layout-6-bg-color: #23b7e5;
 
@@ -73,7 +73,7 @@ $color-name: c-blue, c-red, c-green, c-yellow, c-purple;
 $color-color: $primary-color, $danger-color, $success-color, $warning-color, $purple-color;
 $color-bt-name: primary, danger, success, warning, info;
 $color-bt-color: $primary-color, $danger-color, $success-color, $warning-color, $info-color; // form-control variables
-$form-bg: #f0f3f6;
+$form-bg: #f8fafc;
 
 $theme-colors: () !default;
 

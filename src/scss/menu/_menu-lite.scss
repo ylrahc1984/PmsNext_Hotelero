@@ -141,7 +141,11 @@
   padding: 0;
   position: relative;
   top: 0;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.82);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   color: $header-light-text-color;
   width: calc(100% - #{$Menu-width});
   margin-left: $Menu-width;
@@ -562,7 +566,7 @@
 }
 
 .navbar-brand {
-  background: $menu-dark-background;
+  background: linear-gradient(180deg, #22314d 0%, #1b2740 100%);
 }
 
 .pcoded-header,
@@ -578,7 +582,7 @@
   z-index: 1029;
   position: fixed;
   transition: all 0.3s ease-in-out;
-  box-shadow: 1px 0 20px 0 rgb(63, 77, 103);
+  box-shadow: 0 10px 40px rgba(15, 23, 42, 0.18);
 
   ul {
     padding-left: 0;
@@ -704,8 +708,12 @@
         padding: 7px 15px;
         margin: 5px 0 0;
         display: block;
-        border-radius: 0;
+        border-radius: 0 14px 14px 0;
         position: relative;
+        transition:
+          background-color 0.22s ease,
+          color 0.22s ease,
+          box-shadow 0.22s ease;
 
         .pcoded-mtext {
           position: relative;
@@ -816,18 +824,19 @@
     }
     .nav-link:hover,
     .nav-link:focus {
-      color: $primary-color;
+      color: $white;
+      background: rgba(255, 255, 255, 0.06);
     }
   }
   // for navbar
   width: $Menu-width;
   height: 100vh;
   top: 0;
-  background: $menu-dark-background;
+  background: linear-gradient(180deg, #22314d 0%, #1b2740 100%);
   color: $menu-dark-text-color;
 
   .pcoded-submenu {
-    background: color.adjust($header-dark-background, $lightness: -3%);
+    background: rgba(11, 29, 42, 0.22);
     padding: 15px 0;
   }
 
@@ -1062,7 +1071,8 @@
   }
 
   .pcoded-menu-caption {
-    color: #e8edf7;
+    color: rgba(232, 237, 247, 0.74);
+    letter-spacing: 0.08em;
   }
 
   .pcoded-inner-navbar {
@@ -1071,7 +1081,8 @@
       &:focus,
       &:hover {
         > a {
-          color: #1dc4e9;
+          color: $white;
+          background: rgba(255, 255, 255, 0.06);
         }
       }
 
@@ -1081,7 +1092,7 @@
         &:hover {
           > a {
             &:before {
-              background: #1dc4e9;
+              background: $menu-active-color;
             }
           }
         }
@@ -1093,7 +1104,7 @@
       &.pcoded-trigger {
         &:after {
           content: '';
-          background-color: #1dc4e9;
+          background-color: $menu-active-color;
           z-index: 1027;
           position: absolute;
           left: 0;
@@ -1103,8 +1114,15 @@
         }
 
         > a {
-          background: color.adjust($menu-dark-background, $lightness: -6%);
+          background: rgba(37, 99, 235, 0.14);
           color: $white;
+          box-shadow:
+            inset 0 0 20px rgba(0, 216, 180, 0.05),
+            0 8px 22px rgba(15, 23, 42, 0.1);
+        }
+
+        > a .pcoded-micon {
+          color: $menu-active-color;
         }
       }
     }

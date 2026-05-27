@@ -1,21 +1,25 @@
 .welcome-card {
   background:
-    radial-gradient(circle at top right, rgba(255, 255, 255, 0.2), transparent 34%),
-    linear-gradient(135deg, var(--color-primary), var(--color-accent));
-  border-radius: 20px;
+    radial-gradient(circle at top right, rgba(0, 216, 180, 0.24), transparent 34%),
+    radial-gradient(circle at bottom left, rgba(255, 255, 255, 0.14), transparent 30%),
+    linear-gradient(135deg, #22314d 0%, #2563eb 100%);
+  border-radius: 24px;
   padding: 22px 28px;
   color: #fff;
   display: flex;
   gap: 18px;
   align-items: center;
   min-height: 208px;
-  box-shadow: var(--shadow-soft, 0 18px 44px rgba(15, 23, 42, 0.18));
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  transition: all 0.3s ease;
+  box-shadow: 0 18px 50px rgba(37, 99, 235, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition:
+    transform 0.22s ease,
+    box-shadow 0.22s ease;
 }
 
 .welcome-card:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
+  box-shadow: 0 22px 58px rgba(37, 99, 235, 0.22);
 }
 
 .welcome-card__avatar {
@@ -29,6 +33,7 @@
   background: rgba(255, 255, 255, 0.18);
   border: 1px solid rgba(255, 255, 255, 0.24);
   backdrop-filter: blur(10px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
   flex: 0 0 auto;
 }
 
@@ -49,7 +54,8 @@
   margin: 0;
   font-size: clamp(1.7rem, 3vw, 2.4rem);
   line-height: 1.05;
-  color: rgba(255, 255, 255, 0.78);
+  color: #ffffff;
+  font-weight: 800;
 }
 
 .welcome-card__description {
@@ -68,8 +74,9 @@
   border-radius: 999px;
   padding: 0.42rem 0.8rem;
   font-size: 0.82rem;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 @media (max-width: 767.98px) {
