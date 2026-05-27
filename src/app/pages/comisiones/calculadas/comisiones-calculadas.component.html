@@ -84,8 +84,13 @@
       <button class="btn btn-outline-secondary btn-sm" type="button" (click)="exportExcel()" [disabled]="!visibleGridRows().length">
         Exportar Excel
       </button>
-      <button class="btn btn-outline-secondary btn-sm" type="button" (click)="generarComisiones()">
-        Generar Comisiones
+      <button
+        class="btn btn-outline-secondary btn-sm"
+        type="button"
+        (click)="generarComisiones()"
+        [disabled]="generandoComisiones() || !rows().length || !!liquidacionValidationMessage()"
+      >
+        {{ generandoComisiones() ? 'Generando...' : 'Generar Comisiones' }}
       </button>
       <button class="btn btn-outline-secondary btn-sm" type="button" (click)="recalcular()" [disabled]="loading()">
         Recalcular
@@ -103,6 +108,24 @@
 
   @if (actionMessage()) {
     <div class="console-alert info">{{ actionMessage() }}</div>
+  }
+
+  @if (rows().length && liquidacionValidationMessage() && !errorMessage()) {
+    <div class="console-alert error">{{ liquidacionValidationMessage() }}</div>
+  }
+
+  @if (resultadosLiquidacion().length) {
+    <section class="liquidation-results">
+      @for (result of resultadosLiquidacion(); track result.agencia) {
+        <div class="liquidation-result" [class.success]="result.ok" [class.error]="!result.ok">
+          <strong>{{ result.agencia }} · {{ result.nomAgencia }}</strong>
+          <span>{{ result.mensaje }}</span>
+          @if (result.idGenerado) {
+            <code>{{ result.idGenerado }}</code>
+          }
+        </div>
+      }
+    </section>
   }
 
   <section class="grid-shell">

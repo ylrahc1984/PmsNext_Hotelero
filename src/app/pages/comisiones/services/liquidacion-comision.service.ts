@@ -1,7 +1,13 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { LiquidacionComision } from '../interfaces/liquidacion-comision.interface';
+import {
+  LiquidacionComision,
+  LiquidacionComisionRequest,
+  LiquidacionDetalleResponse,
+  LiquidacionListFilters,
+  LiquidacionResumen
+} from '../interfaces/liquidacion-comision.interface';
 import { QueryParams, comisionesApiUrl, toHttpParams } from './comisiones-api.util';
 
 @Injectable({ providedIn: 'root' })
@@ -13,11 +19,27 @@ export class LiquidacionComisionService {
     return this.http.post<LiquidacionComision>(this.apiUrl, payload);
   }
 
+  crearLiquidacion(request: LiquidacionComisionRequest): Observable<unknown> {
+    return this.http.post<unknown>(this.apiUrl, request);
+  }
+
+  listarLiquidaciones(params?: LiquidacionListFilters): Observable<LiquidacionResumen[]> {
+    return this.http.get<LiquidacionResumen[]>(this.apiUrl, { params: toHttpParams(params as QueryParams) });
+  }
+
+  obtenerLiquidacion(id: string): Observable<LiquidacionDetalleResponse> {
+    return this.http.get<LiquidacionDetalleResponse>(`${this.apiUrl}/${encodeURIComponent(id)}`);
+  }
+
+  obtenerVoucher(id: string): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${encodeURIComponent(id)}/voucher`, { responseType: 'blob' });
+  }
+
   actualizar(id: number, payload: LiquidacionComision): Observable<LiquidacionComision> {
     return this.http.put<LiquidacionComision>(`${this.apiUrl}/${id}`, payload);
   }
 
-  obtener(id: number): Observable<LiquidacionComision> {
+  obtener(id: number | string): Observable<LiquidacionComision> {
     return this.http.get<LiquidacionComision>(`${this.apiUrl}/${id}`);
   }
 
@@ -25,20 +47,32 @@ export class LiquidacionComisionService {
     return this.http.get<LiquidacionComision[]>(this.apiUrl, { params: toHttpParams(params) });
   }
 
-  existe(id: number): Observable<boolean> {
+  existe(id: number | string): Observable<boolean> {
     return this.http.get<boolean>(`${this.apiUrl}/${id}/existe`);
   }
 
-  cerrar(id: number): Observable<void> {
-    return this.http.patch<void>(`${this.apiUrl}/${id}/cerrar`, {});
+  cerrar(id: number | string): Observable<void> {
+    return this.cerrarLiquidacion(id);
   }
 
-  pagar(id: number): Observable<void> {
-    return this.http.patch<void>(`${this.apiUrl}/${id}/pagar`, {});
+  cerrarLiquidacion(id: number | string): Observable<void> {
+    return this.http.patch<void>(`${this.apiUrl}/${encodeURIComponent(String(id))}/cerrar`, {});
   }
 
-  anular(id: number, payload: Record<string, unknown> = {}): Observable<void> {
-    return this.http.patch<void>(`${this.apiUrl}/${id}/anular`, payload);
+  pagar(id: number | string): Observable<void> {
+    return this.pagarLiquidacion(id);
+  }
+
+  pagarLiquidacion(id: number | string): Observable<void> {
+    return this.http.patch<void>(`${this.apiUrl}/${encodeURIComponent(String(id))}/pagar`, {});
+  }
+
+  anular(id: number | string, payload: Record<string, unknown> = {}): Observable<void> {
+    return this.anularLiquidacion(id, payload);
+  }
+
+  anularLiquidacion(id: number | string, payload: Record<string, unknown> = {}): Observable<void> {
+    return this.http.patch<void>(`${this.apiUrl}/${encodeURIComponent(String(id))}/anular`, payload);
   }
 
   borradores(params?: QueryParams): Observable<LiquidacionComision[]> {

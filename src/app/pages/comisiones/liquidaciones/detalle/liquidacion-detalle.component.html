@@ -1,32 +1,204 @@
-<section class="commission-shell">
-  <header class="commission-page-header">
-    <div>
-      <h1>Detalle de liquidacion</h1>
-      <p>Ficha financiera y trazabilidad del ciclo seleccionado.</p>
-    </div>
-    <a class="btn btn-outline-secondary btn-sm" routerLink="/comisiones/liquidaciones">
-      <i class="feather icon-arrow-left me-1"></i>
-      Volver
-    </a>
-  </header>
-
-  @if (liquidacion(); as item) {
-    <article class="finance-card finance-section">
-      <div class="detail-top">
-        <div>
-          <span>{{ text(item, ['AD22_NumeroLiquidacion']) }}</span>
-          <h2>{{ text(item, ['AD22_NombreAgencia']) }}</h2>
+<section class="settlement-document">
+  @if (cabecera(); as item) {
+    <header class="document-header">
+      <div>
+        <span class="eyebrow">Liquidacion de Comision</span>
+        <div class="title-line">
+          <h1>{{ item.AD19_Id }}</h1>
+          <span class="status-chip" [class]="statusClass(item.AD19_Estado)">{{ item.AD19_Estado || 'BORRADOR' }}</span>
         </div>
-        <app-estado-badge [estado]="text(item, ['AD22_Estado'], 'BORRADOR')" />
+        <p>Periodo: {{ formatDate(item.AD19_FechaInicio) }} - {{ formatDate(item.AD19_FechaFin) }}</p>
       </div>
-      <div class="totals-grid">
-        <div><span>Periodo</span><strong>{{ text(item, ['AD22_FechaInicio']) }} - {{ text(item, ['AD22_FechaFin']) }}</strong></div>
-        <div><span>Moneda</span><strong>{{ text(item, ['AD22_Moneda'], 'USD') }}</strong></div>
-        <div><span>Total</span><strong>{{ money(item, ['AD22_Total']) }}</strong></div>
+      <div class="header-actions">
+        <button class="btn btn-outline-primary btn-sm" type="button" (click)="ejecutarAccion('cerrar')" [disabled]="!!actionLoading()">Cerrar</button>
+        <button class="btn btn-success btn-sm" type="button" (click)="ejecutarAccion('pagar')" [disabled]="!!actionLoading()">Pagar</button>
+        <button class="btn btn-outline-secondary btn-sm" type="button" (click)="imprimir()">Imprimir</button>
+        <button class="btn btn-outline-danger btn-sm" type="button" (click)="ejecutarAccion('anular')" [disabled]="!!actionLoading()">Anular</button>
+        <a class="btn btn-outline-secondary btn-sm" routerLink="/comisiones/liquidaciones">
+          <i class="feather icon-arrow-left me-1"></i>
+          Volver
+        </a>
       </div>
-      <p class="notes">{{ text(item, ['AD22_Observaciones'], 'Sin observaciones.') }}</p>
-    </article>
+    </header>
+
+    @if (errorMessage()) {
+      <div class="console-alert error">{{ errorMessage() }}</div>
+    }
+
+    @if (actionMessage()) {
+      <div class="console-alert info">{{ actionMessage() }}</div>
+    }
+
+    <section class="summary-grid">
+      <div class="summary-tile">
+        <span>Total facturado</span>
+        <strong>{{ formatMoney(metrics().facturado) }}</strong>
+      </div>
+      <div class="summary-tile accent">
+        <span>Total comision</span>
+        <strong>{{ formatMoney(metrics().comision) }}</strong>
+      </div>
+      <div class="summary-tile">
+        <span>Documentos</span>
+        <strong>{{ metrics().documentos }}</strong>
+      </div>
+      <div class="summary-tile">
+        <span>Reservas</span>
+        <strong>{{ metrics().reservas }}</strong>
+      </div>
+      <div class="summary-tile">
+        <span>Pax</span>
+        <strong>{{ metrics().pax }}</strong>
+      </div>
+    </section>
+
+    <section class="agency-panel">
+      <div>
+        <span>Codigo agencia</span>
+        <strong>{{ item.AD19_CodAgencia }}</strong>
+      </div>
+      <div class="wide">
+        <span>Nombre agencia</span>
+        <strong>{{ item.AD19_NomAgencia }}</strong>
+      </div>
+      <div>
+        <span>Operador</span>
+        <strong>{{ item.AD19_Operador || 'N/D' }}</strong>
+      </div>
+      <div>
+        <span>Fecha liquidacion</span>
+        <strong>{{ formatDateTime(item.AD19_FechaLiquidacion) }}</strong>
+      </div>
+    </section>
+
+    <section class="detail-table-shell">
+      <div class="section-title">
+        <div>
+          <span>Detalle AD20</span>
+          <h2>Documentos liquidados</h2>
+        </div>
+        <strong>{{ detalle().length }} lineas</strong>
+      </div>
+
+      <div class="table-scroll">
+        <table class="detail-table">
+          <thead>
+            <tr>
+              <th>Documento</th>
+              <th>Fecha</th>
+              <th>Reserva</th>
+              <th>Servicio</th>
+              <th class="number">Pax</th>
+              <th class="number">Base</th>
+              <th>Tipo Comision</th>
+              <th class="number">Valor</th>
+              <th class="number">Comision</th>
+              <th>Forma Pago</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (loading()) {
+              @for (row of skeletonRows; track $index) {
+                <tr class="skeleton-row">
+                  <td colspan="11"><span></span></td>
+                </tr>
+              }
+            } @else {
+              @for (linea of detalle(); track linea.AD20_Id) {
+                <tr>
+                  <td class="document-cell">{{ documentLabel(linea) }}</td>
+                  <td>{{ formatDate(linea.AD20_FechaDocumento) }}</td>
+                  <td>{{ linea.AD20_CodReserva || 'N/D' }}</td>
+                  <td>
+                    <div class="service-cell">
+                      <strong>{{ linea.AD20_NomServicio }}</strong>
+                      <span>{{ linea.AD20_CodServicio }}</span>
+                    </div>
+                  </td>
+                  <td class="number">{{ formatNumber(linea.AD20_CantidadPax) }}</td>
+                  <td class="money">{{ formatMoney(linea.AD20_MontoBase) }}</td>
+                  <td>
+                    <span class="soft-chip" [class]="commissionClass(linea.AD20_TipoComision)">{{ linea.AD20_TipoComision }}</span>
+                  </td>
+                  <td class="money">{{ formatMoney(linea.AD20_ValorComision) }}</td>
+                  <td class="money commission">{{ formatMoney(linea.AD20_MontoComision) }}</td>
+                  <td><span class="pay-chip">{{ linea.AD20_FormaPago || 'N/D' }}</span></td>
+                  <td><span class="line-status">{{ linea.AD20_Estado || 'P' }}</span></td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="11">
+                    <div class="empty-state">Esta liquidacion no contiene detalle registrado.</div>
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="bottom-grid">
+      <div class="activity-panel">
+        <div class="section-title">
+          <div>
+            <span>Actividad</span>
+            <h2>Timeline financiero</h2>
+          </div>
+        </div>
+        <div class="timeline">
+          @for (step of timeline(); track step.label) {
+            <div class="timeline-item" [class.active]="step.active">
+              <span></span>
+              <div>
+                <strong>{{ step.label }}</strong>
+                <small>{{ step.detail }}</small>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <aside class="totals-panel">
+        <div>
+          <span>Subtotal base</span>
+          <strong>{{ formatMoney(metrics().facturado) }}</strong>
+        </div>
+        <div>
+          <span>Total comision</span>
+          <strong>{{ formatMoney(metrics().comision) }}</strong>
+        </div>
+        <div>
+          <span>Cantidad pax</span>
+          <strong>{{ metrics().pax }}</strong>
+        </div>
+        <div>
+          <span>Cantidad documentos</span>
+          <strong>{{ metrics().documentos }}</strong>
+        </div>
+      </aside>
+    </section>
+
+    <p class="notes">{{ item.AD19_Observaciones || 'Sin observaciones registradas.' }}</p>
   } @else {
-    <div class="finance-empty">No se encontro la liquidacion solicitada.</div>
+    <header class="document-header">
+      <div>
+        <span class="eyebrow">Liquidacion de Comision</span>
+        <h1>Detalle no disponible</h1>
+        <p>Seleccione una liquidacion valida desde el listado.</p>
+      </div>
+      <a class="btn btn-outline-secondary btn-sm" routerLink="/comisiones/liquidaciones">Volver</a>
+    </header>
+
+    @if (loading()) {
+      <section class="summary-grid">
+        @for (row of skeletonRows; track $index) {
+          <div class="summary-tile skeleton-tile"><span></span><strong></strong></div>
+        }
+      </section>
+    } @else {
+      <div class="empty-state">No se encontro la liquidacion solicitada.</div>
+    }
   }
 </section>

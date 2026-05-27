@@ -49,20 +49,6 @@
           </button>
 
           <button
-            class="btn btn-outline-info rsv-action-btn rsv-action-btn--outline rsv-action-btn--compact"
-            type="button"
-            (click)="imprimirDocumento()"
-            [disabled]="loading || busyPdf || !encabezado?.numeroConsecutivo"
-            title="Imprimir PDF"
-            aria-label="Imprimir PDF"
-          >
-            <span class="rsv-action-btn__icon">
-              <span *ngIf="busyPdf" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-              <i *ngIf="!busyPdf" class="feather icon-printer"></i>
-            </span>
-          </button>
-
-          <button
             class="btn btn-outline-primary rsv-action-btn rsv-action-btn--outline rsv-action-btn--compact"
             type="button"
             (click)="imprimirDocumentoPos()"
@@ -97,6 +83,69 @@
       </div>
 
       <ng-container *ngIf="encabezado as h">
+        <section class="doc-electronic-panel mt-3" aria-label="Documentos electrónicos">
+          <div class="doc-electronic-panel__header">
+            <div class="doc-electronic-panel__title">
+              <i class="feather icon-file-text" aria-hidden="true"></i>
+              <span>Documentos Electrónicos</span>
+            </div>
+            <span class="doc-electronic-panel__meta">{{ h.tipDocu || tipoDocu }} · {{ documentoCodigo }}</span>
+          </div>
+
+          <div class="doc-download-actions">
+            <button
+              type="button"
+              class="doc-download-action doc-download-action--pdf"
+              (click)="descargarDocumentoElectronico('pdf')"
+              [disabled]="loading || downloadingDocumento.pdf"
+              title="Descargar PDF"
+            >
+              <span class="doc-download-action__icon" aria-hidden="true">
+                <span *ngIf="downloadingDocumento.pdf" class="spinner-border spinner-border-sm"></span>
+                <i *ngIf="!downloadingDocumento.pdf" class="feather icon-file"></i>
+              </span>
+              <span class="doc-download-action__text">
+                <strong>PDF</strong>
+                <small>Comprobante</small>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="doc-download-action doc-download-action--xml"
+              (click)="descargarDocumentoElectronico('xmlFirmado')"
+              [disabled]="loading || downloadingDocumento.xmlFirmado"
+              title="Descargar XML firmado"
+            >
+              <span class="doc-download-action__icon" aria-hidden="true">
+                <span *ngIf="downloadingDocumento.xmlFirmado" class="spinner-border spinner-border-sm"></span>
+                <i *ngIf="!downloadingDocumento.xmlFirmado" class="feather icon-file-text"></i>
+              </span>
+              <span class="doc-download-action__text">
+                <strong>XML Firmado</strong>
+                <small>Archivo fiscal</small>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="doc-download-action doc-download-action--hacienda"
+              (click)="descargarDocumentoElectronico('xmlRespuesta')"
+              [disabled]="loading || downloadingDocumento.xmlRespuesta"
+              title="Descargar XML Hacienda"
+            >
+              <span class="doc-download-action__icon" aria-hidden="true">
+                <span *ngIf="downloadingDocumento.xmlRespuesta" class="spinner-border spinner-border-sm"></span>
+                <i *ngIf="!downloadingDocumento.xmlRespuesta" class="feather icon-check-circle"></i>
+              </span>
+              <span class="doc-download-action__text">
+                <strong>XML Hacienda</strong>
+                <small>Respuesta</small>
+              </span>
+            </button>
+          </div>
+        </section>
+
         <div class="row g-3 mt-1">
           <div class="col-lg-8">
             <div class="card shadow-none border h-100">

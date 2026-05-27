@@ -1,13 +1,15 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormArray, FormControl, FormGroup, NonNullableFormBuilder, Validators } from '@angular/forms';
+import { HttpResponse } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { DocumentoDetalleService } from '../../services/documento-detalle.service';
+import { FacturacionDocumentosService } from '../../services/facturacion-documentos.service';
 import {
   CambioFormaPagoPayload,
   DocumentoDetalleItem,
@@ -22,6 +24,7 @@ import { FormaPagoService } from 'src/app/demo/administracion/forma-pago/forma-p
 import { AuthService } from 'src/app/core/services/auth.service';
 import { QzPrintService } from 'src/app/core/services/qz-print.service';
 import { PosDocumentPrintBuilder } from 'src/app/core/printing/pos-document-print.builder';
+import { ToastService } from 'src/app/core/services/toast.service';
 
 type DocumentoResumen = {
   subtotal: number;
@@ -47,6 +50,8 @@ type CambioFormaPagoForm = {
   pagos: FormArray<FormGroup<CambioPagoForm>>;
 };
 
+type DocumentoElectronicoKey = 'pdf' | 'xmlFirmado' | 'xmlRespuesta';
+
 @Component({
   selector: 'app-documento-detalle',
   standalone: true,
@@ -70,8 +75,12 @@ export class DocumentoDetalleComponent implements OnInit {
 
   loading = false;
   errorMsg: string | null = null;
-  busyPdf = false;
   busyPos = false;
+  downloadingDocumento: Record<DocumentoElectronicoKey, boolean> = {
+    pdf: false,
+    xmlFirmado: false,
+    xmlRespuesta: false
+  };
   showCambioFormaPagoModal = false;
   formasPago: FormaPago[] = [];
   formasPagoLoading = false;
@@ -82,10 +91,12 @@ export class DocumentoDetalleComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly detalleService = inject(DocumentoDetalleService);
+  private readonly facturacionDocumentosService = inject(FacturacionDocumentosService);
   private readonly formaPagoService = inject(FormaPagoService);
   private readonly authService = inject(AuthService);
   private readonly qzPrintService = inject(QzPrintService);
   private readonly posDocumentPrintBuilder = inject(PosDocumentPrintBuilder);
+  private readonly toast = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly empresaContext = inject(EmpresaContextService);
@@ -144,6 +155,45 @@ export class DocumentoDetalleComponent implements OnInit {
 
   reload(): void {
     this.fetchDetalle();
+  }
+
+  descargarDocumentoElectronico(tipoArchivo: DocumentoElectronicoKey): void {
+    if (this.downloadingDocumento[tipoArchivo]) return;
+
+    const referencia = this.getDocumentoReferencia();
+    if (!referencia.tipo || !referencia.numero) {
+      this.toast.warning('No se encontró la referencia del documento para descargar.');
+      return;
+    }
+
+    const config = this.getDescargaElectronicaConfig(tipoArchivo);
+    this.downloadingDocumento = {
+      ...this.downloadingDocumento,
+      [tipoArchivo]: true
+    };
+    this.cdr.markForCheck();
+
+    config
+      .request(referencia.tipo, referencia.serie, referencia.numero)
+      .pipe(
+        finalize(() => {
+          this.downloadingDocumento = {
+            ...this.downloadingDocumento,
+            [tipoArchivo]: false
+          };
+          this.cdr.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (response) => {
+          this.downloadBlobResponse(response, config.filename, config.mimeType);
+          this.toast.success(`${config.label} descargado correctamente.`, 2500);
+        },
+        error: (error: unknown) => {
+          this.toast.error(this.getErrorMessage(error, 'No fue posible descargar el archivo'));
+        }
+      });
   }
 
   get cambioPagoArray(): FormArray<FormGroup<CambioPagoForm>> {
@@ -224,30 +274,7 @@ export class DocumentoDetalleComponent implements OnInit {
   }
 
   imprimirDocumento(): void {
-    if (this.busyPdf) return;
-    const consecutivo = (this.encabezado?.numeroConsecutivo ?? '').toString().trim();
-    if (!consecutivo) {
-      window.alert('No se encontró el número consecutivo para imprimir.');
-      return;
-    }
-
-    this.busyPdf = true;
-    this.detalleService
-      .getPdf(this.tipoDocu, this.serieDocu || '000', consecutivo)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (data) => {
-          this.openPdfBlob(data, `Factura_${this.tipoDocu}_${this.serieDocu || '000'}_${this.numeroDocu}.pdf`);
-          this.busyPdf = false;
-          this.cdr.markForCheck();
-        },
-        error: (error: unknown) => {
-          this.busyPdf = false;
-          this.cdr.markForCheck();
-          const message = this.getErrorMessage(error);
-          window.alert(message);
-        }
-      });
+    this.descargarDocumentoElectronico('pdf');
   }
 
   async imprimirDocumentoPos(): Promise<void> {
@@ -672,25 +699,74 @@ export class DocumentoDetalleComponent implements OnInit {
     return fallback;
   }
 
-  private openPdfBlob(blob: Blob, filename: string): void {
-    try {
-      const pdfBlob = new Blob([blob], { type: 'application/pdf' });
-      const objectUrl = URL.createObjectURL(pdfBlob);
-      const opened = window.open(objectUrl, '_blank', 'noopener');
+  private getDocumentoReferencia(): { tipo: string; serie: string; numero: string } {
+    return {
+      tipo: (this.encabezado?.tipDocu || this.tipoDocu || '').toString().trim(),
+      serie: (this.encabezado?.serie || this.serieDocu || '000').toString().trim() || '000',
+      numero: (this.encabezado?.numero || this.numeroDocu || '').toString().trim()
+    };
+  }
 
-      if (!opened) {
-        const link = document.createElement('a');
-        link.href = objectUrl;
-        link.download = filename;
-        link.rel = 'noopener';
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-      }
-
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
-    } catch (err) {
-      console.error('Error abriendo PDF', err);
+  private getDescargaElectronicaConfig(tipoArchivo: DocumentoElectronicoKey): {
+    label: string;
+    filename: string;
+    mimeType: string;
+    request: (tipo: string, serie: string, numero: string) => Observable<HttpResponse<Blob>>;
+  } {
+    if (tipoArchivo === 'xmlFirmado') {
+      return {
+        label: 'XML firmado',
+        filename: 'XML_Firmado.xml',
+        mimeType: 'application/xml',
+        request: (tipo, serie, numero) => this.facturacionDocumentosService.descargarXmlFirmado(tipo, serie, numero)
+      };
     }
+
+    if (tipoArchivo === 'xmlRespuesta') {
+      return {
+        label: 'XML Hacienda',
+        filename: 'XML_Respuesta.xml',
+        mimeType: 'application/xml',
+        request: (tipo, serie, numero) => this.facturacionDocumentosService.descargarXmlRespuesta(tipo, serie, numero)
+      };
+    }
+
+    return {
+      label: 'PDF',
+      filename: 'Factura.pdf',
+      mimeType: 'application/pdf',
+      request: (tipo, serie, numero) => this.facturacionDocumentosService.descargarPdf(tipo, serie, numero)
+    };
+  }
+
+  private downloadBlobResponse(response: HttpResponse<Blob>, fallbackFilename: string, mimeType: string): void {
+    const body = response.body;
+    if (!body) {
+      throw new Error('No fue posible descargar el archivo');
+    }
+
+    const filename = this.getFilenameFromContentDisposition(response.headers.get('content-disposition')) || fallbackFilename;
+    const blob = body.type ? body : new Blob([body], { type: mimeType });
+    const objectUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = filename;
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => window.URL.revokeObjectURL(objectUrl), 100);
+  }
+
+  private getFilenameFromContentDisposition(contentDisposition: string | null): string | null {
+    if (!contentDisposition) return null;
+
+    const encodedMatch = /filename\*=UTF-8''([^;]+)/i.exec(contentDisposition);
+    if (encodedMatch?.[1]) {
+      return decodeURIComponent(encodedMatch[1].trim().replace(/^"|"$/g, ''));
+    }
+
+    const filenameMatch = /filename="?([^";]+)"?/i.exec(contentDisposition);
+    return filenameMatch?.[1]?.trim() || null;
   }
 }

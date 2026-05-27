@@ -15,42 +15,52 @@ import {
   ValueFormatterParams,
   themeQuartz
 } from 'ag-grid-community';
-import { Subscription, catchError, finalize, of } from 'rxjs';
+import { Subscription, catchError, concatMap, finalize, from, map, of, toArray } from 'rxjs';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { ComisionKpiItem, ComisionKpiStripComponent } from '../components/comisiones-calculadas/comision-kpi-strip.component';
 import { AgenciaComision } from '../interfaces/config-comision.interface';
 import { ComisionPreviewRow, ComisionPreviewResumen } from '../interfaces/comision-preview.interface';
+import { LiquidacionComisionDetalleRequest, LiquidacionComisionRequest } from '../interfaces/liquidacion-comision.interface';
 import { AgenciaComisionService } from '../services/agencia-comision.service';
 import { ComisionPreviewService } from '../services/comision-preview.service';
+import { LiquidacionComisionService } from '../services/liquidacion-comision.service';
 
 type GridRowType = 'detail' | 'footer';
 
 interface ComisionPreviewFilters {
-  empresaId: number;
-  fechaInicio: string;
-  fechaFin: string;
-  agencia: string;
-  servicio: string;
-  tipoPax: string;
-  tipoComision: string;
-  documento: string;
-  estadoDocumento: string;
+  empresaId           : number;
+  fechaInicio         : string;
+  fechaFin            : string;
+  agencia             : string;
+  servicio            : string;
+  tipoPax             : string;
+  tipoComision        : string;
+  documento           : string;
+  estadoDocumento     : string;
 }
 
 interface FinancialGridRow extends Partial<ComisionPreviewRow> {
-  __type: GridRowType;
-  __key: string;
-  __label: string;
-  __count: number;
-  __documentos: number;
-  __agencias: number;
-  __servicios: number;
+  __type          : GridRowType;
+  __key           : string;
+  __label         : string;
+  __count         : number;
+  __documentos    : number;
+  __agencias      : number;
+  __servicios     : number;
+}
+
+interface LiquidacionGenerationResult {
+  agencia     : string;
+  nomAgencia  : string;
+  ok          : boolean;
+  idGenerado ?: string;
+  mensaje     : string;
 }
 
 const EMPTY_RESUMEN: ComisionPreviewResumen = {
-  totalRegistros: 0,
-  totalMontoBase: 0,
-  totalMontoComision: 0
+  totalRegistros        : 0,
+  totalMontoBase        : 0,
+  totalMontoComision    : 0
 };
 
 @Component({
@@ -64,42 +74,45 @@ const EMPTY_RESUMEN: ComisionPreviewResumen = {
 export class ComisionesCalculadasComponent implements OnInit {
   private readonly agenciaComisionService = inject(AgenciaComisionService);
   private readonly previewService = inject(ComisionPreviewService);
+  private readonly liquidacionComisionService = inject(LiquidacionComisionService);
   private readonly authService = inject(AuthService);
   private gridApi?: GridApi<FinancialGridRow>;
   private previewRequest?: Subscription;
 
   readonly gridModules: Module[] = [AllCommunityModule];
   readonly gridTheme: Theme = themeQuartz.withParams({
-    accentColor: '#4f6f8f',
-    backgroundColor: '#ffffff',
-    borderColor: '#e1e7ef',
-    browserColorScheme: 'light',
-    fontFamily: 'Inter, Segoe UI, system-ui, sans-serif',
-    fontSize: 12,
-    foregroundColor: '#1f2937',
-    headerBackgroundColor: '#f8fafc',
-    headerTextColor: '#344054',
-    oddRowBackgroundColor: '#fbfcfe',
-    rowHoverColor: '#f1f5f9',
-    selectedRowBackgroundColor: '#edf4ff'
+    accentColor                 : '#4f6f8f',
+    backgroundColor             : '#ffffff',
+    borderColor                 : '#e1e7ef',
+    browserColorScheme          : 'light',
+    fontFamily                  : 'Inter, Segoe UI, system-ui, sans-serif',
+    fontSize                    : 12,
+    foregroundColor             : '#1f2937',
+    headerBackgroundColor       : '#f8fafc',
+    headerTextColor             : '#344054',
+    oddRowBackgroundColor       : '#fbfcfe',
+    rowHoverColor               : '#f1f5f9',
+    selectedRowBackgroundColor  : '#edf4ff'
   });
   readonly loading = signal(false);
+  readonly generandoComisiones = signal(false);
   readonly errorMessage = signal('');
   readonly actionMessage = signal('');
+  readonly resultadosLiquidacion = signal<LiquidacionGenerationResult[]>([]);
   readonly agencias = signal<AgenciaComision[]>([]);
   readonly rows = signal<ComisionPreviewRow[]>([]);
   readonly selectedRows = signal<ComisionPreviewRow[]>([]);
   readonly resumen = signal<ComisionPreviewResumen>(EMPTY_RESUMEN);
   readonly filters = signal<ComisionPreviewFilters>({
-    empresaId: 1,
-    fechaInicio: this.toDateInputValue(this.addDays(new Date(), -7)),
-    fechaFin: this.toDateInputValue(new Date()),
-    agencia: '',
-    servicio: '',
-    tipoPax: '',
-    tipoComision: '',
-    documento: '',
-    estadoDocumento: ''
+    empresaId         : 1,
+    fechaInicio       : this.toDateInputValue(this.addDays(new Date(), -7)),
+    fechaFin          : this.toDateInputValue(new Date()),
+    agencia           : '',
+    servicio          : '',
+    tipoPax           : '',
+    tipoComision      : '',
+    documento         : '',
+    estadoDocumento   : ''
   });
 
   readonly defaultColDef: ColDef<FinancialGridRow> = {
@@ -202,6 +215,12 @@ export class ComisionesCalculadasComponent implements OnInit {
       field: 'EstadoDocumento',
       width: 136,
       cellRenderer: (params: ICellRendererParams<FinancialGridRow>) => this.renderStatusBadge(params.value)
+    },
+    {
+      headerName: 'Forma Pago',
+      field: 'FormaPago',
+      width: 150,
+      cellClass: 'document-cell'
     }
   ];
 
@@ -258,6 +277,7 @@ export class ComisionesCalculadasComponent implements OnInit {
   });
 
   readonly visibleGridRows = computed<FinancialGridRow[]>(() => this.buildFinancialGridRows(this.filteredRows()));
+  readonly liquidacionValidationMessage = computed(() => this.getPreviewLiquidacionValidationMessage(this.rows()));
 
   readonly pinnedBottomRowData = computed<FinancialGridRow[]>(() => {
     const selected = this.selectedSummary();
@@ -318,6 +338,7 @@ export class ComisionesCalculadasComponent implements OnInit {
     this.loading.set(true);
     this.errorMessage.set('');
     this.actionMessage.set('');
+    this.resultadosLiquidacion.set([]);
 
     this.previewRequest = this.previewService
       .obtenerPreview({
@@ -371,12 +392,63 @@ export class ComisionesCalculadasComponent implements OnInit {
   }
 
   generarComisiones(): void {
-    const selected = this.selectedRows().length;
-    this.actionMessage.set(
-      selected
-        ? `${selected} lineas listas para generar comisiones cuando se conecte el endpoint de liquidacion.`
-        : 'Seleccione lineas del preview para generar comisiones.'
+    if (this.generandoComisiones()) {
+      return;
+    }
+
+    const registros = this.rows();
+    if (!this.validarPreviewParaLiquidacion(registros)) {
+      this.errorMessage.set(this.getPreviewLiquidacionValidationMessage(registros));
+      this.actionMessage.set('');
+      this.resultadosLiquidacion.set([]);
+      return;
+    }
+
+    const grupos = Array.from(this.agruparPreviewPorAgencia(registros).entries());
+    const confirmed = window.confirm(
+      'Se generaran liquidaciones de comision agrupadas por agencia. Si existen registros de varias agencias, se creara una liquidacion independiente para cada una. Desea continuar?'
     );
+    if (!confirmed) {
+      return;
+    }
+
+    const requests = grupos.map(([codAgencia, groupRows]) => this.crearRequestLiquidacionPorAgencia(codAgencia, groupRows));
+    this.generandoComisiones.set(true);
+    this.errorMessage.set('');
+    this.actionMessage.set(`Generando ${requests.length} liquidaciones de comision...`);
+    this.resultadosLiquidacion.set([]);
+
+    from(requests)
+      .pipe(
+        concatMap((request) =>
+          this.liquidacionComisionService.crearLiquidacion(request).pipe(
+            map((response) => this.toLiquidacionResult(request, response)),
+            catchError((error) => of(this.toLiquidacionErrorResult(request, error)))
+          )
+        ),
+        toArray(),
+        finalize(() => this.generandoComisiones.set(false))
+      )
+      .subscribe((results) => {
+        const exitosas = results.filter((result) => result.ok).length;
+        const fallidas = results.length - exitosas;
+        this.resultadosLiquidacion.set(results);
+
+        if (fallidas === 0) {
+          this.actionMessage.set(`Se generaron correctamente ${exitosas} liquidaciones de comision.`);
+          return;
+        }
+
+        const message = `Se generaron ${exitosas} liquidaciones correctamente y ${fallidas} presentaron errores.`;
+        if (exitosas === 0) {
+          this.errorMessage.set(message);
+          this.actionMessage.set('');
+          return;
+        }
+
+        this.errorMessage.set('');
+        this.actionMessage.set(message);
+      });
   }
 
   onSelectionChanged(): void {
@@ -387,6 +459,232 @@ export class ComisionesCalculadasComponent implements OnInit {
     const type = params.data?.__type ?? 'detail';
     return `grid-row-${type}`;
   };
+
+  private validarPreviewParaLiquidacion(registros: ComisionPreviewRow[]): boolean {
+    return !this.getPreviewLiquidacionValidationMessage(registros);
+  }
+
+  private getPreviewLiquidacionValidationMessage(registros: ComisionPreviewRow[]): string {
+    if (!registros.length) {
+      return 'No hay comisiones calculadas para generar liquidaciones.';
+    }
+
+    if (registros.some((row) => !this.cleanText(row.CodAgencia))) {
+      return 'Existen registros sin agencia asociada. Revise el preview antes de generar las liquidaciones.';
+    }
+
+    const incompleteRows = registros
+      .map((row, index) => ({
+        index,
+        row,
+        missingFields: this.getMissingLiquidacionFields(row)
+      }))
+      .filter((item) => item.missingFields.length);
+
+    if (!incompleteRows.length) {
+      return '';
+    }
+
+    console.groupCollapsed('[Comisiones] Registros con datos obligatorios incompletos');
+    incompleteRows.forEach(({ index, row, missingFields }) => {
+      console.warn('Registro incompleto para liquidacion', {
+        index,
+        documento: this.documentLabel(row),
+        codAgencia: row.CodAgencia,
+        nomAgencia: row.NomAgencia,
+        missingFields,
+        row
+      });
+    });
+    console.groupEnd();
+
+    return 'Existen registros con datos obligatorios incompletos. Revise el preview antes de generar las liquidaciones.';
+  }
+
+  private getMissingLiquidacionFields(row: ComisionPreviewRow): string[] {
+    return [
+      ['NomAgencia', row.NomAgencia],
+      ['TipoDocumento', row.TipoDocumento],
+      ['NumeroDocumento', row.NumeroDocumento],
+      ['FechaDocumento', row.FechaDocumento],
+      ['CodServicio', row.CodServicio],
+      ['MontoBase', row.MontoBase],
+      ['MontoComision', row.MontoComision]
+    ]
+      .filter(([, value]) => !this.hasValue(value))
+      .map(([field]) => String(field));
+  }
+
+  private agruparPreviewPorAgencia(registros: ComisionPreviewRow[]): Map<string, ComisionPreviewRow[]> {
+    return registros.reduce((groups, row) => {
+      const codAgencia = this.cleanText(row.CodAgencia);
+      const current = groups.get(codAgencia) ?? [];
+      current.push(row);
+      groups.set(codAgencia, current);
+      return groups;
+    }, new Map<string, ComisionPreviewRow[]>());
+  }
+
+  private crearRequestLiquidacionPorAgencia(codAgencia: string, registros: ComisionPreviewRow[]): LiquidacionComisionRequest {
+    const first = registros[0];
+    const filters = this.filters();
+    const fechaInicio = this.formatearFechaParaBackend(filters.fechaInicio);
+    const fechaFin = this.formatearFechaParaBackend(filters.fechaFin);
+
+    return {
+      proceso: 0,
+      aD19_Id: null,
+      aD19_EmpresaId: Number(filters.empresaId),
+      aD19_CodAgencia: codAgencia,
+      aD19_NomAgencia: this.cleanText(first?.NomAgencia),
+      aD19_FechaInicio: fechaInicio,
+      aD19_FechaFin: fechaFin,
+      aD19_TotalFacturado: this.calcularTotalFacturado(registros),
+      aD19_TotalComision: this.calcularTotalComision(registros),
+      aD19_MonedaBase: this.resolverMonedaBase(registros),
+      aD19_Estado: 'BORRADOR',
+      aD19_Observaciones: `Liquidacion generada desde preview de comisiones. Periodo: ${fechaInicio} - ${fechaFin}.`,
+      aD19_Operador: this.getOperador(),
+      detalle: registros.map((row) => this.mapearDetalleLiquidacion(row))
+    };
+  }
+
+  private mapearDetalleLiquidacion(registro: ComisionPreviewRow): LiquidacionComisionDetalleRequest {
+    return {
+      tipoDocumento: this.cleanText(registro.TipoDocumento),
+      serieDocumento: this.cleanText(registro.SerieDocumento),
+      numeroDocumento: this.cleanText(registro.NumeroDocumento),
+      fechaDocumento: this.formatearFechaParaBackend(registro.FechaDocumento),
+      codReserva: this.cleanText(registro.CodReserva),
+      codServicio: this.cleanText(registro.CodServicio),
+      nomServicio: this.cleanText(registro.NomServicio),
+      tipoPax: this.cleanText(registro.TipoPax),
+      cantidadPax: this.toNumber(registro.CantidadPax),
+      montoBase: this.toNumber(registro.MontoBase),
+      tipoComision: this.cleanText(registro.TipoComision),
+      valorComision: this.toNumber(registro.ValorComision),
+      porcentajeAplicado: this.toNumber(registro.PorcentajeAplicado),
+      montoComision: this.toNumber(registro.MontoComision),
+      estado: this.cleanText(registro.EstadoDocumento) || 'ACTIVO',
+      formaPago: this.cleanText(registro.FormaPago)
+    };
+  }
+
+  private calcularTotalFacturado(registros: ComisionPreviewRow[]): number {
+    return this.sum(registros, 'MontoBase');
+  }
+
+  private calcularTotalComision(registros: ComisionPreviewRow[]): number {
+    return this.sum(registros, 'MontoComision');
+  }
+
+  private formatearFechaParaBackend(fecha: string | Date): string {
+    if (fecha instanceof Date) {
+      return this.formatDateParts(fecha.getFullYear(), fecha.getMonth() + 1, fecha.getDate());
+    }
+
+    const text = this.cleanText(fecha);
+    if (!text) {
+      return '';
+    }
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(text)) {
+      return text;
+    }
+
+    const isoDate = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoDate) {
+      return this.formatDateParts(Number(isoDate[1]), Number(isoDate[2]), Number(isoDate[3]));
+    }
+
+    const parsed = new Date(text);
+    if (Number.isNaN(parsed.getTime())) {
+      return text;
+    }
+    return this.formatDateParts(parsed.getFullYear(), parsed.getMonth() + 1, parsed.getDate());
+  }
+
+  private resolverMonedaBase(registros: ComisionPreviewRow[]): string {
+    const monedas = [...new Set(registros.map((row) => this.cleanText(row.Moneda)).filter(Boolean))];
+    if (monedas.length <= 1) {
+      return monedas[0] ?? '';
+    }
+
+    // TODO: reemplazar por la moneda base oficial del sistema cuando este disponible en contexto.
+    return monedas[0];
+  }
+
+  private toLiquidacionResult(request: LiquidacionComisionRequest, response: unknown): LiquidacionGenerationResult {
+    return {
+      agencia: request.aD19_CodAgencia,
+      nomAgencia: request.aD19_NomAgencia,
+      ok: true,
+      idGenerado: this.extractResponseText(response, ['aD19_Id', 'AD19_Id', 'idGenerado', 'numeroLiquidacion', 'AD22_NumeroLiquidacion']),
+      mensaje: this.extractResponseText(response, ['mensaje', 'respuesta', 'message']) || 'Liquidacion registrada correctamente.'
+    };
+  }
+
+  private toLiquidacionErrorResult(request: LiquidacionComisionRequest, error: unknown): LiquidacionGenerationResult {
+    return {
+      agencia: request.aD19_CodAgencia,
+      nomAgencia: request.aD19_NomAgencia,
+      ok: false,
+      mensaje: this.extractErrorMessage(error)
+    };
+  }
+
+  private extractResponseText(response: unknown, keys: string[]): string {
+    if (typeof response === 'string') {
+      return response;
+    }
+    if (!response || typeof response !== 'object') {
+      return '';
+    }
+
+    const record = response as Record<string, unknown>;
+    const nested = [record, record['data'], record['datos']].filter((value): value is Record<string, unknown> => !!value && typeof value === 'object');
+    for (const item of nested) {
+      for (const key of keys) {
+        const value = this.cleanText(item[key]);
+        if (value) {
+          return value;
+        }
+      }
+    }
+    return '';
+  }
+
+  private extractErrorMessage(error: unknown): string {
+    if (!error || typeof error !== 'object') {
+      return 'Error al registrar liquidacion.';
+    }
+    const record = error as Record<string, unknown>;
+    const payload = record['error'];
+    if (typeof payload === 'string') {
+      return payload;
+    }
+    const payloadRecord = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : record;
+    return this.extractResponseText(payloadRecord, ['mensaje', 'respuesta', 'message', 'title']) || 'Error al registrar liquidacion.';
+  }
+
+  private hasValue(value: unknown): boolean {
+    return value !== null && value !== undefined && String(value).trim() !== '';
+  }
+
+  private cleanText(value: unknown): string {
+    return String(value ?? '').trim();
+  }
+
+  private toNumber(value: unknown): number {
+    return Number(value ?? 0) || 0;
+  }
+
+  private formatDateParts(year: number, month: number, day: number): string {
+    return `${this.pad2(day)}/${this.pad2(month)}/${year}`;
+  }
+
+  private pad2(value: number): string {
+    return String(value).padStart(2, '0');
+  }
 
   private buildFinancialGridRows(rows: ComisionPreviewRow[]): FinancialGridRow[] {
     return [...rows]

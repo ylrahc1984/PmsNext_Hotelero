@@ -1,91 +1,240 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { catchError, of } from 'rxjs';
-import { LiquidacionComision, LiquidacionDetalle } from '../../interfaces/liquidacion-comision.interface';
+import { catchError, finalize, map, of } from 'rxjs';
+import { LiquidacionListFilters, LiquidacionResumen } from '../../interfaces/liquidacion-comision.interface';
 import { LiquidacionComisionService } from '../../services/liquidacion-comision.service';
-import { LiquidacionDetalleService } from '../../services/liquidacion-detalle.service';
-import { EstadoBadgeComponent } from '../../shared/components/estado-badge.component';
-import { TimelineLiquidacionComponent, TimelineLiquidacionItem } from '../../shared/components/timeline-liquidacion.component';
-import { asArray, readNumber, readText } from '../../shared/models/comisiones-normalizers';
-import { ComisionesStore } from '../../store/comisiones.store';
+
+type LiquidacionAction = 'cerrar' | 'pagar' | 'anular';
 
 @Component({
   selector: 'app-liquidaciones-lista',
   standalone: true,
-  imports: [CommonModule, RouterLink, EstadoBadgeComponent, TimelineLiquidacionComponent],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './liquidaciones-lista.component.html',
-  styleUrl: './liquidaciones-lista.component.scss'
+  styleUrl: './liquidaciones-lista.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LiquidacionesListaComponent implements OnInit {
   private readonly liquidacionService = inject(LiquidacionComisionService);
-  private readonly detalleService = inject(LiquidacionDetalleService);
-  readonly store = inject(ComisionesStore);
 
-  readonly liquidaciones = signal<LiquidacionComision[]>([]);
-  readonly detalles = signal<LiquidacionDetalle[]>([]);
-
-  readonly selected = computed(() => this.store.selectedLiquidacion() ?? this.liquidaciones()[0] ?? null);
-  readonly timeline = computed<TimelineLiquidacionItem[]>(() => {
-    const item = this.selected();
-    const estado = readText(item as Record<string, unknown>, ['AD22_Estado'], 'BORRADOR').toUpperCase();
-    return [
-      { label: 'Borrador', date: readText(item as Record<string, unknown>, ['AD22_FechaLiquidacion'], ''), active: true },
-      { label: 'Cerrada', detail: 'Aprobacion financiera', active: ['CERRADO', 'PAGADO'].includes(estado) },
-      { label: 'Pagada', detail: 'Salida bancaria aplicada', active: estado === 'PAGADO' }
-    ];
+  readonly liquidaciones = signal<LiquidacionResumen[]>([]);
+  readonly loading = signal(false);
+  readonly actionLoadingId = signal('');
+  readonly printingId = signal('');
+  readonly errorMessage = signal('');
+  readonly actionMessage = signal('');
+  readonly skeletonRows = Array.from({ length: 6 });
+  readonly filters = signal<Required<LiquidacionListFilters>>({
+    empresaId: 1,
+    agencia: '',
+    estado: '',
+    fechaInicio: '',
+    fechaFin: '',
+    busqueda: ''
   });
 
+  readonly filteredLiquidaciones = computed(() => {
+    const filters = this.filters();
+    const search = this.normalize(filters.busqueda);
+    const agencia = this.normalize(filters.agencia);
+    const estado = this.normalize(filters.estado);
+
+    return this.liquidaciones().filter((item) => {
+      const liquidationText = this.normalize(`${item.AD19_Id} ${item.AD19_CodAgencia} ${item.AD19_NomAgencia} ${item.AD19_Operador}`);
+      return (
+        (!agencia || this.normalize(`${item.AD19_CodAgencia} ${item.AD19_NomAgencia}`).includes(agencia)) &&
+        (!estado || this.normalize(item.AD19_Estado) === estado) &&
+        (!search || liquidationText.includes(search)) &&
+        this.matchesDateRange(item)
+      );
+    });
+  });
+
+  readonly kpis = computed(() => {
+    const rows = this.filteredLiquidaciones();
+    return {
+      liquidaciones: rows.length,
+      facturado: this.sum(rows, 'AD19_TotalFacturado'),
+      comision: this.sum(rows, 'AD19_TotalComision'),
+      reservas: this.sum(rows, 'TotalReservas'),
+      pax: this.sum(rows, 'TotalPax')
+    };
+  });
+
+  readonly estadoOptions = computed(() => this.unique(this.liquidaciones().map((item) => item.AD19_Estado)));
+  readonly agenciaOptions = computed(() =>
+    this.unique(this.liquidaciones().map((item) => [item.AD19_CodAgencia, item.AD19_NomAgencia].filter(Boolean).join(' - ')))
+  );
+
   ngOnInit(): void {
+    this.buscar();
+  }
+
+  buscar(): void {
+    this.loading.set(true);
+    this.errorMessage.set('');
+    this.actionMessage.set('');
+
     this.liquidacionService
-      .listar()
-      .pipe(catchError(() => of([])))
-      .subscribe((data) => {
-        const rows = asArray<LiquidacionComision>(data);
-        this.liquidaciones.set(rows);
-        this.store.selectLiquidacion(rows[0] ?? null);
-        this.loadDetalle(rows[0]);
-      });
+      .listarLiquidaciones({ empresaId: Number(this.filters().empresaId) })
+      .pipe(
+        catchError(() => {
+          this.errorMessage.set('No se pudieron cargar las liquidaciones de comision.');
+          return of([] as LiquidacionResumen[]);
+        }),
+        finalize(() => this.loading.set(false))
+      )
+      .subscribe((rows) => this.liquidaciones.set(Array.isArray(rows) ? rows : []));
   }
 
-  select(item: LiquidacionComision): void {
-    this.store.selectLiquidacion(item);
-    this.loadDetalle(item);
+  updateFilter<K extends keyof Required<LiquidacionListFilters>>(key: K, value: Required<LiquidacionListFilters>[K]): void {
+    this.filters.update((current) => ({
+      ...current,
+      [key]: value
+    }));
   }
 
-  cerrar(): void {
-    const id = this.selected()?.AD22_Id;
-    if (id) this.liquidacionService.cerrar(id).pipe(catchError(() => of(null))).subscribe();
+  limpiar(): void {
+    this.filters.set({
+      empresaId: 1,
+      agencia: '',
+      estado: '',
+      fechaInicio: '',
+      fechaFin: '',
+      busqueda: ''
+    });
   }
 
-  pagar(): void {
-    const id = this.selected()?.AD22_Id;
-    if (id) this.liquidacionService.pagar(id).pipe(catchError(() => of(null))).subscribe();
+  refrescar(): void {
+    this.buscar();
   }
 
-  anular(): void {
-    const id = this.selected()?.AD22_Id;
-    if (id) this.liquidacionService.anular(id).pipe(catchError(() => of(null))).subscribe();
-  }
-
-  loadDetalle(item: LiquidacionComision | null | undefined): void {
-    const id = item?.AD22_Id;
-    if (!id) {
-      this.detalles.set([]);
+  ejecutarAccion(item: LiquidacionResumen, action: LiquidacionAction): void {
+    if (this.actionLoadingId()) {
       return;
     }
 
-    this.detalleService
-      .porLiquidacion(id)
-      .pipe(catchError(() => of([])))
-      .subscribe((data) => this.detalles.set(asArray<LiquidacionDetalle>(data)));
+    if (action === 'anular' && !window.confirm(`Desea anular la liquidacion ${item.AD19_Id}?`)) {
+      return;
+    }
+
+    this.actionLoadingId.set(item.AD19_Id);
+    this.errorMessage.set('');
+    this.actionMessage.set('');
+
+    const request =
+      action === 'cerrar'
+        ? this.liquidacionService.cerrarLiquidacion(item.AD19_Id)
+        : action === 'pagar'
+          ? this.liquidacionService.pagarLiquidacion(item.AD19_Id)
+          : this.liquidacionService.anularLiquidacion(item.AD19_Id);
+
+    request
+      .pipe(
+        map(() => true),
+        catchError(() => {
+          this.errorMessage.set(`No se pudo ${this.actionLabel(action).toLowerCase()} la liquidacion ${item.AD19_Id}.`);
+          return of(false);
+        }),
+        finalize(() => this.actionLoadingId.set(''))
+      )
+      .subscribe((success) => {
+        if (!success) {
+          return;
+        }
+        this.actionMessage.set(`Liquidacion ${item.AD19_Id} actualizada correctamente.`);
+        this.buscar();
+      });
   }
 
-  text(record: Record<string, unknown> | null | undefined, keys: string[], fallback = 'N/D'): string {
-    return readText(record, keys, fallback);
+  imprimir(item: LiquidacionResumen): void {
+    if (this.printingId()) {
+      return;
+    }
+
+    this.printingId.set(item.AD19_Id);
+    this.errorMessage.set('');
+    this.actionMessage.set('');
+
+    this.liquidacionService
+      .obtenerVoucher(item.AD19_Id)
+      .pipe(
+        catchError(() => {
+          this.errorMessage.set(`No se pudo generar el voucher de la liquidacion ${item.AD19_Id}.`);
+          return of(null);
+        }),
+        finalize(() => this.printingId.set(''))
+      )
+      .subscribe((voucher) => {
+        if (!voucher) {
+          return;
+        }
+
+        const url = URL.createObjectURL(voucher);
+        const opened = window.open(url, '_blank', 'noopener');
+        if (!opened) {
+          this.errorMessage.set('El navegador bloqueo la apertura del voucher. Permita ventanas emergentes para esta pagina.');
+          URL.revokeObjectURL(url);
+          return;
+        }
+
+        this.actionMessage.set(`Voucher de ${item.AD19_Id} generado correctamente.`);
+        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      });
   }
 
-  money(record: Record<string, unknown> | null | undefined, keys: string[]): string {
-    return new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'USD' }).format(readNumber(record, keys));
+  actionLabel(action: LiquidacionAction): string {
+    return action === 'cerrar' ? 'Cerrar' : action === 'pagar' ? 'Pagar' : 'Anular';
+  }
+
+  statusClass(estado: string): string {
+    const value = this.normalize(estado);
+    if (value.includes('PAG')) return 'paid';
+    if (value.includes('CERR')) return 'closed';
+    if (value.includes('ANUL')) return 'void';
+    return 'draft';
+  }
+
+  formatMoney(value: unknown): string {
+    return new Intl.NumberFormat('es-CR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(Number(value ?? 0));
+  }
+
+  formatDate(value: unknown): string {
+    const text = String(value ?? '').trim();
+    if (!text) return 'N/D';
+    const date = new Date(text);
+    if (Number.isNaN(date.getTime())) return text;
+    return new Intl.DateTimeFormat('es-CR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }).format(date);
+  }
+
+  private matchesDateRange(item: LiquidacionResumen): boolean {
+    const filters = this.filters();
+    const date = this.toDateKey(item.AD19_FechaLiquidacion);
+    return (!filters.fechaInicio || date >= filters.fechaInicio) && (!filters.fechaFin || date <= filters.fechaFin);
+  }
+
+  private toDateKey(value: string): string {
+    return String(value ?? '').slice(0, 10);
+  }
+
+  private sum(rows: LiquidacionResumen[], key: keyof Pick<LiquidacionResumen, 'AD19_TotalFacturado' | 'AD19_TotalComision' | 'TotalReservas' | 'TotalPax'>): number {
+    return rows.reduce((total, row) => total + Number(row[key] ?? 0), 0);
+  }
+
+  private unique(values: string[]): string[] {
+    return [...new Set(values.map((value) => value.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  }
+
+  private normalize(value: string): string {
+    return value.toString().trim().toUpperCase();
   }
 }

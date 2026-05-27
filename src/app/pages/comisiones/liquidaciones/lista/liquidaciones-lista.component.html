@@ -1,91 +1,205 @@
-<section class="commission-shell">
-  <header class="commission-page-header">
+<section class="liquidation-console">
+  <header class="executive-header">
     <div>
-      <h1>Liquidaciones</h1>
-      <p>Vista master/detail para controlar cierre, pago, anulacion y trazabilidad.</p>
+      <span class="eyebrow">Control financiero</span>
+      <h1>Liquidaciones de Comision</h1>
+      <p>Gestion, control y seguimiento de liquidaciones generadas por agencia.</p>
     </div>
-    <button class="btn btn-primary btn-sm" type="button">
-      <i class="feather icon-plus me-1"></i>
-      Nueva liquidacion
-    </button>
+    <div class="header-actions">
+      <div class="quick-summary">
+        <span>{{ kpis().liquidaciones }} liquidaciones</span>
+        <strong>{{ formatMoney(kpis().comision) }}</strong>
+      </div>
+      <a class="btn btn-primary btn-sm" routerLink="/comisiones/calculadas">
+        <i class="feather icon-plus me-1"></i>
+        Nueva Liquidacion
+      </a>
+    </div>
   </header>
 
-  <div class="master-detail">
-    <aside class="finance-card liquidacion-list">
-      @for (item of liquidaciones(); track item.AD22_Id || $index) {
-        <button class="liquidacion-item" [class.active]="selected()?.AD22_Id === item.AD22_Id" type="button" (click)="select(item)">
-          <div>
-            <strong>{{ text(item, ['AD22_NumeroLiquidacion', 'numeroLiquidacion']) }}</strong>
-            <span>{{ text(item, ['AD22_NombreAgencia', 'nombreAgencia']) }}</span>
-          </div>
-          <div class="text-end">
-            <span>{{ money(item, ['AD22_Total', 'total']) }}</span>
-            <app-estado-badge [estado]="text(item, ['AD22_Estado', 'estado'], 'BORRADOR')" />
-          </div>
-        </button>
-      } @empty {
-        <div class="finance-empty">No hay liquidaciones.</div>
-      }
-    </aside>
+  <form class="filter-strip" (ngSubmit)="buscar()">
+    <label>
+      <span>Empresa</span>
+      <select [ngModel]="filters().empresaId" name="empresaId" (ngModelChange)="updateFilter('empresaId', +$event)">
+        <option [ngValue]="1">Empresa 1</option>
+      </select>
+    </label>
 
-    <main class="finance-card finance-section detail-panel">
-      @if (selected(); as item) {
-        <div class="detail-header">
-          <div>
-            <span>Liquidacion</span>
-            <h2>{{ text(item, ['AD22_NumeroLiquidacion', 'numeroLiquidacion']) }}</h2>
-            <p>{{ text(item, ['AD22_NombreAgencia', 'nombreAgencia']) }}</p>
-          </div>
-          <app-estado-badge [estado]="text(item, ['AD22_Estado', 'estado'], 'BORRADOR')" />
-        </div>
+    <label>
+      <span>Agencia</span>
+      <input
+        type="search"
+        list="liquidacion-agencias"
+        [ngModel]="filters().agencia"
+        name="agencia"
+        placeholder="Codigo o nombre"
+        (ngModelChange)="updateFilter('agencia', $event)"
+      />
+      <datalist id="liquidacion-agencias">
+        @for (option of agenciaOptions(); track option) {
+          <option [value]="option"></option>
+        }
+      </datalist>
+    </label>
 
-        <div class="totals-grid">
-          <div><span>Subtotal</span><strong>{{ money(item, ['AD22_Subtotal', 'subtotal']) }}</strong></div>
-          <div><span>Impuestos</span><strong>{{ money(item, ['AD22_Impuestos', 'impuestos']) }}</strong></div>
-          <div><span>Total</span><strong>{{ money(item, ['AD22_Total', 'total']) }}</strong></div>
-        </div>
+    <label>
+      <span>Estado</span>
+      <select [ngModel]="filters().estado" name="estado" (ngModelChange)="updateFilter('estado', $event)">
+        <option value="">Todos</option>
+        @for (estado of estadoOptions(); track estado) {
+          <option [value]="estado">{{ estado }}</option>
+        }
+      </select>
+    </label>
 
-        <div class="action-bar">
-          <button class="btn btn-outline-primary btn-sm" type="button" (click)="cerrar()">Cerrar</button>
-          <button class="btn btn-success btn-sm" type="button" (click)="pagar()">Pagar</button>
-          <button class="btn btn-outline-danger btn-sm" type="button" (click)="anular()">Anular</button>
-          <a class="btn btn-outline-secondary btn-sm" [routerLink]="['/comisiones/liquidaciones', item.AD22_Id]">Detalle completo</a>
-        </div>
+    <label>
+      <span>Fecha inicio</span>
+      <input type="date" [ngModel]="filters().fechaInicio" name="fechaInicio" (ngModelChange)="updateFilter('fechaInicio', $event)" />
+    </label>
 
-        <div class="detail-content">
-          <section>
-            <h3>Documentos</h3>
-            <table class="finance-table">
-              <thead>
-                <tr>
-                  <th>Documento</th>
-                  <th>Servicio</th>
-                  <th>Base</th>
-                  <th>Comision</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (detalle of detalles(); track detalle.AD23_Id || $index) {
-                  <tr>
-                    <td>{{ text(detalle, ['AD23_NumeroDocumento', 'numeroDocumento']) }}</td>
-                    <td>{{ text(detalle, ['AD23_NombreServicio', 'nombreServicio']) }}</td>
-                    <td>{{ money(detalle, ['AD23_MontoBase', 'montoBase']) }}</td>
-                    <td class="fw-semibold">{{ money(detalle, ['AD23_MontoComision', 'montoComision']) }}</td>
-                  </tr>
-                } @empty {
-                  <tr><td colspan="4"><div class="finance-empty">Sin documentos liquidados.</div></td></tr>
-                }
-              </tbody>
-            </table>
-          </section>
-          <section>
-            <h3>Timeline financiero</h3>
-            <app-timeline-liquidacion [items]="timeline()" />
-          </section>
-        </div>
-      } @else {
-        <div class="finance-empty">Seleccione una liquidacion.</div>
-      }
-    </main>
-  </div>
+    <label>
+      <span>Fecha fin</span>
+      <input type="date" [ngModel]="filters().fechaFin" name="fechaFin" (ngModelChange)="updateFilter('fechaFin', $event)" />
+    </label>
+
+    <label class="search-field">
+      <span>Liquidacion</span>
+      <input
+        type="search"
+        [ngModel]="filters().busqueda"
+        name="busqueda"
+        placeholder="LC-001-000010"
+        (ngModelChange)="updateFilter('busqueda', $event)"
+      />
+    </label>
+
+    <div class="filter-actions">
+      <button class="btn btn-primary btn-sm" type="submit" [disabled]="loading()">Buscar</button>
+      <button class="btn btn-outline-secondary btn-sm" type="button" (click)="limpiar()">Limpiar</button>
+      <button class="btn btn-outline-secondary btn-sm icon-btn" type="button" (click)="refrescar()" [disabled]="loading()" title="Refrescar">
+        <i class="feather icon-refresh-cw"></i>
+      </button>
+    </div>
+  </form>
+
+  <section class="kpi-grid">
+    <div class="kpi-tile">
+      <span>Total liquidaciones</span>
+      <strong>{{ kpis().liquidaciones }}</strong>
+    </div>
+    <div class="kpi-tile">
+      <span>Total facturado</span>
+      <strong>{{ formatMoney(kpis().facturado) }}</strong>
+    </div>
+    <div class="kpi-tile accent">
+      <span>Total comision</span>
+      <strong>{{ formatMoney(kpis().comision) }}</strong>
+    </div>
+    <div class="kpi-tile">
+      <span>Total reservas</span>
+      <strong>{{ kpis().reservas }}</strong>
+    </div>
+    <div class="kpi-tile">
+      <span>Total pax</span>
+      <strong>{{ kpis().pax }}</strong>
+    </div>
+  </section>
+
+  @if (errorMessage()) {
+    <div class="console-alert error">{{ errorMessage() }}</div>
+  }
+
+  @if (actionMessage()) {
+    <div class="console-alert info">{{ actionMessage() }}</div>
+  }
+
+  <section class="liquidation-grid-shell">
+    <div class="table-scroll">
+      <table class="liquidation-table">
+        <thead>
+          <tr>
+            <th>Estado</th>
+            <th>Codigo Liquidacion</th>
+            <th>Agencia</th>
+            <th>Periodo</th>
+            <th class="number">Facturado</th>
+            <th class="number">Comision</th>
+            <th>Docs</th>
+            <th>Reservas</th>
+            <th>Pax</th>
+            <th>Fecha</th>
+            <th>Operador</th>
+            <th class="actions-col">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (loading()) {
+            @for (row of skeletonRows; track $index) {
+              <tr class="skeleton-row">
+                <td colspan="12"><span></span></td>
+              </tr>
+            }
+          } @else {
+            @for (item of filteredLiquidaciones(); track item.AD19_Id) {
+              <tr>
+                <td>
+                  <span class="status-chip" [class]="statusClass(item.AD19_Estado)">{{ item.AD19_Estado || 'BORRADOR' }}</span>
+                </td>
+                <td>
+                  <a class="liquidation-code" [routerLink]="['/comisiones/liquidaciones', item.AD19_Id]">{{ item.AD19_Id }}</a>
+                </td>
+                <td>
+                  <div class="agency-cell">
+                    <strong>{{ item.AD19_NomAgencia }}</strong>
+                    <span>{{ item.AD19_CodAgencia }}</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="period-cell">
+                    <span>{{ formatDate(item.AD19_FechaInicio) }}</span>
+                    <span>{{ formatDate(item.AD19_FechaFin) }}</span>
+                  </div>
+                </td>
+                <td class="money">{{ formatMoney(item.AD19_TotalFacturado) }}</td>
+                <td class="money commission">{{ formatMoney(item.AD19_TotalComision) }}</td>
+                <td><span class="mini-badge">{{ item.TotalDocumentos }}</span></td>
+                <td><span class="mini-badge">{{ item.TotalReservas }}</span></td>
+                <td><span class="mini-badge">{{ item.TotalPax }}</span></td>
+                <td>{{ formatDate(item.AD19_FechaLiquidacion) }}</td>
+                <td>{{ item.AD19_Operador || 'N/D' }}</td>
+                <td>
+                  <div class="row-actions">
+                    <a class="icon-btn" [routerLink]="['/comisiones/liquidaciones', item.AD19_Id]" title="Ver detalle">
+                      <i class="feather icon-eye"></i>
+                    </a>
+                    <button class="icon-btn" type="button" (click)="ejecutarAccion(item, 'cerrar')" [disabled]="!!actionLoadingId()" title="Cerrar liquidacion">
+                      <i class="feather icon-lock"></i>
+                    </button>
+                    <button class="icon-btn" type="button" (click)="ejecutarAccion(item, 'pagar')" [disabled]="!!actionLoadingId()" title="Pagar">
+                      <i class="feather icon-credit-card"></i>
+                    </button>
+                    <button class="icon-btn danger" type="button" (click)="ejecutarAccion(item, 'anular')" [disabled]="!!actionLoadingId()" title="Anular">
+                      <i class="feather icon-x-circle"></i>
+                    </button>
+                    <button class="icon-btn" type="button" (click)="imprimir(item)" [disabled]="!!printingId()" title="Imprimir voucher">
+                      <i class="feather" [class.icon-printer]="printingId() !== item.AD19_Id" [class.icon-loader]="printingId() === item.AD19_Id"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="12">
+                  <div class="empty-state">
+                    <strong>Sin liquidaciones para los filtros aplicados</strong>
+                    <span>Genere liquidaciones desde el preview de comisiones o ajuste la busqueda.</span>
+                  </div>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
 </section>
