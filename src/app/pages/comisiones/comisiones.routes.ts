@@ -9,11 +9,11 @@ export const COMISIONES_ROUTES: Routes = [
       {
         path: '',
         pathMatch: 'full',
-        redirectTo: 'dashboard'
+        redirectTo: 'calculadas'
       },
       {
         path: 'dashboard',
-        loadComponent: () => import('./dashboard/comisiones-dashboard.component').then((c) => c.ComisionesDashboardComponent)
+        redirectTo: 'calculadas'
       },
       {
         path: 'configuracion/general',

@@ -4,6 +4,8 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } 
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { catchError, finalize, from, map, of } from 'rxjs';
+import { AuthService } from 'src/app/core/services/auth.service';
+import Swal from 'sweetalert2';
 import { LiquidacionListFilters, LiquidacionResumen } from '../../interfaces/liquidacion-comision.interface';
 import { LiquidacionComisionService } from '../../services/liquidacion-comision.service';
 
@@ -19,6 +21,7 @@ type LiquidacionAction = 'cerrar' | 'pagar' | 'anular';
 })
 export class LiquidacionesListaComponent implements OnInit {
   private readonly liquidacionService = inject(LiquidacionComisionService);
+  private readonly authService = inject(AuthService);
 
   readonly liquidaciones = signal<LiquidacionResumen[]>([]);
   readonly loading = signal(false);
@@ -112,12 +115,17 @@ export class LiquidacionesListaComponent implements OnInit {
     this.buscar();
   }
 
-  ejecutarAccion(item: LiquidacionResumen, action: LiquidacionAction): void {
+  async ejecutarAccion(item: LiquidacionResumen, action: LiquidacionAction): Promise<void> {
     if (this.actionLoadingId()) {
       return;
     }
 
-    if (action === 'anular' && !window.confirm(`Desea anular la liquidacion ${item.AD19_Id}?`)) {
+    if (!this.canEjecutarAccion(item, action)) {
+      return;
+    }
+
+    const confirmed = await this.confirmarAccion(item.AD19_Id, action);
+    if (!confirmed) {
       return;
     }
 
@@ -125,12 +133,13 @@ export class LiquidacionesListaComponent implements OnInit {
     this.errorMessage.set('');
     this.actionMessage.set('');
 
+    const operador = this.getOperador();
     const request =
       action === 'cerrar'
-        ? this.liquidacionService.cerrarLiquidacion(item.AD19_Id)
+        ? this.liquidacionService.cerrarLiquidacion(item.AD19_Id, operador)
         : action === 'pagar'
-          ? this.liquidacionService.pagarLiquidacion(item.AD19_Id)
-          : this.liquidacionService.anularLiquidacion(item.AD19_Id);
+          ? this.liquidacionService.pagarLiquidacion(item.AD19_Id, operador)
+          : this.liquidacionService.anularLiquidacion(item.AD19_Id, {}, operador);
 
     request
       .pipe(
@@ -200,6 +209,29 @@ export class LiquidacionesListaComponent implements OnInit {
     return action === 'cerrar' ? 'Cerrar' : action === 'pagar' ? 'Pagar' : 'Anular';
   }
 
+  canEjecutarAccion(item: LiquidacionResumen, action: LiquidacionAction): boolean {
+    return action === 'cerrar'
+      ? this.canCerrarLiquidacion(item)
+      : action === 'pagar'
+        ? this.canPagarLiquidacion(item)
+        : this.canAnularLiquidacion(item);
+  }
+
+  canCerrarLiquidacion(item: LiquidacionResumen): boolean {
+    const estado = this.normalize(item.AD19_Estado ?? 'BORRADOR');
+    return !estado.includes('CERR') && !estado.includes('PAG') && !estado.includes('ANUL');
+  }
+
+  canPagarLiquidacion(item: LiquidacionResumen): boolean {
+    const estado = this.normalize(item.AD19_Estado ?? 'BORRADOR');
+    return estado.includes('CERR') && !estado.includes('PAG') && !estado.includes('ANUL');
+  }
+
+  canAnularLiquidacion(item: LiquidacionResumen): boolean {
+    const estado = this.normalize(item.AD19_Estado ?? 'BORRADOR');
+    return !estado.includes('PAG') && !estado.includes('ANUL');
+  }
+
   statusClass(estado: string): string {
     const value = this.normalize(estado);
     if (value.includes('PAG')) return 'paid';
@@ -247,6 +279,45 @@ export class LiquidacionesListaComponent implements OnInit {
 
   private normalize(value: string): string {
     return value.toString().trim().toUpperCase();
+  }
+
+  private getOperador(): string {
+    return this.authService.getCurrentUser()?.usuario ?? 'CHARLY';
+  }
+
+  private async confirmarAccion(id: string, action: LiquidacionAction): Promise<boolean> {
+    const config =
+      action === 'cerrar'
+        ? {
+            title: 'Cerrar liquidacion',
+            text: `Desea cerrar la liquidacion ${id}? Esta accion aplicara el cierre financiero.`,
+            confirmButtonText: 'Si, cerrar',
+            confirmButtonColor: '#1d4ed8'
+          }
+        : action === 'pagar'
+          ? {
+              title: 'Pagar liquidacion',
+              text: `Desea marcar como pagada la liquidacion ${id}?`,
+              confirmButtonText: 'Si, pagar',
+              confirmButtonColor: '#166534'
+            }
+          : {
+              title: 'Anular liquidacion',
+              text: `Desea anular la liquidacion ${id}? Esta accion aplicara la reversion administrativa.`,
+              confirmButtonText: 'Si, anular',
+              confirmButtonColor: '#9f1239'
+            };
+
+    const result = await Swal.fire({
+      ...config,
+      icon: 'warning',
+      showCancelButton: true,
+      cancelButtonText: 'Cancelar',
+      cancelButtonColor: '#667085',
+      reverseButtons: true
+    });
+
+    return result.isConfirmed;
   }
 
   private async resolveVoucherError(error: unknown): Promise<string> {

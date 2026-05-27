@@ -309,14 +309,6 @@ export const NavigationItems: NavigationItem[] = [
             icon: 'feather icon-percent',
             children: [
               {
-                id: 'comisiones-dashboard',
-                title: 'Dashboard',
-                type: 'item',
-                url: '/comisiones/dashboard',
-                icon: 'feather icon-grid',
-                classes: 'nav-item'
-              },
-              {
                 id: 'comisiones-reglas',
                 title: 'Reglas',
                 type: 'item',

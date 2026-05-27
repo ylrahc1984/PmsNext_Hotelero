@@ -10,10 +10,43 @@
         <p>Periodo: {{ formatDate(item.AD19_FechaInicio) }} - {{ formatDate(item.AD19_FechaFin) }}</p>
       </div>
       <div class="header-actions">
-        <button class="btn btn-outline-primary btn-sm" type="button" (click)="ejecutarAccion('cerrar')" [disabled]="!!actionLoading()">Cerrar</button>
-        <button class="btn btn-success btn-sm" type="button" (click)="ejecutarAccion('pagar')" [disabled]="!!actionLoading()">Pagar</button>
-        <button class="btn btn-outline-secondary btn-sm" type="button" (click)="imprimir()">Imprimir</button>
-        <button class="btn btn-outline-danger btn-sm" type="button" (click)="ejecutarAccion('anular')" [disabled]="!!actionLoading()">Anular</button>
+        <button
+          class="btn btn-primary btn-sm"
+          type="button"
+          (click)="actualizarDesdePreview()"
+          [disabled]="refreshLoading() || !!actionLoading() || !canActualizarDesdePreview(item)"
+        >
+          <i class="feather icon-refresh-cw me-1"></i>
+          {{ refreshLoading() ? 'Actualizando...' : 'Actualizar docs' }}
+        </button>
+        <button
+          class="btn btn-outline-primary btn-sm"
+          type="button"
+          (click)="ejecutarAccion('cerrar')"
+          [disabled]="!!actionLoading() || refreshLoading() || !canCerrarLiquidacion(item)"
+        >
+          Cerrar
+        </button>
+        <button
+          class="btn btn-success btn-sm"
+          type="button"
+          (click)="ejecutarAccion('pagar')"
+          [disabled]="!!actionLoading() || refreshLoading() || !canPagarLiquidacion(item)"
+        >
+          Pagar
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" type="button" (click)="imprimir()" [disabled]="printing()">
+          <i class="feather me-1" [class.icon-printer]="!printing()" [class.icon-loader]="printing()"></i>
+          {{ printing() ? 'Generando...' : 'Imprimir' }}
+        </button>
+        <button
+          class="btn btn-outline-danger btn-sm"
+          type="button"
+          (click)="ejecutarAccion('anular')"
+          [disabled]="!!actionLoading() || refreshLoading() || !canAnularLiquidacion(item)"
+        >
+          Anular
+        </button>
         <a class="btn btn-outline-secondary btn-sm" routerLink="/comisiones/liquidaciones">
           <i class="feather icon-arrow-left me-1"></i>
           Volver
@@ -149,13 +182,28 @@
         </div>
         <div class="timeline">
           @for (step of timeline(); track step.label) {
-            <div class="timeline-item" [class.active]="step.active">
+            <button
+              class="timeline-item"
+              type="button"
+              [class.active]="step.active"
+              [class.actionable]="!!step.action && !step.active"
+              [disabled]="
+                !step.action ||
+                step.active ||
+                !!actionLoading() ||
+                refreshLoading() ||
+                (step.action === 'cerrar' && !canCerrarLiquidacion(item)) ||
+                (step.action === 'pagar' && !canPagarLiquidacion(item)) ||
+                (step.action === 'anular' && !canAnularLiquidacion(item))
+              "
+              (click)="ejecutarAccionTimeline(step)"
+            >
               <span></span>
               <div>
                 <strong>{{ step.label }}</strong>
                 <small>{{ step.detail }}</small>
               </div>
-            </div>
+            </button>
           }
         </div>
       </div>

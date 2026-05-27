@@ -58,20 +58,31 @@ export class ErrorInterceptor implements HttpInterceptor {
     // No hacer logout en errores de conexión, permitir reintentos
   }
 
-  private handleGenericError(error: HttpErrorResponse): void {
-    const backendMessage =
-      typeof error.error === 'string'
-        ? error.error
-        : error.error?.mensaje || error.error?.respuesta || error.error?.message || error.error?.error;
+  private async handleGenericError(error: HttpErrorResponse): Promise<void> {
+    const backendMessage = await this.resolveBackendMessage(error);
+
     console.error('Error HTTP:', {
       status: error.status,
       statusText: error.statusText,
       message: error.message,
       url: error.url,
-      backend: error.error
+      backend: backendMessage || error.error
     });
+
     const message = backendMessage || `Error ${error.status}: ${error.statusText}`;
     this.toastService.error(message);
+  }
+
+  private async resolveBackendMessage(error: HttpErrorResponse): Promise<string> {
+    if (error.error instanceof Blob) {
+      return (await error.error.text()).trim();
+    }
+
+    if (typeof error.error === 'string') {
+      return error.error.trim();
+    }
+
+    return (error.error?.mensaje || error.error?.respuesta || error.error?.message || error.error?.error || '').toString().trim();
   }
 
   private performLogout(): void {

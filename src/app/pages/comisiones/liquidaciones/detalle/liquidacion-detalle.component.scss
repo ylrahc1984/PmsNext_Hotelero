@@ -256,9 +256,15 @@
 
 .timeline-item {
   align-items: flex-start;
+  background: transparent;
+  border: 0;
+  cursor: default;
   display: grid;
   gap: 10px;
   grid-template-columns: 12px 1fr;
+  padding: 0;
+  text-align: left;
+  width: 100%;
 
   > span {
     background: #cfd6df;
@@ -281,6 +287,10 @@
   &.active > span {
     background: #1d4ed8;
     box-shadow: 0 0 0 4px #eaf2ff;
+  }
+
+  &.actionable {
+    cursor: pointer;
   }
 }
 

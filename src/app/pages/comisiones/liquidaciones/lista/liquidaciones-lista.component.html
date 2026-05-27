@@ -172,13 +172,31 @@
                     <a class="icon-btn" [routerLink]="['/comisiones/liquidaciones', item.AD19_Id]" title="Ver detalle">
                       <i class="feather icon-eye"></i>
                     </a>
-                    <button class="icon-btn" type="button" (click)="ejecutarAccion(item, 'cerrar')" [disabled]="!!actionLoadingId()" title="Cerrar liquidacion">
+                    <button
+                      class="icon-btn"
+                      type="button"
+                      (click)="ejecutarAccion(item, 'cerrar')"
+                      [disabled]="!!actionLoadingId() || !canCerrarLiquidacion(item)"
+                      title="Cerrar liquidacion"
+                    >
                       <i class="feather icon-lock"></i>
                     </button>
-                    <button class="icon-btn" type="button" (click)="ejecutarAccion(item, 'pagar')" [disabled]="!!actionLoadingId()" title="Pagar">
+                    <button
+                      class="icon-btn"
+                      type="button"
+                      (click)="ejecutarAccion(item, 'pagar')"
+                      [disabled]="!!actionLoadingId() || !canPagarLiquidacion(item)"
+                      title="Pagar"
+                    >
                       <i class="feather icon-credit-card"></i>
                     </button>
-                    <button class="icon-btn danger" type="button" (click)="ejecutarAccion(item, 'anular')" [disabled]="!!actionLoadingId()" title="Anular">
+                    <button
+                      class="icon-btn danger"
+                      type="button"
+                      (click)="ejecutarAccion(item, 'anular')"
+                      [disabled]="!!actionLoadingId() || !canAnularLiquidacion(item)"
+                      title="Anular"
+                    >
                       <i class="feather icon-x-circle"></i>
                     </button>
                     <button class="icon-btn" type="button" (click)="imprimir(item)" [disabled]="!!printingId()" title="Imprimir voucher">
