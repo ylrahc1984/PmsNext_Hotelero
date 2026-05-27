@@ -1,8 +1,9 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { catchError, finalize, map, of } from 'rxjs';
+import { catchError, finalize, from, map, of } from 'rxjs';
 import { LiquidacionListFilters, LiquidacionResumen } from '../../interfaces/liquidacion-comision.interface';
 import { LiquidacionComisionService } from '../../services/liquidacion-comision.service';
 
@@ -154,6 +155,15 @@ export class LiquidacionesListaComponent implements OnInit {
       return;
     }
 
+    const voucherWindow = window.open('', '_blank');
+    if (!voucherWindow) {
+      this.errorMessage.set('El navegador bloqueo la apertura del voucher. Permita ventanas emergentes para esta pagina.');
+      return;
+    }
+
+    voucherWindow.opener = null;
+    voucherWindow.document.write('<!doctype html><html><head><title>Generando voucher...</title></head><body>Generando voucher...</body></html>');
+
     this.printingId.set(item.AD19_Id);
     this.errorMessage.set('');
     this.actionMessage.set('');
@@ -161,10 +171,15 @@ export class LiquidacionesListaComponent implements OnInit {
     this.liquidacionService
       .obtenerVoucher(item.AD19_Id)
       .pipe(
-        catchError(() => {
-          this.errorMessage.set(`No se pudo generar el voucher de la liquidacion ${item.AD19_Id}.`);
-          return of(null);
-        }),
+        catchError((error) =>
+          from(this.resolveVoucherError(error)).pipe(
+            map((message) => {
+              this.errorMessage.set(`No se pudo generar el voucher de la liquidacion ${item.AD19_Id}. ${message}`);
+              voucherWindow.close();
+              return null;
+            })
+          )
+        ),
         finalize(() => this.printingId.set(''))
       )
       .subscribe((voucher) => {
@@ -172,13 +187,9 @@ export class LiquidacionesListaComponent implements OnInit {
           return;
         }
 
-        const url = URL.createObjectURL(voucher);
-        const opened = window.open(url, '_blank', 'noopener');
-        if (!opened) {
-          this.errorMessage.set('El navegador bloqueo la apertura del voucher. Permita ventanas emergentes para esta pagina.');
-          URL.revokeObjectURL(url);
-          return;
-        }
+        const pdfBlob = voucher.type === 'application/pdf' ? voucher : new Blob([voucher], { type: 'application/pdf' });
+        const url = URL.createObjectURL(pdfBlob);
+        voucherWindow.location.href = url;
 
         this.actionMessage.set(`Voucher de ${item.AD19_Id} generado correctamente.`);
         window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
@@ -236,5 +247,24 @@ export class LiquidacionesListaComponent implements OnInit {
 
   private normalize(value: string): string {
     return value.toString().trim().toUpperCase();
+  }
+
+  private async resolveVoucherError(error: unknown): Promise<string> {
+    if (error instanceof HttpErrorResponse && error.error instanceof Blob) {
+      const text = (await error.error.text()).trim();
+      return text || `HTTP ${error.status}`;
+    }
+
+    if (error instanceof HttpErrorResponse) {
+      const backendMessage =
+        typeof error.error === 'string'
+          ? error.error
+          : typeof error.error?.message === 'string'
+            ? error.error.message
+            : '';
+      return backendMessage.trim() || `HTTP ${error.status}`;
+    }
+
+    return 'Intente nuevamente o contacte al administrador.';
   }
 }
