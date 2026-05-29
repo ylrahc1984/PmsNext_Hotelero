@@ -1,0 +1,130 @@
+<section class="sales-tax-report">
+  <header class="report-header">
+    <div>
+      <span class="eyebrow">Reporte contable</span>
+      <h1>Ventas y notas de credito por IVA</h1>
+      <p>Detalle mensual de documentos de venta y notas de credito separado por tarifa de IVA.</p>
+    </div>
+    <div class="header-status">
+      <span>Periodo</span>
+      <strong>{{ filters().fechaInicial }} - {{ filters().fechaFinal }} · {{ filters().moneda }}</strong>
+    </div>
+  </header>
+
+  <section class="kpi-strip">
+    @for (item of kpis(); track item.label) {
+      <article>
+        <span>{{ item.label }}</span>
+        <strong>{{ item.value }}</strong>
+        <small>{{ item.detail }}</small>
+      </article>
+    }
+  </section>
+
+  <form class="filter-panel" (ngSubmit)="buscar()">
+    <div class="filter-grid">
+      <label>
+        <span>Fecha inicio</span>
+        <input type="date" [ngModel]="filters().fechaInicial" name="fechaInicial" (ngModelChange)="updateFilter('fechaInicial', $event)" />
+      </label>
+
+      <label>
+        <span>Fecha fin</span>
+        <input type="date" [ngModel]="filters().fechaFinal" name="fechaFinal" (ngModelChange)="updateFilter('fechaFinal', $event)" />
+      </label>
+
+      <label>
+        <span>Moneda</span>
+        <select [ngModel]="filters().moneda" name="moneda" (ngModelChange)="updateFilter('moneda', $event)">
+          <option value="USD">USD</option>
+          <option value="CRC">CRC</option>
+        </select>
+      </label>
+
+      <label>
+        <span>Tipo doc.</span>
+        <select [ngModel]="filters().tipoDoc" name="tipoDoc" (ngModelChange)="updateFilter('tipoDoc', $event)">
+          <option value="">Todos</option>
+          @for (option of tipoDocumentoOptions(); track option) {
+            <option [value]="option">{{ option }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="search-field">
+        <span>Buscar</span>
+        <input
+          type="search"
+          [ngModel]="filters().search"
+          name="search"
+          placeholder="Documento, cliente o codigo"
+          (ngModelChange)="updateFilter('search', $event)"
+        />
+      </label>
+    </div>
+
+    <button class="btn btn-primary btn-sm generate-btn" type="submit" [disabled]="loading()">
+      {{ loading() ? 'Consultando...' : 'Buscar' }}
+    </button>
+  </form>
+
+  <div class="financial-toolbar">
+    <div class="toolbar-left">
+      <button class="btn btn-outline-secondary btn-sm" type="button" (click)="buscar()" [disabled]="loading()">Recalcular</button>
+      <button class="btn btn-outline-secondary btn-sm" type="button" (click)="exportExcel()" [disabled]="loading() || exportingExcel()">
+        {{ exportingExcel() ? 'Exportando...' : 'Exportar Excel' }}
+      </button>
+    </div>
+    <div class="toolbar-summary">
+      <strong>{{ summary().totalRegistros }}</strong>
+      <span>documentos filtrados</span>
+    </div>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="console-alert error">{{ errorMessage() }}</div>
+  }
+
+  @if (actionMessage()) {
+    <div class="console-alert info">{{ actionMessage() }}</div>
+  }
+
+  <section class="grid-shell">
+    <ag-grid-angular
+      class="financial-grid"
+      [modules]="gridModules"
+      [theme]="gridTheme"
+      [rowData]="visibleGridRows()"
+      [columnDefs]="columnDefs"
+      [defaultColDef]="defaultColDef"
+      [pinnedBottomRowData]="pinnedBottomRowData()"
+      [rowHeight]="38"
+      [headerHeight]="38"
+      [tooltipShowDelay]="250"
+      [enableBrowserTooltips]="true"
+      [loading]="loading()"
+      [rowClass]="rowClass"
+      (gridReady)="onGridReady($event)"
+    />
+
+    @if (!rows().length && !loading()) {
+      <div class="empty-state">
+        <strong>Sin documentos</strong>
+        <span>Seleccione el periodo contable y ejecute Buscar para cargar el detalle.</span>
+      </div>
+    }
+  </section>
+
+  <footer class="totals-footer">
+    <span>Exento: <strong>{{ formatMoney(summary().exento) }}</strong></span>
+    <span>Base 1%: <strong>{{ formatMoney(summary().subtotal1) }}</strong></span>
+    <span>IVA 1%: <strong>{{ formatMoney(summary().imp1) }}</strong></span>
+    <span>Base 2%: <strong>{{ formatMoney(summary().subtotal2) }}</strong></span>
+    <span>IVA 2%: <strong>{{ formatMoney(summary().imp2) }}</strong></span>
+    <span>Base 4%: <strong>{{ formatMoney(summary().subtotal4) }}</strong></span>
+    <span>IVA 4%: <strong>{{ formatMoney(summary().imp4) }}</strong></span>
+    <span>Base 13%: <strong>{{ formatMoney(summary().subtotal13) }}</strong></span>
+    <span>IVA 13%: <strong>{{ formatMoney(summary().imp13) }}</strong></span>
+    <span>Total: <strong>{{ formatMoney(summary().total) }}</strong></span>
+  </footer>
+</section>

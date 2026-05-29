@@ -303,6 +303,14 @@ export const NavigationItems: NavigationItem[] = [
             classes: 'nav-item'
           },
           {
+            id: 'reporte-ventas-iva',
+            title: 'Ventas por IVA',
+            type: 'item',
+            url: '/finanzas/reporte-ventas-iva',
+            icon: 'feather icon-bar-chart-2',
+            classes: 'nav-item'
+          },
+          {
             id: 'comisiones-financieras',
             title: 'Comisiones',
             type: 'collapse',

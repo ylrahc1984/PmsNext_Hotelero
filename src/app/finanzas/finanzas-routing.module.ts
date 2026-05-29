@@ -101,6 +101,11 @@ const routes: Routes = [
           )
       },
       {
+        path: 'reporte-ventas-iva',
+        loadComponent: () =>
+          import('./reporte-ventas-iva/reporte-ventas-iva.component').then((c) => c.ReporteVentasIvaComponent)
+      },
+      {
         path: 'documento/:tipo/:serie/:numero',
         loadComponent: () =>
           import('./pages-factura/documento-detalle/documento-detalle.component').then((c) => c.DocumentoDetalleComponent)
