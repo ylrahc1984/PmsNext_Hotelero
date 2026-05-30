@@ -403,7 +403,7 @@ export class DepositoFormComponent implements OnInit {
   }
 
   get totalDetalle(): number {
-    return this.totalCobranza;
+    return this.detalleArray.getRawValue().reduce((sum, item) => sum + this.normalizeNumber(item.monto), 0);
   }
 
   get diferenciaDetalle(): number {
@@ -496,7 +496,7 @@ export class DepositoFormComponent implements OnInit {
       frmPago: this.normalize(deposito.frmPago),
       numOpera: this.normalize(deposito.numOpera),
       moneda: this.normalize(deposito.moneda),
-      tCambio: this.normalizeNumber(deposito.tCambio),
+      tCambio: this.getTipoCambioDeposito(deposito),
       numDepositante: this.normalize(deposito.numDepositante),
       depositante: this.normalize(deposito.depositante),
       concepto: this.normalize(deposito.concepto),
@@ -512,10 +512,13 @@ export class DepositoFormComponent implements OnInit {
     });
 
     this.detalleArray.clear();
-    this.syncDetalleContable(deposito.detalle?.[0]);
-
-    this.recalcularTotales();
-    this.recalcularDetalle();
+    if (this.readonlyMode) {
+      this.setDetalleFromDeposito(deposito.detalle);
+    } else {
+      this.syncDetalleContable(deposito.detalle?.[0]);
+      this.recalcularTotales();
+      this.recalcularDetalle();
+    }
   }
 
   private setCobranzas(documentos: DocumentoSeleccionado[]): void {
@@ -652,6 +655,17 @@ export class DepositoFormComponent implements OnInit {
     detalleGroup.disable({ emitEvent: false });
   }
 
+  private setDetalleFromDeposito(detalle: DepositoCxcDetalle[] | null | undefined): void {
+    const registros = Array.isArray(detalle) ? detalle : [];
+    if (!registros.length) {
+      this.syncDetalleContable();
+      return;
+    }
+    registros.forEach((item) => {
+      this.detalleArray.push(this.createDetalleForm(item));
+    });
+  }
+
   private getDetalleContableValue(base?: Partial<DepositoCxcDetalle>): DepositoCxcDetalle {
     const tipoCambio = this.normalizeNumber(this.depositoForm.controls.tCambio.value || base?.tCambio || 1);
     return {
@@ -663,17 +677,30 @@ export class DepositoFormComponent implements OnInit {
     };
   }
 
+  private getTipoCambioDeposito(deposito: DepositoCxc): number {
+    const encabezado = this.normalizeNumber(deposito.tCambio);
+    if (encabezado > 0) {
+      return encabezado;
+    }
+    const detalle = deposito.detalle?.find((item) => this.normalizeNumber(item.tCambio) > 0);
+    if (detalle) {
+      return this.normalizeNumber(detalle.tCambio);
+    }
+    const cobranza = deposito.cobranzas?.find((item) => this.normalizeNumber(item.tCambio) > 0);
+    return this.normalizeNumber(cobranza?.tCambio);
+  }
+
   private buildPayload(): DepositoCxc {
     const raw = this.depositoForm.getRawValue();
     const operador = this.getOperador();
     const empresa = this.getEmpresa();
-    const fechaIso = this.toIsoDate(raw.fecha);
+    const fechaOperacion = this.formatDateForApi(raw.fecha);
 
     return {
       idOperacion: this.idOperacion ?? '',
       codBanco: this.normalize(raw.codBanco),
       codCtaBanco: this.normalize(raw.codCtaBanco),
-      fecha: fechaIso,
+      fecha: fechaOperacion,
       numDepositante: this.normalize(raw.numDepositante),
       depositante: this.normalize(raw.depositante),
       concepto: this.normalize(raw.concepto),
@@ -685,7 +712,7 @@ export class DepositoFormComponent implements OnInit {
       operador,
       empresa,
       movCon: 0,
-      fechaCon: fechaIso,
+      fechaCon: fechaOperacion,
       operCon: '',
       detalle: raw.detalle.map((item) => ({
         codConcepto: this.normalize(item.codConcepto),
@@ -698,7 +725,7 @@ export class DepositoFormComponent implements OnInit {
         tipoDocu: this.normalize(item.tipoDocu),
         serie: this.normalize(item.serie),
         numDocu: this.normalize(item.numDocu),
-        fechaCobra: this.toIsoDate(item.fechaCobra || raw.fecha),
+        fechaCobra: this.formatDateForApi(item.fechaCobra || raw.fecha),
         tipo: this.normalize(item.tipo),
         moneda: this.normalize(item.moneda),
         montoPago: this.normalizeNumber(item.montoPago),
@@ -777,6 +804,10 @@ export class DepositoFormComponent implements OnInit {
     if (!trimmed) {
       return '';
     }
+    const datePart = trimmed.split(' ')[0];
+    if (datePart !== trimmed) {
+      return this.formatDateFromApi(datePart);
+    }
     if (trimmed.includes('-') && trimmed.includes('T')) {
       return trimmed.split('T')[0];
     }
@@ -795,19 +826,39 @@ export class DepositoFormComponent implements OnInit {
     return trimmed;
   }
 
-  private toIsoDate(value: string): string {
+  private formatDateForApi(value: string): string {
     const trimmed = this.normalize(value);
     if (!trimmed) {
-      return new Date().toISOString();
+      return '';
     }
-    if (trimmed.includes('T')) {
+    if (trimmed.includes('/')) {
+      const parts = trimmed.split('/');
+      if (parts.length === 3) {
+        const [day, month, year] = parts;
+        if (day && month && year) {
+          return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year.slice(0, 4)}`;
+        }
+      }
       return trimmed;
     }
-    const date = new Date(trimmed);
-    if (Number.isNaN(date.getTime())) {
-      return new Date().toISOString();
+    const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      const [, year, month, day] = isoMatch;
+      return `${day}/${month}/${year}`;
     }
-    return date.toISOString();
+    const compactMatch = trimmed.match(/^(\d{4})(\d{2})(\d{2})$/);
+    if (compactMatch) {
+      const [, year, month, day] = compactMatch;
+      return `${day}/${month}/${year}`;
+    }
+    const parsed = new Date(trimmed);
+    if (!Number.isNaN(parsed.getTime())) {
+      const year = parsed.getFullYear();
+      const month = `${parsed.getMonth() + 1}`.padStart(2, '0');
+      const day = `${parsed.getDate()}`.padStart(2, '0');
+      return `${day}/${month}/${year}`;
+    }
+    return trimmed;
   }
 
   private getOperador(): string {

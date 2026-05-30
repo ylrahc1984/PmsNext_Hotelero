@@ -225,6 +225,44 @@
             </div>
           </app-card>
 
+          <app-card cardTitle="Detalle Contable" @fadeSlideIn>
+            <div class="table-wrapper">
+              <div class="table-responsive">
+                <table class="table table-hover detalle-table table-compact">
+                  <thead>
+                    <tr>
+                      <th>Concepto</th>
+                      <th>Descripción</th>
+                      <th>Moneda</th>
+                      <th class="text-end">Monto</th>
+                      <th class="text-end">Tipo cambio</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let detalle of detalleArray.controls; trackBy: trackByIndex">
+                      <td>{{ detalle.controls.codConcepto.value }}</td>
+                      <td>{{ detalle.controls.descripcion.value }}</td>
+                      <td>{{ detalle.controls.moneda.value }}</td>
+                      <td class="text-end">{{ detalle.controls.monto.value | number:'1.2-2' }}</td>
+                      <td class="text-end">{{ detalle.controls.tCambio.value | number:'1.2-2' }}</td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colspan="3">Total detalle</td>
+                      <td class="text-end">{{ totalDetalle | number:'1.2-2' }}</td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <div class="empty-state" *ngIf="!detalleArray.length">
+                <i class="feather icon-inbox"></i>
+                <p>Sin detalle contable para este depósito.</p>
+              </div>
+            </div>
+          </app-card>
+
         </div>
 
       </div>

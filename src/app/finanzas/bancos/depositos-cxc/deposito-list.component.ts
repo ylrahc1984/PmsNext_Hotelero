@@ -189,21 +189,7 @@ export class DepositoListComponent implements OnInit {
   }
 
   formatFecha(value: string): string {
-    const trimmed = this.normalize(value);
-    if (!trimmed) {
-      return '';
-    }
-    if (trimmed.includes('/')) {
-      return trimmed;
-    }
-    const parts = trimmed.split('-');
-    if (parts.length === 3) {
-      const [year, month, day] = parts;
-      if (year && month && day) {
-        return `${day}/${month}/${year}`;
-      }
-    }
-    return trimmed;
+    return this.formatDateForApi(value);
   }
 
   private async loadDepositos(resetRecords = true): Promise<void> {
@@ -296,8 +282,8 @@ export class DepositoListComponent implements OnInit {
     return {
       codBanco: this.normalize(value.codBanco),
       codCtaBanco: this.normalize(value.codCtaBanco),
-      fechaInicio: this.normalize(value.fechaInicio),
-      fechaFin: this.normalize(value.fechaFin)
+      fechaInicio: this.formatDateForApi(value.fechaInicio),
+      fechaFin: this.formatDateForApi(value.fechaFin)
     };
   }
 
@@ -330,6 +316,41 @@ export class DepositoListComponent implements OnInit {
     const month = `${date.getMonth() + 1}`.padStart(2, '0');
     const day = `${date.getDate()}`.padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  private formatDateForApi(value: string): string {
+    const trimmed = this.normalize(value);
+    if (!trimmed) {
+      return '';
+    }
+    if (trimmed.includes('/')) {
+      const parts = trimmed.split('/');
+      if (parts.length === 3) {
+        const [day, month, year] = parts;
+        if (day && month && year) {
+          return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year.slice(0, 4)}`;
+        }
+      }
+      return trimmed;
+    }
+    const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      const [, year, month, day] = isoMatch;
+      return `${day}/${month}/${year}`;
+    }
+    const compactMatch = trimmed.match(/^(\d{4})(\d{2})(\d{2})$/);
+    if (compactMatch) {
+      const [, year, month, day] = compactMatch;
+      return `${day}/${month}/${year}`;
+    }
+    const parsed = new Date(trimmed);
+    if (!Number.isNaN(parsed.getTime())) {
+      const year = parsed.getFullYear();
+      const month = `${parsed.getMonth() + 1}`.padStart(2, '0');
+      const day = `${parsed.getDate()}`.padStart(2, '0');
+      return `${day}/${month}/${year}`;
+    }
+    return trimmed;
   }
 
   private getErrorMessage(error: unknown, fallback: string): string {
