@@ -40,7 +40,7 @@ export const NavigationItems: NavigationItem[] = [
         children: [
           {
             id: 'operacion-diaria',
-            title: 'Operación Diaria',
+            title: 'Actividades Diaria',
             type: 'item',
             url: '/operaciones/operacion-diaria',
             icon: 'feather icon-clock',
@@ -108,7 +108,7 @@ export const NavigationItems: NavigationItem[] = [
         children: [
           {
             id: 'servicios',
-            title: 'Servicios',
+            title: 'Actividades / Servicios',
             type: 'item',
             url: '/catalogos/servicios',
             icon: 'feather icon-settings',

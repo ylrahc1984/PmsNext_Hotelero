@@ -12,7 +12,7 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 export class WelcomeCardComponent {
   @Input() userName = 'Usuario';
   @Input() title = 'Bienvenido de nuevo';
-  @Input() description = 'Gestiona tu operación diaria, consulta pendientes y mantén visibilidad del día desde un solo lugar.';
+  @Input() description = 'Gestiona tus actividades diarias, consulta pendientes y mantén visibilidad del día desde un solo lugar.';
 
   get initials(): string {
     const parts = this.userName
