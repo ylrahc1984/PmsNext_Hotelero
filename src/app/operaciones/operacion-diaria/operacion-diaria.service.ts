@@ -33,7 +33,7 @@ export class OperacionDiariaService {
     const agenciaId = (params.agenciaId ?? '').toString().trim();
     const choferId = (params.choferId ?? '').toString().trim();
     const page = params.page ?? 1;
-    const pageSize = params.pageSize ?? 50;
+    const pageSize = params.pageSize ?? 150;
 
     if (fechaInicio) httpParams = httpParams.set('fechaInicio', fechaInicio);
     if (fechaFin) httpParams = httpParams.set('fechaFin', fechaFin);
