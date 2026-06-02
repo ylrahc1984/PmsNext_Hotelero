@@ -28,7 +28,14 @@ export class LiquidacionComisionService {
   }
 
   listarLiquidaciones(params?: LiquidacionListFilters): Observable<LiquidacionResumen[]> {
-    return this.http.get<LiquidacionResumen[]>(this.apiUrl, { params: toHttpParams(params as QueryParams) });
+    const httpParams = toHttpParams(params as QueryParams);
+    console.info('[LiquidacionComisionService] GET listarLiquidaciones', {
+      url: this.apiUrl,
+      params: httpParams.keys().reduce<Record<string, string>>((acc, key) => ({ ...acc, [key]: httpParams.get(key) ?? '' }), {}),
+      requestUrl: `${this.apiUrl}?${httpParams.toString()}`
+    });
+
+    return this.http.get<LiquidacionResumen[]>(this.apiUrl, { params: httpParams });
   }
 
   obtenerLiquidacion(id: string): Observable<LiquidacionDetalleResponse> {

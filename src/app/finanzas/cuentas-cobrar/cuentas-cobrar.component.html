@@ -138,7 +138,12 @@
                   >
                 </td>
                 <td>{{ item.tipoDocu }}</td>
-                <td>{{ item.numDocu }}</td>
+                <td>
+                  <div class="documento-cell">
+                    <span class="documento-numero">{{ item.numDocu }}</span>
+                    <span class="documento-reserva" *ngIf="item.codReserva">Reserva: {{ item.codReserva }}</span>
+                  </div>
+                </td>
                 <td>{{ item.fechaDocu | date:'dd/MM/yyyy' }}</td>
                 <td>
                   <div class="cliente-cell">
@@ -193,8 +198,9 @@
             <i class="feather icon-printer"></i>
             Imprimir
           </button>
-          <button class="btn btn-outline-primary" type="button">
-            <i class="feather icon-download"></i>
+          <button class="btn btn-outline-primary" type="button" (click)="exportarExcel()" [disabled]="loading() || exporting()">
+            <span *ngIf="exporting()" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+            <i *ngIf="!exporting()" class="feather icon-download"></i>
             Exportar Excel
           </button>
         </div>

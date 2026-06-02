@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpResponse } from '@angular/common/http';
 import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -32,6 +33,7 @@ type DocumentoSeleccionado = {
   moneda              : string;
   tCambio             : number;
   estadoElectronico   : string;
+  codReserva         ?: string;
 };
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -62,6 +64,7 @@ export class CuentasCobrarComponent implements OnInit {
   });
 
   readonly loading = signal(false);
+  readonly exporting = signal(false);
   readonly records = signal<EstadoCuentaCliente[]>([]);
   readonly pageNumber = signal(1);
   readonly pageSize = signal(DEFAULT_PAGE_SIZE);
@@ -125,6 +128,27 @@ export class CuentasCobrarComponent implements OnInit {
       return;
     }
     this.cargarEstadoCuenta(1, parsed);
+  }
+
+  exportarExcel(): void {
+    if (this.filtrosForm.invalid) {
+      this.filtrosForm.markAllAsTouched();
+      return;
+    }
+
+    const query = this.buildQuery(1, 1000);
+    this.exporting.set(true);
+
+    this.estadoCuentaService
+      .exportarExcel(query)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.exporting.set(false))
+      )
+      .subscribe({
+        next: (response) => this.downloadExcelResponse(response),
+        error: (error) => this.toast.error(this.getErrorMessage(error))
+      });
   }
 
   trackByRow(index: number, item: EstadoCuentaCliente): string {
@@ -289,12 +313,47 @@ export class CuentasCobrarComponent implements OnInit {
         saldo: this.normalizeNumber(item.saldo),
         moneda: this.normalize(item.moneda),
         tCambio: this.normalizeNumber(item.tCambio),
-        estadoElectronico: this.normalize(item.estadoElectronico)
+        estadoElectronico: this.normalize(item.estadoElectronico),
+        codReserva: this.normalize(item.codReserva)
       }));
   }
 
   private getDocumentoKey(item: EstadoCuentaCliente): string {
     return `${this.normalize(item.codCliente)}-${this.normalize(item.tipoDocu)}-${this.normalize(item.serie)}-${this.normalize(item.numDocu)}`;
+  }
+
+  private downloadExcelResponse(response: HttpResponse<Blob>): void {
+    const body = response.body;
+    if (!body) {
+      this.toast.warning('No se recibio el archivo de estado de cuenta.');
+      return;
+    }
+
+    const mimeType = body.type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    const blob = body.type ? body : new Blob([body], { type: mimeType });
+    const objectUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = this.getDownloadFilename(response) || this.buildExportFilename();
+    link.click();
+    window.URL.revokeObjectURL(objectUrl);
+  }
+
+  private getDownloadFilename(response: HttpResponse<Blob>): string {
+    const disposition = response.headers.get('content-disposition') ?? response.headers.get('Content-Disposition') ?? '';
+    const filenameStarMatch = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+    if (filenameStarMatch?.[1]) {
+      return decodeURIComponent(filenameStarMatch[1].replace(/"/g, '').trim());
+    }
+
+    const filenameMatch = /filename="?([^";]+)"?/i.exec(disposition);
+    return filenameMatch?.[1]?.trim() ?? '';
+  }
+
+  private buildExportFilename(): string {
+    const value = this.filtrosForm.getRawValue();
+    const cliente = this.normalize(value.codCliente) || 'todos';
+    return `Estado_Cuenta_${cliente}_${value.fechaInicial}_${value.fechaFinal}.xlsx`;
   }
 
   private formatDateToApi(value: string): string {

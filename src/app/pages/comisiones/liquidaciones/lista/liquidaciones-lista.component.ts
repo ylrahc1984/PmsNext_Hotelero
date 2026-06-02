@@ -38,9 +38,17 @@ export class LiquidacionesListaComponent implements OnInit {
     fechaFin: '',
     busqueda: ''
   });
+  readonly appliedFilters = signal<Required<LiquidacionListFilters>>({
+    empresaId: 1,
+    agencia: '',
+    estado: '',
+    fechaInicio: '',
+    fechaFin: '',
+    busqueda: ''
+  });
 
   readonly filteredLiquidaciones = computed(() => {
-    const filters = this.filters();
+    const filters = this.appliedFilters();
     const search = this.normalize(filters.busqueda);
     const agencia = this.normalize(filters.agencia);
     const estado = this.normalize(filters.estado);
@@ -50,8 +58,7 @@ export class LiquidacionesListaComponent implements OnInit {
       return (
         (!agencia || this.normalize(`${item.AD19_CodAgencia} ${item.AD19_NomAgencia}`).includes(agencia)) &&
         (!estado || this.normalize(item.AD19_Estado) === estado) &&
-        (!search || liquidationText.includes(search)) &&
-        this.matchesDateRange(item)
+        (!search || liquidationText.includes(search))
       );
     });
   });
@@ -77,12 +84,24 @@ export class LiquidacionesListaComponent implements OnInit {
   }
 
   buscar(): void {
+    this.loadLiquidaciones(this.filters(), true);
+  }
+
+  private loadLiquidaciones(filters: Required<LiquidacionListFilters>, applyFilters: boolean): void {
+    if (applyFilters) {
+      this.appliedFilters.set({ ...filters });
+    }
+
     this.loading.set(true);
     this.errorMessage.set('');
     this.actionMessage.set('');
 
     this.liquidacionService
-      .listarLiquidaciones({ empresaId: Number(this.filters().empresaId) })
+      .listarLiquidaciones({
+        empresaId: Number(filters.empresaId),
+        fechaInicio: this.toApiDate(filters.fechaInicio),
+        fechaFin: this.toApiDate(filters.fechaFin)
+      })
       .pipe(
         catchError(() => {
           this.errorMessage.set('No se pudieron cargar las liquidaciones de comision.');
@@ -112,7 +131,7 @@ export class LiquidacionesListaComponent implements OnInit {
   }
 
   refrescar(): void {
-    this.buscar();
+    this.loadLiquidaciones(this.appliedFilters(), false);
   }
 
   async ejecutarAccion(item: LiquidacionResumen, action: LiquidacionAction): Promise<void> {
@@ -155,7 +174,7 @@ export class LiquidacionesListaComponent implements OnInit {
           return;
         }
         this.actionMessage.set(`Liquidacion ${item.AD19_Id} actualizada correctamente.`);
-        this.buscar();
+        this.loadLiquidaciones(this.appliedFilters(), false);
       });
   }
 
@@ -250,23 +269,19 @@ export class LiquidacionesListaComponent implements OnInit {
   formatDate(value: unknown): string {
     const text = String(value ?? '').trim();
     if (!text) return 'N/D';
-    const date = new Date(text);
+
+    const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(text);
+    const date = dateOnlyMatch
+      ? new Date(Number(dateOnlyMatch[1]), Number(dateOnlyMatch[2]) - 1, Number(dateOnlyMatch[3]))
+      : new Date(text);
+
     if (Number.isNaN(date.getTime())) return text;
-    return new Intl.DateTimeFormat('es-CR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    }).format(date);
+    return [date.getDate(), date.getMonth() + 1, date.getFullYear()].map((part) => String(part).padStart(2, '0')).join('/');
   }
 
-  private matchesDateRange(item: LiquidacionResumen): boolean {
-    const filters = this.filters();
-    const date = this.toDateKey(item.AD19_FechaLiquidacion);
-    return (!filters.fechaInicio || date >= filters.fechaInicio) && (!filters.fechaFin || date <= filters.fechaFin);
-  }
-
-  private toDateKey(value: string): string {
-    return String(value ?? '').slice(0, 10);
+  private toApiDate(value: string): string {
+    const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value ?? '').trim());
+    return dateOnlyMatch ? `${dateOnlyMatch[3]}/${dateOnlyMatch[2]}/${dateOnlyMatch[1]}` : String(value ?? '').trim();
   }
 
   private sum(rows: LiquidacionResumen[], key: keyof Pick<LiquidacionResumen, 'AD19_TotalFacturado' | 'AD19_TotalComision' | 'TotalReservas' | 'TotalPax'>): number {

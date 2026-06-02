@@ -181,6 +181,21 @@
   color: #111827;
 }
 
+.documento-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.documento-numero {
+  font-weight: 600;
+  color: #111827;
+}
+
+.documento-reserva {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
 .cliente-cell {
   display: flex;
   flex-direction: column;
