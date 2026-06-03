@@ -53,7 +53,7 @@ export class CuentasCobrarComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly router = inject(Router);
 
-  readonly pageSizes = [10, 20, 50];
+  readonly pageSizes = [10, 20, 50,100,150, 200, 500, 1000];
   private readonly defaultDateRange = this.getDefaultDateRange();
 
   readonly filtrosForm: FormGroup<EstadoCuentaForm> = this.fb.group({
