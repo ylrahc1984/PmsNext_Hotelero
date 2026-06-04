@@ -1,0 +1,160 @@
+<section class="mail-detail-page">
+  <header class="detail-hero">
+    <button class="icon-btn" type="button" (click)="volver()" title="Volver">
+      <i class="feather icon-arrow-left"></i>
+    </button>
+
+    <div class="hero-main">
+      <span class="eyebrow">Detalle de compra por correo</span>
+      <h1>{{ factura()?.PAC40_NumFacturaFmt || numDocu }}</h1>
+      <p>{{ factura()?.PAC40_Concepto || 'Compra de productos descargada desde correo' }}</p>
+    </div>
+
+    <div class="hero-status">
+      <span>{{ factura()?.PAC40_Estado || 'N/D' }}</span>
+      <strong>{{ factura()?.PAC40_Moneda || detalle()[0]?.PAC41_Moneda || 'N/D' }}</strong>
+    </div>
+  </header>
+
+  <section class="provider-panel">
+    <div class="provider-identity">
+      <span class="eyebrow">Proveedor</span>
+      <h2>{{ factura()?.PAC40_NomProve || 'Proveedor no disponible' }}</h2>
+      <div class="provider-meta">
+        <span><i class="feather icon-hash"></i>{{ factura()?.PAC40_RucProve || 'Sin RUC' }}</span>
+        <span><i class="feather icon-mail"></i>{{ factura()?.PAC40_Correo || 'Sin correo' }}</span>
+        <span><i class="feather icon-phone"></i>{{ factura()?.PAC40_Telefono || 'Sin telefono' }}</span>
+      </div>
+    </div>
+
+    <div class="document-grid">
+      <div>
+        <span>Documento</span>
+        <strong>{{ tipDocu }} / {{ numDocu }}</strong>
+      </div>
+      <div>
+        <span>Factura</span>
+        <strong>{{ factura()?.PAC40_NumFacturaFmt || 'N/D' }}</strong>
+      </div>
+      <div>
+        <span>Fecha factura</span>
+        <strong>{{ formatDate(factura()?.PAC40_FecFactu) }}</strong>
+      </div>
+      <div>
+        <span>Vencimiento</span>
+        <strong>{{ formatDate(factura()?.PAC40_FecVen) }}</strong>
+      </div>
+      <div>
+        <span>Forma pago</span>
+        <strong>{{ factura()?.PAC40_FrmPagoDesc || 'N/D' }}</strong>
+      </div>
+      <div>
+        <span>T. cambio</span>
+        <strong>{{ formatExchangeRate(factura()?.PAC40_TCambio || detalle()[0]?.PAC41_Tcambio) }}</strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="summary-strip">
+    <div>
+      <span>Lineas</span>
+      <strong>{{ totales().lineas }}</strong>
+    </div>
+    <div>
+      <span>Cantidad</span>
+      <strong>{{ formatNumber(totales().cantidad, 0, 4) }}</strong>
+    </div>
+    <div>
+      <span>Neto</span>
+      <strong>{{ formatNumber(totales().neto) }}</strong>
+    </div>
+    <div>
+      <span>Impuesto</span>
+      <strong>{{ formatNumber(totales().impuesto) }}</strong>
+    </div>
+    <div class="accent">
+      <span>Total</span>
+      <strong>{{ formatNumber(totales().total) }}</strong>
+    </div>
+    <div class="accent">
+      <span>Total convertido</span>
+      <strong>{{ formatNumber(totales().totalConvertido) }}</strong>
+    </div>
+  </section>
+
+  <div *ngIf="errorMessage()" class="console-alert error">{{ errorMessage() }}</div>
+
+  <section class="detail-grid-shell">
+    <div class="table-title">
+      <div>
+        <span class="eyebrow">Detalle PAC41</span>
+        <h2>Lineas de productos</h2>
+      </div>
+      <span class="count-chip">{{ detalle().length }} lineas</span>
+    </div>
+
+    <div class="table-scroll">
+      <table class="detail-table">
+        <thead>
+          <tr>
+            <th>Orden</th>
+            <th>Codigo</th>
+            <th>Producto</th>
+            <th>Almacen</th>
+            <th class="number">Cantidad</th>
+            <th>Und.</th>
+            <th class="number">Precio</th>
+            <th class="number">Neto</th>
+            <th class="number">% Imp.</th>
+            <th class="number">Impuesto</th>
+            <th class="number">Total</th>
+            <th class="number">T. Cambio</th>
+            <th class="number">Total conv.</th>
+            <th>Cabys</th>
+          </tr>
+        </thead>
+        <tbody>
+          <ng-container *ngIf="loading(); else loadedRows">
+            <tr class="skeleton-row" *ngFor="let row of skeletonRows">
+              <td colspan="14"><span></span></td>
+            </tr>
+          </ng-container>
+
+          <ng-template #loadedRows>
+            <tr *ngFor="let item of detalle()">
+              <td>{{ item.PAC41_Orden || 'N/D' }}</td>
+              <td class="font-monospace">{{ item.PAC41_CodProdu || 'N/D' }}</td>
+              <td>
+                <div class="product-cell">
+                  <strong>{{ item.PAC41_Producto || 'N/D' }}</strong>
+                  <span>{{ item.PAC41_Moneda || 'N/D' }} · Inventario {{ item.PAC41_Inventario }}</span>
+                </div>
+              </td>
+              <td>{{ item.PAC41_Almacen || 'N/D' }}</td>
+              <td class="number">{{ formatNumber(item.PAC41_Cantidad, 0, 4) }}</td>
+              <td>{{ item.PAC41_UndMedida || 'N/D' }}</td>
+              <td class="money">{{ formatNumber(item.PAC41_MtoIndiSInp) }}</td>
+              <td class="money">{{ formatNumber(item.PAC41_Neto) }}</td>
+              <td class="number">{{ formatNumber(item.PAC41_PorImpto, 0, 2) }}</td>
+              <td class="money">{{ formatNumber(item.PAC41_MtoImpto) }}</td>
+              <td class="money total">{{ formatNumber(item.PAC41_Total) }}</td>
+              <td class="money">{{ formatExchangeRate(item.PAC41_Tcambio) }}</td>
+              <td class="money total">{{ formatNumber(convertedTotal(item)) }}</td>
+              <td class="font-monospace">{{ item.PAC41_Cabys || 'N/D' }}</td>
+            </tr>
+
+            <tr *ngIf="!detalle().length">
+              <td colspan="14">
+                <div class="empty-state">
+                  <i class="feather icon-package"></i>
+                  <strong>Sin lineas de detalle</strong>
+                  <span>El endpoint no devolvio productos para este documento.</span>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>

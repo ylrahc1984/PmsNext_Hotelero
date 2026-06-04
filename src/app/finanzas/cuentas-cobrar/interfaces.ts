@@ -4,6 +4,7 @@ export interface EstadoCuentaCliente {
   tipoDocu             : string;
   serie                : string;
   numDocu              : string;
+  numeroConsecutivo   ?: string;
   fechaDocu            : string;
   codCliente           : string;
   nomCliente           : string;

@@ -1,0 +1,199 @@
+<section class="compras-wrapper compras-correo-console">
+  <header class="page-header">
+    <div>
+      <span class="eyebrow">Compras e inventario</span>
+      <h4 class="title">Compras por Correo</h4>
+      <p class="subtitle">Consulta las compras de productos descargadas directamente desde la cuenta de correo.</p>
+    </div>
+    <div class="header-actions">
+      <div class="quick-summary">
+        <span>{{ totalRecords }} registros</span>
+        <strong>{{ formatMoney(kpis().total) }}</strong>
+      </div>
+      <button class="btn btn-outline-secondary btn-sm icon-btn" type="button" (click)="refrescar()" [disabled]="loading()" title="Refrescar">
+        <i class="feather icon-refresh-cw"></i>
+      </button>
+    </div>
+  </header>
+
+  <form class="filter-strip" [formGroup]="filtrosForm" (ngSubmit)="buscar()">
+    <label>
+      <span>Proveedor</span>
+      <input type="search" formControlName="proveedor" placeholder="Nombre, RUC o correo">
+    </label>
+
+    <label>
+      <span>Factura</span>
+      <input type="search" formControlName="numeroFactura" placeholder="Numero o clave">
+    </label>
+
+    <label>
+      <span>Estado</span>
+      <select formControlName="estado">
+        <option value="">Todos</option>
+        <option value="ABIERTO">Abierto</option>
+        <option value="PAGADO">Pagado</option>
+        <option value="ANULADO">Anulado</option>
+      </select>
+    </label>
+
+    <label>
+      <span>Forma Pago</span>
+      <select formControlName="formaPago">
+        <option value="">Todas</option>
+        <option value="CONTADO">Contado</option>
+        <option value="CREDITO">Credito</option>
+      </select>
+    </label>
+
+    <label>
+      <span>Desde</span>
+      <input type="date" formControlName="fechaInicio">
+    </label>
+
+    <label>
+      <span>Hasta</span>
+      <input type="date" formControlName="fechaFin">
+    </label>
+
+    <div class="filter-actions">
+      <button class="btn btn-outline-secondary btn-sm" type="button" (click)="limpiar()" [disabled]="loading()">Limpiar</button>
+      <button class="btn btn-primary btn-sm" type="submit" [disabled]="loading()">Buscar</button>
+    </div>
+  </form>
+
+  <section class="kpi-grid">
+    <div class="kpi-tile">
+      <span>Documentos</span>
+      <strong>{{ kpis().documentos }}</strong>
+    </div>
+    <div class="kpi-tile accent">
+      <span>Total convertido</span>
+      <strong>{{ formatMoney(kpis().total) }}</strong>
+    </div>
+    <div class="kpi-tile">
+      <span>Impuesto convertido</span>
+      <strong>{{ formatMoney(kpis().impuesto) }}</strong>
+    </div>
+    <div class="kpi-tile">
+      <span>Credito</span>
+      <strong>{{ kpis().credito }}</strong>
+    </div>
+    <div class="kpi-tile">
+      <span>Contado</span>
+      <strong>{{ kpis().contado }}</strong>
+    </div>
+  </section>
+
+  <div *ngIf="errorMessage()" class="console-alert error">{{ errorMessage() }}</div>
+
+  <section class="mail-purchase-grid-shell">
+    <div class="table-header">
+      <h6 class="m-0">
+        <i class="feather icon-mail"></i>
+        Compras descargadas
+      </h6>
+      <div class="table-header-meta">
+        <span class="count-chip">{{ totalRecords }} registros</span>
+        <span *ngIf="loading()" class="loading-chip">
+          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+          Cargando
+        </span>
+      </div>
+    </div>
+
+    <div class="table-scroll">
+      <table class="mail-purchase-table">
+        <thead>
+          <tr>
+            <th>Tipo Doc.</th>
+            <th>Factura</th>
+            <th>RUC Proveedor</th>
+            <th>Proveedor</th>
+            <th>Moneda</th>
+            <th class="number">T. Cambio</th>
+            <th>Fecha Factura</th>
+            <th>Fecha Vence</th>
+            <th class="number">Neto</th>
+            <th class="number">Impuesto</th>
+            <th class="number">Total</th>
+            <th>Forma Pago</th>
+            <th class="actions-col">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <ng-container *ngIf="loading(); else loadedRows">
+            <tr class="skeleton-row" *ngFor="let row of skeletonRows">
+              <td colspan="13"><span></span></td>
+            </tr>
+          </ng-container>
+
+          <ng-template #loadedRows>
+            <tr *ngFor="let item of comprasFiltradas(); let index = index">
+              <td>
+                <span class="mini-badge">{{ item.PAC40_TipDocu || 'N/D' }}</span>
+              </td>
+              <td>
+                <strong class="font-monospace">{{ item.PAC40_NumFacturaFmt || 'N/D' }}</strong>
+              </td>
+              <td class="font-monospace">{{ item.PAC40_RucProve || 'N/D' }}</td>
+              <td>
+                <div class="provider-cell">
+                  <strong>{{ item.PAC40_NomProve || 'N/D' }}</strong>
+                </div>
+              </td>
+              <td>{{ item.PAC40_Moneda || 'N/D' }}</td>
+              <td class="money">{{ formatExchangeRate(item.PAC40_TCambio) }}</td>
+              <td>{{ formatDate(item.PAC40_FecFactu) }}</td>
+              <td>{{ formatDate(item.PAC40_FecVen) }}</td>
+              <td class="money">{{ formatMoney(item.PAC40_Neto, item.PAC40_Moneda) }}</td>
+              <td class="money">{{ formatMoney(item.PAC40_Impuesto, item.PAC40_Moneda) }}</td>
+              <td class="money total">{{ formatMoney(item.PAC40_TotalDocu, item.PAC40_Moneda) }}</td>
+              <td>
+                <span class="mini-badge">{{ item.PAC40_FrmPagoDesc || 'N/D' }}</span>
+              </td>
+              <td>
+                <div class="row-actions">
+                  <button class="icon-btn" type="button" (click)="verDetalle(item)" title="Ver detalle">
+                    <i class="feather icon-eye"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            <tr *ngIf="!comprasFiltradas().length">
+              <td colspan="13">
+                <div class="empty-state">
+                  <i class="feather icon-inbox empty-icon"></i>
+                  <strong>Sin compras para los filtros aplicados</strong>
+                  <span>Ajusta el rango de fechas o los filtros de busqueda.</span>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination-strip" *ngIf="totalRecords > 0">
+      <div class="text-muted">Mostrando {{ pageStart }}-{{ pageEnd }} de {{ totalRecords }} registros</div>
+      <select
+        class="form-select form-select-sm w-auto"
+        #pageSizeSelect
+        [value]="pageSize"
+        (change)="onPageSizeChange(pageSizeSelect.value)"
+        [disabled]="loading()"
+      >
+        <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }} por pagina</option>
+      </select>
+      <div class="btn-group" role="group">
+        <button class="btn btn-outline-secondary btn-sm" type="button" [disabled]="pageNumber === 1 || loading()" (click)="goToPageRelative(-1)">
+          Prev
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" type="button" [disabled]="pageNumber === totalPages || loading()" (click)="goToPageRelative(1)">
+          Next
+        </button>
+      </div>
+    </div>
+  </section>
+</section>

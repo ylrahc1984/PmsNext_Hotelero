@@ -208,10 +208,18 @@ export const NavigationItems: NavigationItem[] = [
           },
           {
             id: 'recepcion-facturas',
-            title: 'Recepcion de Facturas',
+            title: 'Consulta de Compras',
             type: 'item',
             url: '/compras/recepcion-facturas',
             icon: 'feather icon-inbox',
+            classes: 'nav-item'
+          },
+          {
+            id: 'compras-correo',
+            title: 'Compras por Correo',
+            type: 'item',
+            url: '/compras/compras-correo',
+            icon: 'feather icon-mail',
             classes: 'nav-item'
           },
           {

@@ -521,6 +521,17 @@ const routes: Routes = [
           import('./demo/compras/recepcion-facturas/recepcion-facturas.component').then((c) => c.RecepcionFacturasComponent)
       },
       {
+        path: 'compras-correo',
+        loadComponent: () => import('./demo/compras/compras-correo/compras-correo.component').then((c) => c.ComprasCorreoComponent)
+      },
+      {
+        path: 'compras-correo/:tipDocu/:numDocu/detalle',
+        loadComponent: () =>
+          import('./demo/compras/compras-correo/detalle/compras-correo-detalle.component').then(
+            (c) => c.ComprasCorreoDetalleComponent
+          )
+      },
+      {
         path: 'recepcion-facturas/nueva-compra-articulos',
         loadComponent: () =>
           import('./demo/compras/recepcion-facturas/nueva-compra-articulos/nueva-compra-articulos.component').then(

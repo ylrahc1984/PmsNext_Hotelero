@@ -53,7 +53,7 @@ export class CuentasCobrarComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly router = inject(Router);
 
-  readonly pageSizes = [10, 20, 50,100,150, 200, 500, 1000];
+  readonly pageSizes = [10, 20, 50,100,150, 200];
   private readonly defaultDateRange = this.getDefaultDateRange();
 
   readonly filtrosForm: FormGroup<EstadoCuentaForm> = this.fb.group({
@@ -81,6 +81,15 @@ export class CuentasCobrarComponent implements OnInit {
 
   readonly selectedKeys = signal<Set<string>>(new Set<string>());
   readonly selectedCount = computed(() => this.selectedKeys().size);
+  readonly selectableRecords = computed(() => this.records().filter((item) => this.isDocumentoSeleccionable(item)));
+  readonly allCurrentRecordsSelected = computed(() => {
+    const selectable = this.selectableRecords();
+    return selectable.length > 0 && selectable.every((item) => this.isDocumentoSeleccionado(item));
+  });
+  readonly someCurrentRecordsSelected = computed(() => {
+    const selectable = this.selectableRecords();
+    return selectable.some((item) => this.isDocumentoSeleccionado(item)) && !this.allCurrentRecordsSelected();
+  });
 
   showClienteModal = false;
   selectedCliente: ClienteUI | null = null;
@@ -228,6 +237,19 @@ export class CuentasCobrarComponent implements OnInit {
       next.add(key);
     } else {
       next.delete(key);
+    }
+    this.selectedKeys.set(next);
+  }
+
+  toggleSeleccionPagina(checked: boolean): void {
+    const next = new Set(this.selectedKeys());
+    for (const item of this.selectableRecords()) {
+      const key = this.getDocumentoKey(item);
+      if (checked) {
+        next.add(key);
+      } else {
+        next.delete(key);
+      }
     }
     this.selectedKeys.set(next);
   }
