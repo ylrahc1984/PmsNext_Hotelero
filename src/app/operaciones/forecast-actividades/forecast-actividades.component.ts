@@ -579,6 +579,10 @@ export class ForecastActividadesComponent implements OnInit {
       const horaBloque = this.normalizeHour(bloque?.bloqueHora);
 
       for (const detalle of bloque?.detalles ?? []) {
+        if (this.isReservaCancelada(detalle)) {
+          continue;
+        }
+
         const fecha = this.normalizeDate(detalle.prV02_FecServicio);
         const hora = this.normalizeHour(detalle.prV02_HoraServicio || detalle.bloqueHora || horaBloque);
         const codServicio = this.textValue(detalle.codServicio, 'SIN-COD');
@@ -889,6 +893,11 @@ export class ForecastActividadesComponent implements OnInit {
     if (value === true) return true;
     if (value === false || value === null || value === undefined) return false;
     return Number(value) === 1;
+  }
+
+  private isReservaCancelada(detalle: ForecastOperacionDetalle): boolean {
+    const estado = this.textValue(detalle.estado).toUpperCase();
+    return ['CAN', 'CANCELADO', 'CANCELADA', 'ANULADO', 'ANULADA'].includes(estado);
   }
 
   private normalizeSearchValue(value: string | null | undefined): string {
