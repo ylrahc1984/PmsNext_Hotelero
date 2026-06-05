@@ -1,0 +1,50 @@
+$next-cyan: #17d4e0;
+$next-blue: #1f6bff;
+$next-bg: #0b1724;
+$next-surface: #132235;
+$next-white: #ffffff;
+
+:host {
+  display: block;
+}
+
+header {
+  min-height: 72px;
+  background:
+    radial-gradient(circle at 18% 0%, rgba($next-cyan, 0.1), transparent 32%),
+    linear-gradient(180deg, rgba($next-surface, 0.98), rgba($next-bg, 0.96));
+  border-bottom: 1px solid rgba($next-white, 0.1);
+  box-shadow: 0 16px 35px rgba(0, 0, 0, 0.16);
+}
+
+.topbar-shell {
+  min-height: 72px;
+}
+
+.mobile-brand {
+  align-items: center;
+  color: $next-white;
+  gap: 8px;
+  text-decoration: none;
+}
+
+.mobile-brand img {
+  width: auto;
+  height: 34px;
+  object-fit: contain;
+}
+
+.mobile-brand span {
+  color: $next-white;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.mobile-menu {
+  color: $next-white;
+}
+
+.mobile-menu i {
+  color: $next-white;
+}

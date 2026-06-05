@@ -1,119 +1,129 @@
-<section class="login-premium-page">
-  <div class="login-background" aria-hidden="true"></div>
-  <div class="login-dark-overlay" aria-hidden="true"></div>
-  <div class="login-radial-glow" aria-hidden="true"></div>
+<section class="signin-shell">
+  <main class="signin-main" aria-labelledby="login-title">
+    <section class="signin-hero" aria-label="PmsNext Hotelero">
+      <div class="mobile-brand" [attr.aria-label]="branding.productName">
+        <img [src]="logoSrc" (error)="onLogoError()" [alt]="branding.productName" />
+        <span>PMS HOTELERO</span>
+      </div>
 
-  <div class="decor decor-topographic decor-top-left" aria-hidden="true"></div>
-  <div class="decor decor-topographic decor-bottom-right" aria-hidden="true"></div>
-  <div class="decor decor-toucan-line" aria-hidden="true"></div>
-  <div class="decor decor-leaves-line" aria-hidden="true"></div>
-
-  <main class="login-content" aria-labelledby="login-title">
-    <section class="brand-block" aria-label="Next Tour Operator System">
-      <img
-        [src]="logoSrc"
-        (error)="onLogoError()"
-        alt="Next Tour Operator System"
-        class="brand-logo"
-      />
-      <span class="brand-subtitle">TOUR OPERATOR SYSTEM</span>
+      <div class="hero-copy">
+        <h2>
+          Gestión inteligente
+          <span>Experiencias memorables</span>
+        </h2>
+        <p>Plataforma integral para la gestión de hoteles, huéspedes, restaurante, operaciones y finanzas.</p>
+      </div>
     </section>
 
-    <section class="login-card">
-      <div class="login-icon" aria-hidden="true">
-        <i class="feather icon-lock"></i>
-      </div>
-
-      <h1 id="login-title">Bienvenido de nuevo</h1>
-      <p class="login-copy">
-        La plataforma inteligente para gestionar tus actividades turísticas.
-      </p>
-
-      <div *ngIf="errorMessage" class="login-alert" role="alert">
-        <i class="feather icon-alert-circle" aria-hidden="true"></i>
-        <span>{{ errorMessage }}</span>
-        <button
-          type="button"
-          class="alert-close"
-          (click)="errorMessage = ''"
-          aria-label="Cerrar alerta">
-          <i class="feather icon-x" aria-hidden="true"></i>
-        </button>
-      </div>
-
-      <form class="login-form" [formGroup]="loginForm" (ngSubmit)="onLogin()" novalidate>
-        <div class="form-control-block">
-          <label class="sr-only" for="login-usuario">Usuario</label>
-          <div class="form-field" [class.has-error]="usuario?.invalid && usuario?.touched">
-            <i class="feather icon-user field-icon" aria-hidden="true"></i>
-            <input
-              id="login-usuario"
-              type="text"
-              formControlName="usuario"
-              placeholder="Usuario"
-              autocomplete="username"
-              [attr.aria-invalid]="usuario?.invalid && usuario?.touched"
-              aria-describedby="usuario-error"
-              [disabled]="isLoading" />
-          </div>
-          <div id="usuario-error" class="field-error" *ngIf="usuario?.invalid && usuario?.touched">
-            <span *ngIf="usuario?.errors?.['required']">El usuario es requerido</span>
-            <span *ngIf="usuario?.errors?.['minlength']">Mínimo 3 caracteres</span>
-          </div>
+    <section class="signin-panel-wrapper" aria-label="Formulario de inicio de sesión">
+      <section class="login-card">
+        <div class="brand-block" [attr.aria-label]="branding.productName">
+          <img [src]="logoSrc" (error)="onLogoError()" [alt]="branding.productName" class="brand-logo" />
+          <span class="brand-subtitle">PMS HOTELERO</span>
+          <span class="brand-platform">Hospitality Management Platform</span>
         </div>
 
-        <div class="form-control-block">
-          <label class="sr-only" for="login-clave">Contraseña</label>
-          <div class="form-field" [class.has-error]="clave?.invalid && clave?.touched">
-            <i class="feather icon-lock field-icon" aria-hidden="true"></i>
-            <input
-              id="login-clave"
-              [type]="showPassword ? 'text' : 'password'"
-              formControlName="clave"
-              placeholder="Contraseña"
-              autocomplete="current-password"
-              [attr.aria-invalid]="clave?.invalid && clave?.touched"
-              aria-describedby="clave-error"
-              [disabled]="isLoading" />
-            <button
-              type="button"
-              class="password-toggle"
-              (click)="togglePasswordVisibility()"
-              [disabled]="isLoading"
-              [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
-              <i [class]="showPassword ? 'feather icon-eye-off' : 'feather icon-eye'" aria-hidden="true"></i>
-            </button>
+        <div class="login-heading">
+          <h1 id="login-title">Bienvenido de nuevo</h1>
+          <p>Inicia sesión para continuar</p>
+        </div>
+
+        <div *ngIf="errorMessage" class="login-alert" role="alert">
+          <i class="feather icon-alert-circle" aria-hidden="true"></i>
+          <span>{{ errorMessage }}</span>
+          <button type="button" class="alert-close" (click)="errorMessage = ''" aria-label="Cerrar alerta">
+            <i class="feather icon-x" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <form class="login-form" [formGroup]="loginForm" (ngSubmit)="onLogin()" novalidate>
+          <div class="form-control-block">
+            <label class="sr-only" for="login-usuario">Usuario</label>
+            <div class="form-field" [class.has-error]="usuario?.invalid && usuario?.touched">
+              <i class="feather icon-user field-icon" aria-hidden="true"></i>
+              <input
+                id="login-usuario"
+                type="text"
+                formControlName="usuario"
+                placeholder="Usuario"
+                autocomplete="username"
+                [attr.aria-invalid]="usuario?.invalid && usuario?.touched"
+                aria-describedby="usuario-error"
+                [disabled]="isLoading" />
+            </div>
+            <div id="usuario-error" class="field-error" *ngIf="usuario?.invalid && usuario?.touched">
+              <span *ngIf="usuario?.errors?.['required']">El usuario es requerido</span>
+              <span *ngIf="usuario?.errors?.['minlength']">Mínimo 3 caracteres</span>
+            </div>
           </div>
-          <div id="clave-error" class="field-error" *ngIf="clave?.invalid && clave?.touched">
-            <span *ngIf="clave?.errors?.['required']">La contraseña es requerida</span>
-            <span *ngIf="clave?.errors?.['minlength']">Mínimo 3 caracteres</span>
+
+          <div class="form-control-block">
+            <label class="sr-only" for="login-clave">Contraseña</label>
+            <div class="form-field" [class.has-error]="clave?.invalid && clave?.touched">
+              <i class="feather icon-lock field-icon" aria-hidden="true"></i>
+              <input
+                id="login-clave"
+                [type]="showPassword ? 'text' : 'password'"
+                formControlName="clave"
+                placeholder="Contraseña"
+                autocomplete="current-password"
+                [attr.aria-invalid]="clave?.invalid && clave?.touched"
+                aria-describedby="clave-error"
+                [disabled]="isLoading" />
+              <button
+                type="button"
+                class="password-toggle"
+                (click)="togglePasswordVisibility()"
+                [disabled]="isLoading"
+                [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+                <i [class]="showPassword ? 'feather icon-eye-off' : 'feather icon-eye'" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div id="clave-error" class="field-error" *ngIf="clave?.invalid && clave?.touched">
+              <span *ngIf="clave?.errors?.['required']">La contraseña es requerida</span>
+              <span *ngIf="clave?.errors?.['minlength']">Mínimo 3 caracteres</span>
+            </div>
           </div>
-        </div>
 
-        <button type="submit" class="btn-login" [disabled]="isLoading">
-          <span *ngIf="!isLoading">Iniciar Sesión</span>
-          <span *ngIf="isLoading" class="loading-label">
-            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-            Ingresando...
-          </span>
-        </button>
-      </form>
+          <div class="login-options">
+            <label class="remember-user">
+              <input type="checkbox" />
+              <span>Recordar usuario</span>
+            </label>
+            <a href="javascript:">¿Olvidaste tu contraseña?</a>
+          </div>
 
-      <div class="login-links">
-        <div>
-          <span>¿Olvidó su contraseña?</span>
-          <a href="javascript:">Restablecer</a>
-        </div>
-        <div>
-          <span>¿No tiene cuenta?</span>
-          <a [routerLink]="['/register']">Registrarse</a>
-        </div>
-      </div>
+          <button type="submit" class="btn-login" [disabled]="isLoading">
+            <span *ngIf="!isLoading">Iniciar Sesión</span>
+            <span *ngIf="isLoading" class="loading-label">
+              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              Ingresando...
+            </span>
+            <i class="feather icon-arrow-right" aria-hidden="true"></i>
+          </button>
+        </form>
 
-      <div class="auth-branding">
-        Tecnología por
-        <a [href]="branding.companyUrl" target="_blank" rel="noopener noreferrer">{{ branding.companyName }}</a>
-      </div>
+        <p class="auth-footer">© 2026 PmsNext Hotelero. Todos los derechos reservados.</p>
+      </section>
+    </section>
+
+    <section class="signin-benefits" aria-label="Beneficios de PmsNext Hotelero">
+      <article class="benefit burgundy">
+        <i class="feather icon-award" aria-hidden="true"></i>
+        <span>Hospitalidad<br />en cada detalle</span>
+      </article>
+      <article class="benefit cyan">
+        <i class="feather icon-users" aria-hidden="true"></i>
+        <span>Huéspedes<br />en el centro</span>
+      </article>
+      <article class="benefit burgundy">
+        <i class="feather icon-trending-up" aria-hidden="true"></i>
+        <span>Operación<br />eficiente</span>
+      </article>
+      <article class="benefit cyan">
+        <i class="feather icon-shield" aria-hidden="true"></i>
+        <span>Información<br />segura</span>
+      </article>
     </section>
   </main>
 </section>

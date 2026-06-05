@@ -1,28 +1,43 @@
-@if (!item().hidden) {
+@if (item(); as navItem) {
+  @if (!navItem.hidden) {
   <!-- vertical layouts -->
   <li
     data-username="dashboard Default Ecommerce CRM Analytics Crypto Project"
     class="nav-item pcoded-hasmenu"
-    [ngClass]="{ 'pcoded-trigger': isExpanded, active: isExpanded }"
+    [ngClass]="{ 'pcoded-trigger': isExpanded, active: isExpanded, 'nav-access-locked': navItem.locked }"
   >
-    <a [routerLinkActive]="['active']" href="javascript:" class="nav-link" (click)="navCollapse($event)">
+    <a
+      [routerLinkActive]="['active']"
+      href="javascript:"
+      class="nav-link"
+      (click)="navCollapse($event)"
+      [attr.aria-disabled]="navItem.locked ? 'true' : null"
+      [attr.title]="navItem.locked ? 'No tienes permisos para acceder a esta opción' : navItem.title"
+    >
       <ng-container *ngTemplateOutlet="itemContent"></ng-container>
     </a>
-    <ng-container *ngTemplateOutlet="subMenuContent"></ng-container>
+    @if (!navItem.locked) {
+      <ng-container *ngTemplateOutlet="subMenuContent"></ng-container>
+    }
   </li>
   <ng-template #itemContent>
-    @if (item().icon) {
+    @if (navItem.icon) {
       <span class="pcoded-micon">
-        <i class="{{ item().icon }}"></i>
+        <i class="{{ navItem.icon }}"></i>
       </span>
     }
     <span class="pcoded-mtext">
-      {{ item().title }}
+      {{ navItem.title }}
     </span>
+    @if (navItem.locked) {
+      <span class="nav-lock-badge" aria-hidden="true">
+        <i class="feather icon-lock"></i>
+      </span>
+    }
   </ng-template>
   <ng-template #subMenuContent>
     <ul class="pcoded-submenu" [routerLinkActive]="['active']">
-      @for (items of item().children; track items) {
+      @for (items of navItem.children; track items) {
         @if (items.type === 'item') {
           <app-nav-item [item]="items" [rootSectionId]="currentRootSectionId" (rootSectionChange)="rootSectionChange.emit($event)" />
         }
@@ -37,4 +52,5 @@
       }
     </ul>
   </ng-template>
+  }
 }

@@ -1,0 +1,123 @@
+$next-cyan: #17d4e0;
+$next-blue: #1f6bff;
+$next-white: #ffffff;
+$next-muted: rgba(255, 255, 255, 0.72);
+
+.main-search {
+  min-width: min(420px, 38vw);
+}
+
+.search-control {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 46px;
+  padding: 0 12px 0 16px;
+  background: rgba($next-white, 0.07);
+  border: 1px solid rgba($next-white, 0.12);
+  border-radius: 16px;
+  box-shadow: inset 0 1px 0 rgba($next-white, 0.04);
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.search-control:focus-within {
+  background: rgba($next-white, 0.1);
+  border-color: rgba($next-cyan, 0.42);
+  box-shadow: 0 0 0 3px rgba($next-blue, 0.1);
+}
+
+.search-control__icon {
+  color: rgba($next-cyan, 0.9);
+  font-size: 1rem;
+  margin-right: 10px;
+}
+
+.form-control {
+  min-width: 240px;
+  color: $next-white;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  padding: 0;
+}
+
+.form-control::placeholder {
+  color: rgba($next-muted, 0.86);
+}
+
+.search-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: rgba($next-white, 0.58);
+  border-radius: 10px;
+  text-decoration: none;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.search-close:hover {
+  color: $next-white;
+  background: rgba($next-white, 0.08);
+}
+
+@media (max-width: 991px) {
+  .main-search {
+    min-width: 100%;
+  }
+
+  .form-control {
+    min-width: 0;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .main-search {
+    min-width: min(250px, 34vw);
+  }
+
+  .search-control {
+    min-height: 40px;
+    padding: 0 9px 0 12px;
+    border-radius: 12px;
+  }
+
+  .search-control__icon {
+    margin-right: 8px;
+    font-size: 0.92rem;
+  }
+
+  .form-control {
+    min-width: 170px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .main-search {
+    min-width: min(58vw, 220px);
+  }
+
+  .search-control {
+    min-height: 38px;
+    padding: 0 8px 0 10px;
+    border-radius: 12px;
+  }
+
+  .search-control__icon {
+    margin-right: 6px;
+    font-size: 0.86rem;
+  }
+
+  .form-control {
+    font-size: 0.78rem;
+  }
+}

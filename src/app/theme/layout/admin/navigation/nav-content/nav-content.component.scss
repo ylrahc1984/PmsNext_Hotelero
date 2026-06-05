@@ -1,81 +1,184 @@
+$next-cyan: #17d4e0;
+$next-blue: #1f6bff;
+$next-burgundy: #8a0f4d;
+$next-bg: #0b1724;
+$next-white: #ffffff;
+$next-muted: rgba(255, 255, 255, 0.72);
+
+:host {
+  display: block;
+  background: $next-bg;
+}
+
 .nav-content-shell {
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 70px);
+  min-height: calc(100vh - 92px);
+  background:
+    radial-gradient(circle at 16% 8%, rgba($next-blue, 0.08), transparent 30%),
+    linear-gradient(180deg, $next-bg 0%, $next-bg 100%);
 }
 
 .pcoded-inner-navbar {
   flex: 1 1 auto;
 }
 
-.sidebar-branding {
-  border-top: 1px solid rgba(181, 193, 214, 0.18);
-  margin: auto 18px 18px;
-  padding-top: 14px;
+:host ::ng-deep .pcoded-inner-navbar {
+  margin: 0;
+  padding: 16px 10px 18px;
 }
 
-.sidebar-branding__active-company {
+:host ::ng-deep .pcoded-inner-navbar .pcoded-menu-caption {
+  margin: 18px 12px 8px;
+  padding: 0;
+}
+
+:host ::ng-deep .pcoded-inner-navbar .pcoded-menu-caption label {
+  color: rgba($next-white, 0.44);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+:host ::ng-deep .pcoded-inner-navbar .nav-item > a,
+:host ::ng-deep .pcoded-inner-navbar .pcoded-hasmenu > a {
+  display: flex;
   align-items: center;
-  color: #ffffff;
-  display: flex;
-  gap: 8px;
-  font-size: 0.8125rem;
+  min-height: 44px;
+  margin: 3px 0;
+  padding: 11px 12px 11px 14px;
+  color: $next-muted;
+  border-left: 3px solid transparent;
+  border-radius: 0 14px 14px 0;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease,
+    border-color 0.2s ease;
+}
+
+:host ::ng-deep .pcoded-inner-navbar .nav-item > a:hover,
+:host ::ng-deep .pcoded-inner-navbar .pcoded-hasmenu > a:hover {
+  color: $next-white;
+  background: rgba($next-white, 0.04);
+  transform: translateX(3px);
+}
+
+:host ::ng-deep .pcoded-inner-navbar .nav-item.active > a,
+:host ::ng-deep .pcoded-inner-navbar .pcoded-hasmenu.active > a,
+:host ::ng-deep .pcoded-inner-navbar .pcoded-hasmenu.pcoded-trigger > a {
+  color: $next-white;
+  background: linear-gradient(90deg, rgba($next-cyan, 0.18), rgba($next-blue, 0.12));
+  border-left-color: $next-cyan;
+  box-shadow: inset 0 0 0 1px rgba($next-cyan, 0.04);
+}
+
+:host ::ng-deep .pcoded-inner-navbar .pcoded-micon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  min-width: 28px;
+  color: inherit;
+}
+
+:host ::ng-deep .pcoded-inner-navbar .pcoded-micon i {
+  color: inherit;
+  font-size: 1rem;
+}
+
+:host ::ng-deep .pcoded-inner-navbar .active > a .pcoded-micon,
+:host ::ng-deep .pcoded-inner-navbar .pcoded-trigger > a .pcoded-micon {
+  color: $next-cyan;
+}
+
+:host ::ng-deep .pcoded-inner-navbar .pcoded-mtext {
+  color: inherit;
+  font-size: 0.85rem;
   font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.25;
+}
+
+:host ::ng-deep .pcoded-inner-navbar .nav-access-locked > a {
+  position: relative;
+  color: rgba($next-white, 0.38);
+  cursor: not-allowed;
+  background: rgba($next-white, 0.015);
+}
+
+:host ::ng-deep .pcoded-inner-navbar .nav-access-locked > a:hover {
+  color: rgba($next-white, 0.48);
+  background: rgba($next-white, 0.025);
+  transform: none;
+}
+
+:host ::ng-deep .pcoded-inner-navbar .nav-access-locked .pcoded-micon {
+  color: rgba($next-white, 0.34);
+}
+
+:host ::ng-deep .pcoded-inner-navbar .nav-lock-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  margin-left: auto;
+  color: rgba($next-cyan, 0.66);
+  background: rgba($next-cyan, 0.08);
+  border: 1px solid rgba($next-cyan, 0.12);
+  border-radius: 999px;
+  font-size: 0.72rem;
+}
+
+:host ::ng-deep .pcoded-inner-navbar .pcoded-submenu {
+  margin: 4px 0 8px;
+  padding: 4px 0 4px 18px;
+  background: transparent;
+  border-left: 1px solid rgba($next-white, 0.08);
+}
+
+:host ::ng-deep .pcoded-inner-navbar .pcoded-submenu a {
+  min-height: 38px;
+  margin: 2px 0;
+  padding-left: 16px;
+  border-radius: 12px;
+}
+
+.sidebar-branding {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: auto 18px 18px;
+  padding: 16px 0 0;
+  border-top: 1px solid rgba($next-white, 0.12);
+}
+
+.sidebar-branding__title {
+  color: $next-white;
+  font-size: 0.82rem;
+  font-weight: 800;
   line-height: 1.2;
-  margin-bottom: 8px;
-  min-width: 0;
-}
-
-.sidebar-branding__active-company i {
-  color: #8fc3ff;
-  flex: 0 0 auto;
-  font-size: 0.875rem;
-}
-
-.sidebar-branding__active-company span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sidebar-branding__product {
-  align-items: baseline;
-  display: flex;
-  gap: 6px;
-  min-width: 0;
-}
-
-.sidebar-branding__name {
-  color: #eef4ff;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .sidebar-branding__version {
-  color: #aebbd0;
-  font-size: 0.75rem;
-  flex: 0 0 auto;
+  color: $next-muted;
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.25;
 }
 
 .sidebar-branding__company {
-  align-items: center;
-  color: #8fc3ff;
-  display: inline-flex;
-  gap: 5px;
-  font-size: 0.75rem;
-  margin-top: 3px;
-  max-width: 100%;
+  color: rgba($next-cyan, 0.86);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
   text-decoration: none;
 }
 
 .sidebar-branding__company:hover {
-  color: #ffffff;
-  text-decoration: underline;
-}
-
-.sidebar-branding__company i {
-  font-size: 0.6875rem;
+  color: $next-white;
 }

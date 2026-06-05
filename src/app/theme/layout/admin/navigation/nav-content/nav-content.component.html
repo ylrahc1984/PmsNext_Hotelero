@@ -1,5 +1,5 @@
 <!--  vertical layouts -->
-<ng-scrollbar style="height: calc(100vh - 70px)" exclude="'#mobile-collapse1'" visibility="hover">
+<ng-scrollbar style="height: calc(100vh - 92px)" exclude="'#mobile-collapse1'" visibility="hover">
   <div class="navbar-content nav-content-shell">
     <ul class="nav pcoded-inner-navbar" (clickOutside)="fireOutClick()">
       @for (item of navigations; track item) {
@@ -12,18 +12,9 @@
       }
     </ul>
     <div class="sidebar-branding" aria-label="Informacion de marca">
-      <div class="sidebar-branding__active-company" [title]="empresaNombre">
-        <i class="feather icon-briefcase" aria-hidden="true"></i>
-        <span>{{ empresaNombre }}</span>
-      </div>
-      <div class="sidebar-branding__product">
-        <span class="sidebar-branding__name">PmsNext</span>
-        <span class="sidebar-branding__version">v{{ currentApplicationVersion }}</span>
-      </div>
-      <a class="sidebar-branding__company" [href]="branding.companyUrl" target="_blank" rel="noopener noreferrer">
-        <span>DiriaLabs</span>
-        <i class="feather icon-external-link" aria-hidden="true"></i>
-      </a>
+      <span class="sidebar-branding__title">NEXT Hospitality</span>
+      <span class="sidebar-branding__version">PmsNext Hotelero v{{ currentApplicationVersion }}</span>
+      <a class="sidebar-branding__company" [href]="branding.companyUrl" target="_blank" rel="noopener noreferrer">© DiriaLabs</a>
     </div>
   </div>
 </ng-scrollbar>

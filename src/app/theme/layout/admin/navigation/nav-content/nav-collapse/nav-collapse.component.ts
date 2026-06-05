@@ -50,6 +50,10 @@ export class NavCollapseComponent {
   navCollapse(e: MouseEvent) {
     e.preventDefault();
 
+    if (this.item().locked) {
+      return;
+    }
+
     if (this.isTopLevelSection()) {
       this.rootSectionChange.emit(this.isExpanded ? null : this.item().id);
       return;

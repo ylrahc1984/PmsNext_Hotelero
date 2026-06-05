@@ -1,5 +1,5 @@
 ﻿import { NgModule } from '@angular/core';
-import { Routes, RouterModule } from '@angular/router';
+import { Route, Routes, RouterModule } from '@angular/router';
 
 // project import
 import { AdminComponent } from './theme/layout/admin/admin.component';
@@ -7,6 +7,23 @@ import { GuestComponent } from './theme/layout/guest/guest.component';
 import { AuthGuard } from './core/guards/auth.guard';
 import { LoginGuard } from './core/guards/login.guard';
 import { CanDeactivateReservaCreateGuard } from './core/guards/can-deactivate-reserva-create.guard';
+
+const loadPmsPlaceholder = () => import('./pages/pms-placeholder/pms-placeholder.component').then((c) => c.PmsPlaceholderComponent);
+
+const pmsPlaceholderChildRoutes = (module: string, entries: Array<[string, string]>): Routes =>
+  entries.map(([path, title]) => ({
+    path,
+    loadComponent: loadPmsPlaceholder,
+    data: { module, title }
+  }));
+
+const pmsPlaceholderSection = (path: string, module: string, entries: Array<[string, string]>): Route => ({
+  path,
+  component: AdminComponent,
+  canActivate: [AuthGuard],
+  canActivateChild: [AuthGuard],
+  children: pmsPlaceholderChildRoutes(module, entries)
+});
 
 const routes: Routes = [
   {
@@ -45,9 +62,149 @@ const routes: Routes = [
       {
         path: '',
         loadComponent: () => import('./demo/dashboard/dashboard.component').then((c) => c.DashboardComponent)
+      },
+      {
+        path: 'indicadores-operativos',
+        loadComponent: loadPmsPlaceholder,
+        data: { module: 'Dashboard', title: 'Indicadores Operativos' }
+      },
+      {
+        path: 'alertas-sistema',
+        loadComponent: loadPmsPlaceholder,
+        data: { module: 'Dashboard', title: 'Alertas del Sistema' }
       }
     ]
   },
+  {
+    path: 'front-desk',
+    component: AdminComponent,
+    canActivate: [AuthGuard],
+    canActivateChild: [AuthGuard],
+    children: [
+      {
+        path: '',
+        redirectTo: 'habitaciones',
+        pathMatch: 'full'
+      },
+      {
+        path: 'habitaciones',
+        loadComponent: loadPmsPlaceholder,
+        data: { module: 'Front Desk', title: 'Habitaciones' }
+      },
+      {
+        path: 'factura-directa',
+        loadComponent: () =>
+          import('./finanzas/pages-factura/nueva-factura/nueva-factura/nueva-factura.component').then((c) => c.NuevaFacturaComponent)
+      },
+      {
+        path: 'rooming-asignaciones',
+        loadComponent: loadPmsPlaceholder,
+        data: { module: 'Front Desk', title: 'Rooming - Asignaciones' }
+      },
+      {
+        path: 'arribos-dia',
+        loadComponent: loadPmsPlaceholder,
+        data: { module: 'Front Desk', title: 'Arribos del Día' }
+      },
+      {
+        path: 'pronostico-ocupacion',
+        loadComponent: loadPmsPlaceholder,
+        data: { module: 'Front Desk', title: 'Pronóstico de Ocupación' }
+      },
+      {
+        path: 'estado-habitaciones',
+        loadComponent: loadPmsPlaceholder,
+        data: { module: 'Front Desk', title: 'Estado de Habitaciones' }
+      },
+      {
+        path: 'configuraciones/room-rack',
+        loadComponent: loadPmsPlaceholder,
+        data: { module: 'Front Desk / Configuraciones', title: 'Room Rack' }
+      },
+      {
+        path: 'configuraciones/estado',
+        loadComponent: loadPmsPlaceholder,
+        data: { module: 'Front Desk / Configuraciones', title: 'Estado de Habitaciones' }
+      },
+      {
+        path: 'configuraciones/bloqueos',
+        loadComponent: loadPmsPlaceholder,
+        data: { module: 'Front Desk / Configuraciones', title: 'Bloqueos de Habitaciones' }
+      },
+      {
+        path: 'configuraciones/categorias',
+        loadComponent: loadPmsPlaceholder,
+        data: { module: 'Front Desk / Configuraciones', title: 'Categorías de Habitación' }
+      },
+      {
+        path: 'configuraciones/mantenimiento',
+        loadComponent: loadPmsPlaceholder,
+        data: { module: 'Front Desk / Configuraciones', title: 'Mantenimiento de Habitaciones' }
+      }
+    ]
+  },
+  pmsPlaceholderSection('housekeeping', 'Housekeeping', [
+    ['estado-habitaciones', 'Estado de Habitaciones'],
+    ['panel-limpieza', 'Panel de Limpieza'],
+    ['asignacion-camareras', 'Asignación de Camareras'],
+    ['supervision', 'Supervisión de Limpieza']
+  ]),
+  {
+    path: 'restaurante',
+    component: AdminComponent,
+    canActivate: [AuthGuard],
+    canActivateChild: [AuthGuard],
+    children: [
+      ...pmsPlaceholderChildRoutes('Restaurante', [
+        ['dashboard', 'Dashboard Restaurante'],
+        ['mesas', 'Mesas / Salones'],
+        ['nuevo-pedido', 'Nuevo Pedido'],
+        ['comandador', 'Comandador'],
+        ['pedidos-activos', 'Pedidos Activos'],
+        ['cocina-barra', 'Cocina / Barra'],
+        ['cargos-habitacion', 'Cargos a Habitación'],
+        ['productos', 'Menú de Productos'],
+        ['categorias', 'Categorías de Productos'],
+        ['puntos-venta', 'Puntos de Venta'],
+        ['saloneros', 'Saloneros']
+      ]),
+      {
+        path: 'facturacion',
+        loadComponent: () =>
+          import('./demo/restaurante/restaurant-dashboard/restaurant-dashboard.component').then(
+            (c) => c.RestaurantDashboardComponent
+          )
+      },
+      {
+        path: 'mesa/:id',
+        loadComponent: () =>
+          import('./demo/restaurante/restaurant-mesa-detalle/restaurant-mesa-detalle.component').then(
+            (c) => c.RestaurantMesaDetalleComponent
+          )
+      },
+      {
+        path: 'configuracion',
+        loadComponent: () =>
+          import('./demo/restaurante/configuracion-restaurante/configuracion-restaurante.component').then(
+            (c) => c.ConfiguracionRestauranteComponent
+          )
+      }
+    ]
+  },
+  pmsPlaceholderSection('huespedes', 'Clientes / Huéspedes', [
+    ['historial-estadias', 'Historial de Estadías'],
+    ['preferencias', 'Preferencias'],
+    ['documentos-identificacion', 'Documentos de Identificación'],
+    ['crm', 'CRM de Huéspedes']
+  ]),
+  pmsPlaceholderSection('mantenimiento', 'Mantenimiento', [
+    ['incidentes', 'Reporte de Incidentes'],
+    ['ordenes', 'Órdenes de Mantenimiento'],
+    ['preventivo', 'Mantenimiento Preventivo'],
+    ['correctivo', 'Mantenimiento Correctivo'],
+    ['habitaciones-fuera-servicio', 'Habitaciones Fuera de Servicio'],
+    ['historial-reparaciones', 'Historial de Reparaciones']
+  ]),
   {
     path: 'acerca-de-pmsnext',
     component: AdminComponent,
@@ -160,6 +317,12 @@ const routes: Routes = [
     redirectTo: 'operaciones/reservas',
     pathMatch: 'full'
   },
+  pmsPlaceholderSection('reservas', 'Reservas', [
+    ['calendario', 'Calendario de Reservas'],
+    ['disponibilidad', 'Disponibilidad'],
+    ['forecast-ocupacion', 'Forecast de Ocupación'],
+    ['tarifas-planes', 'Tarifas y Planes']
+  ]),
   {
     path: 'ordenes-trabajo',
     redirectTo: 'operaciones/ordenes-trabajo',
@@ -184,101 +347,6 @@ const routes: Routes = [
     path: 'operacion-diaria',
     redirectTo: 'operaciones/operacion-diaria',
     pathMatch: 'full'
-  },
-  {
-    path: 'comercial',
-    component: AdminComponent,
-    canActivate: [AuthGuard],
-    canActivateChild: [AuthGuard],
-    children: [
-      {
-        path: 'servicios',
-        redirectTo: '/catalogos/servicios',
-        pathMatch: 'full'
-      },
-      {
-        path: 'servicios/nuevo',
-        redirectTo: '/catalogos/servicios/nuevo',
-        pathMatch: 'full'
-      },
-      {
-        path: 'servicios/editar/:codReceta',
-        redirectTo: '/catalogos/servicios/editar/:codReceta',
-        pathMatch: 'full'
-      },
-      {
-        path: 'listas-precios',
-        redirectTo: '/catalogos/listas-precios',
-        pathMatch: 'full'
-      },
-      {
-        path: 'listas-precios/asignaciones',
-        redirectTo: '/catalogos/listas-precios/asignaciones',
-        pathMatch: 'full'
-      },
-      {
-        path: 'listas-precios/nuevo',
-        redirectTo: '/catalogos/listas-precios/nuevo',
-        pathMatch: 'full'
-      },
-      {
-        path: 'listas-precios/:id/editar',
-        redirectTo: '/catalogos/listas-precios/:id/editar',
-        pathMatch: 'full'
-      },
-      {
-        path: 'listas-precios/:id/detalle',
-        redirectTo: '/catalogos/listas-precios/:id/detalle',
-        pathMatch: 'full'
-      },
-      {
-        path: 'detalle-lista-precio-v2/:codLstPrecio',
-        redirectTo: '/catalogos/detalle-lista-precio-v2/:codLstPrecio',
-        pathMatch: 'full'
-      },
-      {
-        path: 'agencias',
-        redirectTo: '/catalogos/clientes',
-        pathMatch: 'full'
-      },
-      {
-        path: 'agencias/nuevo',
-        redirectTo: '/catalogos/clientes/nuevo',
-        pathMatch: 'full'
-      },
-      {
-        path: 'agencias/:codigo/editar',
-        redirectTo: '/catalogos/clientes/:codigo/editar',
-        pathMatch: 'full'
-      },
-      {
-        path: 'agencias/:codigo/detalle',
-        redirectTo: '/catalogos/clientes/:codigo/detalle',
-        pathMatch: 'full'
-      },
-      {
-        path: 'suplidores',
-        loadComponent: () => import('./demo/catalogos/suplidores/suplidores.component').then((c) => c.SuplidoresComponent)
-      },
-      {
-        path: 'suplidores/nuevo',
-        loadComponent: () => import('./demo/catalogos/suplidores/suplidor-form.component').then((c) => c.SuplidorFormComponent)
-      },
-      {
-        path: 'suplidores/editar/:codSuplidor',
-        loadComponent: () => import('./demo/catalogos/suplidores/suplidor-form.component').then((c) => c.SuplidorFormComponent)
-      },
-      {
-        path: 'ordenes-pedido',
-        redirectTo: '/demo/ordenes-pedido',
-        pathMatch: 'full'
-      },
-      {
-        path: 'ordenes-pedido/nuevo',
-        redirectTo: '/demo/ordenes-pedido/nuevo',
-        pathMatch: 'full'
-      }
-    ]
   },
   {
     path: 'demo',
@@ -465,6 +533,18 @@ const routes: Routes = [
       {
         path: 'lista-pickup/:id/editar',
         loadComponent: () => import('./demo/catalogos/lista-pickup/lista-pickup-form.component').then((c) => c.ListaPickupFormComponent)
+      },
+      {
+        path: 'suplidores',
+        loadComponent: () => import('./demo/catalogos/suplidores/suplidores.component').then((c) => c.SuplidoresComponent)
+      },
+      {
+        path: 'suplidores/nuevo',
+        loadComponent: () => import('./demo/catalogos/suplidores/suplidor-form.component').then((c) => c.SuplidorFormComponent)
+      },
+      {
+        path: 'suplidores/editar/:codSuplidor',
+        loadComponent: () => import('./demo/catalogos/suplidores/suplidor-form.component').then((c) => c.SuplidorFormComponent)
       }
     ]
   },
@@ -600,32 +680,17 @@ const routes: Routes = [
   },
   {
     path: 'suplidores',
-    redirectTo: 'comercial/suplidores',
+    redirectTo: 'catalogos/suplidores',
     pathMatch: 'full'
   },
   {
     path: 'suplidores/nuevo',
-    redirectTo: 'comercial/suplidores/nuevo',
+    redirectTo: 'catalogos/suplidores/nuevo',
     pathMatch: 'full'
   },
   {
     path: 'suplidores/editar/:codSuplidor',
-    redirectTo: 'comercial/suplidores/editar/:codSuplidor',
-    pathMatch: 'full'
-  },
-  {
-    path: 'catalogos/suplidores',
-    redirectTo: 'comercial/suplidores',
-    pathMatch: 'full'
-  },
-  {
-    path: 'catalogos/suplidores/nuevo',
-    redirectTo: 'comercial/suplidores/nuevo',
-    pathMatch: 'full'
-  },
-  {
-    path: 'catalogos/suplidores/editar/:codSuplidor',
-    redirectTo: 'comercial/suplidores/editar/:codSuplidor',
+    redirectTo: 'catalogos/suplidores/editar/:codSuplidor',
     pathMatch: 'full'
   },
   {
@@ -849,6 +914,21 @@ const routes: Routes = [
         loadComponent: () => import('./demo/administracion/configuracion-sistema/configuracion-sistema.component').then((c) => c.ConfiguracionSistemaComponent)
       },
       {
+        path: 'roles-permisos',
+        loadComponent: loadPmsPlaceholder,
+        data: { module: 'Administración', title: 'Roles y Permisos' }
+      },
+      {
+        path: 'catalogos-generales',
+        loadComponent: loadPmsPlaceholder,
+        data: { module: 'Administración', title: 'Catálogos Generales' }
+      },
+      {
+        path: 'auditoria-sistema',
+        loadComponent: loadPmsPlaceholder,
+        data: { module: 'Administración', title: 'Auditoría del Sistema' }
+      },
+      {
         path: 'tipo-cambio',
         loadComponent: () => import('./demo/administracion/tipo-cambio/tipo-cambio.component').then((c) => c.TipoCambioComponent)
       }
@@ -885,6 +965,26 @@ const routes: Routes = [
       {
         path: 'comisiones',
         loadComponent: () => import('./demo/reportes/comisiones/comisiones.component').then((c) => c.ComisionesComponent)
+      },
+      {
+        path: 'restaurante',
+        loadComponent: loadPmsPlaceholder,
+        data: { module: 'Reportes', title: 'Reportes Restaurante' }
+      },
+      {
+        path: 'ocupacion',
+        loadComponent: loadPmsPlaceholder,
+        data: { module: 'Reportes', title: 'Reportes de Ocupación' }
+      },
+      {
+        path: 'housekeeping',
+        loadComponent: loadPmsPlaceholder,
+        data: { module: 'Reportes', title: 'Reportes de Housekeeping' }
+      },
+      {
+        path: 'mantenimiento',
+        loadComponent: loadPmsPlaceholder,
+        data: { module: 'Reportes', title: 'Reportes de Mantenimiento' }
       }
     ]
   }

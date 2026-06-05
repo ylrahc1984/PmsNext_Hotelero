@@ -1,0 +1,28 @@
+<div class="floor-plan-viewport" aria-label="Plano comercial de mesas restaurante">
+  <div class="floor-plan-canvas">
+    <div class="floor-plan-overlay"></div>
+
+    <article
+      *ngFor="let mesa of mesas"
+      class="mesa-card"
+      [ngClass]="[getMesaEstadoClass(mesa), getMesaTipoClass(mesa), mesaSeleccionada?.id === mesa.id ? 'mesa-card--selected' : '']"
+      [ngStyle]="getMesaStyle(mesa)"
+      (click)="onMesaClick(mesa)"
+      [attr.aria-label]="mesa.nombre + ' ' + mesa.estado"
+      role="button"
+      tabindex="0"
+    >
+      <h3>{{ mesa.nombre }}</h3>
+
+      <p *ngIf="mesa.estado === 'LIBRE'">Libre</p>
+      <p *ngIf="mesa.estado === 'CUENTA'">Cuenta</p>
+      <p *ngIf="mesa.estado === 'LIMPIEZA'">Limpieza</p>
+      <p *ngIf="mesa.estado === 'RESERVADA'">{{ mesa.horaReserva }}</p>
+
+      <ng-container *ngIf="mesa.estado === 'OCUPADA'">
+        <p>👤 {{ mesa.personas || 0 }} pax</p>
+        <p>{{ mesa.consumo || 0 | currency:'CRC':'symbol':'1.0-0' }}</p>
+      </ng-container>
+    </article>
+  </div>
+</div>

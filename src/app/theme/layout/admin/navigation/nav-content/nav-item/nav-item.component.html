@@ -5,6 +5,7 @@
         class="nav-link"
         [target]="item().target ? '_blank' : '_self'"
         [routerLink]="[item().url]"
+        [attr.title]="item().title"
         (click)="closeOtherMenu($event)"
       >
         <ng-container *ngTemplateOutlet="itemIcon"></ng-container>
@@ -22,7 +23,7 @@
   }
   @if (item().url && item().external) {
     <li [ngClass]="item().classes">
-      <a [target]="item().target ? '_blank' : '_self'" [href]="item().url">
+      <a [target]="item().target ? '_blank' : '_self'" [href]="item().url" [attr.title]="item().title">
         <ng-container *ngTemplateOutlet="itemIcon"></ng-container>
         @if (item().icon) {
           <span class="pcoded-mtext">{{ item().title }}</span>

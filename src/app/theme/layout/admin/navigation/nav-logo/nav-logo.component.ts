@@ -4,6 +4,7 @@ import { RouterModule } from '@angular/router';
 
 // project import
 import { SharedModule } from 'src/app/theme/shared/shared.module';
+import { APP_BRANDING } from 'src/app/core/config/app-branding';
 
 @Component({
   selector: 'app-nav-logo',
@@ -16,6 +17,7 @@ export class NavLogoComponent {
   @Input() navCollapsed: boolean;
   NavCollapse = output();
   windowWidth = window.innerWidth;
+  readonly branding = APP_BRANDING;
 
   // public method
   navCollapse() {

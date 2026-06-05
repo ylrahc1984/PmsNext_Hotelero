@@ -1,0 +1,58 @@
+<div class="row">
+  <div class="col-sm-12">
+    <app-card cardTitle="Configuración Restaurante">
+      <div class="restaurant-config-header mb-4">
+        <h4 class="mb-2">
+          <i class="feather icon-settings f-28 mr-2"></i>
+          Panel de Configuración
+        </h4>
+        <p class="text-muted mb-0">
+          Panel de administración y parámetros del restaurante. Seleccione una opción para gestionar la configuración correspondiente.
+        </p>
+        <div class="mt-2">
+          <span class="badge badge-light-primary">
+            <i class="feather icon-grid"></i>
+            {{ getTotalConfigOptions() }} opciones disponibles
+          </span>
+        </div>
+      </div>
+
+      <hr class="mb-4" />
+
+      @for (group of configGroups; track group.title) {
+        <section class="restaurant-config-group mb-5">
+          <div class="group-title mb-3">
+            <h5 class="text-uppercase">
+              <i class="feather icon-folder f-18 mr-2"></i>
+              {{ group.title }}
+            </h5>
+            <div class="group-divider"></div>
+          </div>
+
+          <div class="row restaurant-config-grid">
+            @for (card of group.cards; track card.id) {
+              <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-4">
+                <a class="restaurant-config-card" [routerLink]="card.route">
+                  <div class="card-body">
+                    <div class="config-icon-wrapper mb-3">
+                      <i class="feather {{ card.icon }} {{ card.iconColor }}"></i>
+                    </div>
+
+                    <div class="config-content">
+                      <h6 class="card-title mb-2">{{ card.title }}</h6>
+                      <p class="card-text text-muted">{{ card.description }}</p>
+                    </div>
+
+                    <div class="config-arrow">
+                      <i class="feather icon-arrow-right"></i>
+                    </div>
+                  </div>
+                </a>
+              </div>
+            }
+          </div>
+        </section>
+      }
+    </app-card>
+  </div>
+</div>

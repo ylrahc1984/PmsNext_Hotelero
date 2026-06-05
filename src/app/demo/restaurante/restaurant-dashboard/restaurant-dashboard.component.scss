@@ -1,0 +1,509 @@
+:host {
+  display: block;
+}
+
+$next-cyan: #17d4e0;
+$next-blue: #1f6bff;
+$next-burgundy: #8a0f4d;
+$next-bg: #0b1724;
+$next-surface: #132235;
+
+$next-green: #1fc88a;
+$next-purple: #6c48ff;
+$next-magenta: #d5218f;
+$next-orange: #ff8c32;
+$next-paper: #ffffff;
+$next-ink: #0f2133;
+
+.restaurant-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: $next-ink;
+}
+
+.section-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.section-eyebrow {
+  color: rgba($next-cyan, 0.95);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.section-header h1,
+.panel-header h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 850;
+  color: $next-ink;
+}
+
+.kpi-section,
+.panel,
+.operational-status {
+  border: 1px solid rgba($next-paper, 0.12);
+  border-radius: 22px;
+  box-shadow: 0 18px 44px rgba(11, 23, 36, 0.12);
+}
+
+.kpi-section {
+  overflow: hidden;
+  padding: 8px 9px;
+  color: $next-paper;
+  background:
+    radial-gradient(circle at 80% 10%, rgba($next-cyan, 0.24), transparent 28%),
+    radial-gradient(circle at 16% 96%, rgba($next-burgundy, 0.27), transparent 30%),
+    linear-gradient(135deg, $next-surface 0%, $next-blue 55%, $next-bg 100%);
+}
+
+.kpi-section .section-header h1 {
+  color: $next-paper;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.kpi-card {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 6px;
+  min-height: 66px;
+  padding: 6px;
+  border: 1px solid rgba($next-paper, 0.15);
+  border-radius: 10px;
+  background: rgba($next-bg, 0.36);
+  backdrop-filter: blur(8px);
+  animation: rise-in 280ms ease-out both;
+}
+
+.kpi-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: rgba($next-paper, 0.12);
+  font-size: 0.72rem;
+}
+
+.kpi-content p,
+.kpi-content small {
+  margin: 0;
+}
+
+.kpi-content p {
+  font-size: 0.62rem;
+  color: rgba($next-paper, 0.78);
+}
+
+.kpi-content strong {
+  display: block;
+  margin-top: 2px;
+  margin-bottom: 1px;
+  color: $next-paper;
+  font-size: 0.86rem;
+  font-weight: 850;
+  line-height: 1.05;
+}
+
+.kpi-content small {
+  color: rgba($next-paper, 0.75);
+  font-size: 0.6rem;
+  line-height: 1.05;
+}
+
+.kpi-card--cyan .kpi-icon { color: $next-cyan; }
+.kpi-card--green .kpi-icon { color: $next-green; }
+.kpi-card--blue .kpi-icon { color: $next-blue; }
+.kpi-card--purple .kpi-icon { color: $next-purple; }
+.kpi-card--magenta .kpi-icon { color: $next-magenta; }
+.kpi-card--orange .kpi-icon { color: $next-orange; }
+
+.operations-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 250px;
+  grid-template-areas: 'floor salones';
+  gap: 12px;
+}
+
+.panel--floor { grid-area: floor; }
+.panel--salones { grid-area: salones; }
+
+.panel,
+.operational-status {
+  padding: 12px;
+  background: linear-gradient(180deg, rgba($next-paper, 0.97), rgba($next-paper, 0.92));
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.panel-header--compact {
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.panel-header--stacked {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.next-btn {
+  border: 1px solid transparent;
+  border-radius: 9px;
+  padding: 0.38rem 0.58rem;
+  font-size: 0.7rem;
+  font-weight: 760;
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+
+.next-btn--outline {
+  color: $next-blue;
+  background: rgba($next-blue, 0.1);
+  border-color: rgba($next-blue, 0.22);
+}
+
+.salones-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.salon-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 11px;
+  border: 1px solid rgba($next-bg, 0.1);
+  border-radius: 14px;
+  background:
+    linear-gradient(130deg, rgba($next-blue, 0.06), rgba($next-cyan, 0.04) 55%, rgba($next-paper, 0.96)),
+    linear-gradient(180deg, rgba($next-paper, 0.9), rgba($next-paper, 0.96));
+  box-shadow: 0 8px 18px rgba($next-bg, 0.06);
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.salon-card h3 {
+  margin: 0;
+}
+
+.salon-card__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: $next-ink;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.salon-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, $next-cyan, $next-blue);
+  box-shadow: 0 0 0 4px rgba($next-blue, 0.12);
+}
+
+.salon-card i {
+  color: rgba($next-blue, 0.7);
+  font-size: 0.95rem;
+}
+
+.salon-card--room-service {
+  border-color: rgba($next-orange, 0.22);
+  background:
+    linear-gradient(130deg, rgba($next-orange, 0.13), rgba($next-paper, 0.97));
+}
+
+.salon-card--room-service .salon-dot {
+  background: linear-gradient(135deg, $next-orange, #ffb067);
+  box-shadow: 0 0 0 4px rgba($next-orange, 0.14);
+}
+
+.salon-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba($next-blue, 0.2);
+  box-shadow: 0 12px 20px rgba($next-bg, 0.08);
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.next-chip {
+  border: 1px solid rgba($next-bg, 0.14);
+  border-radius: 999px;
+  padding: 0.24rem 0.54rem;
+  color: rgba($next-ink, 0.8);
+  background: rgba($next-bg, 0.04);
+  font-size: 0.68rem;
+  font-weight: 720;
+}
+
+.next-chip--tool {
+  border-radius: 10px;
+}
+
+.next-chip--active {
+  color: $next-paper;
+  border-color: rgba($next-blue, 0.7);
+  background: linear-gradient(135deg, $next-blue, $next-cyan);
+}
+
+.floor-plan-shell {
+  display: block;
+  width: 100%;
+  min-height: 650px;
+  height: 650px;
+  margin-top: 10px;
+}
+
+.operational-status {
+  padding: 10px;
+  background:
+    linear-gradient(180deg, rgba($next-paper, 0.98), rgba($next-paper, 0.94)),
+    radial-gradient(circle at top right, rgba($next-cyan, 0.06), transparent 40%);
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.status-card {
+  border: 1px solid rgba($next-bg, 0.12);
+  border-radius: 12px;
+  padding: 8px;
+  background: rgba($next-bg, 0.03);
+}
+
+.status-card__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-card__title i {
+  color: $next-blue;
+  font-size: 0.86rem;
+}
+
+.status-card__title span,
+.status-card small {
+  color: rgba($next-ink, 0.68);
+  font-size: 0.68rem;
+  font-weight: 710;
+}
+
+.status-card strong {
+  display: block;
+  margin: 6px 0 3px;
+  color: $next-ink;
+  font-size: 0.94rem;
+  font-weight: 840;
+}
+
+.status-primary-action {
+  border: 0;
+  border-radius: 12px;
+  min-height: 68px;
+  padding: 8px 10px;
+  color: $next-paper;
+  background: linear-gradient(135deg, $next-burgundy 0%, $next-blue 100%);
+  font-size: 0.84rem;
+  font-weight: 830;
+  line-height: 1.05;
+  cursor: pointer;
+}
+
+/* Desktop: 1200px+ */
+@media (min-width: 1200px) {
+  .operations-section {
+    grid-template-columns: minmax(0, 1fr) 250px;
+    grid-template-areas: 'floor salones';
+  }
+
+  .status-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+}
+
+/* Tablet: 768px - 1199px */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .restaurant-dashboard {
+    gap: 12px;
+  }
+
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .kpi-card {
+    min-height: 72px;
+  }
+
+  .operations-section {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'salones'
+      'floor';
+    gap: 10px;
+  }
+
+  .panel--salones {
+    padding: 10px;
+  }
+
+  .panel--salones .panel-header {
+    margin-bottom: 4px;
+  }
+
+  .salones-list {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 8px;
+    margin-top: 0;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+  }
+
+  .salon-card {
+    flex: 0 0 auto;
+    min-height: 42px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    box-shadow: none;
+  }
+
+  .salon-card:first-child {
+    border-color: rgba($next-blue, 0.26);
+    background: linear-gradient(135deg, rgba($next-blue, 0.14), rgba($next-cyan, 0.1));
+  }
+
+  .salon-card:first-child .salon-dot {
+    box-shadow: 0 0 0 4px rgba($next-cyan, 0.2);
+  }
+
+  .salon-card__name {
+    font-size: 0.82rem;
+    gap: 7px;
+  }
+
+  .salon-card i {
+    display: none;
+  }
+
+  .floor-plan-shell {
+    height: 420px;
+    min-height: 420px;
+  }
+
+  .status-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .status-primary-action {
+    grid-column: 1 / -1;
+    min-height: 56px;
+  }
+}
+
+/* Mobile: 0px - 767px */
+@media (max-width: 767px) {
+  .kpi-grid,
+  .status-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .operations-section {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'salones'
+      'floor';
+    gap: 10px;
+  }
+
+  .panel--salones {
+    padding: 10px;
+  }
+
+  .salones-list {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 8px;
+    margin-top: 0;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+  }
+
+  .salon-card {
+    flex: 0 0 auto;
+    min-height: 40px;
+    padding: 7px 11px;
+    border-radius: 999px;
+    box-shadow: none;
+  }
+
+  .salon-card:first-child {
+    border-color: rgba($next-blue, 0.26);
+    background: linear-gradient(135deg, rgba($next-blue, 0.14), rgba($next-cyan, 0.1));
+  }
+
+  .salon-card i {
+    display: none;
+  }
+
+  .floor-plan-shell {
+    height: 280px;
+    min-height: 280px;
+  }
+
+  .status-primary-action {
+    min-height: 52px;
+  }
+}
+
+@media (max-width: 560px) {
+  .kpi-section,
+  .panel,
+  .operational-status {
+    border-radius: 16px;
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

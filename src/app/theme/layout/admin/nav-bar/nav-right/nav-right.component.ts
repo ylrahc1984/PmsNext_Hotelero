@@ -10,6 +10,7 @@ import { NgbDropdownConfig } from '@ng-bootstrap/ng-bootstrap';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { LockScreenService } from 'src/app/core/services/lock-screen.service';
+import { APP_BRANDING } from 'src/app/core/config/app-branding';
 
 @Component({
   selector: 'app-nav-right',
@@ -20,6 +21,7 @@ import { LockScreenService } from 'src/app/core/services/lock-screen.service';
 })
 export class NavRightComponent {
   user$ = inject(AuthService).currentUser$;
+  readonly branding = APP_BRANDING;
 
   private authService = inject(AuthService);
   private lockScreenService = inject(LockScreenService);

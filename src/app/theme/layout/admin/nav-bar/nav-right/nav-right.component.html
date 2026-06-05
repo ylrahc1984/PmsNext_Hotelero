@@ -1,102 +1,88 @@
-<ul class="navbar-nav">
-  <li>
+<ul class="navbar-nav nav-right-shell">
+  <li class="topbar-notifications-entry">
     <div class="dropdown" ngbDropdown placement="auto">
-      <a ngbDropdownToggle href="javascript:" data-toggle="dropdown"><i class="icon feather icon-bell"></i></a>
+      <a ngbDropdownToggle href="javascript:" class="topbar-action" data-toggle="dropdown" aria-label="Notificaciones">
+        <i class="icon feather icon-bell"></i>
+        <span class="topbar-action__pulse"></span>
+      </a>
       <div ngbDropdownMenu class="dropdown-menu dropdown-menu-end notification">
         <div class="notification-head">
-          <h6 class="d-inline-block m-b-0">Notifications</h6>
-          <div class="float-end">
-            <a href="javascript:" class="m-r-10 text-decoration-none">mark as read</a>
-            <a href="javascript:" class="text-decoration-none">clear all</a>
+          <div>
+            <h6 class="m-b-0">Notificaciones</h6>
+            <span>Actividad operativa del hotel</span>
           </div>
+          <a href="javascript:" class="text-decoration-none">Ver todas</a>
         </div>
         <ul class="notification-body">
-          <li class="n-title">
-            <p class="m-b-0">NEW</p>
-          </li>
           <li class="notification">
-            <div class="d-flex">
-              <img class="img-radius" src="assets/images/user/avatar-1.jpg" alt="Generic placeholder image" />
+            <div class="notification-item">
+              <span class="notification-icon notification-icon--cyan"><i class="feather icon-calendar"></i></span>
               <div class="flex-grow-1">
-                <p>
-                  <strong>John Doe</strong>
-                  <span class="n-time text-muted">
-                    <i class="icon feather icon-clock m-r-10"></i>
-                    now
-                  </span>
-                </p>
-                <p>New ticket Added</p>
-              </div>
-            </div>
-          </li>
-          <li class="n-title">
-            <p class="m-b-0">EARLIER</p>
-          </li>
-          <li class="notification">
-            <div class="d-flex">
-              <img class="img-radius" src="assets/images/user/avatar-2.jpg" alt="Generic placeholder image" />
-              <div class="flex-grow-1">
-                <p>
-                  <strong>Joseph William</strong>
-                  <span class="n-time text-muted">
-                    <i class="icon feather icon-clock m-r-10"></i>
-                    10 min
-                  </span>
-                </p>
-                <p>Prchace New Theme and make payment</p>
+                <p><strong>Reservas</strong><span class="n-time">Ahora</span></p>
+                <p>Sin alertas criticas pendientes</p>
               </div>
             </div>
           </li>
           <li class="notification">
-            <div class="d-flex">
-              <img class="img-radius" src="assets/images/user/avatar-3.jpg" alt="Generic placeholder image" />
+            <div class="notification-item">
+              <span class="notification-icon notification-icon--blue"><i class="feather icon-home"></i></span>
               <div class="flex-grow-1">
-                <p>
-                  <strong>Sara Soudein</strong>
-                  <span class="n-time text-muted">
-                    <i class="icon feather icon-clock m-r-10"></i>
-                    30 min
-                  </span>
-                </p>
-                <p>currently login</p>
+                <p><strong>Operaciones</strong><span class="n-time">Hoy</span></p>
+                <p>Panel listo para seguimiento del turno</p>
               </div>
             </div>
           </li>
         </ul>
-        <div class="notification-footer">
-          <a href="javascript:">show all</a>
-        </div>
       </div>
     </div>
   </li>
-  <li>
+  <li class="topbar-user-entry">
     <div class="dropdown drp-user" ngbDropdown placement="auto">
-      <a href="javascript:" ngbDropdownToggle data-toggle="dropdown">
-        <i class="icon feather icon-settings"></i>
-      </a>
-      <div class="dropdown-menu dropdown-menu-end profile-notification" ngbDropdownMenu>
-        <div class="pro-head">
-          <img src="assets/images/user/avatar-1.jpg" class="img-radius" alt="User-Profile-Image" />
-          <span>{{ (user$ | async)?.nombre || (user$ | async)?.usuario || 'Usuario' }}</span>
-          <a href="javascript:" class="dud-logout" title="Logout" (click)="onLogout()">
-            <i class="feather icon-log-out"></i>
-          </a>
+      @if (user$ | async; as user) {
+        <a href="javascript:" class="user-trigger" ngbDropdownToggle data-toggle="dropdown">
+          <span class="avatar-circle">{{ (user.nombre || user.usuario || 'U').slice(0, 1).toUpperCase() }}</span>
+          <span class="user-trigger__meta">
+            <strong>{{ user.nombre || user.usuario || 'Usuario' }}</strong>
+            <small>Administrador</small>
+          </span>
+          <i class="feather icon-chevron-down"></i>
+        </a>
+        <div class="dropdown-menu dropdown-menu-end profile-notification" ngbDropdownMenu>
+          <div class="pro-head">
+            <span class="avatar-circle avatar-circle--large">{{ (user.nombre || user.usuario || 'U').slice(0, 1).toUpperCase() }}</span>
+            <span class="pro-head__meta">
+              <strong>{{ user.nombre || user.usuario || 'Usuario' }}</strong>
+              <small>Administrador</small>
+            </span>
+            <a href="javascript:" class="dud-logout" title="Cerrar sesion" (click)="onLogout()">
+              <i class="feather icon-log-out"></i>
+            </a>
+          </div>
+          <ul class="pro-body">
+            <li>
+              <a [routerLink]="['/acerca-de-pmsnext']" class="dropdown-item">
+                <i class="feather icon-info"></i>
+                Acerca de {{ branding.productName }}
+              </a>
+            </li>
+            <li>
+              <a href="javascript:" class="dropdown-item" (click)="onLockScreen()">
+                <i class="feather icon-lock"></i>
+                Bloquear pantalla
+              </a>
+            </li>
+          </ul>
         </div>
-        <ul class="pro-body">
-          <li>
-            <a [routerLink]="['/acerca-de-pmsnext']" class="dropdown-item">
-              <i class="feather icon-info"></i>
-              Acerca de PmsNext
-            </a>
-          </li>
-          <li>
-            <a href="javascript:" class="dropdown-item" (click)="onLockScreen()">
-              <i class="feather icon-lock"></i>
-              Bloquear pantalla
-            </a>
-          </li>
-        </ul>
-      </div>
+      } @else {
+        <a href="javascript:" class="user-trigger" ngbDropdownToggle data-toggle="dropdown">
+          <span class="avatar-circle">U</span>
+          <span class="user-trigger__meta">
+            <strong>Usuario</strong>
+            <small>Administrador</small>
+          </span>
+          <i class="feather icon-chevron-down"></i>
+        </a>
+      }
     </div>
   </li>
 </ul>

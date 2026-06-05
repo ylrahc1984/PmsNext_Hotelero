@@ -17,7 +17,7 @@ export class AppComponent implements OnInit {
   private router = inject(Router);
   private empresaContext = inject(EmpresaContextService);
 
-  title = 'PmsNext_OpeTours';
+  title = 'PmsNext_Hotelero';
 
   // life cycle hook
   ngOnInit() {

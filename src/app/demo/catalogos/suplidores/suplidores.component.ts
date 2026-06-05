@@ -88,11 +88,11 @@ export class SuplidoresComponent implements OnInit {
   }
 
   openForm(): void {
-    this.router.navigate(['/comercial/suplidores/nuevo']);
+    this.router.navigate(['/catalogos/suplidores/nuevo']);
   }
 
   editar(suplidor: SuplidorUI): void {
-    this.router.navigate(['/comercial/suplidores/editar', suplidor.codigo]);
+    this.router.navigate(['/catalogos/suplidores/editar', suplidor.codigo]);
   }
 
   eliminar(suplidor: SuplidorUI): void {

@@ -110,7 +110,7 @@ export class SuplidorFormComponent implements OnInit {
             icon: 'warning'
           });
           this.isLoading = false;
-          this.router.navigate(['/comercial/suplidores']);
+          this.router.navigate(['/catalogos/suplidores']);
           return;
         }
         this.applySuplidor(suplidor);
@@ -194,7 +194,7 @@ export class SuplidorFormComponent implements OnInit {
           text: this.isEditing ? 'Suplidor actualizado correctamente.' : 'Suplidor creado correctamente.',
           icon: 'success'
         });
-        this.router.navigate(['/comercial/suplidores']);
+        this.router.navigate(['/catalogos/suplidores']);
       },
       error: (error) => {
         console.error('Error al guardar suplidor:', error);
@@ -209,6 +209,6 @@ export class SuplidorFormComponent implements OnInit {
   }
 
   cancelForm(): void {
-    this.router.navigate(['/comercial/suplidores']);
+    this.router.navigate(['/catalogos/suplidores']);
   }
 }

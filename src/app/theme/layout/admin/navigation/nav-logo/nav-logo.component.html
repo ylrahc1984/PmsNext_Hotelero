@@ -1,8 +1,7 @@
-<div class="">
-  <a [routerLink]="['/dashboard/default/']" class="b-brand">
-    <div class="b-bg">
-      <img src="assets/images/next_web_logo.png" alt="Logo Next Web" class="logo-img" />
-    </div>
+<div class="sidebar-brand-header">
+  <a [routerLink]="['/dashboard/default/']" class="b-brand" [attr.aria-label]="branding.productName">
+    <span class="brand-system">PMS HOTELERO</span>
+    <span class="brand-platform">Hospitality Platform</span>
   </a>
   <a href="javascript:" class="mobile-menu" [ngClass]="{ on: navCollapsed }" id="mobile-collapse" (click)="navCollapse()"><span></span></a>
 </div>

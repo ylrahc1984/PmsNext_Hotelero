@@ -1,148 +1,280 @@
-<div class="dashboard-top">
-  <div class="dashboard-top__main">
-    <app-welcome-card [userName]="userName"></app-welcome-card>
+<section class="hotel-dashboard" aria-label="Dashboard Ejecutivo Hotelero">
+  <section class="operations-grid">
+    <article class="operations-hero">
+      <div class="operations-hero__content">
+        <span class="section-eyebrow">Centro de operaciones hoteleras</span>
+        <h1>Operacion hotelera de hoy</h1>
+        <p>Resumen ejecutivo en tiempo real de huespedes, habitaciones, restaurante y finanzas.</p>
+      </div>
 
-    <section class="exchange-card" aria-label="Tipo de cambio">
-      <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-2">
+      <div class="executive-metrics" aria-label="Indicadores principales">
+        <div class="executive-metric executive-metric--primary">
+          <span>Ocupacion Actual</span>
+          <strong>82%</strong>
+        </div>
+        <div class="executive-metric">
+          <span>Habitaciones Ocupadas</span>
+          <strong>98 / 120</strong>
+        </div>
+        <div class="executive-metric">
+          <span>Llegadas de Hoy</span>
+          <strong>24</strong>
+        </div>
+        <div class="executive-metric">
+          <span>Salidas de Hoy</span>
+          <strong>18</strong>
+        </div>
+        <div class="executive-metric">
+          <span>Ingresos del Dia</span>
+          <strong>{{ ingresosEstimados ? ('CRC ' + (ingresosEstimados | number:'1.0-0')) : 'CRC 4,500,000' }}</strong>
+        </div>
+        <div class="executive-metric">
+          <span>Ventas Restaurante</span>
+          <strong>CRC 1,200,000</strong>
+        </div>
+      </div>
+
+      <section class="kpi-strip" aria-label="KPIs operativos">
+        <article class="kpi-card">
+          <span class="kpi-card__icon"><i class="feather icon-log-in"></i></span>
+          <div>
+            <strong>24</strong>
+            <span>Llegadas</span>
+          </div>
+          <em>+8%</em>
+        </article>
+        <article class="kpi-card">
+          <span class="kpi-card__icon"><i class="feather icon-log-out"></i></span>
+          <div>
+            <strong>18</strong>
+            <span>Salidas</span>
+          </div>
+          <em>-2%</em>
+        </article>
+        <article class="kpi-card">
+          <span class="kpi-card__icon"><i class="feather icon-user-check"></i></span>
+          <div>
+            <strong>7</strong>
+            <span>Check-In Pendientes</span>
+          </div>
+          <em>Hoy</em>
+        </article>
+        <article class="kpi-card">
+          <span class="kpi-card__icon"><i class="feather icon-user-x"></i></span>
+          <div>
+            <strong>5</strong>
+            <span>Check-Out Pendientes</span>
+          </div>
+          <em>Hoy</em>
+        </article>
+        <article class="kpi-card">
+          <span class="kpi-card__icon"><i class="feather icon-calendar"></i></span>
+          <div>
+            <strong>{{ reservasDia }}</strong>
+            <span>Reservas del Dia</span>
+          </div>
+          <em>+0%</em>
+        </article>
+        <article class="kpi-card">
+          <span class="kpi-card__icon"><i class="feather icon-dollar-sign"></i></span>
+          <div>
+            <strong>{{ ingresosEstimados ? ('CRC ' + (ingresosEstimados | number:'1.0-0')) : 'CRC 0' }}</strong>
+            <span>Ingresos Estimados</span>
+          </div>
+          <em>+0%</em>
+        </article>
+      </section>
+    </article>
+
+    <aside class="auxiliary-widgets" aria-label="Widgets auxiliares">
+      <section class="exchange-widget" aria-label="Tipo de cambio">
+        <div class="widget-header">
+          <div>
+            <span class="section-eyebrow">Tipo de cambio</span>
+            <h2>{{ tipoCambio?.monedaBase || 'COL' }} -> {{ tipoCambio?.monedaReferencia || 'USD' }}</h2>
+          </div>
+          <span class="widget-date">
+            @if (tipoCambio?.fecha) {
+              {{ tipoCambio?.fecha | date:'dd/MM/yyyy' }}
+            } @else {
+              Hoy
+            }
+          </span>
+        </div>
+
+        @if (tipoCambioLoading) {
+          <div class="widget-notice">
+            <i class="feather icon-loader"></i>
+            Actualizando
+          </div>
+        } @else {
+          <div class="exchange-values">
+            <div>
+              <span>Compra</span>
+              <strong>{{ (tipoCambio?.compra ?? 0) | number:'1.2-4' }}</strong>
+            </div>
+            <div>
+              <span>Venta</span>
+              <strong>{{ (tipoCambio?.venta ?? 0) | number:'1.2-4' }}</strong>
+            </div>
+          </div>
+        }
+
+        @if (tipoCambioError) {
+          <div class="widget-notice">{{ tipoCambioError }}</div>
+        }
+      </section>
+
+      <app-weather-card [weather]="weather" [loading]="loading" [error]="weatherError"></app-weather-card>
+    </aside>
+  </section>
+
+  <section class="dashboard-columns">
+    <article class="operations-panel rooms-panel">
+      <div class="panel-heading">
         <div>
-          <span class="exchange-card__eyebrow">Tipo de cambio</span>
-          <h3 class="exchange-card__title">
-            {{ tipoCambio?.monedaBase || 'COL' }} → {{ tipoCambio?.monedaReferencia || 'USD' }}
-          </h3>
+          <span class="section-eyebrow">Habitaciones</span>
+          <h2>Estado de Habitaciones</h2>
         </div>
-        <span class="exchange-card__date">
-          @if (tipoCambio?.fecha) {
-            {{ tipoCambio?.fecha | date:'dd/MM/yyyy' }}
-          } @else {
-            Hoy
-          }
-        </span>
+        <span class="panel-badge">120 habitaciones</span>
       </div>
 
-      @if (tipoCambioLoading) {
-        <div class="exchange-card__notice d-flex align-items-center gap-2">
-          <i class="feather icon-loader"></i>
-          Actualizando tipo de cambio
+      <div class="room-status-grid">
+        <div class="room-status room-status--cyan">
+          <span>Disponibles</span>
+          <strong>22</strong>
+          <div class="status-bar"><i style="width: 18%"></i></div>
         </div>
-      } @else {
-        <div class="d-flex align-items-center flex-wrap gap-4">
-          <div class="exchange-card__metric">
-            <span>Compra</span>
-            <strong>{{ (tipoCambio?.compra ?? 0) | number:'1.2-4' }}</strong>
-          </div>
-          <div class="exchange-card__metric">
-            <span>Venta</span>
-            <strong>{{ (tipoCambio?.venta ?? 0) | number:'1.2-4' }}</strong>
-          </div>
+        <div class="room-status room-status--blue">
+          <span>Ocupadas</span>
+          <strong>98</strong>
+          <div class="status-bar"><i style="width: 82%"></i></div>
         </div>
-      }
+        <div class="room-status room-status--clean">
+          <span>Limpias</span>
+          <strong>74</strong>
+          <div class="status-bar"><i style="width: 62%"></i></div>
+        </div>
+        <div class="room-status room-status--dirty">
+          <span>Sucias</span>
+          <strong>16</strong>
+          <div class="status-bar"><i style="width: 13%"></i></div>
+        </div>
+        <div class="room-status room-status--burgundy">
+          <span>Fuera de Servicio</span>
+          <strong>3</strong>
+          <div class="status-bar"><i style="width: 3%"></i></div>
+        </div>
+        <div class="room-status room-status--muted">
+          <span>Bloqueadas</span>
+          <strong>5</strong>
+          <div class="status-bar"><i style="width: 4%"></i></div>
+        </div>
+      </div>
+    </article>
 
-      @if (tipoCambioError) {
-        <div class="exchange-card__notice">{{ tipoCambioError }}</div>
-      }
-    </section>
-  </div>
-
-  <app-weather-card
-    [weather]="weather"
-    [loading]="loading"
-    [error]="weatherError">
-  </app-weather-card>
-</div>
-
-<div class="row">
-  @for (sale of sales; track sale) {
-    <div class="{{ sale.design }}">
-      <app-card [hidHeader]="true" blockClass="dashboard-card-block dashboard-card-block--metric">
-        <h6 class="mb-4">{{ sale.title }}</h6>
-        <div class="row d-flex align-items-center">
-          <div class="col-9">
-            <h3 class="f-w-300 d-flex align-items-center m-b-0">
-              <i class="feather {{ sale.icon }} f-30 m-r-10"></i>
-              {{ sale.amount }}
-            </h3>
-          </div>
-          <div class="col-3 text-end">
-            <p class="m-b-0">{{ sale.percentage }}</p>
-          </div>
+    <article class="operations-panel restaurant-panel">
+      <div class="panel-heading">
+        <div>
+          <span class="section-eyebrow">Restaurante</span>
+          <h2>Operacion Restaurante</h2>
         </div>
-        <div class="m-t-30">
-          <ngb-progressbar type="progress-bar {{ sale.progress_bg }}" height="7px" [value]="sale.progress"></ngb-progressbar>
+        <span class="panel-badge">Turno activo</span>
+      </div>
+
+      <div class="restaurant-grid">
+        <div><span>Mesas Ocupadas</span><strong>18 / 32</strong></div>
+        <div><span>Pedidos Activos</span><strong>42</strong></div>
+        <div><span>Tickets Abiertos</span><strong>11</strong></div>
+        <div><span>Ventas del Dia</span><strong>CRC 1,200,000</strong></div>
+        <div><span>Room Service Activo</span><strong>8</strong></div>
+      </div>
+    </article>
+  </section>
+
+  <section class="dashboard-columns dashboard-columns--secondary">
+    <article class="operations-panel housekeeping-panel">
+      <div class="panel-heading">
+        <div>
+          <span class="section-eyebrow">Housekeeping</span>
+          <h2>Housekeeping</h2>
         </div>
-      </app-card>
+        <span class="panel-badge">Supervision diaria</span>
+      </div>
+
+      <div class="housekeeping-grid">
+        <div><span>Habitaciones Pendientes</span><strong>16</strong></div>
+        <div><span>En Proceso</span><strong>9</strong></div>
+        <div><span>Limpias</span><strong>74</strong></div>
+        <div><span>Supervisadas</span><strong>58</strong></div>
+      </div>
+    </article>
+
+    <article class="operations-panel alerts-panel">
+      <div class="panel-heading">
+        <div>
+          <span class="section-eyebrow">Monitoreo</span>
+          <h2>Alertas Operativas</h2>
+        </div>
+        <span class="panel-badge panel-badge--danger">6 alertas</span>
+      </div>
+
+      <div class="alert-list">
+        <div><i class="feather icon-alert-circle"></i><span>16 habitaciones pendientes de limpieza.</span></div>
+        <div><i class="feather icon-clock"></i><span>7 llegadas proximas sin pre check-in.</span></div>
+        <div><i class="feather icon-log-out"></i><span>5 salidas pendientes de confirmar.</span></div>
+        <div><i class="feather icon-home"></i><span>3 habitaciones fuera de servicio.</span></div>
+        <div><i class="feather icon-coffee"></i><span>2 pedidos restaurante retrasados.</span></div>
+        <div><i class="feather icon-file-text"></i><span>Facturas pendientes por revision.</span></div>
+      </div>
+    </article>
+  </section>
+
+  <section class="operations-panel analytics-panel">
+    <div class="panel-heading">
+      <div>
+        <span class="section-eyebrow">Analisis ejecutivo</span>
+        <h2>Graficos Ejecutivos</h2>
+      </div>
     </div>
-  }
-</div>
 
-<div class="row mt-4">
-  <div class="col-12">
-    <app-card cardTitle="Accesos Rápidos" blockClass="dashboard-card-block dashboard-card-block--compact">
-      <div class="quick-actions">
-        <button class="quick-action quick-action--primary" routerLink="/operaciones/reservas/nueva-v2">
-          <span class="quick-action__icon">
-            <i class="feather icon-plus"></i>
-          </span>
-          <span class="quick-action__content">
-            <span class="quick-action__label">Nueva Reserva</span>
-            <span class="quick-action__hint">Crea una reserva o cotizacion desde cero.</span>
-          </span>
-          <span class="quick-action__arrow">
-            <i class="feather icon-arrow-right"></i>
-          </span>
-        </button>
-
-        <button class="quick-action quick-action--amber" routerLink="/operaciones/operacion-diaria">
-          <span class="quick-action__icon">
-            <i class="feather icon-file-text"></i>
-          </span>
-          <span class="quick-action__content">
-            <span class="quick-action__label">Actividad Diaria</span>
-            <span class="quick-action__hint">Revisa pendientes y movimientos del dia.</span>
-          </span>
-          <span class="quick-action__arrow">
-            <i class="feather icon-arrow-right"></i>
-          </span>
-        </button>
-
-        <button class="quick-action quick-action--sky" routerLink="/operaciones/ordenes-trabajo">
-          <span class="quick-action__icon">
-            <i class="feather icon-clipboard"></i>
-          </span>
-          <span class="quick-action__content">
-            <span class="quick-action__label">Ver Asignacion de Traslados</span>
-            <span class="quick-action__hint">Consulta el tablero operativo y su seguimiento.</span>
-          </span>
-          <span class="quick-action__arrow">
-            <i class="feather icon-arrow-right"></i>
-          </span>
-        </button>
-
-        <button class="quick-action quick-action--emerald" routerLink="/operaciones/forecast-actividades">
-          <span class="quick-action__icon">
-            <i class="feather icon-users"></i>
-          </span>
-          <span class="quick-action__content">
-            <span class="quick-action__label">Forecast de Actividades</span>
-            <span class="quick-action__hint">Consulta el pronóstico de actividades futuras.</span>
-          </span>
-          <span class="quick-action__arrow">
-            <i class="feather icon-arrow-right"></i>
-          </span>
-        </button>
-      </div>
-    </app-card>
-  </div>
-</div>
-
-<div class="row mt-4">
-  <div class="col-xl-6">
-    <app-card cardTitle="Reservas por Estado">
-      <div id="chart-reservas" style="height: 300px"></div>
-    </app-card>
-  </div>
-  <div class="col-xl-6">
-    <app-card cardTitle="Ingresos por Mes">
-      <div id="chart-ingresos" style="height: 300px"></div>
-    </app-card>
-  </div>
-</div>
+    <div class="analytics-grid">
+      <article class="chart-card">
+        <h3>Ocupacion ultimos 30 dias</h3>
+        <div class="chart-placeholder chart-placeholder--lines"></div>
+      </article>
+      <article class="chart-card">
+        <h3>Ingresos ultimos 30 dias</h3>
+        <div id="chart-ingresos" class="chart-slot"></div>
+      </article>
+      <article class="chart-card">
+        <h3>Reservas por Estado</h3>
+        <div id="chart-reservas" class="chart-slot"></div>
+      </article>
+      <article class="chart-card">
+        <h3>Ventas Restaurante</h3>
+        <div class="chart-placeholder chart-placeholder--bars"></div>
+      </article>
+      <article class="chart-card">
+        <h3>Top Servicios Vendidos</h3>
+        <div class="chart-placeholder chart-placeholder--list">
+          <span>Room Service</span>
+          <span>Restaurante</span>
+          <span>Traslados</span>
+        </div>
+      </article>
+      <article class="chart-card">
+        <h3>Forecast de Ocupacion</h3>
+        <div class="forecast-strip">
+          <span style="height: 52%"></span>
+          <span style="height: 64%"></span>
+          <span style="height: 78%"></span>
+          <span style="height: 71%"></span>
+          <span style="height: 86%"></span>
+          <span style="height: 82%"></span>
+          <span style="height: 74%"></span>
+        </div>
+      </article>
+    </div>
+  </section>
+</section>
