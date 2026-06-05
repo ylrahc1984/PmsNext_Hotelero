@@ -1,0 +1,180 @@
+<div class="page-breadcrumb mb-3">
+  <ul class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a routerLink="/dashboard"><i class="feather icon-home"></i></a>
+    </li>
+    <li class="breadcrumb-item">
+      <a routerLink="/restaurante/configuracion">Configuracion Restaurante</a>
+    </li>
+    <li class="breadcrumb-item active">Puntos de Venta</li>
+  </ul>
+  <a routerLink="/restaurante/configuracion" class="btn btn-outline-secondary btn-sm back-btn">
+    <i class="feather icon-arrow-left"></i> Volver a Configuracion
+  </a>
+</div>
+
+<div class="row">
+  <div class="col-12">
+    <app-card [customHeader]="true">
+      <div class="app-card-header">
+        <h5>Puntos de Venta</h5>
+        <div class="card-header-right">
+          <button class="btn btn-primary" (click)="abrirModalCrear()" [disabled]="isLoading">
+            <i class="feather icon-plus"></i> Nuevo Punto de Venta
+          </button>
+        </div>
+      </div>
+
+      <div class="filters-card mb-3">
+        <div class="row filters-row align-items-end">
+          <div class="col-lg-6 col-md-6 mb-3">
+            <label class="small-label">Nombre / Codigo / Comanda</label>
+            <input
+              type="search"
+              class="form-control"
+              [(ngModel)]="filterNombre"
+              placeholder="Buscar punto de venta"
+              (keyup.enter)="onBuscar()"
+            >
+          </div>
+          <div class="col-lg-3 col-md-6 mb-3">
+            <label class="small-label">Touch</label>
+            <select class="form-control" [(ngModel)]="filterTouch">
+              <option value="">Todos</option>
+              <option value="1">Si</option>
+              <option value="0">No</option>
+            </select>
+          </div>
+          <div class="col-lg-3 col-md-12 mb-3 text-md-end">
+            <button class="btn btn-outline-secondary mr-2" (click)="onLimpiar()" [disabled]="isLoading">Limpiar</button>
+            <button class="btn btn-primary" (click)="onBuscar()" [disabled]="isLoading">Buscar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-striped table-compact">
+          <thead>
+            <tr>
+              <th>Codigo</th>
+              <th>Nombre</th>
+              <th>Comanda</th>
+              <th>Documento</th>
+              <th>Lista Precio</th>
+              <th>Mesas</th>
+              <th>Touch</th>
+              <th>Orden</th>
+              <th>Operador</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let punto of pagedPuntosVenta">
+              <td class="font-monospace">{{ punto.codPntVenta }}</td>
+              <td>{{ punto.nomPntVenta }}</td>
+              <td>{{ punto.codComanda || '-' }}</td>
+              <td>{{ punto.codDocumento || '-' }}</td>
+              <td>{{ punto.codLstPrecio || '-' }}</td>
+              <td>{{ punto.numMesas }}</td>
+              <td>
+                <span class="badge {{ getTouchBadge(punto.pntTouch) }}">
+                  {{ punto.pntTouch === 1 ? 'Si' : 'No' }}
+                </span>
+              </td>
+              <td>{{ punto.orden }}</td>
+              <td>{{ punto.operador || 'N/D' }}</td>
+            </tr>
+            <tr *ngIf="!isLoading && pagedPuntosVenta.length === 0">
+              <td colspan="9" class="text-center text-muted py-4">No hay puntos de venta para mostrar.</td>
+            </tr>
+            <tr *ngIf="isLoading">
+              <td colspan="9" class="text-center py-4">
+                <span class="spinner-border spinner-border-sm mr-2" aria-hidden="true"></span>
+                Cargando puntos de venta...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="row mt-3 align-items-center" *ngIf="totalRegistros > 0">
+        <div class="col-md-4 text-muted">
+          Pagina {{ currentPage }} de {{ totalPages }} ({{ totalRegistros }} registros)
+        </div>
+        <div class="col-md-4 text-center">
+          <select class="form-select form-select-sm d-inline-block w-auto" [(ngModel)]="pageSize" (change)="onPageSizeChange()" [disabled]="isLoading">
+            <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }} por pagina</option>
+          </select>
+        </div>
+        <div class="col-md-4 text-end">
+          <div class="btn-group" role="group">
+            <button class="btn btn-outline-secondary btn-sm" [disabled]="currentPage === 1 || isLoading" (click)="goToPageRelative(-1)">Prev</button>
+            <button class="btn btn-outline-secondary btn-sm" [disabled]="currentPage === totalPages || isLoading" (click)="goToPageRelative(1)">Next</button>
+          </div>
+        </div>
+      </div>
+    </app-card>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="showModal" (click)="cerrarModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h6 class="m-0">Nuevo Punto de Venta</h6>
+      <button type="button" class="btn btn-sm btn-light" (click)="cerrarModal()" [disabled]="isSaving">
+        <i class="feather icon-x"></i>
+      </button>
+    </div>
+
+    <form class="modal-body" (ngSubmit)="guardarPuntoVenta()">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Codigo <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" maxlength="4" [(ngModel)]="formModel.codPntVenta" name="codPntVenta" required>
+        </div>
+        <div class="col-md-8">
+          <label class="form-label">Nombre <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" [(ngModel)]="formModel.nomPntVenta" name="nomPntVenta" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Comanda <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" maxlength="4" [(ngModel)]="formModel.codComanda" name="codComanda" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Mesas</label>
+          <input type="number" min="0" class="form-control" [(ngModel)]="formModel.numMesa" name="numMesa">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Touch</label>
+          <select class="form-control" [(ngModel)]="formModel.pntTouch" name="pntTouch">
+            <option [ngValue]="1">Si</option>
+            <option [ngValue]="0">No</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Orden</label>
+          <input type="number" min="0" class="form-control" [(ngModel)]="formModel.orden" name="orden">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Operador</label>
+          <input type="text" class="form-control" [(ngModel)]="formModel.operador" name="operador">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Impresora A</label>
+          <input type="text" class="form-control" [(ngModel)]="formModel.impresoraA" name="impresoraA">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Impresora B</label>
+          <input type="text" class="form-control" [(ngModel)]="formModel.impresoraB" name="impresoraB">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light mr-2" (click)="cerrarModal()" [disabled]="isSaving">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving">
+          <span *ngIf="isSaving" class="spinner-border spinner-border-sm mr-1" aria-hidden="true"></span>
+          Guardar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

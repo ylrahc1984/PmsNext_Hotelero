@@ -1,5 +1,30 @@
 /* servicios.component.scss */
 
+.page-breadcrumb {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+
+  .breadcrumb {
+    background: transparent;
+    padding: 0;
+    margin: 0;
+  }
+
+  .breadcrumb-item + .breadcrumb-item::before {
+    content: '>';
+  }
+
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+  }
+}
+
 .modal {
   background-color: rgba(0, 0, 0, 0.5);
 }

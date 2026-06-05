@@ -69,8 +69,11 @@ export class NavCollapseComponent {
   private itemContainsUrl(item: NavigationItem, url: string): boolean {
     const normalizedUrl = this.normalizeUrl(url);
 
-    if (item.url && this.normalizeUrl(item.url) === normalizedUrl) {
-      return true;
+    if (item.url) {
+      const normalizedItemUrl = this.normalizeUrl(item.url);
+      if (normalizedItemUrl === normalizedUrl || normalizedUrl.startsWith(normalizedItemUrl + '/')) {
+        return true;
+      }
     }
 
     return item.children?.some((child) => this.itemContainsUrl(child, normalizedUrl)) ?? false;

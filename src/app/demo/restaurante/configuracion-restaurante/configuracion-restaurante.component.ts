@@ -49,7 +49,7 @@ export class ConfiguracionRestauranteComponent {
           id: 'categorias-productos',
           title: 'Categorias de Productos',
           description: 'Familias y clasificaciones operativas',
-          route: '/compras/categoria-producto',
+          route: '/restaurante/configuracion/categorias',
           icon: 'icon-grid',
           iconColor: 'text-c-burgundy'
         }
@@ -62,7 +62,7 @@ export class ConfiguracionRestauranteComponent {
           id: 'puntos-venta',
           title: 'Puntos de Venta',
           description: 'Cajas, estaciones y puntos operativos',
-          route: '/restaurante/puntos-venta',
+          route: '/restaurante/configuracion/puntos-venta',
           icon: 'icon-monitor',
           iconColor: 'text-c-cyan'
         },

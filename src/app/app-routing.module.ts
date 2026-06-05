@@ -164,8 +164,6 @@ const routes: Routes = [
         ['cocina-barra', 'Cocina / Barra'],
         ['cargos-habitacion', 'Cargos a Habitación'],
         ['productos', 'Menú de Productos'],
-        ['categorias', 'Categorías de Productos'],
-        ['puntos-venta', 'Puntos de Venta'],
         ['saloneros', 'Saloneros']
       ]),
       {
@@ -184,9 +182,24 @@ const routes: Routes = [
       },
       {
         path: 'configuracion',
+        pathMatch: 'full',
         loadComponent: () =>
           import('./demo/restaurante/configuracion-restaurante/configuracion-restaurante.component').then(
             (c) => c.ConfiguracionRestauranteComponent
+          )
+      },
+      {
+        path: 'configuracion/categorias',
+        loadComponent: () =>
+          import('./demo/restaurante/categorias-restaurante/categorias-restaurante.component').then(
+            (c) => c.CategoriasRestauranteComponent
+          )
+      },
+      {
+        path: 'configuracion/puntos-venta',
+        loadComponent: () =>
+          import('./demo/restaurante/puntos-venta-restaurante/puntos-venta-restaurante.component').then(
+            (c) => c.PuntosVentaRestauranteComponent
           )
       }
     ]

@@ -1,4 +1,19 @@
-﻿<div class="row">
+﻿<div class="page-breadcrumb mb-3">
+  <ul class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a routerLink="/dashboard"><i class="feather icon-home"></i></a>
+    </li>
+    <li class="breadcrumb-item">
+      <a routerLink="/restaurante/configuracion">Configuracion Restaurante</a>
+    </li>
+    <li class="breadcrumb-item active">Servicios</li>
+  </ul>
+  <a routerLink="/restaurante/configuracion" class="btn btn-outline-secondary btn-sm back-btn">
+    <i class="feather icon-arrow-left"></i> Volver a Configuracion
+  </a>
+</div>
+
+<div class="row">
   <div class="col-12">
     <app-card [customHeader]="true">
       
