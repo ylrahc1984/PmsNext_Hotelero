@@ -162,11 +162,11 @@ export class ServiciosService {
     return this.http.get<{ datos?: ServicioDto[]; paginacion?: any }>(this.apiUrl, { params }).pipe(
       map((response) => {
         const data = (response?.datos ?? []).map((item) => this.mapFromApi(item));
-        const paginacion = response?.paginacion;
-        const totalRegistros = Number(paginacion?.totalRegistros ?? data.length) || data.length;
-        const paginaActual = Number(paginacion?.paginaActual ?? pageNumber) || pageNumber;
-        const size = Number(paginacion?.pageSize ?? pageSize) || pageSize;
-        const totalPages = totalRegistros > 0 ? Math.ceil(totalRegistros / size) : 1;
+        const { totalRegistros, paginaActual, size, totalPages } = this.resolvePagination(response?.paginacion, {
+          fallbackPageNumber: pageNumber,
+          fallbackPageSize: pageSize,
+          fallbackTotalRegistros: data.length
+        });
         return { data, totalRegistros, paginaActual, pageSize: size, totalPages };
       })
     );
@@ -199,11 +199,11 @@ export class ServiciosService {
     return this.http.get<{ datos?: ServicioDto[]; paginacion?: any }>(`${this.apiUrl}/buscar`, { params }).pipe(
       map((response) => {
         const data = (response?.datos ?? []).map((item) => this.mapFromApi(item));
-        const paginacion = response?.paginacion;
-        const totalRegistros = Number(paginacion?.totalRegistros ?? data.length) || data.length;
-        const paginaActual = Number(paginacion?.paginaActual ?? pageNumber) || pageNumber;
-        const size = Number(paginacion?.pageSize ?? pageSize) || pageSize;
-        const totalPages = totalRegistros > 0 ? Math.ceil(totalRegistros / size) : 1;
+        const { totalRegistros, paginaActual, size, totalPages } = this.resolvePagination(response?.paginacion, {
+          fallbackPageNumber: pageNumber,
+          fallbackPageSize: pageSize,
+          fallbackTotalRegistros: data.length
+        });
         return { data, totalRegistros, paginaActual, pageSize: size, totalPages };
       })
     );
@@ -384,6 +384,47 @@ export class ServiciosService {
     } catch {
       return { respuesta: trimmed };
     }
+  }
+
+  private resolvePagination(
+    paginacion: any,
+    fallback: { fallbackPageNumber: number; fallbackPageSize: number; fallbackTotalRegistros: number }
+  ): { totalRegistros: number; paginaActual: number; size: number; totalPages: number } {
+    const totalRegistros = Number(
+      paginacion?.totalRegistros ??
+      paginacion?.totalRecords ??
+      fallback.fallbackTotalRegistros
+    ) || fallback.fallbackTotalRegistros;
+
+    const paginaActual = Number(
+      paginacion?.paginaActual ??
+      paginacion?.pageNumber ??
+      paginacion?.currentPage ??
+      fallback.fallbackPageNumber
+    ) || fallback.fallbackPageNumber;
+
+    const size = Number(
+      paginacion?.pageSize ??
+      paginacion?.tamanoPagina ??
+      paginacion?.cantidadPorPagina ??
+      fallback.fallbackPageSize
+    ) || fallback.fallbackPageSize;
+
+    const totalPagesFromApi = Number(
+      paginacion?.totalPaginas ??
+      paginacion?.totalPages
+    ) || 0;
+
+    const totalPages = totalPagesFromApi > 0
+      ? totalPagesFromApi
+      : (totalRegistros > 0 ? Math.ceil(totalRegistros / size) : 1);
+
+    return {
+      totalRegistros,
+      paginaActual,
+      size,
+      totalPages
+    };
   }
 
   private getOperador(): string {

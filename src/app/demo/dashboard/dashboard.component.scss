@@ -539,6 +539,70 @@ $line: rgba(11, 23, 36, 0.1);
   }
 }
 
+@media (min-width: 768px) and (max-width: 1199.98px) and (orientation: landscape) {
+  .operations-grid,
+  .dashboard-columns,
+  .dashboard-columns--secondary {
+    grid-template-columns: 1fr;
+  }
+
+  .auxiliary-widgets {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .operations-hero,
+  .operations-panel,
+  .exchange-widget {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .operations-hero h1 {
+    font-size: 1.3rem;
+  }
+
+  .executive-metrics,
+  .kpi-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .executive-metric {
+    min-height: 66px;
+    padding: 10px;
+  }
+
+  .executive-metric strong {
+    font-size: 1rem;
+  }
+
+  .executive-metric--primary strong {
+    font-size: 1.3rem;
+  }
+
+  .kpi-card {
+    min-height: 64px;
+    padding: 10px;
+  }
+
+  .kpi-card strong {
+    white-space: normal;
+    font-size: 1rem;
+    line-height: 1.2;
+  }
+
+  .room-status-grid,
+  .analytics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .restaurant-grid,
+  .housekeeping-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 991.98px) {
   .operations-grid,
   .dashboard-columns,
