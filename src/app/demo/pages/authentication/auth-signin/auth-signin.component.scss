@@ -458,6 +458,10 @@
 }
 
 @media (max-width: 1060px) {
+  .signin-shell {
+    overflow-y: auto;
+  }
+
   .signin-main {
     grid-template-columns: 1fr;
   }
@@ -485,6 +489,44 @@
   }
 
   .benefit:nth-child(2)::after {
+    display: none;
+  }
+}
+
+@media (max-width: 1060px) and (max-height: 760px) {
+  .signin-main {
+    display: block;
+    min-height: auto;
+  }
+
+  .signin-hero {
+    min-height: 340px;
+    padding-right: 1.5rem;
+    align-items: flex-end;
+  }
+
+  .hero-copy {
+    max-width: 32rem;
+  }
+
+  .hero-copy h2 {
+    font-size: clamp(1.7rem, 4vw, 2.6rem);
+  }
+
+  .signin-panel-wrapper {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 1rem 1.25rem 1.5rem;
+  }
+
+  .login-card {
+    width: min(560px, 100%);
+  }
+
+  .signin-benefits {
     display: none;
   }
 }
