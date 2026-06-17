@@ -1,0 +1,20 @@
+<button
+  type="button"
+  class="reservation-block"
+  [ngClass]="'reservation-block--' + block.reservation.status.toLowerCase()"
+  [class.reservation-block--ghost]="isGhost"
+  [style.left.px]="block.left"
+  [style.width.px]="block.width"
+  [attr.title]="block.tooltip"
+  (pointerdown)="onDragStart($event)"
+  (click)="onSelect()"
+>
+  <span class="reservation-block__guest">{{ block.label }}</span>
+
+  <span class="reservation-block__popover" role="tooltip">
+    <strong class="reservation-block__popover-name">{{ block.reservation.guestName }}</strong>
+    <span class="reservation-block__popover-line">{{ block.reservation.status }} | {{ block.reservation.source }}</span>
+    <span class="reservation-block__popover-line">{{ block.reservation.startDate }} -> {{ block.reservation.endDate }}</span>
+    <span class="reservation-block__popover-hint">Click para abrir detalle operativo</span>
+  </span>
+</button>

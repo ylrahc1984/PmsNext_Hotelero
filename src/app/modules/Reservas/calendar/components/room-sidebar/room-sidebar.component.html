@@ -1,0 +1,16 @@
+<aside class="room-sidebar">
+  <div class="room-sidebar__head">
+    <h3>Habitaciones</h3>
+    <span>{{ rows.length }}</span>
+  </div>
+
+  <div class="room-sidebar__scroll" #scrollContainer (scroll)="onScroll($event)">
+    <article class="room-sidebar__row" *ngFor="let row of rows">
+      <div class="room-sidebar__icon"><i class="feather icon-home"></i></div>
+      <div>
+        <strong>{{ row.room.roomNumber }}</strong>
+        <p>{{ row.room.type }}</p>
+      </div>
+    </article>
+  </div>
+</aside>

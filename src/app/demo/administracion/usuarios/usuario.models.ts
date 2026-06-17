@@ -133,14 +133,14 @@ export interface PuntoVentaUI {
   codigo: string;
   descripcion: string;
   codComanda: string;
-  codDocumento: unknown;
-  codLstPrecio: unknown;
+  codDocumento: string;
+  codLstPrecio: string;
   numMesas: number;
   pntTouch: number;
   orden: number;
   operador: string;
-  impresoraA: unknown;
-  impresoraB: unknown;
+  impresoraA: string;
+  impresoraB: string;
 }
 
 export interface DescuentoNivel {

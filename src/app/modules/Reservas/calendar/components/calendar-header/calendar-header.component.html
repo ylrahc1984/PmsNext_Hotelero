@@ -1,0 +1,11 @@
+<section class="calendar-header">
+  <div class="calendar-header__month">{{ monthLabel }}</div>
+  <div class="calendar-header__viewport">
+    <div class="calendar-header__track" [style.transform]="'translateX(-' + scrollLeft + 'px)'">
+      <article class="calendar-header__day" *ngFor="let date of dates" [class.calendar-header__day--today]="date.isToday" [class.calendar-header__day--weekend]="date.isWeekend">
+        <span>{{ date.dayNameShort }}</span>
+        <strong>{{ date.dayNumber }}</strong>
+      </article>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,75 @@
+<section class="pos-page" aria-label="Seleccion de punto de venta">
+  <header class="pos-hero">
+    <div>
+      <span class="hero-badge">PmsNext Hotelero</span>
+      <h1>Seleccionar Punto de Venta</h1>
+      <p>Seleccione el centro de consumo donde desea iniciar operaciones.</p>
+    </div>
+    <button type="button" class="refresh-btn" (click)="cargarPuntosVenta()" [disabled]="isLoading" title="Reintentar">
+      <i class="feather icon-refresh-cw" aria-hidden="true"></i>
+      <span>Actualizar</span>
+    </button>
+  </header>
+
+  <section class="state-panel" *ngIf="isLoading" aria-label="Cargando puntos de venta">
+    <article class="pos-skeleton" *ngFor="let item of [1, 2, 3, 4]">
+      <span></span>
+      <div><i></i><i></i><i></i></div>
+    </article>
+  </section>
+
+  <section class="status-card status-card--error" *ngIf="!isLoading && errorMessage">
+    <i class="feather icon-alert-triangle" aria-hidden="true"></i>
+    <div>
+      <h2>No se pudo cargar la información</h2>
+      <p>{{ errorMessage }}</p>
+      <button type="button" (click)="cargarPuntosVenta()">Reintentar</button>
+    </div>
+  </section>
+
+  <section class="status-card" *ngIf="!isLoading && !errorMessage && puntosVenta.length === 0">
+    <i class="feather icon-inbox" aria-hidden="true"></i>
+    <div>
+      <h2>No tiene puntos de venta asignados.</h2>
+      <p>Solicite la asignación de un centro de consumo para iniciar operaciones.</p>
+    </div>
+  </section>
+
+  <section class="pos-grid" *ngIf="!isLoading && !errorMessage && puntosVenta.length > 0">
+    <article
+      class="pos-card"
+      *ngFor="let item of puntosVenta; trackBy: trackByPuntoVenta"
+      (click)="seleccionarPuntoVenta(item)"
+      (keydown.enter)="seleccionarPuntoVenta(item)"
+      (keydown.space)="seleccionarPuntoVenta(item)"
+      role="button"
+      tabindex="0"
+      [attr.aria-label]="'Seleccionar ' + item.MPV12_DesPntventa"
+    >
+      <div class="pos-card__media" aria-hidden="true">
+        <span class="pos-card__image"></span>
+        <span class="pos-card__terminal">
+          <i class="feather icon-credit-card"></i>
+          <b>{{ item.MPV12_PntVenta }}</b>
+        </span>
+        <span class="pos-card__icon">
+          <i class="feather" [ngClass]="getIconClass(item)"></i>
+        </span>
+      </div>
+
+      <div class="pos-card__body">
+        <span class="pos-card__type">{{ getTipoPuntoVenta(item) }}</span>
+        <h2>{{ item.MPV12_DesPntventa }}</h2>
+        <p>Centro de consumo {{ item.MPV12_PntVenta }}</p>
+      </div>
+
+      <footer class="pos-card__footer">
+        <span class="status-pill">Activo</span>
+        <span class="pos-card__action">
+          Seleccionar
+          <i class="feather icon-arrow-right" aria-hidden="true"></i>
+        </span>
+      </footer>
+    </article>
+  </section>
+</section>

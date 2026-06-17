@@ -1,0 +1,164 @@
+<section class="forecast-page" aria-label="Pronostico de Ocupacion">
+  <header class="forecast-hero">
+    <span class="brand-badge">PMSNEXT HOTELERO</span>
+    <h1>Pronóstico de Ocupación</h1>
+    <p>Análisis proyectado de ocupación y disponibilidad de habitaciones</p>
+  </header>
+
+  <section class="forecast-kpis" aria-label="Indicadores de ocupacion">
+    <article class="forecast-kpi" *ngFor="let kpi of kpis; trackBy: trackByLabel">
+      <span class="material-icons" aria-hidden="true">{{ kpi.icon }}</span>
+      <div>
+        <p>{{ kpi.title }}</p>
+        <strong>{{ kpi.value }}</strong>
+        <small>{{ kpi.helper }}</small>
+      </div>
+    </article>
+  </section>
+
+  <section class="filters-card" aria-label="Filtros de pronostico">
+    <div class="field-group">
+      <label for="fechaInicial">Fecha Inicial</label>
+      <input id="fechaInicial" type="date" [(ngModel)]="fechaInicial" />
+    </div>
+
+    <div class="field-group">
+      <label for="fechaFinal">Fecha Final</label>
+      <input id="fechaFinal" type="date" [(ngModel)]="fechaFinal" />
+    </div>
+
+    <fieldset class="category-filter">
+      <legend>Categorías de Habitación</legend>
+      <label *ngFor="let categoria of categorias">
+        <input type="checkbox" [(ngModel)]="categoriasSeleccionadas[categoria]" />
+        <span>{{ categoria }}</span>
+      </label>
+    </fieldset>
+
+    <fieldset class="view-filter">
+      <legend>Tipo de Vista</legend>
+      <label>
+        <input type="radio" name="tipoVista" value="ocupacion" [(ngModel)]="tipoVista" />
+        <span>Ver Ocupación</span>
+      </label>
+      <label>
+        <input type="radio" name="tipoVista" value="disponibilidad" [(ngModel)]="tipoVista" />
+        <span>Ver Disponibilidad</span>
+      </label>
+    </fieldset>
+
+    <button type="button" class="process-button" (click)="procesar()">
+      <span class="material-icons" aria-hidden="true">search</span>
+      <span>Procesar</span>
+    </button>
+  </section>
+
+  <section class="table-card" aria-label="Detalle por fecha">
+    <div class="table-card__header">
+      <div>
+        <span>Forecast</span>
+        <h2>Detalle por Fecha</h2>
+      </div>
+
+      <label class="search-box">
+        <span class="material-icons" aria-hidden="true">search</span>
+        <input type="search" placeholder="Buscar fecha..." [(ngModel)]="busqueda" (ngModelChange)="onSearchChange()" />
+      </label>
+    </div>
+
+    <div class="loading-state" *ngIf="isLoading">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+
+    <div class="empty-state" *ngIf="!isLoading && rows.length === 0">
+      No hay información de pronóstico para el período seleccionado.
+    </div>
+
+    <div class="empty-state" *ngIf="!isLoading && rows.length > 0 && filteredRows.length === 0">
+      No se encontraron registros para la búsqueda realizada.
+    </div>
+
+    <div class="table-scroll" *ngIf="!isLoading && filteredRows.length > 0">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Total Hab.</th>
+            <th>Bloq.</th>
+            <th>Total Ocupada</th>
+            <th># Pax</th>
+            <th>Total CHL</th>
+            <th>Standard</th>
+            <th># Standard</th>
+            <th>Deluxe</th>
+            <th># Deluxe</th>
+            <th>Junior</th>
+            <th># Junior</th>
+            <th>Suite</th>
+            <th># Suite</th>
+            <th>% Ocupación</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of pagedRows; trackBy: trackByFecha">
+            <td class="date-cell">{{ row.fecha }}</td>
+            <td>{{ row.totalHabitaciones }}</td>
+            <td>{{ row.bloqueadas }}</td>
+            <td>{{ row.totalOcupadas }}</td>
+            <td>{{ row.pax }}</td>
+            <td>{{ row.totalChl }}</td>
+            <td>{{ row.standardOcupadas }}</td>
+            <td>{{ row.standardTotal }}</td>
+            <td>{{ row.deluxeOcupadas }}</td>
+            <td>{{ row.deluxeTotal }}</td>
+            <td>{{ row.juniorOcupadas }}</td>
+            <td>{{ row.juniorTotal }}</td>
+            <td>{{ row.suiteOcupadas }}</td>
+            <td>{{ row.suiteTotal }}</td>
+            <td>
+              <span class="occupancy-badge" [ngClass]="getOccupancyClass(row.porcentajeOcupacion)">
+                {{ row.porcentajeOcupacion | number:'1.0-1' }}%
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination-bar" *ngIf="!isLoading && filteredRows.length > 0">
+      <div class="page-size">
+        <span>Mostrar</span>
+        <select [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
+          <option *ngFor="let size of pageSizes" [ngValue]="size">{{ size }}</option>
+        </select>
+      </div>
+
+      <span class="pagination-summary">{{ paginationLabel }}</span>
+
+      <div class="pagination-controls">
+        <button type="button" (click)="previousPage()" [disabled]="currentPage === 1">
+          <span class="material-icons" aria-hidden="true">chevron_left</span>
+        </button>
+        <strong>{{ currentPage }} / {{ totalPages }}</strong>
+        <button type="button" (click)="nextPage()" [disabled]="currentPage === totalPages">
+          <span class="material-icons" aria-hidden="true">chevron_right</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <footer class="forecast-actions" aria-label="Acciones de pronostico">
+    <button
+      type="button"
+      class="action-button"
+      *ngFor="let action of actions; trackBy: trackByLabel"
+      [class.action-button--primary]="action.accent === 'primary'"
+      (click)="action.label === 'Imprimir' ? imprimir() : exportarExcel()"
+    >
+      <span class="material-icons" aria-hidden="true">{{ action.icon }}</span>
+      <span>{{ action.label }}</span>
+    </button>
+  </footer>
+</section>

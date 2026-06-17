@@ -1,0 +1,76 @@
+:host {
+  display: block;
+}
+
+.calendar-grid__scroll {
+  max-height: 620px;
+  overflow: auto;
+  background: #ffffff;
+}
+
+.calendar-grid__content {
+  min-width: 100%;
+  position: relative;
+}
+
+.calendar-grid__row {
+  position: relative;
+  height: 48px;
+}
+
+.calendar-grid__cells {
+  display: flex;
+}
+
+.calendar-grid__overlay {
+  position: absolute;
+  inset: 0;
+}
+
+.calendar-grid__drag-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.calendar-grid__drag-preview {
+  position: absolute;
+  height: 36px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  box-shadow: 0 16px 28px rgba(15, 23, 42, 0.24);
+  opacity: 0.92;
+  backdrop-filter: blur(2px);
+}
+
+.calendar-grid__drag-preview--ocupada {
+  background: linear-gradient(135deg, rgba(46, 96, 143, 0.93), rgba(69, 125, 176, 0.93));
+  color: #ffffff;
+}
+
+.calendar-grid__drag-preview--reservada {
+  background: linear-gradient(135deg, rgba(230, 188, 87, 0.95), rgba(241, 213, 131, 0.95));
+  color: #5b430e;
+}
+
+.calendar-grid__drag-preview--bloqueada {
+  background: linear-gradient(135deg, rgba(140, 152, 171, 0.95), rgba(178, 188, 201, 0.95));
+  color: #f7fbff;
+}
+
+.calendar-grid__drag-preview--invalid {
+  filter: grayscale(0.25);
+  outline: 2px dashed #de5f55;
+  opacity: 0.75;
+}
+
+@media (max-width: 991.98px) {
+  .calendar-grid__scroll {
+    max-height: 480px;
+  }
+}

@@ -1,0 +1,59 @@
+<section class="room-calendar-page">
+  <header class="room-calendar-page__hero">
+    <div>
+      <p class="room-calendar-page__eyebrow">FrontDesk / Calendario</p>
+      <h1>Calendario de Habitaciones</h1>
+      <p class="room-calendar-page__subtitle">Disponibilidad, ocupacion y bloqueos en una linea de tiempo operativa preparada para backend real.</p>
+    </div>
+    <div class="room-calendar-page__hero-metrics">
+      <article class="room-calendar-page__hero-metrics--wide">
+        <span>Rango visible</span>
+        <strong>{{ visibleWindowLabel }}</strong>
+      </article>
+      <article>
+        <span>Ventana</span>
+        <strong>{{ calendarData.dates.length }} dias</strong>
+      </article>
+      <article>
+        <span>Habitaciones</span>
+        <strong>{{ calendarData.visibleRooms }}</strong>
+      </article>
+    </div>
+  </header>
+
+  <app-calendar-toolbar
+    [startDate]="startDate"
+    [endDate]="endDate"
+    [search]="search"
+    [type]="type"
+    [status]="status"
+    [typeOptions]="typeOptions"
+    [statusOptions]="statusOptions"
+    [visibleRooms]="calendarData.visibleRooms"
+    [visibleReservations]="calendarData.visibleReservations"
+    (startDateChange)="onStartDateChange($event)"
+    (endDateChange)="onEndDateChange($event)"
+    (searchChange)="onSearchChange($event)"
+    (typeChange)="onTypeChange($event)"
+    (statusChange)="onStatusChange($event)"
+    (previous)="shiftWindow(-1)"
+    (next)="shiftWindow(1)"
+    (today)="goToday()"
+  ></app-calendar-toolbar>
+
+  <section class="calendar-shell">
+    <app-room-sidebar class="calendar-shell__sidebar" [rows]="calendarData.rows" (scrollTopChange)="onSidebarScrollTop($event)"></app-room-sidebar>
+
+    <section class="calendar-shell__timeline">
+      <app-calendar-header [dates]="calendarData.dates" [monthLabel]="calendarData.monthLabel" [scrollLeft]="headerScrollLeft"></app-calendar-header>
+      <app-calendar-grid
+        [dates]="calendarData.dates"
+        [rows]="calendarData.rows"
+        (scrollLeftChange)="onGridScrollLeft($event)"
+        (scrollTopChange)="onGridScrollTop($event)"
+        (reservationSelect)="openReservation($event)"
+        (reservationDrop)="onReservationDrop($event)"
+      ></app-calendar-grid>
+    </section>
+  </section>
+</section>

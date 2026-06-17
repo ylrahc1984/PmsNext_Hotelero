@@ -1,0 +1,822 @@
+
+[1mInitial chunk files[22m                                                                                    [2m | [22m[1mNames[22m                                                                                    [2m | [22m [1mRaw size[22m
+[32mvendor.js[39m                                                                                              [2m | [22m[2mvendor[22m                                                                                   [2m | [22m  [36m4.77 MB[39m[2m | [22m
+[32mscripts.js[39m                                                                                             [2m | [22m[2mscripts[22m                                                                                  [2m | [22m[36m657.28 kB[39m[2m | [22m
+[32mstyles.css, styles.js[39m                                                                                  [2m | [22m[2mstyles[22m                                                                                   [2m | [22m[36m596.11 kB[39m[2m | [22m
+[32mmain.js[39m                                                                                                [2m | [22m[2mmain[22m                                                                                     [2m | [22m[36m392.31 kB[39m[2m | [22m
+[32mpolyfills.js[39m                                                                                           [2m | [22m[2mpolyfills[22m                                                                                [2m | [22m[36m260.50 kB[39m[2m | [22m
+[32mruntime.js[39m                                                                                             [2m | [22m[2mruntime[22m                                                                                  [2m | [22m [36m13.02 kB[39m[2m | [22m
+
+[1m [22m                                                                                                      [2m | [22m[1mInitial total[22m                                                                            [2m | [22m  [1m6.69 MB[22m
+
+[1mLazy chunk files[22m                                                                                       [2m | [22m[1mNames[22m                                                                                    [2m | [22m [1mRaw size[22m
+[32mdefault-node_modules_ag-grid-angular_fesm2022_ag-grid-angular_mjs.js[39m                                   [2m | [22m[2mcalculadas-comisiones-calculadas-component[22m                                               [2m | [22m  [36m2.58 MB[39m[2m | [22m
+[32mdefault-src_app_demo_administracion_monedas_moneda_service_ts-src_app_demo_catalogos_forma-re-9b8b9c.js[39m[2m | [22m[2mdemo-reservas-create-reserva-create-component[22m                                            [2m | [22m[36m410.63 kB[39m[2m | [22m
+[32msrc_app_finanzas_pages-factura_nueva-factura_nueva-factura_nueva-factura_component_ts.js[39m               [2m | [22m[2msrc-app-finanzas-pages-factura-nueva-factura-nueva-factura-nueva-factura-component[22m       [2m | [22m[36m290.02 kB[39m[2m | [22m
+[32msrc_app_demo_reservas_create_v2_reserva-create-v2_component_ts.js[39m                                      [2m | [22m[2mdemo-reservas-create-v2-reserva-create-v2-component[22m                                      [2m | [22m[36m286.82 kB[39m[2m | [22m
+[32msrc_app_demo_orden-pedido_pages_orden-pedido-form_orden-pedido-form_component_ts.js[39m                    [2m | [22m[2mdemo-orden-pedido-pages-orden-pedido-form-orden-pedido-form-component[22m                    [2m | [22m[36m232.65 kB[39m[2m | [22m
+[32msrc_app_demo_catalogos_suplidores_suplidores_component_ts.js[39m                                           [2m | [22m[2mdemo-catalogos-suplidores-suplidores-component[22m                                           [2m | [22m[36m198.97 kB[39m[2m | [22m
+[32msrc_app_operaciones_operacion-diaria_operacion-diaria_component_ts.js[39m                                  [2m | [22m[2moperaciones-operacion-diaria-operacion-diaria-component[22m                                  [2m | [22m[36m198.42 kB[39m[2m | [22m
+[32msrc_app_demo_ordenes_orden-trabajo-form_component_ts.js[39m                                                [2m | [22m[2mdemo-ordenes-orden-trabajo-form-component[22m                                                [2m | [22m[36m192.24 kB[39m[2m | [22m
+[32msrc_app_demo_catalogos_listas-precios_detalle-lista-precio-v2_component_ts.js[39m                          [2m | [22m[2mdemo-catalogos-listas-precios-detalle-lista-precio-v2-component[22m                          [2m | [22m[36m190.85 kB[39m[2m | [22m
+[32msrc_app_demo_reservas_create_reserva-create_component_ts.js[39m                                            [2m | [22m[2mdemo-reservas-create-reserva-create-component[22m                                            [2m | [22m[36m188.76 kB[39m[2m | [22m
+[32msrc_app_pages_comisiones_reglas_reglas-comision_component_ts.js[39m                                        [2m | [22m[2mreglas-reglas-comision-component[22m                                                         [2m | [22m[36m181.79 kB[39m[2m | [22m
+[32mdefault-node_modules_sweetalert2_dist_sweetalert2_all_js.js[39m                                            [2m | [22m[2mdemo-catalogos-listas-precios-lista-precio-detalle-hotel-component[22m                       [2m | [22m[36m180.59 kB[39m[2m | [22m
+[32msrc_app_demo_compras_recepcion-facturas_nueva-compra-articulos_nueva-compra-articulos_component_ts.js[39m  [2m | [22m[2mdemo-compras-recepcion-facturas-nueva-compra-articulos-nueva-compra-articulos-component[22m  [2m | [22m[36m175.13 kB[39m[2m | [22m
+[32msrc_app_finanzas_pages-factura_documento-detalle_documento-detalle_component_ts.js[39m                     [2m | [22m[2mpages-factura-documento-detalle-documento-detalle-component[22m                              [2m | [22m[36m153.72 kB[39m[2m | [22m
+[32msrc_app_demo_catalogos_agencias-comisionistas_cliente-form_component_ts.js[39m                             [2m | [22m[2mdemo-catalogos-agencias-comisionistas-cliente-form-component[22m                             [2m | [22m[36m140.67 kB[39m[2m | [22m
+[32mdefault-src_app_core_services_qz-print_service_ts.js[39m                                                   [2m | [22m[2moperaciones-operacion-diaria-operacion-diaria-component[22m                                  [2m | [22m[36m140.28 kB[39m[2m | [22m
+[32msrc_app_demo_compras_recepcion-facturas_nueva-compra-servicios_nueva-compra-servicios_component_ts.js[39m  [2m | [22m[2mdemo-compras-recepcion-facturas-nueva-compra-servicios-nueva-compra-servicios-component[22m  [2m | [22m[36m138.70 kB[39m[2m | [22m
+[32msrc_app_pages_operaciones_centro-operacional_centro-operacional_component_ts.js[39m                        [2m | [22m[2mpages-operaciones-centro-operacional-centro-operacional-component[22m                        [2m | [22m[36m138.00 kB[39m[2m | [22m
+[32msrc_app_finanzas_nota-credito_nueva-nota-credito_nueva-nota-credito_component_ts.js[39m                    [2m | [22m[2mnota-credito-nueva-nota-credito-nueva-nota-credito-component[22m                             [2m | [22m[36m135.60 kB[39m[2m | [22m
+[32msrc_app_operaciones_forecast-actividades_forecast-actividades_component_ts.js[39m                          [2m | [22m[2moperaciones-forecast-actividades-forecast-actividades-component[22m                          [2m | [22m[36m134.71 kB[39m[2m | [22m
+[32msrc_app_demo_catalogos_listas-precios_lista-precio-detalle_component_ts.js[39m                             [2m | [22m[2mdemo-catalogos-listas-precios-lista-precio-detalle-component[22m                             [2m | [22m[36m133.96 kB[39m[2m | [22m
+[32msrc_app_demo_dashboard_dashboard_component_ts.js[39m                                                       [2m | [22m[2mdemo-dashboard-dashboard-component[22m                                                       [2m | [22m[36m132.34 kB[39m[2m | [22m
+[32msrc_app_demo_reservas_detalle_reserva-detalle_component_ts.js[39m                                          [2m | [22m[2mdemo-reservas-detalle-reserva-detalle-component[22m                                          [2m | [22m[36m127.21 kB[39m[2m | [22m
+[32msrc_app_demo_orden-pedido_pages_orden-pedido-detalle_orden-pedido-detalle_component_ts.js[39m              [2m | [22m[2mdemo-orden-pedido-pages-orden-pedido-detalle-orden-pedido-detalle-component[22m              [2m | [22m[36m124.11 kB[39m[2m | [22m
+[32msrc_app_demo_catalogos_listas-precios_lista-precio-detalle-hotel_component_ts.js[39m                       [2m | [22m[2mdemo-catalogos-listas-precios-lista-precio-detalle-hotel-component[22m                       [2m | [22m[36m123.03 kB[39m[2m | [22m
+[32mdefault-src_app_demo_administracion_forma-pago_forma-pago_service_ts-src_app_demo_administrac-414021.js[39m[2m | [22m[2mdemo-orden-pedido-pages-orden-pedido-form-orden-pedido-form-component[22m                    [2m | [22m[36m116.59 kB[39m[2m | [22m
+[32msrc_app_finanzas_bancos_depositos-cxc_deposito-form_component_ts.js[39m                                    [2m | [22m[2mbancos-depositos-cxc-deposito-form-component[22m                                             [2m | [22m[36m116.22 kB[39m[2m | [22m
+[32mcommon.js[39m                                                                                              [2m | [22m[2mcommon[22m                                                                                   [2m | [22m[36m113.31 kB[39m[2m | [22m
+[32msrc_app_pages_comisiones_configuracion_servicios_servicios-comisionables_component_ts.js[39m               [2m | [22m[2mconfiguracion-servicios-servicios-comisionables-component[22m                                [2m | [22m[36m112.79 kB[39m[2m | [22m
+[32msrc_app_operaciones_cierre-caja_cierre-caja-form_component_ts.js[39m                                       [2m | [22m[2moperaciones-cierre-caja-cierre-caja-form-component[22m                                       [2m | [22m[36m108.98 kB[39m[2m | [22m
+[32msrc_app_operaciones_cierre-caja_cierre-caja-detalle_component_ts.js[39m                                    [2m | [22m[2moperaciones-cierre-caja-cierre-caja-detalle-component[22m                                    [2m | [22m[36m104.72 kB[39m[2m | [22m
+[32msrc_app_finanzas_bancos_retiros-cxp_retiro-form_component_ts.js[39m                                        [2m | [22m[2mbancos-retiros-cxp-retiro-form-component[22m                                                 [2m | [22m[36m104.08 kB[39m[2m | [22m
+[32msrc_app_finanzas_cuenta-banco_cuenta-banco_component_ts.js[39m                                             [2m | [22m[2mcuenta-banco-cuenta-banco-component[22m                                                      [2m | [22m [36m96.96 kB[39m[2m | [22m
+[32msrc_app_pages_comisiones_calculadas_comisiones-calculadas_component_ts-src_app_pages_comision-c32f9f.js[39m[2m | [22m[2mcalculadas-comisiones-calculadas-component[22m                                               [2m | [22m [36m95.33 kB[39m[2m | [22m
+[32msrc_app_pages_comisiones_configuracion_agencias_agencias-comision_component_ts.js[39m                      [2m | [22m[2mconfiguracion-agencias-agencias-comision-component[22m                                       [2m | [22m [36m93.86 kB[39m[2m | [22m
+[32msrc_app_demo_catalogos_servicios_servicio-form_component_ts.js[39m                                         [2m | [22m[2mdemo-catalogos-servicios-servicio-form-component[22m                                         [2m | [22m [36m90.98 kB[39m[2m | [22m
+[32msrc_app_finanzas_conceptos_conceptos_component_ts.js[39m                                                   [2m | [22m[2mconceptos-conceptos-component[22m                                                            [2m | [22m [36m86.58 kB[39m[2m | [22m
+[32msrc_app_pages_comisiones_liquidaciones_detalle_liquidacion-detalle_component_ts-src_app_pages-b49b6d.js[39m[2m | [22m[2mliquidaciones-detalle-liquidacion-detalle-component[22m                                      [2m | [22m [36m84.96 kB[39m[2m | [22m
+[32msrc_app_finanzas_cuentas-pagar_cuentas-pagar_component_ts.js[39m                                           [2m | [22m[2mcuentas-pagar-cuentas-pagar-component[22m                                                    [2m | [22m [36m83.78 kB[39m[2m | [22m
+[32msrc_app_demo_ordenes_ordenes_component_ts.js[39m                                                           [2m | [22m[2mdemo-ordenes-ordenes-component[22m                                                           [2m | [22m [36m83.30 kB[39m[2m | [22m
+[32msrc_app_demo_administracion_monedas_monedas_component_ts.js[39m                                            [2m | [22m[2mdemo-administracion-monedas-monedas-component[22m                                            [2m | [22m [36m77.78 kB[39m[2m | [22m
+[32msrc_app_demo_ordenes_orden-detalle_component_ts.js[39m                                                     [2m | [22m[2mdemo-ordenes-orden-detalle-component[22m                                                     [2m | [22m [36m76.30 kB[39m[2m | [22m
+[32msrc_app_demo_restaurante_restaurant-dashboard_restaurant-dashboard_component_ts.js[39m                     [2m | [22m[2mdemo-restaurante-restaurant-dashboard-restaurant-dashboard-component[22m                     [2m | [22m [36m76.25 kB[39m[2m | [22m
+[32msrc_app_demo_restaurante_restaurant-mesa-detalle_restaurant-mesa-detalle_component_ts.js[39m               [2m | [22m[2mdemo-restaurante-restaurant-mesa-detalle-restaurant-mesa-detalle-component[22m               [2m | [22m [36m72.80 kB[39m[2m | [22m
+[32msrc_app_pages_comisiones_liquidaciones_lista_liquidaciones-lista_component_ts-src_app_pages_c-2c26f4.js[39m[2m | [22m[2mliquidaciones-lista-liquidaciones-lista-component[22m                                        [2m | [22m [36m71.90 kB[39m[2m | [22m
+[32msrc_app_demo_compras_servicios_servicios_component_ts.js[39m                                               [2m | [22m[2mdemo-compras-servicios-servicios-component[22m                                               [2m | [22m [36m69.57 kB[39m[2m | [22m
+[32msrc_app_finanzas_cuentas-cobrar_cuentas-cobrar_component_ts.js[39m                                         [2m | [22m[2mcuentas-cobrar-cuentas-cobrar-component[22m                                                  [2m | [22m [36m69.46 kB[39m[2m | [22m
+[32msrc_app_finanzas_nota-credito_nota-credito-detalle_nota-credito-detalle_component_ts.js[39m                [2m | [22m[2mnota-credito-nota-credito-detalle-nota-credito-detalle-component[22m                         [2m | [22m [36m68.73 kB[39m[2m | [22m
+[32msrc_app_demo_reservas_list_reservas_component_ts.js[39m                                                    [2m | [22m[2mdemo-reservas-list-reservas-component[22m                                                    [2m | [22m [36m66.94 kB[39m[2m | [22m
+[32msrc_app_demo_compras_compras-correo_compras-correo_component_ts.js[39m                                     [2m | [22m[2mdemo-compras-compras-correo-compras-correo-component[22m                                     [2m | [22m [36m66.77 kB[39m[2m | [22m
+[32msrc_app_demo_compras_recepcion-facturas_compra-articulo-detalle_compra-articulo-detalle_compo-efefd2.js[39m[2m | [22m[2mdemo-compras-recepcion-facturas-compra-articulo-detalle-compra-articulo-detalle-component[22m[2m | [22m [36m65.36 kB[39m[2m | [22m
+[32msrc_app_demo_administracion_usuarios_usuario-propiedades_usuario-propiedades_component_ts.js[39m           [2m | [22m[2mdemo-administracion-usuarios-usuario-propiedades-usuario-propiedades-component[22m           [2m | [22m [36m65.03 kB[39m[2m | [22m
+[32msrc_app_demo_compras_recepcion-facturas_compra-servicio-detalle_compra-servicio-detalle_compo-b26452.js[39m[2m | [22m[2mdemo-compras-recepcion-facturas-compra-servicio-detalle-compra-servicio-detalle-component[22m[2m | [22m [36m64.91 kB[39m[2m | [22m
+[32msrc_app_finanzas_reporte-ventas-iva_reporte-ventas-iva_component_ts.js[39m                                 [2m | [22m[2mreporte-ventas-iva-reporte-ventas-iva-component[22m                                          [2m | [22m [36m63.95 kB[39m[2m | [22m
+[32msrc_app_demo_catalogos_servicios_servicios_component_ts.js[39m                                             [2m | [22m[2mdemo-catalogos-servicios-servicios-component[22m                                             [2m | [22m [36m63.88 kB[39m[2m | [22m
+[32msrc_app_demo_compras_recepcion-facturas_recepcion-facturas_component_ts.js[39m                             [2m | [22m[2mdemo-compras-recepcion-facturas-recepcion-facturas-component[22m                             [2m | [22m [36m63.67 kB[39m[2m | [22m
+[32msrc_app_finanzas_pages-factura_consulta-documentos_consulta-documentos_component_ts.js[39m                 [2m | [22m[2msrc-app-finanzas-pages-factura-consulta-documentos-consulta-documentos-component[22m         [2m | [22m [36m63.38 kB[39m[2m | [22m
+[32msrc_app_demo_pages_authentication_auth-signin_auth-signin_component_ts.js[39m                              [2m | [22m[2mdemo-pages-authentication-auth-signin-auth-signin-component[22m                              [2m | [22m [36m63.28 kB[39m[2m | [22m
+[32msrc_app_demo_administracion_correlativos_correlativos_component_ts.js[39m                                  [2m | [22m[2mdemo-administracion-correlativos-correlativos-component[22m                                  [2m | [22m [36m63.17 kB[39m[2m | [22m
+[32msrc_app_demo_restaurante_categorias-restaurante_categorias-restaurante_component_ts.js[39m                 [2m | [22m[2mdemo-restaurante-categorias-restaurante-categorias-restaurante-component[22m                 [2m | [22m [36m62.38 kB[39m[2m | [22m
+[32msrc_app_demo_restaurante_puntos-venta-restaurante_puntos-venta-restaurante_component_ts.js[39m             [2m | [22m[2mdemo-restaurante-puntos-venta-restaurante-puntos-venta-restaurante-component[22m             [2m | [22m [36m59.45 kB[39m[2m | [22m
+[32msrc_app_finanzas_bancos_depositos-cxc_deposito-list_component_ts.js[39m                                    [2m | [22m[2mbancos-depositos-cxc-deposito-list-component[22m                                             [2m | [22m [36m59.33 kB[39m[2m | [22m
+[32msrc_app_demo_compras_producto-form_producto-form_component_ts.js[39m                                       [2m | [22m[2mdemo-compras-producto-form-producto-form-component[22m                                       [2m | [22m [36m59.28 kB[39m[2m | [22m
+[32msrc_app_finanzas_bancos_bancos_component_ts.js[39m                                                         [2m | [22m[2mbancos-bancos-component[22m                                                                  [2m | [22m [36m59.10 kB[39m[2m | [22m
+[32msrc_app_finanzas_bancos_retiros-cxp_retiro-list_component_ts.js[39m                                        [2m | [22m[2mbancos-retiros-cxp-retiro-list-component[22m                                                 [2m | [22m [36m58.06 kB[39m[2m | [22m
+[32msrc_app_demo_orden-pedido_pages_orden-pedido-list_orden-pedido-list_component_ts.js[39m                    [2m | [22m[2mdemo-orden-pedido-pages-orden-pedido-list-orden-pedido-list-component[22m                    [2m | [22m [36m56.91 kB[39m[2m | [22m
+[32msrc_app_demo_compras_almacen_almacen_component_ts.js[39m                                                   [2m | [22m[2mdemo-compras-almacen-almacen-component[22m                                                   [2m | [22m [36m56.89 kB[39m[2m | [22m
+[32msrc_app_demo_compras_producto-list_producto-list_component_ts.js[39m                                       [2m | [22m[2mdemo-compras-producto-list-producto-list-component[22m                                       [2m | [22m [36m56.14 kB[39m[2m | [22m
+[32msrc_app_demo_compras_compras-correo_detalle_compras-correo-detalle_component_ts.js[39m                     [2m | [22m[2mdemo-compras-compras-correo-detalle-compras-correo-detalle-component[22m                     [2m | [22m [36m55.74 kB[39m[2m | [22m
+[32msrc_app_demo_catalogos_lista-pickup_lista-pickup_component_ts.js[39m                                       [2m | [22m[2mdemo-catalogos-lista-pickup-lista-pickup-component[22m                                       [2m | [22m [36m53.96 kB[39m[2m | [22m
+[32msrc_app_modules_front-desk_pages_room-rack_room-rack_component_ts.js[39m                                   [2m | [22m[2mpages-room-rack-room-rack-component[22m                                                      [2m | [22m [36m53.92 kB[39m[2m | [22m
+[32msrc_app_demo_catalogos_listas-precios_listas-precios_component_ts.js[39m                                   [2m | [22m[2mdemo-catalogos-listas-precios-listas-precios-component[22m                                   [2m | [22m [36m53.48 kB[39m[2m | [22m
+[32msrc_app_demo_reportes_reservas_reservas_component_ts.js[39m                                                [2m | [22m[2mdemo-reportes-reservas-reservas-component[22m                                                [2m | [22m [36m52.89 kB[39m[2m | [22m
+[32msrc_app_finanzas_nota-credito_notas-credito-consulta_notas-credito-consulta_component_ts.js[39m            [2m | [22m[2msrc-app-finanzas-nota-credito-notas-credito-consulta-notas-credito-consulta-component[22m    [2m | [22m [36m52.73 kB[39m[2m | [22m
+[32msrc_app_demo_compras_categoria-producto_categoria-producto_component_ts.js[39m                             [2m | [22m[2mdemo-compras-categoria-producto-categoria-producto-component[22m                             [2m | [22m [36m51.35 kB[39m[2m | [22m
+[32msrc_app_demo_reportes_comisiones_comisiones_component_ts.js[39m                                            [2m | [22m[2mdemo-reportes-comisiones-comisiones-component[22m                                            [2m | [22m [36m50.28 kB[39m[2m | [22m
+[32msrc_app_demo_catalogos_listas-precios_listas-precios-asignaciones_component_ts.js[39m                      [2m | [22m[2mdemo-catalogos-listas-precios-listas-precios-asignaciones-component[22m                      [2m | [22m [36m48.25 kB[39m[2m | [22m
+[32msrc_app_demo_catalogos_agencias-comisionistas_agencias-comisionistas_component_ts.js[39m                   [2m | [22m[2mdemo-catalogos-agencias-comisionistas-agencias-comisionistas-component[22m                   [2m | [22m [36m48.03 kB[39m[2m | [22m
+[32msrc_app_demo_compras_proveedores_proveedor-form_component_ts.js[39m                                        [2m | [22m[2mdemo-compras-proveedores-proveedor-form-component[22m                                        [2m | [22m [36m45.80 kB[39m[2m | [22m
+[32msrc_app_demo_compras_linea-producto_linea-producto_component_ts.js[39m                                     [2m | [22m[2mdemo-compras-linea-producto-linea-producto-component[22m                                     [2m | [22m [36m45.41 kB[39m[2m | [22m
+[32msrc_app_demo_catalogos_suplidores_suplidor-form_component_ts.js[39m                                        [2m | [22m[2mdemo-catalogos-suplidores-suplidor-form-component[22m                                        [2m | [22m [36m44.85 kB[39m[2m | [22m
+[32msrc_app_demo_administracion_forma-pago_forma-pago-detalle_forma-pago-detalle_ts.js[39m                     [2m | [22m[2mdemo-administracion-forma-pago-forma-pago-detalle-forma-pago-detalle[22m                     [2m | [22m [36m43.88 kB[39m[2m | [22m
+[32mdefault-src_app_demo_ordenes_ordenes_service_ts.js[39m                                                     [2m | [22m[2mdemo-dashboard-dashboard-component[22m                                                       [2m | [22m [36m43.12 kB[39m[2m | [22m
+[32msrc_app_demo_restaurante_restaurant-punto-venta_restaurant-punto-venta_component_ts.js[39m                 [2m | [22m[2mdemo-restaurante-restaurant-punto-venta-restaurant-punto-venta-component[22m                 [2m | [22m [36m41.41 kB[39m[2m | [22m
+[32msrc_app_demo_reportes_ventas_ventas_component_ts.js[39m                                                    [2m | [22m[2mdemo-reportes-ventas-ventas-component[22m                                                    [2m | [22m [36m41.27 kB[39m[2m | [22m
+[32mdefault-src_app_demo_catalogos_lista-pickup_lista-pickup_service_ts-src_app_demo_reservas_sha-f88b3f.js[39m[2m | [22m[2mdemo-catalogos-lista-pickup-lista-pickup-form-component[22m                                  [2m | [22m [36m40.24 kB[39m[2m | [22m
+[32msrc_app_demo_compras_proveedores_proveedores_component_ts.js[39m                                           [2m | [22m[2mdemo-compras-proveedores-proveedores-component[22m                                           [2m | [22m [36m39.43 kB[39m[2m | [22m
+[32msrc_app_finanzas_recibos_recibos_component_ts.js[39m                                                       [2m | [22m[2mrecibos-recibos-component[22m                                                                [2m | [22m [36m37.68 kB[39m[2m | [22m
+[32msrc_app_demo_catalogos_listas-precios_lista-precio-form_component_ts.js[39m                                [2m | [22m[2mdemo-catalogos-listas-precios-lista-precio-form-component[22m                                [2m | [22m [36m35.33 kB[39m[2m | [22m
+[32msrc_app_demo_administracion_forma-pago_formas-pago_formas-pago_component_ts.js[39m                         [2m | [22m[2mdemo-administracion-forma-pago-formas-pago-formas-pago-component[22m                         [2m | [22m [36m35.06 kB[39m[2m | [22m
+[32msrc_app_demo_administracion_configuracion-sistema_configuracion-sistema_component_ts.js[39m                [2m | [22m[2mdemo-administracion-configuracion-sistema-configuracion-sistema-component[22m                [2m | [22m [36m32.47 kB[39m[2m | [22m
+[32msrc_app_demo_administracion_usuarios-list_usuarios-list_component_ts.js[39m                                [2m | [22m[2mdemo-administracion-usuarios-list-usuarios-list-component[22m                                [2m | [22m [36m32.36 kB[39m[2m | [22m
+[32msrc_app_operaciones_cierre-caja_cierre-caja-list_component_ts.js[39m                                       [2m | [22m[2moperaciones-cierre-caja-cierre-caja-list-component[22m                                       [2m | [22m [36m31.28 kB[39m[2m | [22m
+[32mdefault-src_app_finanzas_pages-factura_nueva-factura_nueva-factura-cliente-modal_nueva-factur-5f472f.js[39m[2m | [22m[2mdemo-orden-pedido-pages-orden-pedido-form-orden-pedido-form-component[22m                    [2m | [22m [36m30.61 kB[39m[2m | [22m
+[32msrc_app_pages_comisiones_configuracion_config-general_config-general_component_ts.js[39m                   [2m | [22m[2mconfiguracion-config-general-config-general-component[22m                                    [2m | [22m [36m30.09 kB[39m[2m | [22m
+[32msrc_app_demo_administracion_tipo-cambio_tipo-cambio_component_ts.js[39m                                    [2m | [22m[2mdemo-administracion-tipo-cambio-tipo-cambio-component[22m                                    [2m | [22m [36m28.25 kB[39m[2m | [22m
+[32msrc_app_demo_administracion_usuario-form_usuario-form_component_ts.js[39m                                  [2m | [22m[2mdemo-administracion-usuario-form-usuario-form-component[22m                                  [2m | [22m [36m26.40 kB[39m[2m | [22m
+[32msrc_app_demo_administracion_impuesto_impuesto-detalle_impuesto-detalle_component_ts.js[39m                 [2m | [22m[2mdemo-administracion-impuesto-impuesto-detalle-impuesto-detalle-component[22m                 [2m | [22m [36m26.21 kB[39m[2m | [22m
+[32msrc_app_demo_administracion_documento_documento-form_component_ts.js[39m                                   [2m | [22m[2mdemo-administracion-documento-documento-form-component[22m                                   [2m | [22m [36m25.92 kB[39m[2m | [22m
+[32msrc_app_pages_comisiones_auditoria_comisiones-auditoria_component_ts.js[39m                                [2m | [22m[2mauditoria-comisiones-auditoria-component[22m                                                 [2m | [22m [36m25.59 kB[39m[2m | [22m
+[32msrc_app_demo_catalogos_lista-pickup_lista-pickup-form_component_ts.js[39m                                  [2m | [22m[2mdemo-catalogos-lista-pickup-lista-pickup-form-component[22m                                  [2m | [22m [36m25.39 kB[39m[2m | [22m
+[32msrc_app_demo_administracion_contadores_contador-detalle_contador-detalle_component_ts.js[39m               [2m | [22m[2mdemo-administracion-contadores-contador-detalle-contador-detalle-component[22m               [2m | [22m [36m24.15 kB[39m[2m | [22m
+[32msrc_app_demo_administracion_centro-costo_centro-costo_centro-costo_component_ts.js[39m                     [2m | [22m[2mdemo-administracion-centro-costo-centro-costo-centro-costo-component[22m                     [2m | [22m [36m23.97 kB[39m[2m | [22m
+[32msrc_app_demo_restaurante_configuracion-restaurante_configuracion-restaurante_component_ts.js[39m           [2m | [22m[2mdemo-restaurante-configuracion-restaurante-configuracion-restaurante-component[22m           [2m | [22m [36m23.74 kB[39m[2m | [22m
+[32mdefault-src_app_operaciones_cierre-caja_cierre-caja_service_ts.js[39m                                      [2m | [22m[2moperaciones-cierre-caja-cierre-caja-list-component[22m                                       [2m | [22m [36m23.25 kB[39m[2m | [22m
+[32msrc_app_pages_acerca-de-pmsnext_acerca-de-pmsnext_component_ts.js[39m                                      [2m | [22m[2mpages-acerca-de-pmsnext-acerca-de-pmsnext-component[22m                                      [2m | [22m [36m23.01 kB[39m[2m | [22m
+[32msrc_app_demo_administracion_centro-costo_centro-costo-detalle_centro-costo-detalle_component_ts.js[39m     [2m | [22m[2mdemo-administracion-centro-costo-centro-costo-detalle-centro-costo-detalle-component[22m     [2m | [22m [36m22.58 kB[39m[2m | [22m
+[32msrc_app_demo_compras_ordenes-compra_ordenes-compra_component_ts.js[39m                                     [2m | [22m[2mdemo-compras-ordenes-compra-ordenes-compra-component[22m                                     [2m | [22m [36m22.50 kB[39m[2m | [22m
+[32msrc_app_demo_compras_historia-pagos_historia-pagos_component_ts.js[39m                                     [2m | [22m[2mdemo-compras-historia-pagos-historia-pagos-component[22m                                     [2m | [22m [36m22.48 kB[39m[2m | [22m
+[32msrc_app_demo_administracion_documento_documento_component_ts.js[39m                                        [2m | [22m[2mdemo-administracion-documento-documento-component[22m                                        [2m | [22m [36m21.98 kB[39m[2m | [22m
+[32msrc_app_demo_administracion_contadores_contador_contador_component_ts.js[39m                               [2m | [22m[2mdemo-administracion-contadores-contador-contador-component[22m                               [2m | [22m [36m21.15 kB[39m[2m | [22m
+[32mdefault-src_app_finanzas_bancos_bancos_service_ts-src_app_finanzas_bancos_retiros-cxp_retiro_-44b7c3.js[39m[2m | [22m[2mbancos-retiros-cxp-retiro-list-component[22m                                                 [2m | [22m [36m21.13 kB[39m[2m | [22m
+[32msrc_app_demo_administracion_impuesto_impuesto_impuesto_component_ts.js[39m                                 [2m | [22m[2mdemo-administracion-impuesto-impuesto-impuesto-component[22m                                 [2m | [22m [36m20.55 kB[39m[2m | [22m
+[32msrc_app_demo_clientes_clientes_component_ts.js[39m                                                         [2m | [22m[2mdemo-clientes-clientes-component[22m                                                         [2m | [22m [36m19.10 kB[39m[2m | [22m
+[32mdefault-src_app_demo_catalogos_agencias-comisionistas_cliente_service_ts.js[39m                            [2m | [22m[2mdemo-catalogos-agencias-comisionistas-agencias-comisionistas-component[22m                   [2m | [22m [36m18.82 kB[39m[2m | [22m
+[32msrc_app_demo_administracion_departamento_departamento_departamento_component_ts.js[39m                     [2m | [22m[2mdemo-administracion-departamento-departamento-departamento-component[22m                     [2m | [22m [36m18.79 kB[39m[2m | [22m
+[32msrc_app_demo_administracion_unidad-medida_unidad-medida_component_ts.js[39m                                [2m | [22m[2mdemo-administracion-unidad-medida-unidad-medida-component[22m                                [2m | [22m [36m18.71 kB[39m[2m | [22m
+[32msrc_app_demo_administracion_tipo-cliente_tipo-cliente_component_ts.js[39m                                  [2m | [22m[2mdemo-administracion-tipo-cliente-tipo-cliente-component[22m                                  [2m | [22m [36m18.09 kB[39m[2m | [22m
+[32msrc_app_demo_compras_configuracion_configuracion_component_ts.js[39m                                       [2m | [22m[2mdemo-compras-configuracion-configuracion-component[22m                                       [2m | [22m [36m17.80 kB[39m[2m | [22m
+[32msrc_app_finanzas_configuracion_configuracion_component_ts.js[39m                                           [2m | [22m[2mconfiguracion-configuracion-component[22m                                                    [2m | [22m [36m17.80 kB[39m[2m | [22m
+[32mdefault-src_app_finanzas_bancos_bancos_service_ts-src_app_finanzas_bancos_depositos-cxc_depos-560908.js[39m[2m | [22m[2mbancos-depositos-cxc-deposito-list-component[22m                                             [2m | [22m [36m17.78 kB[39m[2m | [22m
+[32mdefault-src_app_pages_comisiones_services_comisiones-api_util_ts-src_app_pages_comisiones_sha-30574d.js[39m[2m | [22m[2mconfiguracion-agencias-agencias-comision-component[22m                                       [2m | [22m [36m16.84 kB[39m[2m | [22m
+[32mdefault-src_app_demo_orden-pedido_services_orden-pedido_service_ts.js[39m                                  [2m | [22m[2mdemo-orden-pedido-pages-orden-pedido-list-orden-pedido-list-component[22m                    [2m | [22m [36m15.35 kB[39m[2m | [22m
+[32msrc_app_finanzas_finanzas_module_ts.js[39m                                                                 [2m | [22m[2mfinanzas-finanzas-module[22m                                                                 [2m | [22m [36m15.22 kB[39m[2m | [22m
+[32msrc_app_demo_administracion_usuarios_usuario-cambiar-clave_usuario-cambiar-clave_component_ts.js[39m       [2m | [22m[2mdemo-administracion-usuarios-usuario-cambiar-clave-usuario-cambiar-clave-component[22m       [2m | [22m [36m15.18 kB[39m[2m | [22m
+[32msrc_app_demo_administracion_unidad-medida_unidad-medida-form_component_ts.js[39m                           [2m | [22m[2mdemo-administracion-unidad-medida-unidad-medida-form-component[22m                           [2m | [22m [36m14.96 kB[39m[2m | [22m
+[32msrc_app_demo_administracion_tipo-cliente_tipo-cliente-form_component_ts.js[39m                             [2m | [22m[2mdemo-administracion-tipo-cliente-tipo-cliente-form-component[22m                             [2m | [22m [36m14.95 kB[39m[2m | [22m
+[32mdefault-src_app_demo_catalogos_servicios_servicios_service_ts-src_app_demo_reservas_services_-243b1f.js[39m[2m | [22m[2mdemo-reservas-create-reserva-create-component[22m                                            [2m | [22m [36m14.79 kB[39m[2m | [22m
+[32msrc_app_demo_administracion_departamento_departamento-detalle_departamento-detalle_component_ts.js[39m     [2m | [22m[2mdemo-administracion-departamento-departamento-detalle-departamento-detalle-component[22m     [2m | [22m [36m14.40 kB[39m[2m | [22m
+[32mdefault-src_app_demo_administracion_usuarios_usuario_service_ts.js[39m                                     [2m | [22m[2moperaciones-cierre-caja-cierre-caja-list-component[22m                                       [2m | [22m [36m14.16 kB[39m[2m | [22m
+[32msrc_app_pages_pms-placeholder_pms-placeholder_component_ts.js[39m                                          [2m | [22m[2mpages-pms-placeholder-pms-placeholder-component[22m                                          [2m | [22m  [36m7.70 kB[39m[2m | [22m
+[32msrc_app_demo_pages_authentication_auth-signup_auth-signup_component_ts.js[39m                              [2m | [22m[2mdemo-pages-authentication-auth-signup-auth-signup-component[22m                              [2m | [22m  [36m6.70 kB[39m[2m | [22m
+[32msrc_app_modules_front-desk_front-desk_routes_ts.js[39m                                                     [2m | [22m[2mmodules-front-desk-front-desk-routes[22m                                                     [2m | [22m  [36m6.09 kB[39m[2m | [22m
+[32msrc_app_pages_comisiones_comisiones_routes_ts.js[39m                                                       [2m | [22m[2mpages-comisiones-comisiones-routes[22m                                                       [2m | [22m  [36m5.23 kB[39m[2m | [22m
+[32msrc_app_demo_reportes_ingresos_ingresos_component_ts.js[39m                                                [2m | [22m[2mdemo-reportes-ingresos-ingresos-component[22m                                                [2m | [22m  [36m1.87 kB[39m[2m | [22m
+
+Build at: 2026-06-17T03:48:04.786Z - Hash: 87da49d12c56c2cb - Time: 13101ms
+
+** Angular Live Development Server is listening on 127.0.0.1:4200, open your browser on http://127.0.0.1:4200/ **
+
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m  [2m | [22m [1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m   [2m | [22m[36m391.67 kB[39m[2m | [22m
+[32mruntime.js[39m         [2m | [22m[2mruntime[22m[2m | [22m [36m13.02 kB[39m[2m | [22m
+
+139 unchanged chunks
+
+Build at: 2026-06-17T03:51:16.394Z - Hash: d5faa9a024857670 - Time: 5551ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                 [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                          [2m | [22m[2mruntime[22m                            [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                    [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_front-desk_pages_room-rack_room-rack_component_ts.js[39m[2m | [22m[2mpages-room-rack-room-rack-component[22m[2m | [22m[36m53.94 kB[39m[2m | [22m
+
+139 unchanged chunks
+
+Build at: 2026-06-17T03:53:35.720Z - Hash: 914b13c82b3f4cfd - Time: 3487ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                 [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                          [2m | [22m[2mruntime[22m                            [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                    [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_front-desk_pages_room-rack_room-rack_component_ts.js[39m[2m | [22m[2mpages-room-rack-room-rack-component[22m[2m | [22m[36m53.91 kB[39m[2m | [22m
+
+139 unchanged chunks
+
+Build at: 2026-06-17T03:56:31.490Z - Hash: 08b2308bdaa26e0d - Time: 1475ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                 [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                          [2m | [22m[2mruntime[22m                            [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                    [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_front-desk_pages_room-rack_room-rack_component_ts.js[39m[2m | [22m[2mpages-room-rack-room-rack-component[22m[2m | [22m[36m51.90 kB[39m[2m | [22m
+
+139 unchanged chunks
+
+Build at: 2026-06-17T03:57:32.865Z - Hash: 6277bde7c1855913 - Time: 1157ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                 [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                          [2m | [22m[2mruntime[22m                            [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                    [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_front-desk_pages_room-rack_room-rack_component_ts.js[39m[2m | [22m[2mpages-room-rack-room-rack-component[22m[2m | [22m[36m51.24 kB[39m[2m | [22m
+
+139 unchanged chunks
+
+Build at: 2026-06-17T03:57:51.547Z - Hash: 9613f87621aad25d - Time: 1061ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                 [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                          [2m | [22m[2mruntime[22m                            [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                    [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_front-desk_pages_room-rack_room-rack_component_ts.js[39m[2m | [22m[2mpages-room-rack-room-rack-component[22m[2m | [22m[36m49.41 kB[39m[2m | [22m
+
+139 unchanged chunks
+
+Build at: 2026-06-17T03:58:07.936Z - Hash: abdfedee4a780193 - Time: 1034ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                 [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                          [2m | [22m[2mruntime[22m                            [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                    [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_front-desk_pages_room-rack_room-rack_component_ts.js[39m[2m | [22m[2mpages-room-rack-room-rack-component[22m[2m | [22m[36m49.27 kB[39m[2m | [22m
+
+139 unchanged chunks
+
+Build at: 2026-06-17T03:58:42.991Z - Hash: ca6220037f8dbfbc - Time: 1275ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                 [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                          [2m | [22m[2mruntime[22m                            [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                    [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_front-desk_pages_room-rack_room-rack_component_ts.js[39m[2m | [22m[2mpages-room-rack-room-rack-component[22m[2m | [22m[36m48.99 kB[39m[2m | [22m
+
+139 unchanged chunks
+
+Build at: 2026-06-17T04:02:35.803Z - Hash: 9230d327ff103baf - Time: 1195ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                 [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                          [2m | [22m[2mruntime[22m                            [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                    [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_front-desk_pages_room-rack_room-rack_component_ts.js[39m[2m | [22m[2mpages-room-rack-room-rack-component[22m[2m | [22m[36m54.21 kB[39m[2m | [22m
+
+139 unchanged chunks
+
+Build at: 2026-06-17T04:06:38.349Z - Hash: 19677171dd181bba - Time: 1267ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                 [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                          [2m | [22m[2mruntime[22m                            [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                    [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_front-desk_pages_room-rack_room-rack_component_ts.js[39m[2m | [22m[2mpages-room-rack-room-rack-component[22m[2m | [22m[36m55.89 kB[39m[2m | [22m
+
+139 unchanged chunks
+
+Build at: 2026-06-17T04:07:46.869Z - Hash: 713cbe207200c341 - Time: 1480ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                 [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                          [2m | [22m[2mruntime[22m                            [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                    [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_front-desk_pages_room-rack_room-rack_component_ts.js[39m[2m | [22m[2mpages-room-rack-room-rack-component[22m[2m | [22m[36m56.08 kB[39m[2m | [22m
+
+139 unchanged chunks
+
+Build at: 2026-06-17T04:17:54.812Z - Hash: 9c03dc734cd3d440 - Time: 1419ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                 [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                          [2m | [22m[2mruntime[22m                            [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                    [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_front-desk_pages_room-rack_room-rack_component_ts.js[39m[2m | [22m[2mpages-room-rack-room-rack-component[22m[2m | [22m[36m56.13 kB[39m[2m | [22m
+
+139 unchanged chunks
+
+Build at: 2026-06-17T04:22:51.045Z - Hash: 046cfd1f56a54dd6 - Time: 1345ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                 [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                          [2m | [22m[2mruntime[22m                            [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                    [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_front-desk_pages_room-rack_room-rack_component_ts.js[39m[2m | [22m[2mpages-room-rack-room-rack-component[22m[2m | [22m[36m56.17 kB[39m[2m | [22m
+
+139 unchanged chunks
+
+Build at: 2026-06-17T04:32:35.184Z - Hash: 4214c11aa2958f73 - Time: 1159ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                 [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                          [2m | [22m[2mruntime[22m                            [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                    [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_front-desk_pages_room-rack_room-rack_component_ts.js[39m[2m | [22m[2mpages-room-rack-room-rack-component[22m[2m | [22m[36m56.41 kB[39m[2m | [22m
+
+139 unchanged chunks
+
+Build at: 2026-06-17T04:33:09.603Z - Hash: 20125993de5063aa - Time: 1093ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                 [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                          [2m | [22m[2mruntime[22m                            [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                    [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_front-desk_pages_room-rack_room-rack_component_ts.js[39m[2m | [22m[2mpages-room-rack-room-rack-component[22m[2m | [22m[36m56.83 kB[39m[2m | [22m
+
+139 unchanged chunks
+
+Build at: 2026-06-17T04:35:51.999Z - Hash: a52552a64fa4f85e - Time: 1098ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                 [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                          [2m | [22m[2mruntime[22m                            [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                    [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_front-desk_pages_room-rack_room-rack_component_ts.js[39m[2m | [22m[2mpages-room-rack-room-rack-component[22m[2m | [22m[36m57.01 kB[39m[2m | [22m
+
+139 unchanged chunks
+
+Build at: 2026-06-17T04:36:30.474Z - Hash: 1520f24f3c2aceab - Time: 1370ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m  [2m | [22m [1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m   [2m | [22m[36m391.05 kB[39m[2m | [22m
+[32mruntime.js[39m         [2m | [22m[2mruntime[22m[2m | [22m [36m13.02 kB[39m[2m | [22m
+
+139 unchanged chunks
+
+Build at: 2026-06-17T04:41:27.719Z - Hash: 93f1f40ec3eaac75 - Time: 2007ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                                   [2m | [22m[1mNames[22m                                                [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                                            [2m | [22m[2mruntime[22m                                              [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                                      [2m | [22m[1mNames[22m                                                [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_front-desk_pages_occupancy-forecast_occupancy-forecast_component_ts.js[39m[2m | [22m[2mpages-occupancy-forecast-occupancy-forecast-component[22m[2m | [22m[36m75.43 kB[39m[2m | [22m
+[32msrc_app_modules_front-desk_front-desk_routes_ts.js[39m                                    [2m | [22m[2mmodules-front-desk-front-desk-routes[22m                 [2m | [22m [36m6.38 kB[39m[2m | [22m
+
+139 unchanged chunks
+
+Build at: 2026-06-17T04:57:39.306Z - Hash: 19729cb35bc2250d - Time: 2421ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m  [2m | [22m [1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m   [2m | [22m[36m391.05 kB[39m[2m | [22m
+[32mruntime.js[39m         [2m | [22m[2mruntime[22m[2m | [22m [36m13.02 kB[39m[2m | [22m
+
+140 unchanged chunks
+
+Build at: 2026-06-17T04:57:42.625Z - Hash: 07e60197928cab61 - Time: 1233ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                 [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                          [2m | [22m[2mruntime[22m                            [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                    [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_front-desk_pages_room-rack_room-rack_component_ts.js[39m[2m | [22m[2mpages-room-rack-room-rack-component[22m[2m | [22m[36m56.89 kB[39m[2m | [22m
+
+140 unchanged chunks
+
+Build at: 2026-06-17T04:58:18.273Z - Hash: 89164808c8f58f3a - Time: 1165ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                 [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                          [2m | [22m[2mruntime[22m                            [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                    [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_front-desk_pages_room-rack_room-rack_component_ts.js[39m[2m | [22m[2mpages-room-rack-room-rack-component[22m[2m | [22m[36m56.85 kB[39m[2m | [22m
+
+140 unchanged chunks
+
+Build at: 2026-06-17T04:58:44.621Z - Hash: bb1d64f567c400d8 - Time: 1455ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                 [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                          [2m | [22m[2mruntime[22m                            [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                    [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_front-desk_pages_room-rack_room-rack_component_ts.js[39m[2m | [22m[2mpages-room-rack-room-rack-component[22m[2m | [22m[36m56.75 kB[39m[2m | [22m
+
+140 unchanged chunks
+
+Build at: 2026-06-17T04:59:12.121Z - Hash: 5a83c605d243cb12 - Time: 1383ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m  [2m | [22m [1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m   [2m | [22m[36m390.82 kB[39m[2m | [22m
+[32mruntime.js[39m         [2m | [22m[2mruntime[22m[2m | [22m [36m13.02 kB[39m[2m | [22m
+
+140 unchanged chunks
+
+Build at: 2026-06-17T05:01:55.110Z - Hash: 039a9832fcef42a6 - Time: 1246ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                                     [2m | [22m[1mNames[22m                                                  [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                                              [2m | [22m[2mruntime[22m                                                [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                                        [2m | [22m[1mNames[22m                                                  [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_front-desk_pages_front-desk-settings_front-desk-settings_component_ts.js[39m[2m | [22m[2mpages-front-desk-settings-front-desk-settings-component[22m[2m | [22m[36m24.31 kB[39m[2m | [22m
+[32msrc_app_modules_front-desk_front-desk_routes_ts.js[39m                                      [2m | [22m[2mmodules-front-desk-front-desk-routes[22m                   [2m | [22m [36m7.48 kB[39m[2m | [22m
+
+140 unchanged chunks
+
+Build at: 2026-06-17T05:06:49.849Z - Hash: af9a06e39326dc56 - Time: 2784ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m  [2m | [22m [1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m   [2m | [22m[36m389.69 kB[39m[2m | [22m
+[32mruntime.js[39m         [2m | [22m[2mruntime[22m[2m | [22m [36m13.02 kB[39m[2m | [22m
+
+141 unchanged chunks
+
+Build at: 2026-06-17T05:06:59.690Z - Hash: aa68fbf009007d3f - Time: 1323ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                                     [2m | [22m[1mNames[22m                                                  [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                                              [2m | [22m[2mruntime[22m                                                [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                                        [2m | [22m[1mNames[22m                                                  [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_front-desk_pages_front-desk-settings_front-desk-settings_component_ts.js[39m[2m | [22m[2mpages-front-desk-settings-front-desk-settings-component[22m[2m | [22m[36m25.00 kB[39m[2m | [22m
+
+141 unchanged chunks
+
+Build at: 2026-06-17T05:08:37.689Z - Hash: 71214a89a592581f - Time: 1616ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                                     [2m | [22m[1mNames[22m                                                  [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                                              [2m | [22m[2mruntime[22m                                                [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                                        [2m | [22m[1mNames[22m                                                  [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_front-desk_pages_front-desk-settings_front-desk-settings_component_ts.js[39m[2m | [22m[2mpages-front-desk-settings-front-desk-settings-component[22m[2m | [22m [36m8.86 kB[39m[2m | [22m
+
+141 unchanged chunks
+
+Build at: 2026-06-17T05:08:42.363Z - Hash: ef70600de161c3ea - Time: 1294ms
+
+× Failed to compile.
+
+[1mInitial chunk files[22m                                                                     [2m | [22m[1mNames[22m                                                  [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                                              [2m | [22m[2mruntime[22m                                                [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                                        [2m | [22m[1mNames[22m                                                  [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_front-desk_pages_front-desk-settings_front-desk-settings_component_ts.js[39m[2m | [22m[2mpages-front-desk-settings-front-desk-settings-component[22m[2m | [22m[36m23.20 kB[39m[2m | [22m
+
+141 unchanged chunks
+
+Build at: 2026-06-17T05:09:17.463Z - Hash: 717e84b50eb2d79a - Time: 1137ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                       [2m | [22m[1mNames[22m                                                       [2m | [22m [1mRaw size[22m
+[32mmain.js[39m                                                                   [2m | [22m[2mmain[22m                                                        [2m | [22m[36m390.28 kB[39m[2m | [22m
+[32mruntime.js[39m                                                                [2m | [22m[2mruntime[22m                                                     [2m | [22m [36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                          [2m | [22m[1mNames[22m                                                       [2m | [22m [1mRaw size[22m
+[32msrc_app_modules_Reservas_calendar_pages_room-calendar-page_component_ts.js[39m[2m | [22m[2mmodules-Reservas-calendar-pages-room-calendar-page-component[22m[2m | [22m[36m113.88 kB[39m[2m | [22m
+
+141 unchanged chunks
+
+Build at: 2026-06-17T05:18:44.728Z - Hash: 4a2f3ebb25769ea1 - Time: 3244ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m  [2m | [22m [1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m   [2m | [22m[36m390.08 kB[39m[2m | [22m
+[32mruntime.js[39m         [2m | [22m[2mruntime[22m[2m | [22m [36m13.02 kB[39m[2m | [22m
+
+142 unchanged chunks
+
+Build at: 2026-06-17T05:24:41.233Z - Hash: 375d78afc57e4cec - Time: 1840ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m  [2m | [22m [1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m   [2m | [22m[36m389.88 kB[39m[2m | [22m
+[32mruntime.js[39m         [2m | [22m[2mruntime[22m[2m | [22m [36m13.02 kB[39m[2m | [22m
+
+142 unchanged chunks
+
+Build at: 2026-06-17T05:28:02.976Z - Hash: 53397d947c0e5b9a - Time: 1068ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                                   [2m | [22m[1mNames[22m                                                [2m | [22m [1mRaw size[22m
+[32mmain.js[39m                                                                               [2m | [22m[2mmain[22m                                                 [2m | [22m[36m389.88 kB[39m[2m | [22m
+[32mruntime.js[39m                                                                            [2m | [22m[2mruntime[22m                                              [2m | [22m [36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                                      [2m | [22m[1mNames[22m                                                [2m | [22m [1mRaw size[22m
+[32mnode_modules_apexcharts_dist_apexcharts_esm_js.js[39m                                     [2m | [22m[2mapexcharts[22m                                           [2m | [22m[36m842.86 kB[39m[2m | [22m
+[32msrc_app_modules_front-desk_pages_forecast-ocupacion_forecast-ocupacion_component_ts.js[39m[2m | [22m[2mpages-forecast-ocupacion-forecast-ocupacion-component[22m[2m | [22m[36m102.67 kB[39m[2m | [22m
+[32msrc_app_modules_front-desk_front-desk_routes_ts.js[39m                                    [2m | [22m[2mmodules-front-desk-front-desk-routes[22m                 [2m | [22m  [36m7.83 kB[39m[2m | [22m
+
+141 unchanged chunks
+
+Build at: 2026-06-17T05:39:29.382Z - Hash: 35ccb7e83cdc5a79 - Time: 14487ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m  [2m | [22m [1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m   [2m | [22m[36m389.94 kB[39m[2m | [22m
+[32mruntime.js[39m         [2m | [22m[2mruntime[22m[2m | [22m [36m13.02 kB[39m[2m | [22m
+
+144 unchanged chunks
+
+Build at: 2026-06-17T05:39:30.619Z - Hash: 30a38ddbe06c3d4e - Time: 1175ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m  [2m | [22m [1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m   [2m | [22m[36m389.94 kB[39m[2m | [22m
+[32mruntime.js[39m         [2m | [22m[2mruntime[22m[2m | [22m [36m13.02 kB[39m[2m | [22m
+
+144 unchanged chunks
+
+Build at: 2026-06-17T05:42:30.276Z - Hash: 2b9ba1b5c44d6a7f - Time: 1174ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m  [2m | [22m [1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m   [2m | [22m[36m390.00 kB[39m[2m | [22m
+[32mruntime.js[39m         [2m | [22m[2mruntime[22m[2m | [22m [36m13.02 kB[39m[2m | [22m
+
+144 unchanged chunks
+
+Build at: 2026-06-17T05:42:31.531Z - Hash: 581c9653afc2cccf - Time: 1189ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m  [2m | [22m [1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m   [2m | [22m[36m389.57 kB[39m[2m | [22m
+[32mruntime.js[39m         [2m | [22m[2mruntime[22m[2m | [22m [36m13.02 kB[39m[2m | [22m
+
+144 unchanged chunks
+
+Build at: 2026-06-17T05:45:10.819Z - Hash: 424e9abf35c85166 - Time: 1507ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                       [2m | [22m[1mNames[22m                                                       [2m | [22m [1mRaw size[22m
+[32mmain.js[39m                                                                   [2m | [22m[2mmain[22m                                                        [2m | [22m[36m390.16 kB[39m[2m | [22m
+[32mruntime.js[39m                                                                [2m | [22m[2mruntime[22m                                                     [2m | [22m [36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                          [2m | [22m[1mNames[22m                                                       [2m | [22m [1mRaw size[22m
+[32msrc_app_modules_housekeeping_panel-limpieza_panel-limpieza_component_ts.js[39m[2m | [22m[2mmodules-housekeeping-panel-limpieza-panel-limpieza-component[22m[2m | [22m [36m72.81 kB[39m[2m | [22m
+
+144 unchanged chunks
+
+Build at: 2026-06-17T05:55:14.730Z - Hash: 9ca84e57de449868 - Time: 2618ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                       [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                                [2m | [22m[2mruntime[22m                                                     [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                          [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_housekeeping_panel-limpieza_panel-limpieza_component_ts.js[39m[2m | [22m[2mmodules-housekeeping-panel-limpieza-panel-limpieza-component[22m[2m | [22m[36m72.53 kB[39m[2m | [22m
+
+145 unchanged chunks
+
+Build at: 2026-06-17T05:56:30.123Z - Hash: 9382a6fb2513951f - Time: 1278ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                       [2m | [22m[1mNames[22m                                                       [2m | [22m [1mRaw size[22m
+[32mmain.js[39m                                                                   [2m | [22m[2mmain[22m                                                        [2m | [22m[36m390.16 kB[39m[2m | [22m
+[32mruntime.js[39m                                                                [2m | [22m[2mruntime[22m                                                     [2m | [22m [36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                          [2m | [22m[1mNames[22m                                                       [2m | [22m [1mRaw size[22m
+[32msrc_app_modules_housekeeping_panel-limpieza_panel-limpieza_component_ts.js[39m[2m | [22m[2mmodules-housekeeping-panel-limpieza-panel-limpieza-component[22m[2m | [22m [36m69.78 kB[39m[2m | [22m
+
+144 unchanged chunks
+
+Build at: 2026-06-17T05:58:48.297Z - Hash: 053cb82cb561c399 - Time: 2095ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                       [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                                [2m | [22m[2mruntime[22m                                                     [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                          [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_housekeeping_panel-limpieza_panel-limpieza_component_ts.js[39m[2m | [22m[2mmodules-housekeeping-panel-limpieza-panel-limpieza-component[22m[2m | [22m[36m69.42 kB[39m[2m | [22m
+
+145 unchanged chunks
+
+Build at: 2026-06-17T05:59:00.522Z - Hash: 90dd8f7685728626 - Time: 1496ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                       [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                                [2m | [22m[2mruntime[22m                                                     [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                          [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_housekeeping_panel-limpieza_panel-limpieza_component_ts.js[39m[2m | [22m[2mmodules-housekeeping-panel-limpieza-panel-limpieza-component[22m[2m | [22m[36m69.67 kB[39m[2m | [22m
+
+145 unchanged chunks
+
+Build at: 2026-06-17T05:59:32.200Z - Hash: 356848814d967524 - Time: 1539ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                       [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                                [2m | [22m[2mruntime[22m                                                     [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                          [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_housekeeping_panel-limpieza_panel-limpieza_component_ts.js[39m[2m | [22m[2mmodules-housekeeping-panel-limpieza-panel-limpieza-component[22m[2m | [22m[36m70.47 kB[39m[2m | [22m
+
+145 unchanged chunks
+
+Build at: 2026-06-17T06:05:34.740Z - Hash: 773f72ef6272c25c - Time: 1534ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                       [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                                [2m | [22m[2mruntime[22m                                                     [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                          [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_housekeeping_panel-limpieza_panel-limpieza_component_ts.js[39m[2m | [22m[2mmodules-housekeeping-panel-limpieza-panel-limpieza-component[22m[2m | [22m[36m70.17 kB[39m[2m | [22m
+
+145 unchanged chunks
+
+Build at: 2026-06-17T06:09:04.916Z - Hash: 00bf8e77e578dd38 - Time: 2432ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                       [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                                [2m | [22m[2mruntime[22m                                                     [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                          [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_housekeeping_panel-limpieza_panel-limpieza_component_ts.js[39m[2m | [22m[2mmodules-housekeeping-panel-limpieza-panel-limpieza-component[22m[2m | [22m[36m70.50 kB[39m[2m | [22m
+
+145 unchanged chunks
+
+Build at: 2026-06-17T06:10:53.207Z - Hash: 5a5568217ee1e96b - Time: 2404ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                       [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                                [2m | [22m[2mruntime[22m                                                     [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                          [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_housekeeping_panel-limpieza_panel-limpieza_component_ts.js[39m[2m | [22m[2mmodules-housekeeping-panel-limpieza-panel-limpieza-component[22m[2m | [22m[36m70.86 kB[39m[2m | [22m
+
+145 unchanged chunks
+
+Build at: 2026-06-17T06:12:15.974Z - Hash: a4dd3d96585308bb - Time: 2646ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                       [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                                [2m | [22m[2mruntime[22m                                                     [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                          [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_housekeeping_panel-limpieza_panel-limpieza_component_ts.js[39m[2m | [22m[2mmodules-housekeeping-panel-limpieza-panel-limpieza-component[22m[2m | [22m[36m73.18 kB[39m[2m | [22m
+
+145 unchanged chunks
+
+Build at: 2026-06-17T06:12:38.184Z - Hash: 83e5bc9d165397ab - Time: 2498ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                       [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                                [2m | [22m[2mruntime[22m                                                     [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                          [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_housekeeping_panel-limpieza_panel-limpieza_component_ts.js[39m[2m | [22m[2mmodules-housekeeping-panel-limpieza-panel-limpieza-component[22m[2m | [22m[36m73.17 kB[39m[2m | [22m
+
+145 unchanged chunks
+
+Build at: 2026-06-17T06:15:33.832Z - Hash: b782d3a3693e3333 - Time: 1198ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                       [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                                [2m | [22m[2mruntime[22m                                                     [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                          [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_housekeeping_panel-limpieza_panel-limpieza_component_ts.js[39m[2m | [22m[2mmodules-housekeeping-panel-limpieza-panel-limpieza-component[22m[2m | [22m[36m73.17 kB[39m[2m | [22m
+
+145 unchanged chunks
+
+Build at: 2026-06-17T06:15:35.430Z - Hash: bf4dd079c4669f0c - Time: 1041ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                       [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                                [2m | [22m[2mruntime[22m                                                     [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                          [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_housekeeping_panel-limpieza_panel-limpieza_component_ts.js[39m[2m | [22m[2mmodules-housekeeping-panel-limpieza-panel-limpieza-component[22m[2m | [22m[36m73.17 kB[39m[2m | [22m
+
+145 unchanged chunks
+
+Build at: 2026-06-17T06:16:43.276Z - Hash: 9f9332dad2a7e269 - Time: 1269ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                       [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                                [2m | [22m[2mruntime[22m                                                     [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                          [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_housekeeping_panel-limpieza_panel-limpieza_component_ts.js[39m[2m | [22m[2mmodules-housekeeping-panel-limpieza-panel-limpieza-component[22m[2m | [22m[36m73.17 kB[39m[2m | [22m
+
+145 unchanged chunks
+
+Build at: 2026-06-17T06:16:46.446Z - Hash: 08ea627dec2493f7 - Time: 1018ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                       [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                                [2m | [22m[2mruntime[22m                                                     [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                          [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_housekeeping_panel-limpieza_panel-limpieza_component_ts.js[39m[2m | [22m[2mmodules-housekeeping-panel-limpieza-panel-limpieza-component[22m[2m | [22m[36m73.32 kB[39m[2m | [22m
+
+145 unchanged chunks
+
+Build at: 2026-06-17T06:17:22.082Z - Hash: ff470194cddd2d24 - Time: 1133ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                       [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                                [2m | [22m[2mruntime[22m                                                     [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                          [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_housekeeping_panel-limpieza_panel-limpieza_component_ts.js[39m[2m | [22m[2mmodules-housekeeping-panel-limpieza-panel-limpieza-component[22m[2m | [22m[36m73.32 kB[39m[2m | [22m
+
+145 unchanged chunks
+
+Build at: 2026-06-17T06:17:28.119Z - Hash: 5042fab3773648d0 - Time: 1027ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                       [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                                [2m | [22m[2mruntime[22m                                                     [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                          [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_housekeeping_panel-limpieza_panel-limpieza_component_ts.js[39m[2m | [22m[2mmodules-housekeeping-panel-limpieza-panel-limpieza-component[22m[2m | [22m[36m73.32 kB[39m[2m | [22m
+
+145 unchanged chunks
+
+Build at: 2026-06-17T06:18:11.989Z - Hash: b8109d6d436d4848 - Time: 1126ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                       [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                                [2m | [22m[2mruntime[22m                                                     [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                          [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_housekeeping_panel-limpieza_panel-limpieza_component_ts.js[39m[2m | [22m[2mmodules-housekeeping-panel-limpieza-panel-limpieza-component[22m[2m | [22m[36m73.32 kB[39m[2m | [22m
+
+145 unchanged chunks
+
+Build at: 2026-06-17T06:18:21.330Z - Hash: 6e3f1227ca081b67 - Time: 1015ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                       [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                                [2m | [22m[2mruntime[22m                                                     [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                          [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_housekeeping_panel-limpieza_panel-limpieza_component_ts.js[39m[2m | [22m[2mmodules-housekeeping-panel-limpieza-panel-limpieza-component[22m[2m | [22m[36m73.32 kB[39m[2m | [22m
+
+145 unchanged chunks
+
+Build at: 2026-06-17T06:18:30.227Z - Hash: 8deef69a51c8f484 - Time: 1054ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                                       [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                                                [2m | [22m[2mruntime[22m                                                     [2m | [22m[36m13.02 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                                          [2m | [22m[1mNames[22m                                                       [2m | [22m[1mRaw size[22m
+[32msrc_app_modules_housekeeping_panel-limpieza_panel-limpieza_component_ts.js[39m[2m | [22m[2mmodules-housekeeping-panel-limpieza-panel-limpieza-component[22m[2m | [22m[36m73.32 kB[39m[2m | [22m
+
+145 unchanged chunks
+
+Build at: 2026-06-17T06:18:36.874Z - Hash: 4686169ad555937e - Time: 1031ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m  [2m | [22m [1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m   [2m | [22m[36m389.95 kB[39m[2m | [22m
+[32mruntime.js[39m         [2m | [22m[2mruntime[22m[2m | [22m [36m13.02 kB[39m[2m | [22m
+
+145 unchanged chunks
+
+Build at: 2026-06-17T06:20:36.757Z - Hash: c67633101e8c2bac - Time: 1441ms
+
+√ Compiled successfully.

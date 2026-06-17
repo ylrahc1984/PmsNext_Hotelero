@@ -10,8 +10,8 @@ interface PuntoVentaApiDto {
   MPV07_CodPntVenta: string;
   MPV07_NomPntVenta: string;
   MPV07_CodComanda: string;
-  MPV07_CodDocumento: string;
-  MPV07_CodLstPrecio: string;
+  MPV07_CodDocumento: unknown;
+  MPV07_CodLstPrecio: unknown;
   MPV07_NumMesas: number;
   MPV07_PntTouch: number;
   MPV07_Orden: number;
@@ -74,17 +74,17 @@ export class PuntosVentaRestauranteService {
 
   private mapFromApi(api: PuntoVentaApiDto): PuntoVentaRestaurante {
     return {
-      codPntVenta: (api.MPV07_CodPntVenta || '').trim(),
-      nomPntVenta: (api.MPV07_NomPntVenta || '').trim(),
-      codComanda: (api.MPV07_CodComanda || '').trim(),
-      codDocumento: (api.MPV07_CodDocumento || '').trim(),
-      codLstPrecio: (api.MPV07_CodLstPrecio || '').trim(),
+      codPntVenta: this.normalizeText(api.MPV07_CodPntVenta),
+      nomPntVenta: this.normalizeText(api.MPV07_NomPntVenta),
+      codComanda: this.normalizeText(api.MPV07_CodComanda),
+      codDocumento: this.normalizeText(api.MPV07_CodDocumento),
+      codLstPrecio: this.normalizeText(api.MPV07_CodLstPrecio),
       numMesas: Number(api.MPV07_NumMesas ?? 0),
       pntTouch: Number(api.MPV07_PntTouch ?? 0),
       orden: Number(api.MPV07_Orden ?? 0),
-      operador: (api.MPV07_Operador || '').trim(),
-      impresoraA: this.normalizePrinter(api.MPV07_ImpresoraA),
-      impresoraB: this.normalizePrinter(api.MPV07_ImpresoraB)
+      operador: this.normalizeText(api.MPV07_Operador),
+      impresoraA: this.normalizeText(api.MPV07_ImpresoraA),
+      impresoraB: this.normalizeText(api.MPV07_ImpresoraB)
     };
   }
 
@@ -105,9 +105,12 @@ export class PuntosVentaRestauranteService {
     };
   }
 
-  private normalizePrinter(value: unknown): string {
+  private normalizeText(value: unknown): string {
     if (typeof value === 'string') {
       return value.trim();
+    }
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value).trim();
     }
     if (value && typeof value === 'object' && Object.keys(value as Record<string, unknown>).length > 0) {
       return JSON.stringify(value);

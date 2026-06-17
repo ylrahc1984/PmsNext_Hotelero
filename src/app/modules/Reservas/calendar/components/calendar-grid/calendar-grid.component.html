@@ -1,0 +1,34 @@
+<div class="calendar-grid__scroll" #scrollContainer (scroll)="onScroll($event)">
+  <div class="calendar-grid__content" [style.width.px]="dates.length * cellWidth">
+    <div class="calendar-grid__row" *ngFor="let row of rows; trackBy: trackByRoom">
+      <div class="calendar-grid__cells">
+        <app-calendar-cell *ngFor="let date of dates; trackBy: trackByDate" [isToday]="date.isToday" [isWeekend]="date.isWeekend"></app-calendar-cell>
+      </div>
+
+      <div class="calendar-grid__overlay">
+        <app-reservation-block
+          *ngFor="let block of row.blocks; trackBy: trackByBlock"
+          [block]="block"
+          [isGhost]="isDraggedReservation(block)"
+          (dragStart)="onReservationDragStart($event)"
+          (select)="onReservationSelect($event)"
+        ></app-reservation-block>
+      </div>
+    </div>
+
+    <div class="calendar-grid__drag-layer" *ngIf="dragPreview as preview">
+      <div
+        class="calendar-grid__drag-preview"
+        [class.calendar-grid__drag-preview--invalid]="!preview.valid"
+        [class.calendar-grid__drag-preview--ocupada]="preview.statusClass === 'ocupada'"
+        [class.calendar-grid__drag-preview--reservada]="preview.statusClass === 'reservada'"
+        [class.calendar-grid__drag-preview--bloqueada]="preview.statusClass === 'bloqueada'"
+        [style.left.px]="preview.left"
+        [style.top.px]="preview.top"
+        [style.width.px]="preview.width"
+      >
+        {{ preview.label }}
+      </div>
+    </div>
+  </div>
+</div>

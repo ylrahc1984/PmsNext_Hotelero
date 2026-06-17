@@ -77,78 +77,43 @@ const routes: Routes = [
   },
   {
     path: 'front-desk',
+    canActivate: [AuthGuard],
+    canActivateChild: [AuthGuard],
+    loadChildren: () => import('./modules/front-desk/front-desk.routes').then((m) => m.FRONT_DESK_ROUTES)
+  },
+  {
+    path: 'hotel',
     component: AdminComponent,
     canActivate: [AuthGuard],
     canActivateChild: [AuthGuard],
     children: [
       {
-        path: '',
-        redirectTo: 'habitaciones',
-        pathMatch: 'full'
-      },
-      {
-        path: 'habitaciones',
-        loadComponent: loadPmsPlaceholder,
-        data: { module: 'Front Desk', title: 'Habitaciones' }
-      },
-      {
-        path: 'factura-directa',
+        path: 'listas-precios/:codListaPrecio',
         loadComponent: () =>
-          import('./finanzas/pages-factura/nueva-factura/nueva-factura/nueva-factura.component').then((c) => c.NuevaFacturaComponent)
-      },
-      {
-        path: 'rooming-asignaciones',
-        loadComponent: loadPmsPlaceholder,
-        data: { module: 'Front Desk', title: 'Rooming - Asignaciones' }
-      },
-      {
-        path: 'arribos-dia',
-        loadComponent: loadPmsPlaceholder,
-        data: { module: 'Front Desk', title: 'Arribos del Día' }
-      },
-      {
-        path: 'pronostico-ocupacion',
-        loadComponent: loadPmsPlaceholder,
-        data: { module: 'Front Desk', title: 'Pronóstico de Ocupación' }
-      },
-      {
-        path: 'estado-habitaciones',
-        loadComponent: loadPmsPlaceholder,
-        data: { module: 'Front Desk', title: 'Estado de Habitaciones' }
-      },
-      {
-        path: 'configuraciones/room-rack',
-        loadComponent: loadPmsPlaceholder,
-        data: { module: 'Front Desk / Configuraciones', title: 'Room Rack' }
-      },
-      {
-        path: 'configuraciones/estado',
-        loadComponent: loadPmsPlaceholder,
-        data: { module: 'Front Desk / Configuraciones', title: 'Estado de Habitaciones' }
-      },
-      {
-        path: 'configuraciones/bloqueos',
-        loadComponent: loadPmsPlaceholder,
-        data: { module: 'Front Desk / Configuraciones', title: 'Bloqueos de Habitaciones' }
-      },
-      {
-        path: 'configuraciones/categorias',
-        loadComponent: loadPmsPlaceholder,
-        data: { module: 'Front Desk / Configuraciones', title: 'Categorías de Habitación' }
-      },
-      {
-        path: 'configuraciones/mantenimiento',
-        loadComponent: loadPmsPlaceholder,
-        data: { module: 'Front Desk / Configuraciones', title: 'Mantenimiento de Habitaciones' }
+          import('./demo/catalogos/listas-precios/lista-precio-detalle-hotel.component').then(
+            (c) => c.ListaPrecioDetalleHotelComponent
+          )
       }
     ]
   },
-  pmsPlaceholderSection('housekeeping', 'Housekeeping', [
-    ['estado-habitaciones', 'Estado de Habitaciones'],
-    ['panel-limpieza', 'Panel de Limpieza'],
-    ['asignacion-camareras', 'Asignación de Camareras'],
-    ['supervision', 'Supervisión de Limpieza']
-  ]),
+  {
+    path: 'housekeeping',
+    component: AdminComponent,
+    canActivate: [AuthGuard],
+    canActivateChild: [AuthGuard],
+    children: [
+      {
+        path: 'panel-limpieza',
+        loadComponent: () =>
+          import('./modules/housekeeping/panel-limpieza/panel-limpieza.component').then((c) => c.PanelLimpiezaComponent)
+      },
+      ...pmsPlaceholderChildRoutes('Housekeeping', [
+        ['estado-habitaciones', 'Estado de Habitaciones'],
+        ['asignacion-camareras', 'Asignación de Camareras'],
+        ['supervision', 'Supervisión de Limpieza']
+      ])
+    ]
+  },
   {
     path: 'restaurante',
     component: AdminComponent,
@@ -168,10 +133,8 @@ const routes: Routes = [
       ]),
       {
         path: 'facturacion',
-        loadComponent: () =>
-          import('./demo/restaurante/restaurant-dashboard/restaurant-dashboard.component').then(
-            (c) => c.RestaurantDashboardComponent
-          )
+        redirectTo: '/restaurant/puntos-venta',
+        pathMatch: 'full'
       },
       {
         path: 'mesa/:id',
@@ -189,6 +152,35 @@ const routes: Routes = [
           )
       },
       {
+        path: 'servicios',
+        loadComponent: () => import('./demo/catalogos/servicios/servicios.component').then((c) => c.ServiciosComponent)
+      },
+      {
+        path: 'servicios/nuevo',
+        loadComponent: () => import('./demo/catalogos/servicios/servicio-form.component').then((c) => c.ServicioFormComponent)
+      },
+      {
+        path: 'servicios/editar/:codReceta',
+        loadComponent: () => import('./demo/catalogos/servicios/servicio-form.component').then((c) => c.ServicioFormComponent)
+      },
+      {
+        path: 'agencias',
+        loadComponent: () => import('./demo/catalogos/agencias-comisionistas/agencias-comisionistas.component').then((c) => c.AgenciasComisionistasComponent)
+      },
+      {
+        path: 'agencias/nuevo',
+        loadComponent: () => import('./demo/catalogos/agencias-comisionistas/cliente-form.component').then((c) => c.ClienteFormComponent)
+      },
+      {
+        path: 'agencias/:codigo/editar',
+        loadComponent: () => import('./demo/catalogos/agencias-comisionistas/cliente-form.component').then((c) => c.ClienteFormComponent)
+      },
+      {
+        path: 'agencias/:codigo/detalle',
+        loadComponent: () => import('./demo/catalogos/agencias-comisionistas/cliente-form.component').then((c) => c.ClienteFormComponent),
+        data: { readOnly: true }
+      },
+      {
         path: 'configuracion/categorias',
         loadComponent: () =>
           import('./demo/restaurante/categorias-restaurante/categorias-restaurante.component').then(
@@ -200,6 +192,40 @@ const routes: Routes = [
         loadComponent: () =>
           import('./demo/restaurante/puntos-venta-restaurante/puntos-venta-restaurante.component').then(
             (c) => c.PuntosVentaRestauranteComponent
+          )
+      }
+    ]
+  },
+  {
+    path: 'restaurant',
+    component: AdminComponent,
+    canActivate: [AuthGuard],
+    canActivateChild: [AuthGuard],
+    children: [
+      {
+        path: '',
+        redirectTo: 'puntos-venta',
+        pathMatch: 'full'
+      },
+      {
+        path: 'puntos-venta',
+        loadComponent: () =>
+          import('./demo/restaurante/restaurant-punto-venta/restaurant-punto-venta.component').then(
+            (c) => c.RestaurantPuntoVentaComponent
+          )
+      },
+      {
+        path: 'dashboard/:codPuntoVenta',
+        loadComponent: () =>
+          import('./demo/restaurante/restaurant-dashboard/restaurant-dashboard.component').then(
+            (c) => c.RestaurantDashboardComponent
+          )
+      },
+      {
+        path: 'mesa/:id',
+        loadComponent: () =>
+          import('./demo/restaurante/restaurant-mesa-detalle/restaurant-mesa-detalle.component').then(
+            (c) => c.RestaurantMesaDetalleComponent
           )
       }
     ]
@@ -330,12 +356,31 @@ const routes: Routes = [
     redirectTo: 'operaciones/reservas',
     pathMatch: 'full'
   },
-  pmsPlaceholderSection('reservas', 'Reservas', [
-    ['calendario', 'Calendario de Reservas'],
-    ['disponibilidad', 'Disponibilidad'],
-    ['forecast-ocupacion', 'Forecast de Ocupación'],
-    ['tarifas-planes', 'Tarifas y Planes']
-  ]),
+  {
+    path: 'reservas',
+    component: AdminComponent,
+    canActivate: [AuthGuard],
+    canActivateChild: [AuthGuard],
+    children: [
+      {
+        path: 'calendario',
+        loadComponent: () => import('./modules/Reservas/calendar/pages/room-calendar-page.component').then((c) => c.RoomCalendarPageComponent)
+      },
+      {
+        path: 'forecast-ocupacion',
+        redirectTo: '/front-desk/forecast-ocupacion',
+        pathMatch: 'full'
+      },
+      {
+        path: 'tarifas-planes',
+        redirectTo: '/catalogos/listas-precios',
+        pathMatch: 'full'
+      },
+      ...pmsPlaceholderChildRoutes('Reservas', [
+        ['disponibilidad', 'Disponibilidad']
+      ])
+    ]
+  },
   {
     path: 'ordenes-trabajo',
     redirectTo: 'operaciones/ordenes-trabajo',

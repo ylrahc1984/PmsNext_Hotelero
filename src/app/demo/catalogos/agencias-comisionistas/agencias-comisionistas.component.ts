@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import Swal from 'sweetalert2';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { ClienteService } from './cliente.service';
@@ -16,6 +16,10 @@ import { ClienteUI } from './cliente.models';
 export class AgenciasComisionistasComponent implements OnInit {
   private clientesService = inject(ClienteService);
   private router = inject(Router);
+
+  get baseRoute(): string {
+    return this.router.url.startsWith('/restaurante/agencias') ? '/restaurante/agencias' : '/catalogos/clientes';
+  }
 
   clientes: ClienteUI[] = [];
   filteredClientes: ClienteUI[] = [];
@@ -94,15 +98,15 @@ export class AgenciasComisionistasComponent implements OnInit {
   }
 
   openForm() {
-    this.router.navigate(['/catalogos/clientes/nuevo']);
+    this.router.navigate([this.baseRoute, 'nuevo']);
   }
 
   editar(cliente: ClienteUI) {
-    this.router.navigate(['/catalogos/clientes', cliente.codigo, 'editar']);
+    this.router.navigate([this.baseRoute, cliente.codigo, 'editar']);
   }
 
   verDetalle(cliente: ClienteUI) {
-    this.router.navigate(['/catalogos/clientes', cliente.codigo, 'detalle']);
+    this.router.navigate([this.baseRoute, cliente.codigo, 'detalle']);
   }
 
   eliminar(cliente: ClienteUI) {

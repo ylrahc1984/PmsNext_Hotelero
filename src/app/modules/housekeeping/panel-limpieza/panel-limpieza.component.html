@@ -1,0 +1,172 @@
+<section class="housekeeping-page" aria-label="Panel de Limpieza">
+  <header class="hero-card">
+    <div>
+      <h1>Centro Operativo de Limpieza</h1>
+      <p>Supervisión en tiempo real de habitaciones y personal.</p>
+    </div>
+
+    <button type="button" class="hero-card__button" (click)="actualizar()">
+      <span class="material-icons" aria-hidden="true">refresh</span>
+      <span>Actualizar</span>
+    </button>
+  </header>
+
+  <section class="kpi-grid" aria-label="Indicadores de limpieza">
+    <article class="kpi-card" *ngFor="let kpi of kpis; trackBy: trackByKpi" [ngClass]="'kpi-card--' + kpi.color">
+      <span class="kpi-card__icon material-icons" aria-hidden="true">{{ kpi.icono }}</span>
+      <div>
+        <span>{{ kpi.titulo }}</span>
+        <strong>{{ kpi.valor }}</strong>
+      </div>
+    </article>
+  </section>
+
+  <section class="filter-card" aria-label="Filtros de Housekeeping">
+    <label>
+      <span>Piso</span>
+      <select [(ngModel)]="filtroPiso">
+        <option *ngFor="let piso of pisos" [value]="piso">{{ piso }}</option>
+      </select>
+    </label>
+
+    <label>
+      <span>Tipo Habitación</span>
+      <select [(ngModel)]="filtroTipo">
+        <option *ngFor="let tipo of tiposHabitacion" [value]="tipo">{{ tipo }}</option>
+      </select>
+    </label>
+
+    <label>
+      <span>Estado</span>
+      <select [(ngModel)]="filtroEstado">
+        <option *ngFor="let estado of estados" [value]="estado">{{ estado }}</option>
+      </select>
+    </label>
+
+    <label>
+      <span>Camarera Asignada</span>
+      <select [(ngModel)]="filtroCamarera">
+        <option *ngFor="let camarera of camarerasFiltro" [value]="camarera">{{ camarera }}</option>
+      </select>
+    </label>
+
+    <div class="filter-card__actions">
+      <button type="button" class="action-button action-button--ghost" (click)="limpiarFiltros()">
+        <span class="material-icons" aria-hidden="true">restart_alt</span>
+        <span>Limpiar Filtros</span>
+      </button>
+      <button type="button" class="action-button action-button--primary" (click)="actualizar()">
+        <span class="material-icons" aria-hidden="true">refresh</span>
+        <span>Actualizar</span>
+      </button>
+    </div>
+  </section>
+
+  <section class="workspace">
+    <main class="rooms-panel">
+      <div class="panel-heading">
+        <div>
+          <span>Operación</span>
+          <h2>Estado de Habitaciones</h2>
+        </div>
+        <strong>{{ habitacionesFiltradas.length }} habitaciones</strong>
+      </div>
+
+      <div class="rooms-grid" *ngIf="isLoading">
+        <div class="skeleton-room" *ngFor="let item of [1,2,3,4,5,6,7,8,9,10]"></div>
+      </div>
+
+      <div class="empty-state" *ngIf="!isLoading && habitacionesFiltradas.length === 0">
+        <span class="material-icons" aria-hidden="true">search_off</span>
+        <p>No hay habitaciones para mostrar.</p>
+      </div>
+
+      <div class="rooms-grid" *ngIf="!isLoading && habitacionesFiltradas.length > 0">
+        <button
+          type="button"
+          class="room-card"
+          *ngFor="let room of habitacionesFiltradas; trackBy: trackByRoom"
+          [ngClass]="getRoomClass(room.estado)"
+          (click)="onRoomSelected(room)"
+        >
+          <strong>{{ room.numero }}</strong>
+          <span>{{ room.categoria }}</span>
+          <em>{{ room.estado }}</em>
+        </button>
+      </div>
+
+      <div class="legend-bar" aria-label="Leyenda de estados">
+        <span *ngFor="let estado of estados.slice(1)">
+          <i [ngClass]="getLegendClass(estado)"></i>
+          {{ estado === 'FUERA DE SERVICIO' ? 'Fuera Servicio' : estado }}
+        </span>
+      </div>
+    </main>
+
+    <aside class="side-column">
+      <section class="side-card">
+        <div class="side-card__header">
+          <div>
+            <span>Equipo</span>
+            <h2>Camareras Activas</h2>
+          </div>
+          <button type="button" (click)="verTodasCamareras()">Ver Todas</button>
+        </div>
+
+        <div class="empty-state empty-state--compact" *ngIf="camareras.length === 0">
+          <p>No hay personal activo.</p>
+        </div>
+
+        <div class="staff-list" *ngIf="camareras.length > 0">
+          <article class="staff-item" *ngFor="let camarera of camareras; trackBy: trackByCamarera">
+            <span class="staff-avatar">{{ camarera.nombre.charAt(0) }}</span>
+            <div class="staff-item__body">
+              <div class="staff-item__title">
+                <strong>{{ camarera.nombre }}</strong>
+                <span>{{ camarera.porcentajeCarga }}%</span>
+              </div>
+              <p>{{ camarera.habitacionesAsignadas }} habitaciones</p>
+              <div class="progress-track">
+                <span [style.width.%]="camarera.porcentajeCarga"></span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="side-card">
+        <div class="side-card__header">
+          <div>
+            <span>Prioridades</span>
+            <h2>Habitaciones Prioritarias</h2>
+          </div>
+          <button type="button" (click)="verTodasPrioritarias()">Ver Todas</button>
+        </div>
+
+        <div class="priority-list">
+          <article class="priority-item" *ngFor="let room of habitacionesPrioritarias; trackBy: trackByPrioritaria">
+            <div>
+              <strong>{{ room.habitacion }}</strong>
+              <span>{{ room.categoria }}</span>
+            </div>
+            <div>
+              <em>Check-In {{ room.horaCheckIn }}</em>
+              <b>Alta</b>
+            </div>
+          </article>
+        </div>
+      </section>
+    </aside>
+  </section>
+
+  <footer class="bottom-actions" aria-label="Acciones inferiores">
+    <button type="button" class="action-button action-button--ghost" (click)="imprimir()">
+      <span class="material-icons" aria-hidden="true">print</span>
+      <span>Imprimir</span>
+    </button>
+    <button type="button" class="action-button action-button--primary" (click)="exportarExcel()">
+      <span class="material-icons" aria-hidden="true">file_download</span>
+      <span>Exportar Excel</span>
+    </button>
+  </footer>
+</section>

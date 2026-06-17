@@ -1,0 +1,93 @@
+:host {
+  display: block;
+}
+
+.room-sidebar {
+  width: 180px;
+  min-width: 180px;
+  max-width: 180px;
+  border: 1px solid #e2e9f3;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.05);
+  overflow: hidden;
+}
+
+.room-sidebar__head {
+  height: 58px;
+  padding: 0 0.7rem;
+  border-bottom: 1px solid #e7edf6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(180deg, #f9fbff, #f4f8fd);
+}
+
+.room-sidebar__head h3 {
+  margin: 0;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #556a86;
+}
+
+.room-sidebar__head span {
+  border-radius: 999px;
+  background: #edf4ff;
+  color: #325b8a;
+  padding: 0.12rem 0.45rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.room-sidebar__scroll {
+  max-height: 620px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.room-sidebar__row {
+  height: 48px;
+  padding: 0 0.65rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid #eff3f8;
+}
+
+.room-sidebar__icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: #f2f7fd;
+  color: #58718f;
+  font-size: 0.74rem;
+}
+
+.room-sidebar__row strong {
+  display: block;
+  font-size: 0.82rem;
+  color: #21344d;
+  line-height: 1.1;
+}
+
+.room-sidebar__row p {
+  margin: 0.08rem 0 0;
+  font-size: 0.66rem;
+  color: #71839a;
+  letter-spacing: 0.06em;
+}
+
+@media (max-width: 991.98px) {
+  .room-sidebar {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .room-sidebar__scroll {
+    max-height: 180px;
+  }
+}

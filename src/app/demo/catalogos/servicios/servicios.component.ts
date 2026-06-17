@@ -1,7 +1,7 @@
 ﻿import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import Swal from 'sweetalert2';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
@@ -33,6 +33,19 @@ export class ServiciosComponent implements OnInit {
   pageSizeOptions = [10, 20, 50, 100];
 
   private serviciosService = inject(ServiciosService);
+  private router = inject(Router);
+
+  get baseRoute(): string {
+    return this.router.url.startsWith('/restaurante/servicios') ? '/restaurante/servicios' : '/catalogos/servicios';
+  }
+
+  get parentRoute(): string {
+    return this.router.url.startsWith('/restaurante/servicios') ? '/restaurante/dashboard' : '/restaurante/configuracion';
+  }
+
+  get parentLabel(): string {
+    return this.router.url.startsWith('/restaurante/servicios') ? 'Restaurante' : 'Configuracion Restaurante';
+  }
 
   ngOnInit() {
     this.loadCategoriaOptions();

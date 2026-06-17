@@ -4,12 +4,12 @@
       <a routerLink="/dashboard"><i class="feather icon-home"></i></a>
     </li>
     <li class="breadcrumb-item">
-      <a routerLink="/restaurante/configuracion">Configuracion Restaurante</a>
+      <a [routerLink]="parentRoute">{{ parentLabel }}</a>
     </li>
-    <li class="breadcrumb-item active">Servicios</li>
+    <li class="breadcrumb-item active">Catalogo Comercial</li>
   </ul>
-  <a routerLink="/restaurante/configuracion" class="btn btn-outline-secondary btn-sm back-btn">
-    <i class="feather icon-arrow-left"></i> Volver a Configuracion
+  <a [routerLink]="parentRoute" class="btn btn-outline-secondary btn-sm back-btn">
+    <i class="feather icon-arrow-left"></i> Volver
   </a>
 </div>
 
@@ -18,10 +18,10 @@
     <app-card [customHeader]="true">
       
       <div class="app-card-header">
-        <h5>Catalogo de Actividades / Servicios</h5>
+        <h5>Catalogo Comercial</h5>
         <div class="card-header-right">
-          <button class="btn btn-primary btn-nuevo-servicio" routerLink="/catalogos/servicios/nuevo">
-            <i class="feather icon-plus"></i> Nuevo Servicio
+          <button class="btn btn-primary btn-nuevo-servicio" [routerLink]="[baseRoute, 'nuevo']">
+            <i class="feather icon-plus"></i> Nuevo Registro
           </button>
         </div>
       </div>
@@ -110,29 +110,25 @@
                 </span>
               </td>
               <td class="text-center">
-                <div ngbDropdown container="body" placement="bottom-end" class="servicio-action-menu">
-                  <button type="button" ngbDropdownToggle class="servicio-action-toggle" aria-label="Abrir acciones del servicio">
-                    <i class="feather icon-more-horizontal" aria-hidden="true"></i>
+                <div class="servicio-actions">
+                  <button
+                    type="button"
+                    class="servicio-action-btn servicio-action-btn--edit"
+                    [routerLink]="[baseRoute, 'editar', servicio.codReceta]"
+                    title="Editar registro"
+                    aria-label="Editar registro"
+                  >
+                    <i class="feather icon-edit" aria-hidden="true"></i>
                   </button>
-
-                  <div ngbDropdownMenu class="dropdown-menu servicio-action-dropdown">
-                    <button
-                      type="button"
-                      ngbDropdownItem
-                      class="dropdown-item"
-                      [routerLink]="['/catalogos/servicios/editar', servicio.codReceta]"
-                    >
-                      <i class="feather icon-edit" aria-hidden="true"></i>
-                      <span>Editar servicio</span>
-                    </button>
-
-                    <div class="servicio-action-divider"></div>
-
-                    <button type="button" ngbDropdownItem class="dropdown-item dropdown-item--danger" (click)="deleteServicio(servicio)">
-                      <i class="feather icon-trash" aria-hidden="true"></i>
-                      <span>Eliminar servicio</span>
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    class="servicio-action-btn servicio-action-btn--danger"
+                    (click)="deleteServicio(servicio)"
+                    title="Eliminar registro"
+                    aria-label="Eliminar registro"
+                  >
+                    <i class="feather icon-trash" aria-hidden="true"></i>
+                  </button>
                 </div>
               </td>
             </tr>

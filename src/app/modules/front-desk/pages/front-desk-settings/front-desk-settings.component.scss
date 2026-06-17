@@ -1,0 +1,260 @@
+:host {
+  display: block;
+}
+
+$blue: #1f6bff;
+$cyan: #17d4e0;
+$ink: #1f2937;
+$muted: #75849a;
+$paper: #ffffff;
+$line: #e6ebf3;
+$soft: #f3f6fa;
+$green: #24c986;
+$amber: #ff9f43;
+$burgundy: #8a0f4d;
+$violet: #a78bfa;
+
+.settings-page {
+  color: $ink;
+}
+
+.settings-shell {
+  overflow: hidden;
+  border: 1px solid $line;
+  border-radius: 4px;
+  background: $paper;
+  box-shadow: 0 10px 28px rgba(15, 33, 51, 0.06);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 58px;
+  padding: 0 22px 0 28px;
+  border-bottom: 1px solid $line;
+  border-left: 5px solid $cyan;
+}
+
+.card-header h1 {
+  margin: 0;
+  color: #1f2d3d;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.card-header button {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  color: #7b8794;
+  background: transparent;
+  cursor: pointer;
+}
+
+.card-header button:hover {
+  background: $soft;
+}
+
+.intro-panel {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 54px 20px 38px;
+  text-align: center;
+}
+
+.intro-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.intro-title .material-icons {
+  color: #111827;
+  font-size: 2rem;
+}
+
+.intro-title h2 {
+  margin: 0;
+  color: #202938;
+  font-size: 1.35rem;
+  font-weight: 850;
+}
+
+.intro-panel p {
+  max-width: 650px;
+  margin: 0;
+  color: $muted;
+  font-size: 0.96rem;
+  font-weight: 620;
+  line-height: 1.45;
+}
+
+.options-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 16px;
+  border: 1px solid rgba($blue, 0.22);
+  border-radius: 8px;
+  color: #4f7dff;
+  background: rgba($blue, 0.08);
+  font-size: 0.9rem;
+  font-weight: 820;
+}
+
+.options-badge .material-icons {
+  font-size: 1rem;
+}
+
+.settings-section {
+  margin: 0 28px 26px;
+  padding-top: 26px;
+  border-top: 1px solid #d9dde5;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-bottom: 11px;
+  border-bottom: 3px solid rgba($blue, 0.68);
+}
+
+.section-title .material-icons {
+  color: #7b7f86;
+  font-size: 1.25rem;
+}
+
+.section-title h3 {
+  margin: 0;
+  color: #24313f;
+  font-size: 0.98rem;
+  font-weight: 850;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 18px;
+  padding-top: 18px;
+}
+
+.settings-card {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  min-height: 164px;
+  padding: 18px 16px;
+  border: 1px solid #dfe5ee;
+  border-radius: 8px;
+  color: $ink;
+  background: $paper;
+  text-align: center;
+  text-decoration: none;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.settings-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba($blue, 0.36);
+  box-shadow: 0 14px 28px rgba(15, 33, 51, 0.1);
+}
+
+.settings-card__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  margin-bottom: 18px;
+  border-radius: 50%;
+  color: $blue;
+  background: #f0f3f8;
+  font-size: 1.45rem;
+}
+
+.settings-card h4 {
+  margin: 0;
+  color: #24313f;
+  font-size: 0.9rem;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
+.settings-card p {
+  margin: 10px 0 0;
+  color: $muted;
+  font-size: 0.8rem;
+  font-weight: 620;
+  line-height: 1.35;
+}
+
+.settings-card--cyan .settings-card__icon {
+  color: $cyan;
+}
+
+.settings-card--green .settings-card__icon {
+  color: $green;
+}
+
+.settings-card--slate .settings-card__icon {
+  color: #64748b;
+}
+
+.settings-card--amber .settings-card__icon {
+  color: $amber;
+}
+
+.settings-card--burgundy .settings-card__icon {
+  color: $burgundy;
+}
+
+.settings-card--blue .settings-card__icon {
+  color: $blue;
+}
+
+.settings-card:nth-child(6) .settings-card__icon {
+  color: $violet;
+}
+
+@media (max-width: 1399.98px) {
+  .settings-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 991.98px) {
+  .settings-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767.98px) {
+  .card-header {
+    padding: 0 14px 0 18px;
+  }
+
+  .intro-panel {
+    padding: 36px 18px 28px;
+  }
+
+  .intro-title {
+    align-items: center;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .settings-section {
+    margin: 0 14px 18px;
+  }
+
+  .settings-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}

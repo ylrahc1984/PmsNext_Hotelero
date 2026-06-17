@@ -1,10 +1,116 @@
-<section class="restaurant-dashboard" aria-label="Centro operativo restaurante">
-  <section class="kpi-section" aria-label="KPIs Restaurante">
-    <div class="section-header">
-      <span class="section-eyebrow">PMSNEXT HOTELERO</span>
-      <h1>KPIs Restaurante</h1>
+<section class="restaurant-dashboard" aria-label="Vista operativa del punto de venta">
+  <header class="pos-context-header">
+    <div>
+      <span class="context-eyebrow">Punto de Venta Activo</span>
+      <h1>{{ descripcionPuntoVenta }}</h1>
     </div>
+    <button type="button" class="change-pos-btn" (click)="volverSeleccionPuntoVenta()">
+      <i class="feather icon-repeat" aria-hidden="true"></i>
+      <span>Cambiar Punto de Venta</span>
+    </button>
+  </header>
 
+  <section class="dashboard-skeleton" *ngIf="isLoading" aria-label="Cargando areas operativas">
+    <div class="skeleton-floor"></div>
+    <aside class="skeleton-side">
+      <span *ngFor="let item of [1, 2, 3, 4, 5]"></span>
+    </aside>
+  </section>
+
+  <section class="status-card status-card--error" *ngIf="!isLoading && errorMessage">
+    <i class="feather icon-alert-triangle" aria-hidden="true"></i>
+    <div>
+      <h2>No se pudieron cargar las areas operativas.</h2>
+      <p>{{ errorMessage }}</p>
+      <button type="button" (click)="cargarUbicaciones()">Reintentar</button>
+    </div>
+  </section>
+
+  <section class="status-card" *ngIf="!isLoading && !errorMessage && ubicaciones.length === 0">
+    <i class="feather icon-inbox" aria-hidden="true"></i>
+    <div>
+      <h2>No existen areas operativas configuradas para este punto de venta.</h2>
+      <p>Configure salones o areas para iniciar la operación.</p>
+    </div>
+  </section>
+
+  <section class="operations-section" *ngIf="!isLoading && !errorMessage && ubicaciones.length > 0" aria-label="Areas y mesas">
+    <aside class="panel panel--areas" aria-label="Areas operativas">
+      <header class="panel-header panel-header--areas">
+        <div>
+          <h2>Areas Operativas</h2>
+        </div>
+      </header>
+
+      <div class="areas-list">
+        <button
+          type="button"
+          class="area-card"
+          *ngFor="let salon of ubicaciones; trackBy: trackBySalon"
+          [class.area-card--active]="salonSeleccionado?.MPV09_CodUbicacion === salon.MPV09_CodUbicacion"
+          [class.area-card--room-service]="isRoomService(salon)"
+          (click)="seleccionarSalon(salon)"
+        >
+          <span class="area-dot"></span>
+          <span class="area-info">
+            <strong>{{ salon.MPV09_Descripcion }}</strong>
+            <small>{{ salon.MPV09_TotMesas }} mesas · Orden {{ salon.MPV09_Orden }}</small>
+          </span>
+          <span class="area-status" [class.area-status--inactive]="!isUbicacionActiva(salon)">
+            {{ isUbicacionActiva(salon) ? 'Activo' : 'Inactivo' }}
+          </span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="panel panel--floor" aria-label="Plano de mesas">
+      <header class="panel-header">
+        <div>
+          <span class="panel-eyebrow">{{ salonSeleccionado?.MPV09_CodUbicacion || '-' }}</span>
+          <h2>{{ salonSeleccionado?.MPV09_Descripcion || 'Plano de Mesas' }}</h2>
+        </div>
+        <span class="mesa-count" *ngIf="!isRoomService(salonSeleccionado)">
+          {{ mesas.length }} mesas
+        </span>
+      </header>
+
+      <section class="restaurant-floor" [class.restaurant-floor--room-service]="isRoomService(salonSeleccionado)">
+        <div class="room-service-state" *ngIf="isRoomService(salonSeleccionado)">
+          <i class="feather icon-phone-call" aria-hidden="true"></i>
+          <h3>Room Service no utiliza mesas fisicas.</h3>
+          <p>Los pedidos se gestionan directamente desde habitaciones.</p>
+          <button type="button">Ver Pedidos Room Service</button>
+        </div>
+
+        <div class="empty-mesas" *ngIf="!isRoomService(salonSeleccionado) && mesas.length === 0">
+          <h3>No existen mesas configuradas para esta area.</h3>
+          <p>Seleccione otra area operativa o revise la configuración.</p>
+        </div>
+
+        <div class="tables-grid" *ngIf="!isRoomService(salonSeleccionado) && mesas.length > 0">
+          <button
+            type="button"
+            class="table-card"
+            *ngFor="let mesa of mesas; trackBy: trackByMesa"
+            [ngClass]="[getMesaClass(mesa), mesaSeleccionada?.numero === mesa.numero ? 'table-card--selected' : '']"
+            (click)="abrirMesa(mesa)"
+            [attr.aria-label]="mesa.nombre + ' ' + mesa.estado"
+          >
+            <strong>{{ mesa.nombre }}</strong>
+            <span *ngIf="mesa.estado === 'LIBRE'">Libre</span>
+            <span *ngIf="mesa.estado === 'CUENTA'">Cuenta</span>
+            <span *ngIf="mesa.estado === 'LIMPIEZA'">Limpieza</span>
+            <span *ngIf="mesa.estado === 'RESERVADA'">{{ mesa.horaReserva }}</span>
+            <ng-container *ngIf="mesa.estado === 'OCUPADA'">
+              <span>{{ mesa.personas || 0 }} pax</span>
+            </ng-container>
+          </button>
+        </div>
+      </section>
+    </main>
+  </section>
+
+  <section class="kpi-section" *ngIf="!isLoading && !errorMessage && ubicaciones.length > 0" aria-label="KPIs del punto de venta">
     <div class="kpi-grid">
       <article class="kpi-card" *ngFor="let kpi of kpis" [ngClass]="'kpi-card--' + kpi.accent">
         <span class="kpi-icon"><i class="feather" [ngClass]="kpi.icon"></i></span>
@@ -14,59 +120,6 @@
           <small>{{ kpi.detail }}</small>
         </div>
       </article>
-    </div>
-  </section>
-
-  <section class="operations-section" aria-label="Salones y plano de mesas">
-    <main class="panel panel--floor" aria-label="Plano de mesas">
-      <header class="panel-header panel-header--stacked">
-        <h2>Plano de Mesas</h2>
-      </header>
-
-      <app-restaurant-floor-plan class="floor-plan-shell"></app-restaurant-floor-plan>
-    </main>
-
-    <aside class="panel panel--salones" aria-label="Panel de salones">
-      <header class="panel-header panel-header--compact">
-        <h2>Salones</h2>
-      </header>
-
-      <div class="salones-list">
-        <article class="salon-card" *ngFor="let salon of salones">
-          <h3 class="salon-card__name">
-            <span class="salon-dot"></span>
-            <span>{{ salon.nombre }}</span>
-          </h3>
-          <i class="feather icon-chevron-right" aria-hidden="true"></i>
-        </article>
-
-        <article class="salon-card salon-card--room-service">
-          <h3 class="salon-card__name">
-            <span class="salon-dot"></span>
-            <span>Room Service</span>
-          </h3>
-          <i class="feather icon-chevron-right" aria-hidden="true"></i>
-        </article>
-      </div>
-    </aside>
-  </section>
-
-  <section class="operational-status" aria-label="Estado operativo restaurante">
-    <header class="panel-header">
-      <h2>Estado Operativo</h2>
-    </header>
-
-    <div class="status-grid">
-      <article class="status-card" *ngFor="let item of estadoOperativo">
-        <div class="status-card__title">
-          <i class="feather" [ngClass]="item.icon"></i>
-          <span>{{ item.titulo }}</span>
-        </div>
-        <strong>{{ item.valor }}</strong>
-        <small>{{ item.detalle }}</small>
-      </article>
-
-      <button type="button" class="status-primary-action">Ver Pedidos</button>
     </div>
   </section>
 </section>

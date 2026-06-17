@@ -1,0 +1,386 @@
+<div class="page-breadcrumb mb-3">
+  <ul class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a routerLink="/dashboard"><i class="feather icon-home"></i></a>
+    </li>
+    <li class="breadcrumb-item">
+      <a routerLink="/restaurante/configuracion">Configuracion Restaurante</a>
+    </li>
+    <li class="breadcrumb-item">
+      <a routerLink="/catalogos/listas-precios">Listas de Precios</a>
+    </li>
+    <li class="breadcrumb-item active">Detalle</li>
+  </ul>
+  <button type="button" class="btn btn-outline-secondary btn-sm back-btn" (click)="volver()">
+    <i class="feather icon-arrow-left"></i> Volver a Listas
+  </button>
+</div>
+
+<section class="price-detail">
+  <header class="detail-hero">
+    <div class="detail-hero__content">
+      <h1>Detalle Lista de Precios Hotel</h1>
+      <p>Administración de productos, categorías y precios asociados</p>
+    </div>
+
+    <div class="detail-hero__meta">
+      <span class="list-badge">{{ codListaPrecio }}</span>
+      <span class="total-chip">Total Productos: {{ totalProductos }}</span>
+      <button type="button" class="hero-back" (click)="volver()" aria-label="Volver a listas de precios">
+        <i class="feather icon-arrow-left" aria-hidden="true"></i>
+        <span>Volver</span>
+      </button>
+    </div>
+  </header>
+
+  <section class="kpi-grid" aria-label="Indicadores de lista de precios">
+    <article class="kpi-card kpi-card--cyan">
+      <span class="kpi-icon"><i class="feather icon-package"></i></span>
+      <div>
+        <p>Total Productos</p>
+        <strong>{{ totalProductos }}</strong>
+        <small>Registros asociados</small>
+      </div>
+    </article>
+    <article class="kpi-card kpi-card--blue">
+      <span class="kpi-icon"><i class="feather icon-layers"></i></span>
+      <div>
+        <p>Categorías</p>
+        <strong>{{ totalCategorias }}</strong>
+        <small>Clasificación comercial</small>
+      </div>
+    </article>
+    <article class="kpi-card kpi-card--burgundy">
+      <span class="kpi-icon"><i class="feather icon-grid"></i></span>
+      <div>
+        <p>Grupos</p>
+        <strong>{{ totalGrupos }}</strong>
+        <small>Centros operativos</small>
+      </div>
+    </article>
+    <article class="kpi-card kpi-card--warning">
+      <span class="kpi-icon"><i class="feather icon-dollar-sign"></i></span>
+      <div>
+        <p>Monedas</p>
+        <strong>{{ totalMonedas }}</strong>
+        <small>Monedas activas</small>
+      </div>
+    </article>
+  </section>
+
+  <section class="workspace">
+    <div class="toolbar">
+      <label class="search-field">
+        <i class="feather icon-search" aria-hidden="true"></i>
+        <input
+          type="search"
+          [(ngModel)]="searchTerm"
+          (ngModelChange)="onSearchChange()"
+          placeholder="Buscar producto..."
+          aria-label="Buscar producto"
+        >
+      </label>
+
+      <button type="button" class="add-product-btn" (click)="agregarProducto()">
+        <i class="feather icon-plus" aria-hidden="true"></i>
+        <span>Agregar Producto</span>
+      </button>
+    </div>
+
+    <div class="status-message status-message--error" *ngIf="errorMessage && !isLoading">
+      {{ errorMessage }}
+    </div>
+
+    <div class="skeleton-table" *ngIf="isLoading" aria-label="Cargando productos">
+      <div class="skeleton-row" *ngFor="let row of [1, 2, 3, 4, 5, 6]">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <ng-container *ngIf="!isLoading">
+      <div class="empty-state" *ngIf="data.length === 0">
+        <i class="feather icon-inbox" aria-hidden="true"></i>
+        <p>No existen productos registrados para esta lista de precios.</p>
+      </div>
+
+      <div class="empty-state" *ngIf="data.length > 0 && filteredData.length === 0">
+        <i class="feather icon-search" aria-hidden="true"></i>
+        <p>No se encontraron productos para la búsqueda realizada.</p>
+      </div>
+
+      <div class="table-shell" *ngIf="filteredData.length > 0">
+        <table class="price-table">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Nombre Corto</th>
+              <th>Grupo</th>
+              <th>Categoría</th>
+              <th class="tablet-hidden">Unidad</th>
+              <th>Precio</th>
+              <th>Costo</th>
+              <th>Impuesto</th>
+              <th class="tablet-hidden">Operador</th>
+              <th class="text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of pagedData; trackBy: trackByProducto">
+              <td>
+                <div class="product-cell">
+                  <span class="product-avatar"><i class="feather icon-box"></i></span>
+                  <div>
+                    <strong>{{ item.MPV05_CodProducto }}</strong>
+                    <span>{{ item.MPV05_DesProducto }}</span>
+                  </div>
+                </div>
+              </td>
+              <td>{{ item.MPV05_NomCorto || '-' }}</td>
+              <td><span class="soft-badge soft-badge--group">{{ item.MPV01_CodGrupo || '-' }}</span></td>
+              <td><span class="soft-badge soft-badge--category">{{ item.MPV00_NomCategoria || '-' }}</span></td>
+              <td class="tablet-hidden">{{ item.MPV01_UMedida || '-' }}</td>
+              <td class="money money--price">{{ formatMoney(item, item.MPV05_PrecioTotal) }}</td>
+              <td class="money">{{ formatMoney(item, item.MPV05_CostoProdu) }}</td>
+              <td>
+                <span class="tax-badge" [class.tax-badge--yes]="hasImpuesto(item)">
+                  {{ hasImpuesto(item) ? 'Sí' : 'No' }}
+                </span>
+              </td>
+              <td class="tablet-hidden">{{ item.MPV05_Operador || 'N/D' }}</td>
+              <td class="text-center">
+                <button
+                  type="button"
+                  class="icon-action icon-action--danger"
+                  title="Eliminar producto"
+                  aria-label="Eliminar producto"
+                  [disabled]="isDeleting"
+                  (click)="eliminarProducto(item)"
+                >
+                  <i class="feather icon-trash-2" aria-hidden="true"></i>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mobile-list" *ngIf="filteredData.length > 0">
+        <article class="product-card" *ngFor="let item of pagedData; trackBy: trackByProducto">
+          <div class="product-card__top">
+            <div class="product-cell">
+              <span class="product-avatar"><i class="feather icon-box"></i></span>
+              <div>
+                <strong>{{ item.MPV05_CodProducto }}</strong>
+                <span>{{ item.MPV05_DesProducto }}</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              class="icon-action icon-action--danger"
+              title="Eliminar producto"
+              aria-label="Eliminar producto"
+              [disabled]="isDeleting"
+              (click)="eliminarProducto(item)"
+            >
+              <i class="feather icon-trash-2" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="product-card__meta">
+            <span class="soft-badge soft-badge--category">{{ item.MPV00_NomCategoria || '-' }}</span>
+            <span class="soft-badge soft-badge--group">{{ item.MPV01_CodGrupo || '-' }}</span>
+            <span class="tax-badge" [class.tax-badge--yes]="hasImpuesto(item)">
+              {{ hasImpuesto(item) ? 'Sí' : 'No' }}
+            </span>
+          </div>
+          <div class="product-card__prices">
+            <span><small>Precio</small><strong>{{ formatMoney(item, item.MPV05_PrecioTotal) }}</strong></span>
+            <span><small>Costo</small><strong>{{ formatMoney(item, item.MPV05_CostoProdu) }}</strong></span>
+          </div>
+        </article>
+      </div>
+
+      <div class="pagination-bar" *ngIf="filteredData.length > 0">
+        <span>Página {{ currentPage }} de {{ totalPages }} ({{ totalRecords }} registros)</span>
+        <label>
+          <span>Mostrar</span>
+          <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+            <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+          </select>
+        </label>
+        <div class="pager-actions">
+          <button type="button" (click)="goToPageRelative(-1)" [disabled]="currentPage === 1">Prev</button>
+          <button type="button" (click)="goToPageRelative(1)" [disabled]="currentPage === totalPages">Next</button>
+        </div>
+      </div>
+    </ng-container>
+  </section>
+</section>
+
+<div class="modal-backdrop-custom" *ngIf="isProductModalOpen"></div>
+<section class="product-modal" *ngIf="isProductModalOpen" role="dialog" aria-modal="true" aria-labelledby="agregarProductoTitle">
+  <div class="product-modal__panel">
+    <header class="product-modal__header">
+      <div>
+        <span class="modal-eyebrow">{{ codListaPrecio }}</span>
+        <h2 id="agregarProductoTitle">Agregar Producto</h2>
+        <p>Seleccione un producto disponible e indique el precio final con impuestos incluidos.</p>
+      </div>
+      <button type="button" class="modal-close" (click)="cerrarModalProducto()" aria-label="Cerrar modal" [disabled]="isSavingProducto">
+        <i class="feather icon-x" aria-hidden="true"></i>
+      </button>
+    </header>
+
+    <div class="product-modal__body">
+      <section class="modal-catalog">
+        <div class="modal-toolbar">
+          <label class="modal-search">
+            <i class="feather icon-search" aria-hidden="true"></i>
+            <input
+              type="search"
+              [(ngModel)]="recetaSearchTerm"
+              (keyup.enter)="buscarRecetasNoEnLista()"
+              placeholder="Buscar por nombre de receta..."
+              aria-label="Buscar por nombre de receta"
+            >
+          </label>
+          <div class="modal-toolbar__actions">
+            <button type="button" class="btn-clean" (click)="limpiarBusquedaRecetas()" [disabled]="isLoadingRecetas || !recetaSearchTerm">
+              Limpiar
+            </button>
+            <button type="button" class="btn-search" (click)="buscarRecetasNoEnLista()" [disabled]="isLoadingRecetas">
+              Buscar
+            </button>
+          </div>
+        </div>
+
+        <div class="status-message status-message--error" *ngIf="recetaErrorMessage && !isLoadingRecetas">
+          {{ recetaErrorMessage }}
+        </div>
+
+        <div class="modal-skeleton" *ngIf="isLoadingRecetas">
+          <span *ngFor="let row of [1, 2, 3, 4, 5]"></span>
+        </div>
+
+        <ng-container *ngIf="!isLoadingRecetas">
+          <div class="empty-state empty-state--compact" *ngIf="recetasNoEnLista.length === 0">
+            <i class="feather icon-inbox" aria-hidden="true"></i>
+            <p>No hay productos disponibles para agregar.</p>
+          </div>
+
+          <div class="available-table-shell" *ngIf="recetasNoEnLista.length > 0">
+            <table class="available-table">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th>Grupo</th>
+                  <th>Unidad</th>
+                  <th>Costo</th>
+                  <th class="text-center">Seleccionar</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  *ngFor="let receta of recetasNoEnLista; trackBy: trackByReceta"
+                  [class.row-selected]="isRecetaSelected(receta)"
+                >
+                  <td>
+                    <div class="product-cell">
+                      <span class="product-avatar"><i class="feather icon-box"></i></span>
+                      <div>
+                        <strong>{{ receta.MPV01_CodReceta }}</strong>
+                        <span>{{ receta.MPV01_NomReceta }}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="soft-badge soft-badge--group">{{ receta.MPV01_CodGrupo || '-' }}</span></td>
+                  <td>{{ receta.MPV01_UMedida || '-' }}</td>
+                  <td class="money">{{ receta.MPV01_CtoTotal | number: '1.2-2' }}</td>
+                  <td class="text-center">
+                    <button type="button" class="select-product-btn" (click)="seleccionarReceta(receta)">
+                      {{ isRecetaSelected(receta) ? 'Seleccionado' : 'Seleccionar' }}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="pagination-bar pagination-bar--modal" *ngIf="recetasNoEnLista.length > 0">
+            <span>Página {{ recetaCurrentPage }} de {{ recetaTotalPages }} ({{ recetaTotalRecords }} registros)</span>
+            <label>
+              <span>Mostrar</span>
+              <select [(ngModel)]="recetaPageSize" (change)="onRecetaPageSizeChange()">
+                <option *ngFor="let size of recetaPageSizeOptions" [value]="size">{{ size }}</option>
+              </select>
+            </label>
+            <div class="pager-actions">
+              <button type="button" (click)="goToRecetaPageRelative(-1)" [disabled]="recetaCurrentPage === 1 || isLoadingRecetas">Prev</button>
+              <button type="button" (click)="goToRecetaPageRelative(1)" [disabled]="recetaCurrentPage === recetaTotalPages || isLoadingRecetas">Next</button>
+            </div>
+          </div>
+        </ng-container>
+      </section>
+
+      <aside class="selection-panel">
+        <ng-container *ngIf="selectedReceta; else noProductSelected">
+          <span class="modal-eyebrow">Producto seleccionado</span>
+          <h3>{{ selectedReceta.MPV01_CodReceta }}</h3>
+          <p>{{ selectedReceta.MPV01_NomReceta }}</p>
+
+          <dl class="selection-details">
+            <div>
+              <dt>Grupo</dt>
+              <dd>{{ selectedReceta.MPV01_CodGrupo || '-' }}</dd>
+            </div>
+            <div>
+              <dt>Categoría</dt>
+              <dd>{{ selectedReceta.MPV01_CodCategoria || '-' }}</dd>
+            </div>
+            <div>
+              <dt>Unidad</dt>
+              <dd>{{ selectedReceta.MPV01_UMedida || '-' }}</dd>
+            </div>
+            <div>
+              <dt>Costo</dt>
+              <dd>{{ selectedReceta.MPV01_CtoTotal | number: '1.2-2' }}</dd>
+            </div>
+          </dl>
+
+          <label class="price-input">
+            <span>Precio total</span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              [(ngModel)]="selectedPrecioTotal"
+              placeholder="0.00"
+              [disabled]="isSavingProducto"
+            >
+            <small>Este precio debe incluir los impuestos de ley.</small>
+          </label>
+
+          <label class="price-input">
+            <span>Moneda</span>
+            <select [(ngModel)]="selectedMoneda" [disabled]="isSavingProducto">
+              <option value="USD">USD</option>
+              <option value="CRC">CRC</option>
+              <option value="COL">COL</option>
+            </select>
+          </label>
+
+          <button type="button" class="save-product-btn" (click)="guardarProductoSeleccionado()" [disabled]="isSavingProducto">
+            <i class="feather icon-save" aria-hidden="true"></i>
+            <span>{{ isSavingProducto ? 'Guardando...' : 'Guardar Producto' }}</span>
+          </button>
+        </ng-container>
+
+        <ng-template #noProductSelected>
+          <div class="selection-empty">
+            <i class="feather icon-mouse-pointer" aria-hidden="true"></i>
+            <p>Seleccione un producto para indicar el precio y guardarlo en la lista.</p>
+          </div>
+        </ng-template>
+      </aside>
+    </div>
+  </div>
+</section>

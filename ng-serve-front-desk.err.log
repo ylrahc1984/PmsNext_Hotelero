@@ -1,0 +1,671 @@
+- Generating browser application bundles (phase: setup)...
+√ Browser application bundle generation complete.
+[1m[33m
+./src/app/pages/comisiones/auditoria/comisiones-auditoria.component.scss?ngResource - Warning: Module Warning (from ./node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 0, column 8 of file:///D:/Next_HotelWeb/PmsNext_Hotelero/src/app/pages/comisiones/auditoria/comisiones-auditoria.component.scss:0:8:
+Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+0 | @import '../shared/finance';
+
+
+src\app\pages\comisiones\auditoria\comisiones-auditoria.component.scss 1:9  root stylesheet
+
+
+./src/app/pages/comisiones/configuracion/agencias/agencias-comision-card.component.scss?ngResource - Warning: Module Warning (from ./node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 0, column 8 of file:///D:/Next_HotelWeb/PmsNext_Hotelero/src/app/pages/comisiones/configuracion/agencias/agencias-comision-card.component.scss:0:8:
+Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+0 | @import '../../shared/finance';
+
+
+src\app\pages\comisiones\configuracion\agencias\agencias-comision-card.component.scss 1:9  root stylesheet
+
+
+./src/app/pages/comisiones/configuracion/agencias/agencias-comision.component.scss?ngResource - Warning: Module Warning (from ./node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 0, column 8 of file:///D:/Next_HotelWeb/PmsNext_Hotelero/src/app/pages/comisiones/configuracion/agencias/agencias-comision.component.scss:0:8:
+Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+0 | @import '../../shared/finance';
+
+
+src\app\pages\comisiones\configuracion\agencias\agencias-comision.component.scss 1:9  root stylesheet
+
+
+./src/app/pages/comisiones/configuracion/config-general/config-general.component.scss?ngResource - Warning: Module Warning (from ./node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 0, column 8 of file:///D:/Next_HotelWeb/PmsNext_Hotelero/src/app/pages/comisiones/configuracion/config-general/config-general.component.scss:0:8:
+Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+0 | @import '../../shared/finance';
+
+
+src\app\pages\comisiones\configuracion\config-general\config-general.component.scss 1:9  root stylesheet
+
+
+./src/app/pages/comisiones/configuracion/servicios/servicio-comisionable-card.component.scss?ngResource - Warning: Module Warning (from ./node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 0, column 8 of file:///D:/Next_HotelWeb/PmsNext_Hotelero/src/app/pages/comisiones/configuracion/servicios/servicio-comisionable-card.component.scss:0:8:
+Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+0 | @import '../../shared/finance';
+
+
+src\app\pages\comisiones\configuracion\servicios\servicio-comisionable-card.component.scss 1:9  root stylesheet
+
+
+./src/app/pages/comisiones/configuracion/servicios/servicio-comisionable-toolbar.component.scss?ngResource - Warning: Module Warning (from ./node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 0, column 8 of file:///D:/Next_HotelWeb/PmsNext_Hotelero/src/app/pages/comisiones/configuracion/servicios/servicio-comisionable-toolbar.component.scss:0:8:
+Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+0 | @import '../../shared/finance';
+
+
+src\app\pages\comisiones\configuracion\servicios\servicio-comisionable-toolbar.component.scss 1:9  root stylesheet
+
+
+./src/app/pages/comisiones/configuracion/servicios/servicios-comisionables.component.scss?ngResource - Warning: Module Warning (from ./node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 0, column 8 of file:///D:/Next_HotelWeb/PmsNext_Hotelero/src/app/pages/comisiones/configuracion/servicios/servicios-comisionables.component.scss:0:8:
+Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+0 | @import '../../shared/finance';
+
+
+src\app\pages\comisiones\configuracion\servicios\servicios-comisionables.component.scss 1:9  root stylesheet
+
+
+./src/app/pages/comisiones/reglas/filtros-reglas.component.scss?ngResource - Warning: Module Warning (from ./node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 0, column 8 of file:///D:/Next_HotelWeb/PmsNext_Hotelero/src/app/pages/comisiones/reglas/filtros-reglas.component.scss:0:8:
+Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+0 | @import '../shared/finance';
+
+
+src\app\pages\comisiones\reglas\filtros-reglas.component.scss 1:9  root stylesheet
+
+
+./src/app/pages/comisiones/reglas/regla-card.component.scss?ngResource - Warning: Module Warning (from ./node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 0, column 8 of file:///D:/Next_HotelWeb/PmsNext_Hotelero/src/app/pages/comisiones/reglas/regla-card.component.scss:0:8:
+Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+0 | @import '../shared/finance';
+
+
+src\app\pages\comisiones\reglas\regla-card.component.scss 1:9  root stylesheet
+
+
+./src/app/pages/comisiones/reglas/regla-preview.component.scss?ngResource - Warning: Module Warning (from ./node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 0, column 8 of file:///D:/Next_HotelWeb/PmsNext_Hotelero/src/app/pages/comisiones/reglas/regla-preview.component.scss:0:8:
+Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+0 | @import '../shared/finance';
+
+
+src\app\pages\comisiones\reglas\regla-preview.component.scss 1:9  root stylesheet
+
+
+./src/app/pages/comisiones/reglas/reglas-comision.component.scss?ngResource - Warning: Module Warning (from ./node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 0, column 8 of file:///D:/Next_HotelWeb/PmsNext_Hotelero/src/app/pages/comisiones/reglas/reglas-comision.component.scss:0:8:
+Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+0 | @import '../shared/finance';
+
+
+src\app\pages\comisiones\reglas\reglas-comision.component.scss 1:9  root stylesheet
+
+
+./src/app/pages/comisiones/shared/components/resumen-card.component.scss?ngResource - Warning: Module Warning (from ./node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 0, column 8 of file:///D:/Next_HotelWeb/PmsNext_Hotelero/src/app/pages/comisiones/shared/components/resumen-card.component.scss:0:8:
+Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+0 | @import '../finance';
+
+
+src\app\pages\comisiones\shared\components\resumen-card.component.scss 1:9  root stylesheet
+
+
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+[1m[31m
+Error: Module not found: Error: Can't resolve 'D:/Next_HotelWeb/PmsNext_Hotelero/src/app/modules/front-desk/pages/front-desk-settings/front-desk-settings.component.scss?ngResource' in 'D:\Next_HotelWeb\PmsNext_Hotelero'
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/demo/dashboard/dashboard.component.ts[0m:[93m19[0m:[93m55[0m - [93mwarning[0m[90m NG8113: [0mWelcomeCardComponent is not used within the template of DashboardComponent
+
+[7m19[0m   imports: [CommonModule, RouterModule, SharedModule, WelcomeCardComponent, WeatherCardComponent],
+[7m  [0m [93m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m

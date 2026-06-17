@@ -44,6 +44,10 @@ export class ClienteFormComponent implements OnInit {
   private clienteService = inject(ClienteService);
   private destroyRef = inject(DestroyRef);
 
+  get listRoute(): string {
+    return this.router.url.startsWith('/restaurante/agencias') ? '/restaurante/agencias' : '/catalogos/clientes';
+  }
+
   form!: FormGroup;
   isEditing = false;
   isLoading = false;
@@ -624,7 +628,7 @@ export class ClienteFormComponent implements OnInit {
               text: 'No se encontro el cliente.',
               icon: 'warning'
             });
-            this.router.navigate(['/catalogos/clientes']);
+            this.router.navigate([this.listRoute]);
             return of(null);
           }
           this.tipoIdentificacionOptions = this.mergeSelectedOption(tipoIdentificacion, cliente.tCliente);
@@ -734,7 +738,7 @@ export class ClienteFormComponent implements OnInit {
             text: this.isEditing ? 'Cliente actualizado correctamente.' : 'Cliente creado correctamente.',
             icon: 'success'
           });
-          this.router.navigate(['/catalogos/clientes']);
+          this.router.navigate([this.listRoute]);
         },
         error: (error) => {
           console.error('Error al guardar cliente:', error);
@@ -856,7 +860,7 @@ export class ClienteFormComponent implements OnInit {
   }
 
   cancelForm(): void {
-    this.router.navigate(['/catalogos/clientes']);
+    this.router.navigate([this.listRoute]);
   }
 
   setActividadPrincipal(actividad: { MPV32_CodigoAMH?: string } | null | undefined): void {

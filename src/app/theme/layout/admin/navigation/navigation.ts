@@ -44,14 +44,6 @@ export const NavigationItems: NavigationItem[] = [
             icon: 'feather icon-bar-chart-2',
             classes: 'nav-item'
           },
-          {
-            id: 'alertas-sistema',
-            title: 'Alertas del Sistema',
-            type: 'item',
-            url: '/dashboard/alertas-sistema',
-            icon: 'feather icon-alert-triangle',
-            classes: 'nav-item'
-          }
         ]
       },
       {
@@ -59,30 +51,13 @@ export const NavigationItems: NavigationItem[] = [
         title: 'Front Desk',
         type: 'collapse',
         icon: 'feather icon-log-in',
-        locked: true,
         children: [
-          { id: 'front-desk-habitaciones', title: 'Habitaciones', type: 'item', url: '/front-desk/habitaciones', icon: 'feather icon-home', classes: 'nav-item' },
-          { id: 'front-desk-factura-directa', title: 'Factura Directa', type: 'item', url: '/front-desk/factura-directa', icon: 'feather icon-file-plus', classes: 'nav-item' },
-          { id: 'front-desk-rooming-asignaciones', title: 'Rooming - Asignaciones', type: 'item', url: '/front-desk/rooming-asignaciones', icon: 'feather icon-users', classes: 'nav-item' },
-          { id: 'front-desk-arribos-dia', title: 'Arribos del Día', type: 'item', url: '/front-desk/arribos-dia', icon: 'feather icon-log-in', classes: 'nav-item' },
-          { id: 'front-desk-pronostico-ocupacion', title: 'Pronóstico de Ocupación', type: 'item', url: '/front-desk/pronostico-ocupacion', icon: 'feather icon-trending-up', classes: 'nav-item' },
-          { id: 'front-desk-estado-habitaciones', title: 'Estado de Habitaciones', type: 'item', url: '/front-desk/estado-habitaciones', icon: 'feather icon-check-circle', classes: 'nav-item' },
-          { id: 'front-desk-cierre-caja', title: 'Cierre de Caja', type: 'item', url: '/operaciones/cierre-caja', icon: 'feather icon-lock', classes: 'nav-item' },
-          { id: 'front-desk-consulta-documentos', title: 'Consulta de Documentos', type: 'item', url: '/finanzas/consulta-documentos', icon: 'feather icon-search', classes: 'nav-item' },
-          { id: 'front-desk-notas-credito', title: 'Notas de Crédito', type: 'item', url: '/finanzas/notas-credito', icon: 'feather icon-file-minus', classes: 'nav-item' },
-          {
-            id: 'front-desk-configuraciones',
-            title: 'Configuraciones',
-            type: 'collapse',
-            icon: 'feather icon-settings',
-            children: [
-              { id: 'front-desk-config-room-rack', title: 'Room Rack', type: 'item', url: '/front-desk/configuraciones/room-rack', icon: 'feather icon-grid', classes: 'nav-item' },
-              { id: 'front-desk-config-estado', title: 'Estado de Habitaciones', type: 'item', url: '/front-desk/configuraciones/estado', icon: 'feather icon-check-circle', classes: 'nav-item' },
-              { id: 'front-desk-config-bloqueos', title: 'Bloqueos de Habitaciones', type: 'item', url: '/front-desk/configuraciones/bloqueos', icon: 'feather icon-lock', classes: 'nav-item' },
-              { id: 'front-desk-config-categorias', title: 'Categorías de Habitación', type: 'item', url: '/front-desk/configuraciones/categorias', icon: 'feather icon-layers', classes: 'nav-item' },
-              { id: 'front-desk-config-mantenimiento', title: 'Mantenimiento de Habitaciones', type: 'item', url: '/front-desk/configuraciones/mantenimiento', icon: 'feather icon-settings', classes: 'nav-item' }
-            ]
-          }
+          { id: 'front-desk-habitaciones', title: 'Habitaciones', type: 'item', url: '/front-desk/room-rack', icon: 'feather icon-home', classes: 'nav-item' },
+          { id: 'front-desk-pronostico-ocupacion', title: 'Pronóstico de Ocupación', type: 'item', url: '/front-desk/occupancy-forecast', icon: 'feather icon-trending-up', classes: 'nav-item' },
+          { id: 'front-desk-cierre-caja', title: 'Cierre de Caja', type: 'item', url: '/front-desk/cierre-caja', icon: 'feather icon-lock', classes: 'nav-item' },
+          { id: 'front-desk-consulta-documentos', title: 'Consulta de Documentos', type: 'item', url: '/front-desk/consulta-documentos', icon: 'feather icon-search', classes: 'nav-item' },
+          { id: 'front-desk-notas-credito', title: 'Notas de Crédito', type: 'item', url: '/front-desk/notas-credito', icon: 'feather icon-file-minus', classes: 'nav-item' },
+          { id: 'front-desk-configuraciones', title: 'Configuraciones', type: 'item', url: '/front-desk/configuraciones', icon: 'feather icon-settings', classes: 'nav-item' }
         ]
       },
       {
@@ -90,14 +65,11 @@ export const NavigationItems: NavigationItem[] = [
         title: 'Reservas',
         type: 'collapse',
         icon: 'feather icon-calendar',
-        locked: true,
         children: [
           { id: 'reservas-calendario', title: 'Calendario de Reservas', type: 'item', url: '/reservas/calendario', icon: 'feather icon-calendar', classes: 'nav-item' },
-          { id: 'reservas-nueva', title: 'Nueva Reserva', type: 'item', url: '/operaciones/reservas/nueva-v2', icon: 'feather icon-plus-circle', classes: 'nav-item' },
           { id: 'reservas-consulta', title: 'Consulta de Reservas', type: 'item', url: '/operaciones/reservas', icon: 'feather icon-search', classes: 'nav-item' },
-          { id: 'reservas-disponibilidad', title: 'Disponibilidad', type: 'item', url: '/reservas/disponibilidad', icon: 'feather icon-check-square', classes: 'nav-item' },
-          { id: 'reservas-forecast', title: 'Forecast de Ocupación', type: 'item', url: '/reservas/forecast-ocupacion', icon: 'feather icon-trending-up', classes: 'nav-item' },
-          { id: 'reservas-tarifas', title: 'Tarifas y Planes', type: 'item', url: '/reservas/tarifas-planes', icon: 'feather icon-tag', classes: 'nav-item' },
+          { id: 'reservas-forecast', title: 'Forecast de Ocupación', type: 'item', url: '/front-desk/forecast-ocupacion', icon: 'feather icon-trending-up', classes: 'nav-item' },
+          { id: 'reservas-tarifas', title: 'Tarifas y Planes', type: 'item', url: '/catalogos/listas-precios', icon: 'feather icon-tag', classes: 'nav-item' },
           { id: 'reservas-canales', title: 'Agencias / Canales', type: 'item', url: '/catalogos/clientes', icon: 'feather icon-share-2', classes: 'nav-item' }
         ]
       },
@@ -106,12 +78,9 @@ export const NavigationItems: NavigationItem[] = [
         title: 'Housekeeping',
         type: 'collapse',
         icon: 'feather icon-check-square',
-        locked: true,
         children: [
-          { id: 'housekeeping-estado-habitaciones', title: 'Estado de Habitaciones', type: 'item', url: '/housekeeping/estado-habitaciones', icon: 'feather icon-check-circle', classes: 'nav-item' },
           { id: 'housekeeping-panel', title: 'Panel de Limpieza', type: 'item', url: '/housekeeping/panel-limpieza', icon: 'feather icon-layout', classes: 'nav-item' },
-          { id: 'housekeeping-camareras', title: 'Asignación de Camareras', type: 'item', url: '/housekeeping/asignacion-camareras', icon: 'feather icon-users', classes: 'nav-item' },
-          { id: 'housekeeping-supervision', title: 'Supervisión de Limpieza', type: 'item', url: '/housekeeping/supervision', icon: 'feather icon-eye', classes: 'nav-item' }
+          { id: 'housekeeping-camareras', title: 'Asignación de Camareras', type: 'item', url: '/housekeeping/asignacion-camareras', icon: 'feather icon-users', classes: 'nav-item' }
         ]
       },
       {
@@ -121,8 +90,10 @@ export const NavigationItems: NavigationItem[] = [
         icon: 'feather icon-shopping-cart',
         children: [
           { id: 'restaurante-dashboard', title: 'Dashboard Restaurante', type: 'item', url: '/restaurante/dashboard', icon: 'feather icon-pie-chart', classes: 'nav-item' },
-          { id: 'restaurante-facturacion', title: 'Facturación Restaurante', type: 'item', url: '/restaurante/facturacion', icon: 'feather icon-credit-card', classes: 'nav-item' },
+          { id: 'restaurante-facturacion', title: 'Facturación Restaurante', type: 'item', url: '/restaurant/puntos-venta', icon: 'feather icon-credit-card', classes: 'nav-item' },
           { id: 'restaurante-cargos-habitacion', title: 'Cargos a Habitación', type: 'item', url: '/restaurante/cargos-habitacion', icon: 'feather icon-home', classes: 'nav-item' },
+          { id: 'restaurante-servicios', title: 'Catalogo Comercial', type: 'item', url: '/restaurante/servicios', icon: 'feather icon-tag', classes: 'nav-item' },
+          { id: 'restaurante-agencias', title: 'Agencias', type: 'item', url: '/restaurante/agencias', icon: 'feather icon-share-2', classes: 'nav-item' },
           { id: 'restaurante-configuracion', title: 'Configuración Restaurante', type: 'item', url: '/restaurante/configuracion', icon: 'feather icon-sliders', classes: 'nav-item' }
         ]
       },

@@ -63,7 +63,7 @@ export class ServicioFormComponent implements OnInit {
   formData: ServicioFormData = this.createEmpty();
   isEditing = false;
   isLoading = false;
-  title = 'Nuevo Servicio';
+  title = 'Nuevo Registro Comercial';
 
   categoriaOptions: CategoriaOption[] = [];
   grupoOptions: CentroCostoOption[] = [];
@@ -73,6 +73,10 @@ export class ServicioFormComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private http = inject(HttpClient);
+
+  get listRoute(): string {
+    return this.router.url.startsWith('/restaurante/servicios') ? '/restaurante/servicios' : '/catalogos/servicios';
+  }
 
   showCabysModal = false;
   cabysQuery = '';
@@ -86,7 +90,7 @@ export class ServicioFormComponent implements OnInit {
     const codReceta = this.route.snapshot.paramMap.get('codReceta') ?? '';
     if (codReceta) {
       this.isEditing = true;
-      this.title = 'Editar Servicio';
+      this.title = 'Editar Registro Comercial';
       this.loadCatalogsAndServicio(codReceta);
     } else {
       this.formData = this.createEmpty();
@@ -197,7 +201,7 @@ export class ServicioFormComponent implements OnInit {
             icon: 'warning'
           });
           this.isLoading = false;
-          this.router.navigate(['/catalogos/servicios']);
+          this.router.navigate([this.listRoute]);
           return;
         }
         this.applyServicio(servicio);
@@ -328,7 +332,7 @@ export class ServicioFormComponent implements OnInit {
           text: this.isEditing ? 'Servicio actualizado correctamente.' : 'Servicio creado correctamente.',
           icon: 'success'
         });
-        this.router.navigate(['/catalogos/servicios']);
+        this.router.navigate([this.listRoute]);
       },
       error: (error) => {
         console.error('Error al guardar servicio:', error);
@@ -343,7 +347,7 @@ export class ServicioFormComponent implements OnInit {
   }
 
   cancel(): void {
-    this.router.navigate(['/catalogos/servicios']);
+    this.router.navigate([this.listRoute]);
   }
 
   openCabysModal(): void {

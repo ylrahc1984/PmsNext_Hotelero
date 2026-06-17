@@ -1,0 +1,88 @@
+<section class="room-rack-page" aria-label="Room Rack">
+  <header class="room-rack-header">
+    <div class="room-rack-header__title">
+      <h1>Room Rack</h1>
+      <p>Estado de habitaciones en tiempo real</p>
+    </div>
+ 
+  </header>
+
+  <section class="status-kpis" aria-label="Filtros de estado">
+    <button
+      type="button"
+      class="status-kpi"
+      *ngFor="let kpi of kpis; trackBy: trackByEstado"
+      [ngClass]="kpi.className"
+    >
+      <span>{{ kpi.label }}</span>
+      <strong>{{ kpi.cantidad }}</strong>
+    </button>
+  </section>
+
+  <section class="room-rack-workspace">
+    <div class="rooms-column">
+      <main class="rooms-panel" aria-label="Mapa de habitaciones">
+        <div class="rooms-grid">
+          <button
+            type="button"
+            class="room-card"
+            *ngFor="let habitacion of habitaciones; trackBy: trackByHabitacion"
+            [ngClass]="getEstadoClass(habitacion.estado)"
+            (click)="seleccionarHabitacion(habitacion)"
+            [attr.aria-label]="'Habitacion ' + habitacion.numero + ' ' + habitacion.categoria"
+          >
+            <strong>{{ habitacion.numero }}</strong>
+            <span>{{ habitacion.categoria }}</span>
+          </button>
+        </div>
+      </main>
+
+      <footer class="operations-bar" aria-label="Acciones operativas">
+        <button
+          type="button"
+          class="operation-button"
+          *ngFor="let accion of acciones; trackBy: trackByAccion"
+          [class.operation-button--primary]="accion.accent === 'primary'"
+          [class.operation-button--muted]="accion.accent === 'muted'"
+        >
+          <span class="material-icons" aria-hidden="true">{{ accion.icon }}</span>
+          <span>{{ accion.label }}</span>
+        </button>
+      </footer>
+    </div>
+
+    <aside class="side-panel" aria-label="Informacion operativa">
+      <section class="side-card">
+        <div class="side-card__header">
+          <span>Leyenda</span>
+          <h2>Estados</h2>
+        </div>
+
+        <div class="legend-list">
+          <div class="legend-item" *ngFor="let estado of estados">
+            <span class="legend-dot" [ngClass]="getEstadoClass(estado)"></span>
+            <strong>{{ estado }}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="side-card exchange-card">
+        <div class="side-card__header">
+          <span>Tipo de Cambio</span>
+          <h2>COL -> USD</h2>
+        </div>
+
+        <div class="exchange-values">
+          <div>
+            <span>Compra</span>
+            <strong>{{ compra | number:'1.2-2' }}</strong>
+          </div>
+          <div>
+            <span>Venta</span>
+            <strong>{{ venta | number:'1.2-2' }}</strong>
+          </div>
+        </div>
+      </section>
+    </aside>
+  </section>
+</section>

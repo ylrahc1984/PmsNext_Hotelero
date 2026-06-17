@@ -1,0 +1,136 @@
+:host {
+  display: block;
+}
+
+.calendar-toolbar {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: end;
+  border: 1px solid #e2eaf5;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #f9fbff 0%, #ffffff 68%);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.05);
+  padding: 0.55rem 0.65rem;
+}
+
+.calendar-toolbar__group {
+  display: flex;
+  gap: 0.4rem;
+  align-items: end;
+}
+
+.calendar-toolbar__group--range,
+.calendar-toolbar__group--filters {
+  min-width: 0;
+}
+
+.calendar-toolbar__metrics {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.toolbar-btn {
+  min-width: 36px;
+  height: 36px;
+  border: 1px solid #d6e1ef;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #395a82;
+  font-weight: 700;
+}
+
+.toolbar-btn--ghost {
+  padding: 0 0.8rem;
+}
+
+.toolbar-field {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.toolbar-field span {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6a7c91;
+  font-weight: 700;
+}
+
+.toolbar-field__icon-wrap {
+  position: relative;
+}
+
+.toolbar-field__icon-wrap i {
+  position: absolute;
+  top: 50%;
+  left: 0.5rem;
+  transform: translateY(-50%);
+  color: #72849a;
+  font-size: 0.76rem;
+}
+
+.toolbar-field--search .form-control {
+  min-width: 180px;
+  padding-left: 1.6rem;
+}
+
+.form-control {
+  height: 38px;
+  min-height: 38px;
+  border-radius: 10px;
+  border-color: #d5dfed;
+  font-size: 0.78rem;
+  color: #32465f;
+}
+
+.form-control:focus {
+  border-color: #8fb1d6;
+  box-shadow: 0 0 0 3px rgba(73, 122, 186, 0.14);
+}
+
+.toolbar-metric {
+  min-width: 96px;
+  border: 1px solid #dfe8f4;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 0.35rem 0.55rem;
+  display: grid;
+}
+
+.toolbar-metric span {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  color: #76879c;
+}
+
+.toolbar-metric strong {
+  font-size: 0.92rem;
+  color: #21344d;
+}
+
+@media (max-width: 1399.98px) {
+  .calendar-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .calendar-toolbar__metrics {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .calendar-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .calendar-toolbar__group,
+  .calendar-toolbar__metrics {
+    flex-wrap: wrap;
+  }
+
+  .toolbar-field--search .form-control {
+    min-width: 0;
+  }
+}

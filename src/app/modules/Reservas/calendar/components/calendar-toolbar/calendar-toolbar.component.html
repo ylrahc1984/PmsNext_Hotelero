@@ -1,0 +1,58 @@
+<section class="calendar-toolbar">
+  <div class="calendar-toolbar__group calendar-toolbar__group--nav">
+    <button type="button" class="toolbar-btn" (click)="previous.emit()">
+      <i class="feather icon-chevron-left"></i>
+    </button>
+    <button type="button" class="toolbar-btn toolbar-btn--ghost" (click)="today.emit()">Hoy</button>
+    <button type="button" class="toolbar-btn" (click)="next.emit()">
+      <i class="feather icon-chevron-right"></i>
+    </button>
+  </div>
+
+  <div class="calendar-toolbar__group calendar-toolbar__group--range">
+    <label class="toolbar-field">
+      <span>Inicio</span>
+      <input type="date" class="form-control" [ngModel]="startDate" (ngModelChange)="startDateChange.emit($event)" />
+    </label>
+    <label class="toolbar-field">
+      <span>Fin</span>
+      <input type="date" class="form-control" [ngModel]="endDate" (ngModelChange)="endDateChange.emit($event)" />
+    </label>
+  </div>
+
+  <div class="calendar-toolbar__group calendar-toolbar__group--filters">
+    <label class="toolbar-field toolbar-field--search">
+      <span>Habitacion</span>
+      <div class="toolbar-field__icon-wrap">
+        <i class="feather icon-search"></i>
+        <input type="text" class="form-control" [ngModel]="search" (ngModelChange)="searchChange.emit($event)" placeholder="Buscar 101, 204..." />
+      </div>
+    </label>
+
+    <label class="toolbar-field">
+      <span>Categoria</span>
+      <select class="form-control" [ngModel]="type ?? ''" (ngModelChange)="onTypeModelChange($event)">
+        <option value="">Todas</option>
+        <option *ngFor="let option of typeOptions" [value]="option">{{ option }}</option>
+      </select>
+    </label>
+
+    <label class="toolbar-field">
+      <span>Estado</span>
+      <select class="form-control" [ngModel]="status ?? ''" (ngModelChange)="onStatusModelChange($event)">
+        <option *ngFor="let option of statusOptions" [value]="option.value ?? ''">{{ option.label }}</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="calendar-toolbar__metrics">
+    <article class="toolbar-metric">
+      <span>Habitaciones</span>
+      <strong>{{ visibleRooms }}</strong>
+    </article>
+    <article class="toolbar-metric">
+      <span>Reservas visibles</span>
+      <strong>{{ visibleReservations }}</strong>
+    </article>
+  </div>
+</section>

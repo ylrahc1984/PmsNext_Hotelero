@@ -1,0 +1,339 @@
+:host {
+  display: block;
+}
+
+$cyan: #17d4e0;
+$blue: #1f6bff;
+$burgundy: #8a0f4d;
+$ink: #0f2133;
+$muted: #64748b;
+$paper: #ffffff;
+$line: #dbe5ef;
+
+.pos-page {
+  display: grid;
+  gap: 14px;
+  color: $ink;
+}
+
+.pos-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 26px;
+  border: 1px solid rgba(15, 33, 51, 0.1);
+  border-radius: 18px;
+  color: $paper;
+  background:
+    radial-gradient(circle at 82% 18%, rgba($cyan, 0.16), transparent 28%),
+    linear-gradient(135deg, #18172e 0%, #263348 58%, #0c2530 100%);
+  box-shadow: 0 18px 42px rgba(11, 23, 36, 0.14);
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border: 1px solid rgba($paper, 0.26);
+  border-radius: 999px;
+  background: rgba($paper, 0.11);
+  font-size: 0.66rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pos-hero h1 {
+  margin: 10px 0 4px;
+  color: $paper;
+  font-size: 1.45rem;
+  font-weight: 880;
+}
+
+.pos-hero p {
+  margin: 0;
+  color: rgba($paper, 0.78);
+  font-size: 0.88rem;
+}
+
+.refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgba($paper, 0.32);
+  border-radius: 10px;
+  color: $paper;
+  background: rgba($paper, 0.12);
+  font-weight: 800;
+}
+
+.pos-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.pos-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 118px;
+  overflow: hidden;
+  padding: 16px;
+  border: 1px solid rgba(15, 33, 51, 0.08);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba($paper, 0.98), #f8fbfc);
+  box-shadow: 0 12px 28px rgba(15, 33, 51, 0.08);
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.pos-card:hover,
+.pos-card:focus {
+  transform: translateY(-3px);
+  border-color: rgba($cyan, 0.62);
+  outline: none;
+  box-shadow: 0 20px 42px rgba(15, 33, 51, 0.13);
+}
+
+.pos-card__media {
+  position: relative;
+  width: 62px;
+  height: 62px;
+  overflow: hidden;
+  border: 1px solid rgba($cyan, 0.22);
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba($cyan, 0.12), rgba($blue, 0.08)),
+    $paper;
+}
+
+.pos-card__image {
+  position: absolute;
+  inset: 0;
+  background: url('/assets/images/fondo_Restaurante.png') center / cover no-repeat;
+  opacity: 0.16;
+}
+
+.pos-card__media::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  background: linear-gradient(135deg, rgba($cyan, 0.08), rgba($blue, 0.12));
+}
+
+.pos-card__terminal {
+  display: none;
+}
+
+.pos-card__icon {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  color: #0f74d8;
+  font-size: 1.42rem;
+}
+
+.pos-card__body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pos-card__type {
+  color: #1673d1;
+  font-size: 0.64rem;
+  font-weight: 860;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pos-card__body h2 {
+  margin: 0;
+  color: $ink;
+  font-size: 0.98rem;
+  font-weight: 880;
+  line-height: 1.18;
+}
+
+.pos-card__body p {
+  margin: 0;
+  color: $muted;
+  font-size: 0.82rem;
+  font-weight: 740;
+}
+
+.pos-card__footer {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  justify-content: space-between;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 94px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 23px;
+  padding: 0 8px;
+  border-radius: 999px;
+  color: #047857;
+  background: #dcfce7;
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.pos-card__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #145da0;
+  font-size: 0.74rem;
+  font-weight: 850;
+}
+
+.state-panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.pos-skeleton {
+  min-height: 118px;
+  padding: 18px;
+  border-radius: 18px;
+  background: #f8fafc;
+}
+
+.pos-skeleton span,
+.pos-skeleton i {
+  display: block;
+  border-radius: 999px;
+  background: #dbe5ef;
+  animation: pulse 1s ease-in-out infinite alternate;
+}
+
+.pos-skeleton span {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+}
+
+.pos-skeleton div {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.pos-skeleton i {
+  height: 12px;
+}
+
+.pos-skeleton i:nth-child(1) { width: 78%; }
+.pos-skeleton i:nth-child(2) { width: 44%; }
+.pos-skeleton i:nth-child(3) { width: 32%; }
+
+.status-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 160px;
+  padding: 24px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 18px;
+  background: #f8fafc;
+}
+
+.status-card > i {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  color: $blue;
+  background: rgba($blue, 0.1);
+  font-size: 1.5rem;
+}
+
+.status-card h2 {
+  margin: 0 0 6px;
+  font-size: 1.08rem;
+  font-weight: 850;
+}
+
+.status-card p {
+  margin: 0;
+  color: $muted;
+}
+
+.status-card button {
+  margin-top: 12px;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 9px;
+  color: $paper;
+  background: $blue;
+  font-weight: 800;
+}
+
+.status-card--error > i {
+  color: #b42318;
+  background: #fee2e2;
+}
+
+@media (max-width: 1199px) {
+  .pos-grid,
+  .state-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .pos-hero {
+    flex-direction: column;
+    padding: 22px;
+  }
+
+  .pos-grid,
+  .state-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .pos-card {
+    grid-template-columns: 62px minmax(0, 1fr);
+  }
+
+  .pos-card__footer {
+    grid-column: 1 / -1;
+    align-items: center;
+    flex-direction: row;
+  }
+}
+
+@media (max-width: 420px) {
+  .pos-card__terminal {
+    right: -8px;
+    bottom: -7px;
+  }
+
+  .pos-card__icon {
+    font-size: 1.3rem;
+  }
+}
+
+@keyframes pulse {
+  to {
+    opacity: 0.55;
+  }
+}

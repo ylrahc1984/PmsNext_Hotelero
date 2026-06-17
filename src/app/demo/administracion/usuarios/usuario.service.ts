@@ -314,18 +314,31 @@ export class UsuarioService {
 
   private mapPuntoVentaFromApi(apiData: PuntoVenta): PuntoVentaUI {
     return {
-      codigo: apiData.MPV07_CodPntVenta,
-      descripcion: apiData.MPV07_NomPntVenta,
-      codComanda: apiData.MPV07_CodComanda,
-      codDocumento: apiData.MPV07_CodDocumento,
-      codLstPrecio: apiData.MPV07_CodLstPrecio,
+      codigo: this.normalizeCatalogText(apiData.MPV07_CodPntVenta),
+      descripcion: this.normalizeCatalogText(apiData.MPV07_NomPntVenta),
+      codComanda: this.normalizeCatalogText(apiData.MPV07_CodComanda),
+      codDocumento: this.normalizeCatalogText(apiData.MPV07_CodDocumento),
+      codLstPrecio: this.normalizeCatalogText(apiData.MPV07_CodLstPrecio),
       numMesas: apiData.MPV07_NumMesas,
       pntTouch: apiData.MPV07_PntTouch,
       orden: apiData.MPV07_Orden,
-      operador: apiData.MPV07_Operador,
-      impresoraA: apiData.MPV07_ImpresoraA,
-      impresoraB: apiData.MPV07_ImpresoraB
+      operador: this.normalizeCatalogText(apiData.MPV07_Operador),
+      impresoraA: this.normalizeCatalogText(apiData.MPV07_ImpresoraA),
+      impresoraB: this.normalizeCatalogText(apiData.MPV07_ImpresoraB)
     };
+  }
+
+  private normalizeCatalogText(value: unknown): string {
+    if (typeof value === 'string') {
+      return value.trim();
+    }
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value).trim();
+    }
+    if (value && typeof value === 'object' && Object.keys(value as Record<string, unknown>).length > 0) {
+      return JSON.stringify(value);
+    }
+    return '';
   }
 
   private parseTextResponse(response: string): UsuarioResponse {

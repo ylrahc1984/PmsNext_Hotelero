@@ -1,0 +1,117 @@
+:host {
+  display: block;
+}
+
+.reservation-block {
+  position: absolute;
+  top: 6px;
+  height: 36px;
+  border: 0;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 0.55rem;
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.12);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  overflow: visible;
+  white-space: nowrap;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  z-index: 2;
+}
+
+.reservation-block__guest {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reservation-block:hover,
+.reservation-block:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 22px rgba(15, 23, 42, 0.18);
+  z-index: 8;
+}
+
+.reservation-block--ghost {
+  opacity: 0.35;
+}
+
+.reservation-block:focus-visible {
+  outline: none;
+}
+
+.reservation-block__popover {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 10px);
+  min-width: 220px;
+  max-width: 280px;
+  border-radius: 12px;
+  border: 1px solid rgba(209, 220, 234, 0.92);
+  background: rgba(17, 25, 38, 0.95);
+  box-shadow: 0 18px 34px rgba(15, 23, 42, 0.26);
+  padding: 0.55rem 0.65rem;
+  display: grid;
+  gap: 0.18rem;
+  text-align: left;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(4px);
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
+  pointer-events: none;
+}
+
+.reservation-block:hover .reservation-block__popover,
+.reservation-block:focus-visible .reservation-block__popover {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.reservation-block__popover::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 16px;
+  width: 12px;
+  height: 12px;
+  background: rgba(17, 25, 38, 0.95);
+  transform: rotate(45deg);
+  border-left: 1px solid rgba(209, 220, 234, 0.24);
+  border-top: 1px solid rgba(209, 220, 234, 0.24);
+}
+
+.reservation-block__popover-name {
+  font-size: 0.76rem;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.reservation-block__popover-line {
+  font-size: 0.66rem;
+  color: rgba(232, 239, 248, 0.92);
+  line-height: 1.25;
+}
+
+.reservation-block__popover-hint {
+  margin-top: 0.1rem;
+  font-size: 0.62rem;
+  color: #9fc5f0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.reservation-block--ocupada {
+  background: linear-gradient(135deg, #2e608f, #457db0);
+}
+
+.reservation-block--reservada {
+  background: linear-gradient(135deg, #e6bc57, #f1d583);
+  color: #5b430e;
+}
+
+.reservation-block--bloqueada {
+  background: linear-gradient(135deg, #8c98ab, #b2bcc9);
+}

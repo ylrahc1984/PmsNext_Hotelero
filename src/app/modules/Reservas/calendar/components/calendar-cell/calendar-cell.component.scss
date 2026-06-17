@@ -1,0 +1,21 @@
+:host {
+  display: block;
+  width: 42px;
+  min-width: 42px;
+  flex: 0 0 42px;
+}
+
+.calendar-cell {
+  height: 48px;
+  border-right: 1px solid #edf2f8;
+  border-bottom: 1px solid #eff3f8;
+  background: #ffffff;
+}
+
+.calendar-cell--today {
+  background: #edf5ff;
+}
+
+.calendar-cell--weekend {
+  background: #fbfcfe;
+}
