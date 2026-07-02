@@ -1,0 +1,67 @@
+$c:#17d4e0;$b:#1f6bff;$i:#10263b;$m:#6f8093;$l:#dce5f0;$w:#b98a34;
+:host{position:fixed;inset:0;z-index:1060}
+.restaurant-invoice-dialog-panel,.invoice-backdrop{position:fixed;inset:0}
+.invoice-backdrop{background:rgba(6,18,31,.58);backdrop-filter:blur(5px)}
+.invoice-dialog{position:relative;z-index:1;display:flex;flex-direction:column;width:min(90vw,1400px);max-height:92vh;margin:4vh auto;overflow:hidden;border-radius:22px;background:#f5f8fb;box-shadow:0 28px 80px rgba(8,24,39,.34)}
+.invoice-header,.invoice-stepper,.invoice-footer{background:#fff}
+.invoice-header,.invoice-footer{display:flex;gap:12px;padding:16px 24px}
+.invoice-header{align-items:flex-start;justify-content:space-between;border-bottom:1px solid $l}
+.invoice-footer{align-items:center;justify-content:flex-end;border-top:1px solid $l}
+.invoice-eyebrow,.selected-client__head span,.card-title-row span{color:$b;font-size:.72rem;font-weight:850;text-transform:uppercase}
+.selected-client__head span,.card-title-row span{color:$w}
+h2,h3,strong{color:$i}
+.invoice-header h2{margin:3px 0;font-size:1.38rem;font-weight:860}
+.invoice-header p{margin:0;color:$m;font-size:.9rem}
+button{border-radius:12px;font-weight:800}
+.icon-button,.row-action,.add-payment-btn{display:inline-flex;align-items:center;justify-content:center;border:0}
+.icon-button{width:38px;height:38px;color:$i;background:#eef3f8}
+.invoice-stepper{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:14px 24px}
+.step{display:flex;align-items:center;gap:10px;min-width:0;padding:10px 12px;border:1px solid $l;border-radius:12px;color:$m;background:#f8fafc}
+.step span{display:inline-grid;place-items:center;width:26px;height:26px;flex:0 0 26px;border-radius:50%;color:#fff;background:#9aa9ba;font-size:.78rem;font-weight:850}
+.step strong{overflow:hidden;font-size:.82rem;text-overflow:ellipsis;white-space:nowrap}
+.step--active{color:$i;border-color:rgba($b,.18);background:linear-gradient(180deg,rgba($c,.12),rgba($b,.07))}
+.step--active span,.add-payment-btn,.primary-btn{background:linear-gradient(135deg,$c,$b)}
+.invoice-body{display:grid;grid-template-columns:minmax(250px,.9fr) minmax(420px,1.45fr) minmax(260px,.85fr);gap:14px;padding:16px 24px 18px;overflow:auto}
+.invoice-card{min-width:0;padding:16px;border:1px solid $l;border-radius:16px;background:#fff;box-shadow:0 14px 32px rgba(24,43,61,.08)}
+.invoice-card h3{margin:0 0 13px;font-size:1rem;font-weight:850}
+.field-label,label span,.payment-summary span,.summary-list span,.selected-client dt,.selected-client dd,.client-result span,td span{color:$m;font-size:.74rem}
+.search-field,input,select{min-height:38px;border:1px solid $l;border-radius:11px;color:$i;background:#fbfdff}
+.search-field{display:grid;grid-template-columns:20px minmax(0,1fr);align-items:center;gap:8px;min-height:42px;padding:0 12px}
+input,select{width:100%;min-width:0;padding:0 11px;font-size:.86rem}
+.search-field input{border:0;padding:0;background:transparent}
+input:focus,select:focus{outline:2px solid rgba($c,.38);border-color:rgba($b,.42)}
+.client-state,.loading-box,.processing{display:flex;align-items:center;gap:8px;color:$m;font-size:.82rem}
+.processing{margin-right:auto;color:$b;font-weight:800}
+.spinner{width:16px;height:16px;border:2px solid rgba($b,.18);border-top-color:$b;border-radius:50%;animation:spin .8s linear infinite}
+.client-results,.selected-client dl,.summary-list,.payment-summary,.payment-form{display:grid;gap:8px}
+.client-results,.selected-client,.payments-table,.empty-state,.detail-button,.inline-error{margin-top:14px}
+.client-result,.payment-summary div,.summary-list div,.selected-client,.payment-form,.empty-state,.inline-error{border:1px solid rgba($l,.9);border-radius:14px;background:#f8fbff}
+.client-result{display:grid;gap:3px;width:100%;padding:10px 11px;text-align:left}
+.selected-client,.payment-form{padding:12px}
+.selected-client__head,.card-title-row,.summary-list div{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.selected-client__head button{border:0;color:$b;background:transparent}
+.selected-client dd{margin:2px 0 0;color:$i;overflow-wrap:anywhere}
+.payment-summary{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:14px}
+.payment-summary div,.summary-list div{min-width:0;padding:10px}
+.payment-summary strong{display:block;margin-top:4px;font-size:.9rem}
+.payment-form{grid-template-columns:minmax(180px,1.2fr) minmax(110px,.65fr) minmax(150px,.9fr) 42px;align-items:end}
+.add-payment-btn{width:42px;height:38px;color:#fff}
+.payments-table{overflow:auto;border:1px solid $l;border-radius:14px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px 12px;border-bottom:1px solid $l;color:$i;font-size:.82rem;text-align:left}
+th{background:#f3f7fb;color:$m;font-size:.72rem;font-weight:850}
+td strong,td span{display:block}
+.text-end{text-align:right}.text-center{text-align:center}
+.text-success,.summary-paid strong,.summary-change strong{color:#16815a!important}
+.text-warning{color:#c56c17!important}.summary-total strong{color:$b}
+.summary-pending strong,.row-action{color:#b4233d}
+.row-action{width:32px;height:32px;background:rgba(180,35,61,.08)}
+.empty-state{justify-items:center;padding:26px 16px;border-style:dashed;color:$m;text-align:center}
+.detail-button,.secondary-btn,.primary-btn{min-height:40px;padding:0 16px;font-size:.84rem}
+.detail-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;border:1px solid rgba($w,.24);color:#7b5a20;background:rgba($w,.1)}
+.secondary-btn{border:1px solid $l;color:$i;background:#fff}.primary-btn{border:0;color:#fff}
+button:disabled{cursor:not-allowed;opacity:.58}
+.inline-error{padding:9px 11px;border-color:rgba(194,71,45,.2);color:#b4233d;background:rgba(194,71,45,.08);font-size:.78rem;font-weight:760}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:1180px){.invoice-body{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.invoice-card--payments{grid-column:1/-1}}
+@media(max-width:760px){.invoice-dialog{width:96vw;max-height:96vh;margin:2vh auto}.invoice-header,.invoice-footer,.invoice-stepper,.invoice-body{padding-left:14px;padding-right:14px}.invoice-stepper,.invoice-body,.payment-summary,.payment-form{grid-template-columns:minmax(0,1fr)}.invoice-footer{flex-wrap:wrap}.processing{width:100%;margin-right:0}}

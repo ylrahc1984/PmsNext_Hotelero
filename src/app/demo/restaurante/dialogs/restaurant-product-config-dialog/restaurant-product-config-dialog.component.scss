@@ -1,0 +1,245 @@
+$cyan: #17d4e0;
+$blue: #1f6bff;
+$bg: #0b1724;
+$paper: #ffffff;
+$ink: #10263b;
+$muted: #64748b;
+$line: #dbe5ef;
+
+.product-config-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba($bg, 0.56);
+  backdrop-filter: blur(6px);
+}
+
+.product-config-dialog {
+  display: grid;
+  gap: 12px;
+  width: min(640px, 100%);
+  max-height: calc(100vh - 36px);
+  padding: 16px;
+  overflow: auto;
+  border: 1px solid rgba($paper, 0.2);
+  border-radius: 18px;
+  color: $ink;
+  background: $paper;
+  box-shadow: 0 28px 70px rgba($bg, 0.32);
+}
+
+.config-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 14px;
+  color: $paper;
+  background:
+    radial-gradient(circle at 88% 0%, rgba($cyan, 0.32), transparent 34%),
+    linear-gradient(135deg, #132235, $blue);
+}
+
+.config-header span,
+.product-meta span,
+.counter {
+  color: $muted;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.config-header span {
+  color: rgba($paper, 0.74);
+}
+
+.config-header h2 {
+  margin: 2px 0 0;
+  font-size: 1.12rem;
+  font-weight: 900;
+  line-height: 1.15;
+  color: $paper;
+}
+
+.icon-btn {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba($paper, 0.22);
+  border-radius: 10px;
+  color: $paper;
+  background: rgba($bg, 0.22);
+}
+
+.product-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.product-meta article,
+.config-section {
+  border: 1px solid $line;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #fff, #f8fbff);
+}
+
+.product-meta article {
+  padding: 9px 10px;
+}
+
+.product-meta strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.82rem;
+}
+
+.config-section {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.config-section.centered {
+  justify-items: center;
+  text-align: center;
+}
+
+.config-section h3 {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.quantity-control {
+  display: grid;
+  grid-template-columns: 64px minmax(88px, 1fr) 64px;
+  align-items: center;
+  width: min(320px, 100%);
+  min-height: 54px;
+  overflow: hidden;
+  border: 1px solid rgba($blue, 0.18);
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.quantity-control button,
+.choice-grid button,
+.config-footer button {
+  border: 0;
+  font-weight: 850;
+}
+
+.quantity-control button {
+  height: 100%;
+  color: $blue;
+  background: rgba($blue, 0.08);
+  font-size: 1.2rem;
+}
+
+.quantity-control strong {
+  text-align: center;
+  font-size: 1.28rem;
+}
+
+.choice-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.choice-grid--puestos {
+  grid-template-columns: repeat(auto-fit, minmax(46px, 1fr));
+}
+
+.choice-grid--tiempos {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.choice-grid button {
+  min-height: 42px;
+  border: 1px solid rgba($blue, 0.16);
+  border-radius: 10px;
+  color: $ink;
+  background: #f8fafc;
+}
+
+.choice-grid button span,
+.choice-grid button strong {
+  display: block;
+}
+
+.choice-grid button span {
+  font-size: 0.8rem;
+}
+
+.choice-grid button strong {
+  font-size: 0.76rem;
+}
+
+.choice-grid .active {
+  border-color: transparent;
+  color: $paper;
+  background: linear-gradient(135deg, $cyan, $blue);
+  box-shadow: 0 12px 22px rgba($blue, 0.22);
+}
+
+textarea {
+  width: 100%;
+  min-height: 88px;
+  resize: vertical;
+  border: 1px solid $line;
+  border-radius: 10px;
+  padding: 9px 10px;
+  outline: 0;
+  color: $ink;
+}
+
+.field-error {
+  color: #b42318;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.counter {
+  justify-self: end;
+}
+
+.config-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.config-footer button {
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 10px;
+}
+
+.config-footer .ghost {
+  color: $ink;
+  background: rgba($bg, 0.06);
+}
+
+.config-footer .primary {
+  color: $paper;
+  background: linear-gradient(135deg, $cyan, $blue);
+}
+
+@media (max-width: 560px) {
+  .product-config-dialog {
+    padding: 12px;
+  }
+
+  .product-meta,
+  .choice-grid--tiempos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .config-footer {
+    display: grid;
+  }
+}

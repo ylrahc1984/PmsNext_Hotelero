@@ -1,0 +1,85 @@
+<section class="product-config-backdrop" role="presentation" (click)="cancelar()">
+  <article class="product-config-dialog" role="dialog" aria-modal="true" aria-label="Configurar producto" (click)="$event.stopPropagation()">
+    <header class="config-header">
+      <div>
+        <span>Configurar producto</span>
+        <h2>{{ producto.MPV05_DesProducto }}</h2>
+      </div>
+      <button type="button" class="icon-btn" aria-label="Cerrar" (click)="cancelar()">
+        <i class="feather icon-x"></i>
+      </button>
+    </header>
+
+    <div class="product-meta">
+      <article>
+        <span>Precio</span>
+        <strong>{{ producto.MPV05_Moneda }} {{ producto.MPV05_PrecioTotal | number:'1.2-2' }}</strong>
+      </article>
+      <article>
+        <span>Codigo</span>
+        <strong>{{ producto.MPV05_CodProducto }}</strong>
+      </article>
+      <article>
+        <span>Categoria</span>
+        <strong>{{ categoriaNombre || producto.MPV01_CodCategoria }}</strong>
+      </article>
+    </div>
+
+    <section class="config-section centered">
+      <h3>Cantidad</h3>
+      <div class="quantity-control" aria-label="Cantidad">
+        <button type="button" (click)="disminuir()">-</button>
+        <strong>{{ cantidad }}</strong>
+        <button type="button" (click)="incrementar()">+</button>
+      </div>
+      @if (submitted && cantidad <= 0) {
+        <small class="field-error">La cantidad debe ser mayor a cero.</small>
+      }
+    </section>
+
+    <section class="config-section">
+      <h3>Puesto de Mesa</h3>
+      <div class="choice-grid choice-grid--puestos">
+        @for (puesto of puestosMesa(); track puesto) {
+          <button type="button" [class.active]="puestoMesa === puesto" (click)="seleccionarPuesto(puesto)">
+            {{ puesto }}
+          </button>
+        }
+      </div>
+      @if (submitted && !puestoMesa) {
+        <small class="field-error">Seleccione un puesto de mesa.</small>
+      }
+    </section>
+
+    <section class="config-section">
+      <h3>Tiempo del Plato</h3>
+      <div class="choice-grid choice-grid--tiempos">
+        @for (option of tiempos; track option.value) {
+          <button type="button" [class.active]="tiempo === option.value" (click)="seleccionarTiempo(option.value)">
+            <span>{{ option.value }}</span>
+            <strong>{{ option.title }}</strong>
+          </button>
+        }
+      </div>
+      @if (submitted && !tiempo) {
+        <small class="field-error">Seleccione el tiempo del plato.</small>
+      }
+    </section>
+
+    <section class="config-section">
+      <h3>Comentarios</h3>
+      <textarea
+        [(ngModel)]="comentario"
+        maxlength="200"
+        rows="4"
+        placeholder="Sin cebolla&#10;Termino medio&#10;Sin gluten&#10;Sin hielo"
+      ></textarea>
+      <small class="counter">{{ comentario.length }}/200</small>
+    </section>
+
+    <footer class="config-footer">
+      <button type="button" class="ghost" (click)="cancelar()">Cancelar</button>
+      <button type="button" class="primary" (click)="confirmar()">Agregar al Pedido</button>
+    </footer>
+  </article>
+</section>

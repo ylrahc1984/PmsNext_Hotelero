@@ -21,6 +21,20 @@ interface SettingsShortcut {
 export class FrontDeskSettingsComponent {
   readonly shortcuts: SettingsShortcut[] = [
     {
+      title: 'Grupos de Habitaciones',
+      description: 'Organización interna por bloques, zonas o edificios.',
+      icon: 'domain',
+      route: '/front-desk/configuraciones/grupos-habitaciones',
+      tone: 'amber'
+    },
+    {
+      title: 'Categorías de Habitaciones',
+      description: 'Agrupaciones para venta, operación y reportes.',
+      icon: 'category',
+      route: '/front-desk/configuraciones/categorias',
+      tone: 'cyan'
+    },
+    {
       title: 'Tipos de Habitación',
       description: 'Clasificación comercial y operativa de las habitaciones.',
       icon: 'hotel_class',
@@ -28,14 +42,7 @@ export class FrontDeskSettingsComponent {
       tone: 'blue'
     },
     {
-      title: 'Categorías',
-      description: 'Agrupaciones para venta, operación y reportes.',
-      icon: 'category',
-      route: '/front-desk/configuraciones/categorias',
-      tone: 'cyan'
-    },
-    {
-      title: 'Tipos de Pax',
+      title: 'Tipos de PAX',
       description: 'Parámetros para adultos, menores, cortesías y perfiles.',
       icon: 'groups',
       route: '/front-desk/configuraciones/tipos-pax',
@@ -49,17 +56,10 @@ export class FrontDeskSettingsComponent {
       tone: 'slate'
     },
     {
-      title: 'Grupos de Habitaciones',
-      description: 'Organización interna por bloques, zonas o edificios.',
-      icon: 'domain',
-      route: '/front-desk/configuraciones/grupos-habitaciones',
-      tone: 'amber'
-    },
-    {
-      title: 'Lista de Habitaciones',
+      title: 'Habitaciones',
       description: 'Inventario maestro de habitaciones disponibles en el hotel.',
       icon: 'meeting_room',
-      route: '/front-desk/configuraciones/lista-habitaciones',
+      route: '/front-desk/configuraciones/habitaciones',
       tone: 'burgundy'
     }
   ];

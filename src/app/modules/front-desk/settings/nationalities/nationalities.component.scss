@@ -1,0 +1,46 @@
+.table-sort-button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  display: inline-flex;
+  font: inherit;
+  font-weight: 600;
+  gap: 0.35rem;
+  padding: 0;
+}
+
+.table-sort-button i {
+  color: #6c757d;
+  font-size: 0.85rem;
+}
+
+.pagination-footer {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding-top: 1rem;
+}
+
+.modal {
+  background: rgba(15, 23, 42, 0.25);
+}
+
+.modal-content {
+  border: 0;
+  border-radius: 8px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
+}
+
+.modal-header,
+.modal-footer {
+  border-color: #edf0f4;
+}
+
+@media (max-width: 767.98px) {
+  .pagination-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

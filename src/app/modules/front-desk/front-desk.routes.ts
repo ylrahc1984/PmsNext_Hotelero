@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { AdminComponent } from 'src/app/theme/layout/admin/admin.component';
+import { RoomStayManagementComponent } from './pages/room-stay-management/room-stay-management.component';
 
 const loadPmsPlaceholder = () => import('src/app/pages/pms-placeholder/pms-placeholder.component').then((c) => c.PmsPlaceholderComponent);
 
@@ -19,9 +20,17 @@ export const FRONT_DESK_ROUTES: Routes = [
         loadComponent: () => import('./pages/room-rack/room-rack.component').then((c) => c.RoomRackComponent)
       },
       {
+        path: 'walk-in',
+        loadComponent: () => import('./walk-in/walk-in.component').then((c) => c.WalkInComponent)
+      },
+      {
+        path: 'habitaciones/room-stay-management/:roomNumber',
+        component: RoomStayManagementComponent
+      },
+      {
         path: 'habitaciones',
-        loadComponent: loadPmsPlaceholder,
-        data: { module: 'Front Desk', title: 'Habitaciones' }
+        redirectTo: 'room-rack',
+        pathMatch: 'full'
       },
       {
         path: 'habitaciones/estado',
@@ -92,33 +101,31 @@ export const FRONT_DESK_ROUTES: Routes = [
       },
       {
         path: 'configuraciones/tipos-habitacion',
-        loadComponent: loadPmsPlaceholder,
-        data: { module: 'Front Desk / Configuraciones', title: 'Tipos de Habitacion' }
+        loadComponent: () => import('./settings/room-types/room-types.component').then((c) => c.RoomTypesComponent)
       },
       {
         path: 'configuraciones/categorias',
-        loadComponent: loadPmsPlaceholder,
-        data: { module: 'Front Desk / Configuraciones', title: 'Categorias' }
+        loadComponent: () => import('./settings/room-categories/room-categories.component').then((c) => c.RoomCategoriesComponent)
       },
       {
         path: 'configuraciones/tipos-pax',
-        loadComponent: loadPmsPlaceholder,
-        data: { module: 'Front Desk / Configuraciones', title: 'Tipos de Pax' }
+        loadComponent: () => import('./settings/pax-types/pax-types.component').then((c) => c.PaxTypesComponent)
       },
       {
         path: 'configuraciones/nacionalidades',
-        loadComponent: loadPmsPlaceholder,
-        data: { module: 'Front Desk / Configuraciones', title: 'Nacionalidades' }
+        loadComponent: () => import('./settings/nationalities/nationalities.component').then((c) => c.NationalitiesComponent)
       },
       {
         path: 'configuraciones/grupos-habitaciones',
-        loadComponent: loadPmsPlaceholder,
-        data: { module: 'Front Desk / Configuraciones', title: 'Grupos de Habitaciones' }
+        loadComponent: () => import('./settings/room-groups/room-groups.component').then((c) => c.RoomGroupsComponent)
+      },
+      {
+        path: 'configuraciones/habitaciones',
+        loadComponent: () => import('./settings/rooms/rooms.component').then((c) => c.RoomsComponent)
       },
       {
         path: 'configuraciones/lista-habitaciones',
-        loadComponent: loadPmsPlaceholder,
-        data: { module: 'Front Desk / Configuraciones', title: 'Lista de Habitaciones' }
+        loadComponent: () => import('./settings/rooms/rooms.component').then((c) => c.RoomsComponent)
       },
       {
         path: 'configuraciones/motivos-bloqueo',

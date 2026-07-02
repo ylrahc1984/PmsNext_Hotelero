@@ -1,0 +1,67 @@
+@if (open) {
+  <div class="menu-drawer__backdrop" (click)="cerrar()"></div>
+  <aside class="menu-drawer" aria-label="Agregar productos">
+    <header class="menu-drawer__header">
+      <div>
+        <span>Agregar Productos</span>
+        <h2>Mesa {{ mesa }} - Salon {{ salon }}</h2>
+      </div>
+      <button type="button" class="menu-icon-btn" aria-label="Cerrar" (click)="cerrar()">
+        <i class="feather icon-x"></i>
+      </button>
+    </header>
+
+    <section class="menu-drawer__body">
+      <label class="menu-search">
+        <i class="feather icon-search"></i>
+        <input type="search" [(ngModel)]="busqueda" placeholder="Buscar producto..." autocomplete="off" />
+      </label>
+
+      @if (error()) {
+        <div class="menu-alert">{{ error() }}</div>
+      }
+
+      <section class="menu-section">
+        <h3>Categorias</h3>
+        @if (loadingCategorias()) {
+          <div class="menu-loading">Cargando categorias...</div>
+        } @else {
+          <div class="categorias-grid">
+            @for (categoria of categorias(); track trackCategoria($index, categoria)) {
+              <button
+                type="button"
+                class="categoria-card"
+                [class.categoria-card--active]="categoriaActiva()?.MPV00_CodCategoria === categoria.MPV00_CodCategoria"
+                (click)="seleccionarCategoria(categoria)"
+              >
+                <i class="feather" [ngClass]="iconoCategoria(categoria.MPV00_NomCategoria)"></i>
+                <strong>{{ categoria.MPV00_NomCategoria }}</strong>
+              </button>
+            }
+          </div>
+        }
+      </section>
+
+      <section class="menu-section">
+        <h3>Productos</h3>
+        @if (loadingProductos()) {
+          <div class="menu-loading">Cargando productos...</div>
+        } @else {
+          <app-menu-productos-grid [productos]="productosFiltrados()"></app-menu-productos-grid>
+        }
+      </section>
+    </section>
+
+    <footer class="menu-drawer__footer">
+      <div>
+        <span>Categoria seleccionada:</span>
+        <strong>{{ categoriaActiva()?.MPV00_NomCategoria || 'Sin seleccionar' }}</strong>
+      </div>
+      <div>
+        <span>{{ productosFiltrados().length }} productos encontrados</span>
+      </div>
+      <button type="button" class="menu-btn menu-btn--ghost" (click)="cerrar()">Cerrar</button>
+      <button type="button" class="menu-btn" (click)="cerrar()">Cancelar</button>
+    </footer>
+  </aside>
+}

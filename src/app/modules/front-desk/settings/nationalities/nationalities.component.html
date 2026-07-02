@@ -1,0 +1,268 @@
+<div class="container-fluid">
+  <div class="row mb-3">
+    <div class="col-12">
+      <ul class="breadcrumb mb-0">
+        <li class="breadcrumb-item">
+          <a routerLink="/dashboard"><i class="feather icon-home"></i></a>
+        </li>
+        <li class="breadcrumb-item">
+          <a>Front Desk</a>
+        </li>
+        <li class="breadcrumb-item">
+          <a routerLink="/front-desk/configuraciones">Configuraciones</a>
+        </li>
+        <li class="breadcrumb-item">
+          <a>Nacionalidades</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h4 class="mb-1">
+            <i class="feather icon-globe me-2"></i>
+            Nacionalidades
+          </h4>
+          <p class="text-muted mb-0">Administracion del catalogo de nacionalidades</p>
+        </div>
+        <button type="button" class="btn btn-primary" (click)="openCreateModal()" [disabled]="isLoading || isSaving">
+          <i class="feather icon-plus me-1"></i>
+          Nueva Nacionalidad
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <div class="row g-3 align-items-end">
+            <div class="col-lg-3 col-md-6">
+              <label for="searchCriterion" class="form-label">Criterio</label>
+              <select
+                id="searchCriterion"
+                class="form-select"
+                [formControl]="searchCriterionControl"
+                (change)="onSearchCriterionChange()"
+                [disabled]="isLoading"
+              >
+                <option value="codigo">Código</option>
+                <option value="descripcion">Descripción</option>
+              </select>
+            </div>
+            <div class="col-lg-5 col-md-6">
+              <label for="searchTerm" class="form-label">Buscar</label>
+              <div class="input-group">
+                <span class="input-group-text">
+                  <i class="feather icon-search"></i>
+                </span>
+                <input
+                  type="text"
+                  id="searchTerm"
+                  class="form-control"
+                  placeholder="Buscar nacionalidades..."
+                  [formControl]="searchControl"
+                  [disabled]="isLoading"
+                >
+              </div>
+            </div>
+            <div class="col-lg-2 col-md-6">
+              <label for="pageSize" class="form-label">Registros</label>
+              <select id="pageSize" class="form-select" [formControl]="pageSizeControl" [disabled]="isLoading">
+                <option *ngFor="let option of pageSizeOptions" [ngValue]="option">{{ option }}</option>
+              </select>
+            </div>
+            <div class="col-lg-2 col-md-6 text-lg-end">
+              <span class="text-muted">
+                {{ filteredNationalities.length }} nacionalidad{{ filteredNationalities.length !== 1 ? 'es' : '' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <div *ngIf="errorMessage" class="alert alert-danger mb-3" role="alert">
+            {{ errorMessage }}
+          </div>
+
+          <div *ngIf="isLoading" class="alert alert-info d-flex align-items-center" role="alert">
+            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+            <span>Cargando nacionalidades...</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>
+                    <button type="button" class="table-sort-button" (click)="sortBy('codigo')">
+                      Código
+                      <i class="feather" [ngClass]="sortColumn === 'codigo' && sortDirection === 'desc' ? 'icon-chevron-down' : 'icon-chevron-up'"></i>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" class="table-sort-button" (click)="sortBy('descripcion')">
+                      Descripción
+                      <i class="feather" [ngClass]="sortColumn === 'descripcion' && sortDirection === 'desc' ? 'icon-chevron-down' : 'icon-chevron-up'"></i>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" class="table-sort-button" (click)="sortBy('operador')">
+                      Operador
+                      <i class="feather" [ngClass]="sortColumn === 'operador' && sortDirection === 'desc' ? 'icon-chevron-down' : 'icon-chevron-up'"></i>
+                    </button>
+                  </th>
+                  <th class="text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let nationality of paginatedNationalities; trackBy: trackByCodigo">
+                  <td>
+                    <span class="badge bg-light text-dark">{{ nationality.CR06_Codigo }}</span>
+                  </td>
+                  <td>{{ nationality.CR06_Descripcion }}</td>
+                  <td>{{ nationality.CR06_Operador || 'N/D' }}</td>
+                  <td class="text-center">
+                    <div class="btn-group btn-group-sm" role="group">
+                      <button
+                        type="button"
+                        class="btn btn-outline-primary"
+                        (click)="openEditModal(nationality)"
+                        [disabled]="isLoading || isSaving"
+                        title="Editar"
+                      >
+                        <i class="feather icon-edit-2"></i>
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-outline-danger"
+                        (click)="deleteNationality(nationality)"
+                        [disabled]="isLoading || isDeleting"
+                        title="Eliminar"
+                      >
+                        <i class="feather icon-trash-2"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr *ngIf="!isLoading && filteredNationalities.length === 0">
+                  <td colspan="4" class="text-center py-4">
+                    <i class="feather icon-inbox display-4 text-muted"></i>
+                    <p class="text-muted mt-2 mb-0">{{ emptyMessage }}</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="pagination-footer" *ngIf="!isLoading && filteredNationalities.length > 0">
+            <span class="text-muted">
+              Mostrando {{ showingFrom }}-{{ showingTo }} de {{ filteredNationalities.length }} registros
+            </span>
+
+            <nav aria-label="Paginacion de nacionalidades">
+              <ul class="pagination pagination-sm mb-0">
+                <li class="page-item" [class.disabled]="currentPage === 1">
+                  <button type="button" class="page-link" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">
+                    Anterior
+                  </button>
+                </li>
+                <li class="page-item" *ngFor="let page of visiblePages" [class.active]="page === currentPage">
+                  <button type="button" class="page-link" (click)="goToPage(page)">
+                    {{ page }}
+                  </button>
+                </li>
+                <li class="page-item" [class.disabled]="currentPage === totalPages">
+                  <button type="button" class="page-link" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages">
+                    Siguiente
+                  </button>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="showModal"></div>
+<div class="modal d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="nationalityModalTitle" *ngIf="showModal" (click)="closeModal()">
+  <div class="modal-dialog modal-dialog-centered" role="document" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="nationalityModalTitle">
+          <i class="feather icon-globe me-2"></i>
+          {{ modalTitle }}
+        </h5>
+        <button type="button" class="btn-close" aria-label="Cerrar" (click)="closeModal()" [disabled]="isSaving"></button>
+      </div>
+
+      <form [formGroup]="nationalityForm" (ngSubmit)="saveNationality()">
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label for="codigo" class="form-label">Código <span class="text-danger">*</span></label>
+              <input
+                type="text"
+                id="codigo"
+                class="form-control text-uppercase"
+                formControlName="codigo"
+                maxlength="20"
+                [class.is-invalid]="isFieldInvalid('codigo')"
+              >
+              <div class="invalid-feedback">{{ getFieldError('codigo') }}</div>
+            </div>
+
+            <div class="col-md-8">
+              <label for="descripcion" class="form-label">Descripción <span class="text-danger">*</span></label>
+              <input
+                type="text"
+                id="descripcion"
+                class="form-control"
+                formControlName="descripcion"
+                maxlength="150"
+                [class.is-invalid]="isFieldInvalid('descripcion')"
+              >
+              <div class="invalid-feedback">{{ getFieldError('descripcion') }}</div>
+            </div>
+
+            <div class="col-md-6">
+              <label for="operador" class="form-label">Operador <span class="text-danger">*</span></label>
+              <input
+                type="text"
+                id="operador"
+                class="form-control"
+                formControlName="operador"
+                maxlength="50"
+                [class.is-invalid]="isFieldInvalid('operador')"
+              >
+              <div class="invalid-feedback">{{ getFieldError('operador') }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" (click)="closeModal()" [disabled]="isSaving">
+            Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary" [disabled]="isSaving">
+            <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+            <i class="feather icon-save me-1" *ngIf="!isSaving"></i>
+            Guardar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

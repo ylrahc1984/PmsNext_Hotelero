@@ -132,9 +132,9 @@ $line: rgba(15, 33, 51, 0.1);
 
 .status-kpis {
   display: grid;
-  grid-template-columns: repeat(9, minmax(104px, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 6px;
-  padding: 6px;
+  padding: 4px 6px;
   border: 1px solid $line;
   border-radius: 16px;
   background: $paper;
@@ -142,10 +142,12 @@ $line: rgba(15, 33, 51, 0.1);
 }
 
 .status-kpi {
-  display: grid;
-  align-content: center;
-  min-height: 48px;
-  padding: 7px 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 42px;
+  padding: 5px 9px;
   border: 1px solid rgba($bg, 0.14);
   border-left: 4px solid rgba($bg, 0.26);
   border-radius: 10px;
@@ -166,10 +168,17 @@ $line: rgba(15, 33, 51, 0.1);
   color: $muted;
   font-size: 0.7rem;
   font-weight: 760;
+  line-height: 1.1;
 }
 
 .status-kpi strong {
-  margin-top: 2px;
+  display: inline-grid;
+  place-items: center;
+  min-width: 34px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 10px;
+  background: rgba($bg, 0.045);
   color: $ink;
   font-size: 0.98rem;
   font-weight: 880;
@@ -178,7 +187,7 @@ $line: rgba(15, 33, 51, 0.1);
 
 .room-rack-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 290px;
+  grid-template-columns: minmax(0, 1fr) 310px;
   gap: 10px;
   align-items: start;
 }
@@ -190,8 +199,7 @@ $line: rgba(15, 33, 51, 0.1);
 }
 
 .rooms-panel,
-.side-card,
-.operations-bar {
+.side-card {
   border: 1px solid $line;
   border-radius: 16px;
   background: rgba($paper, 0.96);
@@ -204,7 +212,7 @@ $line: rgba(15, 33, 51, 0.1);
 
 .rooms-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -251,6 +259,12 @@ $line: rgba(15, 33, 51, 0.1);
 
 .side-card {
   padding: 12px;
+}
+
+.operations-card {
+  background:
+    radial-gradient(circle at 88% 10%, rgba($cyan, 0.1), transparent 28%),
+    linear-gradient(180deg, rgba($paper, 0.98), #f8fbfc);
 }
 
 .side-card__header {
@@ -326,7 +340,7 @@ $line: rgba(15, 33, 51, 0.1);
 }
 
 .legend-dot.estado-bloqueada {
-  background: #94a3b8;
+  background: #64748b;
 }
 
 .legend-dot.estado-sucia {
@@ -365,6 +379,10 @@ $line: rgba(15, 33, 51, 0.1);
   gap: 8px;
 }
 
+.exchange-values--muted strong {
+  opacity: 0.55;
+}
+
 .exchange-values div {
   padding: 8px;
   border: 1px solid rgba($bg, 0.08);
@@ -380,24 +398,35 @@ $line: rgba(15, 33, 51, 0.1);
   font-weight: 880;
 }
 
+.exchange-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: rgba($ink, 0.72);
+  font-size: 0.75rem;
+  font-weight: 760;
+}
+
+.exchange-status--info {
+  margin-top: 8px;
+  margin-bottom: 0;
+  color: rgba($muted, 0.96);
+}
+
 .operations-bar {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 8px;
-  padding: 9px;
-  background:
-    linear-gradient(180deg, rgba($paper, 0.94), rgba(#f8fbfc, 0.96)),
-    radial-gradient(circle at 12% 18%, rgba($cyan, 0.1), transparent 28%);
-  box-shadow: 0 16px 34px rgba(15, 33, 51, 0.08);
+  grid-template-columns: 1fr;
+  gap: 7px;
 }
 
 .operation-button {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 9px;
-  min-height: 44px;
-  padding: 6px 10px;
+  justify-content: flex-start;
+  gap: 10px;
+  min-height: 46px;
+  padding: 8px 10px;
   border: 1px solid rgba($bg, 0.14);
   border-radius: 12px;
   color: $ink;
@@ -405,7 +434,7 @@ $line: rgba(15, 33, 51, 0.1);
   font-size: 0.76rem;
   font-weight: 840;
   line-height: 1.15;
-  text-align: center;
+  text-align: left;
   cursor: pointer;
   box-shadow: inset 0 0 0 1px rgba($paper, 0.68), inset 0 1px 0 rgba($paper, 0.9), 0 8px 18px rgba(15, 33, 51, 0.055);
   transition:
@@ -419,13 +448,13 @@ $line: rgba(15, 33, 51, 0.1);
 .operation-button .material-icons {
   display: inline-grid;
   place-items: center;
-  flex: 0 0 28px;
-  width: 28px;
-  height: 28px;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
   border-radius: 9px;
   color: $blue;
   background: rgba($blue, 0.08);
-  font-size: 1rem;
+  font-size: 1.08rem;
   transition: background 160ms ease, color 160ms ease, transform 160ms ease;
 }
 
@@ -525,8 +554,8 @@ $line: rgba(15, 33, 51, 0.1);
 }
 
 .estado-bloqueada {
-  border-left-color: #94a3b8;
-  background: linear-gradient(180deg, #f1f5f9, #ffffff);
+  border-left-color: #64748b;
+  background: linear-gradient(180deg, #e2e8f0, #ffffff);
 }
 
 .estado-sucia {
@@ -541,19 +570,19 @@ $line: rgba(15, 33, 51, 0.1);
 
 @media (min-width: 1600px) {
   .rooms-grid {
-    grid-template-columns: repeat(10, minmax(0, 1fr));
+    grid-template-columns: repeat(12, minmax(0, 1fr));
   }
 }
 
 @media (min-width: 1200px) and (max-width: 1599.98px) {
   .rooms-grid {
-    grid-template-columns: repeat(9, minmax(0, 1fr));
+    grid-template-columns: repeat(12, minmax(0, 1fr));
   }
 }
 
 @media (min-width: 992px) and (max-width: 1199.98px) {
   .rooms-grid {
-    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-columns: repeat(8, minmax(0, 1fr));
   }
 }
 
@@ -567,11 +596,7 @@ $line: rgba(15, 33, 51, 0.1);
   }
 
   .side-panel {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .operations-bar {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: minmax(280px, 1.15fr) repeat(2, minmax(220px, 0.9fr));
   }
 }
 
@@ -619,14 +644,8 @@ $line: rgba(15, 33, 51, 0.1);
     grid-template-columns: 1fr;
   }
 
-  .operations-bar {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .operation-button {
-    min-height: 52px;
-    flex-direction: column;
-    gap: 4px;
+    min-height: 48px;
     line-height: 1.1;
   }
 }

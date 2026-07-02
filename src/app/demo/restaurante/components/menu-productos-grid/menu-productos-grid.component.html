@@ -1,0 +1,26 @@
+@if (productos.length) {
+  <div class="productos-grid">
+    @for (producto of productos; track trackProducto($index, producto)) {
+      <article class="producto-card">
+        <div>
+          <h4>{{ producto.MPV05_DesProducto }}</h4>
+          @if (precio(producto) > 0) {
+            <strong>{{ producto.MPV05_Moneda }} {{ precio(producto) | number:'1.2-2' }}</strong>
+          } @else {
+            <span class="producto-badge">Sin costo</span>
+          }
+        </div>
+        <small>Codigo: {{ producto.MPV05_CodProducto }}</small>
+        <button type="button" (click)="agregar.emit(producto)">
+          <i class="feather icon-plus"></i>
+          <span>Agregar</span>
+        </button>
+      </article>
+    }
+  </div>
+} @else {
+  <div class="productos-empty">
+    <i class="feather icon-package"></i>
+    <strong>No existen productos para esta categoria.</strong>
+  </div>
+}

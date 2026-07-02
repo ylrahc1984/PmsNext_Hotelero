@@ -1,5 +1,5 @@
 // angular import
-import { Component, Input, output } from '@angular/core';
+import { Component, HostListener, Input, output } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
 // project import
@@ -25,5 +25,10 @@ export class NavLogoComponent {
       this.navCollapsed = !this.navCollapsed;
       this.NavCollapse.emit();
     }
+  }
+
+  @HostListener('window:resize')
+  onResize(): void {
+    this.windowWidth = window.innerWidth;
   }
 }

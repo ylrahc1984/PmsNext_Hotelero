@@ -227,6 +227,13 @@ const routes: Routes = [
           import('./demo/restaurante/restaurant-mesa-detalle/restaurant-mesa-detalle.component').then(
             (c) => c.RestaurantMesaDetalleComponent
           )
+      },
+      {
+        path: 'pos-productos/:id',
+        loadComponent: () =>
+          import('./demo/restaurante/restaurant-pos-productos/restaurant-pos-productos.component').then(
+            (c) => c.RestaurantPosProductosComponent
+          )
       }
     ]
   },

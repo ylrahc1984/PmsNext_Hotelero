@@ -1,0 +1,150 @@
+<section class="restaurant-pos" aria-label="POS productos restaurante">
+  <header class="pos-header">
+    <button type="button" class="back-btn" (click)="cancelar()">
+      <i class="feather icon-arrow-left"></i>
+      <span>Mesa</span>
+    </button>
+    <article><span>Mesa</span><strong>{{ mesaInfo.mesa }}</strong></article>
+    <article><span>Salon</span><strong>{{ mesaInfo.salon }}</strong></article>
+    <article><span>Mesero</span><strong>{{ mesaInfo.mesero }}</strong></article>
+    <article><span>Pax</span><strong>{{ mesaInfo.personas }}</strong></article>
+    <article><span>Tiempo</span><strong>{{ mesaInfo.tiempo }}</strong></article>
+    <article class="pos-header__total"><span>Total Temporal</span><strong>{{ moneda() }} {{ total() | number:'1.2-2' }}</strong></article>
+  </header>
+
+  <nav class="pos-tabs" aria-label="Vistas POS">
+    <button type="button" [class.active]="activeTab === 'categorias'" (click)="activeTab = 'categorias'">Categorias</button>
+    <button type="button" [class.active]="activeTab === 'productos'" (click)="activeTab = 'productos'">Productos</button>
+    <button type="button" [class.active]="activeTab === 'pedido'" (click)="activeTab = 'pedido'">Pedido</button>
+  </nav>
+
+  <section class="pos-layout">
+    <aside class="pos-panel pos-categorias" [class.pos-mobile-hidden]="activeTab !== 'categorias'">
+      <h2>Categorias</h2>
+      @if (loadingCategorias) {
+        <div class="pos-state">Cargando categorias...</div>
+      } @else if (errorCategorias) {
+        <div class="pos-state pos-state--error">{{ errorCategorias }}</div>
+      } @else {
+        <div class="categoria-list">
+          @for (categoria of categorias; track trackCategoria($index, categoria)) {
+            <button
+              type="button"
+              class="categoria-card"
+              [class.categoria-card--active]="categoriaActiva?.MPV00_CodCategoria === categoria.MPV00_CodCategoria"
+              (click)="seleccionarCategoria(categoria)"
+            >
+              <strong>{{ categoria.MPV00_NomCategoria }}</strong>
+            </button>
+          }
+        </div>
+      }
+    </aside>
+
+    <main class="pos-panel pos-productos" [class.pos-mobile-hidden]="activeTab !== 'productos'">
+      <div class="section-head">
+        <div>
+          <span>{{ categoriaActiva?.MPV00_NomCategoria || 'Seleccione categoria' }}</span>
+          <h1>Productos</h1>
+        </div>
+        <label class="product-search">
+          <i class="feather icon-search"></i>
+          <input type="search" [(ngModel)]="busqueda" placeholder="Buscar producto..." />
+        </label>
+      </div>
+
+      @if (loadingProductos) {
+        <div class="products-skeleton">
+          <span></span><span></span><span></span><span></span>
+        </div>
+      } @else if (errorProductos) {
+        <div class="pos-state pos-state--error">{{ errorProductos }}</div>
+      } @else if (productosFiltrados().length) {
+        <div class="productos-grid">
+          @for (producto of productosFiltrados(); track trackProducto($index, producto)) {
+            <article class="producto-card">
+              <h3>{{ producto.MPV05_DesProducto }}</h3>
+              @if (producto.MPV05_PrecioTotal > 0) {
+                <strong>{{ producto.MPV05_Moneda }} {{ producto.MPV05_PrecioTotal | number:'1.2-2' }}</strong>
+              } @else {
+                <span class="free-badge">Sin costo</span>
+              }
+              <small>Cod. {{ producto.MPV05_CodProducto }}</small>
+              <button type="button" (click)="abrirModalConfiguracion(producto)">
+                <i class="feather icon-plus"></i>
+                <span>Agregar</span>
+              </button>
+            </article>
+          }
+        </div>
+      } @else {
+        <div class="pos-state">
+          <i class="feather icon-package"></i>
+          <strong>No existen productos para esta categoria.</strong>
+        </div>
+      }
+    </main>
+
+    <aside class="pos-panel pos-pedido" [class.pos-mobile-hidden]="activeTab !== 'pedido'">
+      <div class="section-head section-head--compact">
+        <div>
+          <span>Mesa {{ mesaInfo.mesa }}</span>
+          <h2>Pedido Actual</h2>
+        </div>
+      </div>
+
+      <div class="pedido-list">
+        @if (restaurantCartStore.items().length) {
+          @for (item of restaurantCartStore.items(); track trackPedido($index, item)) {
+            <article class="pedido-item">
+              <div>
+                <strong>{{ item.cantidad }}x {{ item.nomConsumo }}</strong>
+                <span>{{ item.moneda }} {{ item.precio | number:'1.2-2' }} c/u</span>
+                <small>| Puesto {{ item.puestoMesa }} | Tiempo {{ item.tiempo }} |</small>
+                <small>Total {{ item.moneda }} {{ subtotalItem(item) | number:'1.2-2' }}</small>
+              </div>
+              <div class="qty-actions">
+                <button type="button" (click)="disminuir(item)">-</button>
+                <button type="button" (click)="incrementar(item)">+</button>
+                <button type="button" class="danger" (click)="eliminar(item)"><i class="feather icon-trash-2"></i></button>
+              </div>
+            </article>
+          }
+        } @else {
+          <div class="pedido-empty">Seleccione productos para iniciar el pedido.</div>
+        }
+      </div>
+
+      <div class="pedido-summary">
+        <div class="summary-total"><span>TOTAL</span><strong>{{ moneda() }} {{ total() | number:'1.2-2' }}</strong></div>
+      </div>
+
+      @if (mensaje) {
+        <div class="pending-message">{{ mensaje }}</div>
+      }
+
+      <footer class="pedido-footer">
+        <button type="button" class="ghost" (click)="cancelar()">Cancelar</button>
+        <button type="button" class="ghost" (click)="limpiarPedido()">Limpiar Pedido</button>
+        <button
+          type="button"
+          class="primary"
+          [disabled]="!restaurantCartStore.items().length || guardandoPedido"
+          (click)="confirmarPedido()"
+        >
+          {{ guardandoPedido ? 'Enviando...' : 'Confirmar Pedido' }}
+        </button>
+      </footer>
+    </aside>
+  </section>
+
+  @if (productoConfigActivo) {
+    <app-restaurant-product-config-dialog
+      [producto]="productoConfigActivo"
+      [categoriaNombre]="categoriaActiva?.MPV00_NomCategoria || ''"
+      [context]="contextoModalProducto()"
+      (cancelado)="cerrarModalConfiguracion()"
+      (confirmado)="agregarItemConfigurado($event)"
+    />
+  }
+</section>

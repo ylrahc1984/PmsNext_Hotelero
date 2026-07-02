@@ -1,22 +1,27 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { Router, NavigationExtras } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { of } from 'rxjs';
+import { catchError, finalize } from 'rxjs/operators';
 
+import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
+import { RoomRackNavigationState, RoomRackRoom } from './models/room-rack-room.model';
+import { RoomRackService } from './services/room-rack.service';
 
 type EstadoHabitacion =
   | 'Disponible'
   | 'Ocupada'
-  | 'Salida Hoy'
-  | 'Salida Mañana'
-  | 'Reservada'
   | 'Bloqueada'
   | 'Sucia'
   | 'Limpia';
 
 interface HabitacionRack {
   numero: string;
-  categoria: 'Stand' | 'Junior' | 'Deluxe' | 'Suite';
+  categoria: string;
   estado: EstadoHabitacion;
+  data: RoomRackRoom;
 }
 
 interface EstadoKpi {
@@ -40,44 +45,98 @@ interface AccionOperativa {
   styleUrls: ['./room-rack.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class RoomRackComponent {
+export class RoomRackComponent implements OnInit {
+  private readonly roomRackService = inject(RoomRackService);
+  private readonly tipoCambioService = inject(TipoCambioService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly cdr = inject(ChangeDetectorRef);
+
   readonly hotelActual = 'Hotel PMSNext Central';
   readonly ultimaActualizacion = new Date();
-  readonly compra = 505.24;
-  readonly venta = 518.72;
+  readonly fechaOperacion = '01/07/2026';
 
   readonly estados: EstadoHabitacion[] = [
     'Disponible',
     'Ocupada',
-    'Salida Hoy',
-    'Salida Mañana',
-    'Reservada',
     'Bloqueada',
     'Sucia',
     'Limpia'
   ];
 
-  readonly habitaciones: HabitacionRack[] = this.generarHabitaciones();
-  readonly kpis: EstadoKpi[] = this.generarKpis();
-  readonly resumen = this.generarResumen();
+  habitaciones: HabitacionRack[] = [];
+  kpis: EstadoKpi[] = this.generarKpis();
+  resumen = this.generarResumen();
+  isLoading = false;
+  errorMessage = '';
+  tipoCambio: TipoCambio | null = null;
+  tipoCambioLoading = false;
+  tipoCambioError = '';
 
   readonly acciones: AccionOperativa[] = [
     { label: 'Asignar Habitacion', icon: 'home', accent: 'primary' },
-    { label: 'Ingresar Arribos', icon: 'login' },
+    { label: 'Ingresar Arribos', icon: 'flight_land' },
     { label: 'Lista Pax In House', icon: 'groups' },
     { label: 'Imprimir Hoja Registro', icon: 'print' } 
   ];
 
+  constructor(private readonly router: Router) {}
+
+  ngOnInit(): void {
+    this.cargarHabitaciones();
+    this.cargarTipoCambio();
+  }
+
   seleccionarHabitacion(habitacion: HabitacionRack): void {
-    console.log(habitacion);
+    const navigationState: RoomRackNavigationState = {
+      ...habitacion.data
+    };
+    const extras: NavigationExtras = { state: { roomRackRoom: navigationState } };
+
+    if (habitacion.estado === 'Disponible') {
+      this.router.navigate(['/front-desk/walk-in'], extras);
+      return;
+    }
+
+    this.router.navigate(['/front-desk/habitaciones/room-stay-management', habitacion.numero], extras);
   }
 
   actualizarVentana(): void {
-    console.log('Actualizar Room Rack');
+    this.cargarHabitaciones();
+    this.cargarTipoCambio();
+  }
+
+  get compra(): number {
+    return this.tipoCambio?.compra ?? 0;
+  }
+
+  get venta(): number {
+    return this.tipoCambio?.venta ?? 0;
   }
 
   getEstadoClass(estado: EstadoHabitacion | 'Todas'): string {
     return `estado-${this.slugEstado(estado)}`;
+  }
+
+  getCleanLabel(habitacion: HabitacionRack): string {
+    return habitacion.data.CR05_Clean === 'S' ? 'Habitación sucia' : 'Habitación limpia';
+  }
+
+  getCleanIndicatorStyle(habitacion: HabitacionRack): Record<string, string> {
+    const isDirty = habitacion.data.CR05_Clean === 'S';
+
+    return {
+      position: 'absolute',
+      top: '7px',
+      right: '8px',
+      width: '12px',
+      height: '12px',
+      border: '1.5px solid #0f172a',
+      borderRadius: '3px',
+      background: isDirty ? 'linear-gradient(135deg, #6f4428, #b7794b)' : '#ffffff',
+      boxShadow: '0 2px 5px rgba(15, 23, 42, 0.18)',
+      pointerEvents: 'none',
+      transform: 'rotate(45deg)'
+    };
   }
 
   trackByHabitacion(_: number, habitacion: HabitacionRack): string {
@@ -92,31 +151,60 @@ export class RoomRackComponent {
     return accion.label;
   }
 
-  private generarHabitaciones(): HabitacionRack[] {
-    const categorias: HabitacionRack['categoria'][] = ['Stand', 'Junior', 'Deluxe', 'Suite'];
-    const estados: EstadoHabitacion[] = [
-      'Disponible',
-      'Ocupada',
-      'Salida Hoy',
-      'Salida Mañana',
-      'Reservada',
-      'Bloqueada',
-      'Sucia',
-      'Limpia'
-    ];
+  private cargarHabitaciones(): void {
+    this.isLoading = true;
+    this.errorMessage = '';
 
-    return Array.from({ length: 7 }, (_, piso) => piso + 1).flatMap((piso) =>
-      Array.from({ length: 12 }, (_, index) => {
-        const numero = `${piso}${String(index + 1).padStart(2, '0')}`;
-        const mix = piso * 12 + index;
+    this.roomRackService
+      .getAllRoomsStatus(this.fechaOperacion)
+      .pipe(
+        catchError((error) => {
+          console.error('No se pudo cargar el Room Rack.', error);
+          this.errorMessage = 'No se pudo cargar el estado de habitaciones.';
+          return of([] as RoomRackRoom[]);
+        }),
+        finalize(() => {
+          this.isLoading = false;
+          this.cdr.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((rooms) => {
+        this.habitaciones = rooms.map((room) => this.mapRoomRackRoom(room));
+        this.kpis = this.generarKpis();
+        this.resumen = this.generarResumen();
+      });
+  }
 
-        return {
-          numero,
-          categoria: categorias[mix % categorias.length],
-          estado: estados[mix % estados.length]
-        };
-      })
-    );
+  private cargarTipoCambio(): void {
+    this.tipoCambioLoading = true;
+    this.tipoCambioError = '';
+
+    this.tipoCambioService
+      .fetchTipoCambio(this.fechaOperacion, 'usd')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (items) => {
+          this.tipoCambio = items[0] ?? this.tipoCambioService.getActual() ?? null;
+          this.tipoCambioLoading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.tipoCambio = this.tipoCambioService.getActual() ?? null;
+          this.tipoCambioLoading = false;
+          this.tipoCambioError = 'Referencia no actualizada';
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  private mapRoomRackRoom(room: RoomRackRoom): HabitacionRack {
+    return {
+      numero: String(room.CR05_NumHab),
+      categoria: room.CR05_Descripcion || room.CR05_TipoHab || room.CR05_CateHab,
+      estado: this.mapEstadoHabitacion(room),
+      data: room
+    };
   }
 
   private generarKpis(): EstadoKpi[] {
@@ -141,19 +229,35 @@ export class RoomRackComponent {
   private generarResumen(): EstadoKpi[] {
     return [
       { label: 'Total habitaciones', estado: 'Todas', cantidad: this.habitaciones.length, className: this.getEstadoClass('Todas') },
-      ...this.estados
-        .filter((estado) => ['Disponible', 'Ocupada', 'Reservada', 'Bloqueada', 'Sucia', 'Limpia'].includes(estado))
-        .map((estado) => ({
-          label: estado === 'Disponible' ? 'Disponibles' : estado === 'Ocupada' ? 'Ocupadas' : estado,
-          estado,
-          cantidad: this.contarPorEstado(estado),
-          className: this.getEstadoClass(estado)
-        }))
+      ...this.estados.map((estado) => ({
+        label: estado === 'Disponible' ? 'Disponibles' : estado === 'Ocupada' ? 'Ocupadas' : estado,
+        estado,
+        cantidad: this.contarPorEstado(estado),
+        className: this.getEstadoClass(estado)
+      }))
     ];
   }
 
   private contarPorEstado(estado: EstadoHabitacion): number {
+    if (estado === 'Sucia') {
+      return this.habitaciones.filter((habitacion) => habitacion.data.CR05_Clean === 'S').length;
+    }
+
+    if (estado === 'Limpia') {
+      return this.habitaciones.filter((habitacion) => habitacion.data.CR05_Clean === 'L').length;
+    }
+
     return this.habitaciones.filter((habitacion) => habitacion.estado === estado).length;
+  }
+
+  private mapEstadoHabitacion(room: RoomRackRoom): EstadoHabitacion {
+    const estados: Record<string, EstadoHabitacion> = {
+      B: 'Bloqueada',
+      D: 'Disponible',
+      O: 'Ocupada'
+    };
+
+    return estados[room.CR05_EstHab] ?? 'Disponible';
   }
 
   private slugEstado(estado: EstadoHabitacion | 'Todas'): string {

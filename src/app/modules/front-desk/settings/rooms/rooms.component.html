@@ -1,0 +1,474 @@
+<div class="container-fluid">
+  <div class="row mb-3">
+    <div class="col-12">
+      <ul class="breadcrumb mb-0">
+        <li class="breadcrumb-item">
+          <a routerLink="/dashboard"><i class="feather icon-home"></i></a>
+        </li>
+        <li class="breadcrumb-item">
+          <a>Front Desk</a>
+        </li>
+        <li class="breadcrumb-item">
+          <a routerLink="/front-desk/configuraciones">Configuraciones</a>
+        </li>
+        <li class="breadcrumb-item">
+          <a>Habitaciones</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+          <h4 class="mb-1">
+            <i class="feather icon-home me-2"></i>
+            Habitaciones
+          </h4>
+          <p class="text-muted mb-0">Inventario maestro de habitaciones fisicas del hotel</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          <button type="button" class="btn btn-outline-success" (click)="markAllAsClean()" [disabled]="isLoading || isCleaning || rooms.length === 0">
+            <span *ngIf="isCleaning" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+            <i class="feather icon-check-circle me-1" *ngIf="!isCleaning"></i>
+            Marcar todas como Limpias
+          </button>
+          <button type="button" class="btn btn-primary" (click)="openCreateModal()" [disabled]="isLoading || isSaving || isCatalogLoading">
+            <i class="feather icon-plus me-1"></i>
+            Nueva Habitación
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <div class="row g-3 align-items-end">
+            <div class="col-md-3 col-xl-2">
+              <label class="form-label">Categoría</label>
+              <select class="form-select" [(ngModel)]="filterCategory" (change)="onFilterCategoryChange()" [disabled]="isLoading">
+                <option value="">Todas</option>
+                <option *ngFor="let category of roomCategories" [value]="category.CR01_CodCate">
+                  {{ category.CR01_CodCate }} - {{ category.CR01_Categoria }}
+                </option>
+              </select>
+            </div>
+            <div class="col-md-3 col-xl-2">
+              <label class="form-label">Tipo</label>
+              <select class="form-select" [(ngModel)]="filterType" (change)="onFilterChange()" [disabled]="isLoading || !filterCategory">
+                <option value="">Todos</option>
+                <option *ngFor="let roomType of filterRoomTypes" [value]="roomType.CR02_TipHabita">
+                  {{ roomType.CR02_TipHabita }} - {{ roomType.CR02_NomHabita }}
+                </option>
+              </select>
+            </div>
+            <div class="col-md-3 col-xl-2">
+              <label class="form-label">Grupo</label>
+              <select class="form-select" [(ngModel)]="filterGroup" (change)="onFilterChange()" [disabled]="isLoading">
+                <option value="">Todos</option>
+                <option *ngFor="let group of roomGroups" [value]="group.CR04_CodGrp">
+                  {{ group.CR04_CodGrp }} - {{ group.CR04_Descripcion }}
+                </option>
+              </select>
+            </div>
+            <div class="col-md-3 col-xl-2">
+              <label class="form-label">Estado</label>
+              <select class="form-select" [(ngModel)]="filterEstado" (change)="onFilterChange()" [disabled]="isLoading">
+                <option value="">Todos</option>
+                <option *ngFor="let status of estadoOptions" [value]="status.value">{{ status.label }}</option>
+              </select>
+            </div>
+            <div class="col-md-3 col-xl-2">
+              <label class="form-label">Activo</label>
+              <select class="form-select" [(ngModel)]="filterActivo" (change)="onFilterChange()" [disabled]="isLoading">
+                <option value="">Todos</option>
+                <option *ngFor="let active of activeOptions" [value]="active.value">{{ active.label }}</option>
+              </select>
+            </div>
+            <div class="col-md-6 col-xl-2">
+              <label class="form-label">Buscar</label>
+              <div class="input-group">
+                <span class="input-group-text">
+                  <i class="feather icon-search"></i>
+                </span>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="Número, descripción, anexo..."
+                  [(ngModel)]="searchTerm"
+                  (input)="onSearchChange()"
+                  [disabled]="isLoading"
+                >
+              </div>
+            </div>
+            <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
+              <button type="button" class="btn btn-light btn-sm" (click)="clearFilters()" [disabled]="isLoading">
+                <i class="feather icon-x me-1"></i>
+                Limpiar filtros
+              </button>
+              <span class="text-muted">
+                {{ totalRecords }} habitación{{ totalRecords !== 1 ? 'es' : '' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <div *ngIf="errorMessage" class="alert alert-danger mb-3" role="alert">
+            {{ errorMessage }}
+          </div>
+
+          <div *ngIf="isLoading" class="alert alert-info d-flex align-items-center" role="alert">
+            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+            <span>Cargando habitaciones...</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>
+                    <button type="button" class="table-sort-button" (click)="sortBy('habitacion')">
+                      Número
+                      <i class="feather" [ngClass]="sortColumn === 'habitacion' && sortDirection === 'desc' ? 'icon-chevron-down' : 'icon-chevron-up'"></i>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" class="table-sort-button" (click)="sortBy('categoria')">
+                      Categoría
+                      <i class="feather" [ngClass]="sortColumn === 'categoria' && sortDirection === 'desc' ? 'icon-chevron-down' : 'icon-chevron-up'"></i>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" class="table-sort-button" (click)="sortBy('tipo')">
+                      Tipo
+                      <i class="feather" [ngClass]="sortColumn === 'tipo' && sortDirection === 'desc' ? 'icon-chevron-down' : 'icon-chevron-up'"></i>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" class="table-sort-button" (click)="sortBy('grupo')">
+                      Grupo
+                      <i class="feather" [ngClass]="sortColumn === 'grupo' && sortDirection === 'desc' ? 'icon-chevron-down' : 'icon-chevron-up'"></i>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" class="table-sort-button" (click)="sortBy('camas')">
+                      Camas
+                      <i class="feather" [ngClass]="sortColumn === 'camas' && sortDirection === 'desc' ? 'icon-chevron-down' : 'icon-chevron-up'"></i>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" class="table-sort-button" (click)="sortBy('pax')">
+                      Pax
+                      <i class="feather" [ngClass]="sortColumn === 'pax' && sortDirection === 'desc' ? 'icon-chevron-down' : 'icon-chevron-up'"></i>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" class="table-sort-button" (click)="sortBy('descripcion')">
+                      Descripción
+                      <i class="feather" [ngClass]="sortColumn === 'descripcion' && sortDirection === 'desc' ? 'icon-chevron-down' : 'icon-chevron-up'"></i>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" class="table-sort-button" (click)="sortBy('estado')">
+                      Estado
+                      <i class="feather" [ngClass]="sortColumn === 'estado' && sortDirection === 'desc' ? 'icon-chevron-down' : 'icon-chevron-up'"></i>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" class="table-sort-button" (click)="sortBy('clean')">
+                      Limpieza
+                      <i class="feather" [ngClass]="sortColumn === 'clean' && sortDirection === 'desc' ? 'icon-chevron-down' : 'icon-chevron-up'"></i>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" class="table-sort-button" (click)="sortBy('activo')">
+                      Activo
+                      <i class="feather" [ngClass]="sortColumn === 'activo' && sortDirection === 'desc' ? 'icon-chevron-down' : 'icon-chevron-up'"></i>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" class="table-sort-button" (click)="sortBy('operador')">
+                      Operador
+                      <i class="feather" [ngClass]="sortColumn === 'operador' && sortDirection === 'desc' ? 'icon-chevron-down' : 'icon-chevron-up'"></i>
+                    </button>
+                  </th>
+                  <th class="text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let room of paginatedRooms; trackBy: trackByRoom">
+                  <td>
+                    <span class="badge bg-light text-dark">{{ room.CR05_NumHab }}</span>
+                  </td>
+                  <td>{{ getCategoryLabel(room.CR05_CateHab) }}</td>
+                  <td>{{ getRoomTypeLabel(room.CR05_TipoHab, room.CR05_CateHab) }}</td>
+                  <td>{{ getGroupLabel(room.CR05_CodGrp) }}</td>
+                  <td>{{ room.CR05_TotCamas }}</td>
+                  <td>{{ room.CR05_NumPax }}</td>
+                  <td>{{ room.CR05_Descripcion }}</td>
+                  <td>
+                    <span class="badge" [ngClass]="getOptionBadgeClass(estadoOptions, room.CR05_EstHab)">
+                      {{ getOptionLabel(estadoOptions, room.CR05_EstHab) }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge" [ngClass]="getOptionBadgeClass(cleaningOptions, room.CR05_Clean)">
+                      {{ getOptionLabel(cleaningOptions, room.CR05_Clean) }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge" [ngClass]="getOptionBadgeClass(activeOptions, room.CR05_Activo)">
+                      {{ getOptionLabel(activeOptions, room.CR05_Activo) }}
+                    </span>
+                  </td>
+                  <td>{{ room.CR05_Operador || 'N/D' }}</td>
+                  <td class="text-center">
+                    <div class="btn-group btn-group-sm" role="group">
+                      <button
+                        type="button"
+                        class="btn btn-outline-success"
+                        (click)="cycleCleaningStatus(room)"
+                        [disabled]="isLoading || isCleaning"
+                        title="Cambiar limpieza"
+                      >
+                        <i class="feather icon-refresh-cw"></i>
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-outline-primary"
+                        (click)="openEditModal(room)"
+                        [disabled]="isLoading || isSaving"
+                        title="Editar"
+                      >
+                        <i class="feather icon-edit-2"></i>
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-outline-danger"
+                        (click)="deleteRoom(room)"
+                        [disabled]="isLoading || isDeleting"
+                        title="Eliminar"
+                      >
+                        <i class="feather icon-trash-2"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr *ngIf="!isLoading && paginatedRooms.length === 0">
+                  <td colspan="12" class="text-center py-4">
+                    <i class="feather icon-inbox display-4 text-muted"></i>
+                    <p class="text-muted mt-2 mb-0">{{ emptyMessage }}</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="pagination-footer" *ngIf="!isLoading && totalRecords > 0">
+            <div class="d-flex align-items-center gap-2">
+              <span class="text-muted">Mostrar</span>
+              <select class="form-select form-select-sm page-size-select" [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+                <option *ngFor="let option of pageSizeOptions" [ngValue]="option">{{ option }}</option>
+              </select>
+              <span class="text-muted">registros</span>
+            </div>
+            <div class="text-muted">
+              {{ paginationStart }}-{{ paginationEnd }} de {{ totalRecords }}
+            </div>
+            <div class="btn-group btn-group-sm" role="group" aria-label="Paginación">
+              <button type="button" class="btn btn-outline-secondary" (click)="goToFirstPage()" [disabled]="currentPage === 1">
+                <i class="feather icon-chevrons-left"></i>
+              </button>
+              <button type="button" class="btn btn-outline-secondary" (click)="goToPreviousPage()" [disabled]="currentPage === 1">
+                <i class="feather icon-chevron-left"></i>
+              </button>
+              <button type="button" class="btn btn-light" disabled>
+                {{ currentPage }} / {{ totalPages }}
+              </button>
+              <button type="button" class="btn btn-outline-secondary" (click)="goToNextPage()" [disabled]="currentPage === totalPages">
+                <i class="feather icon-chevron-right"></i>
+              </button>
+              <button type="button" class="btn btn-outline-secondary" (click)="goToLastPage()" [disabled]="currentPage === totalPages">
+                <i class="feather icon-chevrons-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="showModal"></div>
+<div class="modal d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="roomModalTitle" *ngIf="showModal" (click)="closeModal()">
+  <div class="modal-dialog modal-dialog-centered modal-lg" role="document" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="roomModalTitle">
+          <i class="feather icon-home me-2"></i>
+          {{ modalTitle }}
+        </h5>
+        <button type="button" class="btn-close" aria-label="Cerrar" (click)="closeModal()" [disabled]="isSaving"></button>
+      </div>
+
+      <form [formGroup]="roomForm" (ngSubmit)="saveRoom()">
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-3">
+              <label for="habitacion" class="form-label">Número Habitación <span class="text-danger">*</span></label>
+              <input
+                type="number"
+                id="habitacion"
+                class="form-control"
+                formControlName="habitacion"
+                min="1"
+                [class.is-invalid]="isFieldInvalid('habitacion')"
+              >
+              <div class="invalid-feedback">{{ getFieldError('habitacion') }}</div>
+            </div>
+
+            <div class="col-md-5">
+              <label for="categoria" class="form-label">Categoría <span class="text-danger">*</span></label>
+              <select
+                id="categoria"
+                class="form-select"
+                formControlName="categoria"
+                (change)="onFormCategoryChange()"
+                [class.is-invalid]="isFieldInvalid('categoria')"
+              >
+                <option value="">Seleccione...</option>
+                <option *ngFor="let category of roomCategories" [value]="category.CR01_CodCate">
+                  {{ category.CR01_CodCate }} - {{ category.CR01_Categoria }}
+                </option>
+              </select>
+              <div class="invalid-feedback">{{ getFieldError('categoria') }}</div>
+            </div>
+
+            <div class="col-md-4">
+              <label for="tipo" class="form-label">Tipo <span class="text-danger">*</span></label>
+              <select id="tipo" class="form-select" formControlName="tipo" [class.is-invalid]="isFieldInvalid('tipo')">
+                <option value="">Seleccione...</option>
+                <option *ngFor="let roomType of formRoomTypes" [value]="roomType.CR02_TipHabita">
+                  {{ roomType.CR02_TipHabita }} - {{ roomType.CR02_NomHabita }}
+                </option>
+              </select>
+              <div class="invalid-feedback">{{ getFieldError('tipo') }}</div>
+            </div>
+
+            <div class="col-md-4">
+              <label for="grupo" class="form-label">Grupo <span class="text-danger">*</span></label>
+              <select id="grupo" class="form-select" formControlName="grupo" [class.is-invalid]="isFieldInvalid('grupo')">
+                <option value="">Seleccione...</option>
+                <option *ngFor="let group of roomGroups" [value]="group.CR04_CodGrp">
+                  {{ group.CR04_CodGrp }} - {{ group.CR04_Descripcion }}
+                </option>
+              </select>
+              <div class="invalid-feedback">{{ getFieldError('grupo') }}</div>
+            </div>
+
+            <div class="col-md-4">
+              <label for="totCamas" class="form-label">Cantidad Camas <span class="text-danger">*</span></label>
+              <input
+                type="number"
+                id="totCamas"
+                class="form-control"
+                formControlName="totCamas"
+                min="1"
+                [class.is-invalid]="isFieldInvalid('totCamas')"
+              >
+              <div class="invalid-feedback">{{ getFieldError('totCamas') }}</div>
+            </div>
+
+            <div class="col-md-4">
+              <label for="totPax" class="form-label">Cantidad Personas <span class="text-danger">*</span></label>
+              <input
+                type="number"
+                id="totPax"
+                class="form-control"
+                formControlName="totPax"
+                min="1"
+                [class.is-invalid]="isFieldInvalid('totPax')"
+              >
+              <div class="invalid-feedback">{{ getFieldError('totPax') }}</div>
+            </div>
+
+            <div class="col-md-8">
+              <label for="descripcion" class="form-label">Descripción <span class="text-danger">*</span></label>
+              <input
+                type="text"
+                id="descripcion"
+                class="form-control"
+                formControlName="descripcion"
+                maxlength="150"
+                [class.is-invalid]="isFieldInvalid('descripcion')"
+              >
+              <div class="invalid-feedback">{{ getFieldError('descripcion') }}</div>
+            </div>
+
+            <div class="col-md-4">
+              <label for="estado" class="form-label">Estado</label>
+              <select id="estado" class="form-select" formControlName="estado">
+                <option *ngFor="let status of estadoOptions" [value]="status.value">{{ status.label }}</option>
+              </select>
+            </div>
+
+            <div class="col-md-4">
+              <label for="clean" class="form-label">Estado Limpieza</label>
+              <select id="clean" class="form-select" formControlName="clean">
+                <option *ngFor="let clean of cleaningOptions" [value]="clean.value">{{ clean.label }}</option>
+              </select>
+            </div>
+
+            <div class="col-md-4">
+              <label for="activo" class="form-label">Activo</label>
+              <select id="activo" class="form-select" formControlName="activo">
+                <option *ngFor="let active of activeOptions" [value]="active.value">{{ active.label }}</option>
+              </select>
+            </div>
+
+            <div class="col-md-4">
+              <label for="anexo" class="form-label">Anexo</label>
+              <input type="text" id="anexo" class="form-control" formControlName="anexo" maxlength="20" [class.is-invalid]="isFieldInvalid('anexo')">
+              <div class="invalid-feedback">{{ getFieldError('anexo') }}</div>
+            </div>
+
+            <div class="col-md-4">
+              <label for="operador" class="form-label">Operador <span class="text-danger">*</span></label>
+              <input
+                type="text"
+                id="operador"
+                class="form-control"
+                formControlName="operador"
+                maxlength="50"
+                [class.is-invalid]="isFieldInvalid('operador')"
+              >
+              <div class="invalid-feedback">{{ getFieldError('operador') }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" (click)="closeModal()" [disabled]="isSaving">
+            Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary" [disabled]="isSaving">
+            <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+            <i class="feather icon-save me-1" *ngIf="!isSaving"></i>
+            Guardar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

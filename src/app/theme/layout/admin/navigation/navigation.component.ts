@@ -1,5 +1,5 @@
 // angular import
-import { Component, output } from '@angular/core';
+import { Component, HostListener, output } from '@angular/core';
 
 // project import
 import { SharedModule } from 'src/app/theme/shared/shared.module';
@@ -38,5 +38,10 @@ export class NavigationComponent {
     if (this.windowWidth < 992) {
       this.NavCollapsedMob.emit();
     }
+  }
+
+  @HostListener('window:resize')
+  onResize(): void {
+    this.windowWidth = window.innerWidth;
   }
 }

@@ -48,13 +48,13 @@ export class ErrorInterceptor implements HttpInterceptor {
 
   private handleForbidden(): void {
     console.warn('Error 403: Acceso prohibido. Token inválido o expirado.');
-    this.toastService.error('Acceso denegado. Su sesión ha expirado.');
+    this.toastService.sessionExpired('Acceso denegado. Su sesión ha expirado.');
     this.performLogout();
   }
 
   private handleConnectionError(): void {
     console.error('Error de conexión con el servidor.');
-    this.toastService.warning('No se puede conectar con el servidor. Verifique su conexión.');
+    this.toastService.connectivityIssue('No fue posible conectar con el servidor. Puede reintentar en unos segundos.');
     // No hacer logout en errores de conexión, permitir reintentos
   }
 
@@ -70,7 +70,7 @@ export class ErrorInterceptor implements HttpInterceptor {
     });
 
     const message = backendMessage || `Error ${error.status}: ${error.statusText}`;
-    this.toastService.error(message);
+    this.dispatchHttpToast(message, error.status);
   }
 
   private async resolveBackendMessage(error: HttpErrorResponse): Promise<string> {
@@ -90,5 +90,29 @@ export class ErrorInterceptor implements HttpInterceptor {
     this.authService.logout().subscribe({
       complete: () => { this.isLogoutInProgress = false; }
     });
+  }
+
+  private dispatchHttpToast(message: string, status: number): void {
+    const normalizedMessage = message.toLowerCase();
+
+    if (this.isPendingMessage(normalizedMessage)) {
+      this.toastService.featurePending(message);
+      return;
+    }
+
+    if (this.isUnavailableMessage(normalizedMessage) || status === 501 || status === 503) {
+      this.toastService.integrationPending(message);
+      return;
+    }
+
+    this.toastService.blockingError(message);
+  }
+
+  private isPendingMessage(message: string): boolean {
+    return /(aun no|aún no|pendiente|proximamente|próximamente|en preparacion|en preparación|por activar)/i.test(message);
+  }
+
+  private isUnavailableMessage(message: string): boolean {
+    return /(no disponible|no habilitad|no configurad|no implementad|falta integrar|integracion pendiente|integración pendiente)/i.test(message);
   }
 }

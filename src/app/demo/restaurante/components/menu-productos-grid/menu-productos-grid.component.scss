@@ -1,0 +1,96 @@
+:host {
+  display: block;
+}
+
+.productos-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.producto-card,
+.productos-empty {
+  border: 1px solid rgba(11, 23, 36, 0.09);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #ffffff, #f8fbff);
+}
+
+.producto-card {
+  display: grid;
+  gap: 9px;
+  min-height: 150px;
+  padding: 12px;
+}
+
+.producto-card h4 {
+  margin: 0 0 8px;
+  color: #10263b;
+  font-size: 0.82rem;
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+.producto-card strong {
+  color: #17d4e0;
+  font-size: 1rem;
+  font-weight: 880;
+}
+
+.producto-card small {
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 760;
+}
+
+.producto-card button {
+  align-self: end;
+  min-height: 32px;
+  border: 0;
+  border-radius: 8px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #17d4e0, #1f6bff);
+  font-size: 0.74rem;
+  font-weight: 820;
+}
+
+.producto-badge {
+  display: inline-flex;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  color: #047857;
+  background: #dcfce7;
+  font-size: 0.7rem;
+  font-weight: 850;
+}
+
+.productos-empty {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  min-height: 160px;
+  color: #64748b;
+  text-align: center;
+}
+
+.productos-empty i {
+  color: #1f6bff;
+  font-size: 1.5rem;
+}
+
+@media (max-width: 1199px) {
+  .productos-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .productos-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .productos-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -44,27 +44,20 @@
       (keydown.space)="seleccionarPuntoVenta(item)"
       role="button"
       tabindex="0"
-      [attr.aria-label]="'Seleccionar ' + item.MPV12_DesPntventa"
+      [attr.aria-label]="'Seleccionar ' + item.MPV07_NomPntVenta"
     >
       <div class="pos-card__media" aria-hidden="true">
         <span class="pos-card__image"></span>
-        <span class="pos-card__terminal">
-          <i class="feather icon-credit-card"></i>
-          <b>{{ item.MPV12_PntVenta }}</b>
-        </span>
         <span class="pos-card__icon">
           <i class="feather" [ngClass]="getIconClass(item)"></i>
         </span>
       </div>
 
       <div class="pos-card__body">
-        <span class="pos-card__type">{{ getTipoPuntoVenta(item) }}</span>
-        <h2>{{ item.MPV12_DesPntventa }}</h2>
-        <p>Centro de consumo {{ item.MPV12_PntVenta }}</p>
+        <h2>{{ item.MPV07_NomPntVenta }}</h2>
       </div>
 
       <footer class="pos-card__footer">
-        <span class="status-pill">Activo</span>
         <span class="pos-card__action">
           Seleccionar
           <i class="feather icon-arrow-right" aria-hidden="true"></i>

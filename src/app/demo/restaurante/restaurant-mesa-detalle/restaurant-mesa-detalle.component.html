@@ -11,7 +11,7 @@
       <article><span>Mesero</span><strong>{{ mesaDetalle.mesero }}</strong></article>
       <article><span>Pax</span><strong>{{ mesaDetalle.personas }}</strong></article>
       <article><span>Tiempo</span><strong>{{ mesaDetalle.tiempoOcupada }}</strong></article>
-      <article><span>Consumo</span><strong>{{ total | currency:'CRC':'symbol':'1.0-0' }}</strong></article>
+      <article><span>Consumo</span><strong>{{ total | currency:monedaActual:'symbol':'1.2-2' }}</strong></article>
     </div>
   </header>
 
@@ -20,7 +20,7 @@
       <h2>Informacion de la Mesa</h2>
       <div class="info-groups">
         <div class="info-group">
-          <div class="info-item"><i class="feather icon-hash"></i><span>Mesa</span><strong>{{ mesaDetalle.numeroMesa }}</strong></div>
+          <div class="info-item"><i class="feather icon-hash"></i><span>Mesa</span><strong class="fs-5 fw-bold">{{ mesaDetalle.numeroMesa }}</strong></div>
           <div class="info-item"><i class="feather icon-layout"></i><span>Salon</span><strong>{{ mesaDetalle.salon }}</strong></div>
           <div class="info-item"><i class="feather icon-activity"></i><span>Estado</span><strong>{{ mesaDetalle.estado }}</strong></div>
         </div>
@@ -28,16 +28,23 @@
         <div class="info-group">
           <div class="info-item"><i class="feather icon-user"></i><span>Mesero</span><strong>{{ mesaDetalle.mesero }}</strong></div>
           <div class="info-item"><i class="feather icon-users"></i><span>Pax</span><strong>{{ mesaDetalle.personas }}</strong></div>
-          <div class="info-item"><i class="feather icon-timer"></i><span>Tiempo</span><strong>{{ mesaDetalle.tiempoOcupada }}</strong></div>
+          <div class="info-item"><i class="feather icon-clock"></i><span>Hora Apertura</span><strong>{{ mesaDetalle.horaApertura }}</strong></div>
         </div>
 
         <div class="info-group">
+          <div class="info-item"><i class="feather icon-watch"></i><span>Tiempo</span><strong>{{ mesaDetalle.tiempoOcupada }}</strong></div>
           <div class="info-item"><i class="feather icon-home"></i><span>Habitacion</span><strong>{{ mesaDetalle.habitacion }}</strong></div>
           <div class="info-item"><i class="feather icon-user-check"></i><span>Cliente</span><strong>{{ mesaDetalle.cliente }}</strong></div>
         </div>
 
-        <div class="info-group info-group--single">
-          <div class="info-item"><i class="feather icon-clock"></i><span>Hora Apertura</span><strong>{{ mesaDetalle.horaApertura }}</strong></div>
+        <div class="info-group" *ngIf="notaPedidoInfo">
+          <div class="info-item"><i class="feather icon-file-text"></i><span>Tipo NP</span><strong>{{ notaPedidoInfo.tipNp }}</strong></div>
+          <div class="info-item"><i class="feather icon-layers"></i><span>Serie</span><strong>{{ notaPedidoInfo.serieNp }}</strong></div>
+          <div class="info-item"><i class="feather icon-check-circle"></i><span>Documento</span><strong>{{ notaPedidoInfo.numNp }}</strong></div>
+        </div>
+
+        <div class="info-group" *ngIf="notaPedidoInfo">
+          <div class="info-item"><i class="feather icon-calendar"></i><span>Fecha NP</span><strong>{{ notaPedidoInfo.fecha }}</strong></div>
         </div>
       </div>
 
@@ -48,51 +55,128 @@
     </article>
 
     <article class="panel panel--consumo" aria-label="Consumo actual">
+      <div class="cuentas-strip" aria-label="Cuentas internas de la mesa">
+        <button
+          type="button"
+          class="cuentas-strip__button"
+          [ngClass]="{ 'cuentas-strip__button--all': cuentaFiltroActual === 0 }"
+          (click)="seleccionarFiltroCuenta(0)"
+        >
+          Ver todas<br />las cuentas
+        </button>
+        <button
+          type="button"
+          class="cuentas-strip__button cuentas-strip__button--number"
+          [ngClass]="{ 'cuentas-strip__button--all': cuentaFiltroActual === cuenta }"
+          (click)="seleccionarFiltroCuenta(cuenta)"
+          *ngFor="let cuenta of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"
+        >
+          {{ cuenta }}
+        </button>
+      </div>
+
       <div class="panel-head">
         <h2>Consumo Actual</h2>
-        <button type="button" class="next-btn next-btn--primary"><i class="feather icon-plus"></i> Agregar Producto</button>
+        <button type="button" class="next-btn next-btn--primary" (click)="abrirCatalogoProductos()">
+          <i class="feather icon-plus"></i> Agregar Producto
+        </button>
       </div>
 
       <div class="consumo-table-wrap">
-        <table class="consumo-table">
+        <table class="consumo-table fw-bold">
+          <colgroup>
+            <col class="consumo-table__col-producto" />
+            <col class="consumo-table__col-numero" />
+            <col class="consumo-table__col-importe" />
+            <col class="consumo-table__col-importe" />
+            <col class="consumo-table__col-cuenta" />
+            <col class="consumo-table__col-acciones" />
+          </colgroup>
           <thead>
             <tr>
               <th>Producto</th>
-              <th>Cantidad</th>
-              <th>Precio Unitario</th>
-              <th>Subtotal</th>
-              <th>Acciones</th>
+              <th class="text-end">Cantidad</th>
+              <th class="text-end">Precio Unitario</th>
+              <th class="text-end">Subtotal</th>
+              <th class="text-center">Cuenta</th>
+              <th class="text-center">Acciones</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let item of consumoActual">
               <td>{{ item.producto }}</td>
-              <td>{{ item.cantidad }}</td>
-              <td>{{ item.precio | currency:'CRC':'symbol':'1.0-0' }}</td>
-              <td>{{ item.subtotal | currency:'CRC':'symbol':'1.0-0' }}</td>
-              <td>
-                <div class="line-actions">
-                  <button type="button" class="icon-btn" aria-label="Editar"><i class="feather icon-edit-2"></i></button>
-                  <button type="button" class="icon-btn icon-btn--danger" aria-label="Eliminar"><i class="feather icon-trash-2"></i></button>
-                </div>
+              <td class="text-end">{{ item.cantidad }}</td>
+              <td class="text-end">{{ item.precio | currency:item.moneda:'symbol':'1.2-2' }}</td>
+              <td class="text-end">{{ item.subtotal | currency:item.moneda:'symbol':'1.2-2' }}</td>
+              <td class="text-center">{{ item.cuenta || '-' }}</td>
+              <td class="text-center">
+                <details class="acciones-dropdown line-dropdown">
+                  <summary><i class="feather icon-more-horizontal"></i></summary>
+                  <div class="acciones-dropdown__menu">
+                    <button
+                      type="button"
+                      class="acciones-dropdown__item acciones-dropdown__item--danger"
+                      [disabled]="isItemEliminando(item)"
+                      (click)="eliminarItem(item)"
+                    >
+                      <i class="feather" [ngClass]="isItemEliminando(item) ? 'icon-loader' : 'icon-x-circle'"></i>
+                      <span>{{ isItemEliminando(item) ? 'Eliminando...' : 'Eliminar Item' }}</span>
+                    </button>
+                    <button type="button" class="acciones-dropdown__item">
+                      <i class="feather icon-percent"></i><span>Descuento Individual</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="acciones-dropdown__item"
+                      [disabled]="isItemDividiendo(item)"
+                      (click)="abrirModalDividirItem(item)"
+                    >
+                      <i class="feather" [ngClass]="isItemDividiendo(item) ? 'icon-loader' : 'icon-scissors'"></i>
+                      <span>{{ isItemDividiendo(item) ? 'Dividiendo...' : 'Dividir Item' }}</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="acciones-dropdown__item"
+                      [disabled]="isCuentaCambiando(item)"
+                      (click)="abrirModalCambiarCuenta(item)"
+                    >
+                      <i class="feather" [ngClass]="isCuentaCambiando(item) ? 'icon-loader' : 'icon-refresh-cw'"></i>
+                      <span>{{ isCuentaCambiando(item) ? 'Cambiando...' : 'Cambiar Cuenta' }}</span>
+                    </button>
+                  </div>
+                </details>
               </td>
+            </tr>
+            <tr *ngIf="!consumoActual.length">
+              <td colspan="6">No hay productos cargados para esta mesa.</td>
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div class="consumo-actions" aria-label="Acciones de consumo">
+        <button type="button" class="consumo-action">
+          <i class="feather icon-shopping-bag"></i>
+          <span>Service</span>
+        </button>
+        <button type="button" class="consumo-action consumo-action--muted">
+          <i class="feather icon-minus-circle"></i>
+          <span>Quitar Servicio [10%]</span>
+        </button>
       </div>
     </article>
 
     <aside class="panel panel--resumen" aria-label="Resumen de cuenta">
       <h2>Resumen de Cuenta</h2>
       <div class="resumen-list">
-        <div><span>Subtotal</span><strong>{{ subtotal | currency:'CRC':'symbol':'1.0-0' }}</strong></div>
-        <div><span>Descuento</span><strong>{{ descuento | currency:'CRC':'symbol':'1.0-0' }}</strong></div>
-        <div><span>Impuestos</span><strong>{{ impuestos | currency:'CRC':'symbol':'1.0-0' }}</strong></div>
-        <div><span>Propina</span><strong>{{ propina | currency:'CRC':'symbol':'1.0-0' }}</strong></div>
+        <div><span>Subtotal</span><strong>{{ subtotal | currency:monedaActual:'symbol':'1.2-2' }}</strong></div>
+        <div><span>Descuento</span><strong>{{ descuento | currency:monedaActual:'symbol':'1.2-2' }}</strong></div>
+        <div><span>Impuestos</span><strong>{{ impuestos | currency:monedaActual:'symbol':'1.2-2' }}</strong></div>
+        <div><span>Propina</span><strong>{{ propina | currency:monedaActual:'symbol':'1.2-2' }}</strong></div>
       </div>
       <div class="resumen-total">
         <span>TOTAL</span>
-        <strong>{{ total | currency:'CRC':'symbol':'1.0-0' }}</strong>
+        <strong class="text-end">{{ total | currency:monedaActual:'symbol':'1.2-2' }}</strong>
       </div>
       <div class="resumen-state">
         <div><span>Metodo de Pago</span><strong class="resumen-badge resumen-badge--pending">Pendiente</strong></div>
@@ -112,18 +196,28 @@
           'action-btn--primary': accion.tipo === 'primary',
           'action-btn--danger': accion.tipo === 'danger'
         }"
+        [style.background]="accion.id === 'regresar-principal' ? 'linear-gradient(135deg, #f59e0b, #f97316)' : null"
+        [style.color]="accion.id === 'regresar-principal' ? '#ffffff' : null"
         (click)="onAccionClick(accion)"
         *ngFor="let accion of acciones"
       >
-        <i class="feather" [ngClass]="accion.icono"></i>
+        <i class="feather fs-5" [ngClass]="accion.icono" [style.color]="accion.id === 'regresar-principal' ? '#ffffff' : null"></i>
         <span>{{ accion.titulo }}</span>
       </button>
     </div>
 
     <div class="acciones-compact acciones-compact--tablet">
-      <button type="button" class="action-btn action-btn--primary" (click)="onAccionClick(acciones[0])">
-        <i class="feather icon-plus"></i>
-        <span>Agregar Producto</span>
+      <button
+        type="button"
+        class="action-btn"
+        [ngClass]="{
+          'action-btn--primary': acciones[0].tipo === 'primary',
+          'action-btn--danger': acciones[0].tipo === 'danger'
+        }"
+        (click)="onAccionClick(acciones[0])"
+      >
+        <i class="feather fs-5" [ngClass]="acciones[0].icono"></i>
+        <span>{{ acciones[0].titulo }}</span>
       </button>
 
       <details class="acciones-dropdown">
@@ -131,13 +225,15 @@
         <div class="acciones-dropdown__menu">
           <ng-container *ngFor="let accion of acciones">
             <button
-              *ngIf="accion.id !== 'agregar-producto'"
+              *ngIf="accion.id !== acciones[0].id"
               type="button"
               class="acciones-dropdown__item"
               [ngClass]="{ 'acciones-dropdown__item--danger': accion.tipo === 'danger' }"
+              [style.background]="accion.id === 'regresar-principal' ? 'rgba(249, 115, 22, 0.14)' : null"
+              [style.color]="accion.id === 'regresar-principal' ? '#b45309' : null"
               (click)="onAccionClick(accion)"
             >
-              <i class="feather" [ngClass]="accion.icono"></i>
+              <i class="feather fs-5" [ngClass]="accion.icono" [style.color]="accion.id === 'regresar-principal' ? '#b45309' : null"></i>
               <span>{{ accion.titulo }}</span>
             </button>
           </ng-container>
@@ -154,13 +250,148 @@
             type="button"
             class="acciones-dropdown__item"
             [ngClass]="{ 'acciones-dropdown__item--danger': accion.tipo === 'danger' }"
+            [style.background]="accion.id === 'regresar-principal' ? 'rgba(249, 115, 22, 0.14)' : null"
+            [style.color]="accion.id === 'regresar-principal' ? '#b45309' : null"
             (click)="onAccionClick(accion)"
           >
-            <i class="feather" [ngClass]="accion.icono"></i>
+            <i class="feather fs-5" [ngClass]="accion.icono" [style.color]="accion.id === 'regresar-principal' ? '#b45309' : null"></i>
             <span>{{ accion.titulo }}</span>
           </button>
         </div>
       </details>
     </div>
   </section>
+
 </section>
+
+<app-restaurant-invoice-dialog
+  *ngIf="showInvoiceDialog && invoiceDialogData"
+  [data]="invoiceDialogData"
+  (closed)="onInvoiceDialogClosed($event)"
+></app-restaurant-invoice-dialog>
+
+<div
+  *ngIf="cuentaModalItem"
+  class="modal d-block"
+  tabindex="-1"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="cambiarCuentaTitle"
+  style="background: rgba(11, 23, 36, 0.52);"
+  (click)="cerrarModalCambiarCuenta()"
+>
+  <div class="modal-dialog modal-dialog-centered modal-sm" role="document" (click)="$event.stopPropagation()">
+    <div class="modal-content border-0 shadow" style="border-radius: 12px; overflow: hidden;">
+      <div class="modal-header border-0 pb-1">
+        <div>
+          <h5 id="cambiarCuentaTitle" class="modal-title fw-bold">Cambiar cuenta</h5>
+          <small class="text-muted">{{ cuentaModalItem.producto }}</small>
+        </div>
+        <button
+          type="button"
+          class="btn-close"
+          aria-label="Cerrar"
+          [disabled]="isCambioCuentaGuardando()"
+          (click)="cerrarModalCambiarCuenta()"
+        ></button>
+      </div>
+
+      <div class="modal-body pt-2">
+        <div class="d-grid gap-2" style="grid-template-columns: repeat(5, minmax(0, 1fr));">
+          <button
+            type="button"
+            class="btn btn-sm"
+            *ngFor="let cuenta of cuentasDisponibles"
+            [ngClass]="cuentaSeleccionada === cuenta ? 'btn-primary' : 'btn-outline-secondary'"
+            [disabled]="isCambioCuentaGuardando()"
+            (click)="seleccionarCuenta(cuenta)"
+          >
+            {{ cuenta }}
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-footer border-0 pt-0">
+        <button
+          type="button"
+          class="btn btn-light"
+          [disabled]="isCambioCuentaGuardando()"
+          (click)="cerrarModalCambiarCuenta()"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          [disabled]="isCambioCuentaGuardando()"
+          (click)="confirmarCambioCuenta()"
+        >
+          {{ isCambioCuentaGuardando() ? 'Confirmando...' : 'Confirmar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div
+  *ngIf="dividirModalItem"
+  class="modal d-block"
+  tabindex="-1"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="dividirItemTitle"
+  style="background: rgba(11, 23, 36, 0.52);"
+  (click)="cerrarModalDividirItem()"
+>
+  <div class="modal-dialog modal-dialog-centered modal-sm" role="document" (click)="$event.stopPropagation()">
+    <div class="modal-content border-0 shadow" style="border-radius: 12px; overflow: hidden;">
+      <div class="modal-header border-0 pb-1">
+        <div>
+          <h5 id="dividirItemTitle" class="modal-title fw-bold">Dividir item</h5>
+          <small class="text-muted">{{ dividirModalItem.producto }}</small>
+        </div>
+        <button
+          type="button"
+          class="btn-close"
+          aria-label="Cerrar"
+          [disabled]="isDividirItemGuardando()"
+          (click)="cerrarModalDividirItem()"
+        ></button>
+      </div>
+
+      <div class="modal-body pt-2">
+        <div class="d-grid gap-2" style="grid-template-columns: repeat(5, minmax(0, 1fr));">
+          <button
+            type="button"
+            class="btn btn-sm"
+            *ngFor="let partes of partesDisponibles"
+            [ngClass]="partesSeleccionadas === partes ? 'btn-primary' : 'btn-outline-secondary'"
+            [disabled]="isDividirItemGuardando()"
+            (click)="seleccionarPartes(partes)"
+          >
+            {{ partes }}
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-footer border-0 pt-0">
+        <button
+          type="button"
+          class="btn btn-light"
+          [disabled]="isDividirItemGuardando()"
+          (click)="cerrarModalDividirItem()"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          [disabled]="isDividirItemGuardando()"
+          (click)="confirmarDividirItem()"
+        >
+          {{ isDividirItemGuardando() ? 'Confirmando...' : 'Confirmar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,6 +1,6 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, map } from 'rxjs';
+import { Observable } from 'rxjs';
 
 import { PuntoVentaUsuario } from '../models/restaurant-operacion.models';
 import { environment } from 'src/environments/environment';
@@ -10,12 +10,11 @@ import { environment } from 'src/environments/environment';
 })
 export class RestaurantPuntoVentaService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = `${environment.apiUrl}/mozoporpuntoventa`;
+  private readonly apiUrl = `${environment.apiUrl || 'http://localhost:5000/api'}/puntoventa/mozos`;
 
   obtenerPuntosVentaPorUsuario(usuario: string): Observable<PuntoVentaUsuario[]> {
-    const normalized = (usuario || '').trim() || 'CHARLY';
-    return this.http
-      .get<PuntoVentaUsuario[]>(`${this.apiUrl}/usuario/${encodeURIComponent(normalized)}`)
-      .pipe(map((items) => (items ?? []).filter((item) => Number(item.MPV12_Activo ?? 0) === 1)));
+    const normalized = (usuario || '').trim() || 'charly';
+    const params = new HttpParams().set('Operador', normalized);
+    return this.http.get<PuntoVentaUsuario[]>(this.apiUrl, { params });
   }
 }

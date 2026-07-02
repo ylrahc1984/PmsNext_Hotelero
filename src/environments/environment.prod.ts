@@ -20,5 +20,6 @@ export const environment = {
   production: true,
   apiUrl: window.__env?.apiUrl || '',
   baseUrl: window.__env?.baseUrl || '',
+  disabledToastTypes: Array.isArray(window.__env?.disabledToastTypes) ? window.__env.disabledToastTypes : ['error'],
   googleMapsApiKey: 'AIzaSyA-o3tTaSdRzt7JBBjRwBzYGNpUEtGyfF8'
 };

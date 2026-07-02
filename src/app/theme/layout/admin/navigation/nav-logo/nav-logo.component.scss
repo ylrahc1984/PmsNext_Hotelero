@@ -12,7 +12,7 @@ $next-muted: rgba(255, 255, 255, 0.72);
   align-items: center;
   justify-content: center;
   min-height: 92px;
-  padding: 18px 22px;
+  padding: 18px 64px 18px 22px;
   background:
     radial-gradient(circle at 50% -16%, rgba($next-cyan, 0.1), transparent 48%),
     linear-gradient(180deg, $next-bg 0%, $next-bg 100%);
@@ -58,10 +58,52 @@ $next-muted: rgba(255, 255, 255, 0.72);
   line-height: 1.2;
 }
 
-.mobile-menu {
+.sidebar-toggle {
   position: absolute;
+  top: 16px;
   right: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  opacity: 0.72;
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba($next-white, 0.14);
+  border-radius: 12px;
+  color: rgba($next-white, 0.88);
+  background: rgba($next-white, 0.06);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14);
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.sidebar-toggle:hover {
+  transform: translateY(-1px);
+  border-color: rgba($next-cyan, 0.4);
+  color: $next-white;
+  background: rgba($next-cyan, 0.14);
+  box-shadow: 0 12px 22px rgba(0, 0, 0, 0.18);
+}
+
+.sidebar-toggle:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba($next-cyan, 0.18), 0 12px 22px rgba(0, 0, 0, 0.18);
+}
+
+.sidebar-toggle .feather {
+  font-size: 1rem;
+}
+
+.sidebar-toggle--collapsed {
+  color: rgba($next-cyan, 0.92);
+  background: rgba($next-blue, 0.14);
+}
+
+@media (max-width: 991.98px) {
+  .sidebar-toggle {
+    display: none;
+  }
 }

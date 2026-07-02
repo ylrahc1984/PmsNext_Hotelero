@@ -22,36 +22,62 @@
   <section class="room-rack-workspace">
     <div class="rooms-column">
       <main class="rooms-panel" aria-label="Mapa de habitaciones">
+        <div *ngIf="isLoading" class="d-inline-flex align-items-center gap-2 mb-2 text-muted fw-semibold small" role="status">
+          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+          <span>Cargando habitaciones...</span>
+        </div>
+
+        <div *ngIf="!isLoading && errorMessage" class="d-inline-flex align-items-center gap-2 mb-2 text-danger fw-semibold small" role="alert">
+          {{ errorMessage }}
+        </div>
+
         <div class="rooms-grid">
           <button
             type="button"
             class="room-card"
+            style="position: relative;"
             *ngFor="let habitacion of habitaciones; trackBy: trackByHabitacion"
             [ngClass]="getEstadoClass(habitacion.estado)"
             (click)="seleccionarHabitacion(habitacion)"
             [attr.aria-label]="'Habitacion ' + habitacion.numero + ' ' + habitacion.categoria"
           >
+            <span
+              [ngStyle]="getCleanIndicatorStyle(habitacion)"
+              [attr.title]="getCleanLabel(habitacion)"
+              [attr.aria-label]="getCleanLabel(habitacion)"
+            ></span>
             <strong>{{ habitacion.numero }}</strong>
             <span>{{ habitacion.categoria }}</span>
           </button>
         </div>
-      </main>
 
-      <footer class="operations-bar" aria-label="Acciones operativas">
-        <button
-          type="button"
-          class="operation-button"
-          *ngFor="let accion of acciones; trackBy: trackByAccion"
-          [class.operation-button--primary]="accion.accent === 'primary'"
-          [class.operation-button--muted]="accion.accent === 'muted'"
-        >
-          <span class="material-icons" aria-hidden="true">{{ accion.icon }}</span>
-          <span>{{ accion.label }}</span>
-        </button>
-      </footer>
+        <div *ngIf="!isLoading && !errorMessage && habitaciones.length === 0" class="d-inline-flex align-items-center gap-2 mt-2 text-muted fw-semibold small">
+          No existen habitaciones para la fecha seleccionada.
+        </div>
+      </main>
     </div>
 
     <aside class="side-panel" aria-label="Informacion operativa">
+      <section class="side-card operations-card">
+        <div class="side-card__header">
+          <span>Acciones</span>
+          <h2>Operativas</h2>
+        </div>
+
+        <div class="operations-bar" aria-label="Acciones operativas">
+          <button
+            type="button"
+            class="operation-button"
+            *ngFor="let accion of acciones; trackBy: trackByAccion"
+            [class.operation-button--primary]="accion.accent === 'primary'"
+            [class.operation-button--muted]="accion.accent === 'muted'"
+          >
+            <span class="material-icons" aria-hidden="true">{{ accion.icon }}</span>
+            <span>{{ accion.label }}</span>
+          </button>
+        </div>
+      </section>
+
       <section class="side-card">
         <div class="side-card__header">
           <span>Leyenda</span>
@@ -72,7 +98,12 @@
           <h2>COL -> USD</h2>
         </div>
 
-        <div class="exchange-values">
+        <div *ngIf="tipoCambioLoading" class="exchange-status exchange-status--loading">
+          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+          <span>Actualizando referencia...</span>
+        </div>
+
+        <div class="exchange-values" [class.exchange-values--muted]="!tipoCambio">
           <div>
             <span>Compra</span>
             <strong>{{ compra | number:'1.2-2' }}</strong>
@@ -81,6 +112,10 @@
             <span>Venta</span>
             <strong>{{ venta | number:'1.2-2' }}</strong>
           </div>
+        </div>
+
+        <div *ngIf="tipoCambioError" class="exchange-status exchange-status--info">
+          {{ tipoCambioError }}
         </div>
       </section>
     </aside>

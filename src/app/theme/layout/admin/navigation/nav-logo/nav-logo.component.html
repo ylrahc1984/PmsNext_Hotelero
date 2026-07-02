@@ -3,5 +3,14 @@
     <span class="brand-system">PMS HOTELERO</span>
     <span class="brand-platform">Hospitality Platform</span>
   </a>
-  <a href="javascript:" class="mobile-menu" [ngClass]="{ on: navCollapsed }" id="mobile-collapse" (click)="navCollapse()"><span></span></a>
+  <button
+    type="button"
+    class="sidebar-toggle"
+    [class.sidebar-toggle--collapsed]="navCollapsed"
+    [attr.aria-label]="navCollapsed ? 'Expandir menú lateral' : 'Ocultar menú lateral'"
+    [attr.title]="navCollapsed ? 'Expandir menú lateral' : 'Ocultar menú lateral'"
+    (click)="navCollapse()"
+  >
+    <i class="feather" [ngClass]="navCollapsed ? 'icon-chevrons-right' : 'icon-chevrons-left'" aria-hidden="true"></i>
+  </button>
 </div>

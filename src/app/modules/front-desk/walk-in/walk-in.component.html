@@ -1,0 +1,309 @@
+<section class="walk-in-page">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+      <ul class="breadcrumb mb-2">
+        <li class="breadcrumb-item"><a routerLink="/front-desk/room-rack">Front Desk</a></li>
+        <li class="breadcrumb-item active">Walk In</li>
+      </ul>
+      <h4 class="mb-1">
+        <i class="feather icon-log-in me-2"></i>
+        Nuevo Walk In
+      </h4>
+      <p class="text-muted mb-0">Ingreso rápido de huéspedes sin reserva previa</p>
+    </div>
+    <div class="room-highlight" *ngIf="selectedRoom() as room">
+      <div class="room-highlight-icon">
+        <i class="feather icon-home"></i>
+      </div>
+      <div class="room-highlight-copy">
+        <span>Habitación</span>
+        <strong>{{ room.CR05_NumHab }}</strong>
+        <small>{{ room.CR05_Descripcion }}</small>
+      </div>
+    </div>
+  </div>
+
+  <form [formGroup]="stayForm">
+    <div class="row g-4 mb-4">
+      <div class="col-xl-8">
+        <div class="card walk-card h-100">
+          <div class="card-header bg-white">
+            <h5 class="mb-0">
+              <i class="feather icon-calendar me-2"></i>
+              Datos de la Estancia
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label">Fecha Entrada <span class="text-danger">*</span></label>
+                <input type="date" class="form-control" formControlName="fechaEntrada" [class.is-invalid]="isStayFieldInvalid('fechaEntrada')">
+                <div class="invalid-feedback">{{ getFieldError(stayForm.controls.fechaEntrada) }}</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Fecha Salida <span class="text-danger">*</span></label>
+                <input type="date" class="form-control" formControlName="fechaSalida" [class.is-invalid]="isStayFieldInvalid('fechaSalida')">
+                <div class="invalid-feedback">{{ getFieldError(stayForm.controls.fechaSalida) }}</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Noches</label>
+                <input type="number" class="form-control" formControlName="noches" readonly>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Cantidad Pax <span class="text-danger">*</span></label>
+                <input type="number" class="form-control" formControlName="cantidadPax" min="1" [class.is-invalid]="isStayFieldInvalid('cantidadPax')">
+                <div class="invalid-feedback">{{ getFieldError(stayForm.controls.cantidadPax) }}</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Cantidad Children</label>
+                <input type="number" class="form-control" formControlName="cantidadChildren" min="0" [class.is-invalid]="isStayFieldInvalid('cantidadChildren')">
+                <div class="invalid-feedback">{{ getFieldError(stayForm.controls.cantidadChildren) }}</div>
+              </div>
+
+              <div class="col-md-6 position-relative">
+                <label class="form-label">Agencia</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  formControlName="agenciaNombre"
+                  placeholder="Buscar agencia..."
+                  autocomplete="off"
+                  (focus)="openAgenciaSuggestions()"
+                >
+                <div class="autocomplete-menu" *ngIf="agenciaSearchOpen">
+                  <button type="button" class="autocomplete-item" *ngFor="let agencia of agenciaSuggestions" (mousedown)="selectAgencia(agencia)">
+                    <strong>{{ agencia.codigo }}</strong>
+                    <span>{{ agencia.descripcion }}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="col-md-6 position-relative">
+                <label class="form-label">Tarifa <span class="text-danger">*</span></label>
+                <input
+                  type="text"
+                  class="form-control"
+                  formControlName="tarifaDescripcion"
+                  placeholder="Buscar tarifa..."
+                  autocomplete="off"
+                  [class.is-invalid]="isStayFieldInvalid('tarifaDescripcion')"
+                  (focus)="openTarifaSuggestions()"
+                >
+                <div class="invalid-feedback">{{ getFieldError(stayForm.controls.tarifaDescripcion) }}</div>
+                <div class="autocomplete-menu" *ngIf="tarifaSearchOpen">
+                  <button type="button" class="autocomplete-item" *ngFor="let tarifa of tarifaSuggestions" (mousedown)="selectTarifa(tarifa)">
+                    <strong>{{ tarifa.codigo }}</strong>
+                    <span>{{ tarifa.descripcion }}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label">Tarifa Noche</label>
+                <input type="number" class="form-control" formControlName="tarifaNoche" min="0" [class.is-invalid]="isStayFieldInvalid('tarifaNoche')">
+                <div class="invalid-feedback">{{ getFieldError(stayForm.controls.tarifaNoche) }}</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Moneda</label>
+                <select class="form-select" formControlName="moneda">
+                  <option value="USD">USD</option>
+                  <option value="CRC">CRC</option>
+                  <option value="EUR">EUR</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Plan Alimentación <span class="text-danger">*</span></label>
+                <select class="form-select" formControlName="planAlimentacion" [class.is-invalid]="isStayFieldInvalid('planAlimentacion')">
+                  <option value="">Seleccione...</option>
+                  <option *ngFor="let plan of planes; trackBy: trackByCode" [value]="plan.codigo">{{ plan.descripcion }}</option>
+                </select>
+                <div class="invalid-feedback">{{ getFieldError(stayForm.controls.planAlimentacion) }}</div>
+              </div>
+
+              <div class="col-12">
+                <label class="form-label">Observaciones</label>
+                <textarea class="form-control" rows="3" formControlName="observaciones" maxlength="500"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-4">
+        <div class="card walk-card summary-card h-100">
+          <div class="card-header bg-white">
+            <h5 class="mb-0">
+              <i class="feather icon-file-text me-2"></i>
+              Resumen de la Reserva
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="summary-line"><span>Habitación</span><strong>{{ summary().habitacion || '-' }}</strong></div>
+            <div class="summary-line"><span>Noches</span><strong>{{ summary().noches }}</strong></div>
+            <div class="summary-line"><span>Pax</span><strong>{{ summary().pax }}</strong></div>
+            <div class="summary-line"><span>Children</span><strong>{{ summary().children }}</strong></div>
+            <div class="summary-line"><span>Tarifa Noche</span><strong>{{ summary().tarifaNoche | number:'1.2-2' }}</strong></div>
+            <hr>
+            <div class="summary-line"><span>Total Habitación</span><strong>{{ summary().totalHabitacion | number:'1.2-2' }}</strong></div>
+            <div class="summary-line"><span>Total Servicios</span><strong>{{ summary().totalServicios | number:'1.2-2' }}</strong></div>
+            <div class="summary-line"><span>Total Incluido</span><strong>{{ summary().totalIncluido | number:'1.2-2' }}</strong></div>
+            <div class="summary-total">
+              <span>TOTAL</span>
+              <strong>{{ summary().total | number:'1.2-2' }} {{ stayForm.controls.moneda.value }}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <div class="card walk-card mb-4">
+    <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <h5 class="mb-0">
+        <i class="feather icon-users me-2"></i>
+        Huéspedes Registrados
+      </h5>
+      <button type="button" class="btn btn-primary btn-sm" (click)="openAddGuestModal()">
+        <i class="feather icon-user-plus me-1"></i>
+        Agregar Huésped
+      </button>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Documento</th>
+              <th>Nombre</th>
+              <th>Apellidos</th>
+              <th>Nacionalidad</th>
+              <th>Fecha Nacimiento</th>
+              <th>Tipo Pax</th>
+              <th class="text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let guest of guests(); trackBy: trackByGuest">
+              <td>{{ guest.numeroDocumento }}</td>
+              <td>{{ guest.nombre }}</td>
+              <td>{{ guest.apellidos }}</td>
+              <td>{{ getNationalityLabel(guest.nacionalidad) }}</td>
+              <td>{{ guest.fechaNacimiento }}</td>
+              <td><span class="badge bg-light text-dark border">{{ getPaxTypeLabel(guest.tipoPax) }}</span></td>
+              <td class="text-center">
+                <div class="btn-group btn-group-sm">
+                  <button type="button" class="btn btn-outline-primary" title="Editar" (click)="openEditGuestModal(guest)">
+                    <i class="feather icon-edit-2"></i>
+                  </button>
+                  <button type="button" class="btn btn-outline-danger" title="Eliminar" (click)="deleteGuest(guest)">
+                    <i class="feather icon-trash-2"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="guests().length === 0">
+              <td colspan="7" class="text-center text-muted py-4">No hay huéspedes registrados.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-end gap-2 mb-4">
+    <button type="button" class="btn btn-light walk-action-btn" (click)="cancel()">
+      <i class="feather icon-x-circle"></i>
+      Cancelar
+    </button>
+    <button type="button" class="btn btn-primary walk-action-btn" (click)="saveWalkIn()" [disabled]="isSaving">
+      <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+      <i class="feather icon-save" *ngIf="!isSaving"></i>
+      Guardar
+    </button>
+  </div>
+</section>
+
+<div class="modal-backdrop fade show" *ngIf="showGuestModal"></div>
+<div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" *ngIf="showGuestModal" (click)="closeGuestModal()">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ isEditingGuest ? 'Editar Huésped' : 'Agregar Huésped' }}</h5>
+        <button type="button" class="btn-close" aria-label="Cerrar" (click)="closeGuestModal()"></button>
+      </div>
+      <form [formGroup]="guestForm" (ngSubmit)="saveGuest()">
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Tipo Documento <span class="text-danger">*</span></label>
+              <select class="form-select" formControlName="tipoDocumento" [class.is-invalid]="isGuestFieldInvalid('tipoDocumento')">
+                <option value="">Seleccione...</option>
+                <option *ngFor="let item of tiposDocumento; trackBy: trackByCode" [value]="item.codigo">{{ item.descripcion }}</option>
+              </select>
+              <div class="invalid-feedback">{{ getFieldError(guestForm.controls.tipoDocumento) }}</div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Número Documento <span class="text-danger">*</span></label>
+              <input class="form-control" formControlName="numeroDocumento" [class.is-invalid]="isGuestFieldInvalid('numeroDocumento')">
+              <div class="invalid-feedback">{{ getFieldError(guestForm.controls.numeroDocumento) }}</div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Nacionalidad <span class="text-danger">*</span></label>
+              <select class="form-select" formControlName="nacionalidad" [class.is-invalid]="isGuestFieldInvalid('nacionalidad')">
+                <option value="">Seleccione...</option>
+                <option *ngFor="let item of nacionalidades; trackBy: trackByCode" [value]="item.CR06_Codigo">{{ item.CR06_Descripcion }}</option>
+              </select>
+              <div class="invalid-feedback">{{ getFieldError(guestForm.controls.nacionalidad) }}</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Nombre <span class="text-danger">*</span></label>
+              <input class="form-control" formControlName="nombre" [class.is-invalid]="isGuestFieldInvalid('nombre')">
+              <div class="invalid-feedback">{{ getFieldError(guestForm.controls.nombre) }}</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Apellidos <span class="text-danger">*</span></label>
+              <input class="form-control" formControlName="apellidos" [class.is-invalid]="isGuestFieldInvalid('apellidos')">
+              <div class="invalid-feedback">{{ getFieldError(guestForm.controls.apellidos) }}</div>
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Dirección</label>
+              <input class="form-control" formControlName="direccion">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Correo</label>
+              <input type="email" class="form-control" formControlName="correo" [class.is-invalid]="isGuestFieldInvalid('correo')">
+              <div class="invalid-feedback">{{ getFieldError(guestForm.controls.correo) }}</div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Fecha Nacimiento <span class="text-danger">*</span></label>
+              <input type="date" class="form-control" formControlName="fechaNacimiento" [class.is-invalid]="isGuestFieldInvalid('fechaNacimiento')">
+              <div class="invalid-feedback">{{ getFieldError(guestForm.controls.fechaNacimiento) }}</div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Tipo Pax <span class="text-danger">*</span></label>
+              <select class="form-select" formControlName="tipoPax" [class.is-invalid]="isGuestFieldInvalid('tipoPax')">
+                <option value="">Seleccione...</option>
+                <option *ngFor="let item of tiposPax; trackBy: trackByCode" [value]="item.CR03_CodTipo">{{ item.CR03_Descripcion }}</option>
+              </select>
+              <div class="invalid-feedback">{{ getFieldError(guestForm.controls.tipoPax) }}</div>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+              <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" role="switch" id="creditoActivo" formControlName="creditoActivo">
+                <label class="form-check-label" for="creditoActivo">Activar Crédito</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" (click)="closeGuestModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="feather icon-save me-1"></i>
+            Guardar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

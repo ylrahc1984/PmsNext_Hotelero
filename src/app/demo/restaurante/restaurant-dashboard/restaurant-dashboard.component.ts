@@ -6,6 +6,9 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   MesaEstado,
   MesaVisual,
+  MozoPuntoVenta,
+  RestauranteMesaOperacion,
+  SelectedRestaurantTableContext,
   SelectedPointOfSale,
   UbicacionMesa
 } from '../models/restaurant-operacion.models';
@@ -42,9 +45,15 @@ export class RestaurantDashboardComponent implements OnInit {
   salonSeleccionado: UbicacionMesa | null = null;
   mesas: MesaVisual[] = [];
   mesaSeleccionada: MesaVisual | null = null;
+  mesaPendienteMozo: MesaVisual | null = null;
+  mozos: MozoPuntoVenta[] = [];
   kpis: RestaurantKpi[] = [];
   isLoading = false;
+  isLoadingMesas = false;
+  isLoadingMozos = false;
   errorMessage = '';
+  mesasErrorMessage = '';
+  mozosErrorMessage = '';
 
   ngOnInit(): void {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
@@ -66,6 +75,11 @@ export class RestaurantDashboardComponent implements OnInit {
     this.salonSeleccionado = null;
     this.mesas = [];
     this.mesaSeleccionada = null;
+    this.mesaPendienteMozo = null;
+    this.mozos = [];
+    this.isLoadingMesas = false;
+    this.mesasErrorMessage = '';
+    this.mozosErrorMessage = '';
     this.rebuildKpis();
 
     this.service
@@ -100,39 +114,88 @@ export class RestaurantDashboardComponent implements OnInit {
   seleccionarSalon(salon: UbicacionMesa): void {
     this.salonSeleccionado = salon;
     this.mesaSeleccionada = null;
-    this.generarMesasDelSalon(salon);
+    this.cerrarSelectorMozo();
+    this.cargarMesasDelSalon(salon);
     this.rebuildKpis();
     this.cdr.markForCheck();
   }
 
-  generarMesasDelSalon(salon: UbicacionMesa): void {
+  cargarMesasDelSalon(salon: UbicacionMesa): void {
+    this.mesas = [];
+    this.mesasErrorMessage = '';
+
     if (this.isRoomService(salon)) {
-      this.mesas = [];
+      this.isLoadingMesas = false;
+      this.rebuildKpis();
       return;
     }
 
-    const total = Math.max(0, Number(salon.MPV09_TotMesas ?? 0));
-    this.mesas = Array.from({ length: total }, (_, index) => {
-      const numero = index + 1;
-      const estado = this.obtenerEstadoDemo(numero);
-      return {
-        numero,
-        nombre: `Mesa ${numero}`,
-        estado,
-        personas: estado === 'OCUPADA' ? this.obtenerPersonasDemo(numero) : undefined,
-        horaReserva: estado === 'RESERVADA' ? this.obtenerHoraReservaDemo(numero) : undefined
-      };
-    });
+    this.isLoadingMesas = true;
+    this.service
+      .obtenerMesasPorUbicacion(this.codPuntoVenta, salon.MPV09_CodUbicacion)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (items) => {
+          if (this.salonSeleccionado?.MPV09_CodUbicacion !== salon.MPV09_CodUbicacion) {
+            return;
+          }
+          this.mesas = items.map((item) => this.mapMesaOperacion(item));
+          this.isLoadingMesas = false;
+          this.rebuildKpis();
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          console.error('Error al cargar mesas del salon:', error);
+          if (this.salonSeleccionado?.MPV09_CodUbicacion !== salon.MPV09_CodUbicacion) {
+            return;
+          }
+          this.mesas = [];
+          this.isLoadingMesas = false;
+          this.mesasErrorMessage = 'No se pudieron cargar las mesas de esta area.';
+          this.rebuildKpis();
+          this.cdr.markForCheck();
+        }
+      });
   }
 
   abrirMesa(mesa: MesaVisual): void {
     this.mesaSeleccionada = mesa;
-    this.router.navigate(['/restaurant/mesa', mesa.numero], {
+    if (mesa.estado === 'OCUPADA') {
+      this.abrirMesaOcupada(mesa);
+      return;
+    }
+    this.mesaPendienteMozo = mesa;
+    this.mozosErrorMessage = '';
+    this.cargarMozos();
+  }
+
+  seleccionarMozo(mozo: MozoPuntoVenta): void {
+    if (!this.salonSeleccionado || !this.mesaPendienteMozo) {
+      return;
+    }
+
+    const context: SelectedRestaurantTableContext = {
+      puntoVenta: this.readSelectedPointOfSale(),
+      areaOperativa: this.salonSeleccionado,
+      mesa: this.mesaPendienteMozo,
+      mozo
+    };
+
+    sessionStorage.setItem('selectedRestaurantTableContext', JSON.stringify(context));
+
+    this.router.navigate(['/restaurant/mesa', this.mesaPendienteMozo.numero], {
       queryParams: {
         puntoVenta: this.codPuntoVenta,
-        ubicacion: this.salonSeleccionado?.MPV09_CodUbicacion
+        ubicacion: this.salonSeleccionado.MPV09_CodUbicacion,
+        mozo: mozo.MPV11_CodUsuario
       }
     });
+  }
+
+  cerrarSelectorMozo(): void {
+    this.mesaPendienteMozo = null;
+    this.isLoadingMozos = false;
+    this.mozosErrorMessage = '';
   }
 
   isRoomService(salon: UbicacionMesa | null): boolean {
@@ -152,7 +215,38 @@ export class RestaurantDashboardComponent implements OnInit {
   }
 
   trackByMesa(_: number, mesa: MesaVisual): number {
-    return mesa.numero;
+    return mesa.idMesa ?? mesa.numero;
+  }
+
+  trackByMozo(_: number, mozo: MozoPuntoVenta): string {
+    return `${mozo.MPV12_PntVenta}-${mozo.MPV11_CodUsuario}`;
+  }
+
+  cargarMozos(): void {
+    if (this.mozos.length > 0) {
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.isLoadingMozos = true;
+    this.service
+      .obtenerMozosPorPuntoVenta(this.codPuntoVenta)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (items) => {
+          this.mozos = items;
+          this.isLoadingMozos = false;
+          this.mozosErrorMessage = items.length === 0 ? 'No hay mozos configurados para este punto de venta.' : '';
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          console.error('Error al cargar mozos del punto de venta:', error);
+          this.mozos = [];
+          this.isLoadingMozos = false;
+          this.mozosErrorMessage = 'No se pudieron cargar los mozos del punto de venta.';
+          this.cdr.markForCheck();
+        }
+      });
   }
 
   private loadPointOfSaleContext(): void {
@@ -178,10 +272,10 @@ export class RestaurantDashboardComponent implements OnInit {
 
   private rebuildKpis(): void {
     const totalAreas = this.ubicaciones.length;
-    const totalMesas = this.ubicaciones.reduce((sum, item) => sum + Number(item.MPV09_TotMesas || 0), 0);
-    const mesasOcupadas = Math.min(totalMesas, Math.round(totalMesas * 0.32));
+    const totalMesas = this.mesas.length || this.ubicaciones.reduce((sum, item) => sum + Number(item.MPV09_TotMesas || 0), 0);
+    const mesasOcupadas = this.mesas.filter((mesa) => mesa.estado === 'OCUPADA').length;
     const mesasLibres = Math.max(totalMesas - mesasOcupadas, 0);
-    const pedidosActivos = Math.max(0, Math.round(mesasOcupadas * 1.4));
+    const pedidosActivos = this.mesas.filter((mesa) => mesa.notaPedido).length;
     const roomService = this.ubicaciones.some((item) => this.isRoomService(item)) ? 'Activo' : 'No configurado';
 
     this.kpis = [
@@ -205,7 +299,7 @@ export class RestaurantDashboardComponent implements OnInit {
         id: 'mesas-ocupadas',
         label: 'Mesas Ocupadas',
         value: String(mesasOcupadas),
-        detail: 'simulado temporal',
+        detail: this.salonSeleccionado?.MPV09_Descripcion || 'area actual',
         icon: 'icon-users',
         accent: 'purple'
       },
@@ -221,7 +315,7 @@ export class RestaurantDashboardComponent implements OnInit {
         id: 'pedidos-activos',
         label: 'Pedidos Activos',
         value: String(pedidosActivos),
-        detail: 'demo operativo',
+        detail: 'notas abiertas',
         icon: 'icon-clipboard',
         accent: 'magenta'
       },
@@ -236,28 +330,90 @@ export class RestaurantDashboardComponent implements OnInit {
     ];
   }
 
-  private obtenerEstadoDemo(numero: number): MesaEstado {
-    if (numero % 17 === 0) {
-      return 'LIMPIEZA';
+  private mapMesaOperacion(item: RestauranteMesaOperacion): MesaVisual {
+    const estado = this.mapEstadoMesa(item);
+    const tipNp = this.normalizeText(item.ppV07_TipNDP);
+    const serieNp = this.normalizeText(item.ppV07_SerieNDP);
+    const numNp = this.normalizeText(item.ppV07_NumNDP);
+    const fecha = this.normalizeDateDDMMYYYY(item.ppV07_FecDocu);
+
+    return {
+      idMesa: Number(item.cpV05_IdMesa || 0),
+      numero: Number(item.cpV05_NumMesa || 0),
+      nombre: this.normalizeText(item.cpV05_Descripcion) || `Mesa ${item.cpV05_NumMesa}`,
+      estado,
+      consumo: item.ppV07_TotalDocu == null ? undefined : Number(item.ppV07_TotalDocu),
+      notaPedido:
+        tipNp && serieNp && numNp && fecha
+          ? {
+              tipNp,
+              serieNp,
+              numNp,
+              fecha,
+              codVendedor: this.normalizeText(item.ppV07_CodVendedor)
+            }
+          : undefined
+    };
+  }
+
+  private mapEstadoMesa(item: RestauranteMesaOperacion): MesaEstado {
+    const estado = this.normalizeText(item.estadoMesa).toUpperCase();
+    if (estado === 'CUENTA' || estado === 'RESERVADA' || estado === 'LIMPIEZA') {
+      return estado;
     }
-    if (numero % 11 === 0) {
-      return 'RESERVADA';
-    }
-    if (numero % 7 === 0) {
-      return 'CUENTA';
-    }
-    if (numero % 3 === 0) {
+    if (estado === 'OCUPADA' || item.ocupada) {
       return 'OCUPADA';
     }
     return 'LIBRE';
   }
 
-  private obtenerPersonasDemo(numero: number): number {
-    return (numero % 5) + 1;
+  private abrirMesaOcupada(mesa: MesaVisual): void {
+    if (!this.salonSeleccionado) {
+      return;
+    }
+
+    const codVendedor = mesa.notaPedido?.codVendedor || '';
+    const context: SelectedRestaurantTableContext = {
+      puntoVenta: this.readSelectedPointOfSale(),
+      areaOperativa: this.salonSeleccionado,
+      mesa,
+      mozo: {
+        MPV11_CodUsuario: codVendedor,
+        MPV11_NomMozo: codVendedor || 'Sin asignar',
+        MPV12_PntVenta: this.codPuntoVenta
+      }
+    };
+    sessionStorage.setItem('selectedRestaurantTableContext', JSON.stringify(context));
+
+    this.router.navigate(['/restaurant/mesa', mesa.numero], {
+      queryParams: {
+        puntoVenta: this.codPuntoVenta,
+        ubicacion: this.salonSeleccionado.MPV09_CodUbicacion,
+        mozo: codVendedor || null,
+        tipNp: mesa.notaPedido?.tipNp || null,
+        serieNp: mesa.notaPedido?.serieNp || null,
+        numNp: mesa.notaPedido?.numNp || null,
+        fecha: mesa.notaPedido?.fecha || null
+      }
+    });
   }
 
-  private obtenerHoraReservaDemo(numero: number): string {
-    const hour = 6 + (numero % 4);
-    return `${hour}:00 PM`;
+  private normalizeText(value: unknown): string {
+    return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '';
+  }
+
+  private normalizeDateDDMMYYYY(value: unknown): string {
+    const normalized = this.normalizeText(value);
+    const slashDate = normalized.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (slashDate) {
+      return `${slashDate[1].padStart(2, '0')}/${slashDate[2].padStart(2, '0')}/${slashDate[3]}`;
+    }
+
+    const isoDate = normalized.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (isoDate) {
+      return `${isoDate[3].padStart(2, '0')}/${isoDate[2].padStart(2, '0')}/${isoDate[1]}`;
+    }
+
+    return normalized;
   }
 }

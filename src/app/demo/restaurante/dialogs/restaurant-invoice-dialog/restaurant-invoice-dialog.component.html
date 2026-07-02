@@ -1,0 +1,160 @@
+<div class="restaurant-invoice-dialog-panel" role="dialog" aria-modal="true" aria-labelledby="invoice-dialog-title">
+  <div class="invoice-backdrop" (click)="cerrar()"></div>
+
+  <section class="invoice-dialog" (click)="$event.stopPropagation()">
+    <header class="invoice-header">
+      <div>
+        <span class="invoice-eyebrow">PMSNext Hotelero</span>
+        <h2 id="invoice-dialog-title">Facturación de Mesa</h2>
+        <p>Mesa {{ data.mesa }} · {{ data.salon }} · {{ data.pax }} Pax</p>
+      </div>
+      <button type="button" class="icon-button" aria-label="Cerrar" (click)="cerrar()" [disabled]="loadingFacturacion">
+        <i class="feather icon-x"></i>
+      </button>
+    </header>
+
+    <nav class="invoice-stepper" aria-label="Proceso de facturacion">
+      <div class="step step--active"><span>1</span><strong>Cliente</strong></div>
+      <div class="step step--active"><span>2</span><strong>Formas de Pago</strong></div>
+      <div class="step"><span>3</span><strong>Confirmación</strong></div>
+    </nav>
+
+    <main class="invoice-body">
+      <section class="invoice-card invoice-card--client">
+        <h3>Cliente</h3>
+        <label class="field-label" for="cliente-search">Buscar por nombre, cédula o RUC...</label>
+        <div class="search-field">
+          <i class="feather icon-search"></i>
+          <input
+            id="cliente-search"
+            type="search"
+            [ngModel]="clienteSearch"
+            (ngModelChange)="onBuscarCliente($event)"
+            placeholder="Buscar por nombre, cédula o RUC..."
+          />
+        </div>
+
+        <div class="client-state" *ngIf="buscandoClientes">
+          <span class="spinner"></span>
+          Buscando clientes...
+        </div>
+        <div class="inline-error" *ngIf="errorClientes">{{ errorClientes }}</div>
+
+        <div class="client-results" *ngIf="clientes.length">
+          <button type="button" class="client-result" *ngFor="let cliente of clientes; trackBy: trackByCodigo" (click)="seleccionarCliente(cliente)">
+            <strong>{{ cliente.nombre }}</strong>
+            <span>{{ cliente.codigo || '-' }} · {{ cliente.ruc || 'Sin identificación' }}</span>
+          </button>
+        </div>
+
+        <article class="selected-client">
+          <div class="selected-client__head">
+            <span>{{ clienteSeleccionado ? 'Cliente seleccionado' : 'Consumidor final' }}</span>
+            <button type="button" *ngIf="clienteSeleccionado" (click)="limpiarCliente()">Cambiar</button>
+          </div>
+          <strong>{{ clienteFacturacion.nombre }}</strong>
+          <dl>
+            <div><dt>Código</dt><dd>{{ clienteFacturacion.codigo || '-' }}</dd></div>
+            <div><dt>Identificación / RUC</dt><dd>{{ clienteFacturacion.ruc || '0000000000' }}</dd></div>
+            <div *ngIf="clienteFacturacion.email"><dt>Correo</dt><dd>{{ clienteFacturacion.email }}</dd></div>
+            <div><dt>Dirección</dt><dd>{{ clienteFacturacion.direccion || 'S/D' }}</dd></div>
+          </dl>
+        </article>
+      </section>
+
+      <section class="invoice-card invoice-card--payments">
+        <div class="card-title-row">
+          <h3>Formas de Pago</h3>
+          <span>{{ data.puntoVenta }}</span>
+        </div>
+        <div class="loading-box" *ngIf="loadingFormasPago">
+          <span class="spinner"></span>
+          Cargando formas de pago...
+        </div>
+        <div class="inline-error" *ngIf="errorFormasPago">{{ errorFormasPago }}</div>
+
+        <div class="payment-form">
+          <label>
+            <span>Forma de pago</span>
+            <select [(ngModel)]="formaPagoSeleccionada" [disabled]="loadingFormasPago || !formasPago.length">
+              <option value="">Seleccionar</option>
+              <option *ngFor="let forma of formasPago; trackBy: trackByCodigo" [value]="forma.CA05_Codigo">
+                {{ forma.CA05_Descripcion }}
+              </option>
+            </select>
+          </label>
+          <label>
+            <span>Monto</span>
+            <input type="number" min="0" step="0.01" [(ngModel)]="montoPago" />
+          </label>
+          <label>
+            <span>Referencia</span>
+            <input type="text" [(ngModel)]="referenciaPago" placeholder="Opcional" />
+          </label>
+          <button type="button" class="add-payment-btn" (click)="agregarPago()" [disabled]="loadingFormasPago">
+            <i class="feather icon-plus"></i>
+          </button>
+        </div>
+        <div class="inline-error" *ngIf="validationMessage">{{ validationMessage }}</div>
+
+        <div class="payments-table" *ngIf="pagosAplicados.length; else pagosEmpty">
+          <table>
+            <thead>
+              <tr>
+                <th>Forma de Pago</th>
+                <th>Referencia</th>
+                <th class="text-end">Monto</th>
+                <th class="text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let pago of pagosAplicados; let i = index; trackBy: trackByPago">
+                <td><strong>{{ pago.descripcion }}</strong><span>{{ pago.frmPago }}</span></td>
+                <td>{{ pago.numTarjeta || '-' }}</td>
+                <td class="text-end">{{ pago.monto | currency:pago.moneda:'symbol':'1.2-2' }}</td>
+                <td class="text-center">
+                  <button type="button" class="row-action" aria-label="Eliminar pago" (click)="eliminarPago(i)">
+                    <i class="feather icon-trash-2"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ng-template #pagosEmpty>
+          <div class="empty-state">
+            <i class="feather icon-credit-card"></i>
+            <strong>Aún no has agregado formas de pago.</strong>
+            <span>Agrega una forma de pago para continuar.</span>
+          </div>
+        </ng-template>
+      </section>
+
+      <aside class="invoice-card invoice-card--summary">
+        <h3>Resumen de la cuenta</h3>
+        <div class="summary-list">
+          <div><span>Subtotal</span><strong>{{ data.subtotal | currency:data.moneda:'symbol':'1.2-2' }}</strong></div>
+          <div><span>Impuestos</span><strong>{{ data.impuesto | currency:data.moneda:'symbol':'1.2-2' }}</strong></div>
+          <div><span>Propina</span><strong>{{ data.propina | currency:data.moneda:'symbol':'1.2-2' }}</strong></div>
+          <div class="summary-total"><span>Total cuenta</span><strong>{{ totalCuenta | currency:data.moneda:'symbol':'1.2-2' }}</strong></div>
+          <div class="summary-paid"><span>Total pagado</span><strong>{{ totalPagado | currency:data.moneda:'symbol':'1.2-2' }}</strong></div>
+          <div class="summary-pending"><span>Pendiente</span><strong>{{ pendiente | currency:data.moneda:'symbol':'1.2-2' }}</strong></div>
+          <div class="summary-change"><span>Cambio</span><strong>{{ cambio | currency:data.moneda:'symbol':'1.2-2' }}</strong></div>
+        </div>
+        <button type="button" class="detail-button" (click)="verDetalleConsumos()">
+          <i class="feather icon-list"></i>
+          Ver detalle de consumos
+        </button>
+      </aside>
+    </main>
+
+    <footer class="invoice-footer">
+      <span *ngIf="loadingFacturacion" class="processing">Procesando facturación...</span>
+      <button type="button" class="secondary-btn" (click)="cerrar()" [disabled]="loadingFacturacion">Cancelar</button>
+      <button type="button" class="primary-btn" (click)="confirmarFacturacion()" [disabled]="!puedeConfirmar">
+        Confirmar Facturación
+      </button>
+    </footer>
+  </section>
+</div>

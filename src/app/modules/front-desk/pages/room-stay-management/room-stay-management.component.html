@@ -1,0 +1,557 @@
+<section class="stay-page" aria-label="Gestion de habitacion ocupada">
+  <header class="stay-header">
+    <div class="room-title">
+      <button type="button" class="back-button" aria-label="Volver al Room Rack" (click)="backToRoomRack()">
+        <span class="material-icons" aria-hidden="true">arrow_back</span>
+      </button>
+      <span class="room-icon material-icons" aria-hidden="true">hotel</span>
+      <div>
+        <div class="title-line">
+          <h1>Habitacion {{ room().roomNumber }}</h1>
+          <span class="status-badge">Ocupada</span>
+        </div>
+        <p>{{ room().roomType }}</p>
+      </div>
+    </div>
+
+    <div class="header-kpis">
+      <article class="mini-kpi">
+        <span class="material-icons" aria-hidden="true">event</span>
+        <div><small>Check In</small><strong>{{ formatHeaderDate(room().checkIn) }}</strong></div>
+      </article>
+      <article class="mini-kpi">
+        <span class="material-icons" aria-hidden="true">event</span>
+        <div><small>Check Out</small><strong>{{ formatHeaderDate(room().checkOut) }}</strong></div>
+      </article>
+      <article class="mini-kpi">
+        <span class="material-icons" aria-hidden="true">nights_stay</span>
+        <div><small>Noches</small><strong>{{ room().nights }}</strong></div>
+      </article>
+      <article class="mini-kpi">
+        <span class="material-icons" aria-hidden="true">groups</span>
+        <div><small>Huespedes</small><strong>{{ room().guestsCount }}</strong></div>
+      </article>
+      <article class="mini-kpi">
+        <span class="material-icons" aria-hidden="true">child_care</span>
+        <div><small>Ninos</small><strong>{{ room().childrenCount }}</strong></div>
+      </article>
+      <article class="mini-kpi balance-kpi">
+        <span class="material-icons" aria-hidden="true">attach_money</span>
+        <div><small>Saldo Actual</small><strong>{{ headerBalance() | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+      </article>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="Secciones de habitacion">
+    @for (tab of tabs; track tab.id) {
+      <button type="button" class="tab-button" [class.active]="activeTab() === tab.id" (click)="setActiveTab(tab.id)">
+        {{ tab.label }}
+      </button>
+    }
+  </nav>
+
+  @if (activeTab() === 'stay') {
+    <main class="dashboard-grid">
+      <section class="card left-stack">
+        <div class="shell-head">
+          <div>
+            <span>Reserva activa</span>
+            <h2>Estancia y Huespedes</h2>
+          </div>
+          <strong>{{ room().reservationNumber }}</strong>
+        </div>
+
+        <article class="card reservation-card">
+          <div class="card-head">
+            <h2>Informacion de la Reserva</h2>
+            <button type="button" class="icon-button" aria-label="Editar reserva">
+              <span class="material-icons" aria-hidden="true">edit</span>
+            </button>
+          </div>
+
+          <div class="reservation-main">
+            <div class="reservation-pair">
+              <label>Agencia</label><strong>{{ room().agency | uppercase }}</strong>
+              <label>Tarifa</label><strong>{{ room().rate | uppercase }}</strong>
+              <label>No. Reserva</label><strong>{{ room().reservationNumber }}</strong>
+            </div>
+            <div class="reservation-pair">
+              <label>Check In</label><strong>{{ room().checkIn }}</strong>
+              <label>Check Out</label><strong>{{ room().checkOut }}</strong>
+              <label>Noches</label><strong>{{ room().nights }}</strong>
+            </div>
+          </div>
+
+          <div class="reservation-foot">
+            <div><label>Folio Master</label><strong>{{ room().masterFolio }}</strong></div>
+            <div><label>Plan</label><strong>{{ room().plan }}</strong></div>
+            <div><label>Reservada el</label><strong>{{ room().reservedAt }}</strong></div>
+          </div>
+        </article>
+
+        <div class="left-lower-stack">
+          <article class="card notes-card">
+            <h2><span class="material-icons" aria-hidden="true">chat_bubble</span> Observaciones y Comentarios</h2>
+            @for (observation of room().observations; track observation) {
+              <p>{{ observation }}</p>
+            }
+          </article>
+
+          <article class="card guest-card">
+            <div class="card-head">
+              <h2>Registro de Huespedes</h2>
+              <button type="button" class="add-button">
+                <span class="material-icons" aria-hidden="true">add</span>
+                Agregar Huesped
+              </button>
+            </div>
+            <div class="table guest-table" role="table" aria-label="Registro de huespedes">
+              <div class="table-row table-head" role="row">
+                <span>#</span><span>Nombre Completo</span><span>Tipo Doc.</span><span>No. Documento</span><span>Nacionalidad</span><span>Fecha Nac.</span><span></span>
+              </div>
+              @for (guest of room().guests; track guest.document; let index = $index) {
+                <div class="table-row" role="row">
+                  <span data-label="#">{{ index + 1 }}</span>
+                  <span data-label="Nombre Completo">{{ guest.name }}</span>
+                  <span data-label="Tipo Doc.">{{ guest.documentType }}</span>
+                  <span data-label="No. Documento">{{ guest.document }}</span>
+                  <span data-label="Nacionalidad">{{ guest.nationality }}</span>
+                  <span data-label="Fecha Nac.">{{ guest.birthDate }}</span>
+                  <span class="more material-icons" aria-hidden="true">more_vert</span>
+                </div>
+              }
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="middle-stack">
+        <section class="card charges-shell">
+          <div class="shell-head charges-shell__head">
+            <div>
+              <span>Folio operativo</span>
+              <h2>Cargos de la Estancia</h2>
+            </div>
+            <strong>{{ totalToCharge() | currency:'USD':'symbol':'1.2-2' }}</strong>
+          </div>
+
+          <article class="ledger-card">
+            <div class="card-head">
+              <h2>Cargos de Hospedaje y Alimentos</h2>
+              <div class="table-tools">
+                <button type="button" class="icon-button" aria-label="Buscar"><span class="material-icons">search</span></button>
+                <button type="button" class="icon-button" aria-label="Filtrar"><span class="material-icons">filter_alt</span></button>
+              </div>
+            </div>
+            <div class="table ledger-table" role="table" aria-label="Cargos de hospedaje y alimentos">
+              <div class="table-row table-head" role="row">
+                <span>Fecha</span><span>Hora</span><span>Concepto</span><span>Referencia</span><span>Cargos (USD)</span><span>Abonos (USD)</span><span>Saldo (USD)</span>
+              </div>
+              @for (charge of room().lodgingCharges; track charge.reference + charge.time) {
+                <div class="table-row" role="row">
+                  <span data-label="Fecha">{{ charge.date }}</span>
+                  <span data-label="Hora">{{ charge.time }}</span>
+                  <span data-label="Concepto">{{ charge.concept }}</span>
+                  <span data-label="Referencia">{{ charge.reference }}</span>
+                  <span data-label="Cargos">{{ charge.charge | number:'1.2-2' }}</span>
+                  <span data-label="Abonos" [class.credit]="charge.payment > 0">{{ charge.payment ? '-' : '' }}{{ charge.payment | number:'1.2-2' }}</span>
+                  <span data-label="Saldo">{{ charge.balance | number:'1.2-2' }}</span>
+                </div>
+              }
+            </div>
+            <div class="ledger-total"><span>Total Hospedaje y Alimentos</span><strong>{{ lodgingSubtotal() | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+          </article>
+
+          <article class="ledger-card ledger-card--extras">
+            <div class="card-head">
+              <h2>Cargos Extras</h2>
+              <div class="table-tools">
+                <button type="button" class="icon-button" aria-label="Buscar"><span class="material-icons">search</span></button>
+                <button type="button" class="icon-button" aria-label="Filtrar"><span class="material-icons">filter_alt</span></button>
+              </div>
+            </div>
+            <div class="table ledger-table" role="table" aria-label="Cargos extras">
+              <div class="table-row table-head" role="row">
+                <span>Fecha</span><span>Hora</span><span>Concepto</span><span>Referencia</span><span>Cargos (USD)</span><span>Abonos (USD)</span><span>Saldo (USD)</span>
+              </div>
+              @for (charge of room().extraCharges; track charge.reference + charge.time) {
+                <div class="table-row" role="row">
+                  <span data-label="Fecha">{{ charge.date }}</span>
+                  <span data-label="Hora">{{ charge.time }}</span>
+                  <span data-label="Concepto">{{ charge.concept }}</span>
+                  <span data-label="Referencia">{{ charge.reference }}</span>
+                  <span data-label="Cargos">{{ charge.charge | number:'1.2-2' }}</span>
+                  <span data-label="Abonos">{{ charge.payment | number:'1.2-2' }}</span>
+                  <span data-label="Saldo">{{ charge.balance | number:'1.2-2' }}</span>
+                </div>
+              }
+            </div>
+            <div class="ledger-total"><span>Total Extras</span><strong>{{ extrasSubtotal() | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+          </article>
+        </section>
+      </section>
+
+      <aside class="card actions-card" aria-label="Acciones">
+        <h2>Acciones</h2>
+        @for (group of operationGroups; track group.title) {
+          <section class="action-section">
+            <h3>{{ group.title === 'Documentos' ? 'Documentos e Impresion' : group.title }}</h3>
+            @for (action of group.actions; track action.label) {
+              <button type="button" class="action-button" [class.danger]="action.tone === 'danger'" [class.primary]="action.tone === 'primary'" (click)="openActionModal(action)">
+                <span class="material-icons" aria-hidden="true">{{ action.icon }}</span>
+                <span>{{ action.label }}</span>
+              </button>
+            }
+          </section>
+        }
+      </aside>
+    </main>
+  }
+
+  @if (activeTab() === 'account') {
+    <main class="single-card card">
+      <h2>Cuenta</h2>
+      <p>Vista financiera detallada disponible en el panel principal de Estancia.</p>
+    </main>
+  }
+
+  @if (activeTab() === 'operations') {
+    <main class="single-card card actions-only">
+      <h2>Operaciones</h2>
+      @for (group of operationGroups; track group.title) {
+        <section class="action-section">
+          <h3>{{ group.title }}</h3>
+          @for (action of group.actions; track action.label) {
+            <button type="button" class="action-button" [class.danger]="action.tone === 'danger'" [class.primary]="action.tone === 'primary'" (click)="openActionModal(action)">
+              <span class="material-icons" aria-hidden="true">{{ action.icon }}</span>
+              <span>{{ action.label }}</span>
+            </button>
+          }
+        </section>
+      }
+    </main>
+  }
+
+  @if (activeTab() === 'timeline') {
+    <main class="single-card card timeline-card" cdkScrollable>
+      <h2>Timeline Operativo</h2>
+      <div class="timeline-list">
+        @for (item of timeline(); track item.time + item.title) {
+          <article class="timeline-item">
+            <span class="timeline-dot" aria-hidden="true"></span>
+            <time>{{ item.time }}</time>
+            <div><h3>{{ item.title }}</h3><p>{{ item.detail }}</p></div>
+          </article>
+        }
+      </div>
+    </main>
+  }
+
+  @if (activeAction(); as action) {
+    <div class="action-modal-backdrop" (click)="closeActionModal()">
+      <section class="action-modal" role="dialog" aria-modal="true" [attr.aria-label]="action.label" [class.action-modal--invoice]="isActionSelected('invoice-room')" (click)="$event.stopPropagation()">
+        @if (isActionSelected('invoice-room')) {
+          <header class="room-invoice-header">
+            <div>
+              <span class="room-invoice-eyebrow">PMSNEXT HOTELERO</span>
+              <h2>Facturacion de Habitacion</h2>
+              <p>Habitacion {{ room().roomNumber }} · {{ room().roomType }} · {{ room().guestsCount }} Pax</p>
+            </div>
+            <button type="button" class="room-invoice-close" aria-label="Cerrar" (click)="closeActionModal()">
+              <span class="material-icons" aria-hidden="true">close</span>
+            </button>
+          </header>
+
+          <nav class="room-invoice-stepper" aria-label="Proceso de facturacion de habitacion">
+            <div class="room-invoice-step room-invoice-step--active"><span>1</span><strong>Cliente</strong></div>
+            <div class="room-invoice-step room-invoice-step--active"><span>2</span><strong>Formas de Pago</strong></div>
+            <div class="room-invoice-step" [class.room-invoice-step--active]="invoiceCanConfirm()"><span>3</span><strong>Confirmacion</strong></div>
+          </nav>
+
+          <main class="room-invoice-body">
+            <section class="room-invoice-card room-invoice-card--client">
+              <h3>Cliente</h3>
+              <label class="room-invoice-label" for="invoice-client-search">Buscar por nombre, documento o reserva...</label>
+              <div class="room-invoice-search">
+                <span class="material-icons" aria-hidden="true">search</span>
+                <input
+                  id="invoice-client-search"
+                  type="search"
+                  [ngModel]="invoiceClientSearch()"
+                  (ngModelChange)="onInvoiceClientSearchChange($event)"
+                  placeholder="Buscar por nombre, documento o reserva..."
+                />
+              </div>
+
+              @if (filteredInvoiceClients().length) {
+                <div class="room-invoice-results">
+                  @for (client of filteredInvoiceClients(); track client.code) {
+                    <button type="button" class="room-invoice-result" (click)="selectInvoiceClient(client)">
+                      <strong>{{ client.name }}</strong>
+                      <span>{{ client.code }} · {{ client.document || 'Sin documento' }}</span>
+                    </button>
+                  }
+                </div>
+              }
+
+              <article class="room-invoice-selected-client">
+                <div class="room-invoice-selected-head">
+                  <span>{{ selectedInvoiceClient() ? 'Cliente seleccionado' : 'Consumidor final' }}</span>
+                  @if (selectedInvoiceClient()) {
+                    <button type="button" (click)="clearInvoiceClient()">Cambiar</button>
+                  }
+                </div>
+                <strong>{{ invoiceClient().name }}</strong>
+                <dl>
+                  <div><dt>Codigo</dt><dd>{{ invoiceClient().code }}</dd></div>
+                  <div><dt>Identificacion / RUC</dt><dd>{{ invoiceClient().document || '0000000000' }}</dd></div>
+                  @if (invoiceClient().email) {
+                    <div><dt>Correo</dt><dd>{{ invoiceClient().email }}</dd></div>
+                  }
+                  <div><dt>Direccion</dt><dd>{{ invoiceClient().address || 'S/D' }}</dd></div>
+                </dl>
+              </article>
+            </section>
+
+            <section class="room-invoice-card room-invoice-card--payments">
+              <div class="room-invoice-title-row">
+                <h3>Formas de Pago</h3>
+                <span>{{ room().plan }}</span>
+              </div>
+
+              <div class="room-invoice-payment-form">
+                <label>
+                  <span>Forma de pago</span>
+                  <select [ngModel]="invoicePaymentDraft().methodCode" (ngModelChange)="updateInvoicePaymentDraft({ methodCode: $event })">
+                    @for (method of invoicePaymentMethods(); track method.code) {
+                      <option [value]="method.code">{{ method.description }}</option>
+                    }
+                  </select>
+                </label>
+                <label>
+                  <span>Monto</span>
+                  <input type="number" min="0" step="0.01" [ngModel]="invoicePaymentDraft().amount" (ngModelChange)="updateInvoicePaymentDraft({ amount: +$event })" />
+                </label>
+                <label>
+                  <span>Referencia</span>
+                  <input type="text" [ngModel]="invoicePaymentDraft().reference" (ngModelChange)="updateInvoicePaymentDraft({ reference: $event })" placeholder="Opcional" />
+                </label>
+                <button type="button" class="room-invoice-add-payment" aria-label="Agregar forma de pago" (click)="addInvoicePayment()">
+                  <span class="material-icons" aria-hidden="true">add</span>
+                </button>
+              </div>
+
+              @if (invoiceValidationMessage()) {
+                <div class="room-invoice-inline-error">{{ invoiceValidationMessage() }}</div>
+              }
+
+              @if (invoiceAppliedPayments().length) {
+                <div class="room-invoice-payments-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Forma de Pago</th>
+                        <th>Referencia</th>
+                        <th class="text-end">Monto</th>
+                        <th class="text-center">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (payment of invoiceAppliedPayments(); track payment.order) {
+                        <tr>
+                          <td><strong>{{ payment.description }}</strong><span>{{ payment.methodCode }}</span></td>
+                          <td>{{ payment.reference || '-' }}</td>
+                          <td class="text-end">{{ payment.amount | currency:'USD':'symbol':'1.2-2' }}</td>
+                          <td class="text-center">
+                            <button type="button" class="room-invoice-row-action" aria-label="Eliminar pago" (click)="removeInvoicePayment(payment.order)">
+                              <span class="material-icons" aria-hidden="true">delete</span>
+                            </button>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              } @else {
+                <div class="room-invoice-empty-state">
+                  <span class="material-icons" aria-hidden="true">credit_card</span>
+                  <strong>Aun no has agregado formas de pago.</strong>
+                  <span>Agrega una forma de pago para continuar.</span>
+                </div>
+              }
+            </section>
+
+            <aside class="room-invoice-card room-invoice-card--summary">
+              <h3>Resumen de la cuenta</h3>
+              <div class="room-invoice-summary-list">
+                <div><span>Subtotal</span><strong>{{ invoiceSubtotal() | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+                <div><span>Impuestos</span><strong>{{ invoiceTaxes() | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+                <div><span>Propina</span><strong>{{ invoiceTip() | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+                <div class="room-invoice-summary-total"><span>Total cuenta</span><strong>{{ invoiceTotal() | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+                <div class="room-invoice-summary-paid"><span>Total pagado</span><strong>{{ invoicePaid() | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+                <div class="room-invoice-summary-pending"><span>Pendiente</span><strong>{{ invoicePending() | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+                <div class="room-invoice-summary-change"><span>Cambio</span><strong>{{ invoiceChange() | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+              </div>
+              <button type="button" class="room-invoice-detail-button" (click)="viewInvoiceChargeDetail()">
+                <span class="material-icons" aria-hidden="true">list</span>
+                Ver detalle de consumos
+              </button>
+            </aside>
+          </main>
+
+          <footer class="room-invoice-footer">
+            <button type="button" class="room-invoice-secondary-btn" (click)="closeActionModal()">Cancelar</button>
+            <button type="button" class="room-invoice-primary-btn" (click)="executeActiveAction()">Confirmar Facturacion</button>
+          </footer>
+        } @else {
+        <header class="action-modal__header">
+          <div>
+            <span class="action-modal__eyebrow">
+              {{ action.kind === 'document' ? 'Documento' : action.kind === 'critical' ? 'Validacion final' : action.kind === 'financial' ? 'Gestion financiera' : 'Operacion guiada' }}
+            </span>
+            <h2>{{ action.label }}</h2>
+            <p>{{ action.description }}</p>
+          </div>
+          <button type="button" class="action-modal__close" aria-label="Cerrar" (click)="closeActionModal()">
+            <span class="material-icons" aria-hidden="true">close</span>
+          </button>
+        </header>
+
+        <div class="action-modal__body">
+          <div class="action-modal__hero" [class.action-modal__hero--danger]="action.kind === 'critical'">
+            <span class="material-icons" aria-hidden="true">{{ action.icon }}</span>
+            <div>
+              <strong>{{ room().roomNumber }} · {{ room().roomType }}</strong>
+              <p>Reserva {{ room().reservationNumber }} · Folio {{ room().masterFolio }}</p>
+            </div>
+          </div>
+
+          <div class="action-modal__summary">
+            @for (item of modalHighlights(); track item.label) {
+              <article>
+                <span>{{ item.label }}</span>
+                <strong>{{ item.value }}</strong>
+              </article>
+            }
+          </div>
+
+          @if (isActionSelected('change-room')) {
+            <div class="action-modal__grid">
+              <label class="action-field">
+                <span>Habitacion destino</span>
+                <select [ngModel]="actionDraft().targetRoom" (ngModelChange)="onTargetRoomChange($event)">
+                  @for (option of roomOptions(); track option.number) {
+                    <option [value]="option.number">{{ option.number }} · {{ option.type }}</option>
+                  }
+                </select>
+              </label>
+
+              <label class="action-field">
+                <span>Tipo sugerido</span>
+                <input type="text" [ngModel]="actionDraft().targetRoomType" (ngModelChange)="updateActionDraft({ targetRoomType: $event })" />
+              </label>
+            </div>
+          }
+
+          @if (isActionSelected('change-departure')) {
+            <div class="action-modal__grid action-modal__grid--single">
+              <label class="action-field">
+                <span>Nueva fecha de salida</span>
+                <input type="date" [ngModel]="actionDraft().newCheckOut" (ngModelChange)="updateActionDraft({ newCheckOut: $event })" />
+              </label>
+            </div>
+          }
+
+          @if (isActionSelected('register-prepayment')) {
+            <div class="action-modal__grid">
+              <label class="action-field">
+                <span>Monto del prepago</span>
+                <input type="number" min="0" step="0.01" [ngModel]="actionDraft().prepaymentAmount" (ngModelChange)="updateActionDraft({ prepaymentAmount: +$event })" />
+              </label>
+
+              <label class="action-field action-field--wide">
+                <span>Observacion interna</span>
+                <textarea rows="3" [ngModel]="actionDraft().notes" (ngModelChange)="updateActionDraft({ notes: $event })"></textarea>
+              </label>
+            </div>
+          }
+
+          @if (isActionSelected('refresh-charges')) {
+            <div class="action-modal__notice">
+              <strong>Sincronizacion operativa</strong>
+              <p>Esta accion agregara un registro de control al folio para reflejar que los cargos fueron refrescados manualmente.</p>
+            </div>
+          }
+
+          @if (isActionSelected('new-charge')) {
+            <div class="action-modal__grid">
+              <label class="action-field action-field--wide">
+                <span>Concepto del cargo</span>
+                <input type="text" [ngModel]="actionDraft().chargeConcept" (ngModelChange)="updateActionDraft({ chargeConcept: $event })" />
+              </label>
+
+              <label class="action-field">
+                <span>Monto</span>
+                <input type="number" min="0" step="0.01" [ngModel]="actionDraft().chargeAmount" (ngModelChange)="updateActionDraft({ chargeAmount: +$event })" />
+              </label>
+
+              <label class="action-field">
+                <span>Aplicar en</span>
+                <select [ngModel]="actionDraft().chargeBucket" (ngModelChange)="updateActionDraft({ chargeBucket: $event })">
+                  <option value="lodging">Hospedaje y alimentos</option>
+                  <option value="extras">Extras</option>
+                </select>
+              </label>
+            </div>
+          }
+
+          @if (isActionSelected('transfer-charges')) {
+            <div class="action-modal__grid">
+              <label class="action-field">
+                <span>Folio destino</span>
+                <input type="text" [ngModel]="actionDraft().destinationFolio" (ngModelChange)="updateActionDraft({ destinationFolio: $event })" />
+              </label>
+
+              <label class="action-field">
+                <span>Monto a transferir</span>
+                <input type="number" min="0" step="0.01" [ngModel]="actionDraft().chargeAmount" (ngModelChange)="updateActionDraft({ chargeAmount: +$event })" />
+              </label>
+            </div>
+          }
+
+          @if (action.kind === 'document') {
+            <div class="action-modal__grid">
+              <label class="action-field">
+                <span>Formato de salida</span>
+                <select [ngModel]="actionDraft().documentFormat" (ngModelChange)="updateActionDraft({ documentFormat: $event })">
+                  <option value="pdf">PDF</option>
+                  <option value="print">Impresion directa</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="action-modal__notice action-modal__notice--soft">
+              <strong>Vista previa operativa</strong>
+              <p>Se utilizara la reserva {{ room().reservationNumber }}, el folio {{ room().masterFolio }} y un total de {{ formatCurrency(totalToCharge()) }} para preparar el documento.</p>
+            </div>
+          }
+
+          @if (action.kind === 'critical') {
+            <div class="action-modal__notice action-modal__notice--danger">
+              <strong>Validacion antes del cierre</strong>
+              <p>La habitacion mantiene un saldo operativo de {{ formatCurrency(currentBalance()) }}. Este flujo dejara rastro en timeline y observaciones antes de un check out definitivo.</p>
+            </div>
+          }
+        </div>
+
+        <footer class="action-modal__footer">
+          <button type="button" class="action-modal__secondary" (click)="closeActionModal()">Cancelar</button>
+          <button type="button" class="action-modal__primary" [class.action-modal__primary--danger]="action.tone === 'danger'" (click)="executeActiveAction()">
+            {{ action.confirmText }}
+          </button>
+        </footer>
+        }
+      </section>
+    </div>
+  }
+</section>

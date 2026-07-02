@@ -54,7 +54,6 @@
           <span class="area-dot"></span>
           <span class="area-info">
             <strong>{{ salon.MPV09_Descripcion }}</strong>
-            <small>{{ salon.MPV09_TotMesas }} mesas · Orden {{ salon.MPV09_Orden }}</small>
           </span>
           <span class="area-status" [class.area-status--inactive]="!isUbicacionActiva(salon)">
             {{ isUbicacionActiva(salon) ? 'Activo' : 'Inactivo' }}
@@ -83,11 +82,26 @@
         </div>
 
         <div class="empty-mesas" *ngIf="!isRoomService(salonSeleccionado) && mesas.length === 0">
-          <h3>No existen mesas configuradas para esta area.</h3>
-          <p>Seleccione otra area operativa o revise la configuración.</p>
+          <ng-container *ngIf="isLoadingMesas; else mesasState">
+            <i class="feather icon-loader" aria-hidden="true"></i>
+            <h3>Cargando mesas...</h3>
+            <p>Consultando la configuracion operativa del area.</p>
+          </ng-container>
+          <ng-template #mesasState>
+            <ng-container *ngIf="mesasErrorMessage; else mesasEmpty">
+              <i class="feather icon-alert-circle" aria-hidden="true"></i>
+              <h3>No se pudieron cargar las mesas.</h3>
+              <p>{{ mesasErrorMessage }}</p>
+              <button type="button" (click)="salonSeleccionado && cargarMesasDelSalon(salonSeleccionado)">Reintentar</button>
+            </ng-container>
+          </ng-template>
+          <ng-template #mesasEmpty>
+            <h3>No existen mesas configuradas para esta area.</h3>
+            <p>Seleccione otra area operativa o revise la configuración.</p>
+          </ng-template>
         </div>
 
-        <div class="tables-grid" *ngIf="!isRoomService(salonSeleccionado) && mesas.length > 0">
+        <div class="tables-grid" *ngIf="!isRoomService(salonSeleccionado) && !isLoadingMesas && mesas.length > 0">
           <button
             type="button"
             class="table-card"
@@ -102,7 +116,7 @@
             <span *ngIf="mesa.estado === 'LIMPIEZA'">Limpieza</span>
             <span *ngIf="mesa.estado === 'RESERVADA'">{{ mesa.horaReserva }}</span>
             <ng-container *ngIf="mesa.estado === 'OCUPADA'">
-              <span>{{ mesa.personas || 0 }} pax</span>
+              <span>Ocupada</span>
             </ng-container>
           </button>
         </div>
@@ -121,5 +135,41 @@
         </div>
       </article>
     </div>
+  </section>
+
+  <section class="mozo-modal" *ngIf="mesaPendienteMozo" role="dialog" aria-modal="true" aria-label="Seleccionar mozo">
+    <article class="mozo-dialog">
+      <header class="mozo-dialog__header">
+        <div>
+          <span class="context-eyebrow">Mesa disponible</span>
+          <h2>Asignar mozo a {{ mesaPendienteMozo.nombre }}</h2>
+          <p>{{ salonSeleccionado?.MPV09_Descripcion }} · {{ codPuntoVenta }}</p>
+        </div>
+        <button type="button" class="mozo-dialog__close" (click)="cerrarSelectorMozo()" aria-label="Cerrar">
+          <i class="feather icon-x" aria-hidden="true"></i>
+        </button>
+      </header>
+
+      <div class="mozo-dialog__empty" *ngIf="isLoadingMozos">
+        <i class="feather icon-loader" aria-hidden="true"></i>
+        <p>Cargando mozos...</p>
+      </div>
+
+      <div class="mozo-dialog__empty" *ngIf="!isLoadingMozos && mozosErrorMessage">
+        <i class="feather icon-alert-circle" aria-hidden="true"></i>
+        <p>{{ mozosErrorMessage }}</p>
+        <button type="button" (click)="cargarMozos()">Reintentar</button>
+      </div>
+
+      <div class="mozo-list" *ngIf="!isLoadingMozos && !mozosErrorMessage">
+        <button type="button" class="mozo-card" *ngFor="let mozo of mozos; trackBy: trackByMozo" (click)="seleccionarMozo(mozo)">
+          <span>
+            <strong>{{ mozo.MPV11_NomMozo }}</strong>
+            <small>{{ mozo.MPV11_CodUsuario }}</small>
+          </span>
+          <i class="feather icon-arrow-right" aria-hidden="true"></i>
+        </button>
+      </div>
+    </article>
   </section>
 </section>

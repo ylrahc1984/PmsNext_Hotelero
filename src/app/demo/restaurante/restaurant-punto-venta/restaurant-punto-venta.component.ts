@@ -57,16 +57,17 @@ export class RestaurantPuntoVentaComponent implements OnInit {
     sessionStorage.setItem(
       'selectedPointOfSale',
       JSON.stringify({
-        codigo: item.MPV12_PntVenta,
-        descripcion: item.MPV12_DesPntventa
+        codigo: item.MPV07_CodPntVenta,
+        descripcion: item.MPV07_NomPntVenta,
+        detalle: item
       })
     );
 
-    this.router.navigate(['/restaurant/dashboard', item.MPV12_PntVenta]);
+    this.router.navigate(['/restaurant/dashboard', item.MPV07_CodPntVenta]);
   }
 
   getIconClass(item: PuntoVentaUsuario): string {
-    const value = `${item.MPV12_DesPntventa || ''} ${item.MPV12_PntVenta || ''}`.toUpperCase();
+    const value = `${item.MPV07_NomPntVenta || ''} ${item.MPV07_CodPntVenta || ''}`.toUpperCase();
     if (value.includes('RESTAURANT') || value.includes('RESTAURANTE')) {
       return 'icon-shopping-cart';
     }
@@ -86,7 +87,7 @@ export class RestaurantPuntoVentaComponent implements OnInit {
   }
 
   getTipoPuntoVenta(item: PuntoVentaUsuario): string {
-    const value = `${item.MPV12_DesPntventa || ''} ${item.MPV12_PntVenta || ''}`.toUpperCase();
+    const value = `${item.MPV07_NomPntVenta || ''} ${item.MPV07_CodPntVenta || ''}`.toUpperCase();
     if (value.includes('BAR')) {
       return 'Bar';
     }
@@ -106,11 +107,11 @@ export class RestaurantPuntoVentaComponent implements OnInit {
   }
 
   trackByPuntoVenta(_: number, item: PuntoVentaUsuario): string {
-    return item.MPV12_PntVenta;
+    return item.MPV07_CodPntVenta;
   }
 
   private get usuarioActual(): string {
     const user = this.auth.getCurrentUser();
-    return (user?.usuario || user?.Usuario || user?.MPV12_CodUsuario || 'CHARLY').toString().trim() || 'CHARLY';
+    return (user?.usuario || user?.Usuario || user?.Operador || 'charly').toString().trim() || 'charly';
   }
 }

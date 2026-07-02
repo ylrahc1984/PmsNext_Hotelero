@@ -35,15 +35,7 @@ export const NavigationItems: NavigationItem[] = [
             url: '/dashboard',
             icon: 'feather icon-grid',
             classes: 'nav-item'
-          },
-          {
-            id: 'indicadores-operativos',
-            title: 'Indicadores Operativos',
-            type: 'item',
-            url: '/dashboard/indicadores-operativos',
-            icon: 'feather icon-bar-chart-2',
-            classes: 'nav-item'
-          },
+          }
         ]
       },
       {
@@ -209,9 +201,7 @@ export const NavigationItems: NavigationItem[] = [
         icon: 'feather icon-settings',
         children: [
           { id: 'usuarios', title: 'Usuarios', type: 'item', url: '/usuarios', icon: 'feather icon-user', classes: 'nav-item' },
-          { id: 'roles-permisos', title: 'Roles y Permisos', type: 'item', url: '/administracion/roles-permisos', icon: 'feather icon-shield', classes: 'nav-item' },
           { id: 'configuracion-general', title: 'Configuración General', type: 'item', url: '/administracion/configuracion', icon: 'feather icon-sliders', classes: 'nav-item' },
-          { id: 'parametros-sistema', title: 'Parámetros del Sistema', type: 'item', url: '/administracion/configuracion/parametros', icon: 'feather icon-list', classes: 'nav-item' },
           { id: 'catalogos-generales', title: 'Catálogos Generales', type: 'item', url: '/administracion/catalogos-generales', icon: 'feather icon-folder', classes: 'nav-item' },
           { id: 'auditoria-sistema', title: 'Auditoría del Sistema', type: 'item', url: '/administracion/auditoria-sistema', icon: 'feather icon-activity', classes: 'nav-item' }
         ]
