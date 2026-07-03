@@ -1,0 +1,396 @@
+<div class="agency-page container-fluid">
+  <div class="row mb-3">
+    <div class="col-12">
+      <ul class="breadcrumb mb-0">
+        <li class="breadcrumb-item">
+          <a routerLink="/dashboard"><i class="feather icon-home"></i></a>
+        </li>
+        <li class="breadcrumb-item">
+          <a>Reservas</a>
+        </li>
+        <li class="breadcrumb-item">
+          <a>Configuración</a>
+        </li>
+        <li class="breadcrumb-item">
+          <a>Agencias</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="agency-header">
+    <div>
+      <span class="agency-header__module">Reservas</span>
+      <h4 class="agency-header__title">
+        <i class="feather icon-share-2 me-2"></i>
+        Administración de Agencias
+      </h4>
+      <p class="agency-header__subtitle mb-0">Catálogo maestro para agencias, canales y segmentos comerciales.</p>
+    </div>
+    <div class="agency-header__meta">
+      <span class="agency-counter">{{ totalRecords }} registros</span>
+    </div>
+  </div>
+
+  <div class="agency-toolbar card">
+    <div class="card-body">
+      <div class="row g-3 align-items-center">
+        <div class="col-xl-5 col-lg-5">
+          <div class="input-group">
+            <span class="input-group-text">
+              <i class="feather icon-search"></i>
+            </span>
+            <input
+              type="search"
+              class="form-control"
+              placeholder="Buscar agencia por nombre..."
+              [formControl]="searchControl"
+              [disabled]="isLoading"
+            >
+          </div>
+        </div>
+
+        <div class="col-xl-7 col-lg-7">
+          <div class="agency-toolbar__actions">
+            <button type="button" class="btn btn-primary" (click)="openCreateModal()" [disabled]="isLoading || isSaving">
+              <i class="feather icon-plus me-1"></i>
+              Nueva Agencia
+            </button>
+            <button type="button" class="btn btn-outline-secondary" (click)="refresh()" [disabled]="isLoading">
+              <i class="feather icon-refresh-cw me-1"></i>
+              Actualizar
+            </button>
+            <button type="button" class="btn btn-outline-secondary" (click)="exportAgencies()">
+              <i class="feather icon-download me-1"></i>
+              Exportar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="agency-list card">
+    <div class="card-body">
+      <div *ngIf="errorMessage" class="alert alert-danger mb-3" role="alert">
+        {{ errorMessage }}
+      </div>
+
+      <div *ngIf="isLoading" class="alert alert-info d-flex align-items-center" role="alert">
+        <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+        <span>Cargando agencias...</span>
+      </div>
+
+      <div class="agency-table table-responsive" *ngIf="agencies.length > 0">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Código</th>
+              <th>Nombre Agencia</th>
+              <th>Contacto</th>
+              <th class="column-tablet">Ciudad</th>
+              <th class="column-tablet">País</th>
+              <th>Mercado</th>
+              <th class="column-tablet">Teléfono</th>
+              <th class="column-desktop">Correo</th>
+              <th class="text-end column-desktop">Descuento %</th>
+              <th class="text-center">Activo</th>
+              <th class="text-center action-column">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let agency of agencies; trackBy: trackByCode">
+              <td>
+                <span class="badge bg-light text-dark">{{ agency.MR01_CodAgencia }}</span>
+              </td>
+              <td>
+                <div class="agency-name">{{ agency.MR01_NomAgencia || 'N/D' }}</div>
+                <div class="agency-meta" *ngIf="agency.MR01_Ruc">{{ agency.MR01_Ruc }}</div>
+              </td>
+              <td>{{ agency.MR01_Contacto || 'N/D' }}</td>
+              <td class="column-tablet">{{ agency.MR01_Ciudad || 'N/D' }}</td>
+              <td class="column-tablet">{{ agency.MR01_Pais || 'N/D' }}</td>
+              <td>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                  {{ agency.MR01_Mercado || 'N/D' }}
+                </span>
+              </td>
+              <td class="column-tablet">{{ agency.MR01_Telefono1 || 'N/D' }}</td>
+              <td class="column-desktop">{{ agency.MR01_Email || 'N/D' }}</td>
+              <td class="text-end column-desktop">{{ agency.MR01_PorDescu || 0 }}</td>
+              <td class="text-center">
+                <span class="badge" [ngClass]="isActive(agency) ? 'bg-success' : 'bg-danger'">
+                  {{ isActive(agency) ? 'Activo' : 'Inactivo' }}
+                </span>
+              </td>
+              <td class="text-center action-column">
+                <div class="agency-action-buttons" role="group" aria-label="Acciones de agencia">
+                  <button
+                    type="button"
+                    class="btn btn-outline-primary agency-action-btn"
+                    (click)="openEditModal(agency)"
+                    [disabled]="isLoading || isSaving"
+                    aria-label="Editar agencia"
+                    title="Editar"
+                  >
+                    <i class="feather icon-edit-2"></i>
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-outline-danger agency-action-btn"
+                    (click)="deleteAgency(agency)"
+                    [disabled]="isLoading || isDeleting"
+                    aria-label="Eliminar agencia"
+                    title="Eliminar"
+                  >
+                    <i class="feather icon-trash-2"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="agency-mobile-list" *ngIf="agencies.length > 0">
+        <article class="agency-mobile-card" *ngFor="let agency of agencies; trackBy: trackByCode">
+          <div class="agency-mobile-card__header">
+            <div>
+              <span class="badge bg-light text-dark">{{ agency.MR01_CodAgencia }}</span>
+              <h5>{{ agency.MR01_NomAgencia || 'N/D' }}</h5>
+            </div>
+            <span class="badge" [ngClass]="isActive(agency) ? 'bg-success' : 'bg-danger'">
+              {{ isActive(agency) ? 'Activo' : 'Inactivo' }}
+            </span>
+          </div>
+          <div class="agency-mobile-card__grid">
+            <span>Contacto</span>
+            <strong>{{ agency.MR01_Contacto || 'N/D' }}</strong>
+            <span>Ubicación</span>
+            <strong>{{ agency.MR01_Ciudad || 'N/D' }} / {{ agency.MR01_Pais || 'N/D' }}</strong>
+            <span>Mercado</span>
+            <strong>{{ agency.MR01_Mercado || 'N/D' }}</strong>
+            <span>Teléfono</span>
+            <strong>{{ agency.MR01_Telefono1 || 'N/D' }}</strong>
+          </div>
+          <div class="agency-mobile-card__actions">
+            <button type="button" class="btn btn-outline-primary btn-sm" (click)="openEditModal(agency)" [disabled]="isLoading || isSaving">
+              <i class="feather icon-edit-2 me-1"></i>
+              Editar
+            </button>
+            <button type="button" class="btn btn-outline-danger btn-sm" (click)="deleteAgency(agency)" [disabled]="isLoading || isDeleting">
+              <i class="feather icon-trash-2 me-1"></i>
+              Eliminar
+            </button>
+          </div>
+        </article>
+      </div>
+
+      <div *ngIf="!isLoading && agencies.length === 0" class="agency-empty">
+        <i class="feather icon-inbox"></i>
+        <p>{{ emptyMessage }}</p>
+        <button type="button" class="btn btn-primary" (click)="openCreateModal()">
+          <i class="feather icon-plus me-1"></i>
+          Nueva Agencia
+        </button>
+      </div>
+
+      <div class="agency-pagination" *ngIf="totalPages > 0">
+        <div class="agency-pagination__summary">
+          Página {{ currentPage }} de {{ totalPages }} · {{ totalRecords }} registros
+        </div>
+
+        <div class="agency-pagination__size">
+          <select class="form-select form-select-sm" [formControl]="pageSizeControl" [disabled]="isLoading">
+            <option *ngFor="let size of pageSizeOptions" [ngValue]="size">{{ size }} registros</option>
+          </select>
+        </div>
+
+        <div class="btn-group btn-group-sm agency-pagination__buttons" role="group" aria-label="Paginación de agencias">
+          <button type="button" class="btn btn-outline-secondary" (click)="goToPage(1)" [disabled]="currentPage === 1 || isLoading">
+            Primera
+          </button>
+          <button type="button" class="btn btn-outline-secondary" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1 || isLoading">
+            Anterior
+          </button>
+          <button type="button" class="btn btn-outline-secondary" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages || isLoading">
+            Siguiente
+          </button>
+          <button type="button" class="btn btn-outline-secondary" (click)="goToPage(totalPages)" [disabled]="currentPage === totalPages || isLoading">
+            Última
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="showModal"></div>
+<div class="modal d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="agencyModalTitle" *ngIf="showModal" (click)="closeModal()">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="agencyModalTitle">
+          <i class="feather icon-share-2 me-2"></i>
+          {{ modalTitle }}
+        </h5>
+        <button type="button" class="btn-close" aria-label="Cerrar" (click)="closeModal()" [disabled]="isSaving"></button>
+      </div>
+
+      <form [formGroup]="agencyForm" (ngSubmit)="saveAgency()">
+        <div class="modal-body">
+          <div class="agency-form-card mb-3">
+            <div class="agency-form-card__title">
+              <i class="feather icon-briefcase"></i>
+              Información General
+            </div>
+
+            <div class="row g-3">
+              <div class="col-lg-3 col-md-4">
+                <label for="codigo" class="form-label">Código <span class="text-danger">*</span></label>
+                <input id="codigo" type="text" class="form-control text-uppercase" formControlName="codigo" maxlength="20" [class.is-invalid]="isFieldInvalid('codigo')">
+                <div class="invalid-feedback">{{ getFieldError('codigo') }}</div>
+              </div>
+
+              <div class="col-lg-3 col-md-4">
+                <label for="ruc" class="form-label">RUC</label>
+                <input id="ruc" type="text" class="form-control" formControlName="ruc" maxlength="30" [class.is-invalid]="isFieldInvalid('ruc')">
+                <div class="invalid-feedback">{{ getFieldError('ruc') }}</div>
+              </div>
+
+              <div class="col-lg-6 col-md-4">
+                <label for="nombreAgencia" class="form-label">Nombre <span class="text-danger">*</span></label>
+                <input id="nombreAgencia" type="text" class="form-control" formControlName="nombreAgencia" maxlength="150" [class.is-invalid]="isFieldInvalid('nombreAgencia')">
+                <div class="invalid-feedback">{{ getFieldError('nombreAgencia') }}</div>
+              </div>
+
+              <div class="col-lg-4 col-md-6">
+                <label for="contacto" class="form-label">Contacto <span class="text-danger">*</span></label>
+                <input id="contacto" type="text" class="form-control" formControlName="contacto" maxlength="120" [class.is-invalid]="isFieldInvalid('contacto')">
+                <div class="invalid-feedback">{{ getFieldError('contacto') }}</div>
+              </div>
+
+              <div class="col-lg-4 col-md-6">
+                <label for="mercado" class="form-label">Mercado</label>
+                <input id="mercado" type="text" class="form-control" formControlName="mercado" maxlength="60" [class.is-invalid]="isFieldInvalid('mercado')">
+                <div class="invalid-feedback">{{ getFieldError('mercado') }}</div>
+              </div>
+
+              <div class="col-lg-2 col-md-6">
+                <label for="primario" class="form-label">Primario</label>
+                <select id="primario" class="form-select" formControlName="primario">
+                  <option [ngValue]="1">Sí</option>
+                  <option [ngValue]="0">No</option>
+                </select>
+              </div>
+
+              <div class="col-lg-2 col-md-6">
+                <label for="activo" class="form-label">Activo</label>
+                <select id="activo" class="form-select" formControlName="activo">
+                  <option [ngValue]="1">Activo</option>
+                  <option [ngValue]="0">Inactivo</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="agency-form-card">
+            <div class="agency-form-card__title">
+              <i class="feather icon-credit-card"></i>
+              Información Comercial
+            </div>
+
+            <div class="row g-3">
+              <div class="col-lg-8">
+                <label for="direccion" class="form-label">Dirección</label>
+                <input id="direccion" type="text" class="form-control" formControlName="direccion" maxlength="250" [class.is-invalid]="isFieldInvalid('direccion')">
+                <div class="invalid-feedback">{{ getFieldError('direccion') }}</div>
+              </div>
+
+              <div class="col-lg-2 col-md-6">
+                <label for="ciudad" class="form-label">Ciudad</label>
+                <input id="ciudad" type="text" class="form-control" formControlName="ciudad" maxlength="80" [class.is-invalid]="isFieldInvalid('ciudad')">
+                <div class="invalid-feedback">{{ getFieldError('ciudad') }}</div>
+              </div>
+
+              <div class="col-lg-2 col-md-6">
+                <label for="pais" class="form-label">País</label>
+                <input id="pais" type="text" class="form-control" formControlName="pais" maxlength="80" [class.is-invalid]="isFieldInvalid('pais')">
+                <div class="invalid-feedback">{{ getFieldError('pais') }}</div>
+              </div>
+
+              <div class="col-lg-3 col-md-6">
+                <label for="telefono1" class="form-label">Teléfono 1</label>
+                <input id="telefono1" type="text" class="form-control" formControlName="telefono1" maxlength="40" [class.is-invalid]="isFieldInvalid('telefono1')">
+                <div class="invalid-feedback">{{ getFieldError('telefono1') }}</div>
+              </div>
+
+              <div class="col-lg-3 col-md-6">
+                <label for="telefono2" class="form-label">Teléfono 2</label>
+                <input id="telefono2" type="text" class="form-control" formControlName="telefono2" maxlength="40" [class.is-invalid]="isFieldInvalid('telefono2')">
+                <div class="invalid-feedback">{{ getFieldError('telefono2') }}</div>
+              </div>
+
+              <div class="col-lg-2 col-md-6">
+                <label for="fax" class="form-label">Fax</label>
+                <input id="fax" type="text" class="form-control" formControlName="fax" maxlength="40" [class.is-invalid]="isFieldInvalid('fax')">
+                <div class="invalid-feedback">{{ getFieldError('fax') }}</div>
+              </div>
+
+              <div class="col-lg-4 col-md-6">
+                <label for="email" class="form-label">Correo</label>
+                <input id="email" type="email" class="form-control" formControlName="email" maxlength="150" [class.is-invalid]="isFieldInvalid('email')">
+                <div class="invalid-feedback">{{ getFieldError('email') }}</div>
+              </div>
+
+              <div class="col-lg-2 col-md-4">
+                <label for="porDescu" class="form-label">Descuento</label>
+                <input id="porDescu" type="number" class="form-control" formControlName="porDescu" min="0" max="100" [class.is-invalid]="isFieldInvalid('porDescu')">
+                <div class="invalid-feedback">{{ getFieldError('porDescu') }}</div>
+              </div>
+
+              <div class="col-lg-2 col-md-4">
+                <label for="codHabita" class="form-label">Código Habitación</label>
+                <input id="codHabita" type="text" class="form-control text-uppercase" formControlName="codHabita" maxlength="20" [class.is-invalid]="isFieldInvalid('codHabita')">
+                <div class="invalid-feedback">{{ getFieldError('codHabita') }}</div>
+              </div>
+
+              <div class="col-lg-2 col-md-4">
+                <label for="numHabita" class="form-label">Número Habitación</label>
+                <input id="numHabita" type="number" class="form-control" formControlName="numHabita" min="0" [class.is-invalid]="isFieldInvalid('numHabita')">
+                <div class="invalid-feedback">{{ getFieldError('numHabita') }}</div>
+              </div>
+
+              <div class="col-lg-2 col-md-4">
+                <label for="codReserva" class="form-label">Código Reserva</label>
+                <input id="codReserva" type="text" class="form-control text-uppercase" formControlName="codReserva" maxlength="20" [class.is-invalid]="isFieldInvalid('codReserva')">
+                <div class="invalid-feedback">{{ getFieldError('codReserva') }}</div>
+              </div>
+
+              <div class="col-lg-2 col-md-4">
+                <label for="numReserva" class="form-label">Número Reserva</label>
+                <input id="numReserva" type="number" class="form-control" formControlName="numReserva" min="0" [class.is-invalid]="isFieldInvalid('numReserva')">
+                <div class="invalid-feedback">{{ getFieldError('numReserva') }}</div>
+              </div>
+
+              <div class="col-lg-2 col-md-4">
+                <label for="operador" class="form-label">Operador</label>
+                <input id="operador" type="text" class="form-control" formControlName="operador" maxlength="50" [class.is-invalid]="isFieldInvalid('operador')">
+                <div class="invalid-feedback">{{ getFieldError('operador') }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" (click)="closeModal()" [disabled]="isSaving">Cancelar</button>
+          <button type="submit" class="btn btn-primary" [disabled]="isSaving">
+            <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+            <i class="feather icon-save me-1" *ngIf="!isSaving"></i>
+            Guardar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

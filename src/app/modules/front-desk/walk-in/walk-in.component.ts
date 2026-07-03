@@ -3,15 +3,17 @@ import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angula
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { debounceTime, distinctUntilChanged, forkJoin, of, switchMap } from 'rxjs';
+import { debounceTime, distinctUntilChanged, finalize, forkJoin, of, switchMap } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import Swal from 'sweetalert2';
 
+import { AuthService } from 'src/app/core/services/auth.service';
 import { ToastService } from 'src/app/core/services/toast.service';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { PaxType } from '../settings/pax-types/models/pax-type.model';
 import { Nationality } from '../settings/nationalities/models/nationality.model';
 import { RoomRackNavigationState } from '../pages/room-rack/models/room-rack-room.model';
-import { WalkInAgenciaOption, WalkInGuest, WalkInOption, WalkInRequest, WalkInTarifaOption } from './models/walk-in.model';
+import { WalkInAgenciaOption, WalkInGuest, WalkInOption, WalkInSavePayload, WalkInStay, WalkInTarifaOption } from './models/walk-in.model';
 import { WalkInService } from './services/walk-in.service';
 
 interface StayForm {
@@ -44,6 +46,13 @@ interface GuestForm {
   creditoActivo: FormControl<boolean>;
 }
 
+interface WalkInDraft {
+  stay: WalkInStay;
+  guests: WalkInGuest[];
+  selectedRoom: RoomRackNavigationState | null;
+  updatedAt: string;
+}
+
 @Component({
   selector: 'app-walk-in',
   standalone: true,
@@ -55,8 +64,11 @@ export class WalkInComponent implements OnInit {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly router = inject(Router);
   private readonly walkInService = inject(WalkInService);
+  private readonly authService = inject(AuthService);
   private readonly toastService = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly draftStorageKey = 'pmsnext.walk-in.draft';
+  private draftRestored = false;
 
   readonly selectedRoom = signal<RoomRackNavigationState | null>(this.resolveSelectedRoom());
   readonly guests = signal<WalkInGuest[]>([]);
@@ -74,12 +86,14 @@ export class WalkInComponent implements OnInit {
     tarifaCodigo: this.fb.control('', { validators: [Validators.required] }),
     tarifaDescripcion: this.fb.control('', { validators: [Validators.required, Validators.maxLength(160)] }),
     tarifaNoche: this.fb.control(0, { validators: [Validators.required, Validators.min(0)] }),
-    moneda: this.fb.control('USD', { validators: [Validators.required] }),
+    moneda: this.fb.control('', { validators: [Validators.required] }),
     planAlimentacion: this.fb.control('', { validators: [Validators.required] }),
     observaciones: this.fb.control('', { validators: [Validators.maxLength(500)] })
   });
 
   readonly stayValue = signal(this.stayForm.getRawValue());
+  readonly agencyModalSearchControl = this.fb.control('');
+  readonly tarifaModalSearchControl = this.fb.control('');
 
   readonly guestForm: FormGroup<GuestForm> = this.fb.group({
     tipoDocumento: this.fb.control('', { validators: [Validators.required] }),
@@ -119,17 +133,35 @@ export class WalkInComponent implements OnInit {
   tiposPax: PaxType[] = [];
   planes: WalkInOption[] = [];
   agenciaSuggestions: WalkInAgenciaOption[] = [];
+  agencyModalAgencies: WalkInAgenciaOption[] = [];
   tarifaSuggestions: WalkInTarifaOption[] = [];
+  tarifaModalTarifas: WalkInTarifaOption[] = [];
+  private allTarifas: WalkInTarifaOption[] = [];
 
   isCatalogLoading = false;
   isSaving = false;
   showGuestModal = false;
+  showAgencyModal = false;
+  showTarifaModal = false;
   isEditingGuest = false;
   editingGuestId = '';
   agenciaSearchOpen = false;
+  agencyModalLoading = false;
+  agencyModalError = '';
+  agencyModalPage = 1;
+  agencyModalPageSize = 10;
+  agencyModalTotalRecords = 0;
+  agencyModalTotalPages = 0;
   tarifaSearchOpen = false;
+  tarifaModalLoading = false;
+  tarifaModalError = '';
+  tarifaModalPage = 1;
+  tarifaModalPageSize = 10;
+  tarifaModalTotalRecords = 0;
+  tarifaModalTotalPages = 0;
 
   ngOnInit(): void {
+    this.restoreDraft();
     this.patchRoom();
     this.loadCatalogs();
     this.bindStayCalculations();
@@ -164,6 +196,30 @@ export class WalkInComponent implements OnInit {
   closeGuestModal(): void {
     this.showGuestModal = false;
     this.guestForm.markAsUntouched();
+  }
+
+  openAgencyModal(): void {
+    this.showAgencyModal = true;
+    this.agenciaSearchOpen = false;
+    this.agencyModalSearchControl.setValue(this.getCurrentAgencySearchTerm(), { emitEvent: false });
+    this.loadAgencyModalPage(1);
+  }
+
+  closeAgencyModal(): void {
+    this.showAgencyModal = false;
+    this.agencyModalError = '';
+  }
+
+  openTarifaModal(): void {
+    this.showTarifaModal = true;
+    this.tarifaSearchOpen = false;
+    this.tarifaModalSearchControl.setValue(this.getCurrentTarifaSearchTerm(), { emitEvent: false });
+    this.loadTarifasModal();
+  }
+
+  closeTarifaModal(): void {
+    this.showTarifaModal = false;
+    this.tarifaModalError = '';
   }
 
   openAgenciaSuggestions(): void {
@@ -201,42 +257,127 @@ export class WalkInComponent implements OnInit {
     this.guests.update((items) =>
       this.isEditingGuest ? items.map((item) => (item.id === guest.id ? guest : item)) : [...items, guest]
     );
+    this.persistDraft();
     this.closeGuestModal();
   }
 
   deleteGuest(guest: WalkInGuest): void {
     this.guests.update((items) => items.filter((item) => item.id !== guest.id));
+    this.persistDraft();
   }
 
   selectAgencia(agencia: WalkInAgenciaOption): void {
     this.stayForm.patchValue(
       {
         agenciaCodigo: agencia.codigo,
-        agenciaNombre: `${agencia.codigo} - ${agencia.descripcion}`
+        agenciaNombre: this.buildAgenciaLabel(agencia)
       },
       { emitEvent: false }
     );
     this.syncStayValue();
+    this.persistDraft();
     this.agenciaSuggestions = [];
     this.agenciaSearchOpen = false;
+    this.showAgencyModal = false;
+  }
+
+  loadAgencyModalPage(page: number): void {
+    const normalizedPage = Math.max(page, 1);
+    const searchTerm = this.agencyModalSearchControl.value.trim();
+    const pageSize = searchTerm.length >= 2 ? 50 : 10;
+    this.agencyModalLoading = true;
+    this.agencyModalError = '';
+
+    const request =
+      searchTerm.length >= 2
+        ? this.walkInService.buscarAgenciasPorNombre(searchTerm, normalizedPage, pageSize)
+        : this.walkInService.getAgenciasPaginadas(normalizedPage, pageSize);
+
+    request
+      .pipe(
+        finalize(() => {
+          this.agencyModalLoading = false;
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (response) => {
+          this.agencyModalAgencies = response.datos;
+          this.agencyModalPage = response.paginaActual || normalizedPage;
+          this.agencyModalPageSize = response.tamanoPagina || pageSize;
+          this.agencyModalTotalRecords = response.totalRegistros || response.datos.length;
+          this.agencyModalTotalPages = response.totalPaginas || (response.datos.length ? 1 : 0);
+        },
+        error: () => {
+          this.agencyModalAgencies = [];
+          this.agencyModalTotalRecords = 0;
+          this.agencyModalTotalPages = 0;
+          this.agencyModalError = 'No se pudo cargar la lista de agencias.';
+        }
+      });
+  }
+
+  goToAgencyModalPage(page: number): void {
+    if (this.agencyModalLoading || page < 1 || (this.agencyModalTotalPages > 0 && page > this.agencyModalTotalPages)) {
+      return;
+    }
+
+    this.loadAgencyModalPage(page);
   }
 
   selectTarifa(tarifa: WalkInTarifaOption): void {
     this.stayForm.patchValue(
       {
         tarifaCodigo: tarifa.codigo,
-        tarifaDescripcion: `${tarifa.codigo} - ${tarifa.descripcion}`,
-        moneda: tarifa.moneda || this.stayForm.controls.moneda.value,
+        tarifaDescripcion: this.buildTarifaLabel(tarifa),
+        moneda: tarifa.moneda,
         tarifaNoche: tarifa.tarifaNoche || this.stayForm.controls.tarifaNoche.value
       },
       { emitEvent: false }
     );
     this.syncStayValue();
+    this.persistDraft();
     this.tarifaSuggestions = [];
     this.tarifaSearchOpen = false;
+    this.showTarifaModal = false;
   }
 
-  saveWalkIn(): void {
+  loadTarifasModal(): void {
+    this.tarifaModalLoading = true;
+    this.tarifaModalError = '';
+
+    this.walkInService
+      .getTarifasReserva()
+      .pipe(
+        finalize(() => {
+          this.tarifaModalLoading = false;
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (items) => {
+          this.allTarifas = items;
+          this.applyTarifaModalFilter(1);
+        },
+        error: () => {
+          this.allTarifas = [];
+          this.tarifaModalTarifas = [];
+          this.tarifaModalTotalRecords = 0;
+          this.tarifaModalTotalPages = 0;
+          this.tarifaModalError = 'No se pudo cargar la lista de tarifas.';
+        }
+      });
+  }
+
+  goToTarifaModalPage(page: number): void {
+    if (this.tarifaModalLoading || page < 1 || (this.tarifaModalTotalPages > 0 && page > this.tarifaModalTotalPages)) {
+      return;
+    }
+
+    this.applyTarifaModalFilter(page);
+  }
+
+  async saveWalkIn(): Promise<void> {
     if (this.stayForm.invalid || !this.selectedRoom() || this.guests().length === 0 || !this.isValidDateRange()) {
       this.stayForm.markAllAsTouched();
       this.toastService.addToast({
@@ -247,12 +388,22 @@ export class WalkInComponent implements OnInit {
       return;
     }
 
+    const confirmation = await Swal.fire({
+      title: 'Guardar Walk In',
+      text: 'Se registrará el Walk In con la información capturada. ¿Desea continuar?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, guardar',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true
+    });
+
+    if (!confirmation.isConfirmed) {
+      return;
+    }
+
     this.isSaving = true;
-    const payload: WalkInRequest = {
-      estancia: this.stayForm.getRawValue(),
-      huespedes: this.guests(),
-      habitacionSeleccionada: this.selectedRoom()
-    };
+    const payload = this.buildWalkInPayload();
 
     this.walkInService
       .createWalkIn(payload)
@@ -260,6 +411,7 @@ export class WalkInComponent implements OnInit {
       .subscribe({
         next: () => {
           this.isSaving = false;
+          this.clearDraft();
           this.toastService.addToast({ title: 'Walk In', message: 'Walk In preparado correctamente.', type: 'success' });
         },
         error: () => {
@@ -309,13 +461,29 @@ export class WalkInComponent implements OnInit {
     return item.codigo ?? item.CR06_Codigo ?? item.CR03_CodTipo ?? '';
   }
 
+  getAgencyModalSearchLabel(): string {
+    const term = this.agencyModalSearchControl.value.trim();
+    return term ? `Resultados para "${term}"` : 'Agencias registradas';
+  }
+
+  getTarifaModalSearchLabel(): string {
+    const term = this.tarifaModalSearchControl.value.trim();
+    return term ? `Resultados para "${term}"` : 'Tarifas registradas';
+  }
+
   private patchRoom(): void {
     const room = this.selectedRoom();
     if (!room) return;
 
-    this.stayForm.controls.habitacion.setValue(room.CR05_NumHab, { emitEvent: false });
-    this.stayForm.controls.cantidadPax.setValue(Math.max(Number(room.CR05_NumPax || 1), 1), { emitEvent: false });
+    if (!this.draftRestored) {
+      this.stayForm.controls.habitacion.setValue(room.CR05_NumHab, { emitEvent: false });
+      this.stayForm.controls.cantidadPax.setValue(Math.max(Number(room.CR05_NumPax || 1), 1), { emitEvent: false });
+    } else if (!this.stayForm.controls.habitacion.value) {
+      this.stayForm.controls.habitacion.setValue(room.CR05_NumHab, { emitEvent: false });
+    }
+
     this.syncStayValue();
+    this.persistDraft();
   }
 
   private loadCatalogs(): void {
@@ -332,13 +500,16 @@ export class WalkInComponent implements OnInit {
         this.nacionalidades = nacionalidades;
         this.tiposPax = tiposPax;
         this.planes = planes;
-        this.applyDemoDefaults();
+        this.applyCatalogDefaults();
         this.isCatalogLoading = false;
       });
   }
 
   private bindStayCalculations(): void {
-    this.stayForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.syncStayValue());
+    this.stayForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.syncStayValue();
+      this.persistDraft();
+    });
     this.stayForm.controls.fechaEntrada.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.updateNights());
     this.stayForm.controls.fechaSalida.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.updateNights());
   }
@@ -352,8 +523,25 @@ export class WalkInComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((items) => {
+        this.clearAgencyCodeIfTypedManually();
         this.agenciaSuggestions = items;
         this.agenciaSearchOpen = items.length > 0;
+      });
+
+    this.agencyModalSearchControl.valueChanges
+      .pipe(debounceTime(350), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (this.showAgencyModal) {
+          this.loadAgencyModalPage(1);
+        }
+      });
+
+    this.tarifaModalSearchControl.valueChanges
+      .pipe(debounceTime(250), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (this.showTarifaModal) {
+          this.applyTarifaModalFilter(1);
+        }
       });
 
     this.stayForm.controls.tarifaDescripcion.valueChanges
@@ -364,6 +552,7 @@ export class WalkInComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((items) => {
+        this.clearTarifaCodeIfTypedManually();
         this.tarifaSuggestions = items;
         this.tarifaSearchOpen = items.length > 0;
       });
@@ -377,27 +566,254 @@ export class WalkInComponent implements OnInit {
     this.syncStayValue();
   }
 
-  private applyDemoDefaults(): void {
-    const agencia = this.walkInService.getDemoAgenciaPrincipal();
-    const tarifa = this.walkInService.getDemoTarifas()[0];
+  private applyCatalogDefaults(): void {
+    if (this.stayForm.controls.planAlimentacion.value) {
+      return;
+    }
 
     this.stayForm.patchValue(
       {
-        agenciaCodigo: agencia.codigo,
-        agenciaNombre: `${agencia.codigo} - ${agencia.descripcion}`,
-        planAlimentacion: this.planes[0]?.codigo ?? '',
-        tarifaCodigo: tarifa.codigo,
-        tarifaDescripcion: `${tarifa.codigo} - ${tarifa.descripcion}`,
-        tarifaNoche: tarifa.tarifaNoche,
-        moneda: tarifa.moneda
+        planAlimentacion: this.planes[0]?.codigo ?? ''
       },
       { emitEvent: false }
     );
     this.syncStayValue();
+    this.persistDraft();
   }
 
   private syncStayValue(): void {
     this.stayValue.set(this.stayForm.getRawValue());
+  }
+
+  private buildWalkInPayload(): WalkInSavePayload {
+    const raw = this.stayForm.getRawValue();
+    const room = this.selectedRoom();
+    const operador = this.getOperador();
+    const noches = Number(raw.noches || 0);
+    const tarifa = Number(raw.tarifaNoche || 0);
+    const totalHabitacion = noches * tarifa;
+    const habitacion = String(raw.habitacion || room?.CR05_NumHab || '');
+
+    return {
+      proceso: 1,
+      codReserva: '',
+      codAgencia: this.safeString(raw.agenciaCodigo),
+      codTarifa: this.safeString(raw.tarifaCodigo),
+      codPlan: this.safeString(raw.planAlimentacion),
+      fecIngreso: this.formatDateForApi(raw.fechaEntrada),
+      fecSalida: this.formatDateForApi(raw.fechaSalida),
+      fecCreacion: this.formatDateForApi(new Date()),
+      fecConfirma: '',
+      fecPrepago: '',
+      fecAnulada: '',
+      totNoches: noches,
+      totDias: noches + 1,
+      descripcion: this.safeString(raw.tarifaDescripcion),
+      tCambio: 0,
+      folio: '',
+      estado: '1',
+      moneda: this.safeString(raw.moneda),
+      totalRsv: this.summary().total,
+      observaciones: this.safeString(raw.observaciones),
+      procesa: 0,
+      numHabitacion: habitacion,
+      categoria: this.safeString(room?.CR05_CateHab),
+      tipo: this.safeString(room?.CR05_TipoHab),
+      numPax: Number(raw.cantidadPax || 0),
+      numChild: Number(raw.cantidadChildren || 0),
+      lCredito: this.guests().some((guest) => guest.creditoActivo) ? 1 : 0,
+      mtoCredito: 0,
+      numTarjeta: '',
+      vence: '',
+      autoriza: '',
+      tarifa,
+      operador,
+      detHab: [
+        {
+          catHabita: this.safeString(room?.CR05_CateHab),
+          tipHabita: this.safeString(room?.CR05_TipoHab),
+          cantHab: 1,
+          precio: tarifa,
+          moneda: this.safeString(raw.moneda),
+          total: totalHabitacion,
+          cpl: 0,
+          impuesto: 0,
+          numPax: Number(raw.cantidadPax || 0),
+          numChild: Number(raw.cantidadChildren || 0),
+          totChild: Number(raw.cantidadChildren || 0),
+          cCosto: '',
+          orden: 1
+        }
+      ],
+      detInclu: [],
+      detSrv: [],
+      detRoom: this.guests().map((guest, index) => ({
+        numHabita: habitacion,
+        codNacional: this.safeString(guest.nacionalidad),
+        tipDocu: this.safeString(guest.tipoDocumento),
+        numDocu: this.safeString(guest.numeroDocumento),
+        nombre: this.safeString(guest.nombre),
+        apellidos: this.safeString(guest.apellidos),
+        fecNaci: this.formatDateForApi(guest.fechaNacimiento),
+        sexo: '',
+        estCivil: '',
+        tipoPax: this.safeString(guest.tipoPax),
+        direccion: this.safeString(guest.direccion),
+        email: this.safeString(guest.correo),
+        motivo: '',
+        procede: '',
+        mdoArribo: '',
+        orden: index + 1,
+        operador
+      }))
+    };
+  }
+
+  private restoreDraft(): void {
+    const draft = this.readDraft();
+    if (!draft) return;
+
+    const navigationRoom = this.selectedRoom();
+    if (navigationRoom && !this.isSameDraftRoom(draft, navigationRoom)) {
+      this.clearDraft();
+      return;
+    }
+
+    if (!navigationRoom && draft.selectedRoom) {
+      this.selectedRoom.set(draft.selectedRoom);
+    }
+
+    this.stayForm.patchValue(draft.stay, { emitEvent: false });
+    this.guests.set(Array.isArray(draft.guests) ? draft.guests : []);
+    this.draftRestored = true;
+    this.syncStayValue();
+  }
+
+  private readDraft(): WalkInDraft | null {
+    try {
+      const raw = localStorage.getItem(this.draftStorageKey);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as Partial<WalkInDraft>;
+      if (!parsed?.stay) return null;
+
+      return {
+        stay: parsed.stay as WalkInStay,
+        guests: Array.isArray(parsed.guests) ? parsed.guests : [],
+        selectedRoom: parsed.selectedRoom ?? null,
+        updatedAt: this.safeString(parsed.updatedAt)
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private persistDraft(): void {
+    try {
+      const draft: WalkInDraft = {
+        stay: this.stayForm.getRawValue(),
+        guests: this.guests(),
+        selectedRoom: this.selectedRoom(),
+        updatedAt: new Date().toISOString()
+      };
+      localStorage.setItem(this.draftStorageKey, JSON.stringify(draft));
+    } catch {
+      // Draft persistence should never block the operational flow.
+    }
+  }
+
+  private clearDraft(): void {
+    try {
+      localStorage.removeItem(this.draftStorageKey);
+    } catch {
+      // Ignore storage cleanup errors.
+    }
+  }
+
+  private isSameDraftRoom(draft: WalkInDraft, room: RoomRackNavigationState): boolean {
+    const draftRoom = Number(draft.selectedRoom?.CR05_NumHab || draft.stay?.habitacion || 0);
+    return draftRoom === Number(room.CR05_NumHab || 0);
+  }
+
+  private getOperador(): string {
+    const user = this.authService.getCurrentUser();
+    return this.safeString(user?.usuario || user?.nombre || 'SISTEMA');
+  }
+
+  private safeString(value: unknown): string {
+    return value == null ? '' : String(value).trim();
+  }
+
+  private formatDateForApi(value: unknown): string {
+    const text = this.safeString(value);
+    if (!text) return '';
+
+    const isoMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(text);
+    if (isoMatch) {
+      return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
+    }
+
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(text)) {
+      return text;
+    }
+
+    const date = value instanceof Date ? value : new Date(text);
+    if (Number.isNaN(date.getTime())) {
+      return text;
+    }
+
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    return `${day}/${month}/${date.getFullYear()}`;
+  }
+
+  private buildAgenciaLabel(agencia: WalkInAgenciaOption): string {
+    return [agencia.codigo, agencia.descripcion].filter(Boolean).join(' - ');
+  }
+
+  private buildTarifaLabel(tarifa: WalkInTarifaOption): string {
+    return [tarifa.codigo, tarifa.descripcion].filter(Boolean).join(' - ');
+  }
+
+  private applyTarifaModalFilter(page: number): void {
+    const filtered = this.walkInService.filterTarifas(this.allTarifas, this.tarifaModalSearchControl.value);
+    const totalPages = Math.ceil(filtered.length / this.tarifaModalPageSize);
+    const normalizedPage = Math.min(Math.max(page, 1), Math.max(totalPages, 1));
+    const start = (normalizedPage - 1) * this.tarifaModalPageSize;
+
+    this.tarifaModalTarifas = filtered.slice(start, start + this.tarifaModalPageSize);
+    this.tarifaModalPage = normalizedPage;
+    this.tarifaModalTotalRecords = filtered.length;
+    this.tarifaModalTotalPages = totalPages;
+  }
+
+  private clearAgencyCodeIfTypedManually(): void {
+    const codigo = this.stayForm.controls.agenciaCodigo.value.trim();
+    const nombre = this.stayForm.controls.agenciaNombre.value.trim();
+    if (codigo && !nombre.startsWith(`${codigo} -`)) {
+      this.stayForm.controls.agenciaCodigo.setValue('', { emitEvent: false });
+      this.syncStayValue();
+    }
+  }
+
+  private clearTarifaCodeIfTypedManually(): void {
+    const codigo = this.stayForm.controls.tarifaCodigo.value.trim();
+    const descripcion = this.stayForm.controls.tarifaDescripcion.value.trim();
+    if (codigo && !descripcion.startsWith(`${codigo} -`)) {
+      this.stayForm.patchValue({ tarifaCodigo: '', tarifaNoche: 0, moneda: '' }, { emitEvent: false });
+      this.syncStayValue();
+    }
+  }
+
+  private getCurrentAgencySearchTerm(): string {
+    const value = this.stayForm.controls.agenciaNombre.value.trim();
+    const code = this.stayForm.controls.agenciaCodigo.value.trim();
+    return code && value.startsWith(`${code} -`) ? value.slice(`${code} -`.length).trim() : value;
+  }
+
+  private getCurrentTarifaSearchTerm(): string {
+    const value = this.stayForm.controls.tarifaDescripcion.value.trim();
+    const code = this.stayForm.controls.tarifaCodigo.value.trim();
+    return code && value.startsWith(`${code} -`) ? value.slice(`${code} -`.length).trim() : value;
   }
 
   private isValidDateRange(): boolean {

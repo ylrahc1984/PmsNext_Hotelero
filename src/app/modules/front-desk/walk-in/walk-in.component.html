@@ -63,38 +63,50 @@
 
               <div class="col-md-6 position-relative">
                 <label class="form-label">Agencia</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  formControlName="agenciaNombre"
-                  placeholder="Buscar agencia..."
-                  autocomplete="off"
-                  (focus)="openAgenciaSuggestions()"
-                >
+                <div class="input-group">
+                  <input
+                    type="text"
+                    class="form-control"
+                    formControlName="agenciaNombre"
+                    placeholder="Escriba para buscar agencia..."
+                    autocomplete="off"
+                    (focus)="openAgenciaSuggestions()"
+                  >
+                  <button type="button" class="btn btn-outline-primary" title="Buscar agencia" (click)="openAgencyModal()">
+                    <i class="feather icon-search"></i>
+                  </button>
+                </div>
                 <div class="autocomplete-menu" *ngIf="agenciaSearchOpen">
                   <button type="button" class="autocomplete-item" *ngFor="let agencia of agenciaSuggestions" (mousedown)="selectAgencia(agencia)">
                     <strong>{{ agencia.codigo }}</strong>
                     <span>{{ agencia.descripcion }}</span>
+                    <small *ngIf="agencia.contacto || agencia.telefono">{{ agencia.contacto || 'Sin contacto' }} · {{ agencia.telefono || 'Sin teléfono' }}</small>
                   </button>
                 </div>
               </div>
 
               <div class="col-md-6 position-relative">
                 <label class="form-label">Tarifa <span class="text-danger">*</span></label>
-                <input
-                  type="text"
-                  class="form-control"
-                  formControlName="tarifaDescripcion"
-                  placeholder="Buscar tarifa..."
-                  autocomplete="off"
-                  [class.is-invalid]="isStayFieldInvalid('tarifaDescripcion')"
-                  (focus)="openTarifaSuggestions()"
-                >
+                <div class="input-group">
+                  <input
+                    type="text"
+                    class="form-control"
+                    formControlName="tarifaDescripcion"
+                    placeholder="Escriba para buscar tarifa..."
+                    autocomplete="off"
+                    [class.is-invalid]="isStayFieldInvalid('tarifaDescripcion')"
+                    (focus)="openTarifaSuggestions()"
+                  >
+                  <button type="button" class="btn btn-outline-primary" title="Buscar tarifa" (click)="openTarifaModal()">
+                    <i class="feather icon-search"></i>
+                  </button>
+                </div>
                 <div class="invalid-feedback">{{ getFieldError(stayForm.controls.tarifaDescripcion) }}</div>
                 <div class="autocomplete-menu" *ngIf="tarifaSearchOpen">
                   <button type="button" class="autocomplete-item" *ngFor="let tarifa of tarifaSuggestions" (mousedown)="selectTarifa(tarifa)">
                     <strong>{{ tarifa.codigo }}</strong>
                     <span>{{ tarifa.descripcion }}</span>
+                    <small>{{ tarifa.moneda || 'Sin moneda' }} · {{ tarifa.activo ? 'Activa' : 'Inactiva' }}</small>
                   </button>
                 </div>
               </div>
@@ -106,11 +118,15 @@
               </div>
               <div class="col-md-4">
                 <label class="form-label">Moneda</label>
-                <select class="form-select" formControlName="moneda">
-                  <option value="USD">USD</option>
-                  <option value="CRC">CRC</option>
-                  <option value="EUR">EUR</option>
-                </select>
+                <input
+                  type="text"
+                  class="form-control"
+                  formControlName="moneda"
+                  placeholder="Seleccione tarifa"
+                  readonly
+                  [class.is-invalid]="isStayFieldInvalid('moneda')"
+                >
+                <div class="invalid-feedback">{{ getFieldError(stayForm.controls.moneda) }}</div>
               </div>
               <div class="col-md-4">
                 <label class="form-label">Plan Alimentación <span class="text-danger">*</span></label>
@@ -304,6 +320,202 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="showTarifaModal"></div>
+<div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="tarifaSearchModalTitle" *ngIf="showTarifaModal" (click)="closeTarifaModal()">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title" id="tarifaSearchModalTitle">
+            <i class="feather icon-search me-2"></i>
+            Buscar Tarifa
+          </h5>
+          <small class="text-muted">{{ getTarifaModalSearchLabel() }}</small>
+        </div>
+        <button type="button" class="btn-close" aria-label="Cerrar" (click)="closeTarifaModal()"></button>
+      </div>
+      <div class="modal-body">
+        <div class="agency-search-toolbar">
+          <div class="input-group">
+            <span class="input-group-text">
+              <i class="feather icon-search"></i>
+            </span>
+            <input
+              type="search"
+              class="form-control"
+              placeholder="Buscar por código, nombre o moneda..."
+              [formControl]="tarifaModalSearchControl"
+              [disabled]="tarifaModalLoading"
+            >
+          </div>
+          <button type="button" class="btn btn-outline-secondary" (click)="loadTarifasModal()" [disabled]="tarifaModalLoading">
+            <i class="feather icon-refresh-cw me-1"></i>
+            Actualizar
+          </button>
+        </div>
+
+        <div class="alert alert-danger" *ngIf="tarifaModalError">{{ tarifaModalError }}</div>
+        <div class="alert alert-info d-flex align-items-center" *ngIf="tarifaModalLoading">
+          <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+          <span>Cargando tarifas...</span>
+        </div>
+
+        <div class="table-responsive agency-search-table" *ngIf="tarifaModalTarifas.length > 0">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Código</th>
+                <th>Tarifa</th>
+                <th>Moneda</th>
+                <th>Vigencia</th>
+                <th>Operador</th>
+                <th class="text-center">Estado</th>
+                <th class="text-end">Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let tarifa of tarifaModalTarifas; trackBy: trackByCode">
+                <td><span class="badge bg-light text-dark">{{ tarifa.codigo }}</span></td>
+                <td>
+                  <div class="agency-search-name">{{ tarifa.descripcion || 'N/D' }}</div>
+                </td>
+                <td>{{ tarifa.moneda || 'N/D' }}</td>
+                <td>
+                  <span>{{ tarifa.fechaInicial ? (tarifa.fechaInicial | date:'yyyy-MM-dd') : 'N/D' }}</span>
+                  <span *ngIf="tarifa.fechaFinal"> / {{ tarifa.fechaFinal | date:'yyyy-MM-dd' }}</span>
+                </td>
+                <td>{{ tarifa.operador || 'N/D' }}</td>
+                <td class="text-center">
+                  <span class="badge" [ngClass]="tarifa.activo ? 'bg-success' : 'bg-secondary'">
+                    {{ tarifa.activo ? 'Activa' : 'Inactiva' }}
+                  </span>
+                </td>
+                <td class="text-end">
+                  <button type="button" class="btn btn-primary btn-sm" (click)="selectTarifa(tarifa)">
+                    <i class="feather icon-check me-1"></i>
+                    Seleccionar
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="agency-search-empty" *ngIf="!tarifaModalLoading && !tarifaModalError && tarifaModalTarifas.length === 0">
+          <i class="feather icon-inbox"></i>
+          <span>No se encontraron tarifas.</span>
+        </div>
+      </div>
+      <div class="modal-footer agency-search-footer">
+        <span>Página {{ tarifaModalPage }} de {{ tarifaModalTotalPages || 1 }} · {{ tarifaModalTotalRecords }} registros</span>
+        <div class="btn-group btn-group-sm" role="group" aria-label="Paginación de tarifas">
+          <button type="button" class="btn btn-outline-secondary" (click)="goToTarifaModalPage(1)" [disabled]="tarifaModalLoading || tarifaModalPage <= 1">Primera</button>
+          <button type="button" class="btn btn-outline-secondary" (click)="goToTarifaModalPage(tarifaModalPage - 1)" [disabled]="tarifaModalLoading || tarifaModalPage <= 1">Anterior</button>
+          <button type="button" class="btn btn-outline-secondary" (click)="goToTarifaModalPage(tarifaModalPage + 1)" [disabled]="tarifaModalLoading || tarifaModalPage >= tarifaModalTotalPages">Siguiente</button>
+          <button type="button" class="btn btn-outline-secondary" (click)="goToTarifaModalPage(tarifaModalTotalPages)" [disabled]="tarifaModalLoading || tarifaModalPage >= tarifaModalTotalPages">Última</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="showAgencyModal"></div>
+<div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="agencySearchModalTitle" *ngIf="showAgencyModal" (click)="closeAgencyModal()">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title" id="agencySearchModalTitle">
+            <i class="feather icon-search me-2"></i>
+            Buscar Agencia
+          </h5>
+          <small class="text-muted">{{ getAgencyModalSearchLabel() }}</small>
+        </div>
+        <button type="button" class="btn-close" aria-label="Cerrar" (click)="closeAgencyModal()"></button>
+      </div>
+      <div class="modal-body">
+        <div class="agency-search-toolbar">
+          <div class="input-group">
+            <span class="input-group-text">
+              <i class="feather icon-search"></i>
+            </span>
+            <input
+              type="search"
+              class="form-control"
+              placeholder="Buscar por nombre de agencia..."
+              [formControl]="agencyModalSearchControl"
+              [disabled]="agencyModalLoading"
+            >
+          </div>
+          <button type="button" class="btn btn-outline-secondary" (click)="loadAgencyModalPage(1)" [disabled]="agencyModalLoading">
+            <i class="feather icon-refresh-cw me-1"></i>
+            Actualizar
+          </button>
+        </div>
+
+        <div class="alert alert-danger" *ngIf="agencyModalError">{{ agencyModalError }}</div>
+        <div class="alert alert-info d-flex align-items-center" *ngIf="agencyModalLoading">
+          <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+          <span>Cargando agencias...</span>
+        </div>
+
+        <div class="table-responsive agency-search-table" *ngIf="agencyModalAgencies.length > 0">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Código</th>
+                <th>Agencia</th>
+                <th>Contacto</th>
+                <th>Mercado</th>
+                <th>Teléfono</th>
+                <th class="text-center">Estado</th>
+                <th class="text-end">Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let agencia of agencyModalAgencies; trackBy: trackByCode">
+                <td><span class="badge bg-light text-dark">{{ agencia.codigo }}</span></td>
+                <td>
+                  <div class="agency-search-name">{{ agencia.descripcion || 'N/D' }}</div>
+                  <small class="text-muted" *ngIf="agencia.ruc || agencia.email">{{ agencia.ruc || 'Sin RUC' }} · {{ agencia.email || 'Sin correo' }}</small>
+                </td>
+                <td>{{ agencia.contacto || 'N/D' }}</td>
+                <td>{{ agencia.mercado || 'N/D' }}</td>
+                <td>{{ agencia.telefono || 'N/D' }}</td>
+                <td class="text-center">
+                  <span class="badge" [ngClass]="agencia.activo ? 'bg-success' : 'bg-secondary'">
+                    {{ agencia.activo ? 'Activa' : 'Inactiva' }}
+                  </span>
+                </td>
+                <td class="text-end">
+                  <button type="button" class="btn btn-primary btn-sm" (click)="selectAgencia(agencia)">
+                    <i class="feather icon-check me-1"></i>
+                    Seleccionar
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="agency-search-empty" *ngIf="!agencyModalLoading && !agencyModalError && agencyModalAgencies.length === 0">
+          <i class="feather icon-inbox"></i>
+          <span>No se encontraron agencias.</span>
+        </div>
+      </div>
+      <div class="modal-footer agency-search-footer">
+        <span>Página {{ agencyModalPage }} de {{ agencyModalTotalPages || 1 }} · {{ agencyModalTotalRecords }} registros</span>
+        <div class="btn-group btn-group-sm" role="group" aria-label="Paginación de agencias">
+          <button type="button" class="btn btn-outline-secondary" (click)="goToAgencyModalPage(1)" [disabled]="agencyModalLoading || agencyModalPage <= 1">Primera</button>
+          <button type="button" class="btn btn-outline-secondary" (click)="goToAgencyModalPage(agencyModalPage - 1)" [disabled]="agencyModalLoading || agencyModalPage <= 1">Anterior</button>
+          <button type="button" class="btn btn-outline-secondary" (click)="goToAgencyModalPage(agencyModalPage + 1)" [disabled]="agencyModalLoading || agencyModalPage >= agencyModalTotalPages">Siguiente</button>
+          <button type="button" class="btn btn-outline-secondary" (click)="goToAgencyModalPage(agencyModalTotalPages)" [disabled]="agencyModalLoading || agencyModalPage >= agencyModalTotalPages">Última</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>

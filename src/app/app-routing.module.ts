@@ -383,6 +383,11 @@ const routes: Routes = [
         redirectTo: '/catalogos/listas-precios',
         pathMatch: 'full'
       },
+      {
+        path: 'configuracion/agencias',
+        loadComponent: () =>
+          import('./modules/Reservas/agency-management/agency-management.component').then((c) => c.AgencyManagementComponent)
+      },
       ...pmsPlaceholderChildRoutes('Reservas', [
         ['disponibilidad', 'Disponibilidad']
       ])

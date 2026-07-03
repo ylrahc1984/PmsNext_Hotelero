@@ -1,0 +1,274 @@
+.agency-page {
+  padding-bottom: 1.5rem;
+}
+
+.agency-header {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.agency-header__module {
+  color: #6c757d;
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+}
+
+.agency-header__title {
+  color: #1f2937;
+  font-weight: 700;
+  margin: 0;
+}
+
+.agency-header__subtitle {
+  color: #6c757d;
+  margin-top: 0.25rem;
+}
+
+.agency-counter {
+  background: #eef4ff;
+  border: 1px solid #dbe8ff;
+  border-radius: 6px;
+  color: #2459a6;
+  display: inline-flex;
+  font-weight: 600;
+  padding: 0.45rem 0.75rem;
+}
+
+.agency-toolbar,
+.agency-list {
+  border: 0;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  margin-bottom: 1rem;
+}
+
+.agency-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.agency-name {
+  color: #1f2937;
+  font-weight: 700;
+}
+
+.agency-meta {
+  color: #6c757d;
+  font-size: 0.78rem;
+  margin-top: 0.15rem;
+}
+
+.agency-table th {
+  color: #4b5563;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.agency-table td {
+  white-space: nowrap;
+}
+
+.agency-table .action-column {
+  min-width: 104px;
+  width: 104px;
+}
+
+.agency-action-buttons {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.35rem;
+  justify-content: center;
+  min-width: 82px;
+}
+
+.agency-action-btn {
+  align-items: center;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  width: 34px;
+}
+
+.agency-action-btn > i {
+  font-size: 0.95rem;
+  line-height: 1;
+  margin-right: 0;
+}
+
+.agency-mobile-list {
+  display: none;
+}
+
+.agency-empty {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 2.5rem 1rem;
+  text-align: center;
+}
+
+.agency-empty i {
+  color: #9ca3af;
+  font-size: 2.4rem;
+}
+
+.agency-empty p {
+  color: #6c757d;
+  margin: 0;
+}
+
+.agency-pagination {
+  align-items: center;
+  border-top: 1px solid #edf0f4;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
+.agency-pagination__summary {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.agency-pagination__size {
+  min-width: 150px;
+}
+
+.modal {
+  background: rgba(15, 23, 42, 0.25);
+}
+
+.modal-content {
+  border: 0;
+  border-radius: 8px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
+}
+
+.modal-header,
+.modal-footer {
+  border-color: #edf0f4;
+}
+
+.agency-form-card {
+  border: 1px solid #edf0f4;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.agency-form-card__title {
+  align-items: center;
+  color: #1f2937;
+  display: flex;
+  font-weight: 700;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 1199.98px) {
+  .column-desktop {
+    display: none;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .agency-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .agency-toolbar__actions {
+    justify-content: flex-start;
+  }
+
+  .column-tablet {
+    display: none;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .agency-table {
+    display: none;
+  }
+
+  .agency-mobile-list {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .agency-mobile-card {
+    border: 1px solid #edf0f4;
+    border-radius: 8px;
+    padding: 1rem;
+  }
+
+  .agency-mobile-card__header {
+    align-items: flex-start;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: space-between;
+  }
+
+  .agency-mobile-card__header h5 {
+    color: #1f2937;
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0.5rem 0 0;
+  }
+
+  .agency-mobile-card__grid {
+    display: grid;
+    gap: 0.35rem 0.75rem;
+    grid-template-columns: minmax(80px, 0.45fr) 1fr;
+    margin-top: 0.85rem;
+  }
+
+  .agency-mobile-card__grid span {
+    color: #6c757d;
+    font-size: 0.8rem;
+  }
+
+  .agency-mobile-card__grid strong {
+    color: #374151;
+    font-size: 0.85rem;
+    font-weight: 600;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .agency-mobile-card__actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    margin-top: 1rem;
+  }
+
+  .agency-pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .agency-pagination__buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .agency-pagination__buttons .btn {
+    border-radius: 0;
+  }
+}

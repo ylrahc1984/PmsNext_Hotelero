@@ -142,6 +142,51 @@
   font-size: 0.78rem;
 }
 
+.autocomplete-item small {
+  color: #94a3b8;
+  font-size: 0.72rem;
+}
+
+.agency-search-toolbar,
+.agency-search-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.agency-search-toolbar {
+  margin-bottom: 1rem;
+}
+
+.agency-search-toolbar .input-group {
+  max-width: 520px;
+}
+
+.agency-search-table {
+  border: 1px solid rgba(15, 33, 51, 0.08);
+  border-radius: 10px;
+}
+
+.agency-search-name {
+  color: #0f2133;
+  font-weight: 800;
+}
+
+.agency-search-empty {
+  display: grid;
+  min-height: 170px;
+  place-items: center;
+  gap: 0.5rem;
+  color: #64748b;
+  border: 1px dashed rgba(15, 33, 51, 0.18);
+  border-radius: 10px;
+}
+
+.agency-search-empty i {
+  font-size: 1.6rem;
+}
+
 .walk-action-btn {
   display: inline-flex;
   align-items: center;
@@ -167,4 +212,24 @@
   border: 0;
   border-radius: 12px;
   box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
+}
+
+@media (max-width: 768px) {
+  .agency-search-toolbar,
+  .agency-search-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .agency-search-toolbar .input-group {
+    max-width: none;
+  }
+
+  .agency-search-footer .btn-group {
+    width: 100%;
+  }
+
+  .agency-search-footer .btn {
+    flex: 1 1 0;
+  }
 }

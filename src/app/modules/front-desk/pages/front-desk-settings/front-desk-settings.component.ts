@@ -61,6 +61,13 @@ export class FrontDeskSettingsComponent {
       icon: 'meeting_room',
       route: '/front-desk/configuraciones/habitaciones',
       tone: 'burgundy'
+    },
+    {
+      title: 'Planes de Alimentación',
+      description: 'Catálogo operativo para desayuno, media pensión y otros planes.',
+      icon: 'restaurant',
+      route: '/front-desk/configuraciones/planes-alimentacion',
+      tone: 'blue'
     }
   ];
 

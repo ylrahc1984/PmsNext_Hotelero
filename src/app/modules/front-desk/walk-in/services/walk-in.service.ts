@@ -1,31 +1,57 @@
 import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, catchError, map, of } from 'rxjs';
 
 import { ClienteService, SelectOption } from 'src/app/demo/catalogos/agencias-comisionistas/cliente.service';
-import { ClienteUI } from 'src/app/demo/catalogos/agencias-comisionistas/cliente.models';
-import { ListaPrecioService } from 'src/app/demo/catalogos/listas-precios/lista-precio.service';
 import { PlanesTarifasService } from 'src/app/demo/catalogos/listas-precios/planes-tarifas.service';
+import { environment } from 'src/environments/environment';
 import { Nationality } from '../../settings/nationalities/models/nationality.model';
 import { NationalitiesService } from '../../settings/nationalities/services/nationalities.service';
 import { PaxType } from '../../settings/pax-types/models/pax-type.model';
 import { PaxTypesService } from '../../settings/pax-types/services/pax-types.service';
-import { WalkInAgenciaOption, WalkInOption, WalkInRequest, WalkInTarifaOption } from '../models/walk-in.model';
+import { WalkInAgenciaOption, WalkInAgenciaPage, WalkInOption, WalkInSavePayload, WalkInTarifaOption } from '../models/walk-in.model';
+
+interface AgenciaApiDto {
+  MR01_CodAgencia?: string;
+  MR01_Ruc?: string;
+  MR01_NomAgencia?: string;
+  MR01_Ciudad?: string;
+  MR01_Pais?: string;
+  MR01_Contacto?: string;
+  MR01_Telefono1?: string;
+  MR01_Email?: string;
+  MR01_Mercado?: string;
+  MR01_Activo?: number | boolean;
+}
+
+interface AgenciaApiPageResponse {
+  datos?: AgenciaApiDto[];
+  totalRegistros?: number;
+  paginaActual?: number;
+  tamanoPagina?: number;
+  totalPaginas?: number;
+}
+
+interface TarifaReservaApiDto {
+  MR03_CodTarifa?: string;
+  MR03_NomTarifa?: string;
+  MR03_Moneda?: string;
+  MR03_FecInicial?: string;
+  MR03_FecFin?: string;
+  MR03_Activo?: number | boolean;
+  MR03_Operador?: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class WalkInService {
+  private readonly http = inject(HttpClient);
   private readonly clienteService = inject(ClienteService);
   private readonly nationalitiesService = inject(NationalitiesService);
   private readonly paxTypesService = inject(PaxTypesService);
   private readonly planesTarifasService = inject(PlanesTarifasService);
-  private readonly listaPrecioService = inject(ListaPrecioService);
-
-  private readonly demoAgencias: WalkInAgenciaOption[] = [
-    { codigo: 'DIR', descripcion: 'Directos en Recepcion', email: '' },
-    { codigo: 'WEB', descripcion: 'Web PMSNext', email: 'reservas@pmsnext.demo' },
-    { codigo: 'EXP', descripcion: 'Expedia', email: '' },
-    { codigo: 'BKG', descripcion: 'Booking.com', email: '' },
-    { codigo: 'CORP', descripcion: 'Convenio Corporativo', email: 'corporativo@pmsnext.demo' }
-  ];
+  private readonly agenciaUrl = `${(environment.apiUrl ?? '').toString().replace(/\/+$/, '')}/agencia`;
+  private readonly tarifaReservaUrl = `${(environment.apiUrl ?? '').toString().replace(/\/+$/, '')}/tarifa-reserva`;
+  private readonly walkInUrl = `${(environment.apiUrl ?? '').toString().replace(/\/+$/, '')}/walkin`;
 
   private readonly demoPlanes: WalkInOption[] = [
     { codigo: 'SIN', descripcion: 'Sin Plan de alimentacion' },
@@ -34,15 +60,13 @@ export class WalkInService {
     { codigo: 'PC', descripcion: 'Pension completa' }
   ];
 
-  private readonly demoTarifas: WalkInTarifaOption[] = [
-    { codigo: 'BAR-STD', descripcion: 'Tarifa Rack Standard', moneda: 'USD', tarifaNoche: 95 },
-    { codigo: 'BAR-FLEX', descripcion: 'Tarifa Flexible Recepcion', moneda: 'USD', tarifaNoche: 120 },
-    { codigo: 'CORP-CRC', descripcion: 'Tarifa Corporativa Local', moneda: 'CRC', tarifaNoche: 58000 }
-  ];
+  createWalkIn(payload: WalkInSavePayload): Observable<unknown> {
+    console.groupCollapsed('[WalkInService] POST /walkin');
+    console.log('URL:', this.walkInUrl);
+    console.log('Payload:', JSON.parse(JSON.stringify(payload)));
+    console.groupEnd();
 
-  createWalkIn(request: WalkInRequest): Observable<{ respuesta?: string }> {
-    console.log('[WalkInService] createWalkIn preparado', request);
-    return of({ respuesta: 'Walk In preparado localmente.' });
+    return this.http.post<unknown>(this.walkInUrl, payload);
   }
 
   getTiposDocumento(): Observable<WalkInOption[]> {
@@ -74,72 +98,109 @@ export class WalkInService {
   searchAgencias(term: string): Observable<WalkInAgenciaOption[]> {
     const sanitizedTerm = term.trim();
     if (sanitizedTerm.length < 2) {
-      return of(this.demoAgencias);
+      return this.getAgenciasPaginadas(1, 8).pipe(
+        map((response) => response.datos),
+        catchError(() => of([]))
+      );
     }
 
-    return this.clienteService.getClientes(1, 10, sanitizedTerm).pipe(
-      map((response) =>
-        this.mergeAgenciasDemo(
-          response.data.map((cliente: ClienteUI) => ({
-          codigo: cliente.codigo,
-          descripcion: cliente.contacto || cliente.nombre || cliente.codigo,
-          email: cliente.email || cliente.emailPrincipal
-          })),
-          sanitizedTerm
-        )
-      ),
-      catchError(() => of(this.filterAgenciasDemo(sanitizedTerm)))
+    return this.buscarAgenciasPorNombre(sanitizedTerm, 1, 50).pipe(
+      map((response) => response.datos.slice(0, 8)),
+      catchError(() => of([]))
     );
+  }
+
+  getAgenciasPaginadas(pageNumber = 1, pageSize = 10): Observable<WalkInAgenciaPage> {
+    const params = new HttpParams().set('pageNumber', pageNumber).set('pageSize', pageSize);
+
+    return this.http
+      .get<AgenciaApiPageResponse>(`${this.agenciaUrl}/paginado`, { params })
+      .pipe(map((response) => this.mapAgenciaPage(response, pageNumber, pageSize)));
+  }
+
+  buscarAgenciasPorNombre(nombre: string, pageNumber = 1, pageSize = 50): Observable<WalkInAgenciaPage> {
+    const params = new HttpParams().set('nombre', nombre.trim()).set('pageNumber', pageNumber).set('pageSize', pageSize);
+
+    return this.http
+      .get<AgenciaApiPageResponse>(`${this.agenciaUrl}/buscar`, { params })
+      .pipe(map((response) => this.mapAgenciaPage(response, pageNumber, pageSize)));
   }
 
   searchTarifas(term: string): Observable<WalkInTarifaOption[]> {
     const sanitizedTerm = term.trim();
-    if (sanitizedTerm.length < 2) {
-      return of(this.demoTarifas);
-    }
 
-    return this.listaPrecioService.getListas({ descripcion: sanitizedTerm, pageNumber: 1, pageSize: 10 }).pipe(
-      map((response) =>
-        this.mergeTarifasDemo(
-          response.data.map((tarifa) => ({
-          codigo: tarifa.codigo,
-          descripcion: tarifa.descripcion || tarifa.codigo,
-          moneda: tarifa.moneda || 'USD',
-          tarifaNoche: 0
-          })),
-          sanitizedTerm
-        )
-      ),
-      catchError(() => of(this.filterTarifasDemo(sanitizedTerm)))
+    return this.getTarifasReserva().pipe(
+      map((items) => this.filterTarifas(items, sanitizedTerm).slice(0, 8)),
+      catchError(() => of([]))
     );
   }
 
-  getDemoAgenciaPrincipal(): WalkInAgenciaOption {
-    return this.demoAgencias[0];
+  getTarifasReserva(): Observable<WalkInTarifaOption[]> {
+    return this.http
+      .get<TarifaReservaApiDto[] | { datos?: TarifaReservaApiDto[] }>(this.tarifaReservaUrl)
+      .pipe(map((response) => this.normalizeTarifasResponse(response).map((item) => this.mapTarifa(item))));
   }
 
-  getDemoTarifas(): WalkInTarifaOption[] {
-    return this.demoTarifas;
+  private mapAgenciaPage(response: AgenciaApiPageResponse, pageNumber: number, pageSize: number): WalkInAgenciaPage {
+    const datos = Array.isArray(response?.datos) ? response.datos.map((item) => this.mapAgencia(item)) : [];
+    const totalRegistros = Number(response?.totalRegistros ?? datos.length);
+    const tamanoPagina = Number(response?.tamanoPagina ?? pageSize);
+    const totalPaginas = Number(response?.totalPaginas ?? Math.ceil(totalRegistros / Math.max(tamanoPagina, 1)));
+
+    return {
+      datos,
+      totalRegistros,
+      paginaActual: Number(response?.paginaActual ?? pageNumber),
+      tamanoPagina,
+      totalPaginas
+    };
   }
 
-  private mergeAgenciasDemo(items: WalkInAgenciaOption[], term: string): WalkInAgenciaOption[] {
-    const merged = [...this.filterAgenciasDemo(term), ...items];
-    return merged.filter((item, index, list) => list.findIndex((candidate) => candidate.codigo === item.codigo) === index).slice(0, 8);
+  private mapAgencia(item: AgenciaApiDto): WalkInAgenciaOption {
+    const codigo = String(item.MR01_CodAgencia ?? '').trim();
+    const descripcion = String(item.MR01_NomAgencia ?? codigo).trim();
+
+    return {
+      codigo,
+      descripcion,
+      email: String(item.MR01_Email ?? '').trim(),
+      ruc: String(item.MR01_Ruc ?? '').trim(),
+      contacto: String(item.MR01_Contacto ?? '').trim(),
+      telefono: String(item.MR01_Telefono1 ?? '').trim(),
+      ciudad: String(item.MR01_Ciudad ?? '').trim(),
+      pais: String(item.MR01_Pais ?? '').trim(),
+      mercado: String(item.MR01_Mercado ?? '').trim(),
+      activo: item.MR01_Activo === true || Number(item.MR01_Activo ?? 0) === 1
+    };
   }
 
-  private mergeTarifasDemo(items: WalkInTarifaOption[], term: string): WalkInTarifaOption[] {
-    const remoteWithPrice = items.filter((item) => item.tarifaNoche > 0);
-    const merged = [...this.filterTarifasDemo(term), ...remoteWithPrice];
-    return merged.filter((item, index, list) => list.findIndex((candidate) => candidate.codigo === item.codigo) === index).slice(0, 8);
+  private normalizeTarifasResponse(response: TarifaReservaApiDto[] | { datos?: TarifaReservaApiDto[] }): TarifaReservaApiDto[] {
+    if (Array.isArray(response)) return response;
+    return Array.isArray(response?.datos) ? response.datos : [];
   }
 
-  private filterAgenciasDemo(term: string): WalkInAgenciaOption[] {
-    const normalizedTerm = term.toLowerCase();
-    return this.demoAgencias.filter((item) => `${item.codigo} ${item.descripcion}`.toLowerCase().includes(normalizedTerm));
+  private mapTarifa(item: TarifaReservaApiDto): WalkInTarifaOption {
+    const codigo = String(item.MR03_CodTarifa ?? '').trim();
+    const descripcion = String(item.MR03_NomTarifa ?? codigo).trim();
+
+    return {
+      codigo,
+      descripcion,
+      moneda: String(item.MR03_Moneda ?? '').trim(),
+      tarifaNoche: 0,
+      fechaInicial: String(item.MR03_FecInicial ?? '').trim(),
+      fechaFinal: String(item.MR03_FecFin ?? '').trim(),
+      activo: item.MR03_Activo === true || Number(item.MR03_Activo ?? 0) === 1,
+      operador: String(item.MR03_Operador ?? '').trim()
+    };
   }
 
-  private filterTarifasDemo(term: string): WalkInTarifaOption[] {
-    const normalizedTerm = term.toLowerCase();
-    return this.demoTarifas.filter((item) => `${item.codigo} ${item.descripcion}`.toLowerCase().includes(normalizedTerm));
+  filterTarifas(items: WalkInTarifaOption[], term: string): WalkInTarifaOption[] {
+    const normalizedTerm = term.trim().toLowerCase();
+    if (!normalizedTerm) return items;
+
+    return items.filter((item) =>
+      [item.codigo, item.descripcion, item.moneda, item.operador].join(' ').toLowerCase().includes(normalizedTerm)
+    );
   }
 }

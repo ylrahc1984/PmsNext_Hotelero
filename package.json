@@ -32,6 +32,7 @@
     "ag-grid-community": "^35.3.0",
     "apexcharts": "4.7.0",
     "bootstrap": "5.3.7",
+    "bootstrap-icons": "^1.13.1",
     "ng-apexcharts": "1.16.0",
     "ngx-scrollbar": "18.0.0",
     "qz-tray": "^2.2.6",

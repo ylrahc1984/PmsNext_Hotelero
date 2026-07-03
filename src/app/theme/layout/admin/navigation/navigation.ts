@@ -62,7 +62,8 @@ export const NavigationItems: NavigationItem[] = [
           { id: 'reservas-consulta', title: 'Consulta de Reservas', type: 'item', url: '/operaciones/reservas', icon: 'feather icon-search', classes: 'nav-item' },
           { id: 'reservas-forecast', title: 'Forecast de Ocupación', type: 'item', url: '/front-desk/forecast-ocupacion', icon: 'feather icon-trending-up', classes: 'nav-item' },
           { id: 'reservas-tarifas', title: 'Tarifas y Planes', type: 'item', url: '/catalogos/listas-precios', icon: 'feather icon-tag', classes: 'nav-item' },
-          { id: 'reservas-canales', title: 'Agencias / Canales', type: 'item', url: '/catalogos/clientes', icon: 'feather icon-share-2', classes: 'nav-item' }
+          { id: 'reservas-agencias-canales', title: 'Agencias / Canales', type: 'item', url: '/reservas/configuracion/agencias', icon: 'feather icon-share-2', classes: 'nav-item' },
+          { id: 'reservas-canales', title: 'Clientes / Facturación', type: 'item', url: '/catalogos/clientes', icon: 'feather icon-share-2', classes: 'nav-item' }
         ]
       },
       {

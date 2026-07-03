@@ -124,6 +124,10 @@ export const FRONT_DESK_ROUTES: Routes = [
         loadComponent: () => import('./settings/rooms/rooms.component').then((c) => c.RoomsComponent)
       },
       {
+        path: 'configuraciones/planes-alimentacion',
+        loadComponent: () => import('./settings/meal-plans/meal-plans.component').then((c) => c.MealPlansComponent)
+      },
+      {
         path: 'configuraciones/lista-habitaciones',
         loadComponent: () => import('./settings/rooms/rooms.component').then((c) => c.RoomsComponent)
       },
