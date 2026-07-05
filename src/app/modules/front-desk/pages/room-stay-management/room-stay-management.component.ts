@@ -1,11 +1,38 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CdkScrollable } from '@angular/cdk/scrolling';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { forkJoin, of } from 'rxjs';
+import { catchError, finalize } from 'rxjs/operators';
+import Swal from 'sweetalert2';
 
+import { AuthService } from 'src/app/core/services/auth.service';
 import { ToastService } from 'src/app/core/services/toast.service';
+import { ClienteService, SelectOption } from 'src/app/demo/catalogos/agencias-comisionistas/cliente.service';
+import { MonedaService, MonedaUI } from 'src/app/demo/administracion/monedas/moneda.service';
+import { TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
+import { Nationality } from '../../settings/nationalities/models/nationality.model';
+import { NationalitiesService } from '../../settings/nationalities/services/nationalities.service';
+import { PaxType } from '../../settings/pax-types/models/pax-type.model';
+import { PaxTypesService } from '../../settings/pax-types/services/pax-types.service';
 import { RoomRackNavigationState } from '../room-rack/models/room-rack-room.model';
+import {
+  DepartureDateChangePayload,
+  PointOfSalePaymentMethodApi,
+  RoomChargePayload,
+  RoomChargeAnnulPayload,
+  RoomChargePointOfSaleApi,
+  RoomChargePriceListApiItem,
+  RoomAvailabilityApiRoom,
+  RoomingListUpdatePayload,
+  RoomChangePayload,
+  RoomStayApiCharge,
+  RoomStayApiData,
+  RoomStayManagementService
+} from './services/room-stay-management.service';
 
 type ActiveTab = 'stay' | 'account' | 'operations' | 'timeline';
 type OperationKind = 'workflow' | 'financial' | 'document' | 'critical';
@@ -15,7 +42,6 @@ type StayActionId =
   | 'change-room'
   | 'change-departure'
   | 'register-prepayment'
-  | 'refresh-charges'
   | 'new-charge'
   | 'transfer-charges'
   | 'print-room-charge'
@@ -32,6 +58,11 @@ interface Guest {
 }
 
 interface Charge {
+  id: string;
+  tipCrgHab: string;
+  numCrgHab: string;
+  codRsv: string;
+  numHab: string;
   date: string;
   time: string;
   concept: string;
@@ -39,6 +70,7 @@ interface Charge {
   charge: number;
   payment: number;
   balance: number;
+  invoiceSelected: boolean;
 }
 
 interface StayOperation {
@@ -73,14 +105,22 @@ interface InvoiceClient {
 interface InvoicePaymentMethod {
   code: string;
   description: string;
+  tipo: string;
+  tipPago: string;
+  ndias: number;
 }
 
 interface InvoiceAppliedPayment {
-  methodCode: string;
+  frmPago: string;
+  tipo: string;
+  numTarjeta: string;
+  moneda: string;
+  monto: number;
+  vencimiento: string;
+  mtoTotal: number;
+  tCambio: number;
+  orden: number;
   description: string;
-  reference: string;
-  amount: number;
-  order: number;
 }
 
 interface RoomOption {
@@ -103,13 +143,53 @@ interface ActionModalDraft {
 
 interface InvoicePaymentDraft {
   methodCode: string;
+  moneda: string;
   amount: number | null;
-  reference: string;
+  numTarjeta: string;
+  vencimiento: string;
+  tCambio: number;
+}
+
+interface RoomChargeGuestOption {
+  name: string;
+  document: string;
+  documentType: string;
+}
+
+interface RoomChargePointOfSale {
+  code: string;
+  name: string;
+  priceList: string;
+  currency: string;
+}
+
+interface RoomChargeDraft {
+  guestDocument: string;
+  pointOfSale: string;
+  priceList: string;
+  currency: string;
+  itemSearch: string;
+  comment: string;
+}
+
+interface RoomChargeLine {
+  id: string;
+  group: string;
+  category: string;
+  code: string;
+  name: string;
+  quantity: number;
+  price: number;
+  total: number;
+  currency: string;
+  order: number;
+  comment: string;
 }
 
 interface RoomStay {
   roomNumber: string;
   roomType: string;
+  roomCategory: string;
   status: 'OCCUPIED';
   agency: string;
   rate: string;
@@ -127,122 +207,77 @@ interface RoomStay {
   lodgingCharges: Charge[];
   extraCharges: Charge[];
   prepaid: number;
+  operator?: string;
 }
 
-const rooms: RoomStay[] = [
-  {
-    roomNumber: '523',
-    roomType: 'Deluxe Room',
-    status: 'OCCUPIED',
-    agency: 'Tarifa FITS',
-    rate: 'Tarifa FITS',
-    reservationNumber: 'EE250156799',
-    checkIn: '16/06/2026',
-    checkOut: '18/06/2026',
-    nights: 2,
-    guestsCount: 2,
-    childrenCount: 0,
-    masterFolio: 'TR00005',
-    plan: 'DYN',
-    reservedAt: '10/06/2026',
-    observations: ['Tour Director confirma llegada temprana.', 'Prepagada parcialmente por agencia.', 'Solicita cama adicional y almohadas firmes.'],
-    guests: [
-      { name: 'Eric Burnett', documentType: 'PAS', document: '523', nationality: 'USA', birthDate: '12/04/1985' },
-      { name: 'Danelle Burnett', documentType: 'PAS', document: '523', nationality: 'USA', birthDate: '15/09/1987' }
-    ],
-    lodgingCharges: [
-      { date: '16/06/2026', time: '10:05', concept: 'Room Charge', reference: '523', charge: 120, payment: 0, balance: 120 },
-      { date: '16/06/2026', time: '13:20', concept: 'Desayuno', reference: '523', charge: 25, payment: 0, balance: 145 },
-      { date: '17/06/2026', time: '10:05', concept: 'Room Charge', reference: '523', charge: 120, payment: 0, balance: 265 },
-      { date: '17/06/2026', time: '13:15', concept: 'Almuerzo', reference: '523', charge: 30, payment: 50, balance: 245 }
-    ],
-    extraCharges: [
-      { date: '16/06/2026', time: '15:30', concept: 'Spa', reference: '523', charge: 80, payment: 0, balance: 80 },
-      { date: '17/06/2026', time: '18:45', concept: 'Lavanderia', reference: '523', charge: 15, payment: 0, balance: 95 }
-    ],
-    prepaid: 100
-  },
-  {
-    roomNumber: '401',
-    roomType: 'Junior Suite',
-    status: 'OCCUPIED',
-    agency: 'Corporate Plus',
-    rate: 'Business Flex',
-    reservationNumber: 'EE250157004',
-    checkIn: '15/06/2026',
-    checkOut: '19/06/2026',
-    nights: 4,
-    guestsCount: 1,
-    childrenCount: 0,
-    masterFolio: 'TR00018',
-    plan: 'BAR',
-    reservedAt: '08/06/2026',
-    observations: ['Cuenta corporativa con credito aprobado.', 'Huesped solicita facturacion separada de extras.', 'Preferencia por piso alto.'],
-    guests: [{ name: 'Laura Chen', documentType: 'PAS', document: 'PA-7894112', nationality: 'Panama', birthDate: '04/02/1991' }],
-    lodgingCharges: [
-      { date: '15/06/2026', time: '16:20', concept: 'Room Charge', reference: 'TR00018', charge: 150, payment: 0, balance: 150 },
-      { date: '16/06/2026', time: '07:55', concept: 'Breakfast', reference: 'REST-8752', charge: 22, payment: 0, balance: 172 },
-      { date: '16/06/2026', time: '12:40', concept: 'Lunch', reference: 'REST-8791', charge: 38, payment: 0, balance: 210 }
-    ],
-    extraCharges: [
-      { date: '16/06/2026', time: '14:10', concept: 'Spa', reference: 'SPA-188', charge: 70, payment: 0, balance: 280 },
-      { date: '16/06/2026', time: '19:00', concept: 'Laundry', reference: 'LND-020', charge: 18, payment: 0, balance: 298 },
-      { date: '17/06/2026', time: '08:30', concept: 'Transfer', reference: 'TRF-398', charge: 40, payment: 0, balance: 338 }
-    ],
-    prepaid: 125
-  },
-  {
-    roomNumber: '612',
-    roomType: 'Master Suite',
-    status: 'OCCUPIED',
-    agency: 'VIP Direct',
-    rate: 'Suite Experience',
-    reservationNumber: 'EE250157208',
-    checkIn: '16/06/2026',
-    checkOut: '20/06/2026',
-    nights: 4,
-    guestsCount: 3,
-    childrenCount: 1,
-    masterFolio: 'TR00026',
-    plan: 'DYN',
-    reservedAt: '11/06/2026',
-    observations: ['Prepagada por tarjeta AMEX.', 'Solicita amenidad de bienvenida.', 'Cama adicional instalada antes de llegada.'],
-    guests: [
-      { name: 'Marco Alvarez', documentType: 'PAS', document: 'MX-4421909', nationality: 'Mexico', birthDate: '18/08/1982' },
-      { name: 'Sofia Alvarez', documentType: 'PAS', document: 'MX-4421910', nationality: 'Mexico', birthDate: '30/10/1984' },
-      { name: 'Mateo Alvarez', documentType: 'PAS', document: 'MX-4421911', nationality: 'Mexico', birthDate: '02/05/2016' }
-    ],
-    lodgingCharges: [
-      { date: '16/06/2026', time: '17:30', concept: 'Room Charge', reference: 'TR00026', charge: 240, payment: 0, balance: 240 },
-      { date: '17/06/2026', time: '08:15', concept: 'Breakfast', reference: 'REST-8834', charge: 58, payment: 0, balance: 298 },
-      { date: '17/06/2026', time: '13:05', concept: 'Lunch', reference: 'REST-8882', charge: 76, payment: 0, balance: 374 }
-    ],
-    extraCharges: [
-      { date: '17/06/2026', time: '15:30', concept: 'Spa', reference: 'SPA-209', charge: 150, payment: 0, balance: 524 },
-      { date: '17/06/2026', time: '18:45', concept: 'Laundry', reference: 'LND-037', charge: 34, payment: 0, balance: 558 },
-      { date: '18/06/2026', time: '09:10', concept: 'Transfer', reference: 'TRF-421', charge: 60, payment: 0, balance: 618 }
-    ],
-    prepaid: 300
-  }
-];
+interface ExtraGuestForm {
+  tipDocu: FormControl<string>;
+  numDocu: FormControl<string>;
+  codNacion: FormControl<string>;
+  nombre: FormControl<string>;
+  apellido: FormControl<string>;
+  fecNac: FormControl<string>;
+  sexo: FormControl<string>;
+  estCivil: FormControl<string>;
+  tiPax: FormControl<string>;
+  direccion: FormControl<string>;
+  email: FormControl<string>;
+  motivo: FormControl<string>;
+  procede: FormControl<string>;
+  mdoArribo: FormControl<string>;
+}
 
-const initialTimeline: TimelineItem[] = [
-  { time: '10:05', title: 'Check In realizado', detail: 'Recepcion confirmo documentos y garantia.' },
-  { time: '10:20', title: 'Registro huesped', detail: 'Se completo el registro principal de la habitacion.' },
-  { time: '13:15', title: 'Cargo desayuno', detail: 'Consumo cargado desde restaurante.' },
-  { time: '15:30', title: 'Cargo Spa', detail: 'Servicio aplicado a folio de extras.' },
-  { time: '18:45', title: 'Cargo lavanderia', detail: 'Orden de lavanderia procesada.' }
-];
+interface RoomGuestOption {
+  codigo: string;
+  descripcion: string;
+}
+
+const emptyRoomStay: RoomStay = {
+  roomNumber: '',
+  roomType: '',
+  roomCategory: '',
+  status: 'OCCUPIED',
+  agency: '',
+  rate: '',
+  reservationNumber: '',
+  checkIn: '',
+  checkOut: '',
+  nights: 0,
+  guestsCount: 0,
+  childrenCount: 0,
+  masterFolio: '',
+  plan: '',
+  reservedAt: '',
+  observations: [],
+  guests: [],
+  lodgingCharges: [],
+  extraCharges: [],
+  prepaid: 0
+};
 
 @Component({
   selector: 'app-room-stay-management',
   standalone: true,
-  imports: [CommonModule, SharedModule, CdkScrollable],
+  imports: [CommonModule, ReactiveFormsModule, SharedModule, CdkScrollable],
   templateUrl: './room-stay-management.component.html',
   styleUrls: ['./room-stay-management.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class RoomStayManagementComponent {
+export class RoomStayManagementComponent implements OnInit {
+  private readonly fb = inject(NonNullableFormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly authService = inject(AuthService);
+  private readonly roomStayManagementService = inject(RoomStayManagementService);
+  private readonly clienteService = inject(ClienteService);
+  private readonly nationalitiesService = inject(NationalitiesService);
+  private readonly paxTypesService = inject(PaxTypesService);
+  private readonly monedaService = inject(MonedaService);
+  private readonly tipoCambioService = inject(TipoCambioService);
+  private readonly invoiceBaseCurrency = 'USD';
+  private readonly roomChargeCatalogPageSize = 8;
+  private requestedRoomNumber = '';
+  private requestedReservationNumber = '';
+
   private readonly invoiceConsumerFinal: InvoiceClient = {
     code: '000000000',
     name: 'CLIENTE EN GENERAL',
@@ -252,27 +287,103 @@ export class RoomStayManagementComponent {
   };
 
   readonly activeTab = signal<ActiveTab>('stay');
-  readonly room = signal<RoomStay>(rooms[0]);
+  readonly room = signal<RoomStay>({ ...emptyRoomStay });
+  readonly isStayLoading = signal(false);
+  readonly stayErrorMessage = signal('');
+  readonly availableRoomOptions = signal<RoomOption[]>([]);
+  readonly isAvailableRoomsLoading = signal(false);
+  readonly availableRoomsLoaded = signal(false);
+  readonly isRoomChangeSubmitting = signal(false);
+  readonly isDepartureChangeSubmitting = signal(false);
+  readonly isRoomChargeCatalogLoading = signal(false);
+  readonly isRoomChargeItemsLoading = signal(false);
+  readonly isRoomChargeSubmitting = signal(false);
+  readonly showExtraGuestModal = signal(false);
+  readonly isExtraGuestCatalogLoading = signal(false);
+  readonly isExtraGuestSaving = signal(false);
+  readonly extraGuestValidationMessage = signal('');
+  readonly extraGuestNationalitySearch = signal('');
+  readonly isExtraGuestNationalitySearchOpen = signal(false);
+  readonly extraGuestDocumentTypes = signal<RoomGuestOption[]>([]);
+  readonly extraGuestNationalities = signal<Nationality[]>([]);
+  readonly extraGuestPaxTypes = signal<PaxType[]>([]);
   readonly activeAction = signal<StayOperation | null>(null);
   readonly actionDraft = signal<ActionModalDraft>(this.buildActionDraft());
-  readonly timeline = signal<TimelineItem[]>(initialTimeline);
+  readonly roomChargeDraft = signal<RoomChargeDraft>(this.buildRoomChargeDraft());
+  readonly roomChargePointOfSales = signal<RoomChargePointOfSale[]>([]);
+  readonly roomChargeItems = signal<RoomChargePriceListApiItem[]>([]);
+  readonly roomChargeLines = signal<RoomChargeLine[]>([]);
+  readonly roomChargeCatalogPage = signal(1);
+  readonly roomChargeValidationMessage = signal('');
+  readonly timeline = signal<TimelineItem[]>([]);
   readonly invoiceClientSearch = signal('');
   readonly selectedInvoiceClient = signal<InvoiceClient | null>(null);
   readonly invoiceAppliedPayments = signal<InvoiceAppliedPayment[]>([]);
   readonly invoicePaymentDraft = signal<InvoicePaymentDraft>({
-    methodCode: 'cash',
+    methodCode: '',
+    moneda: this.invoiceBaseCurrency,
     amount: null,
-    reference: ''
+    numTarjeta: '',
+    vencimiento: '',
+    tCambio: 1
   });
   readonly invoiceValidationMessage = signal('');
-  readonly roomOptions = computed(() => this.buildRoomOptions(this.room().roomNumber));
+  readonly invoiceCurrencies = signal<MonedaUI[]>([]);
+  readonly isInvoiceCatalogLoading = signal(false);
+  readonly isInvoiceExchangeRateLoading = signal(false);
+  readonly roomOptions = computed(() =>
+    this.availableRoomsLoaded() || this.isAvailableRoomsLoading() ? this.availableRoomOptions() : this.buildRoomOptions(this.room().roomNumber)
+  );
   readonly activeActionKind = computed(() => this.activeAction()?.kind ?? 'workflow');
-  readonly invoicePaymentMethods = signal<InvoicePaymentMethod[]>([
-    { code: 'cash', description: 'EFECTIVO' },
-    { code: 'card', description: 'TARJETA' },
-    { code: 'transfer', description: 'TRANSFERENCIA' },
-    { code: 'bonus', description: 'PAGO CON BONO' }
-  ]);
+  readonly invoicePaymentMethods = signal<InvoicePaymentMethod[]>([]);
+  readonly invoiceCurrencyOptions = computed(() =>
+    this.invoiceCurrencies().length
+      ? this.invoiceCurrencies()
+      : [
+          {
+            codMoneda: this.invoiceBaseCurrency,
+            moneda: 'DOLAR',
+            simbolo: '$',
+            activo: 1,
+            primario: 0,
+            secundario: 1,
+            orden: 1
+          }
+        ]
+  );
+  readonly filteredExtraGuestNationalities = computed(() => {
+    const term = this.normalizeSearchTerm(this.extraGuestNationalitySearch());
+    const nationalities = this.extraGuestNationalities();
+
+    if (!term) {
+      return nationalities.slice(0, 12);
+    }
+
+    return nationalities
+      .filter((nationality) =>
+        [nationality.CR06_Codigo, nationality.CR06_Descripcion]
+          .map((value) => this.normalizeSearchTerm(value))
+          .some((value) => value.includes(term))
+      )
+      .slice(0, 12);
+  });
+
+  readonly extraGuestForm: FormGroup<ExtraGuestForm> = this.fb.group({
+    tipDocu: this.fb.control('', { validators: [Validators.required] }),
+    numDocu: this.fb.control('', { validators: [Validators.required, Validators.maxLength(30)] }),
+    codNacion: this.fb.control('', { validators: [Validators.required] }),
+    nombre: this.fb.control('', { validators: [Validators.required, Validators.maxLength(80)] }),
+    apellido: this.fb.control('', { validators: [Validators.required, Validators.maxLength(120)] }),
+    fecNac: this.fb.control('', { validators: [Validators.required] }),
+    sexo: this.fb.control(''),
+    estCivil: this.fb.control(''),
+    tiPax: this.fb.control('', { validators: [Validators.required] }),
+    direccion: this.fb.control('', { validators: [Validators.maxLength(220)] }),
+    email: this.fb.control('', { validators: [Validators.email, Validators.maxLength(120)] }),
+    motivo: this.fb.control(''),
+    procede: this.fb.control(''),
+    mdoArribo: this.fb.control('')
+  });
 
   readonly tabs: { id: ActiveTab; label: string }[] = [
     { id: 'stay', label: 'Estancia' },
@@ -315,14 +426,6 @@ export class RoomStayManagementComponent {
     {
       title: 'Gestion de Cargos',
       actions: [
-        {
-          id: 'refresh-charges',
-          label: 'Actualizar Cargos',
-          icon: 'sync',
-          kind: 'financial',
-          description: 'Simula una sincronizacion operativa de cargos para refrescar el folio activo.',
-          confirmText: 'Actualizar folio'
-        },
         {
           id: 'new-charge',
           label: 'Nuevo Cargo',
@@ -407,8 +510,11 @@ export class RoomStayManagementComponent {
   readonly lodgingSubtotal = computed(() => this.sumCharges(this.room().lodgingCharges));
   readonly extrasSubtotal = computed(() => this.sumCharges(this.room().extraCharges));
   readonly totalToCharge = computed(() => this.lodgingSubtotal() + this.extrasSubtotal());
+  readonly lodgingInvoiceSubtotal = computed(() => this.sumSelectedCharges(this.room().lodgingCharges));
+  readonly extrasInvoiceSubtotal = computed(() => this.sumSelectedCharges(this.room().extraCharges));
+  readonly totalToInvoice = computed(() => this.lodgingInvoiceSubtotal() + this.extrasInvoiceSubtotal());
   readonly currentBalance = computed(() => this.totalToCharge() - this.room().prepaid);
-  readonly headerBalance = computed(() => this.lodgingSubtotal());
+  readonly headerBalance = computed(() => this.currentBalance());
   readonly modalHighlights = computed(() => {
     const room = this.room();
 
@@ -452,32 +558,90 @@ export class RoomStayManagementComponent {
     );
   });
   readonly invoiceClient = computed(() => this.selectedInvoiceClient() ?? this.invoiceConsumerFinal);
-  readonly invoiceSubtotal = computed(() => this.roundCurrency(this.totalToCharge() / 1.18));
-  readonly invoiceTaxes = computed(() => this.roundCurrency(this.totalToCharge() - this.invoiceSubtotal()));
+  readonly invoiceSubtotal = computed(() => this.roundCurrency(this.totalToInvoice() / 1.18));
+  readonly invoiceTaxes = computed(() => this.roundCurrency(this.totalToInvoice() - this.invoiceSubtotal()));
   readonly invoiceTip = computed(() => 0);
   readonly invoiceTotal = computed(() => this.roundCurrency(this.invoiceSubtotal() + this.invoiceTaxes() + this.invoiceTip()));
   readonly invoicePaid = computed(() =>
-    this.roundCurrency(this.invoiceAppliedPayments().reduce((sum, payment) => sum + payment.amount, 0))
+    this.roundCurrency(this.invoiceAppliedPayments().reduce((sum, payment) => sum + payment.mtoTotal, 0))
   );
   readonly invoicePending = computed(() => this.roundCurrency(Math.max(this.invoiceTotal() - this.invoicePaid(), 0)));
   readonly invoiceChange = computed(() => this.roundCurrency(Math.max(this.invoicePaid() - this.invoiceTotal(), 0)));
   readonly invoiceCanConfirm = computed(() => this.invoiceAppliedPayments().length > 0 && this.invoicePaid() >= this.invoiceTotal());
+  readonly invoiceDraftConvertedAmount = computed(() => {
+    const draft = this.invoicePaymentDraft();
+    return this.roundCurrency(this.convertPaymentToInvoiceCurrency(Number(draft.amount || 0), draft.moneda, draft.tCambio));
+  });
+  readonly roomChargeGuests = computed<RoomChargeGuestOption[]>(() =>
+    this.room().guests.map((guest, index) => ({
+      name: guest.name,
+      document: guest.document,
+      documentType: guest.documentType || `H${index + 1}`
+    }))
+  );
+  readonly selectedRoomChargeGuest = computed(() => {
+    const draft = this.roomChargeDraft();
+    return this.roomChargeGuests().find((guest) => guest.document === draft.guestDocument) ?? this.roomChargeGuests()[0] ?? null;
+  });
+  readonly selectedRoomChargePointOfSale = computed(() => {
+    const draft = this.roomChargeDraft();
+    return this.roomChargePointOfSales().find((pointOfSale) => pointOfSale.code === draft.pointOfSale) ?? null;
+  });
+  readonly filteredRoomChargeItems = computed(() => {
+    const term = this.normalizeSearchTerm(this.roomChargeDraft().itemSearch);
+    const items = this.roomChargeItems();
+
+    if (!term) {
+      return items;
+    }
+
+    return items.filter((item) =>
+        [
+          item.MPV05_CodProducto,
+          item.MPV05_DesProducto,
+          item.MPV05_NomCorto,
+          item.MPV00_NomCategoria,
+          item.MPV01_CodGrupo
+        ]
+          .map((value) => this.normalizeSearchTerm(value))
+          .some((value) => value.includes(term))
+      );
+  });
+  readonly roomChargeCatalogTotalPages = computed(() =>
+    Math.max(1, Math.ceil(this.filteredRoomChargeItems().length / this.roomChargeCatalogPageSize))
+  );
+  readonly paginatedRoomChargeItems = computed(() => {
+    const totalPages = this.roomChargeCatalogTotalPages();
+    const safePage = Math.min(Math.max(this.roomChargeCatalogPage(), 1), totalPages);
+    const startIndex = (safePage - 1) * this.roomChargeCatalogPageSize;
+
+    return this.filteredRoomChargeItems().slice(startIndex, startIndex + this.roomChargeCatalogPageSize);
+  });
+  readonly roomChargeTotal = computed(() =>
+    this.roundCurrency(this.roomChargeLines().reduce((sum, line) => sum + line.total, 0))
+  );
 
   constructor(
     private readonly route: ActivatedRoute,
     private readonly router: Router,
     private readonly toastService: ToastService
   ) {
-    const roomNumber = this.route.snapshot.paramMap.get('roomNumber') ?? rooms[0].roomNumber;
+    const roomNumber = this.route.snapshot.paramMap.get('roomNumber') ?? '';
     const navigationRoom = this.getNavigationRoom();
+
+    this.requestedRoomNumber = roomNumber;
+    this.requestedReservationNumber = navigationRoom?.RSV ?? '';
 
     if (navigationRoom) {
       this.room.set(this.buildRoomFromRackData(navigationRoom, roomNumber));
       return;
     }
 
-    const selectedRoom = rooms.find((item) => item.roomNumber === roomNumber);
-    this.room.set(selectedRoom ?? this.buildRoomFromNumber(roomNumber));
+    this.room.set(this.buildRoomFromNumber(roomNumber));
+  }
+
+  ngOnInit(): void {
+    this.loadRoomStay();
   }
 
   setActiveTab(tab: ActiveTab): void {
@@ -489,15 +653,32 @@ export class RoomStayManagementComponent {
   }
 
   openActionModal(action: StayOperation): void {
+    if (action.id !== 'change-room') {
+      this.availableRoomsLoaded.set(false);
+      this.availableRoomOptions.set([]);
+    }
+
     this.actionDraft.set(this.buildActionDraft(action.id));
+
+    if (action.id === 'change-room') {
+      this.loadAvailableRoomsForChange();
+    }
+
     if (action.id === 'invoice-room') {
       this.resetInvoiceDraft();
+      this.loadInvoiceCatalogs();
+    }
+
+    if (action.id === 'new-charge') {
+      this.resetRoomChargeDraft();
+      this.loadRoomChargePointOfSales();
     }
     this.activeAction.set(action);
   }
 
   closeActionModal(): void {
     this.invoiceValidationMessage.set('');
+    this.roomChargeValidationMessage.set('');
     this.activeAction.set(null);
   }
 
@@ -514,6 +695,33 @@ export class RoomStayManagementComponent {
     });
   }
 
+  canExecuteActiveAction(): boolean {
+    if (this.isActionSelected('change-room')) {
+      return (
+        this.availableRoomsLoaded() &&
+        !this.isAvailableRoomsLoading() &&
+        !this.isRoomChangeSubmitting() &&
+        this.roomOptions().length > 0
+      );
+    }
+
+    if (this.isActionSelected('change-departure')) {
+      return Boolean(this.actionDraft().newCheckOut) && !this.isDepartureChangeSubmitting();
+    }
+
+    if (this.isActionSelected('new-charge')) {
+      return (
+        Boolean(this.selectedRoomChargeGuest()) &&
+        Boolean(this.roomChargeDraft().pointOfSale) &&
+        this.roomChargeLines().length > 0 &&
+        this.roomChargeTotal() > 0 &&
+        !this.isRoomChargeSubmitting()
+      );
+    }
+
+    return true;
+  }
+
   executeActiveAction(): void {
     const action = this.activeAction();
 
@@ -521,23 +729,31 @@ export class RoomStayManagementComponent {
       return;
     }
 
+    if (!this.canExecuteActiveAction()) {
+      const message = action.id === 'change-room'
+        ? 'Espera a que carguen las habitaciones disponibles.'
+        : 'Completa los datos requeridos antes de continuar.';
+      this.toastService.info(message, 3000, 'Estancia');
+      return;
+    }
+
     let shouldClose = true;
 
     switch (action.id) {
       case 'change-room':
-        this.applyRoomChange();
+        shouldClose = false;
+        void this.confirmRoomChange();
         break;
       case 'change-departure':
-        this.applyDepartureChange();
+        shouldClose = false;
+        void this.submitDepartureChange();
         break;
       case 'register-prepayment':
         this.applyPrepaymentRegistration();
         break;
-      case 'refresh-charges':
-        this.applyChargeRefresh();
-        break;
       case 'new-charge':
-        this.applyNewCharge();
+        shouldClose = false;
+        void this.submitRoomCharge();
         break;
       case 'transfer-charges':
         this.applyChargeTransfer();
@@ -572,11 +788,16 @@ export class RoomStayManagementComponent {
   }
 
   trackByCharge(_: number, item: Charge): string {
-    return `${item.date}-${item.time}-${item.reference}`;
+    return item.id;
   }
 
   formatHeaderDate(date: string): string {
     const [day, month, year] = date.split('/');
+
+    if (!day || !month || !year) {
+      return '-';
+    }
+
     const monthName = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'][Number(month) - 1] ?? month;
     return `${Number(day)} ${monthName} ${year}`;
   }
@@ -601,12 +822,34 @@ export class RoomStayManagementComponent {
 
   updateInvoicePaymentDraft(patch: Partial<InvoicePaymentDraft>): void {
     this.invoicePaymentDraft.update((currentDraft) => ({ ...currentDraft, ...patch }));
+
+    if (patch.moneda !== undefined) {
+      this.loadInvoiceExchangeRateForCurrency(patch.moneda);
+    }
+  }
+
+  toggleChargeInvoiceSelection(bucket: ChargeBucket, chargeId: string, selected: boolean): void {
+    this.room.update((currentRoom) => {
+      const updateCharges = (charges: Charge[]) =>
+        charges.map((charge) => (charge.id === chargeId ? { ...charge, invoiceSelected: selected } : charge));
+
+      return {
+        ...currentRoom,
+        lodgingCharges: bucket === 'lodging' ? updateCharges(currentRoom.lodgingCharges) : currentRoom.lodgingCharges,
+        extraCharges: bucket === 'extras' ? updateCharges(currentRoom.extraCharges) : currentRoom.extraCharges
+      };
+    });
+
+    this.resetInvoicePaymentsForSelectionChange();
   }
 
   addInvoicePayment(): void {
     const draft = this.invoicePaymentDraft();
     const method = this.invoicePaymentMethods().find((item) => item.code === draft.methodCode);
+    const moneda = this.cleanText(draft.moneda).toUpperCase();
     const amount = this.roundCurrency(Number(draft.amount || 0));
+    const exchangeRate = this.getInvoiceDraftExchangeRate(draft);
+    const convertedAmount = this.roundCurrency(this.convertPaymentToInvoiceCurrency(amount, moneda, exchangeRate));
 
     this.invoiceValidationMessage.set('');
 
@@ -615,34 +858,56 @@ export class RoomStayManagementComponent {
       return;
     }
 
+    if (!moneda) {
+      this.invoiceValidationMessage.set('Selecciona la moneda del pago.');
+      return;
+    }
+
     if (amount <= 0) {
       this.invoiceValidationMessage.set('El monto debe ser mayor a 0.');
+      return;
+    }
+
+    if (moneda !== this.invoiceBaseCurrency && exchangeRate <= 0) {
+      this.invoiceValidationMessage.set('No se pudo determinar el tipo de cambio para la moneda seleccionada.');
       return;
     }
 
     this.invoiceAppliedPayments.update((payments) => [
       ...payments,
       {
-        methodCode: method.code,
+        frmPago: method.code,
+        tipo: method.tipo || method.tipPago,
+        numTarjeta: this.cleanText(draft.numTarjeta),
+        moneda,
+        monto: amount,
+        vencimiento: this.cleanText(draft.vencimiento),
+        mtoTotal: convertedAmount,
+        tCambio: exchangeRate,
+        orden: payments.length + 1,
         description: method.description,
-        reference: draft.reference.trim(),
-        amount,
-        order: payments.length + 1
       }
     ]);
 
+    const nextPendingAmount = this.roundCurrency(
+      this.convertPaymentFromInvoiceCurrency(this.invoicePending(), moneda, exchangeRate)
+    );
+
     this.invoicePaymentDraft.set({
       methodCode: draft.methodCode,
-      amount: this.invoicePending() > 0 ? this.invoicePending() : null,
-      reference: ''
+      moneda,
+      amount: nextPendingAmount > 0 ? nextPendingAmount : null,
+      numTarjeta: '',
+      vencimiento: '',
+      tCambio: exchangeRate
     });
   }
 
   removeInvoicePayment(order: number): void {
     this.invoiceAppliedPayments.update((payments) =>
       payments
-        .filter((payment) => payment.order !== order)
-        .map((payment, index) => ({ ...payment, order: index + 1 }))
+        .filter((payment) => payment.orden !== order)
+        .map((payment, index) => ({ ...payment, orden: index + 1 }))
     );
   }
 
@@ -651,26 +916,1099 @@ export class RoomStayManagementComponent {
     this.toastService.info('Se abrio el detalle financiero de la estancia.', 3000, 'Facturacion');
   }
 
+  viewChargeDetail(bucket: ChargeBucket, charge: Charge): void {
+    const bucketLabel = bucket === 'lodging' ? 'Hospedaje y alimentos' : 'Extras';
+
+    void Swal.fire({
+      title: 'Detalle del cargo',
+      icon: 'info',
+      confirmButtonText: 'Cerrar',
+      html: `
+        <div style="display:grid;gap:10px;text-align:left">
+          <div><strong>Tipo:</strong> ${bucketLabel}</div>
+          <div><strong>Fecha:</strong> ${charge.date || '-'} ${charge.time || ''}</div>
+          <div><strong>Concepto:</strong> ${charge.concept || '-'}</div>
+          <div><strong>Referencia:</strong> ${charge.reference || '-'}</div>
+          <div><strong>Documento cargo:</strong> ${charge.tipCrgHab || '-'} ${charge.numCrgHab || ''}</div>
+          <div><strong>Monto:</strong> ${this.formatCurrency(charge.charge)}</div>
+          <div><strong>Facturable:</strong> ${charge.invoiceSelected ? 'Si' : 'No'}</div>
+        </div>
+      `
+    });
+  }
+
+  async annulCharge(bucket: ChargeBucket, charge: Charge): Promise<void> {
+    const payloadBase = this.buildAnnulRoomChargePayload(charge, '');
+
+    if (!payloadBase) {
+      this.toastService.warning('El cargo no tiene la informacion necesaria para anularse.', 4000, 'Cargos');
+      return;
+    }
+
+    const confirmation = await Swal.fire({
+      title: 'Anular cargo',
+      text: `Se anulara el cargo "${charge.concept}" por ${this.formatCurrency(charge.charge)}.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Si, anular',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true
+    });
+
+    if (!confirmation.isConfirmed) {
+      return;
+    }
+
+    const reasonResult = await Swal.fire({
+      title: 'Motivo de anulacion',
+      input: 'textarea',
+      inputLabel: 'Indica el motivo de la anulacion',
+      inputPlaceholder: 'Ej. Cargo duplicado, consumo no reconocido...',
+      inputAttributes: {
+        maxlength: '250',
+        rows: '4'
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Aplicar anulacion',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true,
+      inputValidator: (value) => {
+        const reason = this.cleanText(value);
+
+        if (reason.length < 5) {
+          return 'El motivo debe tener al menos 5 caracteres.';
+        }
+
+        return null;
+      }
+    });
+
+    if (!reasonResult.isConfirmed) {
+      return;
+    }
+
+    const payload = this.buildAnnulRoomChargePayload(charge, reasonResult.value);
+
+    if (!payload) {
+      this.toastService.warning('No se pudo preparar la anulacion del cargo.', 4000, 'Cargos');
+      return;
+    }
+
+    this.roomStayManagementService
+      .annulRoomCharge(payload)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          if (this.isFailedApiResponse(response)) {
+            this.toastService.warning(response.message || 'No se pudo anular el cargo.', 4000, 'Cargos');
+            return;
+          }
+
+          this.applyAnnulledCharge(bucket, charge, payload.motivo);
+        },
+        error: (error) => {
+          console.error('No se pudo anular el cargo de habitacion.', error);
+          this.toastService.warning('No se pudo anular el cargo de habitacion.', 4000, 'Cargos');
+        }
+      });
+  }
+
+  private applyAnnulledCharge(bucket: ChargeBucket, charge: Charge, reason: string): void {
+    this.room.update((currentRoom) => {
+      const nextLodgingCharges = bucket === 'lodging'
+        ? currentRoom.lodgingCharges.filter((item) => item.id !== charge.id)
+        : currentRoom.lodgingCharges;
+      const nextExtraCharges = bucket === 'extras'
+        ? currentRoom.extraCharges.filter((item) => item.id !== charge.id)
+        : currentRoom.extraCharges;
+
+      return {
+        ...currentRoom,
+        lodgingCharges: nextLodgingCharges,
+        extraCharges: nextExtraCharges,
+        observations: [`Cargo anulado: ${charge.concept} (${this.formatCurrency(charge.charge)}). Motivo: ${reason}`, ...currentRoom.observations]
+      };
+    });
+
+    this.resetInvoicePaymentsForSelectionChange();
+    this.addTimelineEntry('Cargo anulado', `${charge.concept} fue anulado por ${this.formatCurrency(charge.charge)}. Motivo: ${reason}`);
+    this.toastService.success('Cargo de habitacion anulado correctamente.', 4000, 'Cargos');
+  }
+
+  private buildAnnulRoomChargePayload(charge: Charge, reason: string): RoomChargeAnnulPayload | null {
+    const payload: RoomChargeAnnulPayload = {
+      tipCrgHab: this.cleanText(charge.tipCrgHab) || 'CH',
+      numCrgHab: this.cleanText(charge.numCrgHab || charge.reference),
+      codRsv: this.cleanText(charge.codRsv || this.room().reservationNumber),
+      numHab: this.cleanText(charge.numHab || this.room().roomNumber),
+      motivo: this.cleanText(reason),
+      operador: this.getOperador()
+    };
+
+    const hasRequiredChargeData = Boolean(payload.tipCrgHab && payload.numCrgHab && payload.codRsv && payload.numHab && payload.operador);
+
+    if (!hasRequiredChargeData) {
+      return null;
+    }
+
+    return payload;
+  }
+
+  updateRoomChargeDraft(patch: Partial<RoomChargeDraft>): void {
+    this.roomChargeValidationMessage.set('');
+    this.roomChargeDraft.update((currentDraft) => ({ ...currentDraft, ...patch }));
+
+    if (patch.itemSearch !== undefined) {
+      this.roomChargeCatalogPage.set(1);
+    }
+  }
+
+  setRoomChargeCatalogPage(page: number): void {
+    const nextPage = Math.min(Math.max(Math.trunc(Number(page) || 1), 1), this.roomChargeCatalogTotalPages());
+    this.roomChargeCatalogPage.set(nextPage);
+  }
+
+  onRoomChargePointOfSaleChange(pointOfSaleCode: string): void {
+    const selectedPointOfSale = this.roomChargePointOfSales().find((pointOfSale) => pointOfSale.code === pointOfSaleCode);
+
+    this.roomChargeLines.set([]);
+    this.roomChargeItems.set([]);
+    this.roomChargeCatalogPage.set(1);
+    this.updateRoomChargeDraft({
+      pointOfSale: pointOfSaleCode,
+      priceList: selectedPointOfSale?.priceList ?? '',
+      currency: selectedPointOfSale?.currency ?? this.invoiceBaseCurrency,
+      itemSearch: ''
+    });
+
+    if (selectedPointOfSale?.priceList) {
+      this.loadRoomChargePriceListItems(selectedPointOfSale.priceList);
+    }
+  }
+
+  addRoomChargeItem(item: RoomChargePriceListApiItem): void {
+    const code = this.cleanText(item.MPV05_CodProducto);
+
+    if (!code) {
+      return;
+    }
+
+    this.roomChargeLines.update((lines) => {
+      const existingLine = lines.find((line) => line.code === code);
+
+      if (existingLine) {
+        return lines.map((line) => (line.code === code ? this.recalculateRoomChargeLine({ ...line, quantity: line.quantity + 1 }) : line));
+      }
+
+      const currency = this.cleanText(item.MPV05_Moneda) || this.roomChargeDraft().currency || this.invoiceBaseCurrency;
+      const line: RoomChargeLine = {
+        id: `${code}|${Date.now()}|${lines.length}`,
+        group: this.cleanText(item.MPV01_CodGrupo),
+        category: this.cleanText(item.MPV01_CodCategoria || item.MPV00_NomCategoria),
+        code,
+        name: this.cleanText(item.MPV05_DesProducto || item.MPV05_NomCorto || code),
+        quantity: 1,
+        price: this.roundCurrency(Number(item.MPV05_PrecioTotal ?? 0)),
+        total: this.roundCurrency(Number(item.MPV05_PrecioTotal ?? 0)),
+        currency,
+        order: lines.length + 1,
+        comment: ''
+      };
+
+      return [...lines, line];
+    });
+
+    this.updateRoomChargeDraft({ itemSearch: '' });
+  }
+
+  updateRoomChargeLine(lineId: string, patch: Partial<RoomChargeLine>): void {
+    this.roomChargeValidationMessage.set('');
+    this.roomChargeLines.update((lines) =>
+      lines.map((line) => (line.id === lineId ? this.recalculateRoomChargeLine({ ...line, ...patch }) : line))
+    );
+  }
+
+  removeRoomChargeLine(lineId: string): void {
+    this.roomChargeLines.update((lines) =>
+      lines.filter((line) => line.id !== lineId).map((line, index) => ({ ...line, order: index + 1 }))
+    );
+  }
+
+  openAddGuestModal(): void {
+    this.extraGuestValidationMessage.set('');
+    this.resetExtraGuestForm();
+    this.showExtraGuestModal.set(true);
+    this.loadExtraGuestCatalogs();
+  }
+
+  closeExtraGuestModal(): void {
+    if (this.isExtraGuestSaving()) {
+      return;
+    }
+
+    this.showExtraGuestModal.set(false);
+    this.extraGuestValidationMessage.set('');
+    this.extraGuestNationalitySearch.set('');
+    this.isExtraGuestNationalitySearchOpen.set(false);
+    this.extraGuestForm.markAsUntouched();
+  }
+
+  openExtraGuestNationalitySearch(): void {
+    this.isExtraGuestNationalitySearchOpen.set(true);
+  }
+
+  onExtraGuestNationalitySearchChange(value: string): void {
+    this.extraGuestNationalitySearch.set(value);
+    this.extraGuestForm.controls.codNacion.setValue('');
+    this.extraGuestForm.controls.codNacion.markAsDirty();
+    this.isExtraGuestNationalitySearchOpen.set(true);
+  }
+
+  closeExtraGuestNationalitySearch(): void {
+    setTimeout(() => this.isExtraGuestNationalitySearchOpen.set(false), 120);
+  }
+
+  selectExtraGuestNationality(nationality: Nationality): void {
+    this.extraGuestForm.controls.codNacion.setValue(nationality.CR06_Codigo);
+    this.extraGuestForm.controls.codNacion.markAsDirty();
+    this.extraGuestForm.controls.codNacion.markAsTouched();
+    this.extraGuestNationalitySearch.set(nationality.CR06_Descripcion);
+    this.isExtraGuestNationalitySearchOpen.set(false);
+  }
+
+  isExtraGuestFieldInvalid(field: keyof ExtraGuestForm): boolean {
+    const control = this.extraGuestForm.controls[field];
+    return control.invalid && (control.dirty || control.touched);
+  }
+
+  getExtraGuestFieldError(field: keyof ExtraGuestForm): string {
+    const control = this.extraGuestForm.controls[field];
+
+    if (control.errors?.['required']) return 'Campo requerido';
+    if (control.errors?.['email']) return 'Correo invalido';
+    if (control.errors?.['maxlength']) return 'Longitud maxima excedida';
+
+    return '';
+  }
+
+  async saveExtraGuest(): Promise<void> {
+    if (this.extraGuestForm.invalid) {
+      this.extraGuestForm.markAllAsTouched();
+      this.extraGuestValidationMessage.set('Completa los campos obligatorios del huesped.');
+      return;
+    }
+
+    const payload = this.buildExtraGuestPayload();
+
+    if (!payload) {
+      this.extraGuestValidationMessage.set('Faltan datos de reserva o habitacion para agregar el huesped.');
+      return;
+    }
+
+    const confirmation = await Swal.fire({
+      title: 'Agregar huesped',
+      text: `Se agregara ${payload.nombre} ${payload.apellido} a la habitacion ${payload.numHabita}.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Si, guardar',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true
+    });
+
+    if (!confirmation.isConfirmed) {
+      return;
+    }
+
+    this.isExtraGuestSaving.set(true);
+    this.extraGuestValidationMessage.set('');
+
+    this.roomStayManagementService
+      .createRoomingListGuest(payload)
+      .pipe(
+        finalize(() => this.isExtraGuestSaving.set(false)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (response) => {
+          if (this.isFailedApiResponse(response)) {
+            this.extraGuestValidationMessage.set(response.message || 'No se pudo agregar el huesped.');
+            return;
+          }
+
+          this.applyExtraGuest(payload);
+          this.showExtraGuestModal.set(false);
+          this.toastService.success('Huesped agregado correctamente.', 4000, 'Rooming list');
+          this.loadRoomStay();
+        },
+        error: (error) => {
+          console.error('No se pudo agregar el huesped.', error);
+          this.extraGuestValidationMessage.set('No se pudo agregar el huesped.');
+        }
+      });
+  }
+
+  private resetRoomChargeDraft(): void {
+    const firstGuest = this.roomChargeGuests()[0];
+    const firstPointOfSale = this.roomChargePointOfSales()[0];
+
+    this.roomChargeDraft.set({
+      guestDocument: firstGuest?.document ?? '',
+      pointOfSale: firstPointOfSale?.code ?? '',
+      priceList: firstPointOfSale?.priceList ?? '',
+      currency: firstPointOfSale?.currency ?? this.invoiceBaseCurrency,
+      itemSearch: '',
+      comment: ''
+    });
+    this.roomChargeItems.set([]);
+    this.roomChargeLines.set([]);
+    this.roomChargeCatalogPage.set(1);
+    this.roomChargeValidationMessage.set('');
+  }
+
+  private resetExtraGuestForm(): void {
+    this.extraGuestForm.reset({
+      tipDocu: this.extraGuestDocumentTypes()[0]?.codigo ?? '',
+      numDocu: '',
+      codNacion: '',
+      nombre: '',
+      apellido: '',
+      fecNac: '',
+      sexo: '',
+      estCivil: '',
+      tiPax: this.extraGuestPaxTypes()[0]?.CR03_CodTipo ?? '',
+      direccion: '',
+      email: '',
+      motivo: '',
+      procede: '',
+      mdoArribo: ''
+    });
+    this.extraGuestNationalitySearch.set('');
+    this.isExtraGuestNationalitySearchOpen.set(false);
+  }
+
+  private loadExtraGuestCatalogs(): void {
+    if (this.extraGuestDocumentTypes().length && this.extraGuestNationalities().length && this.extraGuestPaxTypes().length) {
+      this.applyExtraGuestCatalogDefaults();
+      return;
+    }
+
+    this.isExtraGuestCatalogLoading.set(true);
+
+    forkJoin({
+      documentTypes: this.clienteService.getTipoIdentificacionOptions().pipe(
+        catchError((error) => {
+          console.error('No se pudieron cargar los tipos de documento.', error);
+          return of([] as SelectOption[]);
+        })
+      ),
+      nationalities: this.nationalitiesService.getNationalities().pipe(
+        catchError((error) => {
+          console.error('No se pudieron cargar las nacionalidades.', error);
+          return of([] as Nationality[]);
+        })
+      ),
+      paxTypes: this.paxTypesService.getPaxTypes().pipe(
+        catchError((error) => {
+          console.error('No se pudieron cargar los tipos de pax.', error);
+          return of([] as PaxType[]);
+        })
+      )
+    })
+      .pipe(
+        finalize(() => this.isExtraGuestCatalogLoading.set(false)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(({ documentTypes, nationalities, paxTypes }) => {
+        this.extraGuestDocumentTypes.set(
+          documentTypes.map((item) => ({
+            codigo: this.cleanText(item.value),
+            descripcion: this.cleanText(item.label)
+          }))
+        );
+        this.extraGuestNationalities.set(nationalities);
+        this.extraGuestPaxTypes.set(paxTypes);
+        this.applyExtraGuestCatalogDefaults();
+      });
+  }
+
+  private applyExtraGuestCatalogDefaults(): void {
+    if (!this.extraGuestForm.controls.tipDocu.value) {
+      this.extraGuestForm.controls.tipDocu.setValue(this.extraGuestDocumentTypes()[0]?.codigo ?? '');
+    }
+
+    if (!this.extraGuestForm.controls.tiPax.value) {
+      this.extraGuestForm.controls.tiPax.setValue(this.extraGuestPaxTypes()[0]?.CR03_CodTipo ?? '');
+    }
+  }
+
+  private buildExtraGuestPayload(): RoomingListUpdatePayload | null {
+    const raw = this.extraGuestForm.getRawValue();
+    const room = this.room();
+    const operador = this.getOperador();
+    const codRsv = this.cleanText(room.reservationNumber);
+    const numHabita = this.cleanText(room.roomNumber);
+
+    if (!codRsv || !numHabita) {
+      return null;
+    }
+
+    return {
+      proceso: 6,
+      idOpe: operador,
+      codRsv,
+      numHabita,
+      codNacion: this.cleanText(raw.codNacion),
+      tipDocu: this.cleanText(raw.tipDocu),
+      numDocu: this.cleanText(raw.numDocu),
+      nombre: this.cleanText(raw.nombre),
+      apellido: this.cleanText(raw.apellido),
+      fecNac: this.formatInputDateForApi(raw.fecNac),
+      sexo: this.cleanText(raw.sexo),
+      estCivil: this.cleanText(raw.estCivil),
+      tiPax: this.cleanText(raw.tiPax),
+      direccion: this.cleanText(raw.direccion),
+      email: this.cleanText(raw.email),
+      motivo: this.cleanText(raw.motivo),
+      procede: this.cleanText(raw.procede),
+      mdoArribo: this.cleanText(raw.mdoArribo),
+      orden: this.room().guests.length + 1,
+      operador
+    };
+  }
+
+  private applyExtraGuest(payload: RoomingListUpdatePayload): void {
+    const guest: Guest = {
+      name: [payload.nombre, payload.apellido].map((item) => this.cleanText(item)).filter(Boolean).join(' ') || 'S/D',
+      documentType: payload.tipDocu || 'S/D',
+      document: payload.numDocu || 'S/D',
+      nationality: payload.codNacion || 'S/D',
+      birthDate: payload.fecNac
+    };
+
+    this.room.update((currentRoom) => ({
+      ...currentRoom,
+      guestsCount: currentRoom.guestsCount + 1,
+      guests: [...currentRoom.guests, guest],
+      observations: [`Huesped agregado al rooming list: ${guest.name}.`, ...currentRoom.observations]
+    }));
+
+    this.addTimelineEntry('Huesped agregado', `${guest.name} fue agregado a la habitacion ${payload.numHabita}.`);
+  }
+
+  private loadRoomChargePointOfSales(): void {
+    this.isRoomChargeCatalogLoading.set(true);
+    this.roomChargePointOfSales.set([]);
+    this.roomChargeItems.set([]);
+    this.roomChargeCatalogPage.set(1);
+
+    this.roomStayManagementService
+      .getRoomChargePointOfSales('PF')
+      .pipe(
+        catchError((error) => {
+          console.error('No se pudieron cargar los puntos de venta.', error);
+          this.toastService.warning('No se pudieron cargar los puntos de venta del operador.', 3500, 'Cargo habitacion');
+          return of([] as RoomChargePointOfSaleApi[]);
+        }),
+        finalize(() => this.isRoomChargeCatalogLoading.set(false)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((pointOfSales) => {
+        const mappedPointOfSales = pointOfSales
+          .map((pointOfSale) => this.mapRoomChargePointOfSale(pointOfSale))
+          .filter((pointOfSale) => pointOfSale.code.length > 0);
+
+        this.roomChargePointOfSales.set(mappedPointOfSales);
+
+        const selectedPointOfSale = mappedPointOfSales[0];
+        this.roomChargeDraft.update((draft) => ({
+          ...draft,
+          pointOfSale: selectedPointOfSale?.code ?? '',
+          priceList: selectedPointOfSale?.priceList ?? '',
+          currency: selectedPointOfSale?.currency ?? draft.currency
+        }));
+
+        if (selectedPointOfSale?.priceList) {
+          this.loadRoomChargePriceListItems(selectedPointOfSale.priceList);
+        } else if (!mappedPointOfSales.length) {
+          this.roomChargeValidationMessage.set('No hay puntos de venta asignados para este operador.');
+        }
+      });
+  }
+
+  private loadRoomChargePriceListItems(priceList: string): void {
+    const normalizedPriceList = this.cleanText(priceList);
+
+    if (!normalizedPriceList) {
+      this.roomChargeItems.set([]);
+      this.roomChargeCatalogPage.set(1);
+      this.roomChargeValidationMessage.set('El punto de venta no tiene lista de precios configurada.');
+      return;
+    }
+
+    this.isRoomChargeItemsLoading.set(true);
+
+    this.roomStayManagementService
+      .getRoomChargePriceListItems(normalizedPriceList)
+      .pipe(
+        catchError((error) => {
+          console.error('No se pudo cargar la lista de precios del punto de venta.', error);
+          this.toastService.warning('No se pudo cargar la lista de precios del punto de venta.', 3500, 'Cargo habitacion');
+          return of([] as RoomChargePriceListApiItem[]);
+        }),
+        finalize(() => this.isRoomChargeItemsLoading.set(false)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((items) => {
+        this.roomChargeItems.set(items);
+        this.roomChargeCatalogPage.set(1);
+
+        if (!items.length) {
+          this.roomChargeValidationMessage.set('La lista de precios no tiene consumos disponibles.');
+        }
+      });
+  }
+
+  private mapRoomChargePointOfSale(pointOfSale: RoomChargePointOfSaleApi): RoomChargePointOfSale {
+    const pointOfSaleCode = this.cleanText(pointOfSale.MPV10_CodPntVenta || pointOfSale.MPV07_CodPntVenta);
+    const priceList = this.cleanText(
+      pointOfSale.MPV04_CodLstPrecio || pointOfSale.MPV10_CodLstPrecio || pointOfSale.MPV07_CodLstPrecio
+    );
+
+    return {
+      code: pointOfSaleCode,
+      name: this.cleanText(pointOfSale.MPV07_NomPntVenta) || pointOfSaleCode,
+      priceList,
+      currency: this.cleanText(pointOfSale.MPV04_Moneda).toUpperCase() || this.invoiceBaseCurrency
+    };
+  }
+
+  private recalculateRoomChargeLine(line: RoomChargeLine): RoomChargeLine {
+    const quantity = Math.max(Number(line.quantity || 0), 0);
+    const price = this.roundCurrency(Math.max(Number(line.price || 0), 0));
+
+    return {
+      ...line,
+      quantity,
+      price,
+      total: this.roundCurrency(quantity * price)
+    };
+  }
+
+  private async submitRoomCharge(): Promise<void> {
+    const payload = this.buildRoomChargePayload();
+
+    if (!payload) {
+      this.roomChargeValidationMessage.set('Completa huesped, punto de venta y al menos un consumo con monto mayor a 0.');
+      return;
+    }
+
+    const confirmation = await Swal.fire({
+      title: 'Confirmar cargo de habitacion',
+      text: `Se registrara un cargo por ${this.formatCurrency(payload.mtoTotal)} a la habitacion ${payload.numHab}.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Si, registrar',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true
+    });
+
+    if (!confirmation.isConfirmed) {
+      return;
+    }
+
+    this.isRoomChargeSubmitting.set(true);
+    this.roomChargeValidationMessage.set('');
+
+    this.roomStayManagementService
+      .createRoomCharge(payload)
+      .pipe(
+        finalize(() => this.isRoomChargeSubmitting.set(false)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (response) => {
+          if (this.isFailedApiResponse(response)) {
+            this.roomChargeValidationMessage.set(response.message || 'No se pudo registrar el cargo de habitacion.');
+            return;
+          }
+
+          this.applySubmittedRoomCharge(payload);
+          this.closeActionModal();
+          this.loadRoomStay();
+        },
+        error: (error) => {
+          console.error('No se pudo registrar el cargo de habitacion.', error);
+          this.roomChargeValidationMessage.set('No se pudo registrar el cargo de habitacion.');
+          this.toastService.warning('No se pudo registrar el cargo de habitacion.', 4000, 'Cargo habitacion');
+        }
+      });
+  }
+
+  private buildRoomChargePayload(): RoomChargePayload | null {
+    const room = this.room();
+    const draft = this.roomChargeDraft();
+    const guest = this.selectedRoomChargeGuest();
+    const pointOfSale = this.selectedRoomChargePointOfSale();
+    const operator = this.getOperador();
+    const fecha = this.todayDisplayDate();
+    const hora = this.currentTimeLabel();
+    const currency = this.cleanText(pointOfSale?.currency || draft.currency || this.roomChargeLines()[0]?.currency || this.invoiceBaseCurrency);
+    const validLines = this.roomChargeLines().filter((line) => line.quantity > 0 && line.price >= 0 && line.total > 0);
+
+    if (!guest || !draft.pointOfSale || !room.reservationNumber || !room.roomNumber || !validLines.length || this.roomChargeTotal() <= 0) {
+      return null;
+    }
+
+    return {
+      proceso: 1,
+      tipCrgHab: 'CH',
+      numCrgHab: '',
+      codRsv: this.cleanText(room.reservationNumber),
+      numHab: this.cleanText(room.roomNumber),
+      pntVenta: this.cleanText(draft.pointOfSale),
+      fecha,
+      hora,
+      numDocu: this.cleanText(guest.document),
+      nombrePax: this.cleanText(guest.name),
+      mtoTotal: this.roomChargeTotal(),
+      moneda: currency,
+      cierre: 0,
+      numCierre: 0,
+      operador: operator,
+      detalle: validLines.map((line, index) => ({
+        codRsv: this.cleanText(room.reservationNumber),
+        numHab: this.cleanText(room.roomNumber),
+        pntVenta: this.cleanText(draft.pointOfSale),
+        fecha,
+        hora,
+        grupo: this.cleanText(line.group),
+        categoria: this.cleanText(line.category),
+        codConsumo: this.cleanText(line.code),
+        nomConsumo: this.cleanText(line.name),
+        cantidad: Number(line.quantity || 0),
+        precio: this.roundCurrency(Number(line.price || 0)),
+        total: this.roundCurrency(Number(line.total || 0)),
+        moneda: this.cleanText(line.currency || currency),
+        tipNPedido: '',
+        numNPedido: '',
+        codMozo: '',
+        incluido: 0,
+        exonerado: 0,
+        orden: index + 1,
+        comentario: this.cleanText(line.comment || draft.comment),
+        operador: operator
+      }))
+    };
+  }
+
+  private applySubmittedRoomCharge(payload: RoomChargePayload): void {
+    const numCrgHab = this.cleanText(payload.numCrgHab) || this.cleanText(payload.pntVenta);
+    const charge: Charge = {
+      id: this.buildChargeId(numCrgHab, payload.fecha, payload.hora, this.room().extraCharges.length),
+      tipCrgHab: this.cleanText(payload.tipCrgHab) || 'CH',
+      numCrgHab,
+      codRsv: this.cleanText(payload.codRsv),
+      numHab: this.cleanText(payload.numHab),
+      date: payload.fecha,
+      time: payload.hora,
+      concept: payload.detalle.length === 1 ? payload.detalle[0].nomConsumo : `Cargo habitacion ${payload.pntVenta}`,
+      reference: numCrgHab,
+      charge: payload.mtoTotal,
+      payment: 0,
+      balance: this.totalToCharge() + payload.mtoTotal,
+      invoiceSelected: true
+    };
+
+    this.room.update((currentRoom) => ({
+      ...currentRoom,
+      extraCharges: [charge, ...currentRoom.extraCharges],
+      observations: [
+        `Cargo de habitacion registrado a ${payload.nombrePax} por ${this.formatCurrency(payload.mtoTotal)}.`,
+        ...currentRoom.observations
+      ]
+    }));
+
+    this.addTimelineEntry('Cargo de habitacion', `${payload.detalle.length} consumo(s) registrados desde ${payload.pntVenta}.`);
+    this.toastService.success('Cargo de habitacion registrado correctamente.', 4000, 'Cargo habitacion');
+  }
+
+  private loadAvailableRoomsForChange(): void {
+    const room = this.room();
+    const category = this.cleanText(room.roomCategory);
+
+    if (!room.checkIn || !room.checkOut || !category) {
+      this.availableRoomsLoaded.set(true);
+      this.availableRoomOptions.set([]);
+      this.toastService.warning('No hay datos suficientes para consultar disponibilidad.', 3500, 'Habitaciones');
+      return;
+    }
+
+    this.isAvailableRoomsLoading.set(true);
+    this.availableRoomsLoaded.set(false);
+    this.availableRoomOptions.set([]);
+
+    this.roomStayManagementService
+      .getAvailableRooms(room.checkIn, room.checkOut, category)
+      .pipe(
+        catchError((error) => {
+          console.error('No se pudo cargar la disponibilidad de habitaciones.', error);
+          this.toastService.warning('No se pudo cargar habitaciones disponibles.', 3500, 'Habitaciones');
+          return of([] as RoomAvailabilityApiRoom[]);
+        }),
+        finalize(() => this.isAvailableRoomsLoading.set(false)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((availableRooms) => {
+        const options = availableRooms
+          .filter((item) => Number(item.cantidadDisponible ?? 0) > 0)
+          .map((item) => this.mapAvailableRoomOption(item));
+
+        this.availableRoomOptions.set(options);
+        this.availableRoomsLoaded.set(true);
+
+        const firstOption = options[0];
+        if (firstOption) {
+          this.updateActionDraft({
+            targetRoom: firstOption.number,
+            targetRoomType: firstOption.type
+          });
+        } else {
+          this.toastService.info('No hay habitaciones disponibles para la categoria y fechas seleccionadas.', 3500, 'Habitaciones');
+        }
+      });
+  }
+
+  private mapAvailableRoomOption(room: RoomAvailabilityApiRoom): RoomOption {
+    const description = this.cleanText(room.descripcion) || this.cleanText(room.cateHab) || 'Habitacion';
+    const type = this.cleanText(room.tipoHab);
+
+    return {
+      number: this.cleanText(room.numHab),
+      type: type ? `${description} / ${type}` : description
+    };
+  }
+
+  private loadRoomStay(): void {
+    const roomNumber = this.requestedRoomNumber || this.room().roomNumber;
+
+    if (!roomNumber) {
+      return;
+    }
+
+    this.isStayLoading.set(true);
+    this.stayErrorMessage.set('');
+
+    this.roomStayManagementService
+      .getRoomStay(roomNumber, this.requestedReservationNumber)
+      .pipe(
+        catchError((error) => {
+          console.error('No se pudo cargar la estancia de la habitacion.', error);
+          this.stayErrorMessage.set('No se pudo cargar la informacion real de la estancia.');
+          this.toastService.warning('Se mantiene la informacion disponible del Room Rack.', 3500, 'Estancia');
+          return of(null);
+        }),
+        finalize(() => this.isStayLoading.set(false)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((stay) => {
+        if (!stay) {
+          return;
+        }
+
+        this.room.set(this.mapApiStayToRoomStay(stay));
+        this.requestedReservationNumber = stay.codReserva;
+      });
+  }
+
+  private mapApiStayToRoomStay(stay: RoomStayApiData): RoomStay {
+    const checkIn = this.formatApiDate(stay.fechaIng);
+    const checkOut = this.formatApiDate(stay.fechaSal);
+    const observations = [stay.observacion, stay.comentarios]
+      .map((item) => this.cleanText(item))
+      .filter((item) => item.length > 0);
+
+    return {
+      roomNumber: this.cleanText(stay.numHabita) || this.room().roomNumber,
+      roomType: [stay.catHabi, stay.tipHabi].map((item) => this.cleanText(item)).filter(Boolean).join(' / ') || this.room().roomType,
+      roomCategory: this.cleanText(stay.catHabi) || this.room().roomCategory,
+      status: 'OCCUPIED',
+      agency: this.cleanText(stay.nombreAgencia) || this.cleanText(stay.codAgencia) || 'S/D',
+      rate: this.cleanText(stay.codTarifa) || 'S/D',
+      reservationNumber: this.cleanText(stay.codReserva) || this.room().reservationNumber,
+      checkIn,
+      checkOut,
+      nights: Number(stay.noches ?? 0),
+      guestsCount: Number(stay.numPax ?? stay.roomingList?.length ?? 0),
+      childrenCount: Number(stay.numChild ?? 0),
+      masterFolio: this.cleanText(stay.folio) || 'S/F',
+      plan: this.cleanText(stay.codPlan) || 'S/D',
+      reservedAt: '',
+      observations,
+      guests: Array.isArray(stay.roomingList)
+        ? stay.roomingList
+            .slice()
+            .sort((left, right) => Number(left.orden ?? 0) - Number(right.orden ?? 0))
+            .map((guest) => ({
+              name: [guest.nombre, guest.apellidos].map((item) => this.cleanText(item)).filter(Boolean).join(' ') || 'S/D',
+              documentType: this.cleanText(guest.tipDocu) || 'S/D',
+              document: this.cleanText(guest.numDocu) || this.cleanText(guest.numInterno) || 'S/D',
+              nationality: this.cleanText(guest.nacionalidad) || 'S/D',
+              birthDate: this.formatApiDate(guest.fecNaci)
+            }))
+        : [],
+      lodgingCharges: this.mapApiCharges(stay.cargosFolioMaster),
+      extraCharges: this.mapApiCharges(stay.cargosExtras),
+      prepaid: 0,
+      operator:
+        this.cleanText(stay.roomingList?.[0]?.operador) ||
+        this.cleanText(stay.cargosFolioMaster?.[0]?.operador) ||
+        this.cleanText(stay.cargosExtras?.[0]?.operador) ||
+        this.room().operator
+    };
+  }
+
+  private mapApiCharges(charges: RoomStayApiCharge[] | null | undefined): Charge[] {
+    let balance = 0;
+
+    if (!Array.isArray(charges)) {
+      return [];
+    }
+
+    return charges.map((charge, index) => {
+      const amount = Number(charge.totCargo ?? 0);
+      balance += amount;
+      const date = this.formatApiDate(charge.fecCargo);
+      const time = this.formatApiTime(charge.horaCargo);
+      const reference = this.cleanText(charge.numCrgHab) || this.cleanText(charge.folio);
+      const apiCharge = charge as RoomStayApiCharge & { tipCrgHab?: string; tipoCrgHab?: string; tipCargo?: string };
+
+      return {
+        id: this.buildChargeId(reference, date, time, index),
+        tipCrgHab: this.cleanText(apiCharge.tipCrgHab) || this.cleanText(apiCharge.tipoCrgHab) || this.cleanText(apiCharge.tipCargo) || 'CH',
+        numCrgHab: this.cleanText(charge.numCrgHab) || reference,
+        codRsv: this.cleanText(charge.codReserva) || this.cleanText(this.room().reservationNumber),
+        numHab: this.cleanText(charge.numHab) || this.cleanText(this.room().roomNumber),
+        date,
+        time,
+        concept: this.cleanText(charge.nombreHuesped) || 'Cargo',
+        reference,
+        charge: amount,
+        payment: 0,
+        balance,
+        invoiceSelected: true
+      };
+    });
+  }
+
+  private formatApiTime(value: string | null | undefined): string {
+    const [hour, minute] = this.cleanText(value).split(':');
+
+    if (!hour || !minute) {
+      return this.cleanText(value);
+    }
+
+    return `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+  }
+
+  private formatApiDate(value: string | null | undefined): string {
+    const rawDate = this.cleanText(value).split(' ')[0];
+    const [day, month, year] = rawDate.split('/');
+
+    if (!day || !month || !year) {
+      return '';
+    }
+
+    return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+  }
+
+  private cleanText(value: string | number | null | undefined): string {
+    return (value ?? '').toString().trim();
+  }
+
+  private normalizeSearchTerm(value: string | number | null | undefined): string {
+    return this.cleanText(value)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
   private sumCharges(charges: Charge[]): number {
     return charges.reduce((total, item) => total + item.charge - item.payment, 0);
   }
 
+  private sumSelectedCharges(charges: Charge[]): number {
+    return this.sumCharges(charges.filter((charge) => charge.invoiceSelected));
+  }
+
+  private buildChargeId(reference: string, date: string, time: string, index: number): string {
+    return [reference || 'SIN-REF', date || 'SIN-FECHA', time || 'SIN-HORA', index].join('|');
+  }
+
+  private resetInvoicePaymentsForSelectionChange(): void {
+    this.invoiceAppliedPayments.set([]);
+    this.invoiceValidationMessage.set('');
+    this.invoicePaymentDraft.update((draft) => ({
+      ...draft,
+      amount: this.roundCurrency(this.convertPaymentFromInvoiceCurrency(this.invoiceTotal(), draft.moneda, this.getInvoiceDraftExchangeRate(draft)))
+    }));
+  }
+
   private resetInvoiceDraft(): void {
+    const defaultMethod = this.invoicePaymentMethods()[0]?.code ?? '';
+    const defaultCurrency = this.getDefaultInvoiceCurrency();
+
     this.selectedInvoiceClient.set(null);
     this.invoiceClientSearch.set('');
     this.invoiceAppliedPayments.set([]);
     this.invoiceValidationMessage.set('');
     this.invoicePaymentDraft.set({
-      methodCode: 'cash',
+      methodCode: defaultMethod,
+      moneda: defaultCurrency,
       amount: this.invoiceTotal(),
-      reference: ''
+      numTarjeta: '',
+      vencimiento: '',
+      tCambio: defaultCurrency === this.invoiceBaseCurrency ? 1 : 0
     });
+
+    if (defaultCurrency !== this.invoiceBaseCurrency) {
+      this.loadInvoiceExchangeRateForCurrency(defaultCurrency);
+    }
+  }
+
+  private loadInvoiceCatalogs(): void {
+    this.isInvoiceCatalogLoading.set(true);
+
+    this.roomStayManagementService
+      .getPointOfSalePaymentMethods('PF')
+      .pipe(
+        catchError((error) => {
+          console.error('No se pudo cargar formas de pago de punto de venta.', error);
+          this.toastService.warning('No se pudieron cargar las formas de pago.', 3500, 'Facturacion');
+          return of([] as PointOfSalePaymentMethodApi[]);
+        }),
+        finalize(() => this.isInvoiceCatalogLoading.set(false)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((methods) => {
+        const mappedMethods = methods.map((method) => this.mapInvoicePaymentMethod(method));
+        this.invoicePaymentMethods.set(mappedMethods);
+
+        const currentMethod = this.invoicePaymentDraft().methodCode;
+        if (!currentMethod || !mappedMethods.some((method) => method.code === currentMethod)) {
+          this.updateInvoicePaymentDraft({ methodCode: mappedMethods[0]?.code ?? '' });
+        }
+      });
+
+    if (!this.invoiceCurrencies().length) {
+      this.monedaService
+        .getAll()
+        .pipe(
+          catchError((error) => {
+            console.error('No se pudo cargar monedas.', error);
+            this.toastService.warning('No se pudo cargar el catalogo de monedas.', 3500, 'Facturacion');
+            return of([] as MonedaUI[]);
+          }),
+          takeUntilDestroyed(this.destroyRef)
+        )
+        .subscribe((currencies) => {
+          const activeCurrencies = currencies
+            .filter((currency) => Number(currency.activo ?? 0) !== 0)
+            .sort((a, b) => Number(a.orden ?? 0) - Number(b.orden ?? 0));
+
+          this.invoiceCurrencies.set(activeCurrencies);
+
+          const defaultCurrency = this.getDefaultInvoiceCurrency();
+          const draft = this.invoicePaymentDraft();
+          if (!draft.moneda || !this.invoiceCurrencyOptions().some((currency) => currency.codMoneda === draft.moneda)) {
+            this.updateInvoicePaymentDraft({ moneda: defaultCurrency, tCambio: defaultCurrency === this.invoiceBaseCurrency ? 1 : 0 });
+          }
+        });
+    }
+  }
+
+  private mapInvoicePaymentMethod(method: PointOfSalePaymentMethodApi): InvoicePaymentMethod {
+    return {
+      code: this.cleanText(method.CA05_Codigo),
+      description: this.cleanText(method.CA05_Descripcion) || this.cleanText(method.CA05_Codigo),
+      tipo: this.cleanText(method.CA05_Tipo),
+      tipPago: this.cleanText(method.CA05_TipPago),
+      ndias: Number(method.CA05_NDias ?? 0)
+    };
+  }
+
+  private loadInvoiceExchangeRateForCurrency(currency: string): void {
+    const moneda = this.cleanText(currency).toUpperCase();
+
+    if (!moneda || moneda === this.invoiceBaseCurrency) {
+      this.invoicePaymentDraft.update((draft) => ({ ...draft, moneda: moneda || this.invoiceBaseCurrency, tCambio: 1 }));
+      return;
+    }
+
+    this.isInvoiceExchangeRateLoading.set(true);
+
+    this.tipoCambioService
+      .fetchTipoCambio(this.todayDisplayDate(), moneda.toLowerCase())
+      .pipe(
+        catchError((error) => {
+          console.error('No se pudo cargar el tipo de cambio.', error);
+          this.toastService.warning('No se pudo cargar el tipo de cambio para la moneda seleccionada.', 3500, 'Facturacion');
+          return of([]);
+        }),
+        finalize(() => this.isInvoiceExchangeRateLoading.set(false)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((items) => {
+        const exchangeRate = Number(items[0]?.venta ?? 0);
+        this.invoicePaymentDraft.update((draft) => ({
+          ...draft,
+          moneda,
+          tCambio: exchangeRate > 0 ? this.roundCurrency(exchangeRate) : 0
+        }));
+      });
+  }
+
+  private getDefaultInvoiceCurrency(): string {
+    const currencies = this.invoiceCurrencyOptions();
+    const usdCurrency = currencies.find((currency) => this.cleanText(currency.codMoneda).toUpperCase() === this.invoiceBaseCurrency);
+
+    return this.cleanText(usdCurrency?.codMoneda || currencies[0]?.codMoneda || this.invoiceBaseCurrency).toUpperCase();
+  }
+
+  private getInvoiceDraftExchangeRate(draft: InvoicePaymentDraft): number {
+    const moneda = this.cleanText(draft.moneda).toUpperCase();
+
+    if (!moneda || moneda === this.invoiceBaseCurrency) {
+      return 1;
+    }
+
+    const rate = Number(draft.tCambio ?? 0);
+    return Number.isFinite(rate) && rate > 0 ? rate : 0;
+  }
+
+  private convertPaymentToInvoiceCurrency(amount: number, currency: string, rate: number): number {
+    const paymentCurrency = this.cleanText(currency).toUpperCase();
+
+    if (!amount || !paymentCurrency || paymentCurrency === this.invoiceBaseCurrency || !rate) {
+      return amount || 0;
+    }
+
+    return paymentCurrency === 'USD' ? amount : amount / rate;
+  }
+
+  private convertPaymentFromInvoiceCurrency(amount: number, currency: string, rate: number): number {
+    const paymentCurrency = this.cleanText(currency).toUpperCase();
+
+    if (!amount || !paymentCurrency || paymentCurrency === this.invoiceBaseCurrency || !rate) {
+      return amount || 0;
+    }
+
+    return paymentCurrency === 'USD' ? amount : amount * rate;
   }
 
   private buildActionDraft(actionId?: StayActionId): ActionModalDraft {
     const room = this.room();
     const roomOptions = this.buildRoomOptions(room.roomNumber);
-    const firstOption = roomOptions[0];
+    const firstOption = actionId === 'change-room' ? null : roomOptions[0];
     const currentBalance = this.sumCharges(room.lodgingCharges) + this.sumCharges(room.extraCharges) - room.prepaid;
 
     return {
@@ -687,18 +2025,21 @@ export class RoomStayManagementComponent {
     };
   }
 
-  private buildRoomOptions(currentRoomNumber: string): RoomOption[] {
-    const seed = Number(currentRoomNumber) || 100;
-    const roomTypes = ['Standard Room', 'Junior Suite', 'Deluxe Room', 'Master Suite'];
+  private buildRoomChargeDraft(): RoomChargeDraft {
+    const firstGuest = this.room().guests[0];
 
-    return [1, 2, 3].map((offset) => {
-      const nextRoomNumber = String(seed + offset);
+    return {
+      guestDocument: firstGuest?.document ?? '',
+      pointOfSale: '',
+      priceList: '',
+      currency: this.invoiceBaseCurrency,
+      itemSearch: '',
+      comment: ''
+    };
+  }
 
-      return {
-        number: nextRoomNumber,
-        type: roomTypes[(seed + offset) % roomTypes.length]
-      };
-    });
+  private buildRoomOptions(_currentRoomNumber: string): RoomOption[] {
+    return [];
   }
 
   private applyRoomChange(): void {
@@ -718,9 +2059,169 @@ export class RoomStayManagementComponent {
     this.toastService.success(`Cambio de habitacion preparado para ${draft.targetRoom}.`, 4000, 'Estancia');
   }
 
+  private async confirmRoomChange(): Promise<void> {
+    const payload = this.buildRoomChangePayload();
+
+    if (!payload) {
+      this.toastService.warning('Faltan datos para preparar el cambio de habitacion.', 3500, 'Habitaciones');
+      return;
+    }
+
+    if (payload.oldHab === payload.newHab) {
+      this.toastService.info('Selecciona una habitacion distinta a la actual.', 3000, 'Habitaciones');
+      return;
+    }
+
+    this.isRoomChangeSubmitting.set(true);
+
+    const confirmation = await Swal.fire({
+      title: 'Confirmar cambio de habitacion',
+      text: `Se cambiara la reserva ${payload.codReserva} de la habitacion ${payload.oldHab} a la ${payload.newHab}.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Si, cambiar',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true
+    });
+
+    if (!confirmation.isConfirmed) {
+      this.isRoomChangeSubmitting.set(false);
+      return;
+    }
+
+    this.roomStayManagementService
+      .changeRoom(payload)
+      .pipe(
+        finalize(() => this.isRoomChangeSubmitting.set(false)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (response) => {
+          if (this.isFailedApiResponse(response)) {
+            this.toastService.warning(response.message || 'No se pudo preparar el cambio de habitacion.', 4000, 'Habitaciones');
+            return;
+          }
+
+          this.applyRoomChange();
+          this.requestedRoomNumber = payload.newHab;
+          this.closeActionModal();
+          this.router.navigate(['/front-desk/room-rack']);
+        },
+        error: (error) => {
+          console.error('No se pudo preparar el cambio de habitacion.', error);
+          this.toastService.warning('No se pudo preparar el cambio de habitacion.', 4000, 'Habitaciones');
+        }
+      });
+  }
+
+  private buildRoomChangePayload(): RoomChangePayload | null {
+    const room = this.room();
+    const draft = this.actionDraft();
+    const payload: RoomChangePayload = {
+      codReserva: this.cleanText(room.reservationNumber),
+      oldHab: this.cleanText(room.roomNumber),
+      newHab: this.cleanText(draft.targetRoom),
+      folio: this.cleanText(room.masterFolio),
+      operador: this.getOperador()
+    };
+
+    return Object.values(payload).every((value) => value.length > 0) ? payload : null;
+  }
+
+  private getOperador(): string {
+    const user = this.authService.getCurrentUser();
+    return this.cleanText(user?.usuario || user?.nombre || this.room().operator || 'SISTEMA');
+  }
+
+  private isFailedApiResponse(response: unknown): response is { success: false; message?: string } {
+    return (
+      typeof response === 'object' &&
+      response !== null &&
+      Object.prototype.hasOwnProperty.call(response, 'success') &&
+      (response as { success?: boolean }).success === false
+    );
+  }
+
+  private async submitDepartureChange(): Promise<void> {
+    const payload = this.buildDepartureDateChangePayload();
+
+    if (!payload) {
+      this.toastService.warning('Faltan datos para actualizar la fecha de salida.', 3500, 'Reserva');
+      return;
+    }
+
+    if (payload.fechaSalida === this.room().checkOut) {
+      this.toastService.info('Selecciona una fecha de salida distinta a la actual.', 3000, 'Reserva');
+      return;
+    }
+
+    this.isDepartureChangeSubmitting.set(true);
+
+    const confirmation = await Swal.fire({
+      title: 'Confirmar cambio de salida',
+      text: `Se actualizara la salida de la reserva ${payload.codReserva} para el ${payload.fechaSalida}.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Si, actualizar',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true
+    });
+
+    if (!confirmation.isConfirmed) {
+      this.isDepartureChangeSubmitting.set(false);
+      return;
+    }
+
+    this.executeDepartureChange(payload);
+  }
+
+  private executeDepartureChange(payload: DepartureDateChangePayload): void {
+    this.isDepartureChangeSubmitting.set(true);
+
+    this.roomStayManagementService
+      .changeDepartureDate(payload)
+      .pipe(
+        finalize(() => this.isDepartureChangeSubmitting.set(false)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (response) => {
+          if (this.isFailedApiResponse(response)) {
+            this.toastService.warning(response.message || 'No se pudo actualizar la fecha de salida.', 4000, 'Reserva');
+            return;
+          }
+
+          this.applyDepartureChange();
+          this.closeActionModal();
+        },
+        error: (error) => {
+          console.error('No se pudo actualizar la fecha de salida.', error);
+          this.toastService.warning('No se pudo actualizar la fecha de salida.', 4000, 'Reserva');
+        }
+      });
+  }
+
+  private buildDepartureDateChangePayload(): DepartureDateChangePayload | null {
+    const room = this.room();
+    const fechaSalida = this.formatInputDateForApi(this.actionDraft().newCheckOut);
+    const payload: DepartureDateChangePayload = {
+      codReserva: this.cleanText(room.reservationNumber),
+      habitacion: this.cleanText(room.roomNumber),
+      fechaSalida,
+      operador: this.getOperador()
+    };
+
+    return Object.values(payload).every((value) => value.length > 0) ? payload : null;
+  }
+
   private applyDepartureChange(): void {
     const draft = this.actionDraft();
-    const formattedCheckOut = this.fromInputDate(draft.newCheckOut);
+    const formattedCheckOut = this.formatInputDateForApi(draft.newCheckOut);
+
+    if (!formattedCheckOut) {
+      this.toastService.warning('La fecha de salida no tiene un formato valido.', 3500, 'Reserva');
+      return;
+    }
 
     this.room.update((currentRoom) => ({
       ...currentRoom,
@@ -751,13 +2252,19 @@ export class RoomStayManagementComponent {
 
   private applyChargeRefresh(): void {
     const refreshCharge: Charge = {
+      id: this.buildChargeId(this.room().masterFolio, this.todayDisplayDate(), this.currentTimeLabel(), this.room().lodgingCharges.length),
+      tipCrgHab: 'CH',
+      numCrgHab: this.cleanText(this.room().masterFolio),
+      codRsv: this.cleanText(this.room().reservationNumber),
+      numHab: this.cleanText(this.room().roomNumber),
       date: this.todayDisplayDate(),
       time: this.currentTimeLabel(),
       concept: 'Sincronizacion de folio',
       reference: this.room().masterFolio,
       charge: 0,
       payment: 0,
-      balance: this.totalToCharge()
+      balance: this.totalToCharge(),
+      invoiceSelected: false
     };
 
     this.room.update((currentRoom) => ({
@@ -773,14 +2280,25 @@ export class RoomStayManagementComponent {
   private applyNewCharge(): void {
     const draft = this.actionDraft();
     const currentBalance = this.totalToCharge() + draft.chargeAmount;
-    const newCharge: Charge = {
-      date: this.todayDisplayDate(),
-      time: this.currentTimeLabel(),
-      concept: draft.chargeConcept,
+      const newCharge: Charge = {
+        id: this.buildChargeId(
+          draft.chargeBucket === 'lodging' ? this.room().masterFolio : `EXT-${this.room().roomNumber}`,
+          this.todayDisplayDate(),
+          this.currentTimeLabel(),
+          draft.chargeBucket === 'lodging' ? this.room().lodgingCharges.length : this.room().extraCharges.length
+        ),
+        tipCrgHab: 'CH',
+        numCrgHab: draft.chargeBucket === 'lodging' ? this.cleanText(this.room().masterFolio) : `EXT-${this.cleanText(this.room().roomNumber)}`,
+        codRsv: this.cleanText(this.room().reservationNumber),
+        numHab: this.cleanText(this.room().roomNumber),
+        date: this.todayDisplayDate(),
+        time: this.currentTimeLabel(),
+        concept: draft.chargeConcept,
       reference: draft.chargeBucket === 'lodging' ? this.room().masterFolio : `EXT-${this.room().roomNumber}`,
       charge: draft.chargeAmount,
       payment: 0,
-      balance: currentBalance
+      balance: currentBalance,
+      invoiceSelected: true
     };
 
     this.room.update((currentRoom) => ({
@@ -800,13 +2318,19 @@ export class RoomStayManagementComponent {
   private applyChargeTransfer(): void {
     const draft = this.actionDraft();
     const transferCharge: Charge = {
+      id: this.buildChargeId(draft.destinationFolio, this.todayDisplayDate(), this.currentTimeLabel(), this.room().extraCharges.length),
+      tipCrgHab: 'CH',
+      numCrgHab: this.cleanText(draft.destinationFolio),
+      codRsv: this.cleanText(this.room().reservationNumber),
+      numHab: this.cleanText(this.room().roomNumber),
       date: this.todayDisplayDate(),
       time: this.currentTimeLabel(),
       concept: `Transferencia a ${draft.destinationFolio}`,
       reference: draft.destinationFolio,
       charge: 0,
       payment: draft.chargeAmount,
-      balance: Math.max(this.totalToCharge() - draft.chargeAmount, 0)
+      balance: Math.max(this.totalToCharge() - draft.chargeAmount, 0),
+      invoiceSelected: false
     };
 
     this.room.update((currentRoom) => ({
@@ -831,6 +2355,11 @@ export class RoomStayManagementComponent {
   }
 
   private applyRoomInvoiceAction(): boolean {
+    if (this.totalToInvoice() <= 0) {
+      this.invoiceValidationMessage.set('Selecciona al menos un cargo para facturar.');
+      return false;
+    }
+
     if (!this.invoiceCanConfirm()) {
       this.invoiceValidationMessage.set(
         this.invoiceAppliedPayments().length === 0
@@ -882,7 +2411,7 @@ export class RoomStayManagementComponent {
     return new Intl.DateTimeFormat('es-DO', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
   }
 
-  private todayDisplayDate(): string {
+  todayDisplayDate(): string {
     const now = new Date();
     const day = `${now.getDate()}`.padStart(2, '0');
     const month = `${now.getMonth() + 1}`.padStart(2, '0');
@@ -902,10 +2431,14 @@ export class RoomStayManagementComponent {
   }
 
   private fromInputDate(date: string): string {
+    return this.formatInputDateForApi(date) || this.room().checkOut;
+  }
+
+  private formatInputDateForApi(date: string): string {
     const [year, month, day] = date.split('-');
 
     if (!year || !month || !day) {
-      return this.room().checkOut;
+      return '';
     }
 
     return `${day}/${month}/${year}`;
@@ -960,6 +2493,7 @@ export class RoomStayManagementComponent {
       ...fallback,
       roomNumber,
       roomType,
+      roomCategory: roomData.CR05_CateHab || fallback.roomCategory,
       agency: roomData.CR05_CodGrp || fallback.agency,
       rate,
       reservationNumber,
@@ -1010,42 +2544,9 @@ export class RoomStayManagementComponent {
   }
 
   private buildRoomFromNumber(roomNumber: string): RoomStay {
-    const seed = Number(roomNumber) || 1;
-    const template = rooms[seed % rooms.length];
-    const roomTypes = ['Standard Room', 'Junior Suite', 'Deluxe Room', 'Master Suite'];
-    const baseCharge = 90 + (seed % 5) * 25;
-    const prepaid = seed % 2 === 0 ? 80 : 120;
-
     return {
-      ...template,
-      roomNumber,
-      roomType: roomTypes[seed % roomTypes.length],
-      reservationNumber: `EE25015${String(seed).padStart(4, '0')}`,
-      masterFolio: `TR${String(seed).padStart(5, '0')}`,
-      nights: 2 + (seed % 3),
-      guestsCount: 1 + (seed % 3),
-      childrenCount: seed % 2,
-      prepaid,
-      observations: [
-        `Habitacion ${roomNumber} con informacion mock operativa.`,
-        seed % 2 === 0 ? 'Prepagada parcialmente por agencia.' : 'Solicita cama adicional segun disponibilidad.',
-        'Pendiente validar preferencias al cierre del turno.'
-      ],
-      guests: template.guests.map((guest, index) => ({
-        ...guest,
-        documentType: guest.documentType,
-        document: `${guest.document}-${roomNumber}-${index + 1}`
-      })),
-      lodgingCharges: [
-        { date: '16/06/2026', time: '15:05', concept: 'Room Charge', reference: `TR-${roomNumber}`, charge: baseCharge, payment: 0, balance: baseCharge },
-        { date: '17/06/2026', time: '08:40', concept: 'Breakfast', reference: `BF-${roomNumber}`, charge: 24 + (seed % 4) * 3, payment: 0, balance: baseCharge + 24 },
-        { date: '17/06/2026', time: '13:15', concept: 'Lunch', reference: `LN-${roomNumber}`, charge: 36 + (seed % 5) * 4, payment: 0, balance: baseCharge + 60 }
-      ],
-      extraCharges: [
-        { date: '17/06/2026', time: '15:30', concept: 'Spa', reference: `SPA-${roomNumber}`, charge: 60 + (seed % 4) * 15, payment: 0, balance: baseCharge + 120 },
-        { date: '17/06/2026', time: '18:45', concept: 'Laundry', reference: `LND-${roomNumber}`, charge: 18 + (seed % 3) * 5, payment: 0, balance: baseCharge + 145 },
-        { date: '18/06/2026', time: '09:10', concept: 'Transfer', reference: `TRF-${roomNumber}`, charge: 25 + (seed % 4) * 5, payment: 0, balance: baseCharge + 180 }
-      ]
+      ...emptyRoomStay,
+      roomNumber
     };
   }
 }

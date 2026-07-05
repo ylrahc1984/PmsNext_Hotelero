@@ -24,7 +24,7 @@
   </div>
 
   <form [formGroup]="stayForm">
-    <div class="row g-4 mb-4">
+    <div class="row g-3 mb-3">
       <div class="col-xl-8">
         <div class="card walk-card h-100">
           <div class="card-header bg-white">
@@ -34,7 +34,7 @@
             </h5>
           </div>
           <div class="card-body">
-            <div class="row g-3">
+            <div class="row g-2">
               <div class="col-md-4">
                 <label class="form-label">Fecha Entrada <span class="text-danger">*</span></label>
                 <input type="date" class="form-control" formControlName="fechaEntrada" [class.is-invalid]="isStayFieldInvalid('fechaEntrada')">
@@ -139,7 +139,7 @@
 
               <div class="col-12">
                 <label class="form-label">Observaciones</label>
-                <textarea class="form-control" rows="3" formControlName="observaciones" maxlength="500"></textarea>
+                <textarea class="form-control" rows="2" formControlName="observaciones" maxlength="500"></textarea>
               </div>
             </div>
           </div>
@@ -264,13 +264,32 @@
               <input class="form-control" formControlName="numeroDocumento" [class.is-invalid]="isGuestFieldInvalid('numeroDocumento')">
               <div class="invalid-feedback">{{ getFieldError(guestForm.controls.numeroDocumento) }}</div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-4 position-relative">
               <label class="form-label">Nacionalidad <span class="text-danger">*</span></label>
-              <select class="form-select" formControlName="nacionalidad" [class.is-invalid]="isGuestFieldInvalid('nacionalidad')">
-                <option value="">Seleccione...</option>
-                <option *ngFor="let item of nacionalidades; trackBy: trackByCode" [value]="item.CR06_Codigo">{{ item.CR06_Descripcion }}</option>
-              </select>
-              <div class="invalid-feedback">{{ getFieldError(guestForm.controls.nacionalidad) }}</div>
+              <div class="input-group">
+                <input
+                  type="search"
+                  class="form-control"
+                  placeholder="Escriba para buscar..."
+                  autocomplete="off"
+                  [value]="nationalitySearchControl.value"
+                  [class.is-invalid]="isGuestFieldInvalid('nacionalidad')"
+                  (focus)="openNationalitySearch()"
+                  (blur)="closeNationalitySearch()"
+                  (input)="onNationalitySearchChange($any($event.target).value)"
+                >
+                <button type="button" class="btn btn-outline-secondary" (click)="openNationalitySearch()" tabindex="-1">
+                  <i class="feather icon-search"></i>
+                </button>
+              </div>
+              <div class="invalid-feedback d-block" *ngIf="isGuestFieldInvalid('nacionalidad')">{{ getFieldError(guestForm.controls.nacionalidad) }}</div>
+              <div class="autocomplete-menu nationality-menu" *ngIf="nationalitySearchOpen">
+                <button type="button" class="autocomplete-item" *ngFor="let item of filteredNationalities(); trackBy: trackByCode" (mousedown)="selectNationality(item)">
+                  <strong>{{ item.CR06_Descripcion }}</strong>
+                  <small>{{ item.CR06_Codigo }}</small>
+                </button>
+                <div class="autocomplete-empty" *ngIf="filteredNationalities().length === 0">No se encontraron nacionalidades.</div>
+              </div>
             </div>
             <div class="col-md-6">
               <label class="form-label">Nombre <span class="text-danger">*</span></label>

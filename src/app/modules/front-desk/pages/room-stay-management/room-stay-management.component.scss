@@ -233,7 +233,7 @@ h1 {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: minmax(390px, 0.95fr) minmax(520px, 1.25fr) 300px;
+  grid-template-columns: minmax(390px, 0.92fr) minmax(560px, 1.38fr) 260px;
   grid-template-rows: auto auto auto;
   gap: 10px;
   align-items: stretch;
@@ -448,13 +448,41 @@ label {
 }
 
 .guest-table .table-row {
-  grid-template-columns: 32px minmax(110px, 1.3fr) 74px minmax(90px, 1fr) minmax(80px, 0.9fr) minmax(92px, 1fr) 24px;
+  grid-template-columns: 32px minmax(120px, 1.35fr) minmax(130px, 1.05fr) minmax(92px, 0.9fr) minmax(92px, 0.9fr) 24px;
   gap: 8px;
 }
 
 .ledger-table .table-row {
-  grid-template-columns: 88px 54px minmax(98px, 1fr) 84px 92px 94px 86px;
-  gap: 12px;
+  grid-template-columns: 42px 78px 42px minmax(145px, 1.45fr) minmax(112px, 1fr) 86px 82px;
+  gap: 8px;
+}
+
+.ledger-check-cell {
+  justify-content: center;
+}
+
+.ledger-check-cell input {
+  width: 16px;
+  height: 16px;
+  accent-color: $cyan;
+  cursor: pointer;
+}
+
+.ledger-table .table-row span:nth-child(3) {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ledger-table .table-row span:nth-child(4),
+.ledger-table .table-row span:nth-child(5) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ledger-table .table-row span:nth-child(6) {
+  text-align: right;
 }
 
 .ledger-card .card-head {
@@ -548,8 +576,8 @@ label {
   display: grid;
   flex: 1 1 0;
   align-content: start;
-  gap: 8px;
-  padding: 10px 12px;
+  gap: 7px;
+  padding: 9px 10px;
   border-bottom: 1px solid $line;
 }
 
@@ -561,18 +589,18 @@ label {
 
 .action-button {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr);
+  grid-template-columns: 26px minmax(0, 1fr);
   align-items: center;
-  column-gap: 12px;
+  column-gap: 9px;
   width: 100%;
   min-width: 0;
-  min-height: 46px;
-  padding: 4px 10px;
+  min-height: 42px;
+  padding: 4px 8px;
   border: 2px solid #d5e4ec;
   border-radius: 8px;
   color: $ink;
   background: $paper;
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 780;
   text-align: left;
   cursor: pointer;
@@ -582,10 +610,10 @@ label {
 .action-button .material-icons {
   display: grid;
   place-items: center;
-  width: 30px;
-  min-width: 30px;
+  width: 26px;
+  min-width: 26px;
   color: #1fab8b;
-  font-size: 1.28rem;
+  font-size: 1.18rem;
   text-align: center;
 }
 
@@ -601,7 +629,7 @@ label {
 }
 
 .action-button.danger {
-  grid-template-columns: 30px max-content;
+  grid-template-columns: 26px max-content;
   justify-content: center;
   border-color: rgba($red, 0.65);
   color: $red;
@@ -721,6 +749,71 @@ label {
   border-radius: 22px;
   background: #f5f8fb;
   box-shadow: 0 28px 80px rgba(8, 24, 39, 0.34);
+}
+
+.action-modal.action-modal--room-charge {
+  width: calc(100vw - 24px);
+  max-width: 1720px;
+  max-height: calc(100vh - 24px);
+  padding: 0;
+  overflow: hidden;
+  border-radius: 22px;
+  background: #f5f8fb;
+  box-shadow: 0 28px 80px rgba(8, 24, 39, 0.34);
+}
+
+.action-modal.action-modal--room-charge .room-charge-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+}
+
+.action-modal.action-modal--room-charge .room-charge-secondary,
+.action-modal.action-modal--room-charge .room-charge-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 138px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 12px;
+  font-size: 0.86rem;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.action-modal.action-modal--room-charge .room-charge-secondary {
+  border: 1px solid $line;
+  color: $ink;
+  background: $paper;
+}
+
+.action-modal.action-modal--room-charge .room-charge-primary {
+  border: 1px solid rgba($cyan-dark, 0.22);
+  color: $paper;
+  background: linear-gradient(135deg, $cyan-dark, $cyan);
+  box-shadow: 0 12px 24px rgba($cyan-dark, 0.2);
+}
+
+.action-modal.action-modal--room-charge .room-charge-primary:disabled {
+  opacity: 0.55;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.action-modal.action-modal--room-charge .room-charge-secondary .material-icons,
+.action-modal.action-modal--room-charge .room-charge-primary .material-icons {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 18px;
+  width: 18px;
+  font-size: 1.12rem;
+  line-height: 1;
 }
 
 .action-modal__header,
@@ -991,9 +1084,13 @@ label {
 }
 
 .room-invoice-header {
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid $line;
+}
+
+.room-invoice-header > div:first-child {
+  min-width: 0;
 }
 
 .room-invoice-eyebrow,
@@ -1028,6 +1125,39 @@ label {
   margin: 0;
   color: $muted;
   font-size: 0.9rem;
+}
+
+.room-invoice-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+
+.room-invoice-exchange-rate {
+  display: grid;
+  gap: 4px;
+  min-width: 116px;
+}
+
+.room-invoice-exchange-rate span {
+  color: $muted;
+  font-size: 0.68rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.room-invoice-exchange-rate input {
+  width: 116px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid $line;
+  border-radius: 10px;
+  color: #10263b;
+  background: #eef3f8;
+  font-size: 0.84rem;
+  font-weight: 850;
+  text-align: right;
 }
 
 .room-invoice-close,
@@ -1100,15 +1230,15 @@ label {
 
 .room-invoice-body {
   display: grid;
-  grid-template-columns: minmax(250px, 0.9fr) minmax(420px, 1.45fr) minmax(260px, 0.85fr);
-  gap: 14px;
-  padding: 12px 20px 14px;
+  grid-template-columns: minmax(230px, 0.72fr) minmax(620px, 1.55fr) minmax(220px, 0.58fr);
+  gap: 12px;
+  padding: 12px 18px 14px;
   overflow: auto;
 }
 
 .room-invoice-card {
   min-width: 0;
-  padding: 12px;
+  padding: 10px;
   border: 1px solid $line;
   border-radius: 16px;
   background: $paper;
@@ -1116,8 +1246,8 @@ label {
 }
 
 .room-invoice-card h3 {
-  margin: 0 0 10px;
-  font-size: 1rem;
+  margin: 0 0 8px;
+  font-size: 0.96rem;
   font-weight: 850;
 }
 
@@ -1135,9 +1265,9 @@ label {
 .room-invoice-search,
 .room-invoice-payment-form input,
 .room-invoice-payment-form select {
-  min-height: 38px;
+  min-height: 34px;
   border: 1px solid $line;
-  border-radius: 11px;
+  border-radius: 10px;
   color: #10263b;
   background: #fbfdff;
 }
@@ -1161,9 +1291,10 @@ label {
 .room-invoice-payment-form select {
   width: 100%;
   min-width: 0;
-  padding: 0 11px;
+  padding: 0 9px;
   font: inherit;
-  font-size: 0.86rem;
+  font-size: 0.78rem;
+  font-weight: 760;
 }
 
 .room-invoice-search input {
@@ -1179,6 +1310,13 @@ label {
   border-color: rgba($blue, 0.42);
 }
 
+.room-invoice-payment-form input:disabled,
+.room-invoice-payment-form select:disabled {
+  color: #6c7d8e;
+  background: #eef3f8;
+  cursor: not-allowed;
+}
+
 .room-invoice-results,
 .room-invoice-selected-client dl,
 .room-invoice-summary-list,
@@ -1192,7 +1330,8 @@ label {
 .room-invoice-payments-table,
 .room-invoice-empty-state,
 .room-invoice-detail-button,
-.room-invoice-inline-error {
+.room-invoice-inline-error,
+.room-invoice-conversion-hint {
   margin-top: 10px;
 }
 
@@ -1218,7 +1357,7 @@ label {
 
 .room-invoice-selected-client,
 .room-invoice-payment-form {
-  padding: 10px;
+  padding: 9px;
 }
 
 .room-invoice-selected-head,
@@ -1242,14 +1381,41 @@ label {
 }
 
 .room-invoice-payment-form {
-  grid-template-columns: minmax(180px, 1.2fr) minmax(110px, 0.65fr) minmax(150px, 0.9fr) 42px;
+  grid-template-columns: minmax(230px, 1.35fr) minmax(180px, 1fr) minmax(120px, 0.6fr) 38px;
   align-items: end;
+  gap: 7px;
+}
+
+.room-invoice-payment-form label:nth-child(4) {
+  grid-column: 1 / span 2;
+}
+
+.room-invoice-payment-form label:nth-child(5) {
+  grid-column: 3;
 }
 
 .room-invoice-add-payment {
-  width: 42px;
-  height: 38px;
-  border-radius: 12px;
+  grid-column: 4;
+  grid-row: 2;
+}
+
+.room-invoice-conversion-hint {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  color: $muted;
+  font-size: 0.74rem;
+  font-weight: 780;
+}
+
+.room-invoice-conversion-hint strong {
+  color: $blue;
+}
+
+.room-invoice-add-payment {
+  width: 38px;
+  height: 34px;
+  border-radius: 10px;
   color: $paper;
   cursor: pointer;
 }
@@ -1267,17 +1433,17 @@ label {
 
 .room-invoice-payments-table th,
 .room-invoice-payments-table td {
-  padding: 10px 12px;
+  padding: 8px 9px;
   border-bottom: 1px solid $line;
   color: #10263b;
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   text-align: left;
 }
 
 .room-invoice-payments-table th {
   background: #f3f7fb;
   color: $muted;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 850;
 }
 
@@ -1493,6 +1659,7 @@ label {
   .room-invoice-card--payments {
     grid-column: 1 / -1;
   }
+
 }
 
 @media (max-width: 767.98px) {
@@ -1561,6 +1728,20 @@ label {
     max-height: 96vh;
   }
 
+  .action-modal.action-modal--room-charge {
+    width: calc(100vw - 12px);
+    max-height: calc(100vh - 12px);
+  }
+
+  .action-modal.action-modal--room-charge .room-charge-footer {
+    flex-direction: column-reverse;
+  }
+
+  .action-modal.action-modal--room-charge .room-charge-secondary,
+  .action-modal.action-modal--room-charge .room-charge-primary {
+    width: 100%;
+  }
+
   .room-invoice-header,
   .room-invoice-footer,
   .room-invoice-stepper,
@@ -1573,6 +1754,12 @@ label {
   .room-invoice-body,
   .room-invoice-payment-form {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .room-invoice-payment-form label,
+  .room-invoice-add-payment {
+    grid-column: auto;
+    grid-row: auto;
   }
 
   .room-invoice-footer {

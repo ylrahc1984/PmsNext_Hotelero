@@ -68,13 +68,18 @@
 }
 
 .walk-in-page form .walk-card > .card-header {
-  padding-top: 0.75rem;
-  padding-bottom: 0.75rem;
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
 }
 
 .walk-in-page form .walk-card > .card-body {
-  padding-top: 1rem;
-  padding-bottom: 1rem;
+  padding-top: 0.7rem;
+  padding-bottom: 0.7rem;
+}
+
+.walk-in-page form .form-label {
+  margin-bottom: 0.25rem;
+  font-size: 0.82rem;
 }
 
 .summary-card {
@@ -87,7 +92,7 @@
   display: flex;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.45rem 0;
+  padding: 0.3rem 0;
 }
 
 .summary-line span {
@@ -100,8 +105,8 @@
 }
 
 .summary-total {
-  margin-top: 0.75rem;
-  padding: 0.9rem;
+  margin-top: 0.55rem;
+  padding: 0.65rem 0.75rem;
   border-radius: 10px;
   color: #ffffff;
   background: linear-gradient(135deg, #1457d8, #1f6bff);
@@ -145,6 +150,13 @@
 .autocomplete-item small {
   color: #94a3b8;
   font-size: 0.72rem;
+}
+
+.autocomplete-empty {
+  padding: 0.75rem 0.85rem;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .agency-search-toolbar,

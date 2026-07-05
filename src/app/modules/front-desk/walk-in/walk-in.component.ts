@@ -94,6 +94,7 @@ export class WalkInComponent implements OnInit {
   readonly stayValue = signal(this.stayForm.getRawValue());
   readonly agencyModalSearchControl = this.fb.control('');
   readonly tarifaModalSearchControl = this.fb.control('');
+  readonly nationalitySearchControl = this.fb.control('');
 
   readonly guestForm: FormGroup<GuestForm> = this.fb.group({
     tipoDocumento: this.fb.control('', { validators: [Validators.required] }),
@@ -153,6 +154,7 @@ export class WalkInComponent implements OnInit {
   agencyModalTotalRecords = 0;
   agencyModalTotalPages = 0;
   tarifaSearchOpen = false;
+  nationalitySearchOpen = false;
   tarifaModalLoading = false;
   tarifaModalError = '';
   tarifaModalPage = 1;
@@ -171,6 +173,8 @@ export class WalkInComponent implements OnInit {
   openAddGuestModal(): void {
     this.isEditingGuest = false;
     this.editingGuestId = '';
+    this.nationalitySearchControl.setValue('', { emitEvent: false });
+    this.nationalitySearchOpen = false;
     this.guestForm.reset({
       tipoDocumento: this.tiposDocumento[0]?.codigo ?? '',
       numeroDocumento: '',
@@ -190,11 +194,14 @@ export class WalkInComponent implements OnInit {
     this.isEditingGuest = true;
     this.editingGuestId = guest.id;
     this.guestForm.reset({ ...guest });
+    this.nationalitySearchControl.setValue(this.getNationalityLabel(guest.nacionalidad), { emitEvent: false });
+    this.nationalitySearchOpen = false;
     this.showGuestModal = true;
   }
 
   closeGuestModal(): void {
     this.showGuestModal = false;
+    this.nationalitySearchOpen = false;
     this.guestForm.markAsUntouched();
   }
 
@@ -240,6 +247,44 @@ export class WalkInComponent implements OnInit {
         this.tarifaSuggestions = items;
         this.tarifaSearchOpen = items.length > 0;
       });
+  }
+
+  openNationalitySearch(): void {
+    this.nationalitySearchOpen = true;
+  }
+
+  onNationalitySearchChange(value: string): void {
+    this.nationalitySearchControl.setValue(value, { emitEvent: false });
+    this.guestForm.controls.nacionalidad.setValue('');
+    this.nationalitySearchOpen = true;
+  }
+
+  closeNationalitySearch(): void {
+    setTimeout(() => {
+      this.nationalitySearchOpen = false;
+    }, 120);
+  }
+
+  selectNationality(nationality: Nationality): void {
+    this.guestForm.controls.nacionalidad.setValue(nationality.CR06_Codigo);
+    this.guestForm.controls.nacionalidad.markAsDirty();
+    this.guestForm.controls.nacionalidad.markAsTouched();
+    this.nationalitySearchControl.setValue(nationality.CR06_Descripcion, { emitEvent: false });
+    this.nationalitySearchOpen = false;
+  }
+
+  filteredNationalities(): Nationality[] {
+    const term = this.normalizeText(this.nationalitySearchControl.value);
+
+    if (!term) {
+      return this.nacionalidades.slice(0, 25);
+    }
+
+    return this.nacionalidades
+      .filter((nationality) =>
+        [nationality.CR06_Codigo, nationality.CR06_Descripcion].some((field) => this.normalizeText(field).includes(term))
+      )
+      .slice(0, 25);
   }
 
   saveGuest(): void {
@@ -413,6 +458,7 @@ export class WalkInComponent implements OnInit {
           this.isSaving = false;
           this.clearDraft();
           this.toastService.addToast({ title: 'Walk In', message: 'Walk In preparado correctamente.', type: 'success' });
+          this.router.navigate(['/front-desk/room-rack']);
         },
         error: () => {
           this.isSaving = false;
@@ -641,7 +687,7 @@ export class WalkInComponent implements OnInit {
           numPax: Number(raw.cantidadPax || 0),
           numChild: Number(raw.cantidadChildren || 0),
           totChild: Number(raw.cantidadChildren || 0),
-          cCosto: '',
+          cCosto: 'HOSPED',
           orden: 1
         }
       ],
@@ -741,6 +787,13 @@ export class WalkInComponent implements OnInit {
 
   private safeString(value: unknown): string {
     return value == null ? '' : String(value).trim();
+  }
+
+  private normalizeText(value: unknown): string {
+    return this.safeString(value)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
   }
 
   private formatDateForApi(value: unknown): string {
