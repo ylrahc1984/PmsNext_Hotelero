@@ -5,231 +5,231 @@ import { Observable, map, of, switchMap } from 'rxjs';
 import { environment } from 'src/environments/environment';
 
 export interface RoomStayApiGuest {
-  numInterno: string;
-  codReserva: string;
-  numHabita: string;
-  nacionalidad: string;
-  tipDocu: string;
-  numDocu: string;
-  nombre: string;
-  apellidos: string;
-  fecNaci: string;
-  sexo: string;
-  estCivil: string;
-  tipoPax: string;
-  direccion: string;
-  email: string;
-  motivo: string;
-  procede: string;
-  mdoArribo: string;
-  orden: number;
-  operador: string;
+  numInterno        : string;
+  codReserva        : string;
+  numHabita         : string;
+  nacionalidad      : string;
+  tipDocu           : string;
+  numDocu           : string;
+  nombre            : string;
+  apellidos         : string;
+  fecNaci           : string;
+  sexo              : string;
+  estCivil          : string;
+  tipoPax           : string;
+  direccion         : string;
+  email             : string;
+  motivo            : string;
+  procede           : string;
+  mdoArribo         : string;
+  orden             : number;
+  operador          : string;
 }
 
 export interface RoomStayApiCharge {
-  pntVenta: string;
-  numCrgHab: string;
-  codReserva: string;
-  numHab: string;
-  fecCargo: string;
-  horaCargo: string;
-  folio: string;
-  nombreHuesped: string;
-  totCargo: number;
-  moneda: string;
-  estado: number;
-  operador: string;
+  pntVenta            : string;
+  numCrgHab           : string;
+  codReserva          : string;
+  numHab              : string;
+  fecCargo            : string;
+  horaCargo           : string;
+  folio               : string;
+  nombreHuesped       : string;
+  totCargo            : number;
+  moneda              : string;
+  estado              : number;
+  operador            : string;
 }
 
 export interface RoomStayApiData {
-  codReserva: string;
-  numHabita: string;
-  codAgencia: string;
-  codTarifa: string;
-  codPlan: string;
-  fechaIng: string;
-  fechaSal: string;
-  noches: number;
-  numPax: number;
-  numChild: number;
-  totDias: number;
-  catHabi: string;
-  tipHabi: string;
-  credito: number;
-  limiteCre: number;
-  monedaLmt: string;
-  tarjeta: string;
-  vence: string;
-  autoriza: string;
-  tarxNoc: number;
-  folio: string;
-  totalRsv: number;
-  observacion: string;
-  comentarios: string;
-  nombreAgencia: string;
-  roomingList: RoomStayApiGuest[];
-  cargosFolioMaster: RoomStayApiCharge[];
-  cargosExtras: RoomStayApiCharge[];
+  codReserva              : string;
+  numHabita               : string;
+  codAgencia              : string;
+  codTarifa               : string;
+  codPlan                 : string;
+  fechaIng                : string;
+  fechaSal                : string;
+  noches                  : number;
+  numPax                  : number;
+  numChild                : number;
+  totDias                 : number;
+  catHabi                 : string;
+  tipHabi                 : string;
+  credito                 : number;
+  limiteCre               : number;
+  monedaLmt               : string;
+  tarjeta                 : string;
+  vence                   : string;
+  autoriza                : string;
+  tarxNoc                 : number;
+  folio                   : string;
+  totalRsv                : number;
+  observacion             : string;
+  comentarios             : string;
+  nombreAgencia           : string;
+  roomingList             : RoomStayApiGuest[];
+  cargosFolioMaster       : RoomStayApiCharge[];
+  cargosExtras            : RoomStayApiCharge[];
 }
 
 export interface RoomAvailabilityApiRoom {
-  numHab: number;
-  cateHab: string;
-  tipoHab: string;
-  codGrp: string;
-  totCamas: number;
-  numPax: number;
-  descripcion: string;
-  estHab: string;
-  clean: string;
-  anexo: string;
-  activo: string;
-  cantidadDisponible: number;
+  numHab                : number;
+  cateHab               : string;
+  tipoHab               : string;
+  codGrp                : string;
+  totCamas              : number;
+  numPax                : number;
+  descripcion           : string;
+  estHab                : string;
+  clean                 : string;
+  anexo                 : string;
+  activo                : string;
+  cantidadDisponible    : number;
 }
 
 export interface RoomChangePayload {
-  codReserva: string;
-  oldHab: string;
-  newHab: string;
-  folio: string;
-  operador: string;
+  codReserva    : string;
+  oldHab        : string;
+  newHab        : string;
+  folio         : string;
+  operador      : string;
 }
 
 export interface DepartureDateChangePayload {
-  codReserva: string;
-  habitacion: string;
-  fechaSalida: string;
-  operador: string;
+  codReserva      : string;
+  habitacion      : string;
+  fechaSalida     : string;
+  operador        : string;
 }
 
 export interface PointOfSalePaymentMethodApi {
-  CA05_Codigo: string;
-  CA05_Descripcion: string;
-  CA05_Tipo: string;
-  CA05_TipPago: string;
-  CA05_NDias: number;
+  CA05_Codigo         : string;
+  CA05_Descripcion    : string;
+  CA05_Tipo           : string;
+  CA05_TipPago        : string;
+  CA05_NDias          : number;
 }
 
 export interface RoomChargePointOfSaleApi {
-  MPV07_CodPntVenta: string;
-  MPV07_NomPntVenta: string;
-  MPV07_CodComanda: string;
-  MPV07_CodDocumento?: string;
-  MPV07_CodLstPrecio?: string;
-  MPV10_CodPntVenta?: string;
-  MPV10_Principal?: number;
-  MPV10_CodLstPrecio: string;
-  MPV04_CodLstPrecio?: string;
-  MPV04_DesLstPrecio?: string;
-  MPV04_Moneda: string;
-  MPV04_Vigente?: string;
-  MPV07_ImpresoraA: unknown;
-  MPV07_ImpresoraB: unknown;
+  MPV07_CodPntVenta      : string;
+  MPV07_NomPntVenta      : string;
+  MPV07_CodComanda       : string;
+  MPV07_CodDocumento     ?: string;
+  MPV07_CodLstPrecio     ?: string;
+  MPV10_CodPntVenta      ?: string;
+  MPV10_Principal        ?: number;
+  MPV10_CodLstPrecio     : string;
+  MPV04_CodLstPrecio     ?: string;
+  MPV04_DesLstPrecio     ?: string;
+  MPV04_Moneda           : string;
+  MPV04_Vigente          ?: string;
+  MPV07_ImpresoraA       : unknown;
+  MPV07_ImpresoraB       : unknown;
 }
 
 export interface RoomChargePriceListApiItem {
-  MPV05_ID?: number;
-  MPV05_CodLstPrecio: string;
-  MPV01_CodGrupo: string;
-  MPV00_NomCategoria: string;
-  MPV05_CodProducto: string;
-  MPV05_DesProducto: string;
-  MPV05_NomCorto: string;
-  MPV01_UMedida: string;
-  MPV05_PrecioTotal: number;
-  MPV05_CostoProdu: number;
-  MPV05_Impuesto: number;
-  MPV05_Moneda: string;
-  MPV05_Orden: number;
-  MPV01_CodCategoria: string;
-  MPV05_Operador: string;
+  MPV05_ID              ?: number;
+  MPV05_CodLstPrecio     : string;
+  MPV01_CodGrupo         : string;
+  MPV00_NomCategoria     : string;
+  MPV05_CodProducto      : string;
+  MPV05_DesProducto      : string;
+  MPV05_NomCorto         : string;
+  MPV01_UMedida          : string;
+  MPV05_PrecioTotal      : number;
+  MPV05_CostoProdu       : number;
+  MPV05_Impuesto         : number;
+  MPV05_Moneda           : string;
+  MPV05_Orden            : number;
+  MPV01_CodCategoria     : string;
+  MPV05_Operador         : string;
 }
 
 export interface RoomChargeDetailPayload {
-  codRsv: string;
-  numHab: string;
-  pntVenta: string;
-  fecha: string;
-  hora: string;
-  grupo: string;
-  categoria: string;
-  codConsumo: string;
-  nomConsumo: string;
-  cantidad: number;
-  precio: number;
-  total: number;
-  moneda: string;
-  tipNPedido: string;
-  numNPedido: string;
-  codMozo: string;
-  incluido: number;
-  exonerado: number;
-  orden: number;
-  comentario: string;
-  operador: string;
+  codRsv            : string;
+  numHab            : string;
+  pntVenta          : string;
+  fecha             : string;
+  hora              : string;
+  grupo             : string;
+  categoria         : string;
+  codConsumo        : string;
+  nomConsumo        : string;
+  cantidad          : number;
+  precio            : number;
+  total             : number;
+  moneda            : string;
+  tipNPedido        : string;
+  numNPedido        : string;
+  codMozo           : string;
+  incluido          : number;
+  exonerado         : number;
+  orden             : number;
+  comentario        : string;
+  operador          : string;
 }
 
 export interface RoomChargePayload {
-  proceso: number;
-  tipCrgHab: string;
-  numCrgHab: string;
-  codRsv: string;
-  numHab: string;
-  pntVenta: string;
-  fecha: string;
-  hora: string;
-  numDocu: string;
-  nombrePax: string;
-  mtoTotal: number;
-  moneda: string;
-  cierre: number;
-  numCierre: number;
-  operador: string;
-  detalle: RoomChargeDetailPayload[];
+  proceso         : number;
+  tipCrgHab       : string;
+  numCrgHab       : string;
+  codRsv          : string;
+  numHab          : string;
+  pntVenta        : string;
+  fecha           : string;
+  hora            : string;
+  numDocu         : string;
+  nombrePax       : string;
+  mtoTotal        : number;
+  moneda          : string;
+  cierre          : number;
+  numCierre       : number;
+  operador        : string;
+  detalle         : RoomChargeDetailPayload[];
 }
 
 export interface RoomChargeAnnulPayload {
-  tipCrgHab: string;
-  numCrgHab: string;
-  codRsv: string;
-  numHab: string;
-  motivo: string;
-  operador: string;
+  tipCrgHab     : string;
+  numCrgHab     : string;
+  codRsv        : string;
+  numHab        : string;
+  motivo        : string;
+  operador      : string;
 }
 
 export interface RoomingListUpdatePayload {
-  proceso: number;
-  idOpe: string;
-  codRsv: string;
-  numHabita: string;
-  codNacion: string;
-  tipDocu: string;
-  numDocu: string;
-  nombre: string;
-  apellido: string;
-  fecNac: string;
-  sexo: string;
-  estCivil: string;
-  tiPax: string;
-  direccion: string;
-  email: string;
-  motivo: string;
-  procede: string;
-  mdoArribo: string;
-  orden: number;
-  operador: string;
+  proceso         : number;
+  idOpe           : string;
+  codRsv          : string;
+  numHabita       : string;
+  codNacion       : string;
+  tipDocu         : string;
+  numDocu         : string;
+  nombre          : string;
+  apellido        : string;
+  fecNac          : string;
+  sexo            : string;
+  estCivil        : string;
+  tiPax           : string;
+  direccion       : string;
+  email           : string;
+  motivo          : string;
+  procede         : string;
+  mdoArribo       : string;
+  orden           : number;
+  operador        : string;
 }
 
 interface RoomStayApiResponse {
-  success?: boolean;
-  data?: RoomStayApiData | null;
-  message?: string;
+  success     ?: boolean;
+  data        ?: RoomStayApiData | null;
+  message     ?: string;
 }
 
 interface RoomAvailabilityApiResponse {
-  success?: boolean;
-  data?: RoomAvailabilityApiRoom[] | null;
-  message?: string;
+  success     ?: boolean;
+  data        ?: RoomAvailabilityApiRoom[] | null;
+  message     ?: string;
 }
 
 interface RoomChargePriceListApiResponse {
@@ -238,17 +238,17 @@ interface RoomChargePriceListApiResponse {
 
 @Injectable({ providedIn: 'root' })
 export class RoomStayManagementService {
-  private readonly http = inject(HttpClient);
-  private readonly baseApiUrl = (environment.apiUrl ?? '').toString().replace(/\/+$/, '');
-  private readonly apiUrl = `${this.baseApiUrl}/walkin`;
-  private readonly precheckingUrl = `${this.baseApiUrl}/prechecking`;
-  private readonly roomChangeUrl = `${this.baseApiUrl}/roomchange`;
-  private readonly departureDateChangeUrl = `${this.baseApiUrl}/cambio-fecha-salida`;
-  private readonly pointOfSalePaymentMethodsUrl = `${this.baseApiUrl}/forma-pago-punto-venta`;
-  private readonly roomChargeUrl = `${this.baseApiUrl}/cargo-habitacion`;
-  private readonly roomingListUpdateUrl = `${this.baseApiUrl}/rooming-list/con-actualizacion`;
-  private readonly pointOfSaleDetailUrl = `${this.baseApiUrl}/puntoventa/detalleprincipal`;
-  private readonly priceListDetailUrl = `${this.baseApiUrl}/detalle-lista-precio`;
+  private readonly http                            = inject(HttpClient);
+  private readonly baseApiUrl                      = (environment.apiUrl ?? '').toString().replace(/\/+$/, '');
+  private readonly apiUrl                          = `${this.baseApiUrl}/walkin`;
+  private readonly precheckingUrl                  = `${this.baseApiUrl}/prechecking`;
+  private readonly roomChangeUrl                   = `${this.baseApiUrl}/roomchange`;
+  private readonly departureDateChangeUrl          = `${this.baseApiUrl}/cambio-fecha-salida`;
+  private readonly pointOfSalePaymentMethodsUrl    = `${this.baseApiUrl}/forma-pago-punto-venta`;
+  private readonly roomChargeUrl                   = `${this.baseApiUrl}/cargo-habitacion`;
+  private readonly roomingListUpdateUrl            = `${this.baseApiUrl}/rooming-list/con-actualizacion`;
+  private readonly pointOfSaleDetailUrl            = `${this.baseApiUrl}/puntoventa/detalleprincipal`;
+  private readonly priceListDetailUrl              = `${this.baseApiUrl}/detalle-lista-precio`;
 
   getRoomStay(roomNumber: string, codReserva?: string): Observable<RoomStayApiData | null> {
     return this.http
@@ -390,21 +390,21 @@ export class RoomStayManagementService {
 
   private mapPriceListItem(api: Record<string, unknown>): RoomChargePriceListApiItem {
     return {
-      MPV05_ID: this.toOptionalNumber(api['MPV05_ID'] ?? api['MPV05_Id'] ?? api['id']),
-      MPV05_CodLstPrecio: this.toText(api['MPV05_CodLstPrecio']),
-      MPV01_CodGrupo: this.toText(api['MPV01_CodGrupo']),
-      MPV00_NomCategoria: this.toText(api['MPV00_NomCategoria']),
-      MPV05_CodProducto: this.toText(api['MPV05_CodProducto']),
-      MPV05_DesProducto: this.toText(api['MPV05_DesProducto']),
-      MPV05_NomCorto: this.toText(api['MPV05_NomCorto']),
-      MPV01_UMedida: this.toText(api['MPV01_UMedida']),
-      MPV05_PrecioTotal: this.toNumber(api['MPV05_PrecioTotal']),
-      MPV05_CostoProdu: this.toNumber(api['MPV05_CostoProdu']),
-      MPV05_Impuesto: this.toNumber(api['MPV05_Impuesto']),
-      MPV05_Moneda: this.toText(api['MPV05_Moneda']),
-      MPV05_Orden: this.toNumber(api['MPV05_Orden']),
-      MPV01_CodCategoria: this.toText(api['MPV01_CodCategoria']),
-      MPV05_Operador: this.toText(api['MPV05_Operador'])
+      MPV05_ID                : this.toOptionalNumber(api['MPV05_ID'] ?? api['MPV05_Id'] ?? api['id']),
+      MPV05_CodLstPrecio      : this.toText(api['MPV05_CodLstPrecio']),
+      MPV01_CodGrupo          : this.toText(api['MPV01_CodGrupo']),
+      MPV00_NomCategoria      : this.toText(api['MPV00_NomCategoria']),
+      MPV05_CodProducto       : this.toText(api['MPV05_CodProducto']),
+      MPV05_DesProducto       : this.toText(api['MPV05_DesProducto']),
+      MPV05_NomCorto          : this.toText(api['MPV05_NomCorto']),
+      MPV01_UMedida           : this.toText(api['MPV01_UMedida']),
+      MPV05_PrecioTotal       : this.toNumber(api['MPV05_PrecioTotal']),
+      MPV05_CostoProdu        : this.toNumber(api['MPV05_CostoProdu']),
+      MPV05_Impuesto          : this.toNumber(api['MPV05_Impuesto']),
+      MPV05_Moneda            : this.toText(api['MPV05_Moneda']),
+      MPV05_Orden             : this.toNumber(api['MPV05_Orden']),
+      MPV01_CodCategoria      : this.toText(api['MPV01_CodCategoria']),
+      MPV05_Operador          : this.toText(api['MPV05_Operador'])
     };
   }
 

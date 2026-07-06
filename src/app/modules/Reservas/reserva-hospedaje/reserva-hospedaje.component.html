@@ -1,0 +1,730 @@
+<form class="reservation-shell" [formGroup]="reservaForm" (ngSubmit)="confirmarReserva()">
+  <header class="reservation-topbar">
+    <div class="reservation-title">
+      <div class="title-line">
+        <h1>Nueva Reserva de Hospedaje</h1>
+        <i class="bi bi-star"></i>
+      </div>
+      <nav class="breadcrumb-line" aria-label="breadcrumb">
+        <a routerLink="/reservas/consulta-reservas">Reservas</a>
+        <i class="bi bi-chevron-right"></i>
+        <span>Nueva reserva</span>
+      </nav>
+    </div>
+
+    <div class="topbar-actions">
+      <button type="button" class="btn btn-outline-light action-button" routerLink="/reservas/consulta-reservas">
+        <i class="bi bi-arrow-left"></i>
+        Volver
+      </button>
+      <button type="button" class="btn btn-outline-light action-button" (click)="limpiarFormulario()">
+        <i class="bi bi-eraser"></i>
+        Limpiar
+      </button>
+      <button type="button" class="btn btn-outline-light action-button" (click)="guardarBorrador()">
+        <i class="bi bi-floppy"></i>
+        Guardar borrador
+      </button>
+      <button type="submit" class="btn btn-primary action-button action-button--primary" [disabled]="saving()">
+        <span class="spinner-border spinner-border-sm" *ngIf="saving()"></span>
+        <i class="bi bi-check-circle" *ngIf="!saving()"></i>
+        Confirmar reserva
+      </button>
+    </div>
+  </header>
+
+  <div class="reservation-layout">
+    <aside class="left-column">
+      <section class="module-card general-card">
+        <div class="card-title-row">
+          <div class="step-title">
+            <span class="step-badge">1.</span>
+            <h2>Datos Generales</h2>
+          </div>
+          <button type="button" class="icon-ghost" aria-label="Contraer datos generales">
+            <i class="bi bi-chevron-up"></i>
+          </button>
+        </div>
+
+        <div class="general-form">
+          <label class="field span-2 lookup-field">
+            <span>Agencia <b>*</b></span>
+            <div class="lookup-row">
+              <input
+                type="text"
+                class="form-control"
+                [formControl]="agenciaSearchControl"
+                placeholder="Escriba para buscar agencia..."
+                autocomplete="off"
+                (focus)="openAgenciaSuggestions()"
+              >
+              <button type="button" class="lookup-button" aria-label="Buscar agencia" (click)="openAgencyModal()">
+                <i class="bi bi-search"></i>
+              </button>
+            </div>
+            <div class="autocomplete-menu" *ngIf="agenciaSearchOpen">
+              <button type="button" class="autocomplete-item" *ngFor="let agencia of agenciaSuggestions; trackBy: trackByCode" (mousedown)="selectAgencia(agencia)">
+                <strong>{{ agencia.codigo }}</strong>
+                <span>{{ agencia.descripcion }}</span>
+                <small *ngIf="agencia.contacto || agencia.telefono">{{ agencia.contacto || 'Sin contacto' }} · {{ agencia.telefono || 'Sin teléfono' }}</small>
+              </button>
+            </div>
+          </label>
+
+          <label class="field span-2 lookup-field">
+            <span>Tarifa <b>*</b></span>
+            <div class="lookup-row">
+              <input
+                type="text"
+                class="form-control"
+                [formControl]="tarifaSearchControl"
+                placeholder="Escriba para buscar tarifa..."
+                autocomplete="off"
+                (focus)="openTarifaSuggestions()"
+              >
+              <button type="button" class="lookup-button" aria-label="Buscar tarifa" (click)="openTarifaModal()">
+                <i class="bi bi-search"></i>
+              </button>
+            </div>
+            <div class="autocomplete-menu" *ngIf="tarifaSearchOpen">
+              <button type="button" class="autocomplete-item" *ngFor="let tarifa of tarifaSuggestions; trackBy: trackByCode" (mousedown)="selectTarifa(tarifa)">
+                <strong>{{ tarifa.codigo }}</strong>
+                <span>{{ tarifa.descripcion }}</span>
+                <small>{{ tarifa.moneda || 'Sin moneda' }} · {{ tarifa.activo ? 'Activa' : 'Inactiva' }}</small>
+              </button>
+            </div>
+          </label>
+
+          <label class="field span-2">
+            <span>Plan de alimentos</span>
+            <select class="form-select" formControlName="codPlan" (change)="onPlanChange($any($event.target).value)" [disabled]="isCatalogLoading">
+              <option value="">Seleccione...</option>
+              <option *ngFor="let plan of planes; trackBy: trackByCode" [value]="plan.codigo">{{ plan.descripcion }}</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Fecha ingreso <b>*</b></span>
+            <div class="date-control">
+              <input type="date" class="form-control" formControlName="fecIngreso">
+              <i class="bi bi-calendar3"></i>
+            </div>
+          </label>
+          <label class="field">
+            <span>Fecha salida <b>*</b></span>
+            <div class="date-control">
+              <input type="date" class="form-control" formControlName="fecSalida">
+              <i class="bi bi-calendar3"></i>
+            </div>
+          </label>
+
+          <div class="metric-card">
+            <span>Noches</span>
+            <strong>{{ reservaForm.controls.totNoches.value }}</strong>
+            <i class="bi bi-moon"></i>
+          </div>
+          <div class="metric-card metric-card--sun">
+            <span>Días</span>
+            <strong>{{ reservaForm.controls.totDias.value }}</strong>
+            <i class="bi bi-sun"></i>
+          </div>
+
+          <label class="field">
+            <span>Moneda <b>*</b></span>
+            <input type="text" class="form-control" formControlName="moneda" readonly placeholder="Seleccione tarifa">
+          </label>
+          <label class="field">
+            <span>Tipo de cambio</span>
+            <input type="number" class="form-control" formControlName="tCambio" min="0" step="0.01">
+          </label>
+
+          <label class="field">
+            <span>Fecha creación</span>
+            <div class="date-control">
+              <input type="date" class="form-control" formControlName="fecCreacion">
+              <i class="bi bi-calendar3"></i>
+            </div>
+          </label>
+
+          <label class="field span-2">
+            <span>Descripción de la reserva</span>
+            <textarea class="form-control" rows="3" formControlName="descripcion"></textarea>
+          </label>
+
+          <label class="field span-2">
+            <span>Observaciones internas</span>
+            <textarea class="form-control" rows="4" formControlName="observaciones"></textarea>
+          </label>
+        </div>
+      </section>
+    </aside>
+
+    <main class="center-column">
+      <section class="module-card room-card">
+        <div class="card-title-row">
+          <div class="step-title">
+            <span class="step-badge">2.</span>
+            <div>
+              <h2>Habitaciones</h2>
+              <small>Organice la reserva por tipo, cantidad y tarifa antes de agregarla.</small>
+            </div>
+          </div>
+          <div class="room-header-indicator">
+            <span class="room-header-indicator__label">En reserva</span>
+            <strong>{{ habitaciones.length }} habitación{{ habitaciones.length === 1 ? '' : 'es' }}</strong>
+          </div>
+        </div>
+
+        <div class="room-editor" [formGroup]="habitacionForm">
+          <div class="room-editor-section">
+            <div class="room-editor-section__header">
+              <h3>Selección de habitación</h3>
+              <p>Defina la categoría, el tipo y la cantidad a reservar.</p>
+            </div>
+            <div class="room-editor-fields room-editor-fields--three">
+              <label class="field">
+                <span>Categoría <b>*</b></span>
+                <select class="form-select" formControlName="categoria">
+                  <option value="" disabled>{{ roomCategories.length ? 'Seleccione categoría' : 'Cargando categorías...' }}</option>
+                  <option *ngFor="let category of roomCategories; trackBy: trackByCategoria" [value]="category.codigo">
+                    {{ category.codigo }} - {{ category.descripcion }}
+                  </option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Tipo habitación <b>*</b></span>
+                <select class="form-select" formControlName="tipo">
+                  <option value="" disabled>
+                    {{ isRoomTypesLoading ? 'Cargando tipos...' : (roomTypes.length ? 'Seleccione tipo' : 'Seleccione una categoría') }}
+                  </option>
+                  <option *ngFor="let type of roomTypes; trackBy: trackByTipoHabitacion" [value]="type.codigo">
+                    {{ type.codigo }} - {{ type.descripcion }}
+                  </option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Cantidad habitaciones <b>*</b></span>
+                <div class="stepper">
+                  <button type="button" (click)="ajustarHabitacionDraft('cantidad', -1)"><i class="bi bi-dash"></i></button>
+                  <input type="number" formControlName="cantidad" min="1">
+                  <button type="button" (click)="ajustarHabitacionDraft('cantidad', 1)"><i class="bi bi-plus"></i></button>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div class="room-editor-section room-editor-section--accent">
+            <div class="room-editor-section__header">
+              <h3>Tarifa y ocupación</h3>
+              <p>Capture el precio base y el costo adicional por niños, si aplica.</p>
+            </div>
+            <div class="room-editor-fields room-editor-fields--three">
+              <label class="field">
+                <span>Precio por habitación <b>*</b></span>
+                <div class="money-control">
+                  <select aria-label="Moneda precio habitación">
+                    <option>{{ reservaForm.controls.moneda.value }}</option>
+                  </select>
+                  <input type="number" formControlName="precio" min="0" step="0.01">
+                </div>
+              </label>
+              <label class="field">
+                <span>Cantidad niños</span>
+                <div class="stepper">
+                  <button type="button" (click)="ajustarHabitacionDraft('cantidadNinos', -1)"><i class="bi bi-dash"></i></button>
+                  <input type="number" formControlName="cantidadNinos" min="0">
+                  <button type="button" (click)="ajustarHabitacionDraft('cantidadNinos', 1)"><i class="bi bi-plus"></i></button>
+                </div>
+              </label>
+              <label class="field">
+                <span>Precio por niño</span>
+                <div class="money-control">
+                  <select aria-label="Moneda precio niño">
+                    <option>{{ reservaForm.controls.moneda.value }}</option>
+                  </select>
+                  <input type="number" formControlName="precioNino" min="0" step="0.01">
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div class="room-editor-actions">
+            <div class="room-draft-total">
+              <span>Total de esta línea</span>
+              <strong>{{ reservaForm.controls.moneda.value || '---' }} {{ habitacionForm.controls.total.value | number: '1.2-2' }}</strong>
+            </div>
+            <div class="room-editor-actions__buttons">
+              <button type="button" class="btn btn-light" (click)="habitacionForm.reset({ categoria: roomCategories[0]?.codigo || '', tipo: roomTypes[0]?.codigo || '', cantidad: 1, precio: 200, cantidadNinos: 0, precioNino: 0, total: 0 })">
+                Cancelar
+              </button>
+              <button type="button" class="btn btn-primary" (click)="agregarHabitacion()">
+                <i class="bi bi-plus-lg"></i>
+                {{ editingRoomIndex() === null ? 'Agregar a la reserva' : 'Actualizar habitación' }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-section">
+          <h3>Habitaciones agregadas</h3>
+          <div class="table-responsive clean-table">
+            <table class="table align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Categoría</th>
+                  <th>Tipo habitación</th>
+                  <th>Cant. Hab.</th>
+                  <th>Precio (por hab.)</th>
+                  <th>Niños</th>
+                  <th>Precio (por niño)</th>
+                  <th>Total</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let room of habitaciones.controls; let i = index; trackBy: trackByIndex">
+                  <td>{{ i + 1 }}</td>
+                  <td>{{ getCategoriaLabel(room.controls.categoria.value) }}</td>
+                  <td>{{ getTipoHabitacionLabel(room.controls.tipo.value) }}</td>
+                  <td>{{ room.controls.cantidad.value }}</td>
+                  <td>{{ reservaForm.controls.moneda.value }} {{ room.controls.precio.value | number: '1.2-2' }}</td>
+                  <td>{{ room.controls.cantidadNinos.value }}</td>
+                  <td>{{ reservaForm.controls.moneda.value }} {{ room.controls.precioNino.value | number: '1.2-2' }}</td>
+                  <td>{{ reservaForm.controls.moneda.value }} {{ room.controls.total.value | number: '1.2-2' }}</td>
+                  <td>
+                    <div class="row-actions">
+                      <button type="button" class="icon-button icon-button--edit" (click)="editarHabitacion(i)" title="Editar">
+                        <i class="bi bi-pencil"></i>
+                      </button>
+                      <button type="button" class="icon-button icon-button--delete" (click)="eliminarHabitacion(i)" title="Eliminar">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="empty-row" *ngIf="habitaciones.length === 0">Agregue habitaciones para calcular la reserva.</div>
+          </div>
+          <div class="section-total">
+            <span>Total habitaciones</span>
+            <strong>{{ reservaForm.controls.moneda.value }} {{ habitacionesTotal() | number: '1.2-2' }}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="module-card plan-card">
+        <div class="card-title-row collapsible-title" role="button" tabindex="0" (click)="togglePlan()" (keydown.enter)="togglePlan()" (keydown.space)="togglePlan()">
+          <div class="step-title">
+            <span class="step-badge step-badge--green"><i class="bi bi-fork-knife"></i></span>
+            <div>
+              <h2>3. Plan de Alimentos (Incluido)</h2>
+              <small>{{ inclusiones.length }} inclusión · {{ reservaForm.controls.moneda.value || '---' }} {{ inclusionesTotal() | number: '1.2-2' }}</small>
+            </div>
+          </div>
+          <div class="collapse-actions">
+            <button type="button" class="btn btn-outline-primary compact-button" (click)="abrirPlanModal(0); $event.stopPropagation()" [disabled]="isNoMealPlanSelected()">Ver / Editar plan</button>
+            <button type="button" class="collapse-toggle" [attr.aria-expanded]="planExpanded()" aria-label="Mostrar u ocultar plan">
+              <i class="bi" [ngClass]="planExpanded() ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="collapsed-summary" *ngIf="!planExpanded()">
+          <span class="summary-dot summary-dot--green"><i class="bi bi-check-lg"></i></span>
+          <div>
+            <strong>{{ inclusiones.at(0)?.controls?.desServ?.value || selectedPlanDescription() }}</strong>
+            <span>{{ reservaForm.controls.totNoches.value }} noches · total incluido {{ reservaForm.controls.moneda.value || '---' }} {{ inclusionesTotal() | number: '1.2-2' }}</span>
+          </div>
+        </div>
+
+        <div class="collapsible-body" *ngIf="planExpanded()">
+          <div class="included-strip" *ngIf="inclusiones.length === 0">
+            <span class="included-check"><i class="bi bi-dash-lg"></i></span>
+            <div>
+              <strong>{{ selectedPlanDescription() }}</strong>
+              <span>Este plan no agrega inclusiones al POST.</span>
+            </div>
+            <div class="included-total">
+              <span>Total incluido</span>
+              <strong>{{ reservaForm.controls.moneda.value || '---' }} 0.00</strong>
+            </div>
+          </div>
+          <div class="included-strip" *ngFor="let item of inclusiones.controls; let i = index; trackBy: trackByIndex">
+            <span class="included-check"><i class="bi bi-check-lg"></i></span>
+            <div>
+              <strong>{{ item.controls.desServ.value || 'Plan incluido' }}</strong>
+              <span>{{ item.controls.cantidad.value }} {{ item.controls.tipPax.value }} x {{ reservaForm.controls.totNoches.value }} noches</span>
+            </div>
+            <div class="included-total">
+              <span>Total incluido</span>
+              <strong>{{ reservaForm.controls.moneda.value }} {{ item.controls.totServ.value | number: '1.2-2' }}</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="module-card services-card">
+        <div class="card-title-row collapsible-title" role="button" tabindex="0" (click)="toggleServices()" (keydown.enter)="toggleServices()" (keydown.space)="toggleServices()">
+          <div class="step-title">
+            <span class="step-badge step-badge--purple"><i class="bi bi-bag"></i></span>
+            <div>
+              <h2>4. Servicios Extras</h2>
+              <small>{{ servicios.length }} servicios · {{ reservaForm.controls.moneda.value || '---' }} {{ serviciosSubtotal() | number: '1.2-2' }}</small>
+            </div>
+          </div>
+          <div class="collapse-actions">
+            <button type="button" class="btn btn-outline-primary compact-button" (click)="abrirServicioModal(); $event.stopPropagation()">
+              <i class="bi bi-plus-lg"></i>
+              Agregar servicio
+            </button>
+            <button type="button" class="collapse-toggle" [attr.aria-expanded]="servicesExpanded()" aria-label="Mostrar u ocultar servicios">
+              <i class="bi" [ngClass]="servicesExpanded() ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="collapsed-summary" *ngIf="!servicesExpanded()">
+          <span class="summary-dot summary-dot--purple"><i class="bi bi-bag"></i></span>
+          <div>
+            <strong>{{ servicios.length ? servicios.length + ' servicios agregados' : 'Sin servicios extras' }}</strong>
+            <span>Total servicios {{ reservaForm.controls.moneda.value || '---' }} {{ serviciosSubtotal() | number: '1.2-2' }} · impuestos {{ reservaForm.controls.moneda.value || '---' }} {{ impuestos() | number: '1.2-2' }}</span>
+          </div>
+        </div>
+
+        <div class="table-responsive clean-table collapsible-body" *ngIf="servicesExpanded()">
+          <table class="table align-middle mb-0">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Servicio</th>
+                <th>Descripción</th>
+                <th>Cantidad</th>
+                <th>Precio</th>
+                <th>Total</th>
+                <th>Impuesto</th>
+                <th>Tipo Pax</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let service of servicios.controls; let i = index; trackBy: trackByIndex">
+                <td>{{ i + 1 }}</td>
+                <td>{{ service.controls.codSrv.value }}</td>
+                <td>{{ service.controls.descripcion.value }}</td>
+                <td>
+                  <div class="mini-stepper">
+                    <button type="button" (click)="ajustarServicioCantidad(i, -1)"><i class="bi bi-dash"></i></button>
+                    <span>{{ service.controls.cantidad.value }}</span>
+                    <button type="button" (click)="ajustarServicioCantidad(i, 1)"><i class="bi bi-plus"></i></button>
+                  </div>
+                </td>
+                <td>{{ reservaForm.controls.moneda.value }} {{ service.controls.precio.value | number: '1.2-2' }}</td>
+                <td>{{ reservaForm.controls.moneda.value }} {{ service.controls.total.value | number: '1.2-2' }}</td>
+                <td>{{ reservaForm.controls.moneda.value }} {{ service.controls.impuesto.value | number: '1.2-2' }}</td>
+                <td>{{ service.controls.tipPax.value }}</td>
+                <td>
+                  <div class="row-actions">
+                    <button type="button" class="icon-button icon-button--edit" (click)="abrirServicioModal(i)" title="Editar">
+                      <i class="bi bi-pencil"></i>
+                    </button>
+                    <button type="button" class="icon-button icon-button--delete" (click)="eliminarServicio(i)" title="Eliminar">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="empty-row" *ngIf="servicios.length === 0">Sin servicios extras.</div>
+        </div>
+        <div class="section-total" *ngIf="servicesExpanded()">
+          <span>Total servicios</span>
+          <strong>{{ reservaForm.controls.moneda.value }} {{ serviciosSubtotal() | number: '1.2-2' }}</strong>
+        </div>
+      </section>
+    </main>
+
+    <aside class="right-column">
+      <section class="summary-card">
+        <div class="summary-header">
+          <i class="bi bi-clipboard-data"></i>
+          <h2>Resumen de la Reserva</h2>
+        </div>
+        <div class="summary-body">
+          <div class="summary-item">
+            <span class="summary-icon summary-icon--bed"><i class="bi bi-inboxes"></i></span>
+            <span>Habitaciones</span>
+            <strong>{{ reservaForm.controls.moneda.value }} {{ habitacionesTotal() | number: '1.2-2' }}</strong>
+          </div>
+          <div class="summary-item">
+            <span class="summary-icon summary-icon--food"><i class="bi bi-fork-knife"></i></span>
+            <span>Plan de alimentos</span>
+            <strong>{{ reservaForm.controls.moneda.value }} {{ inclusionesTotal() | number: '1.2-2' }}</strong>
+          </div>
+          <div class="summary-item">
+            <span class="summary-icon summary-icon--bag"><i class="bi bi-bag"></i></span>
+            <span>Servicios extras</span>
+            <strong>{{ reservaForm.controls.moneda.value }} {{ serviciosSubtotal() | number: '1.2-2' }}</strong>
+          </div>
+          <hr>
+          <div class="summary-line"><span>Subtotal</span><strong>{{ reservaForm.controls.moneda.value }} {{ habitacionesTotal() + inclusionesTotal() + serviciosSubtotal() | number: '1.2-2' }}</strong></div>
+          <div class="summary-line"><span>Impuestos</span><strong>{{ reservaForm.controls.moneda.value }} {{ impuestos() | number: '1.2-2' }}</strong></div>
+          <div class="grand-total">
+            <span>Total Reserva</span>
+            <strong>{{ reservaForm.controls.moneda.value }} {{ totalReserva() | number: '1.2-2' }}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="info-panel">
+        <div class="info-title">
+          <span><i class="bi bi-info-circle"></i></span>
+          <h2>Información de la Reserva</h2>
+        </div>
+        <div class="info-list">
+          <div><span>Código de reserva</span><strong>(Auto)</strong></div>
+          <div><span>Estado</span><strong class="status-pill">{{ reservaForm.controls.estado.value }}</strong></div>
+          <div><span>Moneda</span><strong>{{ reservaForm.controls.moneda.value || 'Seleccione tarifa' }}</strong></div>
+          <div><span>Tipo de cambio</span><strong>{{ reservaForm.controls.tCambio.value | number: '1.2-2' }}</strong></div>
+          <div><span>Folio</span><strong>(Auto)</strong></div>
+          <div><span>Directo / Agencia</span><strong>{{ reservaForm.controls.directo.value ? 'Agencia' : 'Directo' }}</strong></div>
+          <div><span>Operador</span><strong>{{ reservaForm.controls.operador.value }}</strong></div>
+        </div>
+        <div class="info-note">
+          <i class="bi bi-info-circle-fill"></i>
+          <p>Los totales se calculan automáticamente. Verifique la información antes de confirmar la reserva.</p>
+        </div>
+      </section>
+    </aside>
+  </div>
+</form>
+
+<div class="modal-backdrop fade show" *ngIf="showTarifaModal"></div>
+<div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" *ngIf="showTarifaModal" (click)="closeTarifaModal()">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title">
+            <i class="bi bi-search me-2"></i>
+            Buscar Tarifa
+          </h5>
+          <small class="text-muted">{{ getTarifaModalSearchLabel() }}</small>
+        </div>
+        <button type="button" class="btn-close" aria-label="Cerrar" (click)="closeTarifaModal()"></button>
+      </div>
+      <div class="modal-body">
+        <div class="search-toolbar">
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="search" class="form-control" placeholder="Buscar por código, nombre o moneda..." [formControl]="tarifaModalSearchControl" [disabled]="tarifaModalLoading">
+          </div>
+          <button type="button" class="btn btn-outline-secondary" (click)="loadTarifasModal()" [disabled]="tarifaModalLoading">
+            <i class="bi bi-arrow-clockwise me-1"></i>
+            Actualizar
+          </button>
+        </div>
+
+        <div class="alert alert-danger" *ngIf="tarifaModalError">{{ tarifaModalError }}</div>
+        <div class="alert alert-info d-flex align-items-center" *ngIf="tarifaModalLoading">
+          <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+          <span>Cargando tarifas...</span>
+        </div>
+
+        <div class="table-responsive search-table" *ngIf="tarifaModalTarifas.length > 0">
+          <table class="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Tarifa</th>
+                <th>Moneda</th>
+                <th>Vigencia</th>
+                <th>Operador</th>
+                <th class="text-center">Estado</th>
+                <th class="text-end">Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let tarifa of tarifaModalTarifas; trackBy: trackByCode">
+                <td><span class="badge bg-light text-dark">{{ tarifa.codigo }}</span></td>
+                <td>{{ tarifa.descripcion || 'N/D' }}</td>
+                <td>{{ tarifa.moneda || 'N/D' }}</td>
+                <td>
+                  <span>{{ tarifa.fechaInicial ? (tarifa.fechaInicial | date:'yyyy-MM-dd') : 'N/D' }}</span>
+                  <span *ngIf="tarifa.fechaFinal"> / {{ tarifa.fechaFinal | date:'yyyy-MM-dd' }}</span>
+                </td>
+                <td>{{ tarifa.operador || 'N/D' }}</td>
+                <td class="text-center">
+                  <span class="badge" [ngClass]="tarifa.activo ? 'bg-success' : 'bg-secondary'">
+                    {{ tarifa.activo ? 'Activa' : 'Inactiva' }}
+                  </span>
+                </td>
+                <td class="text-end">
+                  <button type="button" class="btn btn-primary btn-sm" (click)="selectTarifa(tarifa)">
+                    <i class="bi bi-check-lg me-1"></i>
+                    Seleccionar
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="search-empty" *ngIf="!tarifaModalLoading && !tarifaModalError && tarifaModalTarifas.length === 0">
+          <i class="bi bi-inbox"></i>
+          <span>No se encontraron tarifas.</span>
+        </div>
+      </div>
+      <div class="modal-footer search-footer">
+        <span>Página {{ tarifaModalPage }} de {{ tarifaModalTotalPages || 1 }} · {{ tarifaModalTotalRecords }} registros</span>
+        <div class="btn-group btn-group-sm" role="group" aria-label="Paginación de tarifas">
+          <button type="button" class="btn btn-outline-secondary" (click)="goToTarifaModalPage(1)" [disabled]="tarifaModalLoading || tarifaModalPage <= 1">Primera</button>
+          <button type="button" class="btn btn-outline-secondary" (click)="goToTarifaModalPage(tarifaModalPage - 1)" [disabled]="tarifaModalLoading || tarifaModalPage <= 1">Anterior</button>
+          <button type="button" class="btn btn-outline-secondary" (click)="goToTarifaModalPage(tarifaModalPage + 1)" [disabled]="tarifaModalLoading || tarifaModalPage >= tarifaModalTotalPages">Siguiente</button>
+          <button type="button" class="btn btn-outline-secondary" (click)="goToTarifaModalPage(tarifaModalTotalPages)" [disabled]="tarifaModalLoading || tarifaModalPage >= tarifaModalTotalPages">Última</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="showAgencyModal"></div>
+<div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" *ngIf="showAgencyModal" (click)="closeAgencyModal()">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title">
+            <i class="bi bi-search me-2"></i>
+            Buscar Agencia
+          </h5>
+          <small class="text-muted">{{ getAgencyModalSearchLabel() }}</small>
+        </div>
+        <button type="button" class="btn-close" aria-label="Cerrar" (click)="closeAgencyModal()"></button>
+      </div>
+      <div class="modal-body">
+        <div class="search-toolbar">
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="search" class="form-control" placeholder="Buscar por nombre de agencia..." [formControl]="agencyModalSearchControl" [disabled]="agencyModalLoading">
+          </div>
+          <button type="button" class="btn btn-outline-secondary" (click)="loadAgencyModalPage(1)" [disabled]="agencyModalLoading">
+            <i class="bi bi-arrow-clockwise me-1"></i>
+            Actualizar
+          </button>
+        </div>
+
+        <div class="alert alert-danger" *ngIf="agencyModalError">{{ agencyModalError }}</div>
+        <div class="alert alert-info d-flex align-items-center" *ngIf="agencyModalLoading">
+          <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+          <span>Cargando agencias...</span>
+        </div>
+
+        <div class="table-responsive search-table" *ngIf="agencyModalAgencies.length > 0">
+          <table class="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Agencia</th>
+                <th>Contacto</th>
+                <th>Mercado</th>
+                <th>Teléfono</th>
+                <th class="text-center">Estado</th>
+                <th class="text-end">Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let agencia of agencyModalAgencies; trackBy: trackByCode">
+                <td><span class="badge bg-light text-dark">{{ agencia.codigo }}</span></td>
+                <td>
+                  <div class="search-name">{{ agencia.descripcion || 'N/D' }}</div>
+                  <small class="text-muted" *ngIf="agencia.ruc || agencia.email">{{ agencia.ruc || 'Sin RUC' }} · {{ agencia.email || 'Sin correo' }}</small>
+                </td>
+                <td>{{ agencia.contacto || 'N/D' }}</td>
+                <td>{{ agencia.mercado || 'N/D' }}</td>
+                <td>{{ agencia.telefono || 'N/D' }}</td>
+                <td class="text-center">
+                  <span class="badge" [ngClass]="agencia.activo ? 'bg-success' : 'bg-secondary'">
+                    {{ agencia.activo ? 'Activa' : 'Inactiva' }}
+                  </span>
+                </td>
+                <td class="text-end">
+                  <button type="button" class="btn btn-primary btn-sm" (click)="selectAgencia(agencia)">
+                    <i class="bi bi-check-lg me-1"></i>
+                    Seleccionar
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="search-empty" *ngIf="!agencyModalLoading && !agencyModalError && agencyModalAgencies.length === 0">
+          <i class="bi bi-inbox"></i>
+          <span>No se encontraron agencias.</span>
+        </div>
+      </div>
+      <div class="modal-footer search-footer">
+        <span>Página {{ agencyModalPage }} de {{ agencyModalTotalPages || 1 }} · {{ agencyModalTotalRecords }} registros</span>
+        <div class="btn-group btn-group-sm" role="group" aria-label="Paginación de agencias">
+          <button type="button" class="btn btn-outline-secondary" (click)="goToAgencyModalPage(1)" [disabled]="agencyModalLoading || agencyModalPage <= 1">Primera</button>
+          <button type="button" class="btn btn-outline-secondary" (click)="goToAgencyModalPage(agencyModalPage - 1)" [disabled]="agencyModalLoading || agencyModalPage <= 1">Anterior</button>
+          <button type="button" class="btn btn-outline-secondary" (click)="goToAgencyModalPage(agencyModalPage + 1)" [disabled]="agencyModalLoading || agencyModalPage >= agencyModalTotalPages">Siguiente</button>
+          <button type="button" class="btn btn-outline-secondary" (click)="goToAgencyModalPage(agencyModalTotalPages)" [disabled]="agencyModalLoading || agencyModalPage >= agencyModalTotalPages">Última</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="showPlanModal()"></div>
+<div class="modal d-block" tabindex="-1" *ngIf="showPlanModal()" (click)="cerrarPlanModal()">
+  <div class="modal-dialog modal-lg modal-dialog-centered" (click)="$event.stopPropagation()">
+    <div class="modal-content" [formGroup]="inclusionForm">
+      <div class="modal-header">
+        <h5 class="modal-title">Administrar Plan Alimentación</h5>
+        <button type="button" class="btn-close" (click)="cerrarPlanModal()"></button>
+      </div>
+      <div class="modal-body modal-grid">
+        <label>Código Servicio<input type="text" class="form-control" formControlName="codServ"></label>
+        <label>Descripción<input type="text" class="form-control" formControlName="desServ"></label>
+        <label>Tipo Pax<input type="text" class="form-control" formControlName="tipPax"></label>
+        <label>Precio<input type="number" class="form-control" formControlName="precio" min="0" step="0.01"></label>
+        <label>Cantidad<input type="number" class="form-control" formControlName="cantidad" min="1"></label>
+        <div class="modal-total"><span>Total Servicio</span><strong>{{ inclusionForm.controls.totServ.value | number: '1.2-2' }}</strong></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" (click)="cerrarPlanModal()">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="guardarInclusion()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="showServiceModal()"></div>
+<div class="modal d-block" tabindex="-1" *ngIf="showServiceModal()" (click)="cerrarServicioModal()">
+  <div class="modal-dialog modal-lg modal-dialog-centered" (click)="$event.stopPropagation()">
+    <div class="modal-content" [formGroup]="servicioForm">
+      <div class="modal-header">
+        <h5 class="modal-title">Agregar Servicio Extra</h5>
+        <button type="button" class="btn-close" (click)="cerrarServicioModal()"></button>
+      </div>
+      <div class="modal-body modal-grid">
+        <label>Código<input type="text" class="form-control" formControlName="codSrv"></label>
+        <label>Descripción<input type="text" class="form-control" formControlName="descripcion"></label>
+        <label>Cantidad<input type="number" class="form-control" formControlName="cantidad" min="1"></label>
+        <label>Precio<input type="number" class="form-control" formControlName="precio" min="0" step="0.01"></label>
+        <label>Impuesto<input type="number" class="form-control" formControlName="impuesto" min="0" step="0.01"></label>
+        <label>Tipo Pax<input type="text" class="form-control" formControlName="tipPax"></label>
+        <div class="modal-total"><span>Total</span><strong>{{ servicioForm.controls.total.value | number: '1.2-2' }}</strong></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" (click)="cerrarServicioModal()">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="guardarServicio()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+

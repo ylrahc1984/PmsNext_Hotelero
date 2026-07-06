@@ -1,0 +1,159 @@
+<div class="consulta-reservas container-fluid">
+  <div class="reserva-header">
+    <div>
+      <h4 class="reserva-header__title">Consulta de Reservas</h4>
+      <p class="reserva-header__subtitle mb-0">Administre todas las reservas del hotel</p>
+    </div>
+    <div class="reserva-header__actions">
+      <button type="button" class="btn btn-primary" (click)="nuevaReserva()">
+        <i class="feather icon-plus me-1"></i>
+        Nueva Reserva
+      </button>
+      <button type="button" class="btn btn-outline-secondary" (click)="actualizar()">
+        <i class="feather icon-refresh-cw me-1"></i>
+        Actualizar
+      </button>
+      <button type="button" class="btn btn-outline-secondary" (click)="exportar()">
+        <i class="feather icon-download me-1"></i>
+        Exportar
+      </button>
+    </div>
+  </div>
+
+  <form class="card reserva-filters" [formGroup]="filterForm" (ngSubmit)="buscar()">
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+        <div class="col-xl-2 col-lg-2 col-md-6">
+          <label class="form-label" for="fechaInicio">Fecha Inicio</label>
+          <input id="fechaInicio" type="date" class="form-control" formControlName="fechaInicio">
+        </div>
+        <div class="col-xl-2 col-lg-2 col-md-6">
+          <label class="form-label" for="fechaFinal">Fecha Final</label>
+          <input id="fechaFinal" type="date" class="form-control" formControlName="fechaFinal">
+        </div>
+        <div class="col-xl-4 col-lg-4 col-md-6">
+          <label class="form-label" for="agencia">Agencia</label>
+          <div class="lookup-field">
+            <div class="lookup-row">
+              <input
+                id="agencia"
+                type="text"
+                class="form-control"
+                [formControl]="agenciaSearchControl"
+                placeholder="Todas"
+                autocomplete="off"
+                (focus)="openAgenciaSuggestions()"
+              >
+              <button type="button" class="lookup-button" aria-label="Buscar agencia" (click)="openAgenciaSuggestions()">
+                <i class="feather icon-search"></i>
+              </button>
+            </div>
+            <div class="autocomplete-menu" *ngIf="agenciaSearchOpen">
+              <button type="button" class="autocomplete-item" *ngFor="let agencia of agenciaSuggestions; trackBy: trackByCode" (mousedown)="selectAgencia(agencia)">
+                <strong>{{ agencia.codigo }}</strong>
+                <span>{{ agencia.descripcion }}</span>
+                <small *ngIf="agencia.contacto || agencia.telefono">{{ agencia.contacto || 'Sin contacto' }} · {{ agencia.telefono || 'Sin teléfono' }}</small>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="col-xl-2 col-lg-3 col-md-6">
+          <label class="form-label" for="estado">Estado</label>
+          <select id="estado" class="form-select" formControlName="estado">
+            <option value="">Todos</option>
+            <option *ngFor="let estado of estados" [value]="estado.valor">{{ estado.etiqueta }}</option>
+          </select>
+        </div>
+        <div class="col-xl-2 col-lg-12">
+          <div class="filter-actions">
+            <button type="submit" class="btn btn-primary">
+              <i class="feather icon-search me-1"></i>
+              Buscar
+            </button>
+            <button type="button" class="btn btn-light" (click)="limpiar()">
+              <i class="feather icon-x me-1"></i>
+              Limpiar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <div class="card reserva-list">
+    <div class="card-body">
+      <div class="reserva-list__toolbar">
+        <div class="input-group quick-search">
+          <span class="input-group-text"><i class="feather icon-search"></i></span>
+          <input type="search" class="form-control" [formControl]="quickSearchControl" placeholder="Buscar por reserva o descripción">
+        </div>
+        <div class="reserva-count">
+          <span *ngIf="loading()">Cargando reservas...</span>
+          <span *ngIf="!loading()">{{ totalRecords() }} reservas</span>
+        </div>
+      </div>
+
+      <div class="alert alert-danger py-2 mb-3" *ngIf="errorMessage()">
+        {{ errorMessage() }}
+      </div>
+
+      <div class="table-responsive reserva-table">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Reserva</th>
+              <th>Agencia</th>
+              <th>Ingreso</th>
+              <th>Salida</th>
+              <th class="text-center">Noches</th>
+              <th class="text-center">Habitaciones</th>
+              <th>Estado</th>
+              <th class="text-end">Total</th>
+              <th>Operador</th>
+              <th class="text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let reserva of pagedReservas(); trackBy: trackByReserva">
+              <td>
+                <strong>{{ reserva.reserva }}</strong>
+                <span>{{ reserva.descripcion }}</span>
+              </td>
+              <td>{{ reserva.agencia }}</td>
+              <td>{{ reserva.ingreso | date: 'dd/MM/yyyy' }}</td>
+              <td>{{ reserva.salida | date: 'dd/MM/yyyy' }}</td>
+              <td class="text-center">{{ reserva.noches }}</td>
+              <td class="text-center">{{ reserva.habitaciones }}</td>
+              <td><span class="badge border" [ngClass]="statusClass(reserva.estado)">{{ estadoLabel(reserva.estado) }}</span></td>
+              <td class="text-end fw-semibold">{{ reserva.moneda || 'USD' }} {{ reserva.total | number: '1.2-2' }}</td>
+              <td>{{ reserva.operador }}</td>
+              <td class="text-center">
+                <div class="row-actions">
+                  <button type="button" class="btn btn-outline-primary btn-icon" title="Editar"><i class="feather icon-edit-2"></i></button>
+                  <button type="button" class="btn btn-outline-secondary btn-icon" title="Consultar"><i class="feather icon-eye"></i></button>
+                  <button type="button" class="btn btn-outline-danger btn-icon" title="Cancelar"><i class="feather icon-x-circle"></i></button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="empty-state" *ngIf="pagedReservas().length === 0">
+        <i class="feather icon-inbox"></i>
+        <span>{{ loading() ? 'Consultando reservas...' : 'No existen reservas con los filtros seleccionados.' }}</span>
+      </div>
+
+      <div class="reserva-pagination">
+        <span>Página {{ currentPage() }} de {{ totalPages() }}</span>
+        <select class="form-select form-select-sm" [value]="pageSize()" (change)="setPageSize($any($event.target).value)">
+          <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }} registros</option>
+        </select>
+        <div class="btn-group btn-group-sm">
+          <button type="button" class="btn btn-outline-secondary" (click)="goToPage(currentPage() - 1)" [disabled]="currentPage() === 1">Anterior</button>
+          <button type="button" class="btn btn-outline-secondary" (click)="goToPage(currentPage() + 1)" [disabled]="currentPage() === totalPages()">Siguiente</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

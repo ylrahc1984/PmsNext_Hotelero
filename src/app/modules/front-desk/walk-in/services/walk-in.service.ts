@@ -12,46 +12,46 @@ import { PaxTypesService } from '../../settings/pax-types/services/pax-types.ser
 import { WalkInAgenciaOption, WalkInAgenciaPage, WalkInOption, WalkInSavePayload, WalkInTarifaOption } from '../models/walk-in.model';
 
 interface AgenciaApiDto {
-  MR01_CodAgencia?: string;
-  MR01_Ruc?: string;
-  MR01_NomAgencia?: string;
-  MR01_Ciudad?: string;
-  MR01_Pais?: string;
-  MR01_Contacto?: string;
-  MR01_Telefono1?: string;
-  MR01_Email?: string;
-  MR01_Mercado?: string;
-  MR01_Activo?: number | boolean;
+  MR01_CodAgencia     ?: string;
+  MR01_Ruc            ?: string;
+  MR01_NomAgencia     ?: string;
+  MR01_Ciudad         ?: string;
+  MR01_Pais           ?: string;
+  MR01_Contacto       ?: string;
+  MR01_Telefono1      ?: string;
+  MR01_Email          ?: string;
+  MR01_Mercado        ?: string;
+  MR01_Activo         ?: number | boolean;
 }
 
 interface AgenciaApiPageResponse {
-  datos?: AgenciaApiDto[];
-  totalRegistros?: number;
-  paginaActual?: number;
-  tamanoPagina?: number;
-  totalPaginas?: number;
+  datos             ?: AgenciaApiDto[];
+  totalRegistros    ?: number;
+  paginaActual      ?: number;
+  tamanoPagina      ?: number;
+  totalPaginas      ?: number;
 }
 
 interface TarifaReservaApiDto {
-  MR03_CodTarifa?: string;
-  MR03_NomTarifa?: string;
-  MR03_Moneda?: string;
-  MR03_FecInicial?: string;
-  MR03_FecFin?: string;
-  MR03_Activo?: number | boolean;
-  MR03_Operador?: string;
+  MR03_CodTarifa      ?: string;
+  MR03_NomTarifa      ?: string;
+  MR03_Moneda         ?: string;
+  MR03_FecInicial     ?: string;
+  MR03_FecFin         ?: string;
+  MR03_Activo         ?: number | boolean;
+  MR03_Operador       ?: string;
 }
 
 @Injectable({ providedIn: 'root' })
 export class WalkInService {
-  private readonly http = inject(HttpClient);
-  private readonly clienteService = inject(ClienteService);
-  private readonly nationalitiesService = inject(NationalitiesService);
-  private readonly paxTypesService = inject(PaxTypesService);
-  private readonly planesTarifasService = inject(PlanesTarifasService);
-  private readonly agenciaUrl = `${(environment.apiUrl ?? '').toString().replace(/\/+$/, '')}/agencia`;
-  private readonly tarifaReservaUrl = `${(environment.apiUrl ?? '').toString().replace(/\/+$/, '')}/tarifa-reserva`;
-  private readonly walkInUrl = `${(environment.apiUrl ?? '').toString().replace(/\/+$/, '')}/walkin`;
+  private readonly http                       = inject(HttpClient);
+  private readonly clienteService             = inject(ClienteService);
+  private readonly nationalitiesService       = inject(NationalitiesService);
+  private readonly paxTypesService            = inject(PaxTypesService);
+  private readonly planesTarifasService       = inject(PlanesTarifasService);
+  private readonly agenciaUrl                 = `${(environment.apiUrl ?? '').toString().replace(/\/+$/, '')}/agencia`;
+  private readonly tarifaReservaUrl           = `${(environment.apiUrl ?? '').toString().replace(/\/+$/, '')}/tarifa-reserva`;
+  private readonly walkInUrl                  = `${(environment.apiUrl ?? '').toString().replace(/\/+$/, '')}/walkin`;
 
   private readonly demoPlanes: WalkInOption[] = [
     { codigo: 'SIN', descripcion: 'Sin Plan de alimentacion' },
@@ -161,16 +161,16 @@ export class WalkInService {
     const descripcion = String(item.MR01_NomAgencia ?? codigo).trim();
 
     return {
-      codigo,
-      descripcion,
-      email: String(item.MR01_Email ?? '').trim(),
-      ruc: String(item.MR01_Ruc ?? '').trim(),
-      contacto: String(item.MR01_Contacto ?? '').trim(),
-      telefono: String(item.MR01_Telefono1 ?? '').trim(),
-      ciudad: String(item.MR01_Ciudad ?? '').trim(),
-      pais: String(item.MR01_Pais ?? '').trim(),
-      mercado: String(item.MR01_Mercado ?? '').trim(),
-      activo: item.MR01_Activo === true || Number(item.MR01_Activo ?? 0) === 1
+      codigo          ,
+      descripcion     ,
+      email           : String(item.MR01_Email ?? '').trim(),
+      ruc             : String(item.MR01_Ruc ?? '').trim(),
+      contacto        : String(item.MR01_Contacto ?? '').trim(),
+      telefono        : String(item.MR01_Telefono1 ?? '').trim(),
+      ciudad          : String(item.MR01_Ciudad ?? '').trim(),
+      pais            : String(item.MR01_Pais ?? '').trim(),
+      mercado         : String(item.MR01_Mercado ?? '').trim(),
+      activo          : item.MR01_Activo === true || Number(item.MR01_Activo ?? 0) === 1
     };
   }
 
@@ -184,14 +184,14 @@ export class WalkInService {
     const descripcion = String(item.MR03_NomTarifa ?? codigo).trim();
 
     return {
-      codigo,
-      descripcion,
-      moneda: String(item.MR03_Moneda ?? '').trim(),
-      tarifaNoche: 0,
-      fechaInicial: String(item.MR03_FecInicial ?? '').trim(),
-      fechaFinal: String(item.MR03_FecFin ?? '').trim(),
-      activo: item.MR03_Activo === true || Number(item.MR03_Activo ?? 0) === 1,
-      operador: String(item.MR03_Operador ?? '').trim()
+      codigo          ,
+      descripcion     ,
+      moneda          : String(item.MR03_Moneda ?? '').trim(),
+      tarifaNoche     : 0,
+      fechaInicial    : String(item.MR03_FecInicial ?? '').trim(),
+      fechaFinal      : String(item.MR03_FecFin ?? '').trim(),
+      activo          : item.MR03_Activo === true || Number(item.MR03_Activo ?? 0) === 1,
+      operador        : String(item.MR03_Operador ?? '').trim()
     };
   }
 

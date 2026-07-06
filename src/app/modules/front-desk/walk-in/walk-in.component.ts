@@ -17,40 +17,40 @@ import { WalkInAgenciaOption, WalkInGuest, WalkInOption, WalkInSavePayload, Walk
 import { WalkInService } from './services/walk-in.service';
 
 interface StayForm {
-  fechaEntrada: FormControl<string>;
-  fechaSalida: FormControl<string>;
-  noches: FormControl<number>;
-  habitacion: FormControl<number>;
-  cantidadPax: FormControl<number>;
-  cantidadChildren: FormControl<number>;
-  agenciaCodigo: FormControl<string>;
-  agenciaNombre: FormControl<string>;
-  tarifaCodigo: FormControl<string>;
-  tarifaDescripcion: FormControl<string>;
-  tarifaNoche: FormControl<number>;
-  moneda: FormControl<string>;
-  planAlimentacion: FormControl<string>;
-  observaciones: FormControl<string>;
+  fechaEntrada          : FormControl<string>;
+  fechaSalida           : FormControl<string>;
+  noches                : FormControl<number>;
+  habitacion            : FormControl<number>;
+  cantidadPax           : FormControl<number>;
+  cantidadChildren      : FormControl<number>;
+  agenciaCodigo         : FormControl<string>;
+  agenciaNombre         : FormControl<string>;
+  tarifaCodigo          : FormControl<string>;
+  tarifaDescripcion     : FormControl<string>;
+  tarifaNoche           : FormControl<number>;
+  moneda                : FormControl<string>;
+  planAlimentacion      : FormControl<string>;
+  observaciones         : FormControl<string>;
 }
 
 interface GuestForm {
-  tipoDocumento: FormControl<string>;
-  numeroDocumento: FormControl<string>;
-  nacionalidad: FormControl<string>;
-  nombre: FormControl<string>;
-  apellidos: FormControl<string>;
-  direccion: FormControl<string>;
-  correo: FormControl<string>;
-  fechaNacimiento: FormControl<string>;
-  tipoPax: FormControl<string>;
-  creditoActivo: FormControl<boolean>;
+  tipoDocumento       : FormControl<string>;
+  numeroDocumento     : FormControl<string>;
+  nacionalidad        : FormControl<string>;
+  nombre              : FormControl<string>;
+  apellidos           : FormControl<string>;
+  direccion           : FormControl<string>;
+  correo              : FormControl<string>;
+  fechaNacimiento     : FormControl<string>;
+  tipoPax             : FormControl<string>;
+  creditoActivo       : FormControl<boolean>;
 }
 
 interface WalkInDraft {
-  stay: WalkInStay;
-  guests: WalkInGuest[];
-  selectedRoom: RoomRackNavigationState | null;
-  updatedAt: string;
+  stay            : WalkInStay;
+  guests          : WalkInGuest[];
+  selectedRoom    : RoomRackNavigationState | null;
+  updatedAt       : string;
 }
 
 @Component({
@@ -61,52 +61,52 @@ interface WalkInDraft {
   styleUrls: ['./walk-in.component.scss']
 })
 export class WalkInComponent implements OnInit {
-  private readonly fb = inject(NonNullableFormBuilder);
-  private readonly router = inject(Router);
-  private readonly walkInService = inject(WalkInService);
-  private readonly authService = inject(AuthService);
-  private readonly toastService = inject(ToastService);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly draftStorageKey = 'pmsnext.walk-in.draft';
-  private draftRestored = false;
+  private readonly fb                   = inject(NonNullableFormBuilder);
+  private readonly router               = inject(Router);
+  private readonly walkInService        = inject(WalkInService);
+  private readonly authService          = inject(AuthService);
+  private readonly toastService         = inject(ToastService);
+  private readonly destroyRef           = inject(DestroyRef);
+  private readonly draftStorageKey      = 'pmsnext.walk-in.draft';
+  private draftRestored                 = false;
 
-  readonly selectedRoom = signal<RoomRackNavigationState | null>(this.resolveSelectedRoom());
-  readonly guests = signal<WalkInGuest[]>([]);
-  readonly totalServicios = signal(0);
+  readonly selectedRoom                 = signal<RoomRackNavigationState | null>(this.resolveSelectedRoom());
+  readonly guests                       = signal<WalkInGuest[]>([]);
+  readonly totalServicios               = signal(0);
 
   readonly stayForm: FormGroup<StayForm> = this.fb.group({
-    fechaEntrada: this.fb.control(this.todayAsInputDate(), { validators: [Validators.required] }),
-    fechaSalida: this.fb.control(this.addDaysAsInputDate(1), { validators: [Validators.required] }),
-    noches: this.fb.control(1, { validators: [Validators.required, Validators.min(1)] }),
-    habitacion: this.fb.control(0, { validators: [Validators.required, Validators.min(1)] }),
-    cantidadPax: this.fb.control(1, { validators: [Validators.required, Validators.min(1)] }),
-    cantidadChildren: this.fb.control(0, { validators: [Validators.required, Validators.min(0)] }),
-    agenciaCodigo: this.fb.control(''),
-    agenciaNombre: this.fb.control('', { validators: [Validators.maxLength(160)] }),
-    tarifaCodigo: this.fb.control('', { validators: [Validators.required] }),
-    tarifaDescripcion: this.fb.control('', { validators: [Validators.required, Validators.maxLength(160)] }),
-    tarifaNoche: this.fb.control(0, { validators: [Validators.required, Validators.min(0)] }),
-    moneda: this.fb.control('', { validators: [Validators.required] }),
-    planAlimentacion: this.fb.control('', { validators: [Validators.required] }),
-    observaciones: this.fb.control('', { validators: [Validators.maxLength(500)] })
+    fechaEntrada          : this.fb.control(this.todayAsInputDate(), { validators: [Validators.required] }),
+    fechaSalida           : this.fb.control(this.addDaysAsInputDate(1), { validators: [Validators.required] }),
+    noches                : this.fb.control(1, { validators: [Validators.required, Validators.min(1)] }),
+    habitacion            : this.fb.control(0, { validators: [Validators.required, Validators.min(1)] }),
+    cantidadPax           : this.fb.control(1, { validators: [Validators.required, Validators.min(1)] }),
+    cantidadChildren      : this.fb.control(0, { validators: [Validators.required, Validators.min(0)] }),
+    agenciaCodigo         : this.fb.control(''),
+    agenciaNombre         : this.fb.control('', { validators: [Validators.maxLength(160)] }),
+    tarifaCodigo          : this.fb.control('', { validators: [Validators.required] }),
+    tarifaDescripcion     : this.fb.control('', { validators: [Validators.required, Validators.maxLength(160)] }),
+    tarifaNoche           : this.fb.control(0, { validators: [Validators.required, Validators.min(0)] }),
+    moneda                : this.fb.control('', { validators: [Validators.required] }),
+    planAlimentacion      : this.fb.control('', { validators: [Validators.required] }),
+    observaciones         : this.fb.control('', { validators: [Validators.maxLength(500)] })
   });
 
-  readonly stayValue = signal(this.stayForm.getRawValue());
-  readonly agencyModalSearchControl = this.fb.control('');
-  readonly tarifaModalSearchControl = this.fb.control('');
-  readonly nationalitySearchControl = this.fb.control('');
+  readonly stayValue                    = signal(this.stayForm.getRawValue());
+  readonly agencyModalSearchControl     = this.fb.control('');
+  readonly tarifaModalSearchControl     = this.fb.control('');
+  readonly nationalitySearchControl     = this.fb.control('');
 
   readonly guestForm: FormGroup<GuestForm> = this.fb.group({
-    tipoDocumento: this.fb.control('', { validators: [Validators.required] }),
-    numeroDocumento: this.fb.control('', { validators: [Validators.required, Validators.maxLength(30)] }),
-    nacionalidad: this.fb.control('', { validators: [Validators.required] }),
-    nombre: this.fb.control('', { validators: [Validators.required, Validators.maxLength(80)] }),
-    apellidos: this.fb.control('', { validators: [Validators.required, Validators.maxLength(120)] }),
-    direccion: this.fb.control('', { validators: [Validators.maxLength(220)] }),
-    correo: this.fb.control('', { validators: [Validators.email, Validators.maxLength(120)] }),
-    fechaNacimiento: this.fb.control('', { validators: [Validators.required] }),
-    tipoPax: this.fb.control('', { validators: [Validators.required] }),
-    creditoActivo: this.fb.control(false)
+    tipoDocumento       : this.fb.control('', { validators: [Validators.required] }),
+    numeroDocumento     : this.fb.control('', { validators: [Validators.required, Validators.maxLength(30)] }),
+    nacionalidad        : this.fb.control('', { validators: [Validators.required] }),
+    nombre              : this.fb.control('', { validators: [Validators.required, Validators.maxLength(80)] }),
+    apellidos           : this.fb.control('', { validators: [Validators.required, Validators.maxLength(120)] }),
+    direccion           : this.fb.control('', { validators: [Validators.maxLength(220)] }),
+    correo              : this.fb.control('', { validators: [Validators.email, Validators.maxLength(120)] }),
+    fechaNacimiento     : this.fb.control('', { validators: [Validators.required] }),
+    tipoPax             : this.fb.control('', { validators: [Validators.required] }),
+    creditoActivo       : this.fb.control(false)
   });
 
   readonly summary = computed(() => {
@@ -117,50 +117,50 @@ export class WalkInComponent implements OnInit {
     const servicios = this.totalServicios();
 
     return {
-      habitacion: raw.habitacion,
-      noches: nights,
-      pax: raw.cantidadPax,
-      children: raw.cantidadChildren,
-      tarifaNoche: rate,
-      totalHabitacion,
-      totalServicios: servicios,
-      totalIncluido: totalHabitacion + servicios,
-      total: totalHabitacion + servicios
+      habitacion          : raw.habitacion,
+      noches              : nights,
+      pax                 : raw.cantidadPax,
+      children            : raw.cantidadChildren,
+      tarifaNoche         : rate,
+      totalHabitacion     ,
+      totalServicios      : servicios,
+      totalIncluido       : totalHabitacion + servicios,
+      total               : totalHabitacion + servicios
     };
   });
 
-  tiposDocumento: WalkInOption[] = [];
-  nacionalidades: Nationality[] = [];
-  tiposPax: PaxType[] = [];
-  planes: WalkInOption[] = [];
-  agenciaSuggestions: WalkInAgenciaOption[] = [];
-  agencyModalAgencies: WalkInAgenciaOption[] = [];
-  tarifaSuggestions: WalkInTarifaOption[] = [];
-  tarifaModalTarifas: WalkInTarifaOption[] = [];
-  private allTarifas: WalkInTarifaOption[] = [];
+  tiposDocumento          : WalkInOption[] = [];
+  nacionalidades          : Nationality[] = [];
+  tiposPax                : PaxType[] = [];
+  planes                  : WalkInOption[] = [];
+  agenciaSuggestions      : WalkInAgenciaOption[] = [];
+  agencyModalAgencies     : WalkInAgenciaOption[] = [];
+  tarifaSuggestions       : WalkInTarifaOption[] = [];
+  tarifaModalTarifas      : WalkInTarifaOption[] = [];
+  private allTarifas      : WalkInTarifaOption[] = [];
 
-  isCatalogLoading = false;
-  isSaving = false;
-  showGuestModal = false;
-  showAgencyModal = false;
-  showTarifaModal = false;
-  isEditingGuest = false;
-  editingGuestId = '';
-  agenciaSearchOpen = false;
-  agencyModalLoading = false;
-  agencyModalError = '';
-  agencyModalPage = 1;
-  agencyModalPageSize = 10;
-  agencyModalTotalRecords = 0;
-  agencyModalTotalPages = 0;
-  tarifaSearchOpen = false;
-  nationalitySearchOpen = false;
-  tarifaModalLoading = false;
-  tarifaModalError = '';
-  tarifaModalPage = 1;
-  tarifaModalPageSize = 10;
-  tarifaModalTotalRecords = 0;
-  tarifaModalTotalPages = 0;
+  isCatalogLoading         = false;
+  isSaving                 = false;
+  showGuestModal           = false;
+  showAgencyModal          = false;
+  showTarifaModal          = false;
+  isEditingGuest           = false;
+  editingGuestId           = '';
+  agenciaSearchOpen        = false;
+  agencyModalLoading       = false;
+  agencyModalError         = '';
+  agencyModalPage          = 1;
+  agencyModalPageSize      = 10;
+  agencyModalTotalRecords  = 0;
+  agencyModalTotalPages    = 0;
+  tarifaSearchOpen         = false;
+  nationalitySearchOpen    = false;
+  tarifaModalLoading       = false;
+  tarifaModalError         = '';
+  tarifaModalPage          = 1;
+  tarifaModalPageSize      = 10;
+  tarifaModalTotalRecords  = 0;
+  tarifaModalTotalPages    = 0;
 
   ngOnInit(): void {
     this.restoreDraft();
@@ -171,21 +171,21 @@ export class WalkInComponent implements OnInit {
   }
 
   openAddGuestModal(): void {
-    this.isEditingGuest = false;
-    this.editingGuestId = '';
+    this.isEditingGuest         = false;
+    this.editingGuestId         = '';
     this.nationalitySearchControl.setValue('', { emitEvent: false });
-    this.nationalitySearchOpen = false;
+    this.nationalitySearchOpen  = false;
     this.guestForm.reset({
-      tipoDocumento: this.tiposDocumento[0]?.codigo ?? '',
-      numeroDocumento: '',
-      nacionalidad: '',
-      nombre: '',
-      apellidos: '',
-      direccion: '',
-      correo: '',
-      fechaNacimiento: '',
-      tipoPax: this.tiposPax[0]?.CR03_CodTipo ?? '',
-      creditoActivo: false
+      tipoDocumento       : this.tiposDocumento[0]?.codigo ?? '',
+      numeroDocumento     : '',
+      nacionalidad        : '',
+      nombre              : '',
+      apellidos           : '',
+      direccion           : '',
+      correo              : '',
+      fechaNacimiento     : '',
+      tipoPax             : this.tiposPax[0]?.CR03_CodTipo ?? '',
+      creditoActivo       : false
     });
     this.showGuestModal = true;
   }
@@ -347,17 +347,17 @@ export class WalkInComponent implements OnInit {
       )
       .subscribe({
         next: (response) => {
-          this.agencyModalAgencies = response.datos;
-          this.agencyModalPage = response.paginaActual || normalizedPage;
-          this.agencyModalPageSize = response.tamanoPagina || pageSize;
-          this.agencyModalTotalRecords = response.totalRegistros || response.datos.length;
-          this.agencyModalTotalPages = response.totalPaginas || (response.datos.length ? 1 : 0);
+          this.agencyModalAgencies         = response.datos;
+          this.agencyModalPage             = response.paginaActual || normalizedPage;
+          this.agencyModalPageSize         = response.tamanoPagina || pageSize;
+          this.agencyModalTotalRecords     = response.totalRegistros || response.datos.length;
+          this.agencyModalTotalPages       = response.totalPaginas || (response.datos.length ? 1 : 0);
         },
         error: () => {
-          this.agencyModalAgencies = [];
-          this.agencyModalTotalRecords = 0;
-          this.agencyModalTotalPages = 0;
-          this.agencyModalError = 'No se pudo cargar la lista de agencias.';
+          this.agencyModalAgencies         = [];
+          this.agencyModalTotalRecords     = 0;
+          this.agencyModalTotalPages       = 0;
+          this.agencyModalError            = 'No se pudo cargar la lista de agencias.';
         }
       });
   }
@@ -535,19 +535,19 @@ export class WalkInComponent implements OnInit {
   private loadCatalogs(): void {
     this.isCatalogLoading = true;
     forkJoin({
-      tiposDocumento: this.walkInService.getTiposDocumento().pipe(catchError(() => of([] as WalkInOption[]))),
-      nacionalidades: this.walkInService.getNacionalidades().pipe(catchError(() => of([] as Nationality[]))),
-      tiposPax: this.walkInService.getTiposPax().pipe(catchError(() => of([] as PaxType[]))),
-      planes: this.walkInService.getPlanes().pipe(catchError(() => of([] as WalkInOption[])))
+      tiposDocumento    : this.walkInService.getTiposDocumento().pipe(catchError(() => of([] as WalkInOption[]))),
+      nacionalidades    : this.walkInService.getNacionalidades().pipe(catchError(() => of([] as Nationality[]))),
+      tiposPax          : this.walkInService.getTiposPax().pipe(catchError(() => of([] as PaxType[]))),
+      planes            : this.walkInService.getPlanes().pipe(catchError(() => of([] as WalkInOption[])))
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(({ tiposDocumento, nacionalidades, tiposPax, planes }) => {
-        this.tiposDocumento = tiposDocumento;
-        this.nacionalidades = nacionalidades;
-        this.tiposPax = tiposPax;
-        this.planes = planes;
+        this.tiposDocumento   = tiposDocumento;
+        this.nacionalidades   = nacionalidades;
+        this.tiposPax         = tiposPax;
+        this.planes           = planes;
         this.applyCatalogDefaults();
-        this.isCatalogLoading = false;
+        this.isCatalogLoading  = false;
       });
   }
 
@@ -632,84 +632,84 @@ export class WalkInComponent implements OnInit {
   }
 
   private buildWalkInPayload(): WalkInSavePayload {
-    const raw = this.stayForm.getRawValue();
-    const room = this.selectedRoom();
-    const operador = this.getOperador();
-    const noches = Number(raw.noches || 0);
-    const tarifa = Number(raw.tarifaNoche || 0);
-    const totalHabitacion = noches * tarifa;
-    const habitacion = String(raw.habitacion || room?.CR05_NumHab || '');
+    const raw               = this.stayForm.getRawValue();
+    const room              = this.selectedRoom();
+    const operador          = this.getOperador();
+    const noches            = Number(raw.noches || 0);
+    const tarifa            = Number(raw.tarifaNoche || 0);
+    const totalHabitacion   = noches * tarifa;
+    const habitacion        = String(raw.habitacion || room?.CR05_NumHab || '');
 
     return {
-      proceso: 1,
-      codReserva: '',
-      codAgencia: this.safeString(raw.agenciaCodigo),
-      codTarifa: this.safeString(raw.tarifaCodigo),
-      codPlan: this.safeString(raw.planAlimentacion),
-      fecIngreso: this.formatDateForApi(raw.fechaEntrada),
-      fecSalida: this.formatDateForApi(raw.fechaSalida),
-      fecCreacion: this.formatDateForApi(new Date()),
-      fecConfirma: '',
-      fecPrepago: '',
-      fecAnulada: '',
-      totNoches: noches,
-      totDias: noches + 1,
-      descripcion: this.safeString(raw.tarifaDescripcion),
-      tCambio: 0,
-      folio: '',
-      estado: '1',
-      moneda: this.safeString(raw.moneda),
-      totalRsv: this.summary().total,
-      observaciones: this.safeString(raw.observaciones),
-      procesa: 0,
-      numHabitacion: habitacion,
-      categoria: this.safeString(room?.CR05_CateHab),
-      tipo: this.safeString(room?.CR05_TipoHab),
-      numPax: Number(raw.cantidadPax || 0),
-      numChild: Number(raw.cantidadChildren || 0),
-      lCredito: this.guests().some((guest) => guest.creditoActivo) ? 1 : 0,
-      mtoCredito: 0,
-      numTarjeta: '',
-      vence: '',
-      autoriza: '',
-      tarifa,
-      operador,
+      proceso             : 1,
+      codReserva          : '',
+      codAgencia          : this.safeString(raw.agenciaCodigo),
+      codTarifa           : this.safeString(raw.tarifaCodigo),
+      codPlan             : this.safeString(raw.planAlimentacion),
+      fecIngreso          : this.formatDateForApi(raw.fechaEntrada),
+      fecSalida           : this.formatDateForApi(raw.fechaSalida),
+      fecCreacion         : this.formatDateForApi(new Date()),
+      fecConfirma         : '',
+      fecPrepago          : '',
+      fecAnulada          : '',
+      totNoches           : noches,
+      totDias             : noches + 1,
+      descripcion         : this.safeString(raw.tarifaDescripcion),
+      tCambio             : 0,
+      folio               : '',
+      estado              : '1',
+      moneda              : this.safeString(raw.moneda),
+      totalRsv            : this.summary().total,
+      observaciones       : this.safeString(raw.observaciones),
+      procesa             : 0,
+      numHabitacion       : habitacion,
+      categoria           : this.safeString(room?.CR05_CateHab),
+      tipo                : this.safeString(room?.CR05_TipoHab),
+      numPax              : Number(raw.cantidadPax || 0),
+      numChild            : Number(raw.cantidadChildren || 0),
+      lCredito            : this.guests().some((guest) => guest.creditoActivo) ? 1 : 0,
+      mtoCredito          : 0,
+      numTarjeta          : '',
+      vence               : '',
+      autoriza            : '',
+      tarifa              ,
+      operador            ,
       detHab: [
         {
-          catHabita: this.safeString(room?.CR05_CateHab),
-          tipHabita: this.safeString(room?.CR05_TipoHab),
-          cantHab: 1,
-          precio: tarifa,
-          moneda: this.safeString(raw.moneda),
-          total: totalHabitacion,
-          cpl: 0,
-          impuesto: 0,
-          numPax: Number(raw.cantidadPax || 0),
-          numChild: Number(raw.cantidadChildren || 0),
-          totChild: Number(raw.cantidadChildren || 0),
-          cCosto: 'HOSPED',
-          orden: 1
+          catHabita     : this.safeString(room?.CR05_CateHab),
+          tipHabita     : this.safeString(room?.CR05_TipoHab),
+          cantHab       : 1,
+          precio        : tarifa,
+          moneda        : this.safeString(raw.moneda),
+          total         : totalHabitacion,
+          cpl           : 0,
+          impuesto      : 0,
+          numPax        : Number(raw.cantidadPax || 0),
+          numChild      : Number(raw.cantidadChildren || 0),
+          totChild      : Number(raw.cantidadChildren || 0),
+          cCosto        : 'HOSPED',
+          orden         : 1
         }
       ],
       detInclu: [],
       detSrv: [],
       detRoom: this.guests().map((guest, index) => ({
-        numHabita: habitacion,
-        codNacional: this.safeString(guest.nacionalidad),
-        tipDocu: this.safeString(guest.tipoDocumento),
-        numDocu: this.safeString(guest.numeroDocumento),
-        nombre: this.safeString(guest.nombre),
-        apellidos: this.safeString(guest.apellidos),
-        fecNaci: this.formatDateForApi(guest.fechaNacimiento),
-        sexo: '',
-        estCivil: '',
-        tipoPax: this.safeString(guest.tipoPax),
-        direccion: this.safeString(guest.direccion),
-        email: this.safeString(guest.correo),
-        motivo: '',
-        procede: '',
-        mdoArribo: '',
-        orden: index + 1,
+        numHabita         : habitacion,
+        codNacional       : this.safeString(guest.nacionalidad),
+        tipDocu           : this.safeString(guest.tipoDocumento),
+        numDocu           : this.safeString(guest.numeroDocumento),
+        nombre            : this.safeString(guest.nombre),
+        apellidos         : this.safeString(guest.apellidos),
+        fecNaci           : this.formatDateForApi(guest.fechaNacimiento),
+        sexo              : '',
+        estCivil          : '',
+        tipoPax           : this.safeString(guest.tipoPax),
+        direccion         : this.safeString(guest.direccion),
+        email             : this.safeString(guest.correo),
+        procede           : '',
+        motivo            : '',
+        mdoArribo         : '',
+        orden             : index + 1,
         operador
       }))
     };
@@ -743,10 +743,10 @@ export class WalkInComponent implements OnInit {
       if (!parsed?.stay) return null;
 
       return {
-        stay: parsed.stay as WalkInStay,
-        guests: Array.isArray(parsed.guests) ? parsed.guests : [],
-        selectedRoom: parsed.selectedRoom ?? null,
-        updatedAt: this.safeString(parsed.updatedAt)
+        stay            : parsed.stay as WalkInStay,
+        guests          : Array.isArray(parsed.guests) ? parsed.guests : [],
+        selectedRoom    : parsed.selectedRoom ?? null,
+        updatedAt       : this.safeString(parsed.updatedAt)
       };
     } catch {
       return null;
@@ -756,10 +756,10 @@ export class WalkInComponent implements OnInit {
   private persistDraft(): void {
     try {
       const draft: WalkInDraft = {
-        stay: this.stayForm.getRawValue(),
-        guests: this.guests(),
-        selectedRoom: this.selectedRoom(),
-        updatedAt: new Date().toISOString()
+        stay            : this.stayForm.getRawValue(),
+        guests          : this.guests(),
+        selectedRoom    : this.selectedRoom(),
+        updatedAt       : new Date().toISOString()
       };
       localStorage.setItem(this.draftStorageKey, JSON.stringify(draft));
     } catch {

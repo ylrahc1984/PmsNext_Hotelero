@@ -18,23 +18,23 @@ type EstadoHabitacion =
   | 'Limpia';
 
 interface HabitacionRack {
-  numero: string;
-  categoria: string;
-  estado: EstadoHabitacion;
-  data: RoomRackRoom;
+  numero       : string;
+  categoria    : string;
+  estado       : EstadoHabitacion;
+  data          : RoomRackRoom;
 }
 
 interface EstadoKpi {
-  label: string;
-  estado: EstadoHabitacion | 'Todas';
-  cantidad: number;
-  className: string;
+  label       : string;
+  estado      : EstadoHabitacion | 'Todas';
+  cantidad    : number;
+  className   : string;
 }
 
 interface AccionOperativa {
-  label: string;
-  icon: string;
-  accent?: 'primary' | 'muted';
+  label     : string;
+  icon      : string;
+  accent    ?: 'primary' | 'muted';
 }
 
 @Component({
@@ -46,16 +46,16 @@ interface AccionOperativa {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RoomRackComponent implements OnInit {
-  private readonly roomRackService = inject(RoomRackService);
-  private readonly tipoCambioService = inject(TipoCambioService);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly roomRackService      = inject(RoomRackService);
+  private readonly tipoCambioService    = inject(TipoCambioService);
+  private readonly destroyRef           = inject(DestroyRef);
+  private readonly cdr                  = inject(ChangeDetectorRef);
 
-  readonly hotelActual = 'Hotel PMSNext Central';
-  readonly ultimaActualizacion = new Date();
-  readonly fechaOperacion = '01/07/2026';
+  readonly hotelActual                  = 'Hotel PMSNext Central';
+  readonly ultimaActualizacion          = new Date();
+  readonly fechaOperacion               = '01/07/2026';
 
-  readonly estados: EstadoHabitacion[] = [
+  readonly estados: EstadoHabitacion[]  = [
     'Disponible',
     'Ocupada',
     'Bloqueada',
@@ -63,14 +63,14 @@ export class RoomRackComponent implements OnInit {
     'Limpia'
   ];
 
-  habitaciones: HabitacionRack[] = [];
-  kpis: EstadoKpi[] = this.generarKpis();
-  resumen = this.generarResumen();
-  isLoading = false;
-  errorMessage = '';
-  tipoCambio: TipoCambio | null = null;
-  tipoCambioLoading = false;
-  tipoCambioError = '';
+  habitaciones          : HabitacionRack[] = [];
+  kpis                  : EstadoKpi[] = this.generarKpis();
+  resumen               = this.generarResumen();
+  isLoading             = false;
+  errorMessage          = '';
+  tipoCambio            : TipoCambio | null = null;
+  tipoCambioLoading     = false;
+  tipoCambioError       = '';
 
   readonly acciones: AccionOperativa[] = [
     { label: 'Asignar Habitacion', icon: 'home', accent: 'primary' },
@@ -125,17 +125,17 @@ export class RoomRackComponent implements OnInit {
     const isDirty = habitacion.data.CR05_Clean === 'S';
 
     return {
-      position: 'absolute',
-      top: '7px',
-      right: '8px',
-      width: '12px',
-      height: '12px',
-      border: '1.5px solid #0f172a',
-      borderRadius: '3px',
-      background: isDirty ? 'linear-gradient(135deg, #6f4428, #b7794b)' : '#ffffff',
-      boxShadow: '0 2px 5px rgba(15, 23, 42, 0.18)',
-      pointerEvents: 'none',
-      transform: 'rotate(45deg)'
+      position        : 'absolute',
+      top             : '7px',
+      right           : '8px',
+      width           : '12px',
+      height          : '12px',
+      border          : '1.5px solid #0f172a',
+      borderRadius    : '3px',
+      background      : isDirty ? 'linear-gradient(135deg, #6f4428, #b7794b)' : '#ffffff',
+      boxShadow       : '0 2px 5px rgba(15, 23, 42, 0.18)',
+      pointerEvents   : 'none',
+      transform       : 'rotate(45deg)'
     };
   }
 
@@ -209,10 +209,10 @@ export class RoomRackComponent implements OnInit {
 
   private generarKpis(): EstadoKpi[] {
     const todos: EstadoKpi = {
-      label: 'Todas',
-      estado: 'Todas',
-      cantidad: this.habitaciones.length,
-      className: this.getEstadoClass('Todas')
+      label       : 'Todas',
+      estado      : 'Todas',
+      cantidad    : this.habitaciones.length,
+      className   : this.getEstadoClass('Todas')
     };
 
     return [

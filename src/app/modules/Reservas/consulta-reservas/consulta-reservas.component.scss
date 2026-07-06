@@ -1,0 +1,210 @@
+:host {
+  display: block;
+}
+
+.consulta-reservas {
+  color: #263238;
+}
+
+.reserva-header,
+.reserva-list__toolbar,
+.reserva-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.reserva-header {
+  margin-bottom: 1rem;
+}
+
+.reserva-header__title {
+  margin: 0;
+  font-weight: 700;
+  color: #17212b;
+}
+
+.reserva-header__subtitle {
+  color: #6c757d;
+}
+
+.reserva-header__actions,
+.filter-actions,
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.card {
+  border: 1px solid #e8edf3;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+.reserva-filters {
+  margin-bottom: 1rem;
+}
+
+.filter-actions {
+  justify-content: flex-end;
+}
+
+.lookup-field {
+  position: relative;
+}
+
+.lookup-row {
+  display: grid;
+  grid-template-columns: 1fr 40px;
+  gap: 0.4rem;
+}
+
+.lookup-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d8e2ef;
+  border-radius: 6px;
+  color: #334a72;
+  background: #fff;
+}
+
+.lookup-button:hover {
+  color: #0d49e8;
+  background: #f4f7ff;
+}
+
+.autocomplete-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  left: 0;
+  overflow: hidden;
+  border: 1px solid #d8e2ef;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 16px 34px rgba(15, 35, 68, 0.16);
+}
+
+.autocomplete-item {
+  width: 100%;
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.65rem 0.75rem;
+  border: 0;
+  border-bottom: 1px solid #edf2f8;
+  color: #07163a;
+  text-align: left;
+  background: #fff;
+}
+
+.autocomplete-item:hover {
+  background: #f4f7ff;
+}
+
+.autocomplete-item strong {
+  color: #0d49e8;
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.autocomplete-item span,
+.autocomplete-item small {
+  color: #53627d;
+  font-size: 0.76rem;
+  font-weight: 650;
+}
+
+.quick-search {
+  max-width: 520px;
+}
+
+.reserva-count {
+  font-weight: 600;
+  color: #607080;
+}
+
+.reserva-table {
+  margin-top: 1rem;
+  border: 1px solid #edf1f5;
+  border-radius: 8px;
+}
+
+.table {
+  --bs-table-hover-bg: #f8fbff;
+}
+
+.table thead th {
+  border-bottom: 1px solid #e7edf4;
+  color: #5b6876;
+  font-size: 0.75rem;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  background: #f7f9fc;
+}
+
+.table td {
+  border-color: #eef2f6;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.table thead th {
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
+}
+
+.table td:first-child span {
+  display: block;
+  color: #7a8794;
+  font-size: 0.78rem;
+  margin-top: 0.15rem;
+}
+
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  color: #6c757d;
+}
+
+.reserva-pagination {
+  margin-top: 1rem;
+}
+
+.reserva-pagination .form-select {
+  width: 150px;
+}
+
+@media (max-width: 992px) {
+  .reserva-header,
+  .reserva-list__toolbar,
+  .reserva-pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .quick-search {
+    max-width: 100%;
+  }
+
+  .filter-actions,
+  .reserva-header__actions {
+    justify-content: flex-start;
+  }
+}

@@ -34,11 +34,11 @@ import {
   RoomStayManagementService
 } from './services/room-stay-management.service';
 
-type ActiveTab = 'stay' | 'account' | 'operations' | 'timeline';
-type OperationKind = 'workflow' | 'financial' | 'document' | 'critical';
-type ChargeBucket = 'lodging' | 'extras';
+type ActiveTab      = 'stay' | 'account' | 'operations' | 'timeline';
+type OperationKind  = 'workflow' | 'financial' | 'document' | 'critical';
+type ChargeBucket   = 'lodging' | 'extras';
 type DocumentFormat = 'pdf' | 'print';
-type StayActionId =
+type StayActionId   =
   | 'change-room'
   | 'change-departure'
   | 'register-prepayment'
@@ -50,209 +50,209 @@ type StayActionId =
   | 'check-out';
 
 interface Guest {
-  name: string;
-  documentType: string;
-  document: string;
-  nationality: string;
-  birthDate: string;
+  name            : string;
+  documentType    : string;
+  document        : string;
+  nationality     : string;
+  birthDate       : string;
 }
 
 interface Charge {
-  id: string;
-  tipCrgHab: string;
-  numCrgHab: string;
-  codRsv: string;
-  numHab: string;
-  date: string;
-  time: string;
-  concept: string;
-  reference: string;
-  charge: number;
-  payment: number;
-  balance: number;
-  invoiceSelected: boolean;
+  id                : string;
+  tipCrgHab         : string;
+  numCrgHab         : string;
+  codRsv            : string;
+  numHab            : string;
+  date              : string;
+  time              : string;
+  concept           : string;
+  reference         : string;
+  charge            : number;
+  payment           : number;
+  balance           : number;
+  invoiceSelected   : boolean;
 }
 
 interface StayOperation {
-  id: StayActionId;
-  label: string;
-  icon: string;
-  kind: OperationKind;
-  description: string;
-  confirmText: string;
-  tone?: 'primary' | 'danger';
+  id              : StayActionId;
+  label           : string;
+  icon            : string;
+  kind            : OperationKind;
+  description     : string;
+  confirmText     : string;
+  tone            ?: 'primary' | 'danger';
 }
 
 interface OperationGroup {
-  title: string;
-  actions: StayOperation[];
+  title           : string;
+  actions         : StayOperation[];
 }
 
 interface TimelineItem {
-  time: string;
-  title: string;
-  detail: string;
+  time            : string;
+  title           : string;
+  detail          : string;
 }
 
 interface InvoiceClient {
-  code: string;
-  name: string;
-  document: string;
-  address: string;
-  email?: string;
+  code            : string;
+  name            : string;
+  document        : string;
+  address         : string;
+  email           ?: string;
 }
 
 interface InvoicePaymentMethod {
-  code: string;
-  description: string;
-  tipo: string;
-  tipPago: string;
-  ndias: number;
+  code            : string;
+  description     : string;
+  tipo            : string;
+  tipPago         : string;
+  ndias           : number;
 }
 
 interface InvoiceAppliedPayment {
-  frmPago: string;
-  tipo: string;
-  numTarjeta: string;
-  moneda: string;
-  monto: number;
-  vencimiento: string;
-  mtoTotal: number;
-  tCambio: number;
-  orden: number;
-  description: string;
+  frmPago         : string;
+  tipo            : string;
+  numTarjeta      : string;
+  moneda          : string;
+  monto           : number;
+  vencimiento     : string;
+  mtoTotal        : number;
+  tCambio         : number;
+  orden           : number;
+  description     : string;
 }
 
 interface RoomOption {
-  number: string;
-  type: string;
+  number          : string;
+  type            : string;
 }
 
 interface ActionModalDraft {
-  targetRoom: string;
-  targetRoomType: string;
-  newCheckOut: string;
-  prepaymentAmount: number;
-  chargeConcept: string;
-  chargeAmount: number;
-  chargeBucket: ChargeBucket;
-  destinationFolio: string;
-  notes: string;
-  documentFormat: DocumentFormat;
+  targetRoom             : string;
+  targetRoomType         : string;
+  newCheckOut            : string;
+  prepaymentAmount       : number;
+  chargeConcept          : string;
+  chargeAmount           : number;
+  chargeBucket           : ChargeBucket;
+  destinationFolio       : string;
+  notes                  : string;
+  documentFormat         : DocumentFormat;
 }
 
 interface InvoicePaymentDraft {
-  methodCode: string;
-  moneda: string;
-  amount: number | null;
-  numTarjeta: string;
-  vencimiento: string;
-  tCambio: number;
+  methodCode              : string;
+  moneda                  : string;
+  amount                  : number | null;
+  numTarjeta              : string;
+  vencimiento             : string;
+  tCambio                 : number;
 }
 
 interface RoomChargeGuestOption {
-  name: string;
-  document: string;
-  documentType: string;
+  name                    : string;
+  document                : string;
+  documentType            : string;
 }
 
 interface RoomChargePointOfSale {
-  code: string;
-  name: string;
-  priceList: string;
-  currency: string;
+  code          : string;
+  name          : string;
+  priceList     : string;
+  currency      : string;
 }
 
 interface RoomChargeDraft {
-  guestDocument: string;
-  pointOfSale: string;
-  priceList: string;
-  currency: string;
-  itemSearch: string;
-  comment: string;
+  guestDocument   : string;
+  pointOfSale     : string;
+  priceList       : string;
+  currency        : string;
+  itemSearch      : string;
+  comment         : string;
 }
 
 interface RoomChargeLine {
-  id: string;
-  group: string;
-  category: string;
-  code: string;
-  name: string;
-  quantity: number;
-  price: number;
-  total: number;
-  currency: string;
-  order: number;
-  comment: string;
+  id              : string;
+  group           : string;
+  category        : string;
+  code            : string;
+  name            : string;
+  quantity        : number;
+  price           : number;
+  total           : number;
+  currency        : string;
+  order           : number;
+  comment         : string;
 }
 
 interface RoomStay {
-  roomNumber: string;
-  roomType: string;
-  roomCategory: string;
-  status: 'OCCUPIED';
-  agency: string;
-  rate: string;
-  reservationNumber: string;
-  checkIn: string;
-  checkOut: string;
-  nights: number;
-  guestsCount: number;
-  childrenCount: number;
-  masterFolio: string;
-  plan: string;
-  reservedAt: string;
-  observations: string[];
-  guests: Guest[];
-  lodgingCharges: Charge[];
-  extraCharges: Charge[];
-  prepaid: number;
-  operator?: string;
+  roomNumber            : string;
+  roomType              : string;
+  roomCategory          : string;
+  status                : 'OCCUPIED';
+  agency                : string;
+  rate                  : string;
+  reservationNumber     : string;
+  checkIn               : string;
+  checkOut              : string;
+  nights                : number;
+  guestsCount           : number;
+  childrenCount         : number;
+  masterFolio           : string;
+  plan                  : string;
+  reservedAt            : string;
+  observations          : string[];
+  guests                : Guest[];
+  lodgingCharges        : Charge[];
+  extraCharges          : Charge[];
+  prepaid               : number;
+  operator              ?: string;
 }
 
 interface ExtraGuestForm {
-  tipDocu: FormControl<string>;
-  numDocu: FormControl<string>;
-  codNacion: FormControl<string>;
-  nombre: FormControl<string>;
-  apellido: FormControl<string>;
-  fecNac: FormControl<string>;
-  sexo: FormControl<string>;
-  estCivil: FormControl<string>;
-  tiPax: FormControl<string>;
-  direccion: FormControl<string>;
-  email: FormControl<string>;
-  motivo: FormControl<string>;
-  procede: FormControl<string>;
-  mdoArribo: FormControl<string>;
+  tipDocu           : FormControl<string>;
+  numDocu           : FormControl<string>;
+  codNacion         : FormControl<string>;
+  nombre            : FormControl<string>;
+  apellido          : FormControl<string>;
+  fecNac            : FormControl<string>;
+  sexo              : FormControl<string>;
+  estCivil          : FormControl<string>;
+  tiPax             : FormControl<string>;
+  direccion         : FormControl<string>;
+  email             : FormControl<string>;
+  motivo            : FormControl<string>;
+  procede           : FormControl<string>;
+  mdoArribo         : FormControl<string>;
 }
 
 interface RoomGuestOption {
-  codigo: string;
-  descripcion: string;
+  codigo            : string;
+  descripcion       : string;
 }
 
 const emptyRoomStay: RoomStay = {
-  roomNumber: '',
-  roomType: '',
-  roomCategory: '',
-  status: 'OCCUPIED',
-  agency: '',
-  rate: '',
-  reservationNumber: '',
-  checkIn: '',
-  checkOut: '',
-  nights: 0,
-  guestsCount: 0,
-  childrenCount: 0,
-  masterFolio: '',
-  plan: '',
-  reservedAt: '',
-  observations: [],
-  guests: [],
-  lodgingCharges: [],
-  extraCharges: [],
-  prepaid: 0
+  roomNumber            : '',
+  roomType              : '',
+  roomCategory          : '',
+  status                : 'OCCUPIED',
+  agency                : '',
+  rate                  : '',
+  reservationNumber     : '',
+  checkIn               : '',
+  checkOut              : '',
+  nights                : 0,
+  guestsCount           : 0,
+  childrenCount         : 0,
+  masterFolio           : '',
+  plan                  : '',
+  reservedAt            : '',
+  observations          : [],
+  guests                : [],
+  lodgingCharges        : [],
+  extraCharges          : [],
+  prepaid               : 0
 };
 
 @Component({
@@ -264,79 +264,79 @@ const emptyRoomStay: RoomStay = {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RoomStayManagementComponent implements OnInit {
-  private readonly fb = inject(NonNullableFormBuilder);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly authService = inject(AuthService);
-  private readonly roomStayManagementService = inject(RoomStayManagementService);
-  private readonly clienteService = inject(ClienteService);
-  private readonly nationalitiesService = inject(NationalitiesService);
-  private readonly paxTypesService = inject(PaxTypesService);
-  private readonly monedaService = inject(MonedaService);
-  private readonly tipoCambioService = inject(TipoCambioService);
-  private readonly invoiceBaseCurrency = 'USD';
-  private readonly roomChargeCatalogPageSize = 8;
-  private requestedRoomNumber = '';
-  private requestedReservationNumber = '';
+  private readonly fb                             = inject(NonNullableFormBuilder);
+  private readonly destroyRef                     = inject(DestroyRef);
+  private readonly authService                    = inject(AuthService);
+  private readonly roomStayManagementService      = inject(RoomStayManagementService);
+  private readonly clienteService                 = inject(ClienteService);
+  private readonly nationalitiesService           = inject(NationalitiesService);
+  private readonly paxTypesService                = inject(PaxTypesService);
+  private readonly monedaService                  = inject(MonedaService);
+  private readonly tipoCambioService              = inject(TipoCambioService);
+  private readonly invoiceBaseCurrency            = 'USD';
+  private readonly roomChargeCatalogPageSize      = 8;
+  private requestedRoomNumber                     = '';
+  private requestedReservationNumber              = '';
 
   private readonly invoiceConsumerFinal: InvoiceClient = {
-    code: '000000000',
-    name: 'CLIENTE EN GENERAL',
-    document: '0000000000',
-    address: 'S/D',
-    email: ''
+    code          : '000000000',
+    name          : 'CLIENTE EN GENERAL',
+    document      : '0000000000',
+    address       : 'S/D',
+    email         : ''
   };
 
-  readonly activeTab = signal<ActiveTab>('stay');
-  readonly room = signal<RoomStay>({ ...emptyRoomStay });
-  readonly isStayLoading = signal(false);
-  readonly stayErrorMessage = signal('');
-  readonly availableRoomOptions = signal<RoomOption[]>([]);
-  readonly isAvailableRoomsLoading = signal(false);
-  readonly availableRoomsLoaded = signal(false);
-  readonly isRoomChangeSubmitting = signal(false);
-  readonly isDepartureChangeSubmitting = signal(false);
-  readonly isRoomChargeCatalogLoading = signal(false);
-  readonly isRoomChargeItemsLoading = signal(false);
-  readonly isRoomChargeSubmitting = signal(false);
-  readonly showExtraGuestModal = signal(false);
-  readonly isExtraGuestCatalogLoading = signal(false);
-  readonly isExtraGuestSaving = signal(false);
-  readonly extraGuestValidationMessage = signal('');
-  readonly extraGuestNationalitySearch = signal('');
-  readonly isExtraGuestNationalitySearchOpen = signal(false);
-  readonly extraGuestDocumentTypes = signal<RoomGuestOption[]>([]);
-  readonly extraGuestNationalities = signal<Nationality[]>([]);
-  readonly extraGuestPaxTypes = signal<PaxType[]>([]);
-  readonly activeAction = signal<StayOperation | null>(null);
-  readonly actionDraft = signal<ActionModalDraft>(this.buildActionDraft());
-  readonly roomChargeDraft = signal<RoomChargeDraft>(this.buildRoomChargeDraft());
-  readonly roomChargePointOfSales = signal<RoomChargePointOfSale[]>([]);
-  readonly roomChargeItems = signal<RoomChargePriceListApiItem[]>([]);
-  readonly roomChargeLines = signal<RoomChargeLine[]>([]);
-  readonly roomChargeCatalogPage = signal(1);
-  readonly roomChargeValidationMessage = signal('');
-  readonly timeline = signal<TimelineItem[]>([]);
-  readonly invoiceClientSearch = signal('');
-  readonly selectedInvoiceClient = signal<InvoiceClient | null>(null);
-  readonly invoiceAppliedPayments = signal<InvoiceAppliedPayment[]>([]);
-  readonly invoicePaymentDraft = signal<InvoicePaymentDraft>({
-    methodCode: '',
-    moneda: this.invoiceBaseCurrency,
-    amount: null,
-    numTarjeta: '',
-    vencimiento: '',
-    tCambio: 1
+  readonly activeTab                             = signal<ActiveTab>('stay');
+  readonly room                                  = signal<RoomStay>({ ...emptyRoomStay });
+  readonly isStayLoading                         = signal(false);
+  readonly stayErrorMessage                      = signal('');
+  readonly availableRoomOptions                  = signal<RoomOption[]>([]);
+  readonly isAvailableRoomsLoading               = signal(false);
+  readonly availableRoomsLoaded                  = signal(false);
+  readonly isRoomChangeSubmitting                = signal(false);
+  readonly isDepartureChangeSubmitting           = signal(false);
+  readonly isRoomChargeCatalogLoading            = signal(false);
+  readonly isRoomChargeItemsLoading              = signal(false);
+  readonly isRoomChargeSubmitting                = signal(false);
+  readonly showExtraGuestModal                   = signal(false);
+  readonly isExtraGuestCatalogLoading            = signal(false);
+  readonly isExtraGuestSaving                    = signal(false);
+  readonly extraGuestValidationMessage           = signal('');
+  readonly extraGuestNationalitySearch           = signal('');
+  readonly isExtraGuestNationalitySearchOpen     = signal(false);
+  readonly extraGuestDocumentTypes               = signal<RoomGuestOption[]>([]);
+  readonly extraGuestNationalities               = signal<Nationality[]>([]);
+  readonly extraGuestPaxTypes                    = signal<PaxType[]>([]);
+  readonly activeAction                          = signal<StayOperation | null>(null);
+  readonly actionDraft                           = signal<ActionModalDraft>(this.buildActionDraft());
+  readonly roomChargeDraft                       = signal<RoomChargeDraft>(this.buildRoomChargeDraft());
+  readonly roomChargePointOfSales                = signal<RoomChargePointOfSale[]>([]);
+  readonly roomChargeItems                       = signal<RoomChargePriceListApiItem[]>([]);
+  readonly roomChargeLines                       = signal<RoomChargeLine[]>([]);
+  readonly roomChargeCatalogPage                 = signal(1);
+  readonly roomChargeValidationMessage           = signal('');
+  readonly timeline                              = signal<TimelineItem[]>([]);
+  readonly invoiceClientSearch                   = signal('');
+  readonly selectedInvoiceClient                 = signal<InvoiceClient | null>(null);
+  readonly invoiceAppliedPayments                = signal<InvoiceAppliedPayment[]>([]);
+  readonly invoicePaymentDraft                   = signal<InvoicePaymentDraft>({
+    methodCode      : '',
+    moneda          : this.invoiceBaseCurrency,
+    amount          : null,
+    numTarjeta      : '',
+    vencimiento     : '',
+    tCambio         : 1
   });
-  readonly invoiceValidationMessage = signal('');
-  readonly invoiceCurrencies = signal<MonedaUI[]>([]);
-  readonly isInvoiceCatalogLoading = signal(false);
-  readonly isInvoiceExchangeRateLoading = signal(false);
-  readonly roomOptions = computed(() =>
+  readonly invoiceValidationMessage         = signal('');
+  readonly invoiceCurrencies                = signal<MonedaUI[]>([]);
+  readonly isInvoiceCatalogLoading          = signal(false);
+  readonly isInvoiceExchangeRateLoading     = signal(false);
+  readonly roomOptions                      = computed(() =>
     this.availableRoomsLoaded() || this.isAvailableRoomsLoading() ? this.availableRoomOptions() : this.buildRoomOptions(this.room().roomNumber)
   );
-  readonly activeActionKind = computed(() => this.activeAction()?.kind ?? 'workflow');
-  readonly invoicePaymentMethods = signal<InvoicePaymentMethod[]>([]);
-  readonly invoiceCurrencyOptions = computed(() =>
+  readonly activeActionKind                 = computed(() => this.activeAction()?.kind ?? 'workflow');
+  readonly invoicePaymentMethods            = signal<InvoicePaymentMethod[]>([]);
+  readonly invoiceCurrencyOptions           = computed(() =>
     this.invoiceCurrencies().length
       ? this.invoiceCurrencies()
       : [
@@ -369,20 +369,20 @@ export class RoomStayManagementComponent implements OnInit {
   });
 
   readonly extraGuestForm: FormGroup<ExtraGuestForm> = this.fb.group({
-    tipDocu: this.fb.control('', { validators: [Validators.required] }),
-    numDocu: this.fb.control('', { validators: [Validators.required, Validators.maxLength(30)] }),
-    codNacion: this.fb.control('', { validators: [Validators.required] }),
-    nombre: this.fb.control('', { validators: [Validators.required, Validators.maxLength(80)] }),
-    apellido: this.fb.control('', { validators: [Validators.required, Validators.maxLength(120)] }),
-    fecNac: this.fb.control('', { validators: [Validators.required] }),
-    sexo: this.fb.control(''),
-    estCivil: this.fb.control(''),
-    tiPax: this.fb.control('', { validators: [Validators.required] }),
-    direccion: this.fb.control('', { validators: [Validators.maxLength(220)] }),
-    email: this.fb.control('', { validators: [Validators.email, Validators.maxLength(120)] }),
-    motivo: this.fb.control(''),
-    procede: this.fb.control(''),
-    mdoArribo: this.fb.control('')
+    tipDocu         : this.fb.control('', { validators: [Validators.required] }),
+    numDocu         : this.fb.control('', { validators: [Validators.required, Validators.maxLength(30)] }),
+    codNacion       : this.fb.control('', { validators: [Validators.required] }),
+    nombre          : this.fb.control('', { validators: [Validators.required, Validators.maxLength(80)] }),
+    apellido        : this.fb.control('', { validators: [Validators.required, Validators.maxLength(120)] }),
+    fecNac          : this.fb.control('', { validators: [Validators.required] }),
+    sexo            : this.fb.control(''),
+    estCivil        : this.fb.control(''),
+    tiPax           : this.fb.control('', { validators: [Validators.required] }),
+    direccion       : this.fb.control('', { validators: [Validators.maxLength(220)] }),
+    email           : this.fb.control('', { validators: [Validators.email, Validators.maxLength(120)] }),
+    motivo          : this.fb.control(''),
+    procede         : this.fb.control(''),
+    mdoArribo       : this.fb.control('')
   });
 
   readonly tabs: { id: ActiveTab; label: string }[] = [
@@ -397,29 +397,29 @@ export class RoomStayManagementComponent implements OnInit {
       title: 'Gestion de Estancia',
       actions: [
         {
-          id: 'change-room',
-          label: 'Cambiar Habitacion',
-          icon: 'hotel',
-          kind: 'workflow',
-          description: 'Prepara el cambio operativo de la estancia hacia otra habitacion disponible.',
-          confirmText: 'Preparar cambio',
-          tone: 'primary'
+          id              : 'change-room',
+          label           : 'Cambiar Habitacion',
+          icon            : 'hotel',
+          kind            : 'workflow',
+          description     : 'Prepara el cambio operativo de la estancia hacia otra habitacion disponible.',
+          confirmText     : 'Preparar cambio',
+          tone            : 'primary'
         },
         {
-          id: 'change-departure',
-          label: 'Cambiar Fecha Salida',
-          icon: 'event',
-          kind: 'workflow',
-          description: 'Permite extender o ajustar la salida de la reserva con una vista previa del impacto.',
-          confirmText: 'Actualizar salida'
+          id              : 'change-departure',
+          label           : 'Cambiar Fecha Salida',
+          icon            : 'event',
+          kind            : 'workflow',
+          description     : 'Permite extender o ajustar la salida de la reserva con una vista previa del impacto.',
+          confirmText     : 'Actualizar salida'
         },
-        {
-          id: 'register-prepayment',
-          label: 'Registrar Prepago',
-          icon: 'attach_money',
-          kind: 'financial',
-          description: 'Registra un prepago operativo para dejar trazabilidad del abono recibido.',
-          confirmText: 'Registrar prepago'
+        {             
+          id              : 'register-prepayment',
+          label           : 'Registrar Prepago',
+          icon            : 'attach_money',
+          kind            : 'financial',
+          description     : 'Registra un prepago operativo para dejar trazabilidad del abono recibido.',
+          confirmText     : 'Registrar prepago'
         }
       ]
     },
@@ -427,21 +427,21 @@ export class RoomStayManagementComponent implements OnInit {
       title: 'Gestion de Cargos',
       actions: [
         {
-          id: 'new-charge',
-          label: 'Nuevo Cargo',
-          icon: 'add_circle',
-          kind: 'financial',
-          description: 'Registra un cargo manual y lo agrega al bloque correspondiente del folio.',
-          confirmText: 'Agregar cargo',
-          tone: 'danger'
+          id              : 'new-charge',
+          label           : 'Nuevo Cargo',
+          icon            : 'add_circle',
+          kind            : 'financial',
+          description     : 'Registra un cargo manual y lo agrega al bloque correspondiente del folio.',
+          confirmText     : 'Agregar cargo',
+          tone            : 'danger'
         },
         {
-          id: 'transfer-charges',
-          label: 'Transferir Cargos',
-          icon: 'compare_arrows',
-          kind: 'financial',
-          description: 'Mueve un monto a otro folio para representar una transferencia operativa.',
-          confirmText: 'Transferir cargos'
+          id              : 'transfer-charges',
+          label           : 'Transferir Cargos',
+          icon            : 'compare_arrows',
+          kind            : 'financial',
+          description     : 'Mueve un monto a otro folio para representar una transferencia operativa.',
+          confirmText     : 'Transferir cargos'
         }
       ]
     },
@@ -449,29 +449,29 @@ export class RoomStayManagementComponent implements OnInit {
       title: 'Documentos',
       actions: [
         {
-          id: 'print-room-charge',
-          label: 'Imprimir Cargo Habitacion',
-          icon: 'print',
-          kind: 'document',
-          description: 'Genera una salida documental del cargo de habitacion con datos de la estancia.',
-          confirmText: 'Generar documento'
+          id            : 'print-room-charge',
+          label         : 'Imprimir Cargo Habitacion',
+          icon          : 'print',
+          kind          : 'document',
+          description   : 'Genera una salida documental del cargo de habitacion con datos de la estancia.',
+          confirmText   : 'Generar documento'
         },
         {
-          id: 'print-statement',
-          label: 'Imprimir Estado Cuenta',
-          icon: 'receipt',
-          kind: 'document',
-          description: 'Previsualiza un estado de cuenta resumido antes de imprimir o exportar.',
-          confirmText: 'Emitir estado'
+          id            : 'print-statement',
+          label         : 'Imprimir Estado Cuenta',
+          icon          : 'receipt',
+          kind          : 'document',
+          description   : 'Previsualiza un estado de cuenta resumido antes de imprimir o exportar.',
+          confirmText   : 'Emitir estado'
         },
-        {
-          id: 'invoice-room',
-          label: 'Facturar Habitacion',
-          icon: 'description',
-          kind: 'document',
-          description: 'Prepara la emision del documento fiscal de la estancia con un resumen previo.',
-          confirmText: 'Preparar factura',
-          tone: 'primary'
+        {               
+          id            : 'invoice-room',
+          label         : 'Facturar Habitacion',
+          icon          : 'description',
+          kind          : 'document',
+          description   : 'Prepara la emision del documento fiscal de la estancia con un resumen previo.',
+          confirmText   : 'Preparar factura',
+          tone          : 'primary'
         }
       ]
     },
@@ -479,13 +479,13 @@ export class RoomStayManagementComponent implements OnInit {
       title: 'Salida',
       actions: [
         {
-          id: 'check-out',
-          label: 'Check Out',
-          icon: 'logout',
-          kind: 'critical',
-          description: 'Abre una confirmacion operativa de salida con saldo y alertas antes de ejecutar.',
-          confirmText: 'Confirmar salida',
-          tone: 'danger'
+          id            : 'check-out',
+          label         : 'Check Out',
+          icon          : 'logout',
+          kind          : 'critical',
+          description   : 'Abre una confirmacion operativa de salida con saldo y alertas antes de ejecutar.',
+          confirmText   : 'Confirmar salida',
+          tone          : 'danger'
         }
       ]
     }
@@ -507,15 +507,15 @@ export class RoomStayManagementComponent implements OnInit {
     ];
   });
 
-  readonly lodgingSubtotal = computed(() => this.sumCharges(this.room().lodgingCharges));
-  readonly extrasSubtotal = computed(() => this.sumCharges(this.room().extraCharges));
-  readonly totalToCharge = computed(() => this.lodgingSubtotal() + this.extrasSubtotal());
-  readonly lodgingInvoiceSubtotal = computed(() => this.sumSelectedCharges(this.room().lodgingCharges));
-  readonly extrasInvoiceSubtotal = computed(() => this.sumSelectedCharges(this.room().extraCharges));
-  readonly totalToInvoice = computed(() => this.lodgingInvoiceSubtotal() + this.extrasInvoiceSubtotal());
-  readonly currentBalance = computed(() => this.totalToCharge() - this.room().prepaid);
-  readonly headerBalance = computed(() => this.currentBalance());
-  readonly modalHighlights = computed(() => {
+  readonly lodgingSubtotal          = computed(() => this.sumCharges(this.room().lodgingCharges));
+  readonly extrasSubtotal           = computed(() => this.sumCharges(this.room().extraCharges));
+  readonly totalToCharge            = computed(() => this.lodgingSubtotal() + this.extrasSubtotal());
+  readonly lodgingInvoiceSubtotal   = computed(() => this.sumSelectedCharges(this.room().lodgingCharges));
+  readonly extrasInvoiceSubtotal    = computed(() => this.sumSelectedCharges(this.room().extraCharges));
+  readonly totalToInvoice           = computed(() => this.lodgingInvoiceSubtotal() + this.extrasInvoiceSubtotal());
+  readonly currentBalance           = computed(() => this.totalToCharge() - this.room().prepaid);
+  readonly headerBalance            = computed(() => this.currentBalance());
+  readonly modalHighlights          = computed(() => {
     const room = this.room();
 
     return [
@@ -527,21 +527,21 @@ export class RoomStayManagementComponent implements OnInit {
   });
   readonly invoiceClients = computed<InvoiceClient[]>(() => {
     const guestClients = this.room().guests.map((guest, index) => ({
-      code: `HSP-${index + 1}`,
-      name: guest.name,
-      document: guest.document,
-      address: `Habitacion ${this.room().roomNumber}`,
-      email: ''
+      code        : `HSP-${index + 1}`,
+      name        : guest.name,
+      document    : guest.document,
+      address     : `Habitacion ${this.room().roomNumber}`,
+      email       : ''
     }));
 
     return [
       this.invoiceConsumerFinal,
       {
-        code: `RSV-${this.room().reservationNumber}`,
-        name: `${this.room().agency} / ${this.room().reservationNumber}`,
-        document: this.room().reservationNumber,
-        address: `Reserva de habitacion ${this.room().roomNumber}`,
-        email: ''
+        code        : `RSV-${this.room().reservationNumber}`,
+        name        : `${this.room().agency} / ${this.room().reservationNumber}`,
+        document    : this.room().reservationNumber,
+        address     : `Reserva de habitacion ${this.room().roomNumber}`,
+        email       : ''
       },
       ...guestClients
     ];
@@ -557,18 +557,18 @@ export class RoomStayManagementComponent implements OnInit {
       [client.name, client.code, client.document].some((field) => field.toLowerCase().includes(term))
     );
   });
-  readonly invoiceClient = computed(() => this.selectedInvoiceClient() ?? this.invoiceConsumerFinal);
-  readonly invoiceSubtotal = computed(() => this.roundCurrency(this.totalToInvoice() / 1.18));
-  readonly invoiceTaxes = computed(() => this.roundCurrency(this.totalToInvoice() - this.invoiceSubtotal()));
-  readonly invoiceTip = computed(() => 0);
-  readonly invoiceTotal = computed(() => this.roundCurrency(this.invoiceSubtotal() + this.invoiceTaxes() + this.invoiceTip()));
-  readonly invoicePaid = computed(() =>
+  readonly invoiceClient       = computed(() => this.selectedInvoiceClient() ?? this.invoiceConsumerFinal);
+  readonly invoiceSubtotal     = computed(() => this.roundCurrency(this.totalToInvoice() / 1.18));
+  readonly invoiceTaxes        = computed(() => this.roundCurrency(this.totalToInvoice() - this.invoiceSubtotal()));
+  readonly invoiceTip          = computed(() => 0);
+  readonly invoiceTotal        = computed(() => this.roundCurrency(this.invoiceSubtotal() + this.invoiceTaxes() + this.invoiceTip()));
+  readonly invoicePaid         = computed(() =>
     this.roundCurrency(this.invoiceAppliedPayments().reduce((sum, payment) => sum + payment.mtoTotal, 0))
   );
-  readonly invoicePending = computed(() => this.roundCurrency(Math.max(this.invoiceTotal() - this.invoicePaid(), 0)));
-  readonly invoiceChange = computed(() => this.roundCurrency(Math.max(this.invoicePaid() - this.invoiceTotal(), 0)));
-  readonly invoiceCanConfirm = computed(() => this.invoiceAppliedPayments().length > 0 && this.invoicePaid() >= this.invoiceTotal());
-  readonly invoiceDraftConvertedAmount = computed(() => {
+  readonly invoicePending                = computed(() => this.roundCurrency(Math.max(this.invoiceTotal() - this.invoicePaid(), 0)));
+  readonly invoiceChange                 = computed(() => this.roundCurrency(Math.max(this.invoicePaid() - this.invoiceTotal(), 0)));
+  readonly invoiceCanConfirm             = computed(() => this.invoiceAppliedPayments().length > 0 && this.invoicePaid() >= this.invoiceTotal());
+  readonly invoiceDraftConvertedAmount   = computed(() => {
     const draft = this.invoicePaymentDraft();
     return this.roundCurrency(this.convertPaymentToInvoiceCurrency(Number(draft.amount || 0), draft.moneda, draft.tCambio));
   });
@@ -611,9 +611,9 @@ export class RoomStayManagementComponent implements OnInit {
     Math.max(1, Math.ceil(this.filteredRoomChargeItems().length / this.roomChargeCatalogPageSize))
   );
   readonly paginatedRoomChargeItems = computed(() => {
-    const totalPages = this.roomChargeCatalogTotalPages();
-    const safePage = Math.min(Math.max(this.roomChargeCatalogPage(), 1), totalPages);
-    const startIndex = (safePage - 1) * this.roomChargeCatalogPageSize;
+    const totalPages  = this.roomChargeCatalogTotalPages();
+    const safePage    = Math.min(Math.max(this.roomChargeCatalogPage(), 1), totalPages);
+    const startIndex  = (safePage - 1) * this.roomChargeCatalogPageSize;
 
     return this.filteredRoomChargeItems().slice(startIndex, startIndex + this.roomChargeCatalogPageSize);
   });
@@ -1037,12 +1037,12 @@ export class RoomStayManagementComponent implements OnInit {
 
   private buildAnnulRoomChargePayload(charge: Charge, reason: string): RoomChargeAnnulPayload | null {
     const payload: RoomChargeAnnulPayload = {
-      tipCrgHab: this.cleanText(charge.tipCrgHab) || 'CH',
-      numCrgHab: this.cleanText(charge.numCrgHab || charge.reference),
-      codRsv: this.cleanText(charge.codRsv || this.room().reservationNumber),
-      numHab: this.cleanText(charge.numHab || this.room().roomNumber),
-      motivo: this.cleanText(reason),
-      operador: this.getOperador()
+      tipCrgHab     : this.cleanText(charge.tipCrgHab) || 'CH',
+      numCrgHab     : this.cleanText(charge.numCrgHab || charge.reference),
+      codRsv        : this.cleanText(charge.codRsv || this.room().reservationNumber),
+      numHab        : this.cleanText(charge.numHab || this.room().roomNumber),
+      motivo        : this.cleanText(reason),
+      operador      : this.getOperador()
     };
 
     const hasRequiredChargeData = Boolean(payload.tipCrgHab && payload.numCrgHab && payload.codRsv && payload.numHab && payload.operador);
@@ -1075,10 +1075,10 @@ export class RoomStayManagementComponent implements OnInit {
     this.roomChargeItems.set([]);
     this.roomChargeCatalogPage.set(1);
     this.updateRoomChargeDraft({
-      pointOfSale: pointOfSaleCode,
-      priceList: selectedPointOfSale?.priceList ?? '',
-      currency: selectedPointOfSale?.currency ?? this.invoiceBaseCurrency,
-      itemSearch: ''
+      pointOfSale     : pointOfSaleCode,
+      priceList       : selectedPointOfSale?.priceList ?? '',
+      currency        : selectedPointOfSale?.currency ?? this.invoiceBaseCurrency,
+      itemSearch      : ''
     });
 
     if (selectedPointOfSale?.priceList) {
@@ -1102,17 +1102,17 @@ export class RoomStayManagementComponent implements OnInit {
 
       const currency = this.cleanText(item.MPV05_Moneda) || this.roomChargeDraft().currency || this.invoiceBaseCurrency;
       const line: RoomChargeLine = {
-        id: `${code}|${Date.now()}|${lines.length}`,
-        group: this.cleanText(item.MPV01_CodGrupo),
-        category: this.cleanText(item.MPV01_CodCategoria || item.MPV00_NomCategoria),
-        code,
-        name: this.cleanText(item.MPV05_DesProducto || item.MPV05_NomCorto || code),
-        quantity: 1,
-        price: this.roundCurrency(Number(item.MPV05_PrecioTotal ?? 0)),
-        total: this.roundCurrency(Number(item.MPV05_PrecioTotal ?? 0)),
-        currency,
-        order: lines.length + 1,
-        comment: ''
+        id            : `${code}|${Date.now()}|${lines.length}`,
+        group         : this.cleanText(item.MPV01_CodGrupo),
+        category      : this.cleanText(item.MPV01_CodCategoria || item.MPV00_NomCategoria),
+        code          ,
+        name          : this.cleanText(item.MPV05_DesProducto || item.MPV05_NomCorto || code),
+        quantity      : 1,
+        price         : this.roundCurrency(Number(item.MPV05_PrecioTotal ?? 0)),
+        total         : this.roundCurrency(Number(item.MPV05_PrecioTotal ?? 0)),
+        currency      ,
+        order         : lines.length + 1,
+        comment       : ''
       };
 
       return [...lines, line];
@@ -1267,20 +1267,20 @@ export class RoomStayManagementComponent implements OnInit {
 
   private resetExtraGuestForm(): void {
     this.extraGuestForm.reset({
-      tipDocu: this.extraGuestDocumentTypes()[0]?.codigo ?? '',
-      numDocu: '',
-      codNacion: '',
-      nombre: '',
-      apellido: '',
-      fecNac: '',
-      sexo: '',
-      estCivil: '',
-      tiPax: this.extraGuestPaxTypes()[0]?.CR03_CodTipo ?? '',
-      direccion: '',
-      email: '',
-      motivo: '',
-      procede: '',
-      mdoArribo: ''
+      tipDocu           : this.extraGuestDocumentTypes()[0]?.codigo ?? '',
+      numDocu           : '',
+      codNacion         : '',
+      nombre            : '',
+      apellido          : '',
+      fecNac            : '',
+      sexo              : '',
+      estCivil          : '',
+      tiPax             : this.extraGuestPaxTypes()[0]?.CR03_CodTipo ?? '',
+      direccion         : '',
+      email             : '',
+      motivo            : '',
+      procede           : '',
+      mdoArribo         : ''
     });
     this.extraGuestNationalitySearch.set('');
     this.isExtraGuestNationalitySearchOpen.set(false);
@@ -1342,47 +1342,47 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   private buildExtraGuestPayload(): RoomingListUpdatePayload | null {
-    const raw = this.extraGuestForm.getRawValue();
-    const room = this.room();
-    const operador = this.getOperador();
-    const codRsv = this.cleanText(room.reservationNumber);
-    const numHabita = this.cleanText(room.roomNumber);
+    const raw          = this.extraGuestForm.getRawValue();
+    const room         = this.room();
+    const operador     = this.getOperador();
+    const codRsv       = this.cleanText(room.reservationNumber);
+    const numHabita    = this.cleanText(room.roomNumber);
 
     if (!codRsv || !numHabita) {
       return null;
     }
 
     return {
-      proceso: 6,
-      idOpe: operador,
-      codRsv,
-      numHabita,
-      codNacion: this.cleanText(raw.codNacion),
-      tipDocu: this.cleanText(raw.tipDocu),
-      numDocu: this.cleanText(raw.numDocu),
-      nombre: this.cleanText(raw.nombre),
-      apellido: this.cleanText(raw.apellido),
-      fecNac: this.formatInputDateForApi(raw.fecNac),
-      sexo: this.cleanText(raw.sexo),
-      estCivil: this.cleanText(raw.estCivil),
-      tiPax: this.cleanText(raw.tiPax),
-      direccion: this.cleanText(raw.direccion),
-      email: this.cleanText(raw.email),
-      motivo: this.cleanText(raw.motivo),
-      procede: this.cleanText(raw.procede),
-      mdoArribo: this.cleanText(raw.mdoArribo),
-      orden: this.room().guests.length + 1,
-      operador
+      proceso       : 6,
+      idOpe         : operador,
+      codRsv        ,
+      numHabita     ,
+      codNacion     : this.cleanText(raw.codNacion),
+      tipDocu       : this.cleanText(raw.tipDocu),
+      numDocu       : this.cleanText(raw.numDocu),
+      nombre        : this.cleanText(raw.nombre),
+      apellido      : this.cleanText(raw.apellido),
+      fecNac        : this.formatInputDateForApi(raw.fecNac),
+      sexo          : this.cleanText(raw.sexo),
+      estCivil      : this.cleanText(raw.estCivil),
+      tiPax         : this.cleanText(raw.tiPax),
+      direccion     : this.cleanText(raw.direccion),
+      email         : this.cleanText(raw.email),
+      motivo        : this.cleanText(raw.motivo),
+      procede       : this.cleanText(raw.procede),
+      mdoArribo     : this.cleanText(raw.mdoArribo),
+      orden         : this.room().guests.length + 1,
+      operador          
     };
   }
 
   private applyExtraGuest(payload: RoomingListUpdatePayload): void {
     const guest: Guest = {
-      name: [payload.nombre, payload.apellido].map((item) => this.cleanText(item)).filter(Boolean).join(' ') || 'S/D',
-      documentType: payload.tipDocu || 'S/D',
-      document: payload.numDocu || 'S/D',
-      nationality: payload.codNacion || 'S/D',
-      birthDate: payload.fecNac
+      name            : [payload.nombre, payload.apellido].map((item) => this.cleanText(item)).filter(Boolean).join(' ') || 'S/D',
+      documentType    : payload.tipDocu || 'S/D',
+      document        : payload.numDocu || 'S/D',
+      nationality     : payload.codNacion || 'S/D',
+      birthDate       : payload.fecNac
     };
 
     this.room.update((currentRoom) => ({
@@ -1545,58 +1545,58 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   private buildRoomChargePayload(): RoomChargePayload | null {
-    const room = this.room();
-    const draft = this.roomChargeDraft();
-    const guest = this.selectedRoomChargeGuest();
-    const pointOfSale = this.selectedRoomChargePointOfSale();
-    const operator = this.getOperador();
-    const fecha = this.todayDisplayDate();
-    const hora = this.currentTimeLabel();
-    const currency = this.cleanText(pointOfSale?.currency || draft.currency || this.roomChargeLines()[0]?.currency || this.invoiceBaseCurrency);
-    const validLines = this.roomChargeLines().filter((line) => line.quantity > 0 && line.price >= 0 && line.total > 0);
+    const room             = this.room();
+    const draft            = this.roomChargeDraft();
+    const guest            = this.selectedRoomChargeGuest();
+    const pointOfSale      = this.selectedRoomChargePointOfSale();
+    const operator         = this.getOperador();
+    const fecha            = this.todayDisplayDate();
+    const hora             = this.currentTimeLabel();
+    const currency         = this.cleanText(pointOfSale?.currency || draft.currency || this.roomChargeLines()[0]?.currency || this.invoiceBaseCurrency);
+    const validLines       = this.roomChargeLines().filter((line) => line.quantity > 0 && line.price >= 0 && line.total > 0);
 
     if (!guest || !draft.pointOfSale || !room.reservationNumber || !room.roomNumber || !validLines.length || this.roomChargeTotal() <= 0) {
       return null;
     }
 
     return {
-      proceso: 1,
-      tipCrgHab: 'CH',
-      numCrgHab: '',
-      codRsv: this.cleanText(room.reservationNumber),
-      numHab: this.cleanText(room.roomNumber),
-      pntVenta: this.cleanText(draft.pointOfSale),
-      fecha,
-      hora,
-      numDocu: this.cleanText(guest.document),
-      nombrePax: this.cleanText(guest.name),
-      mtoTotal: this.roomChargeTotal(),
-      moneda: currency,
-      cierre: 0,
-      numCierre: 0,
-      operador: operator,
-      detalle: validLines.map((line, index) => ({
-        codRsv: this.cleanText(room.reservationNumber),
-        numHab: this.cleanText(room.roomNumber),
-        pntVenta: this.cleanText(draft.pointOfSale),
-        fecha,
-        hora,
-        grupo: this.cleanText(line.group),
-        categoria: this.cleanText(line.category),
-        codConsumo: this.cleanText(line.code),
-        nomConsumo: this.cleanText(line.name),
-        cantidad: Number(line.quantity || 0),
-        precio: this.roundCurrency(Number(line.price || 0)),
-        total: this.roundCurrency(Number(line.total || 0)),
-        moneda: this.cleanText(line.currency || currency),
-        tipNPedido: '',
-        numNPedido: '',
-        codMozo: '',
-        incluido: 0,
-        exonerado: 0,
-        orden: index + 1,
-        comentario: this.cleanText(line.comment || draft.comment),
-        operador: operator
+      proceso       : 1,
+      tipCrgHab     : 'CH',
+      numCrgHab     : '',
+      codRsv        : this.cleanText(room.reservationNumber),
+      numHab        : this.cleanText(room.roomNumber),
+      pntVenta      : this.cleanText(draft.pointOfSale),
+      fecha         ,
+      hora          ,
+      numDocu       : this.cleanText(guest.document),
+      nombrePax     : this.cleanText(guest.name),
+      mtoTotal      : this.roomChargeTotal(),
+      moneda        : currency,
+      cierre        : 0,
+      numCierre     : 0,
+      operador      : operator,
+      detalle       : validLines.map((line, index) => ({
+        codRsv        : this.cleanText(room.reservationNumber),
+        numHab        : this.cleanText(room.roomNumber),
+        pntVenta      : this.cleanText(draft.pointOfSale),
+        fecha         ,
+        hora          ,
+        grupo         : this.cleanText(line.group),
+        categoria     : this.cleanText(line.category),
+        codConsumo    : this.cleanText(line.code),
+        nomConsumo    : this.cleanText(line.name),
+        cantidad      : Number(line.quantity || 0),
+        precio        : this.roundCurrency(Number(line.price || 0)),
+        total         : this.roundCurrency(Number(line.total || 0)),
+        moneda        : this.cleanText(line.currency || currency),
+        tipNPedido    : '',
+        numNPedido    : '',
+        codMozo       : '',
+        incluido      : 0,
+        exonerado     : 0,
+        orden         : index + 1,
+        comentario    : this.cleanText(line.comment || draft.comment),
+        operador      : operator
       }))
     };
   }
@@ -1604,19 +1604,19 @@ export class RoomStayManagementComponent implements OnInit {
   private applySubmittedRoomCharge(payload: RoomChargePayload): void {
     const numCrgHab = this.cleanText(payload.numCrgHab) || this.cleanText(payload.pntVenta);
     const charge: Charge = {
-      id: this.buildChargeId(numCrgHab, payload.fecha, payload.hora, this.room().extraCharges.length),
-      tipCrgHab: this.cleanText(payload.tipCrgHab) || 'CH',
-      numCrgHab,
-      codRsv: this.cleanText(payload.codRsv),
-      numHab: this.cleanText(payload.numHab),
-      date: payload.fecha,
-      time: payload.hora,
-      concept: payload.detalle.length === 1 ? payload.detalle[0].nomConsumo : `Cargo habitacion ${payload.pntVenta}`,
-      reference: numCrgHab,
-      charge: payload.mtoTotal,
-      payment: 0,
-      balance: this.totalToCharge() + payload.mtoTotal,
-      invoiceSelected: true
+      id                : this.buildChargeId(numCrgHab, payload.fecha, payload.hora, this.room().extraCharges.length),
+      tipCrgHab         : this.cleanText(payload.tipCrgHab) || 'CH',
+      numCrgHab         ,
+      codRsv            : this.cleanText(payload.codRsv),
+      numHab            : this.cleanText(payload.numHab),
+      date              : payload.fecha,
+      time              : payload.hora,
+      concept           : payload.detalle.length === 1 ? payload.detalle[0].nomConsumo : `Cargo habitacion ${payload.pntVenta}`,
+      reference         : numCrgHab,
+      charge            : payload.mtoTotal,
+      payment           : 0,
+      balance           : this.totalToCharge() + payload.mtoTotal,
+      invoiceSelected   : true
     };
 
     this.room.update((currentRoom) => ({
@@ -1728,38 +1728,38 @@ export class RoomStayManagementComponent implements OnInit {
       .filter((item) => item.length > 0);
 
     return {
-      roomNumber: this.cleanText(stay.numHabita) || this.room().roomNumber,
-      roomType: [stay.catHabi, stay.tipHabi].map((item) => this.cleanText(item)).filter(Boolean).join(' / ') || this.room().roomType,
-      roomCategory: this.cleanText(stay.catHabi) || this.room().roomCategory,
-      status: 'OCCUPIED',
-      agency: this.cleanText(stay.nombreAgencia) || this.cleanText(stay.codAgencia) || 'S/D',
-      rate: this.cleanText(stay.codTarifa) || 'S/D',
-      reservationNumber: this.cleanText(stay.codReserva) || this.room().reservationNumber,
-      checkIn,
-      checkOut,
-      nights: Number(stay.noches ?? 0),
-      guestsCount: Number(stay.numPax ?? stay.roomingList?.length ?? 0),
-      childrenCount: Number(stay.numChild ?? 0),
-      masterFolio: this.cleanText(stay.folio) || 'S/F',
-      plan: this.cleanText(stay.codPlan) || 'S/D',
-      reservedAt: '',
-      observations,
-      guests: Array.isArray(stay.roomingList)
+      roomNumber            : this.cleanText(stay.numHabita) || this.room().roomNumber,
+      roomType              : [stay.catHabi, stay.tipHabi].map((item) => this.cleanText(item)).filter(Boolean).join(' / ') || this.room().roomType,
+      roomCategory          : this.cleanText(stay.catHabi) || this.room().roomCategory,
+      status                : 'OCCUPIED',
+      agency                : this.cleanText(stay.nombreAgencia) || this.cleanText(stay.codAgencia) || 'S/D',
+      rate                  : this.cleanText(stay.codTarifa) || 'S/D',
+      reservationNumber     : this.cleanText(stay.codReserva) || this.room().reservationNumber,
+      checkIn               ,
+      checkOut              ,
+      nights                : Number(stay.noches ?? 0),
+      guestsCount           : Number(stay.numPax ?? stay.roomingList?.length ?? 0),
+      childrenCount         : Number(stay.numChild ?? 0),
+      masterFolio           : this.cleanText(stay.folio) || 'S/F',
+      plan                  : this.cleanText(stay.codPlan) || 'S/D',
+      reservedAt            : '',
+      observations          ,
+      guests                : Array.isArray(stay.roomingList)
         ? stay.roomingList
             .slice()
             .sort((left, right) => Number(left.orden ?? 0) - Number(right.orden ?? 0))
             .map((guest) => ({
-              name: [guest.nombre, guest.apellidos].map((item) => this.cleanText(item)).filter(Boolean).join(' ') || 'S/D',
-              documentType: this.cleanText(guest.tipDocu) || 'S/D',
-              document: this.cleanText(guest.numDocu) || this.cleanText(guest.numInterno) || 'S/D',
-              nationality: this.cleanText(guest.nacionalidad) || 'S/D',
-              birthDate: this.formatApiDate(guest.fecNaci)
+              name            : [guest.nombre, guest.apellidos].map((item) => this.cleanText(item)).filter(Boolean).join(' ') || 'S/D',
+              documentType    : this.cleanText(guest.tipDocu) || 'S/D',
+              document        : this.cleanText(guest.numDocu) || this.cleanText(guest.numInterno) || 'S/D',
+              nationality     : this.cleanText(guest.nacionalidad) || 'S/D',
+              birthDate       : this.formatApiDate(guest.fecNaci)
             }))
         : [],
-      lodgingCharges: this.mapApiCharges(stay.cargosFolioMaster),
-      extraCharges: this.mapApiCharges(stay.cargosExtras),
-      prepaid: 0,
-      operator:
+      lodgingCharges        : this.mapApiCharges(stay.cargosFolioMaster),
+      extraCharges          : this.mapApiCharges(stay.cargosExtras),
+      prepaid               : 0,
+      operator              :
         this.cleanText(stay.roomingList?.[0]?.operador) ||
         this.cleanText(stay.cargosFolioMaster?.[0]?.operador) ||
         this.cleanText(stay.cargosExtras?.[0]?.operador) ||
@@ -1775,27 +1775,27 @@ export class RoomStayManagementComponent implements OnInit {
     }
 
     return charges.map((charge, index) => {
-      const amount = Number(charge.totCargo ?? 0);
-      balance += amount;
-      const date = this.formatApiDate(charge.fecCargo);
-      const time = this.formatApiTime(charge.horaCargo);
-      const reference = this.cleanText(charge.numCrgHab) || this.cleanText(charge.folio);
-      const apiCharge = charge as RoomStayApiCharge & { tipCrgHab?: string; tipoCrgHab?: string; tipCargo?: string };
+      const amount      = Number(charge.totCargo ?? 0);
+      balance           += amount;
+      const date        = this.formatApiDate(charge.fecCargo);
+      const time        = this.formatApiTime(charge.horaCargo);
+      const reference   = this.cleanText(charge.numCrgHab) || this.cleanText(charge.folio);
+      const apiCharge   = charge as RoomStayApiCharge & { tipCrgHab?: string; tipoCrgHab?: string; tipCargo?: string };
 
       return {
-        id: this.buildChargeId(reference, date, time, index),
-        tipCrgHab: this.cleanText(apiCharge.tipCrgHab) || this.cleanText(apiCharge.tipoCrgHab) || this.cleanText(apiCharge.tipCargo) || 'CH',
-        numCrgHab: this.cleanText(charge.numCrgHab) || reference,
-        codRsv: this.cleanText(charge.codReserva) || this.cleanText(this.room().reservationNumber),
-        numHab: this.cleanText(charge.numHab) || this.cleanText(this.room().roomNumber),
-        date,
-        time,
-        concept: this.cleanText(charge.nombreHuesped) || 'Cargo',
-        reference,
-        charge: amount,
-        payment: 0,
-        balance,
-        invoiceSelected: true
+        id                : this.buildChargeId(reference, date, time, index),
+        tipCrgHab         : this.cleanText(apiCharge.tipCrgHab) || this.cleanText(apiCharge.tipoCrgHab) || this.cleanText(apiCharge.tipCargo) || 'CH',
+        numCrgHab         : this.cleanText(charge.numCrgHab) || reference,
+        codRsv            : this.cleanText(charge.codReserva) || this.cleanText(this.room().reservationNumber),
+        numHab            : this.cleanText(charge.numHab) || this.cleanText(this.room().roomNumber),
+        date              ,
+        time              ,
+        concept           : this.cleanText(charge.nombreHuesped) || 'Cargo',
+        reference         ,
+        charge            : amount,
+        payment           : 0,
+        balance           ,
+        invoiceSelected   : true
       };
     });
   }
@@ -1862,12 +1862,12 @@ export class RoomStayManagementComponent implements OnInit {
     this.invoiceAppliedPayments.set([]);
     this.invoiceValidationMessage.set('');
     this.invoicePaymentDraft.set({
-      methodCode: defaultMethod,
-      moneda: defaultCurrency,
-      amount: this.invoiceTotal(),
-      numTarjeta: '',
-      vencimiento: '',
-      tCambio: defaultCurrency === this.invoiceBaseCurrency ? 1 : 0
+      methodCode      : defaultMethod,
+      moneda          : defaultCurrency,
+      amount          : this.invoiceTotal(),
+      numTarjeta      : '',
+      vencimiento     : '',
+      tCambio         : defaultCurrency === this.invoiceBaseCurrency ? 1 : 0
     });
 
     if (defaultCurrency !== this.invoiceBaseCurrency) {
@@ -1928,11 +1928,11 @@ export class RoomStayManagementComponent implements OnInit {
 
   private mapInvoicePaymentMethod(method: PointOfSalePaymentMethodApi): InvoicePaymentMethod {
     return {
-      code: this.cleanText(method.CA05_Codigo),
-      description: this.cleanText(method.CA05_Descripcion) || this.cleanText(method.CA05_Codigo),
-      tipo: this.cleanText(method.CA05_Tipo),
-      tipPago: this.cleanText(method.CA05_TipPago),
-      ndias: Number(method.CA05_NDias ?? 0)
+      code            : this.cleanText(method.CA05_Codigo),
+      description     : this.cleanText(method.CA05_Descripcion) || this.cleanText(method.CA05_Codigo),
+      tipo            : this.cleanText(method.CA05_Tipo),
+      tipPago         : this.cleanText(method.CA05_TipPago),
+      ndias           : Number(method.CA05_NDias ?? 0)
     };
   }
 
@@ -2012,16 +2012,16 @@ export class RoomStayManagementComponent implements OnInit {
     const currentBalance = this.sumCharges(room.lodgingCharges) + this.sumCharges(room.extraCharges) - room.prepaid;
 
     return {
-      targetRoom: firstOption?.number ?? room.roomNumber,
-      targetRoomType: firstOption?.type ?? room.roomType,
-      newCheckOut: this.toInputDate(room.checkOut),
-      prepaymentAmount: Math.max(Math.round(currentBalance * 0.35), 25),
-      chargeConcept: actionId === 'new-charge' ? 'Cargo operativo manual' : 'Ajuste operativo',
-      chargeAmount: 45,
-      chargeBucket: actionId === 'new-charge' ? 'extras' : 'lodging',
-      destinationFolio: `${room.masterFolio}-AUX`,
-      notes: '',
-      documentFormat: 'pdf'
+      targetRoom                : firstOption?.number ?? room.roomNumber,
+      targetRoomType            : firstOption?.type ?? room.roomType,
+      newCheckOut               : this.toInputDate(room.checkOut),
+      prepaymentAmount          : Math.max(Math.round(currentBalance * 0.35), 25),
+      chargeConcept             : actionId === 'new-charge' ? 'Cargo operativo manual' : 'Ajuste operativo',
+      chargeAmount              : 45,
+      chargeBucket              : actionId === 'new-charge' ? 'extras' : 'lodging',
+      destinationFolio          : `${room.masterFolio}-AUX`,
+      notes                     : '',
+      documentFormat            : 'pdf'
     };
   }
 
@@ -2029,12 +2029,12 @@ export class RoomStayManagementComponent implements OnInit {
     const firstGuest = this.room().guests[0];
 
     return {
-      guestDocument: firstGuest?.document ?? '',
-      pointOfSale: '',
-      priceList: '',
-      currency: this.invoiceBaseCurrency,
-      itemSearch: '',
-      comment: ''
+      guestDocument     : firstGuest?.document ?? '',
+      pointOfSale       : '',
+      priceList         : '',
+      currency          : this.invoiceBaseCurrency,
+      itemSearch        : '',
+      comment           : ''
     };
   }
 
@@ -2118,11 +2118,11 @@ export class RoomStayManagementComponent implements OnInit {
     const room = this.room();
     const draft = this.actionDraft();
     const payload: RoomChangePayload = {
-      codReserva: this.cleanText(room.reservationNumber),
-      oldHab: this.cleanText(room.roomNumber),
-      newHab: this.cleanText(draft.targetRoom),
-      folio: this.cleanText(room.masterFolio),
-      operador: this.getOperador()
+      codReserva    : this.cleanText(room.reservationNumber),
+      oldHab        : this.cleanText(room.roomNumber),
+      newHab        : this.cleanText(draft.targetRoom),
+      folio         : this.cleanText(room.masterFolio),
+      operador      : this.getOperador()
     };
 
     return Object.values(payload).every((value) => value.length > 0) ? payload : null;
@@ -2252,19 +2252,19 @@ export class RoomStayManagementComponent implements OnInit {
 
   private applyChargeRefresh(): void {
     const refreshCharge: Charge = {
-      id: this.buildChargeId(this.room().masterFolio, this.todayDisplayDate(), this.currentTimeLabel(), this.room().lodgingCharges.length),
-      tipCrgHab: 'CH',
-      numCrgHab: this.cleanText(this.room().masterFolio),
-      codRsv: this.cleanText(this.room().reservationNumber),
-      numHab: this.cleanText(this.room().roomNumber),
-      date: this.todayDisplayDate(),
-      time: this.currentTimeLabel(),
-      concept: 'Sincronizacion de folio',
-      reference: this.room().masterFolio,
-      charge: 0,
-      payment: 0,
-      balance: this.totalToCharge(),
-      invoiceSelected: false
+      id                  : this.buildChargeId(this.room().masterFolio, this.todayDisplayDate(), this.currentTimeLabel(), this.room().lodgingCharges.length),
+      tipCrgHab           : 'CH',
+      numCrgHab           : this.cleanText(this.room().masterFolio),
+      codRsv              : this.cleanText(this.room().reservationNumber),
+      numHab              : this.cleanText(this.room().roomNumber),
+      date                : this.todayDisplayDate(),
+      time                : this.currentTimeLabel(),
+      concept             : 'Sincronizacion de folio',
+      reference           : this.room().masterFolio,
+      charge              : 0,
+      payment             : 0,
+      balance             : this.totalToCharge(),
+      invoiceSelected     : false
     };
 
     this.room.update((currentRoom) => ({
@@ -2287,18 +2287,18 @@ export class RoomStayManagementComponent implements OnInit {
           this.currentTimeLabel(),
           draft.chargeBucket === 'lodging' ? this.room().lodgingCharges.length : this.room().extraCharges.length
         ),
-        tipCrgHab: 'CH',
-        numCrgHab: draft.chargeBucket === 'lodging' ? this.cleanText(this.room().masterFolio) : `EXT-${this.cleanText(this.room().roomNumber)}`,
-        codRsv: this.cleanText(this.room().reservationNumber),
-        numHab: this.cleanText(this.room().roomNumber),
-        date: this.todayDisplayDate(),
-        time: this.currentTimeLabel(),
-        concept: draft.chargeConcept,
-      reference: draft.chargeBucket === 'lodging' ? this.room().masterFolio : `EXT-${this.room().roomNumber}`,
-      charge: draft.chargeAmount,
-      payment: 0,
-      balance: currentBalance,
-      invoiceSelected: true
+        tipCrgHab   : 'CH',
+        numCrgHab   : draft.chargeBucket === 'lodging' ? this.cleanText(this.room().masterFolio) : `EXT-${this.cleanText(this.room().roomNumber)}`,
+        codRsv      : this.cleanText(this.room().reservationNumber),
+        numHab      : this.cleanText(this.room().roomNumber),
+        date        : this.todayDisplayDate(),
+        time        : this.currentTimeLabel(),
+        concept     : draft.chargeConcept,
+        reference           : draft.chargeBucket === 'lodging' ? this.room().masterFolio : `EXT-${this.room().roomNumber}`,
+        charge              : draft.chargeAmount,
+        payment             : 0,
+        balance             : currentBalance,
+        invoiceSelected     : true
     };
 
     this.room.update((currentRoom) => ({
@@ -2318,19 +2318,19 @@ export class RoomStayManagementComponent implements OnInit {
   private applyChargeTransfer(): void {
     const draft = this.actionDraft();
     const transferCharge: Charge = {
-      id: this.buildChargeId(draft.destinationFolio, this.todayDisplayDate(), this.currentTimeLabel(), this.room().extraCharges.length),
-      tipCrgHab: 'CH',
-      numCrgHab: this.cleanText(draft.destinationFolio),
-      codRsv: this.cleanText(this.room().reservationNumber),
-      numHab: this.cleanText(this.room().roomNumber),
-      date: this.todayDisplayDate(),
-      time: this.currentTimeLabel(),
-      concept: `Transferencia a ${draft.destinationFolio}`,
-      reference: draft.destinationFolio,
-      charge: 0,
-      payment: draft.chargeAmount,
-      balance: Math.max(this.totalToCharge() - draft.chargeAmount, 0),
-      invoiceSelected: false
+      id                : this.buildChargeId(draft.destinationFolio, this.todayDisplayDate(), this.currentTimeLabel(), this.room().extraCharges.length),
+      tipCrgHab         : 'CH',
+      numCrgHab         : this.cleanText(draft.destinationFolio),
+      codRsv            : this.cleanText(this.room().reservationNumber),
+      numHab            : this.cleanText(this.room().roomNumber),
+      date              : this.todayDisplayDate(),
+      time              : this.currentTimeLabel(),
+      concept           : `Transferencia a ${draft.destinationFolio}`,
+      reference         : draft.destinationFolio,
+      charge            : 0,
+      payment           : draft.chargeAmount,
+      balance           : Math.max(this.totalToCharge() - draft.chargeAmount, 0),
+      invoiceSelected   : false
     };
 
     this.room.update((currentRoom) => ({
@@ -2412,10 +2412,10 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   todayDisplayDate(): string {
-    const now = new Date();
-    const day = `${now.getDate()}`.padStart(2, '0');
-    const month = `${now.getMonth() + 1}`.padStart(2, '0');
-    const year = now.getFullYear();
+    const now      = new Date();
+    const day      = `${now.getDate()}`.padStart(2, '0');
+    const month    = `${now.getMonth() + 1}`.padStart(2, '0');
+    const year     = now.getFullYear();
 
     return `${day}/${month}/${year}`;
   }
@@ -2482,12 +2482,12 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   private buildRoomFromRackData(roomData: RoomRackNavigationState, fallbackRoomNumber: string): RoomStay {
-    const roomNumber = String(roomData.CR05_NumHab || fallbackRoomNumber);
-    const fallback = this.buildRoomFromNumber(roomNumber);
-    const roomType = roomData.CR05_Descripcion || roomData.CR05_TipoHab || roomData.CR05_CateHab || fallback.roomType;
-    const guestsCount = Number(roomData.CR05_NumPax) || fallback.guestsCount;
-    const rate = roomData.CR05_CateHab || roomData.CR05_TipoHab || fallback.rate;
-    const reservationNumber = roomData.RSV || fallback.reservationNumber;
+    const roomNumber           = String(roomData.CR05_NumHab || fallbackRoomNumber);
+    const fallback             = this.buildRoomFromNumber(roomNumber);
+    const roomType             = roomData.CR05_Descripcion || roomData.CR05_TipoHab || roomData.CR05_CateHab || fallback.roomType;
+    const guestsCount          = Number(roomData.CR05_NumPax) || fallback.guestsCount;
+    const rate                 = roomData.CR05_CateHab || roomData.CR05_TipoHab || fallback.rate;
+    const reservationNumber    = roomData.RSV || fallback.reservationNumber;
 
     return {
       ...fallback,
