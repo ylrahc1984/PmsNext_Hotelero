@@ -1,8 +1,22 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApexOptions, NgApexchartsModule } from 'ng-apexcharts';
+import { of } from 'rxjs';
+import { catchError, finalize } from 'rxjs/operators';
 
+import { Empresa } from 'src/app/core/models/empresa.model';
+import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
+import { EmpresaService } from 'src/app/core/services/empresa.service';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
+import { RoomCategory } from '../../settings/room-categories/models/room-category.model';
+import { RoomCategoriesService } from '../../settings/room-categories/services/room-categories.service';
+import {
+  OccupancyForecastCategoryRequest,
+  OccupancyForecastCategoryResult,
+  OccupancyForecastResponseRow,
+  OccupancyForecastService
+} from '../occupancy-forecast/occupancy-forecast.service';
 
 interface ForecastOcupacionRow {
   fecha: string;
@@ -12,18 +26,22 @@ interface ForecastOcupacionRow {
   porcentajeOcupacion: number;
   pax: number;
   totalCLL: number;
-  standard: number;
-  deluxe: number;
-  juniorSuite: number;
-  suite: number;
+  categorias: Record<string, OccupancyForecastCategoryResult>;
   porOcupacion: number;
 }
 
 interface ForecastCategoria {
   nombre: string;
+  codigo: string;
   porcentaje: number;
   color: string;
   valor: string;
+}
+
+interface ForecastCategoryOption {
+  codigo: string;
+  descripcion: string;
+  operador: string;
 }
 
 interface ForecastKpi {
@@ -42,8 +60,15 @@ interface ForecastKpi {
   styleUrls: ['./forecast-ocupacion.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ForecastOcupacionComponent {
-  hotel = 'Hotel Demo';
+export class ForecastOcupacionComponent implements OnInit {
+  private readonly forecastService = inject(OccupancyForecastService);
+  private readonly empresaService = inject(EmpresaService);
+  private readonly empresaContext = inject(EmpresaContextService);
+  private readonly roomCategoriesService = inject(RoomCategoriesService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly cdr = inject(ChangeDetectorRef);
+
+  hotel = '';
   fechaInicial = '2026-06-16';
   fechaFinal = '2026-06-30';
   tipoVista: 'ocupacion' | 'disponibilidad' = 'ocupacion';
@@ -51,112 +76,22 @@ export class ForecastOcupacionComponent {
   pageSize = 10;
   currentPage = 1;
   isLoading = false;
+  errorMessage = '';
 
-  readonly categoriasSeleccionadas: Record<string, boolean> = {
-    Standard: true,
-    'Junior Suite': true,
-    Deluxe: true,
-    Suite: true
-  };
+  categoriasSeleccionadas: Record<string, boolean> = {};
 
-  readonly hoteles = ['Hotel Demo'];
-  readonly categorias = ['Standard', 'Junior Suite', 'Deluxe', 'Suite'];
   readonly pageSizes = [10, 20, 50, 100];
 
-  readonly kpis: ForecastKpi[] = [
-    { titulo: 'Ocupación Promedio', valor: '42.5%', subtitulo: 'En el período seleccionado', icono: 'analytics', color: '#2563eb' },
-    { titulo: 'Pico de Ocupación', valor: '78.2%', subtitulo: '21 Jun 2026', icono: 'trending_up', color: '#14b8a6' },
-    { titulo: 'Pax Totales', valor: 174, subtitulo: 'En el período seleccionado', icono: 'groups', color: '#9333ea' },
-    { titulo: 'Total Habitaciones', valor: 90, subtitulo: 'Disponibles para venta', icono: 'hotel', color: '#0f3b68' },
-    { titulo: 'Total Noches', valor: 540, subtitulo: 'Habitación noche', icono: 'bedtime', color: '#f59e0b' }
-  ];
+  hoteles: Empresa[] = [];
+  categorias: ForecastCategoryOption[] = [];
+  kpis: ForecastKpi[] = this.buildKpis([]);
+  resumenCategorias: ForecastCategoria[] = [];
+  rows: ForecastOcupacionRow[] = [];
+  chartOptions: Partial<ApexOptions> = this.buildChartOptions([]);
 
-  readonly resumenCategorias: ForecastCategoria[] = [
-    { nombre: 'Standard', porcentaje: 34.2, color: '#14b8a6', valor: '31 hab.' },
-    { nombre: 'Junior Suite', porcentaje: 28.7, color: '#2563eb', valor: '18 hab.' },
-    { nombre: 'Deluxe', porcentaje: 62.1, color: '#9333ea', valor: '27 hab.' },
-    { nombre: 'Suite', porcentaje: 45.0, color: '#f59e0b', valor: '14 hab.' }
-  ];
-
-  readonly rows: ForecastOcupacionRow[] = [
-    this.row('16/06/2026', 90, 2, 1, 1.5, 3, 2, 1, 0, 0, 0, 1.5),
-    this.row('17/06/2026', 90, 2, 3, 3.1, 7, 4, 2, 0, 1, 0, 3.1),
-    this.row('18/06/2026', 90, 2, 3, 3.1, 8, 4, 1, 1, 1, 0, 3.1),
-    this.row('19/06/2026', 90, 3, 4, 4.8, 11, 7, 2, 1, 1, 0, 4.8),
-    this.row('20/06/2026', 90, 3, 4, 4.8, 12, 7, 2, 1, 1, 0, 4.8),
-    this.row('21/06/2026', 90, 5, 70, 78.2, 174, 128, 28, 20, 15, 7, 78.2),
-    this.row('22/06/2026', 90, 4, 50, 55.6, 121, 91, 22, 13, 10, 5, 55.6),
-    this.row('23/06/2026', 90, 3, 24, 26.3, 58, 42, 11, 6, 5, 2, 26.3),
-    this.row('24/06/2026', 90, 3, 17, 18.5, 39, 30, 8, 4, 4, 1, 18.5),
-    this.row('25/06/2026', 90, 2, 22, 24.1, 52, 38, 10, 5, 5, 2, 24.1),
-    this.row('26/06/2026', 90, 2, 29, 32.5, 69, 51, 13, 8, 6, 2, 32.5),
-    this.row('27/06/2026', 90, 3, 37, 41.2, 86, 64, 16, 10, 8, 3, 41.2),
-    this.row('28/06/2026', 90, 3, 35, 38.7, 82, 59, 15, 9, 8, 3, 38.7),
-    this.row('29/06/2026', 90, 2, 26, 28.6, 61, 44, 12, 7, 5, 2, 28.6),
-    this.row('30/06/2026', 90, 2, 16, 17.6, 37, 27, 7, 4, 4, 1, 17.6)
-  ];
-
-  readonly chartOptions: Partial<ApexOptions> = {
-    series: [
-      {
-        name: '% Ocupación',
-        data: [1.5, 3.1, 3.1, 4.8, 4.8, 78.2, 55.6, 26.3, 18.5, 24.1, 32.5, 41.2, 38.7, 28.6, 17.6]
-      }
-    ],
-    chart: {
-      type: 'line',
-      height: 332,
-      toolbar: { show: false },
-      zoom: { enabled: false },
-      fontFamily: 'inherit'
-    },
-    colors: ['#2563eb'],
-    stroke: {
-      curve: 'smooth',
-      width: 3
-    },
-    markers: {
-      size: 4,
-      strokeWidth: 3,
-      hover: { size: 6 }
-    },
-    grid: {
-      borderColor: '#e6ebf3',
-      strokeDashArray: 4
-    },
-    xaxis: {
-      categories: ['16 Jun', '17 Jun', '18 Jun', '19 Jun', '20 Jun', '21 Jun', '22 Jun', '23 Jun', '24 Jun', '25 Jun', '26 Jun', '27 Jun', '28 Jun', '29 Jun', '30 Jun'],
-      labels: { style: { colors: '#64748b' } }
-    },
-    yaxis: {
-      min: 0,
-      max: 100,
-      labels: {
-        formatter: (value) => `${value.toFixed(0)}%`,
-        style: { colors: ['#64748b'] }
-      }
-    },
-    tooltip: {
-      y: {
-        formatter: (value) => `${value.toFixed(1)}%`
-      }
-    },
-    annotations: {
-      yaxis: [
-        {
-          y: 42.5,
-          borderColor: '#14b8a6',
-          strokeDashArray: 5,
-          label: {
-            borderColor: '#14b8a6',
-            style: { color: '#ffffff', background: '#14b8a6' },
-            text: 'Promedio 42.5%'
-          }
-        }
-      ]
-    },
-    dataLabels: { enabled: false }
-  };
+  ngOnInit(): void {
+    this.loadInitialData();
+  }
 
   get filteredRows(): ForecastOcupacionRow[] {
     const term = this.busqueda.trim().toLowerCase();
@@ -182,15 +117,13 @@ export class ForecastOcupacionComponent {
     return `${start}-${end} de ${this.filteredRows.length}`;
   }
 
+  get selectedCategories(): ForecastCategoryOption[] {
+    return this.categorias.filter((categoria) => this.categoriasSeleccionadas[categoria.codigo]);
+  }
+
   procesar(): void {
     this.currentPage = 1;
-    console.log('Procesar forecast de ocupación', {
-      hotel: this.hotel,
-      fechaInicial: this.fechaInicial,
-      fechaFinal: this.fechaFinal,
-      categorias: this.categoriasSeleccionadas,
-      tipoVista: this.tipoVista
-    });
+    this.loadForecast();
   }
 
   imprimir(): void {
@@ -199,6 +132,10 @@ export class ForecastOcupacionComponent {
 
   exportarExcel(): void {
     console.log('Exportar Excel forecast de ocupación');
+  }
+
+  onHotelChange(): void {
+    this.syncSelectedEmpresaContext();
   }
 
   onSearchChange(): void {
@@ -229,6 +166,10 @@ export class ForecastOcupacionComponent {
     return 'occupancy-low';
   }
 
+  getCategoryValue(row: ForecastOcupacionRow, codigo: string): number {
+    return this.getCategoryResult(row, codigo).cantidad;
+  }
+
   trackByFecha(_: number, row: ForecastOcupacionRow): string {
     return row.fecha;
   }
@@ -238,36 +179,310 @@ export class ForecastOcupacionComponent {
   }
 
   trackByCategoria(_: number, item: ForecastCategoria): string {
-    return item.nombre;
+    return item.codigo;
   }
 
-  private row(
-    fecha: string,
-    totalHabitaciones: number,
-    bloqueadas: number,
-    totalOcupada: number,
-    porcentajeOcupacion: number,
-    pax: number,
-    totalCLL: number,
-    standard: number,
-    deluxe: number,
-    juniorSuite: number,
-    suite: number,
-    porOcupacion: number
-  ): ForecastOcupacionRow {
+  trackByCategoriaFiltro(_: number, item: ForecastCategoryOption): string {
+    return item.codigo;
+  }
+
+  trackByHotel(_: number, item: Empresa): string {
+    return item?.MA04_Unidad ?? '';
+  }
+
+  getHotelNombre(item: Empresa): string {
+    return this.toText(item.MA04_Nombre || item.MA04_RazonSocial || item.MA04_Unidad);
+  }
+
+  private loadInitialData(): void {
+    this.isLoading = true;
+    this.errorMessage = '';
+
+    this.empresaContext.restaurarDesdeStorage();
+
+    this.empresaService
+      .obtenerEmpresas()
+      .pipe(
+        catchError((error) => {
+          console.error('No se pudieron cargar las empresas.', error);
+          this.errorMessage = 'No se pudieron cargar las empresas.';
+          return of([] as Empresa[]);
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((empresas) => {
+        this.hoteles = empresas;
+        this.setInitialHotel(empresas);
+        this.loadRoomCategories();
+      });
+  }
+
+  private loadRoomCategories(): void {
+    this.roomCategoriesService
+      .getRoomCategories()
+      .pipe(
+        catchError((error) => {
+          console.error('No se pudieron cargar las categorias de habitacion.', error);
+          this.errorMessage = 'No se pudieron cargar las categorias de habitacion.';
+          return of([] as RoomCategory[]);
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((categories) => {
+        this.categorias = this.mapCategoryOptions(categories);
+        this.categoriasSeleccionadas = this.categorias.reduce<Record<string, boolean>>((selected, categoria) => {
+          selected[categoria.codigo] = true;
+          return selected;
+        }, {});
+
+        this.loadForecast();
+      });
+  }
+
+  private loadForecast(): void {
+    const selectedCategories = this.selectedCategories;
+
+    if (!selectedCategories.length) {
+      this.rows = [];
+      this.kpis = this.buildKpis([]);
+      this.resumenCategorias = [];
+      this.chartOptions = this.buildChartOptions([]);
+      this.isLoading = false;
+      this.errorMessage = 'Seleccione al menos una categoria para procesar el forecast.';
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.isLoading = true;
+    this.errorMessage = '';
+    this.syncSelectedEmpresaContext();
+
+    this.forecastService
+      .getForecast({
+        proceso: 1,
+        fechaInicio: this.formatDateApi(this.fechaInicial),
+        fechaFinal: this.formatDateApi(this.fechaFinal),
+        categorias: selectedCategories.map((categoria) => this.mapCategoryRequest(categoria))
+      })
+      .pipe(
+        catchError((error) => {
+          console.error('No se pudo cargar el forecast de ocupacion.', error);
+          this.errorMessage = 'No se pudo cargar el forecast de ocupacion para el periodo seleccionado.';
+          return of([] as OccupancyForecastResponseRow[]);
+        }),
+        finalize(() => {
+          this.isLoading = false;
+          this.cdr.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((rows) => {
+        this.rows = rows.map((row) => this.mapForecastRow(row));
+        this.kpis = this.buildKpis(this.rows);
+        this.resumenCategorias = this.buildCategorySummary(this.rows);
+        this.chartOptions = this.buildChartOptions(this.rows);
+        this.currentPage = 1;
+      });
+  }
+
+  private setInitialHotel(empresas: Empresa[]): void {
+    const current = this.empresaContext.getSnapshot();
+    const selected =
+      empresas.find((empresa) => empresa.MA04_Unidad === current?.MA04_Unidad) ??
+      empresas.find((empresa) => Number(empresa.MA04_Principal) === 1) ??
+      empresas[0] ??
+      null;
+
+    if (!selected) {
+      this.hotel = '';
+      return;
+    }
+
+    this.hotel = selected.MA04_Unidad;
+    this.empresaContext.setEmpresa(selected);
+  }
+
+  private syncSelectedEmpresaContext(): void {
+    const selected = this.hoteles.find((empresa) => empresa.MA04_Unidad === this.hotel);
+
+    if (selected) {
+      this.empresaContext.setEmpresa(selected);
+    }
+  }
+
+  private mapCategoryOptions(categories: RoomCategory[]): ForecastCategoryOption[] {
+    return categories
+      .map((category) => ({
+        codigo: this.toText(category.CR01_CodCate).toUpperCase(),
+        descripcion: this.toText(category.CR01_Categoria || category.CR01_CodCate).toUpperCase(),
+        operador: this.toText(category.CR01_Operador)
+      }))
+      .filter((category) => category.codigo.length > 0)
+      .sort((left, right) => left.descripcion.localeCompare(right.descripcion, undefined, { sensitivity: 'base' }));
+  }
+
+  private mapCategoryRequest(category: ForecastCategoryOption): OccupancyForecastCategoryRequest {
     return {
-      fecha,
-      totalHabitaciones,
-      bloqueadas,
-      totalOcupada,
-      porcentajeOcupacion,
-      pax,
-      totalCLL,
-      standard,
-      deluxe,
-      juniorSuite,
-      suite,
-      porOcupacion
+      codigo: category.codigo,
+      descripcion: category.descripcion,
+      operador: category.operador || 'carga'
     };
+  }
+
+  private mapForecastRow(row: OccupancyForecastResponseRow): ForecastOcupacionRow {
+    return {
+      fecha: this.formatDisplayDate(row.fecha),
+      totalHabitaciones: Number(row.totHabi) || 0,
+      bloqueadas: Number(row.blk) || 0,
+      totalOcupada: Number(row.totOcupa) || 0,
+      porcentajeOcupacion: Number(row.porOcu) || 0,
+      pax: Number(row.totPax) || 0,
+      totalCLL: Number(row.totChl) || 0,
+      categorias: row.categorias ?? {},
+      porOcupacion: Number(row.porOcu) || 0
+    };
+  }
+
+  private buildKpis(rows: ForecastOcupacionRow[]): ForecastKpi[] {
+    const average = rows.length ? rows.reduce((total, row) => total + row.porcentajeOcupacion, 0) / rows.length : 0;
+    const peak = rows.reduce<ForecastOcupacionRow | null>(
+      (current, row) => (!current || row.porcentajeOcupacion > current.porcentajeOcupacion ? row : current),
+      null
+    );
+    const adults = rows.reduce((total, row) => total + row.pax, 0);
+    const children = rows.reduce((total, row) => total + row.totalCLL, 0);
+    const availableRoomNights = rows.reduce((total, row) => total + Math.max(0, row.totalHabitaciones - row.bloqueadas - row.totalOcupada), 0);
+    const occupiedRoomNights = rows.reduce((total, row) => total + row.totalOcupada, 0);
+
+    return [
+      { titulo: 'Ocupación Promedio', valor: `${average.toFixed(1)}%`, subtitulo: 'En el período seleccionado', icono: 'insert_chart', color: '#2563eb' },
+      { titulo: 'Pico de Ocupación', valor: `${(peak?.porcentajeOcupacion ?? 0).toFixed(1)}%`, subtitulo: peak?.fecha ?? 'Sin datos', icono: 'trending_up', color: '#14b8a6' },
+      { titulo: 'Pax Totales', valor: adults + children, subtitulo: `${adults} adultos / ${children} niños`, icono: 'groups', color: '#9333ea' },
+      { titulo: 'Total Habitaciones', valor: availableRoomNights, subtitulo: 'Disponibles para venta', icono: 'hotel', color: '#0f3b68' },
+      { titulo: 'Total Noches', valor: occupiedRoomNights, subtitulo: 'Habitación noche', icono: 'hotel', color: '#f59e0b' }
+    ];
+  }
+
+  private buildCategorySummary(rows: ForecastOcupacionRow[]): ForecastCategoria[] {
+    const colors = ['#14b8a6', '#2563eb', '#9333ea', '#f59e0b', '#dc2626', '#0f3b68', '#17d4e0'];
+
+    return this.selectedCategories.map((category, index) => {
+      const occupied = rows.reduce((total, row) => total + this.getCategoryResult(row, category.codigo).cantidad, 0);
+      const totalRooms = rows.reduce((total, row) => total + this.getCategoryResult(row, category.codigo).total, 0);
+      const percentage = totalRooms > 0 ? (occupied / totalRooms) * 100 : 0;
+
+      return {
+        nombre: category.descripcion,
+        codigo: category.codigo,
+        porcentaje: percentage,
+        color: colors[index % colors.length],
+        valor: `${occupied} hab.`
+      };
+    });
+  }
+
+  private buildChartOptions(rows: ForecastOcupacionRow[]): Partial<ApexOptions> {
+    const average = rows.length ? rows.reduce((total, row) => total + row.porcentajeOcupacion, 0) / rows.length : 0;
+
+    return {
+      series: [
+        {
+          name: '% Ocupación',
+          data: rows.map((row) => Number(row.porcentajeOcupacion.toFixed(1)))
+        }
+      ],
+      chart: {
+        type: 'line',
+        height: 332,
+        toolbar: { show: false },
+        zoom: { enabled: false },
+        fontFamily: 'inherit'
+      },
+      colors: ['#2563eb'],
+      stroke: {
+        curve: 'smooth',
+        width: 3
+      },
+      markers: {
+        size: 4,
+        strokeWidth: 3,
+        hover: { size: 6 }
+      },
+      grid: {
+        borderColor: '#e6ebf3',
+        strokeDashArray: 4
+      },
+      xaxis: {
+        categories: rows.map((row) => this.formatChartDate(row.fecha)),
+        labels: { style: { colors: '#64748b' } }
+      },
+      yaxis: {
+        min: 0,
+        max: 100,
+        labels: {
+          formatter: (value) => `${value.toFixed(0)}%`,
+          style: { colors: ['#64748b'] }
+        }
+      },
+      tooltip: {
+        y: {
+          formatter: (value) => `${value.toFixed(1)}%`
+        }
+      },
+      annotations: {
+        yaxis: [
+          {
+            y: Number(average.toFixed(1)),
+            borderColor: '#14b8a6',
+            strokeDashArray: 5,
+            label: {
+              borderColor: '#14b8a6',
+              style: { color: '#ffffff', background: '#14b8a6' },
+              text: `Promedio ${average.toFixed(1)}%`
+            }
+          }
+        ]
+      },
+      dataLabels: { enabled: false }
+    };
+  }
+
+  private getCategoryResult(row: ForecastOcupacionRow, codigo: string): OccupancyForecastCategoryResult {
+    const directResult = row.categorias[codigo];
+
+    if (directResult) {
+      return directResult;
+    }
+
+    const key = Object.keys(row.categorias).find((categoryKey) => categoryKey.toUpperCase() === codigo.toUpperCase());
+    return key ? row.categorias[key] : { codigo, cantidad: 0, total: 0 };
+  }
+
+  private formatDateApi(value: string): string {
+    const [year, month, day] = value.split('-');
+    return year && month && day ? `${day}/${month}/${year}` : value;
+  }
+
+  private formatDisplayDate(value: string): string {
+    const date = new Date(value.replace(/\s+/g, ' '));
+
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+
+    return `${day}/${month}/${year}`;
+  }
+
+  private formatChartDate(value: string): string {
+    const [day, month] = value.split('/');
+    return day && month ? `${day}/${month}` : value;
+  }
+
+  private toText(value: unknown): string {
+    return value == null ? '' : String(value).trim();
   }
 }

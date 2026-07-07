@@ -83,8 +83,8 @@ $red: #dc2626;
   display: flex;
   align-items: center;
   gap: 11px;
-  min-height: 92px;
-  padding: 14px;
+  min-height: 82px;
+  padding: 10px 14px;
 }
 
 .forecast-kpi .material-icons {
@@ -248,6 +248,11 @@ $red: #dc2626;
   padding: 14px;
 }
 
+.category-card {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
 .card-title,
 .table-card__header {
   display: flex;
@@ -285,8 +290,8 @@ $red: #dc2626;
 
 .category-list {
   display: grid;
-  gap: 16px;
-  padding-top: 8px;
+  gap: 12px;
+  padding-top: 4px;
 }
 
 .category-row__head {

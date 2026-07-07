@@ -296,7 +296,7 @@ $line: rgba(15, 33, 51, 0.1);
 
 table {
   width: 100%;
-  min-width: 1180px;
+  min-width: 1040px;
   border-collapse: collapse;
   background: $paper;
 }
@@ -334,6 +334,11 @@ tbody tr:hover {
 
 .date-cell {
   color: $ink;
+  font-weight: 850;
+}
+
+.category-cell {
+  color: rgba($ink, 0.82);
   font-weight: 850;
 }
 

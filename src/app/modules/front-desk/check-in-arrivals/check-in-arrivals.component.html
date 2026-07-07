@@ -1,0 +1,248 @@
+<section class="checkin-page" aria-label="Check-In de Arribos">
+  <header class="checkin-hero">
+    <button type="button" class="back-button" aria-label="Volver al Room Rack" (click)="volverRoomRack()">
+      <span class="material-icons" aria-hidden="true">arrow_back</span>
+    </button>
+    <div>
+      <span class="section-eyebrow">Front Desk</span>
+      <h1>Check-In de Arribos</h1>
+      <p>Gestione los ingresos programados y realice el proceso de Check-In.</p>
+    </div>
+  </header>
+
+  <section class="kpi-strip" aria-label="Indicadores de arribos">
+    @for (kpi of kpis; track trackByKpi($index, kpi)) {
+      <article class="kpi-card" [class]="'kpi-card kpi-card--' + kpi.accent">
+        <span class="kpi-card__icon"><span class="material-icons" aria-hidden="true">{{ kpi.icon }}</span></span>
+        <div>
+          <strong>{{ kpi.value | number:'1.0-0' }}</strong>
+          <span>{{ kpi.label }}</span>
+        </div>
+      </article>
+    }
+  </section>
+
+  <form class="filters-card" [formGroup]="filtersForm" (ngSubmit)="buscar()" aria-label="Filtros de arribos">
+    <div class="filter-field">
+      <label for="fechaIngreso">Fecha ingreso</label>
+      <input id="fechaIngreso" type="date" class="form-control" formControlName="fechaIngreso" />
+    </div>
+
+    <label class="pending-toggle">
+      <input type="checkbox" class="form-check-input" formControlName="soloPendientes" />
+      <span>Mostrar unicamente pendientes</span>
+    </label>
+
+    <div class="filter-field filter-field--search">
+      <label for="busqueda">Busqueda general</label>
+      <div class="input-group">
+        <span class="input-group-text"><i class="feather icon-search" aria-hidden="true"></i></span>
+        <input
+          id="busqueda"
+          type="search"
+          class="form-control"
+          formControlName="busqueda"
+          placeholder="Habitacion, reserva, agencia o descripcion"
+          (input)="aplicarBusqueda()"
+        />
+      </div>
+    </div>
+
+    <div class="filter-actions">
+      <button type="submit" class="btn btn-primary" [disabled]="loading || reloading">
+        @if (reloading) {
+          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+        } @else {
+          <i class="feather icon-search" aria-hidden="true"></i>
+        }
+        Buscar
+      </button>
+      <button type="button" class="btn btn-light" (click)="limpiar()" [disabled]="loading || reloading">
+        <i class="feather icon-refresh-cw" aria-hidden="true"></i>
+        Limpiar
+      </button>
+    </div>
+  </form>
+
+  <section class="checkin-workspace">
+    <main class="arrivals-card" aria-label="Tabla de arribos">
+      <div class="table-toolbar">
+        <div>
+          <span class="section-eyebrow">Arribos</span>
+          <h2>Listado principal</h2>
+        </div>
+        <div class="table-toolbar__meta">
+          @if (reloading) {
+            <span class="reload-pill"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Recargando</span>
+          }
+          <span>{{ getRangeLabel() }}</span>
+          <select class="form-select form-select-sm" [value]="pageSize" (change)="cambiarPageSize($any($event.target).value)" aria-label="Registros por pagina">
+            @for (option of pageSizeOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      @if (loading) {
+        <div class="skeleton-list" aria-label="Cargando arribos">
+          @for (row of [1, 2, 3, 4, 5, 6]; track row) {
+            <div class="skeleton-row"></div>
+          }
+        </div>
+      } @else if (errorMessage) {
+        <div class="state-box state-box--error" role="alert">
+          <i class="feather icon-alert-circle" aria-hidden="true"></i>
+          <strong>{{ errorMessage }}</strong>
+        </div>
+      } @else if (filteredArrivals.length === 0) {
+        <div class="state-box">
+          <span class="state-illustration material-icons" aria-hidden="true">event_available</span>
+          <strong>No existen arribos para la fecha seleccionada.</strong>
+        </div>
+      } @else {
+        <div class="table-responsive arrivals-table-shell">
+          <table class="table align-middle arrivals-table">
+            <thead>
+              <tr>
+                @for (column of columns; track trackByColumn($index, column)) {
+                  <th scope="col">
+                    <button type="button" class="sort-button" (click)="ordenar(column.key)">
+                      <span>{{ column.label }}</span>
+                      <span class="material-icons" aria-hidden="true">{{ getSortIcon(column.key) }}</span>
+                    </button>
+                  </th>
+                }
+                <th scope="col" class="actions-header text-end">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (arrival of pagedArrivals; track trackByReserva($index, arrival)) {
+                <tr [class.table-active]="isSelected(arrival)" (click)="seleccionarArrival(arrival)">
+                  <td>
+                    <strong class="room-value">{{ getHabitacionLabel(arrival) }}</strong>
+                    <span class="badge d-block mt-1" [ngClass]="getHabitacionBadgeClass(arrival)">{{ getHabitacionBadgeLabel(arrival) }}</span>
+                  </td>
+                  <td>{{ arrival.catHabita || '-' }}</td>
+                  <td>{{ arrival.tipHabita || '-' }}</td>
+                  <td><strong>{{ arrival.codReserva || '-' }}</strong></td>
+                  <td>{{ arrival.nomAgencia || arrival.codAgencia || '-' }}</td>
+                  <td class="description-cell">{{ arrival.descripcion || '-' }}</td>
+                  <td class="date-cell">{{ formatDisplayDate(arrival.fechaIng) }}</td>
+                  <td class="date-cell">{{ formatDisplayDate(arrival.fechaSal) }}</td>
+                  <td>{{ arrival.totNoches }}</td>
+                  <td>{{ arrival.numPax }}</td>
+                  <td>{{ arrival.numChild }}</td>
+                  <td>{{ arrival.codPlan || '-' }}</td>
+                  <td>
+                    <span class="badge" [ngClass]="getProcesadoBadgeClass(arrival)">{{ getProcesadoBadgeLabel(arrival) }}</span>
+                  </td>
+                  <td class="actions-cell text-end">
+                    <div class="row-actions" (click)="$event.stopPropagation()">
+                      <button
+                        type="button"
+                        class="action-checkin"
+                        [disabled]="isCheckInDisabled(arrival)"
+                        [attr.title]="isCheckInDisabled(arrival) ? 'Check-In realizado' : 'Realizar Check-In'"
+                        (click)="realizarCheckIn(arrival)"
+                      >
+                        <span class="material-icons" aria-hidden="true">how_to_reg</span>
+                        <span>Check-In</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        class="action-icon"
+                        title="Imprimir hoja de registro"
+                        aria-label="Imprimir hoja de registro"
+                        (click)="generarHojaRegistro(arrival)"
+                      >
+                        <span class="material-icons" aria-hidden="true">print</span>
+                      </button>
+
+                      <div class="observation-action">
+                        <button
+                          type="button"
+                          class="action-icon action-icon--note"
+                          [class.action-icon--active]="hasObservacion(arrival)"
+                          [disabled]="!hasObservacion(arrival)"
+                          [attr.title]="hasObservacion(arrival) ? 'Ver observaciones' : 'Sin observaciones'"
+                          [attr.aria-label]="hasObservacion(arrival) ? 'Ver observaciones' : 'Sin observaciones'"
+                          (click)="toggleObservacion(arrival)"
+                        >
+                          <span class="material-icons" aria-hidden="true">speaker_notes</span>
+                          @if (hasObservacion(arrival)) {
+                            <span class="note-dot" aria-hidden="true"></span>
+                          }
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                @if (isObservacionOpen(arrival)) {
+                  <tr class="observation-detail-row">
+                    <td [attr.colspan]="columns.length + 1">
+                      <article class="observation-detail">
+                        <span class="observation-detail__icon material-icons" aria-hidden="true">speaker_notes</span>
+                        <div>
+                          <strong>Observaciones</strong>
+                          <p>{{ arrival.observacion }}</p>
+                        </div>
+                      </article>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="arrival-mobile-list">
+          @for (arrival of pagedArrivals; track trackByReserva($index, arrival)) {
+            <article class="arrival-mobile-card" [class.arrival-mobile-card--selected]="isSelected(arrival)" (click)="seleccionarArrival(arrival)">
+              <div>
+                <strong>{{ getHabitacionLabel(arrival) }}</strong>
+                <span>{{ arrival.codReserva }} · {{ arrival.nomAgencia || '-' }}</span>
+              </div>
+              <div class="mobile-badges">
+                <span class="badge" [ngClass]="getHabitacionBadgeClass(arrival)">{{ getHabitacionBadgeLabel(arrival) }}</span>
+                <span class="badge" [ngClass]="getProcesadoBadgeClass(arrival)">{{ getProcesadoBadgeLabel(arrival) }}</span>
+              </div>
+              <p>{{ arrival.descripcion || '-' }}</p>
+              <div class="mobile-meta">
+                <span>{{ formatDisplayDate(arrival.fechaIng) }} - {{ formatDisplayDate(arrival.fechaSal) }}</span>
+                <span>{{ arrival.numPax }} adultos · {{ arrival.numChild }} ninos</span>
+              </div>
+              @if (hasObservacion(arrival)) {
+                <article class="mobile-observation">
+                  <span>Observaciones</span>
+                  <p>{{ arrival.observacion }}</p>
+                </article>
+              }
+              <div class="mobile-actions">
+                <button type="button" class="btn btn-primary btn-sm" [disabled]="isCheckInDisabled(arrival)" (click)="realizarCheckIn(arrival); $event.stopPropagation()">
+                  <span class="material-icons" aria-hidden="true">how_to_reg</span>
+                  Check-In
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" (click)="generarHojaRegistro(arrival); $event.stopPropagation()">
+                  <span class="material-icons" aria-hidden="true">print</span>
+                  Hoja
+                </button>
+              </div>
+            </article>
+          }
+        </div>
+
+        <div class="pagination-bar">
+          <button type="button" class="btn btn-light btn-sm" (click)="paginaAnterior()" [disabled]="page <= 1">
+            <span class="material-icons" aria-hidden="true">chevron_left</span>
+          </button>
+          <span>Pagina {{ page }} de {{ totalPages }}</span>
+          <button type="button" class="btn btn-light btn-sm" (click)="paginaSiguiente()" [disabled]="page >= totalPages">
+            <span class="material-icons" aria-hidden="true">chevron_right</span>
+          </button>
+        </div>
+      }
+    </main>
+  </section>
+</section>

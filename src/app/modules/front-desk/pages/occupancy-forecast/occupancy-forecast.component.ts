@@ -1,7 +1,18 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { of } from 'rxjs';
+import { catchError, finalize } from 'rxjs/operators';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
+import { RoomCategory } from '../../settings/room-categories/models/room-category.model';
+import { RoomCategoriesService } from '../../settings/room-categories/services/room-categories.service';
+import {
+  OccupancyForecastCategoryRequest,
+  OccupancyForecastCategoryResult,
+  OccupancyForecastResponseRow,
+  OccupancyForecastService
+} from './occupancy-forecast.service';
 
 export interface OccupancyForecastRow {
   fecha: string;
@@ -10,15 +21,14 @@ export interface OccupancyForecastRow {
   totalOcupadas: number;
   pax: number;
   totalChl: number;
-  standardOcupadas: number;
-  standardTotal: number;
-  deluxeOcupadas: number;
-  deluxeTotal: number;
-  juniorOcupadas: number;
-  juniorTotal: number;
-  suiteOcupadas: number;
-  suiteTotal: number;
+  categorias: Record<string, OccupancyForecastCategoryResult>;
   porcentajeOcupacion: number;
+}
+
+interface ForecastCategoryOption {
+  codigo: string;
+  descripcion: string;
+  operador: string;
 }
 
 interface ForecastKpi {
@@ -42,54 +52,37 @@ interface ForecastAction {
   styleUrls: ['./occupancy-forecast.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class OccupancyForecastComponent {
-  fechaInicial = '2026-06-16';
-  fechaFinal = '2026-06-30';
+export class OccupancyForecastComponent implements OnInit {
+  private readonly forecastService = inject(OccupancyForecastService);
+  private readonly roomCategoriesService = inject(RoomCategoriesService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly cdr = inject(ChangeDetectorRef);
+
+  fechaInicial = '2026-11-01';
+  fechaFinal = '2026-11-02';
   tipoVista: 'ocupacion' | 'disponibilidad' = 'ocupacion';
   busqueda = '';
   pageSize = 10;
   currentPage = 1;
   isLoading = false;
+  errorMessage = '';
 
-  readonly categorias = ['Standard', 'Junior Suite', 'Deluxe', 'Suite'];
-  readonly categoriasSeleccionadas: Record<string, boolean> = {
-    Standard: true,
-    'Junior Suite': true,
-    Deluxe: true,
-    Suite: true
-  };
+  categorias: ForecastCategoryOption[] = [];
+  categoriasSeleccionadas: Record<string, boolean> = {};
 
-  readonly kpis: ForecastKpi[] = [
-    { title: 'Ocupacion Promedio', value: '42.5%', helper: 'En el periodo seleccionado', icon: 'analytics' },
-    { title: 'Pico de Ocupacion', value: '78.2%', helper: '21 Jun 2026', icon: 'trending_up' },
-    { title: 'Pax Totales', value: '174', helper: 'En el periodo seleccionado', icon: 'groups' },
-    { title: 'Habitaciones Disponibles', value: '90', helper: 'Disponibles para venta', icon: 'hotel' },
-    { title: 'Noches Proyectadas', value: '540', helper: 'Habitacion noche', icon: 'bedtime' }
-  ];
+  kpis: ForecastKpi[] = this.buildKpis([]);
 
   readonly pageSizes = [10, 20, 50, 100];
-  readonly rows: OccupancyForecastRow[] = [
-    this.row('16/06/2026', 120, 4, 51, 96, 138, 20, 48, 12, 28, 14, 30, 5, 14, 42.5),
-    this.row('17/06/2026', 120, 4, 54, 101, 146, 22, 48, 13, 28, 14, 30, 5, 14, 45),
-    this.row('18/06/2026', 120, 5, 58, 109, 156, 24, 48, 14, 28, 15, 30, 5, 14, 48.3),
-    this.row('19/06/2026', 120, 5, 62, 118, 168, 26, 48, 15, 28, 15, 30, 6, 14, 51.7),
-    this.row('20/06/2026', 120, 6, 74, 143, 205, 31, 48, 18, 28, 18, 30, 7, 14, 61.7),
-    this.row('21/06/2026', 120, 6, 94, 174, 248, 38, 48, 23, 28, 24, 30, 9, 14, 78.2),
-    this.row('22/06/2026', 120, 5, 86, 161, 231, 34, 48, 22, 28, 21, 30, 9, 14, 71.7),
-    this.row('23/06/2026', 120, 4, 78, 149, 214, 31, 48, 20, 28, 19, 30, 8, 14, 65),
-    this.row('24/06/2026', 120, 4, 70, 134, 193, 28, 48, 18, 28, 17, 30, 7, 14, 58.3),
-    this.row('25/06/2026', 120, 3, 63, 121, 176, 25, 48, 16, 28, 16, 30, 6, 14, 52.5),
-    this.row('26/06/2026', 120, 3, 59, 112, 162, 24, 48, 14, 28, 15, 30, 6, 14, 49.2),
-    this.row('27/06/2026', 120, 4, 67, 128, 184, 27, 48, 17, 28, 17, 30, 6, 14, 55.8),
-    this.row('28/06/2026', 120, 5, 88, 169, 240, 35, 48, 22, 28, 22, 30, 9, 14, 73.3),
-    this.row('29/06/2026', 120, 5, 102, 188, 268, 40, 48, 26, 28, 26, 30, 10, 14, 85),
-    this.row('30/06/2026', 120, 4, 43, 82, 119, 18, 48, 10, 28, 11, 30, 4, 14, 35.8)
-  ];
+  rows: OccupancyForecastRow[] = [];
 
   readonly actions: ForecastAction[] = [
     { label: 'Imprimir', icon: 'print', accent: 'primary' },
     { label: 'Exportar Excel', icon: 'file_download' }
   ];
+
+  ngOnInit(): void {
+    this.loadInitialData();
+  }
 
   get filteredRows(): OccupancyForecastRow[] {
     const term = this.busqueda.trim().toLowerCase();
@@ -122,12 +115,7 @@ export class OccupancyForecastComponent {
 
   procesar(): void {
     this.currentPage = 1;
-    console.log('Procesar pronostico de ocupacion', {
-      fechaInicial: this.fechaInicial,
-      fechaFinal: this.fechaFinal,
-      categorias: this.categoriasSeleccionadas,
-      tipoVista: this.tipoVista
-    });
+    this.loadForecast();
   }
 
   imprimir(): void {
@@ -170,43 +158,165 @@ export class OccupancyForecastComponent {
     return row.fecha;
   }
 
+  trackByCategoria(_: number, item: ForecastCategoryOption): string {
+    return item.codigo;
+  }
+
   trackByLabel(_: number, item: { label?: string; title?: string }): string {
     return item.label ?? item.title ?? '';
   }
 
-  private row(
-    fecha: string,
-    totalHabitaciones: number,
-    bloqueadas: number,
-    totalOcupadas: number,
-    pax: number,
-    totalChl: number,
-    standardOcupadas: number,
-    standardTotal: number,
-    deluxeOcupadas: number,
-    deluxeTotal: number,
-    juniorOcupadas: number,
-    juniorTotal: number,
-    suiteOcupadas: number,
-    suiteTotal: number,
-    porcentajeOcupacion: number
-  ): OccupancyForecastRow {
+  get selectedCategories(): ForecastCategoryOption[] {
+    return this.categorias.filter((categoria) => this.categoriasSeleccionadas[categoria.codigo]);
+  }
+
+  getCategoryResult(row: OccupancyForecastRow, codigo: string): OccupancyForecastCategoryResult {
+    return row.categorias[codigo] ?? { codigo, cantidad: 0, total: 0 };
+  }
+
+  getCategoryDisplay(row: OccupancyForecastRow, codigo: string): string {
+    const result = this.getCategoryResult(row, codigo);
+    return `${result.cantidad}/${result.total}`;
+  }
+
+  private loadInitialData(): void {
+    this.isLoading = true;
+    this.errorMessage = '';
+
+    this.roomCategoriesService
+      .getRoomCategories()
+      .pipe(
+        catchError((error) => {
+          console.error('No se pudieron cargar las categorias de habitacion.', error);
+          this.errorMessage = 'No se pudieron cargar las categorias de habitacion.';
+          return of([] as RoomCategory[]);
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((categories) => {
+        this.categorias = this.mapCategoryOptions(categories);
+        this.categoriasSeleccionadas = this.categorias.reduce<Record<string, boolean>>((selected, categoria) => {
+          selected[categoria.codigo] = true;
+          return selected;
+        }, {});
+
+        this.loadForecast();
+      });
+  }
+
+  private loadForecast(): void {
+    const selectedCategories = this.selectedCategories;
+
+    if (!selectedCategories.length) {
+      this.rows = [];
+      this.kpis = this.buildKpis([]);
+      this.isLoading = false;
+      this.errorMessage = 'Seleccione al menos una categoria para procesar el pronostico.';
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.isLoading = true;
+    this.errorMessage = '';
+
+    this.forecastService
+      .getForecast({
+        proceso: 1,
+        fechaInicio: this.formatDateApi(this.fechaInicial),
+        fechaFinal: this.formatDateApi(this.fechaFinal),
+        categorias: selectedCategories.map((categoria) => this.mapCategoryRequest(categoria))
+      })
+      .pipe(
+        catchError((error) => {
+          console.error('No se pudo cargar el pronostico de ocupacion.', error);
+          this.errorMessage = 'No se pudo cargar el pronostico de ocupacion para el periodo seleccionado.';
+          return of([] as OccupancyForecastResponseRow[]);
+        }),
+        finalize(() => {
+          this.isLoading = false;
+          this.cdr.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((rows) => {
+        this.rows = rows.map((row) => this.mapForecastRow(row));
+        this.kpis = this.buildKpis(this.rows);
+        this.currentPage = 1;
+      });
+  }
+
+  private mapCategoryOptions(categories: RoomCategory[]): ForecastCategoryOption[] {
+    return categories
+      .map((category) => ({
+        codigo: this.toText(category.CR01_CodCate).toUpperCase(),
+        descripcion: this.toText(category.CR01_Categoria || category.CR01_CodCate).toUpperCase(),
+        operador: this.toText(category.CR01_Operador)
+      }))
+      .filter((category) => category.codigo.length > 0)
+      .sort((left, right) => left.descripcion.localeCompare(right.descripcion, undefined, { sensitivity: 'base' }));
+  }
+
+  private mapCategoryRequest(category: ForecastCategoryOption): OccupancyForecastCategoryRequest {
     return {
-      fecha,
-      totalHabitaciones,
-      bloqueadas,
-      totalOcupadas,
-      pax,
-      totalChl,
-      standardOcupadas,
-      standardTotal,
-      deluxeOcupadas,
-      deluxeTotal,
-      juniorOcupadas,
-      juniorTotal,
-      suiteOcupadas,
-      suiteTotal,
-      porcentajeOcupacion
+      codigo: category.codigo,
+      descripcion: category.descripcion,
+      operador: category.operador || 'carga'
     };
+  }
+
+  private mapForecastRow(row: OccupancyForecastResponseRow): OccupancyForecastRow {
+    return {
+      fecha: this.formatDisplayDate(row.fecha),
+      totalHabitaciones: Number(row.totHabi) || 0,
+      bloqueadas: Number(row.blk) || 0,
+      totalOcupadas: Number(row.totOcupa) || 0,
+      pax: Number(row.totPax) || 0,
+      totalChl: Number(row.totChl) || 0,
+      categorias: row.categorias ?? {},
+      porcentajeOcupacion: Number(row.porOcu) || 0
+    };
+  }
+
+  private buildKpis(rows: OccupancyForecastRow[]): ForecastKpi[] {
+    const occupancyAverage = rows.length ? rows.reduce((total, row) => total + row.porcentajeOcupacion, 0) / rows.length : 0;
+    const peak = rows.reduce<OccupancyForecastRow | null>(
+      (current, row) => (!current || row.porcentajeOcupacion > current.porcentajeOcupacion ? row : current),
+      null
+    );
+    const adults = rows.reduce((total, row) => total + row.pax, 0);
+    const children = rows.reduce((total, row) => total + row.totalChl, 0);
+    const availableRoomNights = rows.reduce((total, row) => total + Math.max(0, row.totalHabitaciones - row.bloqueadas - row.totalOcupadas), 0);
+    const occupiedRoomNights = rows.reduce((total, row) => total + row.totalOcupadas, 0);
+
+    return [
+      { title: 'Ocupacion Promedio', value: `${occupancyAverage.toFixed(1)}%`, helper: 'En el periodo seleccionado', icon: 'analytics' },
+      { title: 'Pico de Ocupacion', value: `${(peak?.porcentajeOcupacion ?? 0).toFixed(1)}%`, helper: peak?.fecha ?? 'Sin datos', icon: 'trending_up' },
+      { title: 'Pax Totales', value: String(adults + children), helper: `${adults} adultos / ${children} ninos`, icon: 'groups' },
+      { title: 'Habitaciones Disponibles', value: String(availableRoomNights), helper: 'Habitacion noche disponible', icon: 'hotel' },
+      { title: 'Noches Proyectadas', value: String(occupiedRoomNights), helper: 'Habitacion noche ocupada', icon: 'bedtime' }
+    ];
+  }
+
+  private formatDateApi(value: string): string {
+    const [year, month, day] = value.split('-');
+    return year && month && day ? `${day}/${month}/${year}` : value;
+  }
+
+  private formatDisplayDate(value: string): string {
+    const date = new Date(value.replace(/\s+/g, ' '));
+
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+
+    return `${day}/${month}/${year}`;
+  }
+
+  private toText(value: unknown): string {
+    return value == null ? '' : String(value).trim();
   }
 }

@@ -56,8 +56,11 @@ export const FRONT_DESK_ROUTES: Routes = [
       },
       {
         path: 'arribos-dia',
-        loadComponent: loadPmsPlaceholder,
-        data: { module: 'Front Desk', title: 'Arribos del Dia' }
+        loadComponent: () => import('./check-in-arrivals/check-in-arrivals.component').then((c) => c.CheckInArrivalsComponent)
+      },
+      {
+        path: 'huespedes-in-house',
+        loadComponent: () => import('./in-house-guests/in-house-guests.component').then((c) => c.InHouseGuestsComponent)
       },
       {
         path: 'pronostico-ocupacion',

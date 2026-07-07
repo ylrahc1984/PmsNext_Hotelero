@@ -1,0 +1,290 @@
+<section class="inhouse-page" aria-label="Huespedes In House">
+  <header class="inhouse-hero">
+    <button type="button" class="back-button" aria-label="Volver al Room Rack" (click)="volverRoomRack()">
+      <span class="material-icons" aria-hidden="true">arrow_back</span>
+    </button>
+    <div>
+      <h1>Huespedes In House</h1>
+      <p>Consulta y administracion de los huespedes actualmente hospedados en el hotel.</p>
+    </div>
+  </header>
+
+  <form class="filters-card" [formGroup]="filtersForm" (ngSubmit)="buscar()" aria-label="Filtros de huespedes In House">
+    <div class="filter-field">
+      <label for="fechaIni">Fecha Inicial</label>
+      <input id="fechaIni" type="date" class="form-control" formControlName="fechaIni" />
+    </div>
+
+    <div class="filter-field">
+      <label for="fechaFin">Fecha Final</label>
+      <input id="fechaFin" type="date" class="form-control" formControlName="fechaFin" />
+    </div>
+
+    <div class="filter-field filter-field--search">
+      <label for="busqueda">Busqueda General</label>
+      <div class="input-group">
+        <span class="input-group-text"><i class="feather icon-search" aria-hidden="true"></i></span>
+        <input
+          id="busqueda"
+          type="search"
+          class="form-control"
+          formControlName="busqueda"
+          placeholder="Habitacion, huesped, reserva o agencia"
+          (input)="aplicarBusqueda()"
+        />
+      </div>
+    </div>
+
+    <div class="filter-field">
+      <label for="estado">Estado</label>
+      <select id="estado" class="form-select" formControlName="estado" (change)="aplicarBusqueda()">
+        <option value="Todos">Todos</option>
+        <option value="Hospedado">Hospedado</option>
+      </select>
+    </div>
+
+    <div class="filter-field">
+      <label for="plan">Plan</label>
+      <select id="plan" class="form-select" formControlName="plan" (change)="aplicarBusqueda()">
+        <option value="Todos">Todos</option>
+        <option value="AI">AI</option>
+        <option value="MAP">MAP</option>
+        <option value="CP">CP</option>
+        <option value="RO">RO</option>
+      </select>
+    </div>
+
+    <div class="filter-field">
+      <label for="agencia">Agencia</label>
+      <select id="agencia" class="form-select" formControlName="agencia" (change)="aplicarBusqueda()">
+        <option value="Todas">Todas</option>
+        @for (agencia of getAgenciaOptions(); track agencia) {
+          <option [value]="agencia">{{ agencia }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="filter-actions">
+      <button type="submit" class="btn btn-primary" [disabled]="loading || reloading">
+        @if (reloading) {
+          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+        } @else {
+          <i class="feather icon-search" aria-hidden="true"></i>
+        }
+        Buscar
+      </button>
+      <button type="button" class="btn btn-light" (click)="limpiar()" [disabled]="loading || reloading">
+        <i class="feather icon-refresh-cw" aria-hidden="true"></i>
+        Limpiar
+      </button>
+    </div>
+  </form>
+
+  <section class="kpi-strip" aria-label="Indicadores de huespedes In House">
+    @for (kpi of kpis; track trackByKpi($index, kpi)) {
+      <article class="kpi-card" [class]="'kpi-card kpi-card--' + kpi.accent">
+        <span class="kpi-card__icon"><span class="material-icons" aria-hidden="true">{{ kpi.icon }}</span></span>
+        <div>
+          <span>{{ kpi.label }}</span>
+          <strong>{{ kpi.value | number:'1.0-0' }}</strong>
+        </div>
+      </article>
+    }
+  </section>
+
+  <section class="inhouse-workspace">
+    <main class="guests-card" aria-label="Tabla de huespedes In House">
+      <div class="table-toolbar">
+        <div>
+          <span class="section-eyebrow">In House</span>
+          <h2>Listado principal</h2>
+        </div>
+        <div class="table-toolbar__meta">
+          @if (reloading) {
+            <span class="reload-pill"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Recargando</span>
+          }
+          <span>{{ getRangeLabel() }}</span>
+          <select class="form-select form-select-sm" [value]="pageSize" (change)="cambiarPageSize($any($event.target).value)" aria-label="Registros por pagina">
+            @for (option of pageSizeOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      @if (loading) {
+        <div class="skeleton-list" aria-label="Cargando huespedes">
+          @for (row of [1, 2, 3, 4, 5, 6]; track row) {
+            <div class="skeleton-row"></div>
+          }
+        </div>
+      } @else if (errorMessage) {
+        <div class="state-box state-box--error" role="alert">
+          <i class="feather icon-alert-circle" aria-hidden="true"></i>
+          <strong>{{ errorMessage }}</strong>
+        </div>
+      } @else if (filteredGuests.length === 0) {
+        <div class="state-box">
+          <span class="state-illustration material-icons" aria-hidden="true">hotel_class</span>
+          <strong>No existen huespedes In House para el rango seleccionado.</strong>
+        </div>
+      } @else {
+        <div class="table-responsive guests-table-shell">
+          <table class="table align-middle guests-table">
+            <thead>
+              <tr>
+                @for (column of columns; track trackByColumn($index, column)) {
+                  <th scope="col">
+                    <button type="button" class="sort-button" (click)="ordenar(column.key)">
+                      <span>{{ column.label }}</span>
+                      <span class="material-icons" aria-hidden="true">{{ getSortIcon(column.key) }}</span>
+                    </button>
+                  </th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (guest of pagedGuests; track trackByGuest($index, guest)) {
+                <tr [class.table-active]="isSelected(guest)" (click)="seleccionarGuest(guest)">
+                  <td><strong class="room-value">{{ guest.numHabita || '-' }}</strong></td>
+                  <td>
+                    <div class="guest-names">
+                      @for (name of getVisibleGuestNames(guest); track trackByName($index, name)) {
+                        <span>{{ name }}</span>
+                      }
+                      @if (getHiddenGuestCount(guest) > 0) {
+                        <em>+{{ getHiddenGuestCount(guest) }} huespedes</em>
+                      }
+                    </div>
+                  </td>
+                  <td>{{ guest.nomAgencia || '-' }}</td>
+                  <td class="date-cell">{{ formatDisplayDate(guest.fechaIng) }}</td>
+                  <td class="date-cell">{{ formatDisplayDate(guest.fechaSal) }}</td>
+                  <td>{{ guest.noches }}</td>
+                  <td>{{ guest.numPax }}</td>
+                  <td>{{ guest.numChild }}</td>
+                  <td><span class="badge" [ngClass]="getPlanBadgeClass(guest)">{{ getPlanCode(guest) }}</span></td>
+                  <td><span class="status-pill">Hospedado</span></td>
+                  <td><strong>{{ guest.codReserva || '-' }}</strong></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="guest-mobile-list">
+          @for (guest of pagedGuests; track trackByGuest($index, guest)) {
+            <article class="guest-mobile-card" [class.guest-mobile-card--selected]="isSelected(guest)" (click)="seleccionarGuest(guest)">
+              <div class="mobile-card-head">
+                <div>
+                  <strong>{{ guest.numHabita || '-' }}</strong>
+                  <span>{{ guest.codReserva }} · {{ guest.nomAgencia || '-' }}</span>
+                </div>
+                <span class="badge" [ngClass]="getPlanBadgeClass(guest)">{{ getPlanCode(guest) }}</span>
+              </div>
+              <div class="guest-names">
+                @for (name of getVisibleGuestNames(guest); track trackByName($index, name)) {
+                  <span>{{ name }}</span>
+                }
+                @if (getHiddenGuestCount(guest) > 0) {
+                  <em>+{{ getHiddenGuestCount(guest) }} huespedes</em>
+                }
+              </div>
+              <div class="mobile-meta">
+                <span>{{ formatDisplayDate(guest.fechaIng) }} - {{ formatDisplayDate(guest.fechaSal) }}</span>
+                <span>{{ guest.numPax }} adultos · {{ guest.numChild }} ninos · {{ guest.noches }} noches</span>
+              </div>
+              <div class="mobile-actions">
+                <button type="button" class="btn btn-primary btn-sm" (click)="checkOut(guest); $event.stopPropagation()">
+                  <span class="material-icons" aria-hidden="true">logout</span>
+                  Check Out
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" (click)="verCuenta(guest); $event.stopPropagation()">
+                  <span class="material-icons" aria-hidden="true">receipt_long</span>
+                  Cuenta
+                </button>
+              </div>
+            </article>
+          }
+        </div>
+
+        <div class="pagination-bar">
+          <button type="button" class="btn btn-light btn-sm" (click)="paginaAnterior()" [disabled]="page <= 1">
+            <span class="material-icons" aria-hidden="true">chevron_left</span>
+          </button>
+          <span>Pagina {{ page }} de {{ totalPages }}</span>
+          <button type="button" class="btn btn-light btn-sm" (click)="paginaSiguiente()" [disabled]="page >= totalPages">
+            <span class="material-icons" aria-hidden="true">chevron_right</span>
+          </button>
+        </div>
+      }
+    </main>
+
+    <aside class="detail-panel" aria-label="Detalle del huesped">
+      <div class="detail-card">
+        <div class="detail-card__header">
+          <span class="section-eyebrow">Detalle</span>
+          <h2>Detalle del Huesped</h2>
+        </div>
+
+        @if (selectedGuest) {
+          <div class="detail-summary">
+            <div>
+              <span>Habitacion</span>
+              <strong>{{ selectedGuest.numHabita || '-' }}</strong>
+            </div>
+            <div>
+              <span>Reserva</span>
+              <strong>{{ selectedGuest.codReserva || '-' }}</strong>
+            </div>
+            <div>
+              <span>Agencia</span>
+              <strong>{{ selectedGuest.nomAgencia || '-' }}</strong>
+            </div>
+            <div>
+              <span>Entrada</span>
+              <strong>{{ formatDisplayDate(selectedGuest.fechaIng) }}</strong>
+            </div>
+            <div>
+              <span>Salida</span>
+              <strong>{{ formatDisplayDate(selectedGuest.fechaSal) }}</strong>
+            </div>
+            <div>
+              <span>Noches</span>
+              <strong>{{ selectedGuest.noches }}</strong>
+            </div>
+            <div>
+              <span>Adultos</span>
+              <strong>{{ selectedGuest.numPax }}</strong>
+            </div>
+            <div>
+              <span>Ninos</span>
+              <strong>{{ selectedGuest.numChild }}</strong>
+            </div>
+            <div>
+              <span>Plan</span>
+              <strong><span class="badge" [ngClass]="getPlanBadgeClass(selectedGuest)">{{ getPlanCode(selectedGuest) }}</span></strong>
+            </div>
+          </div>
+
+          <article class="guest-list-card">
+            <span class="guest-list-card__icon material-icons" aria-hidden="true">badge</span>
+            <div>
+              <strong>Huespedes</strong>
+              @for (name of getGuestNames(selectedGuest); track trackByName($index, name)) {
+                <span>{{ name }}</span>
+              }
+            </div>
+          </article>
+
+        } @else {
+          <div class="state-box state-box--compact">
+            <span class="state-illustration material-icons" aria-hidden="true">person_search</span>
+            <strong>Seleccione un huesped para ver el detalle.</strong>
+          </div>
+        }
+      </div>
+    </aside>
+  </section>
+
+</section>

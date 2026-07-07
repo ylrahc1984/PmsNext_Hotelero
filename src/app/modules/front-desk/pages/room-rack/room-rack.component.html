@@ -71,6 +71,7 @@
             *ngFor="let accion of acciones; trackBy: trackByAccion"
             [class.operation-button--primary]="accion.accent === 'primary'"
             [class.operation-button--muted]="accion.accent === 'muted'"
+            (click)="ejecutarAccion(accion)"
           >
             <span class="material-icons" aria-hidden="true">{{ accion.icon }}</span>
             <span>{{ accion.label }}</span>

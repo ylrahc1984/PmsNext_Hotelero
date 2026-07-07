@@ -29,9 +29,9 @@
 
     <fieldset class="category-filter">
       <legend>Categorías de Habitación</legend>
-      <label *ngFor="let categoria of categorias">
-        <input type="checkbox" [(ngModel)]="categoriasSeleccionadas[categoria]" />
-        <span>{{ categoria }}</span>
+      <label *ngFor="let categoria of categorias; trackBy: trackByCategoria">
+        <input type="checkbox" [(ngModel)]="categoriasSeleccionadas[categoria.codigo]" />
+        <span>{{ categoria.descripcion }}</span>
       </label>
     </fieldset>
 
@@ -72,15 +72,19 @@
       <span></span>
     </div>
 
-    <div class="empty-state" *ngIf="!isLoading && rows.length === 0">
+    <div class="empty-state" *ngIf="!isLoading && errorMessage">
+      {{ errorMessage }}
+    </div>
+
+    <div class="empty-state" *ngIf="!isLoading && !errorMessage && rows.length === 0">
       No hay información de pronóstico para el período seleccionado.
     </div>
 
-    <div class="empty-state" *ngIf="!isLoading && rows.length > 0 && filteredRows.length === 0">
+    <div class="empty-state" *ngIf="!isLoading && !errorMessage && rows.length > 0 && filteredRows.length === 0">
       No se encontraron registros para la búsqueda realizada.
     </div>
 
-    <div class="table-scroll" *ngIf="!isLoading && filteredRows.length > 0">
+    <div class="table-scroll" *ngIf="!isLoading && !errorMessage && filteredRows.length > 0">
       <table>
         <thead>
           <tr>
@@ -90,14 +94,7 @@
             <th>Total Ocupada</th>
             <th># Pax</th>
             <th>Total CHL</th>
-            <th>Standard</th>
-            <th># Standard</th>
-            <th>Deluxe</th>
-            <th># Deluxe</th>
-            <th>Junior</th>
-            <th># Junior</th>
-            <th>Suite</th>
-            <th># Suite</th>
+            <th *ngFor="let categoria of selectedCategories; trackBy: trackByCategoria">{{ categoria.descripcion }}</th>
             <th>% Ocupación</th>
           </tr>
         </thead>
@@ -109,14 +106,9 @@
             <td>{{ row.totalOcupadas }}</td>
             <td>{{ row.pax }}</td>
             <td>{{ row.totalChl }}</td>
-            <td>{{ row.standardOcupadas }}</td>
-            <td>{{ row.standardTotal }}</td>
-            <td>{{ row.deluxeOcupadas }}</td>
-            <td>{{ row.deluxeTotal }}</td>
-            <td>{{ row.juniorOcupadas }}</td>
-            <td>{{ row.juniorTotal }}</td>
-            <td>{{ row.suiteOcupadas }}</td>
-            <td>{{ row.suiteTotal }}</td>
+            <td class="category-cell" *ngFor="let categoria of selectedCategories; trackBy: trackByCategoria">
+              {{ getCategoryDisplay(row, categoria.codigo) }}
+            </td>
             <td>
               <span class="occupancy-badge" [ngClass]="getOccupancyClass(row.porcentajeOcupacion)">
                 {{ row.porcentajeOcupacion | number:'1.0-1' }}%
@@ -127,7 +119,7 @@
       </table>
     </div>
 
-    <div class="pagination-bar" *ngIf="!isLoading && filteredRows.length > 0">
+    <div class="pagination-bar" *ngIf="!isLoading && !errorMessage && filteredRows.length > 0">
       <div class="page-size">
         <span>Mostrar</span>
         <select [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">

@@ -62,7 +62,7 @@ export class NavContentComponent {
 
   get empresaNombre(): string {
     const empresa = this.empresa();
-    return (empresa?.MA04_Nombre || empresa?.MA04_RazonSocial || 'Empresa no seleccionada').trim();
+    return (empresa?.MA04_Nombre || empresa?.MA04_RazonSocial || 'NEXT Hospitality').trim();
   }
 
   private syncExpandedRootWithUrl(url: string) {

@@ -75,7 +75,7 @@ export class RoomRackComponent implements OnInit {
   readonly acciones: AccionOperativa[] = [
     { label: 'Asignar Habitacion', icon: 'home', accent: 'primary' },
     { label: 'Ingresar Arribos', icon: 'flight_land' },
-    { label: 'Lista Pax In House', icon: 'groups' },
+    { label: 'Lista de Pax In House', icon: 'groups' },
     { label: 'Imprimir Hoja Registro', icon: 'print' } 
   ];
 
@@ -103,6 +103,17 @@ export class RoomRackComponent implements OnInit {
   actualizarVentana(): void {
     this.cargarHabitaciones();
     this.cargarTipoCambio();
+  }
+
+  ejecutarAccion(accion: AccionOperativa): void {
+    if (accion.label === 'Ingresar Arribos') {
+      this.router.navigate(['/front-desk/arribos-dia']);
+      return;
+    }
+
+    if (accion.label === 'Lista de Pax In House') {
+      this.router.navigate(['/front-desk/huespedes-in-house']);
+    }
   }
 
   get compra(): number {
