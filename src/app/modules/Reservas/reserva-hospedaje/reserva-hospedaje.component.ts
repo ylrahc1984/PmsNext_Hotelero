@@ -11,7 +11,7 @@ import {
   ReactiveFormsModule,
   Validators
 } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { catchError, debounceTime, distinctUntilChanged, finalize, firstValueFrom, forkJoin, map, merge, of, switchMap } from 'rxjs';
 import Swal from 'sweetalert2';
 
@@ -24,45 +24,47 @@ import { MealPlansService } from 'src/app/modules/front-desk/settings/meal-plans
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { environment } from 'src/environments/environment';
 import {
+  ReservaHabitacionDetalle,
   ReservaHabitacionItem,
   ReservaInclusionItem,
   ReservaServicioItem
 } from '../interfaces/reserva-habitacion.interface';
 import { ReservaHabitacionMapper } from '../services/reserva-habitacion.mapper';
-import { ReservaHabitacionService } from '../services/reserva-habitacion.service';
+import { ReservaHabitacionService, ReservaTarifaAlimento } from '../services/reserva-habitacion.service';
 
 interface ReservaHeaderForm {
-  codReserva: FormControl<string>;
-  codAgencia: FormControl<string>;
-  codTarifa: FormControl<string>;
-  codPlan: FormControl<string>;
-  fecIngreso: FormControl<string>;
-  fecSalida: FormControl<string>;
-  fecCreacion: FormControl<string>;
-  fecConfirma: FormControl<string>;
-  fecPrepago: FormControl<string>;
-  fecAnulada: FormControl<string>;
-  totNoches: FormControl<number>;
-  totDias: FormControl<number>;
-  descripcion: FormControl<string>;
-  tCambio: FormControl<number>;
-  folio: FormControl<string>;
-  estado: FormControl<string>;
-  moneda: FormControl<string>;
-  totalRsv: FormControl<number>;
-  observaciones: FormControl<string>;
-  procesa: FormControl<string>;
-  directo: FormControl<boolean>;
-  operador: FormControl<string>;
-  habitaciones: FormArray<FormGroup<HabitacionForm>>;
-  inclusiones: FormArray<FormGroup<InclusionForm>>;
-  servicios: FormArray<FormGroup<ServicioForm>>;
+  codReserva      : FormControl<string>;
+  codAgencia      : FormControl<string>;
+  codTarifa       : FormControl<string>;
+  codPlan         : FormControl<string>;
+  fecIngreso      : FormControl<string>;
+  fecSalida       : FormControl<string>;
+  fecCreacion     : FormControl<string>;
+  fecConfirma     : FormControl<string>;
+  fecPrepago      : FormControl<string>;
+  fecAnulada      : FormControl<string>;
+  totNoches       : FormControl<number>;
+  totDias         : FormControl<number>;
+  descripcion     : FormControl<string>;
+  tCambio         : FormControl<number>;
+  folio           : FormControl<string>;
+  estado          : FormControl<string>;
+  moneda          : FormControl<string>;
+  totalRsv        : FormControl<number>;
+  observaciones   : FormControl<string>;
+  procesa         : FormControl<string>;
+  directo         : FormControl<boolean>;
+  operador        : FormControl<string>;
+  habitaciones    : FormArray<FormGroup<HabitacionForm>>;
+  inclusiones     : FormArray<FormGroup<InclusionForm>>;
+  servicios       : FormArray<FormGroup<ServicioForm>>;
 }
 
 interface HabitacionForm {
   categoria: FormControl<string>;
   tipo: FormControl<string>;
   cantidad: FormControl<number>;
+  pax: FormControl<number>;
   precio: FormControl<number>;
   cantidadNinos: FormControl<number>;
   precioNino: FormControl<number>;
@@ -76,6 +78,7 @@ interface InclusionForm {
   precio: FormControl<number>;
   cantidad: FormControl<number>;
   totServ: FormControl<number>;
+  cCosto: FormControl<string>;
 }
 
 interface ServicioForm {
@@ -154,6 +157,7 @@ export class ReservaHospedajeComponent implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
   private readonly apiBaseUrl = (environment.apiUrl || 'http://localhost:5000/api').toString().replace(/\/+$/, '');
   private readonly categoriaHabitacionUrl = `${this.apiBaseUrl}/categoriahabitacion`;
@@ -169,6 +173,9 @@ export class ReservaHospedajeComponent implements OnInit {
   readonly editingRoomIndex = signal<number | null>(null);
   readonly editingPlanIndex = signal<number | null>(null);
   readonly editingServiceIndex = signal<number | null>(null);
+  readonly isEditMode = signal(false);
+  readonly loadingDetalle = signal(false);
+  readonly detailError = signal('');
   readonly agenciaSearchControl = this.fb.control('0000000010 - Agencia CRS');
   readonly tarifaSearchControl = this.fb.control('');
   readonly agencyModalSearchControl = this.fb.control('');
@@ -209,7 +216,8 @@ export class ReservaHospedajeComponent implements OnInit {
     tipPax: 'Adultos',
     precio: 0,
     cantidad: 2,
-    totServ: 0
+    totServ: 0,
+    cCosto: ''
   });
   readonly servicioForm: FormGroup<ServicioForm> = this.createServicioGroup();
 
@@ -228,6 +236,8 @@ export class ReservaHospedajeComponent implements OnInit {
   tarifaSearchOpen = false;
   showAgencyModal = false;
   showTarifaModal = false;
+  isMealPlanLoading = false;
+  mealPlanError = '';
   agencyModalLoading = false;
   agencyModalError = '';
   agencyModalPage = 1;
@@ -240,13 +250,26 @@ export class ReservaHospedajeComponent implements OnInit {
   tarifaModalPageSize = 10;
   tarifaModalTotalRecords = 0;
   tarifaModalTotalPages = 0;
+  private mealPlanDetails: ReservaTarifaAlimento[] = [];
+  private mealPlanRequestKey = '';
   private draftRestorePending = true;
+  private editCodReserva = '';
 
   ngOnInit(): void {
+    const codReserva = this.route.snapshot.paramMap.get('codReserva')?.trim() ?? '';
+    this.editCodReserva = codReserva;
+    this.isEditMode.set(!!codReserva);
+    if (codReserva) {
+      this.draftRestorePending = false;
+      this.loadReservaForEdit(codReserva);
+    }
+
     this.loadCatalogs();
     this.bindCatalogSearch();
-    this.restoreDraft();
-    this.bindDraftPersistence();
+    if (!this.isEditMode()) {
+      this.restoreDraft();
+      this.bindDraftPersistence();
+    }
     this.recalculateStay();
     this.reservaForm.controls.fecIngreso.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.recalculateStay());
     this.reservaForm.controls.fecSalida.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.recalculateStay());
@@ -255,17 +278,21 @@ export class ReservaHospedajeComponent implements OnInit {
       .pipe(distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
       .subscribe((categoria) => this.loadRoomTypesForCategory(categoria));
 
-    this.habitacionForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.updateHabitacionDraftTotal());
+    this.habitacionForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.updateHabitacionDraftPax();
+      this.updateHabitacionDraftTotal();
+      this.recalculateMealPlanInclusions();
+    });
     this.inclusionForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.updateInclusionDraftTotal());
     this.servicioForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.updateServicioDraftTotal());
-
-    if (this.inclusiones.length === 0) {
-      this.inclusiones.push(this.createInclusionGroup(this.inclusionForm.getRawValue()));
-    }
   }
 
   @HostListener('window:beforeunload')
   protectDraftOnUnload(): void {
+    if (this.isEditMode()) {
+      return;
+    }
+
     if (this.hasMeaningfulDraft() && !this.saving()) {
       this.persistDraft();
     }
@@ -289,6 +316,7 @@ export class ReservaHospedajeComponent implements OnInit {
       return;
     }
 
+    this.updateHabitacionDraftPax();
     this.updateHabitacionDraftTotal();
     const index = this.editingRoomIndex();
     const nextGroup = this.createHabitacionGroup(this.habitacionForm.getRawValue());
@@ -301,7 +329,7 @@ export class ReservaHospedajeComponent implements OnInit {
     }
 
     this.habitacionForm.reset(this.defaultHabitacion());
-    this.syncTotal();
+    this.refreshMealPlanForCurrentSelection();
   }
 
   editarHabitacion(index: number): void {
@@ -311,7 +339,7 @@ export class ReservaHospedajeComponent implements OnInit {
 
   eliminarHabitacion(index: number): void {
     this.habitaciones.removeAt(index);
-    this.syncTotal();
+    this.refreshMealPlanForCurrentSelection();
   }
 
   abrirPlanModal(index: number | null = null): void {
@@ -425,11 +453,16 @@ export class ReservaHospedajeComponent implements OnInit {
     this.tarifaSuggestions = [];
     this.tarifaSearchOpen = false;
     this.showTarifaModal = false;
+    this.refreshMealPlanForCurrentSelection(true);
   }
 
   onPlanChange(codPlan: string): void {
     const plan = this.planes.find((item) => item.codigo === codPlan);
     if (!plan) {
+      this.mealPlanDetails = [];
+      this.mealPlanRequestKey = '';
+      this.inclusiones.clear();
+      this.syncTotal();
       return;
     }
 
@@ -442,26 +475,15 @@ export class ReservaHospedajeComponent implements OnInit {
     );
 
     if (this.isNoMealPlan(plan.codigo)) {
+      this.mealPlanDetails = [];
+      this.mealPlanRequestKey = '';
+      this.mealPlanError = '';
       this.inclusiones.clear();
       this.syncTotal();
       return;
     }
 
-    if (this.inclusiones.length === 0) {
-      this.inclusiones.push(this.createInclusionGroup(this.inclusionForm.getRawValue()));
-      this.syncTotal();
-      return;
-    }
-
-    const first = this.inclusiones.at(0);
-    first.patchValue(
-      {
-        codServ: plan.codigo,
-        desServ: plan.descripcion
-      },
-      { emitEvent: false }
-    );
-    this.syncTotal();
+    this.refreshMealPlanForCurrentSelection(true);
   }
 
   isNoMealPlanSelected(): boolean {
@@ -586,7 +608,28 @@ export class ReservaHospedajeComponent implements OnInit {
     return term ? `Resultados para "${term}"` : 'Tarifas registradas';
   }
 
+  pageTitle(): string {
+    return this.isEditMode() ? `Editar Reserva ${this.reservaForm.controls.codReserva.value || this.editCodReserva}` : 'Nueva Reserva de Hospedaje';
+  }
+
+  breadcrumbTitle(): string {
+    return this.isEditMode() ? 'Editar reserva' : 'Nueva reserva';
+  }
+
+  submitButtonText(): string {
+    return this.isEditMode() ? 'Actualizar reserva' : 'Confirmar reserva';
+  }
+
+  clearButtonText(): string {
+    return this.isEditMode() ? 'Recargar' : 'Limpiar';
+  }
+
   limpiarFormulario(): void {
+    if (this.isEditMode()) {
+      this.loadReservaForEdit(this.editCodReserva);
+      return;
+    }
+
     this.clearDraft();
     this.habitaciones.clear();
     this.inclusiones.clear();
@@ -621,21 +664,82 @@ export class ReservaHospedajeComponent implements OnInit {
     this.habitacionForm.reset(this.defaultHabitacion());
     this.agenciaSearchControl.setValue('0000000010 - Agencia CRS', { emitEvent: false });
     this.tarifaSearchControl.setValue('', { emitEvent: false });
-    this.inclusionForm.reset({
-      codServ: 'DES',
-      desServ: 'Desayuno incluido',
-      tipPax: 'Adultos',
-      precio: 0,
-      cantidad: 2,
-      totServ: 0
-    });
+    this.mealPlanDetails = [];
+    this.mealPlanRequestKey = '';
+    this.mealPlanError = '';
+    this.inclusionForm.reset(this.defaultInclusion());
     this.servicioForm.reset(this.defaultServicio());
     this.applyPlanDefault();
     this.recalculateStay();
     this.syncTotal();
   }
 
+  private loadReservaForEdit(codReserva: string): void {
+    if (!codReserva) {
+      return;
+    }
+
+    this.loadingDetalle.set(true);
+    this.detailError.set('');
+
+    this.service
+      .getReservaDetalle(codReserva)
+      .pipe(
+        finalize(() => this.loadingDetalle.set(false)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (detalle) => this.applyReservaDetalle(detalle),
+        error: (error) => {
+          console.error('No se pudo cargar el detalle de la reserva.', error);
+          this.detailError.set('No se pudo cargar el detalle de la reserva.');
+          this.toast.error('No se pudo cargar el detalle de la reserva.', 5500, 'Reserva');
+        }
+      });
+  }
+
+  private applyReservaDetalle(detalle: ReservaHabitacionDetalle): void {
+    const formValue = ReservaHabitacionMapper.fromDetalle(detalle);
+    this.editCodReserva = formValue.codReserva || this.editCodReserva;
+
+    this.habitaciones.clear();
+    this.inclusiones.clear();
+    this.servicios.clear();
+    this.reservaForm.reset(formValue, { emitEvent: false });
+
+    for (const habitacion of formValue.habitaciones) {
+      this.habitaciones.push(this.createHabitacionGroup(habitacion));
+    }
+
+    for (const inclusion of formValue.inclusiones) {
+      this.inclusiones.push(this.createInclusionGroup(inclusion));
+    }
+
+    for (const servicio of formValue.servicios) {
+      this.servicios.push(this.createServicioGroup(servicio));
+    }
+
+    this.habitacionForm.reset(this.defaultHabitacion(), { emitEvent: false });
+    this.inclusionForm.reset(this.defaultInclusion(), { emitEvent: false });
+    this.servicioForm.reset(this.defaultServicio(), { emitEvent: false });
+    this.agenciaSearchControl.setValue(this.buildDetalleLabel(formValue.codAgencia, detalle.nomAgencia), { emitEvent: false });
+    this.tarifaSearchControl.setValue(this.buildDetalleLabel(formValue.codTarifa, detalle.nomTarifa), { emitEvent: false });
+    this.mealPlanDetails = [];
+    this.mealPlanRequestKey = '';
+    this.mealPlanError = '';
+    this.recalculateStay();
+    this.syncTotal();
+  }
+
+  private buildDetalleLabel(codigo: string, descripcion: string | undefined): string {
+    return [codigo, String(descripcion ?? '').trim()].filter(Boolean).join(' - ');
+  }
+
   async guardarBorrador(): Promise<void> {
+    if (this.isEditMode()) {
+      return;
+    }
+
     this.syncTotal();
 
     const result = await Swal.fire({
@@ -670,11 +774,11 @@ export class ReservaHospedajeComponent implements OnInit {
     this.syncTotal();
 
     const result = await Swal.fire({
-      title: 'Confirmar reserva',
+      title: this.isEditMode() ? 'Actualizar reserva' : 'Confirmar reserva',
       html: this.buildConfirmReservationHtml(),
       icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'Sí, confirmar y guardar',
+      confirmButtonText: this.isEditMode() ? 'Sí, actualizar reserva' : 'Sí, confirmar y guardar',
       cancelButtonText: 'No, revisar',
       confirmButtonColor: '#198754',
       width: 720
@@ -716,8 +820,8 @@ export class ReservaHospedajeComponent implements OnInit {
     this.saving.set(true);
 
     void Swal.fire({
-      title: 'Confirmando reserva',
-      text: 'Enviando la reserva al servidor...',
+      title: this.isEditMode() ? 'Actualizando reserva' : 'Confirmando reserva',
+      text: this.isEditMode() ? 'Enviando los cambios al servidor...' : 'Enviando la reserva al servidor...',
       allowOutsideClick: false,
       allowEscapeKey: false,
       showConfirmButton: false,
@@ -727,8 +831,9 @@ export class ReservaHospedajeComponent implements OnInit {
     });
 
     try {
+      const request$ = this.isEditMode() ? this.service.updateReserva(this.editCodReserva, payload) : this.service.createReserva(payload);
       const response = await firstValueFrom(
-        this.service.createReserva(payload).pipe(
+        request$.pipe(
           finalize(() => {
             this.saving.set(false);
             Swal.close();
@@ -738,7 +843,7 @@ export class ReservaHospedajeComponent implements OnInit {
 
       if (response.ok === false) {
         await Swal.fire({
-          title: 'No se pudo confirmar la reserva',
+          title: this.isEditMode() ? 'No se pudo actualizar la reserva' : 'No se pudo confirmar la reserva',
           text: response.respuesta || response.mensaje || 'El endpoint no confirmó la reserva.',
           icon: 'error',
           confirmButtonText: 'Aceptar',
@@ -747,9 +852,11 @@ export class ReservaHospedajeComponent implements OnInit {
         return;
       }
 
-      this.clearDraft();
+      if (!this.isEditMode()) {
+        this.clearDraft();
+      }
       await Swal.fire({
-        title: 'Reserva confirmada',
+        title: this.isEditMode() ? 'Reserva actualizada' : 'Reserva confirmada',
         html: this.buildReservationResponseHtml(response),
         icon: 'success',
         confirmButtonText: 'Ir a consulta de reservas',
@@ -761,7 +868,7 @@ export class ReservaHospedajeComponent implements OnInit {
       this.saving.set(false);
       Swal.close();
       await Swal.fire({
-        title: 'Error al confirmar la reserva',
+        title: this.isEditMode() ? 'Error al actualizar la reserva' : 'Error al confirmar la reserva',
         text: this.getReservaErrorMessage(error),
         icon: 'error',
         confirmButtonText: 'Aceptar',
@@ -885,6 +992,10 @@ export class ReservaHospedajeComponent implements OnInit {
   }
 
   private persistDraft(): void {
+    if (this.isEditMode()) {
+      return;
+    }
+
     if (this.draftRestorePending) {
       return;
     }
@@ -921,6 +1032,7 @@ export class ReservaHospedajeComponent implements OnInit {
       this.agenciaSearchControl.setValue(draft.agenciaSearch || this.agenciaSearchControl.value, { emitEvent: false });
       this.tarifaSearchControl.setValue(draft.tarifaSearch || this.tarifaSearchControl.value, { emitEvent: false });
       this.syncTotal();
+      this.refreshMealPlanForCurrentSelection(true);
     } catch (error) {
       console.error('No se pudo restaurar el borrador de reserva.', error);
       this.clearDraft();
@@ -962,6 +1074,108 @@ export class ReservaHospedajeComponent implements OnInit {
 
   private getTipoHabitacionPax(categoria: string, tipo: string): number {
     return this.roomTypes.find((item) => item.categoria === categoria && item.codigo === tipo)?.pax ?? 0;
+  }
+
+  private refreshMealPlanForCurrentSelection(forceReload = false): void {
+    const codPlan = this.reservaForm.controls.codPlan.value.trim();
+    const codTarifa = this.reservaForm.controls.codTarifa.value.trim();
+
+    if (!codPlan || this.isNoMealPlan(codPlan)) {
+      this.mealPlanDetails = [];
+      this.mealPlanRequestKey = '';
+      this.mealPlanError = '';
+      this.inclusiones.clear();
+      this.syncTotal();
+      return;
+    }
+
+    if (!codTarifa) {
+      this.mealPlanDetails = [];
+      this.mealPlanRequestKey = '';
+      this.inclusiones.clear();
+      this.syncTotal();
+      return;
+    }
+
+    const requestKey = `${codTarifa.toUpperCase()}|${codPlan.toUpperCase()}`;
+    if (!forceReload && this.mealPlanRequestKey === requestKey) {
+      this.recalculateMealPlanInclusions();
+      return;
+    }
+
+    this.isMealPlanLoading = true;
+    this.mealPlanError = '';
+    this.service
+      .getTarifaAlimentos(codTarifa, codPlan)
+      .pipe(
+        finalize(() => {
+          this.isMealPlanLoading = false;
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (items) => {
+          this.mealPlanRequestKey = requestKey;
+          this.mealPlanDetails = items;
+          this.recalculateMealPlanInclusions();
+        },
+        error: () => {
+          this.mealPlanDetails = [];
+          this.mealPlanRequestKey = '';
+          this.inclusiones.clear();
+          this.mealPlanError = 'No se pudo cargar el detalle del plan de alimentos.';
+          this.syncTotal();
+        }
+      });
+  }
+
+  private recalculateMealPlanInclusions(): void {
+    const codPlan = this.reservaForm.controls.codPlan.value.trim();
+    if (!codPlan || this.isNoMealPlan(codPlan)) {
+      this.inclusiones.clear();
+      this.syncTotal();
+      return;
+    }
+
+    if (this.mealPlanDetails.length === 0) {
+      this.syncTotal();
+      return;
+    }
+
+    const cantidadPax = this.getMealPlanPaxQuantity();
+    const noches = Math.max(0, Number(this.reservaForm.controls.totNoches.value) || 0);
+    this.inclusiones.clear();
+
+    for (const detail of this.mealPlanDetails) {
+      const precio = this.toFiniteNumber(detail.precio);
+      this.inclusiones.push(
+        this.createInclusionGroup({
+          codServ: String(detail.codServ ?? '').trim(),
+          desServ: String(detail.descSrv ?? '').trim(),
+          tipPax: String(detail.tipPax ?? '').trim() || 'PAX',
+          precio,
+          cantidad: cantidadPax,
+          totServ: cantidadPax * precio * noches,
+          cCosto: String(detail.area ?? '').trim()
+        })
+      );
+    }
+
+    this.syncTotal();
+  }
+
+  private getMealPlanPaxQuantity(): number {
+    if (this.habitaciones.length > 0) {
+      return this.habitaciones.controls.reduce((total, group) => {
+        const raw = group.getRawValue();
+        const pax = raw.pax || this.getTipoHabitacionPax(raw.categoria, raw.tipo);
+        return total + pax * (Number(raw.cantidad) || 0);
+      }, 0);
+    }
+
+    const raw = this.habitacionForm.getRawValue();
+    const pax = raw.pax || this.getTipoHabitacionPax(raw.categoria, raw.tipo);
+    return pax * (Number(raw.cantidad) || 0);
   }
 
   trackByIndex(index: number): number {
@@ -1200,7 +1414,15 @@ export class ReservaHospedajeComponent implements OnInit {
     const currentPlan = this.reservaForm.controls.codPlan.value;
     const matchedPlan = this.planes.find((item) => item.codigo === currentPlan);
     if (matchedPlan) {
+      if (this.isEditMode()) {
+        return;
+      }
+
       this.onPlanChange(matchedPlan.codigo);
+      return;
+    }
+
+    if (this.isEditMode()) {
       return;
     }
 
@@ -1234,6 +1456,8 @@ export class ReservaHospedajeComponent implements OnInit {
     const typeExists = this.roomTypes.some((item) => item.codigo === preferredType);
     const nextType = typeExists ? preferredType : this.roomTypes[0]?.codigo ?? '';
     this.habitacionForm.controls.tipo.setValue(nextType, { emitEvent: false });
+    this.updateHabitacionDraftPax();
+    this.recalculateMealPlanInclusions();
   }
 
   private buildAgenciaLabel(agencia: WalkInAgenciaOption): string {
@@ -1269,6 +1493,7 @@ export class ReservaHospedajeComponent implements OnInit {
     const label = this.tarifaSearchControl.value.trim();
     if (codigo && !label.startsWith(`${codigo} -`)) {
       this.reservaForm.patchValue({ codTarifa: '' }, { emitEvent: false });
+      this.refreshMealPlanForCurrentSelection(true);
     }
   }
 
@@ -1285,10 +1510,13 @@ export class ReservaHospedajeComponent implements OnInit {
   }
 
   private createHabitacionGroup(value: Partial<ReservaHabitacionItem> = this.defaultHabitacion()): FormGroup<HabitacionForm> {
+    const categoria = value.categoria ?? '';
+    const tipo = value.tipo ?? '';
     return this.fb.group({
-      categoria: this.fb.control(value.categoria ?? '', { validators: [Validators.required] }),
-      tipo: this.fb.control(value.tipo ?? '', { validators: [Validators.required] }),
+      categoria: this.fb.control(categoria, { validators: [Validators.required] }),
+      tipo: this.fb.control(tipo, { validators: [Validators.required] }),
       cantidad: this.fb.control(value.cantidad ?? 1, { validators: [Validators.min(1)] }),
+      pax: this.fb.control(value.pax ?? this.getTipoHabitacionPax(categoria, tipo)),
       precio: this.fb.control(value.precio ?? 0, { validators: [Validators.min(0)] }),
       cantidadNinos: this.fb.control(value.cantidadNinos ?? 0, { validators: [Validators.min(0)] }),
       precioNino: this.fb.control(value.precioNino ?? 0, { validators: [Validators.min(0)] }),
@@ -1303,7 +1531,8 @@ export class ReservaHospedajeComponent implements OnInit {
       tipPax: this.fb.control(value.tipPax ?? 'Adulto'),
       precio: this.fb.control(value.precio ?? 0, { validators: [Validators.min(0)] }),
       cantidad: this.fb.control(value.cantidad ?? 1, { validators: [Validators.min(1)] }),
-      totServ: this.fb.control(value.totServ ?? 0)
+      totServ: this.fb.control(value.totServ ?? 0),
+      cCosto: this.fb.control(value.cCosto ?? '')
     });
   }
 
@@ -1325,9 +1554,17 @@ export class ReservaHospedajeComponent implements OnInit {
     this.habitacionForm.controls.total.setValue(total, { emitEvent: false });
   }
 
+  private updateHabitacionDraftPax(): void {
+    const raw = this.habitacionForm.getRawValue();
+    const pax = this.getTipoHabitacionPax(raw.categoria, raw.tipo);
+    if (this.habitacionForm.controls.pax.value !== pax) {
+      this.habitacionForm.controls.pax.setValue(pax, { emitEvent: false });
+    }
+  }
+
   private updateInclusionDraftTotal(): void {
     const raw = this.inclusionForm.getRawValue();
-    this.inclusionForm.controls.totServ.setValue(raw.cantidad * raw.precio, { emitEvent: false });
+    this.inclusionForm.controls.totServ.setValue(raw.cantidad * raw.precio * this.reservaForm.controls.totNoches.value, { emitEvent: false });
   }
 
   private updateServicioDraftTotal(): void {
@@ -1342,6 +1579,8 @@ export class ReservaHospedajeComponent implements OnInit {
     if (!ingreso || !salida || salida <= ingreso) {
       this.reservaForm.controls.totNoches.setValue(0, { emitEvent: false });
       this.reservaForm.controls.totDias.setValue(0, { emitEvent: false });
+      this.recalculateRoomTotals();
+      this.recalculateMealPlanInclusions();
       return;
     }
 
@@ -1350,6 +1589,7 @@ export class ReservaHospedajeComponent implements OnInit {
     this.reservaForm.controls.totDias.setValue(nights + 1, { emitEvent: false });
     this.recalculateRoomTotals();
     this.updateHabitacionDraftTotal();
+    this.recalculateMealPlanInclusions();
   }
 
   private recalculateRoomTotals(): void {
@@ -1365,11 +1605,17 @@ export class ReservaHospedajeComponent implements OnInit {
     this.reservaForm.controls.totalRsv.setValue(this.totalReserva(), { emitEvent: false });
   }
 
+  private toFiniteNumber(value: unknown): number {
+    const numberValue = Number(value ?? 0);
+    return Number.isFinite(numberValue) ? numberValue : 0;
+  }
+
   private defaultHabitacion(): ReservaHabitacionItem {
     return {
       categoria: this.roomCategories?.[0]?.codigo ?? '',
       tipo: this.roomTypes?.[0]?.codigo ?? '',
       cantidad: 1,
+      pax: this.roomTypes?.[0]?.pax ?? 0,
       precio: 200,
       cantidadNinos: 0,
       precioNino: 0,
@@ -1378,7 +1624,7 @@ export class ReservaHospedajeComponent implements OnInit {
   }
 
   private defaultInclusion(): ReservaInclusionItem {
-    return { codServ: '', desServ: '', tipPax: 'Adulto', precio: 0, cantidad: 1, totServ: 0 };
+    return { codServ: '', desServ: '', tipPax: 'Adulto', precio: 0, cantidad: 1, totServ: 0, cCosto: '' };
   }
 
   private defaultServicio(): ReservaServicioItem {

@@ -5,7 +5,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs';
 
 import { environment } from 'src/environments/environment';
-import { ReservaHabitacionRequest, ReservaHabitacionResponse } from '../interfaces/reserva-habitacion.interface';
+import { ReservaHabitacionDetalle, ReservaHabitacionRequest, ReservaHabitacionResponse } from '../interfaces/reserva-habitacion.interface';
 import {
   ReservaConsulta,
   ReservaConsultaApiItem,
@@ -14,6 +14,19 @@ import {
   ReservaConsultaParams
 } from '../models/reserva-consulta.model';
 import { ReservaHabitacionRepository } from './reserva-habitacion.repository';
+
+export interface ReservaTarifaAlimento {
+  codServ: string;
+  descSrv: string;
+  codTarifa: string;
+  codPlan: string;
+  tipPax: string;
+  moneda: string;
+  impInc: number;
+  area: string;
+  precio: number;
+  impInclu: number;
+}
 
 @Injectable({ providedIn: 'root' })
 export class ReservaHabitacionService implements ReservaHabitacionRepository {
@@ -29,6 +42,54 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
     console.groupEnd();
 
     return this.http.post<ReservaHabitacionResponse>(this.apiUrl, request);
+  }
+
+  getReservaDetalle(codReserva: string): Observable<ReservaHabitacionDetalle> {
+    return this.http.get<ReservaHabitacionDetalle>(`${this.apiUrl}/${encodeURIComponent(codReserva.trim())}`);
+  }
+
+  updateReserva(codReserva: string, request: ReservaHabitacionRequest): Observable<ReservaHabitacionResponse> {
+    const requestSnapshot = JSON.parse(JSON.stringify(request)) as ReservaHabitacionRequest;
+    const url = `${this.apiUrl}/${encodeURIComponent(codReserva.trim())}`;
+    console.groupCollapsed('[Reservas] PUT actualizar reserva');
+    console.log('method', 'PUT');
+    console.log('url', url);
+    console.log('body', requestSnapshot);
+    console.groupEnd();
+
+    return this.http.put<ReservaHabitacionResponse>(url, request);
+  }
+
+  anularReserva(codReserva: string, fecAnulada: string, operador: string, procesa = 1): Observable<ReservaHabitacionResponse> {
+    const url = `${this.apiUrl}/${encodeURIComponent(codReserva.trim())}`;
+    const params = new HttpParams()
+      .set('fecAnulada', fecAnulada.trim())
+      .set('operador', operador.trim())
+      .set('procesa', String(procesa));
+
+    console.groupCollapsed('[Reservas] DELETE anular reserva');
+    console.log('method', 'DELETE');
+    console.log('url', url);
+    console.log('query', { fecAnulada, operador, procesa });
+    console.groupEnd();
+
+    return this.http.delete<ReservaHabitacionResponse>(url, { params });
+  }
+
+  getConfirmacionPdf(codReserva: string): Observable<Blob> {
+    const url = `${this.apiUrl}/${encodeURIComponent(codReserva.trim())}/confirmacion-pdf`;
+    return this.http.get(url, {
+      responseType: 'blob',
+      headers: { Accept: 'application/pdf' }
+    });
+  }
+
+  getTarifaAlimentos(codTarifa: string, codPlan: string): Observable<ReservaTarifaAlimento[]> {
+    const params = new HttpParams().set('codTarifa', codTarifa.trim()).set('codPlan', codPlan.trim());
+
+    return this.http
+      .get<ReservaTarifaAlimento[] | { datos?: ReservaTarifaAlimento[]; data?: ReservaTarifaAlimento[] }>(`${this.apiUrl}/tarifa-alimentos`, { params })
+      .pipe(map((response) => this.normalizeTarifaAlimentosResponse(response)));
   }
 
   consultarReservas(params: ReservaConsultaParams): Observable<ReservaConsultaPage> {
@@ -73,6 +134,20 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
       tamanoPagina: pageSize,
       totalPaginas: Math.max(totalPaginas, reservas.length ? 1 : 0)
     };
+  }
+
+  private normalizeTarifaAlimentosResponse(
+    response: ReservaTarifaAlimento[] | { datos?: ReservaTarifaAlimento[]; data?: ReservaTarifaAlimento[] } | null | undefined
+  ): ReservaTarifaAlimento[] {
+    if (Array.isArray(response)) {
+      return response;
+    }
+
+    if (Array.isArray(response?.datos)) {
+      return response.datos;
+    }
+
+    return Array.isArray(response?.data) ? response.data : [];
   }
 
   private mapConsultaItem(item: ReservaConsultaApiItem): ReservaConsulta {

@@ -1,4 +1,5 @@
 import {
+  ReservaHabitacionDetalle,
   ReservaHabitacionItem,
   ReservaHabitacionRequest,
   ReservaInclusionItem,
@@ -34,6 +35,73 @@ export interface ReservaHabitacionFormValue {
 };
 
 export class ReservaHabitacionMapper {
+  static fromDetalle(detalle: ReservaHabitacionDetalle): ReservaHabitacionFormValue {
+    const noches = Number(detalle.totNoches ?? 0) || 0;
+    const habitaciones: ReservaHabitacionItem[] = (detalle.habitaciones ?? []).map((item) => {
+      const cantidadNinos = Number(item.numChild ?? 0) || 0;
+      const precioNino = cantidadNinos > 0 && noches > 0 ? (Number(item.totChild ?? 0) || 0) / cantidadNinos / noches : 0;
+
+      return {
+        categoria: String(item.catHabita ?? '').trim(),
+        tipo: String(item.tipHabita ?? '').trim(),
+        cantidad: Number(item.cantHab ?? 0) || 0,
+        pax: Number(item.numPax ?? 0) || 0,
+        precio: Number(item.precio ?? 0) || 0,
+        cantidadNinos,
+        precioNino,
+        total: Number(item.total ?? 0) || 0
+      };
+    });
+
+    const inclusiones: ReservaInclusionItem[] = (detalle.inclusiones ?? []).map((item) => ({
+      codServ: String(item.codServ ?? '').trim(),
+      desServ: String(item.desServ ?? '').trim(),
+      tipPax: String(item.tipPax ?? '').trim(),
+      precio: Number(item.precio ?? 0) || 0,
+      cantidad: Number(item.cantidad ?? 0) || 0,
+      totServ: Number(item.totServ ?? 0) || 0,
+      cCosto: String(item.cCosto ?? '').trim()
+    }));
+
+    const servicios: ReservaServicioItem[] = (detalle.servicios ?? []).map((item) => ({
+      codSrv: String(item.codSrv ?? item.codServ ?? '').trim(),
+      descripcion: String(item.descripcion ?? item.desServ ?? '').trim(),
+      cantidad: Number(item.cantidad ?? 0) || 0,
+      precio: Number(item.precio ?? 0) || 0,
+      impuesto: Number(item.impuesto ?? 0) || 0,
+      tipPax: String(item.tipPax ?? '').trim(),
+      total: Number(item.total ?? item.totServ ?? 0) || 0
+    }));
+
+    return {
+      codReserva: String(detalle.codReserva ?? '').trim(),
+      codAgencia: String(detalle.codAgencia ?? '').trim(),
+      codTarifa: String(detalle.codTarifa ?? '').trim(),
+      codPlan: String(detalle.codPlan ?? '').trim(),
+      fecIngreso: this.toInputDate(detalle.fecIngreso ?? detalle.fecIngresa ?? ''),
+      fecSalida: this.toInputDate(detalle.fecSalida ?? ''),
+      fecCreacion: this.toInputDate(detalle.fecCreacion ?? ''),
+      fecConfirma: this.toInputDate(detalle.fecConfirma ?? ''),
+      fecPrepago: this.toInputDate(detalle.fecPrepago ?? ''),
+      fecAnulada: this.toInputDate(detalle.fecAnulada ?? ''),
+      totNoches: Number(detalle.totNoches ?? 0) || 0,
+      totDias: Number(detalle.totDias ?? 0) || 0,
+      descripcion: String(detalle.descripcion ?? '').trim(),
+      tCambio: Number(detalle.tCambio ?? 0) || 0,
+      folio: String(detalle.folio ?? '').trim(),
+      estado: this.normalizeEstado(String(detalle.estado ?? 'ABI')),
+      moneda: String(detalle.moneda ?? '').trim(),
+      totalRsv: Number(detalle.totalRsv ?? 0) || 0,
+      observaciones: String(detalle.observaciones ?? detalle.observacion ?? '').trim(),
+      procesa: String(detalle.procesa ?? detalle.procesado ?? 0),
+      directo: String(detalle.directo ?? '').trim().toUpperCase() === 'S',
+      operador: String(detalle.operador ?? '').trim(),
+      habitaciones,
+      inclusiones,
+      servicios
+    };
+  }
+
   static toRequest(value: ReservaHabitacionFormValue, totalRsv: number, proceso = 0, resolveNumPax: (categoria: string, tipo: string) => number = () => 0): ReservaHabitacionRequest {
     const moneda = value.moneda.trim();
     const noches = Number(value.totNoches) || 0;
@@ -72,10 +140,10 @@ export class ReservaHabitacionMapper {
         total: Number(item.total) || 0,
         cpl: 0,
         impuesto: 0,
-        numPax: resolveNumPax(item.categoria, item.tipo),
+        numPax: resolveNumPax(item.categoria, item.tipo) || Number(item.pax) || 0,
         numChild: Number(item.cantidadNinos) || 0,
         totChild: (Number(item.cantidadNinos) || 0) * (Number(item.precioNino) || 0) * noches,
-        cCosto: '',
+        cCosto: 'HOSPED',
         orden: index + 1
       })),
       inclusiones: includeMealPlan
@@ -86,10 +154,10 @@ export class ReservaHabitacionMapper {
             precio: Number(item.precio) || 0,
             cantidad: Number(item.cantidad) || 0,
             totServ: Number(item.totServ) || 0,
-            exonera: 'N',
+            exonera: '0',
             cpl: 0,
             impInc: 0,
-            cCosto: '',
+            cCosto: (item.cCosto ?? '').trim(),
             orden: index + 1
           }))
         : [],
@@ -155,6 +223,25 @@ export class ReservaHabitacionMapper {
     const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
     if (isoMatch) {
       return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
+    }
+
+    return text;
+  }
+
+  private static toInputDate(value: string): string {
+    const text = String(value ?? '').trim();
+    if (!text || text.startsWith('1900-01-01')) {
+      return '';
+    }
+
+    const isoDate = /^(\d{4})-(\d{2})-(\d{2})/.exec(text);
+    if (isoDate) {
+      return `${isoDate[1]}-${isoDate[2]}-${isoDate[3]}`;
+    }
+
+    const apiDate = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text);
+    if (apiDate) {
+      return `${apiDate[3]}-${apiDate[2]}-${apiDate[1]}`;
     }
 
     return text;

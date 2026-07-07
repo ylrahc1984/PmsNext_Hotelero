@@ -38,6 +38,7 @@ export interface WalkInSummary {
   children: number;
   tarifaNoche: number;
   totalHabitacion: number;
+  totalAlimentacion: number;
   totalServicios: number;
   totalIncluido: number;
   total: number;

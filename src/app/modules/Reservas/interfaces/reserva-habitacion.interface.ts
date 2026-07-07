@@ -4,6 +4,7 @@ export interface ReservaHabitacionItem {
   categoria: string;
   tipo: string;
   cantidad: number;
+  pax?: number;
   precio: number;
   cantidadNinos: number;
   precioNino: number;
@@ -17,6 +18,7 @@ export interface ReservaInclusionItem {
   precio: number;
   cantidad: number;
   totServ: number;
+  cCosto?: string;
 }
 
 export interface ReservaServicioItem {
@@ -69,6 +71,61 @@ export interface ReservaServicioRequestItem {
   impuesto: number;
   tipPax: string;
   cCosto: string;
+}
+
+export interface ReservaHabitacionDetalleItem extends Partial<ReservaHabitacionRequestItem> {
+  codReserva?: string;
+  porDesc?: number;
+  operador?: string;
+}
+
+export interface ReservaInclusionDetalleItem extends Partial<ReservaInclusionRequestItem> {
+  codReserva?: string;
+  idOrden?: number;
+  operador?: string;
+}
+
+export interface ReservaServicioDetalleItem extends Partial<ReservaServicioRequestItem> {
+  codReserva?: string;
+  codServ?: string;
+  desServ?: string;
+  totServ?: number;
+  idOrden?: number;
+  operador?: string;
+}
+
+export interface ReservaHabitacionDetalle {
+  codReserva?: string;
+  codAgencia?: string;
+  nomAgencia?: string;
+  codTarifa?: string;
+  nomTarifa?: string;
+  codPlan?: string;
+  planAlimenticio?: string;
+  fecIngresa?: string;
+  fecIngreso?: string;
+  fecSalida?: string;
+  fecCreacion?: string;
+  fecConfirma?: string;
+  fecPrepago?: string;
+  fecAnulada?: string;
+  totNoches?: number;
+  totDias?: number;
+  descripcion?: string;
+  tCambio?: number;
+  folio?: string;
+  estado?: string;
+  moneda?: string;
+  totalRsv?: number;
+  observacion?: string;
+  observaciones?: string;
+  procesado?: number;
+  procesa?: number;
+  directo?: string;
+  operador?: string;
+  habitaciones?: ReservaHabitacionDetalleItem[];
+  inclusiones?: ReservaInclusionDetalleItem[];
+  servicios?: ReservaServicioDetalleItem[];
 }
 
 export interface ReservaHabitacionRequest {

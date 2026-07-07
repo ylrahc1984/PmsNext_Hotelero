@@ -130,11 +130,16 @@
               </div>
               <div class="col-md-4">
                 <label class="form-label">Plan Alimentación <span class="text-danger">*</span></label>
-                <select class="form-select" formControlName="planAlimentacion" [class.is-invalid]="isStayFieldInvalid('planAlimentacion')">
+                <select class="form-select" formControlName="planAlimentacion" [class.is-invalid]="isStayFieldInvalid('planAlimentacion')" (change)="onPlanAlimentacionChange($any($event.target).value)">
                   <option value="">Seleccione...</option>
                   <option *ngFor="let plan of planes; trackBy: trackByCode" [value]="plan.codigo">{{ plan.descripcion }}</option>
                 </select>
                 <div class="invalid-feedback">{{ getFieldError(stayForm.controls.planAlimentacion) }}</div>
+                <small class="text-muted d-block mt-1" *ngIf="!isMealPlanLoading && !mealPlanError && mealPlanInclusions().length > 0">
+                  {{ mealPlanInclusions().length }} inclusión(es) · {{ totalAlimentacion() | number:'1.2-2' }} {{ stayForm.controls.moneda.value }}
+                </small>
+                <small class="text-muted d-block mt-1" *ngIf="isMealPlanLoading">Cargando detalle del plan...</small>
+                <small class="text-warning d-block mt-1" *ngIf="!isMealPlanLoading && mealPlanError">{{ mealPlanError }}</small>
               </div>
 
               <div class="col-12">
@@ -162,6 +167,7 @@
             <div class="summary-line"><span>Tarifa Noche</span><strong>{{ summary().tarifaNoche | number:'1.2-2' }}</strong></div>
             <hr>
             <div class="summary-line"><span>Total Habitación</span><strong>{{ summary().totalHabitacion | number:'1.2-2' }}</strong></div>
+            <div class="summary-line"><span>Plan Alimentación</span><strong>{{ summary().totalAlimentacion | number:'1.2-2' }}</strong></div>
             <div class="summary-line"><span>Total Servicios</span><strong>{{ summary().totalServicios | number:'1.2-2' }}</strong></div>
             <div class="summary-line"><span>Total Incluido</span><strong>{{ summary().totalIncluido | number:'1.2-2' }}</strong></div>
             <div class="summary-total">

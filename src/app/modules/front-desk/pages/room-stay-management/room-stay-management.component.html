@@ -466,7 +466,9 @@
 
           <footer class="room-invoice-footer">
             <button type="button" class="room-invoice-secondary-btn" (click)="closeActionModal()">Cancelar</button>
-            <button type="button" class="room-invoice-primary-btn" (click)="executeActiveAction()">Confirmar Facturacion</button>
+            <button type="button" class="room-invoice-primary-btn" [disabled]="isInvoiceSubmitting()" (click)="executeActiveAction()">
+              {{ isInvoiceSubmitting() ? 'Facturando...' : 'Confirmar Facturacion' }}
+            </button>
           </footer>
         } @else if (isActionSelected('new-charge')) {
           <header class="room-charge-header">
@@ -835,6 +837,161 @@
             {{ action.confirmText }}
           </button>
         </footer>
+        }
+      </section>
+    </div>
+  }
+
+  @if (isChargeDetailOpen()) {
+    <div class="charge-detail-backdrop" (click)="closeChargeDetailModal()">
+      <section class="charge-detail-modal" role="dialog" aria-modal="true" aria-label="Detalle del cargo" (click)="$event.stopPropagation()">
+        <header class="charge-detail-header">
+          <div class="charge-detail-heading">
+            <span class="charge-detail-header-icon material-icons" aria-hidden="true">receipt_long</span>
+            <div>
+              <span class="charge-detail-eyebrow">{{ chargeBucketLabel(selectedChargeDetailSource()?.bucket) }}</span>
+              <h2>Detalle del cargo</h2>
+              <div class="charge-detail-meta">
+                <span>Documento {{ selectedChargeDetail()?.encabezado?.numCrgHab || selectedChargeDetailSource()?.charge?.numCrgHab || '-' }}</span>
+                <span>Reserva {{ selectedChargeDetail()?.encabezado?.codReserva || room().reservationNumber || '-' }}</span>
+                <span>Habitacion {{ selectedChargeDetail()?.encabezado?.numHab || room().roomNumber || '-' }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="charge-detail-header-actions">
+            <button type="button" class="charge-detail-icon-button" aria-label="Actualizar detalle" [disabled]="isChargeDetailLoading()" (click)="refreshSelectedChargeDetail()">
+              <span class="material-icons" aria-hidden="true">refresh</span>
+            </button>
+            <button type="button" class="charge-detail-icon-button" aria-label="Cerrar" (click)="closeChargeDetailModal()">
+              <span class="material-icons" aria-hidden="true">close</span>
+            </button>
+          </div>
+        </header>
+
+        @if (isChargeDetailLoading()) {
+          <div class="charge-detail-loading">
+            <span class="material-icons" aria-hidden="true">hourglass_top</span>
+            <strong>Consultando detalle del cargo...</strong>
+          </div>
+        } @else if (chargeDetailErrorMessage()) {
+          <div class="charge-detail-error">
+            <span class="material-icons" aria-hidden="true">error_outline</span>
+            <strong>{{ chargeDetailErrorMessage() }}</strong>
+          </div>
+        } @else {
+        @if (selectedChargeDetail(); as chargeDetail) {
+          <main class="charge-detail-body">
+            <section class="charge-detail-summary">
+              <article>
+                <span>Habitacion</span>
+                <strong>{{ chargeDetail.encabezado.numHab || '-' }}</strong>
+              </article>
+              <article>
+                <span>Huesped</span>
+                <strong>{{ chargeDetail.encabezado.nombrePax || '-' }}</strong>
+              </article>
+              <article>
+                <span>Punto venta</span>
+                <strong>{{ chargeDetail.encabezado.pntVenta || '-' }}</strong>
+              </article>
+              <article>
+                <span>Fecha y hora</span>
+                <strong>{{ formatDetailDate(chargeDetail.encabezado.fecha) }} · {{ formatDetailTime(chargeDetail.encabezado.hora) }}</strong>
+              </article>
+              <article>
+                <span>Operador</span>
+                <strong>{{ chargeDetail.encabezado.operador || '-' }}</strong>
+              </article>
+              <article class="charge-detail-summary-total">
+                <span>Total</span>
+                <strong>{{ selectedChargeDetailTotal() | currency:(chargeDetail.encabezado.moneda || 'USD'):'symbol':'1.2-2' }}</strong>
+              </article>
+            </section>
+
+            <section class="charge-detail-table-card">
+              <div class="charge-detail-table-title">
+                <div>
+                  <span>Consumos</span>
+                  <h3>{{ chargeDetail.detalles.length }} item(s)</h3>
+                </div>
+                <strong>{{ chargeDetail.encabezado.moneda || 'USD' }}</strong>
+              </div>
+
+              @if (chargeDetail.detalles.length) {
+                <div class="charge-detail-table-wrap">
+                  <table class="charge-detail-table">
+                    <thead>
+                      <tr>
+                        <th>Item</th>
+                        <th class="text-center">Cant.</th>
+                        <th class="text-end">Precio</th>
+                        <th class="text-end">Descuento</th>
+                        <th class="text-end">Total</th>
+                        <th>Habitacion</th>
+                        <th>Estado</th>
+                        <th class="text-center">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (detail of chargeDetail.detalles; track trackByChargeDetail($index, detail)) {
+                        <tr [class.charge-detail-row--annulled]="!canMutateChargeDetail(detail)">
+                          <td>
+                            <div class="charge-detail-item">
+                              <strong>{{ detail.nomConsumo || 'Consumo sin nombre' }}</strong>
+                              <span>{{ detail.codConsumo || '-' }} · {{ detail.grupo || '-' }} / {{ detail.categoria || '-' }}</span>
+                              @if (detail.comentario) {
+                                <small>{{ detail.comentario }}</small>
+                              }
+                            </div>
+                          </td>
+                          <td class="text-center">{{ detail.cantidad | number:'1.0-2' }}</td>
+                          <td class="text-end">{{ detail.precio | number:'1.2-2' }}</td>
+                          <td class="text-end">{{ detail.descuento | number:'1.2-2' }}</td>
+                          <td class="text-end fw-strong">{{ detail.total | number:'1.2-2' }}</td>
+                          <td>{{ detail.numHab || '-' }}</td>
+                          <td>
+                            <span class="charge-detail-status" [class.charge-detail-status--muted]="!canMutateChargeDetail(detail)">
+                              {{ !canMutateChargeDetail(detail) ? 'Bloqueado' : 'Activo' }}
+                            </span>
+                          </td>
+                          <td>
+                            <div class="charge-detail-row-actions">
+                              <button type="button" aria-label="Editar item" [disabled]="!canMutateChargeDetail(detail)" (click)="editChargeDetailLine(detail)">
+                                <span class="material-icons" aria-hidden="true">edit</span>
+                              </button>
+                              <button type="button" aria-label="Trasladar item" [disabled]="!canMutateChargeDetail(detail)" (click)="transferChargeDetailLine(detail)">
+                                <span class="material-icons" aria-hidden="true">sync_alt</span>
+                              </button>
+                              <button type="button" class="charge-detail-row-action--danger" aria-label="Anular item" [disabled]="!canMutateChargeDetail(detail)" (click)="annulChargeDetailLine(detail)">
+                                <span class="material-icons" aria-hidden="true">block</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              } @else {
+                <div class="charge-detail-empty">
+                  <span class="material-icons" aria-hidden="true">receipt_long</span>
+                  <strong>Este cargo no tiene lineas de detalle.</strong>
+                </div>
+              }
+            </section>
+          </main>
+
+          <footer class="charge-detail-footer">
+            <button type="button" class="charge-detail-secondary" (click)="closeChargeDetailModal()">
+              <span class="material-icons" aria-hidden="true">close</span>
+              <span>Cerrar</span>
+            </button>
+            <button type="button" class="charge-detail-primary" [disabled]="!selectedChargeDetailSource()" (click)="annulCharge(selectedChargeDetailSource()!.bucket, selectedChargeDetailSource()!.charge)">
+              <span class="material-icons" aria-hidden="true">block</span>
+              <span>Anular cargo completo</span>
+            </button>
+          </footer>
+        }
         }
       </section>
     </div>

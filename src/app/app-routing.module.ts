@@ -384,6 +384,16 @@ const routes: Routes = [
           import('./modules/Reservas/reserva-hospedaje/reserva-hospedaje.component').then((c) => c.ReservaHospedajeComponent)
       },
       {
+        path: 'editar-hospedaje/:codReserva',
+        loadComponent: () =>
+          import('./modules/Reservas/reserva-hospedaje/reserva-hospedaje.component').then((c) => c.ReservaHospedajeComponent)
+      },
+      {
+        path: 'detalle-hospedaje/:codReserva',
+        loadComponent: () =>
+          import('./modules/Reservas/reserva-hospedaje-detalle/reserva-hospedaje-detalle.component').then((c) => c.ReservaHospedajeDetalleComponent)
+      },
+      {
         path: 'forecast-ocupacion',
         redirectTo: '/front-desk/forecast-ocupacion',
         pathMatch: 'full'

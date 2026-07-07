@@ -2,13 +2,13 @@
   <header class="reservation-topbar">
     <div class="reservation-title">
       <div class="title-line">
-        <h1>Nueva Reserva de Hospedaje</h1>
+        <h1>{{ pageTitle() }}</h1>
         <i class="bi bi-star"></i>
       </div>
       <nav class="breadcrumb-line" aria-label="breadcrumb">
         <a routerLink="/reservas/consulta-reservas">Reservas</a>
         <i class="bi bi-chevron-right"></i>
-        <span>Nueva reserva</span>
+        <span>{{ breadcrumbTitle() }}</span>
       </nav>
     </div>
 
@@ -19,19 +19,22 @@
       </button>
       <button type="button" class="btn btn-outline-light action-button" (click)="limpiarFormulario()">
         <i class="bi bi-eraser"></i>
-        Limpiar
+        {{ clearButtonText() }}
       </button>
-      <button type="button" class="btn btn-outline-light action-button" (click)="guardarBorrador()">
+      <button type="button" class="btn btn-outline-light action-button" (click)="guardarBorrador()" *ngIf="!isEditMode()">
         <i class="bi bi-floppy"></i>
         Guardar borrador
       </button>
-      <button type="submit" class="btn btn-primary action-button action-button--primary" [disabled]="saving()">
-        <span class="spinner-border spinner-border-sm" *ngIf="saving()"></span>
-        <i class="bi bi-check-circle" *ngIf="!saving()"></i>
-        Confirmar reserva
+      <button type="submit" class="btn btn-primary action-button action-button--primary" [disabled]="saving() || loadingDetalle()">
+        <span class="spinner-border spinner-border-sm" *ngIf="saving() || loadingDetalle()"></span>
+        <i class="bi bi-check-circle" *ngIf="!saving() && !loadingDetalle()"></i>
+        {{ submitButtonText() }}
       </button>
     </div>
   </header>
+
+  <div class="alert alert-info mx-3 mt-3" *ngIf="loadingDetalle()">Cargando detalle de la reserva...</div>
+  <div class="alert alert-danger mx-3 mt-3" *ngIf="detailError()">{{ detailError() }}</div>
 
   <div class="reservation-layout">
     <aside class="left-column">
@@ -106,15 +109,13 @@
           <label class="field">
             <span>Fecha ingreso <b>*</b></span>
             <div class="date-control">
-              <input type="date" class="form-control" formControlName="fecIngreso">
-              <i class="bi bi-calendar3"></i>
+              <input type="date" class="form-control date-input--compact" formControlName="fecIngreso">
             </div>
           </label>
           <label class="field">
             <span>Fecha salida <b>*</b></span>
             <div class="date-control">
-              <input type="date" class="form-control" formControlName="fecSalida">
-              <i class="bi bi-calendar3"></i>
+              <input type="date" class="form-control date-input--compact" formControlName="fecSalida">
             </div>
           </label>
 
@@ -142,7 +143,6 @@
             <span>Fecha creación</span>
             <div class="date-control">
               <input type="date" class="form-control" formControlName="fecCreacion">
-              <i class="bi bi-calendar3"></i>
             </div>
           </label>
 
@@ -221,12 +221,7 @@
             <div class="room-editor-fields room-editor-fields--three">
               <label class="field">
                 <span>Precio por habitación <b>*</b></span>
-                <div class="money-control">
-                  <select aria-label="Moneda precio habitación">
-                    <option>{{ reservaForm.controls.moneda.value }}</option>
-                  </select>
-                  <input type="number" formControlName="precio" min="0" step="0.01">
-                </div>
+                <input type="number" class="form-control" formControlName="precio" min="0" step="0.01">
               </label>
               <label class="field">
                 <span>Cantidad niños</span>
@@ -238,12 +233,7 @@
               </label>
               <label class="field">
                 <span>Precio por niño</span>
-                <div class="money-control">
-                  <select aria-label="Moneda precio niño">
-                    <option>{{ reservaForm.controls.moneda.value }}</option>
-                  </select>
-                  <input type="number" formControlName="precioNino" min="0" step="0.01">
-                </div>
+                <input type="number" class="form-control" formControlName="precioNino" min="0" step="0.01">
               </label>
             </div>
           </div>
@@ -254,7 +244,7 @@
               <strong>{{ reservaForm.controls.moneda.value || '---' }} {{ habitacionForm.controls.total.value | number: '1.2-2' }}</strong>
             </div>
             <div class="room-editor-actions__buttons">
-              <button type="button" class="btn btn-light" (click)="habitacionForm.reset({ categoria: roomCategories[0]?.codigo || '', tipo: roomTypes[0]?.codigo || '', cantidad: 1, precio: 200, cantidadNinos: 0, precioNino: 0, total: 0 })">
+              <button type="button" class="btn btn-light" (click)="habitacionForm.reset({ categoria: roomCategories[0]?.codigo || '', tipo: roomTypes[0]?.codigo || '', cantidad: 1, pax: roomTypes[0]?.pax || 0, precio: 200, cantidadNinos: 0, precioNino: 0, total: 0 })">
                 Cancelar
               </button>
               <button type="button" class="btn btn-primary" (click)="agregarHabitacion()">
@@ -335,11 +325,15 @@
           <span class="summary-dot summary-dot--green"><i class="bi bi-check-lg"></i></span>
           <div>
             <strong>{{ inclusiones.at(0)?.controls?.desServ?.value || selectedPlanDescription() }}</strong>
-            <span>{{ reservaForm.controls.totNoches.value }} noches · total incluido {{ reservaForm.controls.moneda.value || '---' }} {{ inclusionesTotal() | number: '1.2-2' }}</span>
+            <span *ngIf="!isMealPlanLoading && !mealPlanError">{{ reservaForm.controls.totNoches.value }} noches · total incluido {{ reservaForm.controls.moneda.value || '---' }} {{ inclusionesTotal() | number: '1.2-2' }}</span>
+            <span *ngIf="isMealPlanLoading">Cargando detalle del plan...</span>
+            <span *ngIf="!isMealPlanLoading && mealPlanError">{{ mealPlanError }}</span>
           </div>
         </div>
 
         <div class="collapsible-body" *ngIf="planExpanded()">
+          <div class="alert alert-info py-2" *ngIf="isMealPlanLoading">Cargando detalle del plan de alimentos...</div>
+          <div class="alert alert-warning py-2" *ngIf="!isMealPlanLoading && mealPlanError">{{ mealPlanError }}</div>
           <div class="included-strip" *ngIf="inclusiones.length === 0">
             <span class="included-check"><i class="bi bi-dash-lg"></i></span>
             <div>
@@ -472,7 +466,7 @@
           <div class="summary-line"><span>Subtotal</span><strong>{{ reservaForm.controls.moneda.value }} {{ habitacionesTotal() + inclusionesTotal() + serviciosSubtotal() | number: '1.2-2' }}</strong></div>
           <div class="summary-line"><span>Impuestos</span><strong>{{ reservaForm.controls.moneda.value }} {{ impuestos() | number: '1.2-2' }}</strong></div>
           <div class="grand-total">
-            <span>Total Reserva</span>
+            <span>Total</span>
             <strong>{{ reservaForm.controls.moneda.value }} {{ totalReserva() | number: '1.2-2' }}</strong>
           </div>
         </div>
@@ -484,7 +478,7 @@
           <h2>Información de la Reserva</h2>
         </div>
         <div class="info-list">
-          <div><span>Código de reserva</span><strong>(Auto)</strong></div>
+          <div><span>Código de reserva</span><strong>{{ isEditMode() ? reservaForm.controls.codReserva.value : '(Auto)' }}</strong></div>
           <div><span>Estado</span><strong class="status-pill">{{ reservaForm.controls.estado.value }}</strong></div>
           <div><span>Moneda</span><strong>{{ reservaForm.controls.moneda.value || 'Seleccione tarifa' }}</strong></div>
           <div><span>Tipo de cambio</span><strong>{{ reservaForm.controls.tCambio.value | number: '1.2-2' }}</strong></div>
@@ -727,4 +721,3 @@
     </div>
   </div>
 </div>
-

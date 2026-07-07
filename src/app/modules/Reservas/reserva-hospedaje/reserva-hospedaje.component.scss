@@ -88,7 +88,7 @@
 
 .reservation-layout {
   display: grid;
-  grid-template-columns: minmax(270px, 0.95fr) minmax(520px, 2.05fr) minmax(285px, 1fr);
+  grid-template-columns: minmax(260px, 0.85fr) minmax(620px, 2.35fr) minmax(235px, 0.7fr);
   gap: 0.75rem;
   align-items: start;
 }
@@ -381,6 +381,11 @@ textarea.form-control {
   padding-right: 2.2rem;
 }
 
+.date-control .date-input--compact {
+  padding-right: 0.9rem;
+  padding-left: 0.6rem;
+}
+
 .date-control i {
   position: absolute;
   right: 0.75rem;
@@ -613,13 +618,17 @@ textarea.form-control {
 }
 
 .clean-table {
-  overflow: hidden;
+  overflow-x: auto;
   border: 1px solid #dfe7f2;
   border-radius: 7px;
 }
 
 .table {
   color: #07163a;
+}
+
+.room-card .clean-table .table {
+  min-width: 960px;
 }
 
 .table thead th {
@@ -639,10 +648,17 @@ textarea.form-control {
   font-weight: 650;
 }
 
+.room-card .table th:last-child,
+.room-card .table td:last-child {
+  width: 84px;
+  min-width: 84px;
+}
+
 .row-actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.4rem;
+  min-width: 72px;
 }
 
 .icon-button {
@@ -651,17 +667,19 @@ textarea.form-control {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 0;
+  border: 1px solid transparent;
   border-radius: 6px;
   font-size: 0.85rem;
 }
 
 .icon-button--edit {
+  border-color: #c9d9ff;
   color: #0d49e8;
   background: #eff4ff;
 }
 
 .icon-button--delete {
+  border-color: #ffd1d6;
   color: #ef233c;
   background: #fff0f1;
 }

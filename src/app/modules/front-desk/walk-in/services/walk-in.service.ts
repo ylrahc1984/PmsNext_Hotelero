@@ -3,8 +3,9 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, catchError, map, of } from 'rxjs';
 
 import { ClienteService, SelectOption } from 'src/app/demo/catalogos/agencias-comisionistas/cliente.service';
-import { PlanesTarifasService } from 'src/app/demo/catalogos/listas-precios/planes-tarifas.service';
 import { environment } from 'src/environments/environment';
+import { MealPlan } from '../../settings/meal-plans/models/meal-plan.model';
+import { MealPlansService } from '../../settings/meal-plans/services/meal-plans.service';
 import { Nationality } from '../../settings/nationalities/models/nationality.model';
 import { NationalitiesService } from '../../settings/nationalities/services/nationalities.service';
 import { PaxType } from '../../settings/pax-types/models/pax-type.model';
@@ -42,22 +43,35 @@ interface TarifaReservaApiDto {
   MR03_Operador       ?: string;
 }
 
+export interface WalkInTarifaAlimento {
+  codServ: string;
+  descSrv: string;
+  codTarifa: string;
+  codPlan: string;
+  tipPax: string;
+  moneda: string;
+  impInc: number;
+  area: string;
+  precio: number;
+  impInclu: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class WalkInService {
   private readonly http                       = inject(HttpClient);
   private readonly clienteService             = inject(ClienteService);
   private readonly nationalitiesService       = inject(NationalitiesService);
   private readonly paxTypesService            = inject(PaxTypesService);
-  private readonly planesTarifasService       = inject(PlanesTarifasService);
+  private readonly mealPlansService           = inject(MealPlansService);
   private readonly agenciaUrl                 = `${(environment.apiUrl ?? '').toString().replace(/\/+$/, '')}/agencia`;
   private readonly tarifaReservaUrl           = `${(environment.apiUrl ?? '').toString().replace(/\/+$/, '')}/tarifa-reserva`;
+  private readonly reservasHabitacionUrl      = `${(environment.apiUrl ?? '').toString().replace(/\/+$/, '')}/reservas-habitacion`;
   private readonly walkInUrl                  = `${(environment.apiUrl ?? '').toString().replace(/\/+$/, '')}/walkin`;
 
   private readonly demoPlanes: WalkInOption[] = [
-    { codigo: 'SIN', descripcion: 'Sin Plan de alimentacion' },
-    { codigo: 'DES', descripcion: 'Desayuno incluido' },
-    { codigo: 'MP', descripcion: 'Media Pension' },
-    { codigo: 'PC', descripcion: 'Pension completa' }
+    { codigo: 'SPL', descripcion: 'Sin plan de alimentacion' },
+    { codigo: 'DYN', descripcion: 'Desayuno incluido' },
+    { codigo: 'FUL', descripcion: 'Full plan' }
   ];
 
   createWalkIn(payload: WalkInSavePayload): Observable<unknown> {
@@ -84,15 +98,30 @@ export class WalkInService {
   }
 
   getPlanes(): Observable<WalkInOption[]> {
-    return this.planesTarifasService
-      .getPlanesTarifas(1, 100)
+    return this.mealPlansService
+      .getMealPlans()
       .pipe(
         map((planes) => {
-          const mappedPlanes = planes.map((plan) => ({ codigo: String(plan.planId), descripcion: plan.nombrePlan }));
+          const mappedPlanes = planes
+            .map((plan) => this.mapMealPlan(plan))
+            .filter((plan) => plan.codigo)
+            .sort((a, b) => a.orden - b.orden || a.descripcion.localeCompare(b.descripcion))
+            .map(({ codigo, descripcion }) => ({ codigo, descripcion }));
           return mappedPlanes.length > 0 ? mappedPlanes : this.demoPlanes;
         }),
         catchError(() => of(this.demoPlanes))
       );
+  }
+
+  getTarifaAlimentos(codTarifa: string, codPlan: string): Observable<WalkInTarifaAlimento[]> {
+    const params = new HttpParams().set('codTarifa', codTarifa.trim()).set('codPlan', codPlan.trim());
+
+    return this.http
+      .get<WalkInTarifaAlimento[] | { datos?: WalkInTarifaAlimento[]; data?: WalkInTarifaAlimento[] }>(
+        `${this.reservasHabitacionUrl}/tarifa-alimentos`,
+        { params }
+      )
+      .pipe(map((response) => this.normalizeTarifaAlimentosResponse(response)));
   }
 
   searchAgencias(term: string): Observable<WalkInAgenciaOption[]> {
@@ -193,6 +222,28 @@ export class WalkInService {
       activo          : item.MR03_Activo === true || Number(item.MR03_Activo ?? 0) === 1,
       operador        : String(item.MR03_Operador ?? '').trim()
     };
+  }
+
+  private mapMealPlan(plan: MealPlan): WalkInOption & { orden: number } {
+    return {
+      codigo: String(plan.MR06_CodPlan ?? '').trim(),
+      descripcion: String(plan.MR06_PlanAlimenticio ?? '').trim(),
+      orden: Number(plan.MR06_Orden ?? 0)
+    };
+  }
+
+  private normalizeTarifaAlimentosResponse(
+    response: WalkInTarifaAlimento[] | { datos?: WalkInTarifaAlimento[]; data?: WalkInTarifaAlimento[] } | null | undefined
+  ): WalkInTarifaAlimento[] {
+    if (Array.isArray(response)) {
+      return response;
+    }
+
+    if (Array.isArray(response?.datos)) {
+      return response.datos;
+    }
+
+    return Array.isArray(response?.data) ? response.data : [];
   }
 
   filterTarifas(items: WalkInTarifaOption[], term: string): WalkInTarifaOption[] {

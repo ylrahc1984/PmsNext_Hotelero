@@ -24,9 +24,12 @@ import {
   PointOfSalePaymentMethodApi,
   RoomChargePayload,
   RoomChargeAnnulPayload,
+  RoomChargeLookupDetail,
+  RoomChargeLookupResponse,
   RoomChargePointOfSaleApi,
   RoomChargePriceListApiItem,
   RoomAvailabilityApiRoom,
+  RoomInvoicePayload,
   RoomingListUpdatePayload,
   RoomChangePayload,
   RoomStayApiCharge,
@@ -186,6 +189,16 @@ interface RoomChargeLine {
   comment         : string;
 }
 
+interface ChargeDetailSelection {
+  bucket          : ChargeBucket;
+  charge          : Charge;
+}
+
+interface ChargeDetailActionState {
+  orden           : number;
+  action          : 'edit' | 'annul' | 'transfer';
+}
+
 interface RoomStay {
   roomNumber            : string;
   roomType              : string;
@@ -298,6 +311,12 @@ export class RoomStayManagementComponent implements OnInit {
   readonly isRoomChargeCatalogLoading            = signal(false);
   readonly isRoomChargeItemsLoading              = signal(false);
   readonly isRoomChargeSubmitting                = signal(false);
+  readonly isChargeDetailOpen                    = signal(false);
+  readonly isChargeDetailLoading                 = signal(false);
+  readonly chargeDetailErrorMessage              = signal('');
+  readonly selectedChargeDetail                  = signal<RoomChargeLookupResponse | null>(null);
+  readonly selectedChargeDetailSource            = signal<ChargeDetailSelection | null>(null);
+  readonly chargeDetailAction                    = signal<ChargeDetailActionState | null>(null);
   readonly showExtraGuestModal                   = signal(false);
   readonly isExtraGuestCatalogLoading            = signal(false);
   readonly isExtraGuestSaving                    = signal(false);
@@ -323,14 +342,15 @@ export class RoomStayManagementComponent implements OnInit {
     methodCode      : '',
     moneda          : this.invoiceBaseCurrency,
     amount          : null,
-    numTarjeta      : '',
-    vencimiento     : '',
+    numTarjeta      : '00000',
+    vencimiento     : '00/00',
     tCambio         : 1
   });
   readonly invoiceValidationMessage         = signal('');
   readonly invoiceCurrencies                = signal<MonedaUI[]>([]);
   readonly isInvoiceCatalogLoading          = signal(false);
   readonly isInvoiceExchangeRateLoading     = signal(false);
+  readonly isInvoiceSubmitting              = signal(false);
   readonly roomOptions                      = computed(() =>
     this.availableRoomsLoaded() || this.isAvailableRoomsLoading() ? this.availableRoomOptions() : this.buildRoomOptions(this.room().roomNumber)
   );
@@ -470,7 +490,7 @@ export class RoomStayManagementComponent implements OnInit {
           icon          : 'description',
           kind          : 'document',
           description   : 'Prepara la emision del documento fiscal de la estancia con un resumen previo.',
-          confirmText   : 'Preparar factura',
+          confirmText   : 'Confirmar factura',
           tone          : 'primary'
         }
       ]
@@ -620,6 +640,9 @@ export class RoomStayManagementComponent implements OnInit {
   readonly roomChargeTotal = computed(() =>
     this.roundCurrency(this.roomChargeLines().reduce((sum, line) => sum + line.total, 0))
   );
+  readonly selectedChargeDetailTotal = computed(() =>
+    this.roundCurrency((this.selectedChargeDetail()?.detalles ?? []).reduce((sum, detail) => sum + Number(detail.total ?? 0), 0))
+  );
 
   constructor(
     private readonly route: ActivatedRoute,
@@ -719,6 +742,10 @@ export class RoomStayManagementComponent implements OnInit {
       );
     }
 
+    if (this.isActionSelected('invoice-room')) {
+      return !this.isInvoiceSubmitting();
+    }
+
     return true;
   }
 
@@ -765,7 +792,8 @@ export class RoomStayManagementComponent implements OnInit {
         this.applyDocumentAction('Estado de cuenta preparado');
         break;
       case 'invoice-room':
-        shouldClose = this.applyRoomInvoiceAction();
+        shouldClose = false;
+        this.submitRoomInvoice();
         break;
       case 'check-out':
         this.applyCheckOutFlow();
@@ -897,8 +925,8 @@ export class RoomStayManagementComponent implements OnInit {
       methodCode: draft.methodCode,
       moneda,
       amount: nextPendingAmount > 0 ? nextPendingAmount : null,
-      numTarjeta: '',
-      vencimiento: '',
+      numTarjeta: '00000',
+      vencimiento: '00/00',
       tCambio: exchangeRate
     });
   }
@@ -917,28 +945,224 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   viewChargeDetail(bucket: ChargeBucket, charge: Charge): void {
-    const bucketLabel = bucket === 'lodging' ? 'Hospedaje y alimentos' : 'Extras';
+    const numCrgHab = this.cleanText(charge.numCrgHab || charge.reference);
 
-    void Swal.fire({
-      title: 'Detalle del cargo',
-      icon: 'info',
-      confirmButtonText: 'Cerrar',
+    if (!numCrgHab) {
+      this.toastService.warning('El cargo no tiene un numero de documento para consultar.', 3500, 'Cargos');
+      return;
+    }
+
+    this.selectedChargeDetailSource.set({ bucket, charge });
+    this.selectedChargeDetail.set(null);
+    this.chargeDetailErrorMessage.set('');
+    this.chargeDetailAction.set(null);
+    this.isChargeDetailOpen.set(true);
+    this.isChargeDetailLoading.set(true);
+
+    this.roomStayManagementService
+      .getRoomChargeDetailByNumber(numCrgHab)
+      .pipe(
+        finalize(() => this.isChargeDetailLoading.set(false)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (detail) => {
+          this.selectedChargeDetail.set(detail);
+        },
+        error: (error) => {
+          console.error('No se pudo consultar el detalle del cargo.', error);
+          this.chargeDetailErrorMessage.set('No se pudo consultar el detalle del cargo. Revise la conexion con el API.');
+        }
+      });
+  }
+
+  closeChargeDetailModal(): void {
+    this.isChargeDetailOpen.set(false);
+    this.isChargeDetailLoading.set(false);
+    this.chargeDetailErrorMessage.set('');
+    this.selectedChargeDetail.set(null);
+    this.selectedChargeDetailSource.set(null);
+    this.chargeDetailAction.set(null);
+  }
+
+  refreshSelectedChargeDetail(): void {
+    const source = this.selectedChargeDetailSource();
+
+    if (!source) {
+      return;
+    }
+
+    this.viewChargeDetail(source.bucket, source.charge);
+  }
+
+  trackByChargeDetail(_: number, item: RoomChargeLookupDetail): string {
+    return `${item.numCrgHab}-${item.orden}-${item.codConsumo}`;
+  }
+
+  chargeBucketLabel(bucket: ChargeBucket | undefined): string {
+    return bucket === 'extras' ? 'Cargos Extras' : 'Cargos de la Estancia';
+  }
+
+  formatDetailDate(value: string | null | undefined): string {
+    return this.formatApiDate(value) || '-';
+  }
+
+  formatDetailTime(value: string | null | undefined): string {
+    return this.formatApiTime(value) || '-';
+  }
+
+  canMutateChargeDetail(detail: RoomChargeLookupDetail): boolean {
+    const estado = this.cleanText(detail.estado).toUpperCase();
+    const cierre = this.cleanText(this.selectedChargeDetail()?.encabezado?.cierre).toUpperCase();
+
+    return estado !== 'ANU' && estado !== '1' && cierre !== '1' && cierre !== 'S';
+  }
+
+  async editChargeDetailLine(detail: RoomChargeLookupDetail): Promise<void> {
+    if (!this.canMutateChargeDetail(detail)) {
+      this.toastService.info('Este item no se puede editar porque esta cerrado o anulado.', 3500, 'Cargos');
+      return;
+    }
+
+    this.chargeDetailAction.set({ orden: detail.orden, action: 'edit' });
+    const result = await Swal.fire({
+      title: 'Editar item del cargo',
       html: `
-        <div style="display:grid;gap:10px;text-align:left">
-          <div><strong>Tipo:</strong> ${bucketLabel}</div>
-          <div><strong>Fecha:</strong> ${charge.date || '-'} ${charge.time || ''}</div>
-          <div><strong>Concepto:</strong> ${charge.concept || '-'}</div>
-          <div><strong>Referencia:</strong> ${charge.reference || '-'}</div>
-          <div><strong>Documento cargo:</strong> ${charge.tipCrgHab || '-'} ${charge.numCrgHab || ''}</div>
-          <div><strong>Monto:</strong> ${this.formatCurrency(charge.charge)}</div>
-          <div><strong>Facturable:</strong> ${charge.invoiceSelected ? 'Si' : 'No'}</div>
+        <div style="display:grid;gap:12px;text-align:left">
+          <label style="display:grid;gap:6px;font-weight:700">Descripcion
+            <input id="charge-detail-name" class="swal2-input" value="${this.escapeHtml(detail.nomConsumo)}" style="margin:0;width:100%">
+          </label>
+          <label style="display:grid;gap:6px;font-weight:700">Cantidad
+            <input id="charge-detail-quantity" type="number" min="0" step="1" class="swal2-input" value="${Number(detail.cantidad || 0)}" style="margin:0;width:100%">
+          </label>
+          <label style="display:grid;gap:6px;font-weight:700">Precio
+            <input id="charge-detail-price" type="number" min="0" step="0.01" class="swal2-input" value="${Number(detail.precio || 0)}" style="margin:0;width:100%">
+          </label>
+          <label style="display:grid;gap:6px;font-weight:700">Comentario
+            <textarea id="charge-detail-comment" class="swal2-textarea" style="margin:0;width:100%">${this.escapeHtml(detail.comentario)}</textarea>
+          </label>
         </div>
-      `
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Actualizar',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true,
+      preConfirm: () => {
+        const name = this.cleanText((document.getElementById('charge-detail-name') as HTMLInputElement | null)?.value);
+        const quantity = Number((document.getElementById('charge-detail-quantity') as HTMLInputElement | null)?.value);
+        const price = Number((document.getElementById('charge-detail-price') as HTMLInputElement | null)?.value);
+        const comment = this.cleanText((document.getElementById('charge-detail-comment') as HTMLTextAreaElement | null)?.value);
+
+        if (!name) {
+          Swal.showValidationMessage('La descripcion es requerida.');
+          return null;
+        }
+
+        if (!Number.isFinite(quantity) || quantity <= 0) {
+          Swal.showValidationMessage('La cantidad debe ser mayor a 0.');
+          return null;
+        }
+
+        if (!Number.isFinite(price) || price < 0) {
+          Swal.showValidationMessage('El precio no es valido.');
+          return null;
+        }
+
+        return { name, quantity, price, comment };
+      }
     });
+
+    this.chargeDetailAction.set(null);
+
+    if (!result.isConfirmed || !result.value) {
+      return;
+    }
+
+    this.updateSelectedChargeDetailLine(detail, {
+      nomConsumo: result.value.name,
+      cantidad: result.value.quantity,
+      precio: result.value.price,
+      total: this.roundCurrency(result.value.quantity * result.value.price),
+      comentario: result.value.comment
+    });
+    this.toastService.info('Cambios preparados en pantalla. Falta conectar el endpoint de actualizacion del item.', 4500, 'Cargos');
+  }
+
+  async transferChargeDetailLine(detail: RoomChargeLookupDetail): Promise<void> {
+    if (!this.canMutateChargeDetail(detail)) {
+      this.toastService.info('Este item no se puede trasladar porque esta cerrado o anulado.', 3500, 'Cargos');
+      return;
+    }
+
+    this.chargeDetailAction.set({ orden: detail.orden, action: 'transfer' });
+    const result = await Swal.fire({
+      title: 'Trasladar item',
+      input: 'text',
+      inputLabel: 'Habitacion destino',
+      inputPlaceholder: 'Ej. 711',
+      inputValue: '',
+      showCancelButton: true,
+      confirmButtonText: 'Preparar traslado',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true,
+      inputValidator: (value) => {
+        if (!this.cleanText(value)) {
+          return 'Indique la habitacion destino.';
+        }
+
+        if (this.cleanText(value) === this.cleanText(detail.numHab)) {
+          return 'La habitacion destino debe ser distinta.';
+        }
+
+        return null;
+      }
+    });
+
+    this.chargeDetailAction.set(null);
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
+    this.updateSelectedChargeDetailLine(detail, {
+      numHab: this.cleanText(result.value),
+      comentario: [detail.comentario, `Traslado preparado hacia habitacion ${this.cleanText(result.value)}.`].filter(Boolean).join(' | ')
+    });
+    this.toastService.info('Traslado preparado en pantalla. Falta conectar el endpoint de traslado del item.', 4500, 'Cargos');
+  }
+
+  async annulChargeDetailLine(detail: RoomChargeLookupDetail): Promise<void> {
+    if (!this.canMutateChargeDetail(detail)) {
+      this.toastService.info('Este item ya esta cerrado o anulado.', 3500, 'Cargos');
+      return;
+    }
+
+    this.chargeDetailAction.set({ orden: detail.orden, action: 'annul' });
+    const confirmation = await Swal.fire({
+      title: 'Anular item',
+      text: `Se marcara como anulado "${detail.nomConsumo}" por ${this.formatCurrency(Number(detail.total || 0))}.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Anular item',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true
+    });
+
+    this.chargeDetailAction.set(null);
+
+    if (!confirmation.isConfirmed) {
+      return;
+    }
+
+    this.updateSelectedChargeDetailLine(detail, {
+      estado: 'ANU',
+      comentario: [detail.comentario, 'Anulacion preparada desde detalle de cargo.'].filter(Boolean).join(' | ')
+    });
+    this.toastService.warning('Anulacion preparada en pantalla. Falta conectar el endpoint de anulacion del item.', 4500, 'Cargos');
   }
 
   async annulCharge(bucket: ChargeBucket, charge: Charge): Promise<void> {
-    const payloadBase = this.buildAnnulRoomChargePayload(charge, '');
+    const payloadBase = this.buildAnnulRoomChargePayload(bucket, charge, '');
 
     if (!payloadBase) {
       this.toastService.warning('El cargo no tiene la informacion necesaria para anularse.', 4000, 'Cargos');
@@ -987,7 +1211,7 @@ export class RoomStayManagementComponent implements OnInit {
       return;
     }
 
-    const payload = this.buildAnnulRoomChargePayload(charge, reasonResult.value);
+    const payload = this.buildAnnulRoomChargePayload(bucket, charge, reasonResult.value);
 
     if (!payload) {
       this.toastService.warning('No se pudo preparar la anulacion del cargo.', 4000, 'Cargos');
@@ -1035,12 +1259,34 @@ export class RoomStayManagementComponent implements OnInit {
     this.toastService.success('Cargo de habitacion anulado correctamente.', 4000, 'Cargos');
   }
 
-  private buildAnnulRoomChargePayload(charge: Charge, reason: string): RoomChargeAnnulPayload | null {
+  private updateSelectedChargeDetailLine(
+    detail: RoomChargeLookupDetail,
+    patch: Partial<RoomChargeLookupDetail>
+  ): void {
+    this.selectedChargeDetail.update((currentDetail) => {
+      if (!currentDetail) {
+        return currentDetail;
+      }
+
+      return {
+        ...currentDetail,
+        detalles: currentDetail.detalles.map((item) =>
+          item.orden === detail.orden && item.codConsumo === detail.codConsumo
+            ? { ...item, ...patch }
+            : item
+        )
+      };
+    });
+  }
+
+  private buildAnnulRoomChargePayload(bucket: ChargeBucket, charge: Charge, reason: string): RoomChargeAnnulPayload | null {
+    const numHab = bucket === 'lodging' ? this.cleanText(this.room().masterFolio) : this.cleanText(this.room().roomNumber);
+
     const payload: RoomChargeAnnulPayload = {
-      tipCrgHab     : this.cleanText(charge.tipCrgHab) || 'CH',
+      tipCrgHab     : 'CHB',
       numCrgHab     : this.cleanText(charge.numCrgHab || charge.reference),
       codRsv        : this.cleanText(charge.codRsv || this.room().reservationNumber),
-      numHab        : this.cleanText(charge.numHab || this.room().roomNumber),
+      numHab        : numHab,
       motivo        : this.cleanText(reason),
       operador      : this.getOperador()
     };
@@ -1840,6 +2086,12 @@ export class RoomStayManagementComponent implements OnInit {
     return this.sumCharges(charges.filter((charge) => charge.invoiceSelected));
   }
 
+  private getSelectedInvoiceCharges(): Charge[] {
+    const room = this.room();
+
+    return [...room.lodgingCharges, ...room.extraCharges].filter((charge) => charge.invoiceSelected);
+  }
+
   private buildChargeId(reference: string, date: string, time: string, index: number): string {
     return [reference || 'SIN-REF', date || 'SIN-FECHA', time || 'SIN-HORA', index].join('|');
   }
@@ -1865,8 +2117,8 @@ export class RoomStayManagementComponent implements OnInit {
       methodCode      : defaultMethod,
       moneda          : defaultCurrency,
       amount          : this.invoiceTotal(),
-      numTarjeta      : '',
-      vencimiento     : '',
+      numTarjeta      : '00000',
+      vencimiento     : '00/00',
       tCambio         : defaultCurrency === this.invoiceBaseCurrency ? 1 : 0
     });
 
@@ -2354,10 +2606,18 @@ export class RoomStayManagementComponent implements OnInit {
     this.toastService.info(`${title} en formato ${draft.documentFormat.toUpperCase()}.`, 3500, 'Documentos');
   }
 
-  private applyRoomInvoiceAction(): boolean {
-    if (this.totalToInvoice() <= 0) {
+  private submitRoomInvoice(): void {
+    const selectedCharges = this.getSelectedInvoiceCharges();
+    const chargesWithoutDocument = selectedCharges.filter((charge) => !this.cleanText(charge.numCrgHab || charge.reference));
+
+    if (!selectedCharges.length) {
       this.invoiceValidationMessage.set('Selecciona al menos un cargo para facturar.');
-      return false;
+      return;
+    }
+
+    if (chargesWithoutDocument.length) {
+      this.invoiceValidationMessage.set('Uno o mas cargos seleccionados no tienen numero de cargo de habitacion.');
+      return;
     }
 
     if (!this.invoiceCanConfirm()) {
@@ -2367,26 +2627,149 @@ export class RoomStayManagementComponent implements OnInit {
           : 'El total pagado debe cubrir el total de la cuenta.'
       );
 
-      return false;
+      return;
     }
 
+    const payload = this.buildRoomInvoicePayload(selectedCharges);
+
+    console.log('[RoomStayManagement] POST /facturacion-fdesk payload', payload);
+
+    this.isInvoiceSubmitting.set(true);
+    this.invoiceValidationMessage.set('');
+
+    this.roomStayManagementService
+      .invoiceRoom(payload)
+      .pipe(
+        finalize(() => this.isInvoiceSubmitting.set(false)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (response) => {
+          if (this.isFailedApiResponse(response)) {
+            this.invoiceValidationMessage.set(response.message || 'No se pudo facturar la habitacion.');
+            return;
+          }
+
+          this.applyRoomInvoiceAction(payload);
+          this.closeActionModal();
+          this.loadRoomStay();
+        },
+        error: (error) => {
+          console.error('No se pudo facturar la habitacion.', error);
+          this.invoiceValidationMessage.set('No se pudo facturar la habitacion. Revise la conexion con el API.');
+          this.toastService.warning('No se pudo facturar la habitacion.', 4000, 'Documentos');
+        }
+      });
+  }
+
+  private buildRoomInvoicePayload(selectedCharges: Charge[]): RoomInvoicePayload {
+    const room = this.room();
+    const billedClient = this.invoiceClient();
+    const payments = this.invoiceAppliedPayments();
+    const firstPayment = payments[0];
+    const fecha = this.todayDisplayDate();
+    const operador = this.getOperador();
+    const moneda = this.invoiceBaseCurrency;
+    const pntVenta = 'PF';
+
+    return {
+      proceso       : 1,
+      tipDocu       : 'TFD',
+      serieDocu     : '',
+      numDocu       : 'GENERA',
+      codCliente    : this.cleanText(billedClient.code),
+      rucClie       : this.cleanText(billedClient.document) || '0000000000',
+      nomClie       : this.cleanText(billedClient.name) || 'CLIENTE EN GENERAL',
+      direccion     : this.cleanText(billedClient.address) || 'S/D',
+      numInterno    : '',
+      codReserva    : this.cleanText(room.reservationNumber),
+      habita        : this.cleanText(room.roomNumber),
+      master        : this.cleanText(room.masterFolio),
+      fechaDocu     : fecha,
+      fechaPago     : fecha,
+      fechaVen      : fecha,
+      subTotal      : this.invoiceSubtotal(),
+      descuento     : 0,
+      neto          : this.invoiceSubtotal(),
+      impuesto      : this.invoiceTaxes(),
+      exonera       : 0,
+      totDocumento  : this.invoiceTotal(),
+      totPago       : this.invoicePaid(),
+      totPropina    : this.invoiceTip(),
+      pntVenta,
+      codVendedor   : operador,
+      moneda,
+      tCambio       : 1,
+      estado        : 'P',
+      formaPago     : this.cleanText(firstPayment?.frmPago),
+      numCuenta     : 0,
+      tipo          : firstPayment ? 'CONTADO' : '',
+      tipNdp        : '',
+      numeroNdp     : '',
+      operador,
+      detDocumento  : selectedCharges.map((charge, index) => ({
+        orden         : index + 1,
+        fecha         : this.normalizeInvoiceDetailDate(charge.date, fecha),
+        grupo         : '',
+        codConsumo    : '',
+        nomConsumo    : '',
+        cantidad      : 0,
+        precio        : 0,
+        subTotal      : 0,
+        porDescuento  : 0,
+        descuento     : 0,
+        neto          : 0,
+        impuest       : 0,
+        total         : 0,
+        tipNPedido    : this.cleanText(charge.tipCrgHab),
+        numNPedido    : this.cleanText(charge.numCrgHab || charge.reference),
+        codMozo       : '',
+        pntVenta      : '',
+        almacen       : '',
+        incluido      : '',
+        moneda        : '',
+        operador      : ''
+      })),
+      frmPago       : payments.map((payment, index) => ({
+        orden       : index + 1,
+        frmPago     : this.cleanText(payment.frmPago),
+        tipo        : this.cleanText(payment.tipo),
+        numTarjeta  : this.cleanText(payment.numTarjeta),
+        moneda      : this.cleanText(payment.moneda),
+        monto       : this.roundCurrency(payment.monto),
+        vencimiento : this.cleanText(payment.vencimiento),
+        mtoTotal    : this.roundCurrency(payment.mtoTotal),
+        tCambio     : this.roundCurrency(payment.tCambio)
+      }))
+    };
+  }
+
+  private normalizeInvoiceDetailDate(value: string | null | undefined, fallback: string): string {
+    const date = this.cleanText(value);
+
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(date)) {
+      return date;
+    }
+
+    return fallback;
+  }
+
+  private applyRoomInvoiceAction(payload: RoomInvoicePayload): void {
     const billedClient = this.invoiceClient();
 
     this.room.update((currentRoom) => ({
       ...currentRoom,
       observations: [
-        `Facturacion preparada para ${billedClient.name} por ${this.formatCurrency(this.invoiceTotal())}.`,
+        `Facturacion confirmada para ${billedClient.name} por ${this.formatCurrency(payload.totDocumento)}.`,
         ...currentRoom.observations
       ]
     }));
 
     this.addTimelineEntry(
-      'Facturacion preparada',
-      `Documento listo para ${billedClient.name} con ${this.invoiceAppliedPayments().length} forma(s) de pago.`
+      'Facturacion confirmada',
+      `Documento enviado para ${billedClient.name} con ${payload.frmPago.length} forma(s) de pago.`
     );
-    this.toastService.success('Facturacion de habitacion preparada correctamente.', 4000, 'Documentos');
-
-    return true;
+    this.toastService.success('Facturacion de habitacion confirmada correctamente.', 4000, 'Documentos');
   }
 
   private applyCheckOutFlow(): void {
@@ -2442,6 +2825,15 @@ export class RoomStayManagementComponent implements OnInit {
     }
 
     return `${day}/${month}/${year}`;
+  }
+
+  private escapeHtml(value: string | number | null | undefined): string {
+    return this.cleanText(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   private calculateNights(checkIn: string, checkOut: string): number {

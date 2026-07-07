@@ -197,6 +197,59 @@ export interface RoomChargeAnnulPayload {
   operador      : string;
 }
 
+export interface RoomChargeLookupHeader {
+  tipCrgHab     : string;
+  numCrgHab     : string;
+  codReserva    : string;
+  numHab        : string;
+  pntVenta      : string;
+  fecha         : string;
+  hora          : string;
+  numDocu       : string;
+  nombrePax     : string;
+  mtoTot        : number;
+  moneda        : string;
+  cierre        : string;
+  numCierre     : string;
+  estado        : string;
+  operador      : string;
+}
+
+export interface RoomChargeLookupDetail {
+  tipCrgHab     : string;
+  numCrgHab     : string;
+  codRsv        : string;
+  numHab        : string;
+  pntVenta      : string;
+  fecha         : string;
+  hora          : string;
+  grupo         : string;
+  categoria     : string;
+  codConsumo    : string;
+  nomConsumo    : string;
+  cantidad      : number;
+  precio        : number;
+  total         : number;
+  moneda        : string;
+  tipNPedido    : string;
+  numNPedido    : string;
+  codMozo       : string;
+  incluido      : string;
+  exonerado     : string;
+  orden         : number;
+  estado        : string;
+  comentario    : string;
+  porDescuento  : number;
+  descuento     : number;
+  precioLista   : number;
+  operador      : string;
+}
+
+export interface RoomChargeLookupResponse {
+  encabezado    : RoomChargeLookupHeader;
+  detalles      : RoomChargeLookupDetail[];
+}
+
 export interface RoomingListUpdatePayload {
   proceso         : number;
   idOpe           : string;
@@ -218,6 +271,81 @@ export interface RoomingListUpdatePayload {
   mdoArribo       : string;
   orden           : number;
   operador        : string;
+}
+
+export interface RoomInvoiceDocumentDetailPayload {
+  orden           : number;
+  fecha           : string;
+  grupo           : string;
+  codConsumo      : string;
+  nomConsumo      : string;
+  cantidad        : number;
+  precio          : number;
+  subTotal        : number;
+  porDescuento    : number;
+  descuento       : number;
+  neto            : number;
+  impuest         : number;
+  total           : number;
+  tipNPedido      : string;
+  numNPedido      : string;
+  codMozo         : string;
+  pntVenta        : string;
+  almacen         : string;
+  incluido        : string;
+  moneda          : string;
+  operador        : string;
+}
+
+export interface RoomInvoicePaymentPayload {
+  orden           : number;
+  frmPago         : string;
+  tipo            : string;
+  numTarjeta      : string;
+  moneda          : string;
+  monto           : number;
+  vencimiento     : string;
+  mtoTotal        : number;
+  tCambio         : number;
+}
+
+export interface RoomInvoicePayload {
+  proceso         : number;
+  tipDocu         : string;
+  serieDocu       : string;
+  numDocu         : string;
+  codCliente      : string;
+  rucClie         : string;
+  nomClie         : string;
+  direccion       : string;
+  numInterno      : string;
+  codReserva      : string;
+  habita          : string;
+  master          : string;
+  fechaDocu       : string;
+  fechaPago       : string;
+  fechaVen        : string;
+  subTotal        : number;
+  descuento       : number;
+  neto            : number;
+  impuesto        : number;
+  exonera         : number;
+  totDocumento    : number;
+  totPago         : number;
+  totPropina      : number;
+  pntVenta        : string;
+  codVendedor     : string;
+  moneda          : string;
+  tCambio         : number;
+  estado          : string;
+  formaPago       : string;
+  numCuenta       : number;
+  tipo            : string;
+  tipNdp          : string;
+  numeroNdp       : string;
+  operador        : string;
+  detDocumento    : RoomInvoiceDocumentDetailPayload[];
+  frmPago         : RoomInvoicePaymentPayload[];
 }
 
 interface RoomStayApiResponse {
@@ -246,6 +374,8 @@ export class RoomStayManagementService {
   private readonly departureDateChangeUrl          = `${this.baseApiUrl}/cambio-fecha-salida`;
   private readonly pointOfSalePaymentMethodsUrl    = `${this.baseApiUrl}/forma-pago-punto-venta`;
   private readonly roomChargeUrl                   = `${this.baseApiUrl}/cargo-habitacion`;
+  private readonly roomChargeLookupUrl             = `${this.baseApiUrl}/consultar-cargos-habitacion/numero`;
+  private readonly roomInvoiceUrl                  = `${this.baseApiUrl}/facturacion-fdesk`;
   private readonly roomingListUpdateUrl            = `${this.baseApiUrl}/rooming-list/con-actualizacion`;
   private readonly pointOfSaleDetailUrl            = `${this.baseApiUrl}/puntoventa/detalleprincipal`;
   private readonly priceListDetailUrl              = `${this.baseApiUrl}/detalle-lista-precio`;
@@ -321,10 +451,27 @@ export class RoomStayManagementService {
       .pipe(map((response) => this.parseTextResponse(response)));
   }
 
+  getRoomChargeDetailByNumber(numCrgHab: string): Observable<RoomChargeLookupResponse> {
+    const numero = encodeURIComponent(this.cleanParam(numCrgHab));
+
+    return this.http
+      .get<RoomChargeLookupResponse>(`${this.roomChargeLookupUrl}/${numero}`)
+      .pipe(
+        map((response) => ({
+          encabezado: response.encabezado,
+          detalles: Array.isArray(response.detalles) ? response.detalles : []
+        }))
+      );
+  }
+
   createRoomingListGuest(payload: RoomingListUpdatePayload): Observable<unknown> {
     return this.http
       .post(this.roomingListUpdateUrl, payload, { responseType: 'text' })
       .pipe(map((response) => this.parseTextResponse(response)));
+  }
+
+  invoiceRoom(payload: RoomInvoicePayload): Observable<unknown> {
+    return this.http.post<unknown>(this.roomInvoiceUrl, payload);
   }
 
   private getRoomStayDetail(baseStay: RoomStayApiData | null, fallbackCodReserva?: string): Observable<RoomStayApiData | null> {

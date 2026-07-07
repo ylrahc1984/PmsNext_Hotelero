@@ -13,8 +13,16 @@ import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { PaxType } from '../settings/pax-types/models/pax-type.model';
 import { Nationality } from '../settings/nationalities/models/nationality.model';
 import { RoomRackNavigationState } from '../pages/room-rack/models/room-rack-room.model';
-import { WalkInAgenciaOption, WalkInGuest, WalkInOption, WalkInSavePayload, WalkInStay, WalkInTarifaOption } from './models/walk-in.model';
-import { WalkInService } from './services/walk-in.service';
+import {
+  WalkInAgenciaOption,
+  WalkInDetInclu,
+  WalkInGuest,
+  WalkInOption,
+  WalkInSavePayload,
+  WalkInStay,
+  WalkInTarifaOption
+} from './models/walk-in.model';
+import { WalkInService, WalkInTarifaAlimento } from './services/walk-in.service';
 
 interface StayForm {
   fechaEntrada          : FormControl<string>;
@@ -73,6 +81,8 @@ export class WalkInComponent implements OnInit {
   readonly selectedRoom                 = signal<RoomRackNavigationState | null>(this.resolveSelectedRoom());
   readonly guests                       = signal<WalkInGuest[]>([]);
   readonly totalServicios               = signal(0);
+  readonly totalAlimentacion            = signal(0);
+  readonly mealPlanInclusions           = signal<WalkInDetInclu[]>([]);
 
   readonly stayForm: FormGroup<StayForm> = this.fb.group({
     fechaEntrada          : this.fb.control(this.todayAsInputDate(), { validators: [Validators.required] }),
@@ -115,6 +125,7 @@ export class WalkInComponent implements OnInit {
     const rate = Number(raw.tarifaNoche || 0);
     const totalHabitacion = nights * rate;
     const servicios = this.totalServicios();
+    const alimentacion = this.totalAlimentacion();
 
     return {
       habitacion          : raw.habitacion,
@@ -123,9 +134,10 @@ export class WalkInComponent implements OnInit {
       children            : raw.cantidadChildren,
       tarifaNoche         : rate,
       totalHabitacion     ,
+      totalAlimentacion   : alimentacion,
       totalServicios      : servicios,
-      totalIncluido       : totalHabitacion + servicios,
-      total               : totalHabitacion + servicios
+      totalIncluido       : totalHabitacion + alimentacion + servicios,
+      total               : totalHabitacion + alimentacion + servicios
     };
   });
 
@@ -161,6 +173,10 @@ export class WalkInComponent implements OnInit {
   tarifaModalPageSize      = 10;
   tarifaModalTotalRecords  = 0;
   tarifaModalTotalPages    = 0;
+  isMealPlanLoading        = false;
+  mealPlanError            = '';
+  private mealPlanDetails  : WalkInTarifaAlimento[] = [];
+  private mealPlanRequestKey = '';
 
   ngOnInit(): void {
     this.restoreDraft();
@@ -385,6 +401,16 @@ export class WalkInComponent implements OnInit {
     this.tarifaSuggestions = [];
     this.tarifaSearchOpen = false;
     this.showTarifaModal = false;
+    this.refreshMealPlanForCurrentSelection(true);
+  }
+
+  onPlanAlimentacionChange(codPlan: string): void {
+    if (this.isNoMealPlan(codPlan)) {
+      this.clearMealPlanInclusions();
+      return;
+    }
+
+    this.refreshMealPlanForCurrentSelection(true);
   }
 
   loadTarifasModal(): void {
@@ -444,6 +470,15 @@ export class WalkInComponent implements OnInit {
     });
 
     if (!confirmation.isConfirmed) {
+      return;
+    }
+
+    if (this.isMealPlanLoading) {
+      this.toastService.addToast({
+        title: 'Plan de alimentación',
+        message: 'Espere a que termine de cargar el detalle del plan.',
+        type: 'warning'
+      });
       return;
     }
 
@@ -558,6 +593,9 @@ export class WalkInComponent implements OnInit {
     });
     this.stayForm.controls.fechaEntrada.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.updateNights());
     this.stayForm.controls.fechaSalida.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.updateNights());
+    this.stayForm.controls.cantidadPax.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.recalculateMealPlanInclusions());
   }
 
   private bindAutocomplete(): void {
@@ -610,10 +648,103 @@ export class WalkInComponent implements OnInit {
     const diff = Math.ceil((salida.getTime() - entrada.getTime()) / 86400000);
     this.stayForm.controls.noches.setValue(Math.max(diff, 0), { emitEvent: false });
     this.syncStayValue();
+    this.recalculateMealPlanInclusions();
+  }
+
+  private refreshMealPlanForCurrentSelection(forceReload = false): void {
+    const codPlan = this.safeString(this.stayForm.controls.planAlimentacion.value);
+    const codTarifa = this.safeString(this.stayForm.controls.tarifaCodigo.value);
+
+    if (!codPlan || this.isNoMealPlan(codPlan)) {
+      this.clearMealPlanInclusions();
+      return;
+    }
+
+    if (!codTarifa) {
+      this.clearMealPlanInclusions();
+      return;
+    }
+
+    const requestKey = `${codTarifa.toUpperCase()}|${codPlan.toUpperCase()}`;
+    if (!forceReload && this.mealPlanRequestKey === requestKey) {
+      this.recalculateMealPlanInclusions();
+      return;
+    }
+
+    this.isMealPlanLoading = true;
+    this.mealPlanError = '';
+    this.walkInService
+      .getTarifaAlimentos(codTarifa, codPlan)
+      .pipe(
+        finalize(() => {
+          this.isMealPlanLoading = false;
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (items) => {
+          this.mealPlanRequestKey = requestKey;
+          this.mealPlanDetails = items;
+          this.recalculateMealPlanInclusions();
+        },
+        error: () => {
+          this.mealPlanDetails = [];
+          this.mealPlanRequestKey = '';
+          this.mealPlanError = 'No se pudo cargar el detalle del plan de alimentación.';
+          this.mealPlanInclusions.set([]);
+          this.totalAlimentacion.set(0);
+        }
+      });
+  }
+
+  private recalculateMealPlanInclusions(): void {
+    const codPlan = this.safeString(this.stayForm.controls.planAlimentacion.value);
+    if (!codPlan || this.isNoMealPlan(codPlan)) {
+      this.clearMealPlanInclusions();
+      return;
+    }
+
+    if (this.mealPlanDetails.length === 0) {
+      this.mealPlanInclusions.set([]);
+      this.totalAlimentacion.set(0);
+      return;
+    }
+
+    const raw = this.stayForm.getRawValue();
+    const cantidadPax = Math.max(Number(raw.cantidadPax || 0), 0);
+    const noches = Math.max(Number(raw.noches || 0), 0);
+    const inclusions = this.mealPlanDetails.map((detail, index) => {
+      const precio = this.toFiniteNumber(detail.precio);
+      return {
+        codServ: this.safeString(detail.codServ),
+        desServ: this.safeString(detail.descSrv),
+        tipPax: this.safeString(detail.tipPax) || 'PAX',
+        precio,
+        cantidad: cantidadPax,
+        totServ: cantidadPax * precio * noches,
+        exonera: '0',
+        cpl: 0,
+        impInc: 0,
+        cCosto: this.safeString(detail.area),
+        orden: index + 1
+      };
+    });
+
+    this.mealPlanInclusions.set(inclusions);
+    this.totalAlimentacion.set(inclusions.reduce((sum, item) => sum + item.totServ, 0));
+  }
+
+  private clearMealPlanInclusions(): void {
+    this.mealPlanDetails = [];
+    this.mealPlanRequestKey = '';
+    this.mealPlanError = '';
+    this.mealPlanInclusions.set([]);
+    this.totalAlimentacion.set(0);
   }
 
   private applyCatalogDefaults(): void {
     if (this.stayForm.controls.planAlimentacion.value) {
+      this.refreshMealPlanForCurrentSelection(true);
       return;
     }
 
@@ -625,6 +756,7 @@ export class WalkInComponent implements OnInit {
     );
     this.syncStayValue();
     this.persistDraft();
+    this.refreshMealPlanForCurrentSelection(true);
   }
 
   private syncStayValue(): void {
@@ -657,7 +789,7 @@ export class WalkInComponent implements OnInit {
       descripcion         : this.safeString(raw.tarifaDescripcion),
       tCambio             : 0,
       folio               : '',
-      estado              : '1',
+      estado              : 'CHK',
       moneda              : this.safeString(raw.moneda),
       totalRsv            : this.summary().total,
       observaciones       : this.safeString(raw.observaciones),
@@ -691,7 +823,7 @@ export class WalkInComponent implements OnInit {
           orden         : 1
         }
       ],
-      detInclu: [],
+      detInclu: this.mealPlanInclusions().map((item) => ({ ...item })),
       detSrv: [],
       detRoom: this.guests().map((guest, index) => ({
         numHabita         : habitacion,
@@ -854,6 +986,7 @@ export class WalkInComponent implements OnInit {
     if (codigo && !descripcion.startsWith(`${codigo} -`)) {
       this.stayForm.patchValue({ tarifaCodigo: '', tarifaNoche: 0, moneda: '' }, { emitEvent: false });
       this.syncStayValue();
+      this.clearMealPlanInclusions();
     }
   }
 
@@ -871,6 +1004,15 @@ export class WalkInComponent implements OnInit {
 
   private isValidDateRange(): boolean {
     return this.stayForm.controls.noches.value > 0;
+  }
+
+  private isNoMealPlan(codPlan: string): boolean {
+    return this.safeString(codPlan).toUpperCase() === 'SPL';
+  }
+
+  private toFiniteNumber(value: unknown): number {
+    const numberValue = Number(value ?? 0);
+    return Number.isFinite(numberValue) ? numberValue : 0;
   }
 
   private resolveSelectedRoom(): RoomRackNavigationState | null {

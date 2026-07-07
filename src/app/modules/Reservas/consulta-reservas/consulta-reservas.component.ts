@@ -3,8 +3,10 @@ import { Component, DestroyRef, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { EMPTY, catchError, debounceTime, distinctUntilChanged, finalize, switchMap } from 'rxjs';
+import { EMPTY, catchError, debounceTime, distinctUntilChanged, finalize, firstValueFrom, switchMap } from 'rxjs';
+import Swal from 'sweetalert2';
 
+import { AuthService } from 'src/app/core/services/auth.service';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { WalkInAgenciaOption } from 'src/app/modules/front-desk/walk-in/models/walk-in.model';
 import { WalkInService } from 'src/app/modules/front-desk/walk-in/services/walk-in.service';
@@ -35,9 +37,9 @@ export class ConsultaReservasComponent implements OnInit {
 
   readonly estados: EstadoReservaOption[] = [
     { valor: 'ABI', etiqueta: 'Abierta' },
-    { valor: 'CON', etiqueta: 'Confirmada' },
-    { valor: 'IN', etiqueta: 'Check In' },
-    { valor: 'OUT', etiqueta: 'Check Out' },
+    { valor: 'CCR', etiqueta: 'Confirmada' },
+    { valor: 'CHK', etiqueta: 'Check In' },
+    { valor: 'WLT', etiqueta: 'Lista de espera' },
     { valor: 'ANU', etiqueta: 'Cancelada' }
   ];
 
@@ -47,6 +49,8 @@ export class ConsultaReservasComponent implements OnInit {
   readonly totalRecords = signal(0);
   readonly totalPages = signal(1);
   readonly loading = signal(false);
+  readonly cancellingReserva = signal('');
+  readonly printingReserva = signal('');
   readonly errorMessage = signal('');
   readonly filtro = signal<ReservaFiltro>({
     fechaInicio: '',
@@ -69,6 +73,7 @@ export class ConsultaReservasComponent implements OnInit {
     private readonly router: Router,
     private readonly reservaService: ReservaHabitacionService,
     private readonly catalogService: WalkInService,
+    private readonly auth: AuthService,
     private readonly destroyRef: DestroyRef
   ) {
     const { inicio, salida } = this.defaultDateRange();
@@ -96,6 +101,131 @@ export class ConsultaReservasComponent implements OnInit {
 
   nuevaReserva(): void {
     void this.router.navigate(['/reservas/nueva-hospedaje']);
+  }
+
+  editarReserva(reserva: ReservaConsulta): void {
+    const codReserva = reserva.reserva.trim();
+    if (!codReserva) {
+      return;
+    }
+
+    void this.router.navigate(['/reservas/editar-hospedaje', codReserva]);
+  }
+
+  consultarReserva(reserva: ReservaConsulta): void {
+    const codReserva = reserva.reserva.trim();
+    if (!codReserva) {
+      return;
+    }
+
+    void this.router.navigate(['/reservas/detalle-hospedaje', codReserva]);
+  }
+
+  async anularReserva(reserva: ReservaConsulta): Promise<void> {
+    const codReserva = reserva.reserva.trim();
+    if (!codReserva || !this.puedeAnularReserva(reserva)) {
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: 'Anular reserva',
+      html: `¿Está seguro de anular la reserva <strong>${this.escapeHtml(codReserva)}</strong>?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, anular',
+      cancelButtonText: 'No, volver',
+      confirmButtonColor: '#dc3545',
+      cancelButtonColor: '#6c757d'
+    });
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
+    const operador = this.auth.getCurrentUser()?.usuario?.trim() || reserva.operador?.trim() || 'admin';
+    const fecAnulada = this.formatDateForApi(new Date());
+    this.cancellingReserva.set(codReserva);
+
+    void Swal.fire({
+      title: 'Anulando reserva',
+      text: 'Enviando la anulación al servidor...',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    try {
+      const response = await firstValueFrom(
+        this.reservaService.anularReserva(codReserva, fecAnulada, operador, 1).pipe(
+          finalize(() => {
+            this.cancellingReserva.set('');
+            Swal.close();
+          })
+        )
+      );
+
+      if (response?.ok === false) {
+        await Swal.fire({
+          title: 'No se pudo anular',
+          text: response.respuesta || response.mensaje || 'El endpoint no confirmó la anulación.',
+          icon: 'error',
+          confirmButtonText: 'Aceptar',
+          confirmButtonColor: '#dc3545'
+        });
+        return;
+      }
+
+      await Swal.fire({
+        title: 'Reserva anulada',
+        text: response?.respuesta || response?.mensaje || `La reserva ${codReserva} fue anulada correctamente.`,
+        icon: 'success',
+        timer: 1800,
+        showConfirmButton: false
+      });
+      this.loadReservas();
+    } catch (error) {
+      console.error('No se pudo anular la reserva.', error);
+      this.cancellingReserva.set('');
+      Swal.close();
+      await Swal.fire({
+        title: 'Error al anular la reserva',
+        text: this.getAnulacionErrorMessage(error),
+        icon: 'error',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#dc3545'
+      });
+    }
+  }
+
+  puedeAnularReserva(reserva: ReservaConsulta): boolean {
+    const estado = this.normalizeEstadoCode(reserva.estado);
+    return !!reserva.reserva.trim() && estado !== 'CHK' && estado !== 'ANU';
+  }
+
+  imprimirConfirmacion(reserva: ReservaConsulta): void {
+    const codReserva = reserva.reserva.trim();
+    if (!codReserva || this.printingReserva()) {
+      return;
+    }
+
+    this.printingReserva.set(codReserva);
+    this.reservaService
+      .getConfirmacionPdf(codReserva)
+      .pipe(finalize(() => this.printingReserva.set('')))
+      .subscribe({
+        next: (blob) => this.openPdfBlob(blob, `Confirmacion_Reserva_${codReserva}.pdf`),
+        error: (error) => {
+          console.error('No se pudo obtener la confirmación PDF.', error);
+          void Swal.fire({
+            title: 'Error',
+            text: 'No se pudo obtener la confirmación en PDF.',
+            icon: 'error',
+            confirmButtonText: 'Aceptar',
+            confirmButtonColor: '#dc3545'
+          });
+        }
+      });
   }
 
   buscar(): void {
@@ -158,24 +288,21 @@ export class ConsultaReservasComponent implements OnInit {
   }
 
   statusClass(estado: string): string {
+    const normalizedEstado = this.normalizeEstadoCode(estado);
     const classes: Record<string, string> = {
       ABI: 'bg-primary-subtle text-primary border-primary-subtle',
-      CON: 'bg-success-subtle text-success border-success-subtle',
-      IN: 'bg-primary-subtle text-primary border-primary-subtle',
-      OUT: 'bg-secondary-subtle text-secondary border-secondary-subtle',
-      ANU: 'bg-danger-subtle text-danger border-danger-subtle',
-      Pendiente: 'bg-warning-subtle text-warning border-warning-subtle',
-      Confirmada: 'bg-success-subtle text-success border-success-subtle',
-      'Check In': 'bg-primary-subtle text-primary border-primary-subtle',
-      'Check Out': 'bg-secondary-subtle text-secondary border-secondary-subtle',
-      Cancelada: 'bg-danger-subtle text-danger border-danger-subtle'
+      CCR: 'bg-success-subtle text-success border-success-subtle',
+      CHK: 'bg-info-subtle text-info border-info-subtle',
+      WLT: 'bg-warning-subtle text-warning border-warning-subtle',
+      ANU: 'bg-danger-subtle text-danger border-danger-subtle'
     };
 
-    return classes[estado] ?? 'bg-light text-dark border-light';
+    return classes[normalizedEstado] ?? 'bg-light text-dark border-light';
   }
 
   estadoLabel(estado: string): string {
-    return this.estados.find((item) => item.valor === estado)?.etiqueta ?? estado;
+    const normalizedEstado = this.normalizeEstadoCode(estado);
+    return this.estados.find((item) => item.valor === normalizedEstado)?.etiqueta ?? estado;
   }
 
   openAgenciaSuggestions(): void {
@@ -280,6 +407,94 @@ export class ConsultaReservasComponent implements OnInit {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
     return `${year}-${month}-${day}`;
+  }
+
+  private formatDateForApi(date: Date): string {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  }
+
+  private normalizeEstadoCode(estado: string | null | undefined): string {
+    const code = (estado ?? '').trim().toUpperCase();
+    const aliases: Record<string, string> = {
+      ABIERTO: 'ABI',
+      ABIERTA: 'ABI',
+      CON: 'CCR',
+      CONFIRMADA: 'CCR',
+      CONFIRMADO: 'CCR',
+      IN: 'CHK',
+      'CHECK IN': 'CHK',
+      CHECKIN: 'CHK',
+      WAITLIST: 'WLT',
+      'LISTA DE ESPERA': 'WLT',
+      CANCELADA: 'ANU',
+      CANCELADO: 'ANU',
+      ANULADA: 'ANU',
+      ANULADO: 'ANU'
+    };
+
+    return aliases[code] ?? code;
+  }
+
+  private getAnulacionErrorMessage(error: unknown): string {
+    const fallback = 'No se pudo anular la reserva. Revise la conexión con el API o la respuesta del servidor.';
+    if (!error || typeof error !== 'object') {
+      return fallback;
+    }
+
+    const httpError = error as { error?: unknown; message?: string; status?: number; statusText?: string };
+    const statusDetail = httpError.status ? ` Código HTTP ${httpError.status}${httpError.statusText ? `: ${httpError.statusText}` : ''}.` : '';
+    if (typeof httpError.error === 'string' && httpError.error.trim()) {
+      return `${httpError.error}${statusDetail}`;
+    }
+
+    if (httpError.error && typeof httpError.error === 'object') {
+      const apiError = httpError.error as { respuesta?: string; mensaje?: string; message?: string };
+      const apiMessage = apiError.respuesta || apiError.mensaje || apiError.message;
+      return apiMessage ? `${apiMessage}${statusDetail}` : `${fallback}${statusDetail}`;
+    }
+
+    return httpError.message ? `${httpError.message}${statusDetail}` : `${fallback}${statusDetail}`;
+  }
+
+  private openPdfBlob(blob: Blob, filename: string): void {
+    try {
+      const pdfBlob = blob.type === 'application/pdf' ? blob : new Blob([blob], { type: 'application/pdf' });
+      const objectUrl = URL.createObjectURL(pdfBlob);
+      const openedWindow = window.open(objectUrl, '_blank', 'noopener');
+
+      if (!openedWindow) {
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = filename;
+        link.rel = 'noopener';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      }
+
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
+    } catch (error) {
+      console.error('No se pudo abrir la confirmación PDF.', error);
+      void Swal.fire({
+        title: 'Error',
+        text: 'No se pudo abrir la confirmación en PDF.',
+        icon: 'error',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#dc3545'
+      });
+    }
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   private bindAgenciaSearch(): void {

@@ -1,0 +1,292 @@
+<section class="reservation-detail-shell">
+  <header class="detail-topbar">
+    <div>
+      <div class="title-line">
+        <h1>Detalle de Reserva</h1>
+        <span class="code-pill" *ngIf="codReserva()">#{{ codReserva() }}</span>
+      </div>
+      <nav class="breadcrumb-line" aria-label="breadcrumb">
+        <a routerLink="/reservas/consulta-reservas">Reservas</a>
+        <i class="bi bi-chevron-right"></i>
+        <span>Detalle</span>
+      </nav>
+    </div>
+
+    <div class="topbar-actions">
+      <button type="button" class="detail-action" (click)="volver()">
+        <i class="bi bi-arrow-left"></i>
+        Volver
+      </button>
+      <button type="button" class="detail-action" (click)="reload()" [disabled]="loading() || accionesBloqueadas()">
+        <span class="spinner-border spinner-border-sm" *ngIf="loading()"></span>
+        <i class="bi bi-arrow-clockwise" *ngIf="!loading()"></i>
+        Actualizar
+      </button>
+      <button type="button" class="detail-action detail-action--primary" (click)="editarReserva()" [disabled]="!codReserva() || accionesBloqueadas()">
+        <i class="bi bi-pencil-square"></i>
+        Editar
+      </button>
+    </div>
+  </header>
+
+  <div class="alert alert-info d-flex align-items-center" *ngIf="loading()">
+    <span class="spinner-border spinner-border-sm me-2"></span>
+    Cargando detalle de la reserva...
+  </div>
+
+  <div class="alert alert-danger" *ngIf="errorMessage()">
+    {{ errorMessage() }}
+  </div>
+
+  <ng-container *ngIf="reserva() as r">
+    <div class="detail-hero">
+      <div class="hero-main">
+        <div class="hero-title-row">
+          <div>
+            <span class="eyebrow">Reserva hospedaje</span>
+            <h2>{{ r.descripcion || 'Sin descripcion' }}</h2>
+          </div>
+          <span [ngClass]="estadoClass(r.estado)">{{ estadoLabel(r.estado) }}</span>
+        </div>
+
+        <div class="agency-block">
+          <span>Agencia</span>
+          <strong>{{ r.codAgencia || 'N/D' }}<ng-container *ngIf="r.nomAgencia"> - {{ r.nomAgencia }}</ng-container></strong>
+        </div>
+
+        <div class="hero-meta">
+          <div>
+            <span>Ingreso</span>
+            <strong>{{ (r.fecIngresa || r.fecIngreso) | date:'dd/MM/yyyy' }}</strong>
+          </div>
+          <div>
+            <span>Salida</span>
+            <strong>{{ r.fecSalida | date:'dd/MM/yyyy' }}</strong>
+          </div>
+          <div>
+            <span>Noches</span>
+            <strong>{{ r.totNoches || 0 }}</strong>
+          </div>
+          <div>
+            <span>Dias</span>
+            <strong>{{ r.totDias || 0 }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <aside class="total-panel">
+        <span>Total reserva</span>
+        <strong>{{ moneda() }} {{ toNumber(r.totalRsv) | number:'1.2-2' }}</strong>
+        <small>Tipo cambio {{ toNumber(r.tCambio) | number:'1.2-2' }}</small>
+      </aside>
+    </div>
+
+    <div class="metric-grid">
+      <article class="metric-card">
+        <span class="metric-icon metric-icon--room"><i class="bi bi-building"></i></span>
+        <div>
+          <span>Habitaciones</span>
+          <strong>{{ habitaciones().length }}</strong>
+        </div>
+      </article>
+      <article class="metric-card">
+        <span class="metric-icon metric-icon--pax"><i class="bi bi-people"></i></span>
+        <div>
+          <span>Pax / ninos</span>
+          <strong>{{ totalPax() }} / {{ totalNinos() }}</strong>
+        </div>
+      </article>
+      <article class="metric-card">
+        <span class="metric-icon metric-icon--food"><i class="bi bi-cup-hot"></i></span>
+        <div>
+          <span>Inclusiones</span>
+          <strong>{{ moneda() }} {{ totalInclusiones() | number:'1.2-2' }}</strong>
+        </div>
+      </article>
+      <article class="metric-card">
+        <span class="metric-icon metric-icon--service"><i class="bi bi-bag"></i></span>
+        <div>
+          <span>Servicios</span>
+          <strong>{{ moneda() }} {{ totalServicios() | number:'1.2-2' }}</strong>
+        </div>
+      </article>
+    </div>
+
+    <div class="detail-layout">
+      <main class="detail-main">
+        <section class="detail-card">
+          <div class="section-title">
+            <span><i class="bi bi-info-circle"></i></span>
+            <h3>Datos Generales</h3>
+          </div>
+
+          <div class="info-grid">
+            <div><span>Codigo reserva</span><strong>{{ r.codReserva || codReserva() }}</strong></div>
+            <div><span>Folio</span><strong>{{ r.folio || 'N/D' }}</strong></div>
+            <div><span>Tarifa</span><strong>{{ r.codTarifa || 'N/D' }}<ng-container *ngIf="r.nomTarifa"> - {{ r.nomTarifa }}</ng-container></strong></div>
+            <div><span>Plan</span><strong>{{ r.codPlan || 'N/D' }}<ng-container *ngIf="r.planAlimenticio"> - {{ r.planAlimenticio }}</ng-container></strong></div>
+            <div><span>Moneda</span><strong>{{ moneda() }}</strong></div>
+            <div><span>Operador</span><strong>{{ r.operador || 'N/D' }}</strong></div>
+            <div><span>Creacion</span><strong>{{ r.fecCreacion | date:'dd/MM/yyyy' }}</strong></div>
+            <div><span>Directo</span><strong>{{ (r.directo || '').toUpperCase() === 'S' ? 'Si' : 'No' }}</strong></div>
+          </div>
+
+          <div class="note-box" *ngIf="r.observacion || r.observaciones">
+            <span>Observaciones</span>
+            <p>{{ r.observacion || r.observaciones }}</p>
+          </div>
+        </section>
+
+        <section class="detail-card">
+          <div class="section-header">
+            <div class="section-title">
+              <span><i class="bi bi-building"></i></span>
+              <h3>Habitaciones</h3>
+            </div>
+            <strong>{{ moneda() }} {{ totalHabitaciones() | number:'1.2-2' }}</strong>
+          </div>
+
+          <div class="table-responsive detail-table">
+            <table class="table align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Habitacion</th>
+                  <th class="text-center">Cant.</th>
+                  <th class="text-center">Pax</th>
+                  <th class="text-center">Ninos</th>
+                  <th class="text-end">Precio</th>
+                  <th class="text-end">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of habitaciones(); let i = index">
+                  <td>{{ i + 1 }}</td>
+                  <td>
+                    <strong>{{ roomDescription(item) }}</strong>
+                    <span>{{ item.cCosto || 'HOSPED' }}</span>
+                  </td>
+                  <td class="text-center">{{ toNumber(item.cantHab) }}</td>
+                  <td class="text-center">{{ toNumber(item.numPax) }}</td>
+                  <td class="text-center">{{ toNumber(item.numChild) }}</td>
+                  <td class="text-end">{{ moneda() }} {{ toNumber(item.precio) | number:'1.2-2' }}</td>
+                  <td class="text-end fw-semibold">{{ moneda() }} {{ toNumber(item.total) | number:'1.2-2' }}</td>
+                </tr>
+                <tr *ngIf="habitaciones().length === 0">
+                  <td colspan="7" class="empty-cell">Sin habitaciones registradas.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="detail-card">
+          <div class="section-header">
+            <div class="section-title">
+              <span><i class="bi bi-cup-hot"></i></span>
+              <h3>Inclusiones</h3>
+            </div>
+            <strong>{{ moneda() }} {{ totalInclusiones() | number:'1.2-2' }}</strong>
+          </div>
+
+          <div class="table-responsive detail-table">
+            <table class="table align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Servicio</th>
+                  <th>Tipo pax</th>
+                  <th class="text-center">Cantidad</th>
+                  <th class="text-end">Precio</th>
+                  <th class="text-end">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of inclusiones()">
+                  <td>
+                    <strong>{{ inclusionDescription(item) }}</strong>
+                    <span>{{ item.codServ || 'N/D' }} · {{ item.cCosto || 'Sin centro costo' }}</span>
+                  </td>
+                  <td>{{ item.tipPax || 'N/D' }}</td>
+                  <td class="text-center">{{ toNumber(item.cantidad) }}</td>
+                  <td class="text-end">{{ moneda() }} {{ toNumber(item.precio) | number:'1.2-2' }}</td>
+                  <td class="text-end fw-semibold">{{ moneda() }} {{ toNumber(item.totServ) | number:'1.2-2' }}</td>
+                </tr>
+                <tr *ngIf="inclusiones().length === 0">
+                  <td colspan="5" class="empty-cell">Sin inclusiones registradas.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="detail-card">
+          <div class="section-header">
+            <div class="section-title">
+              <span><i class="bi bi-bag"></i></span>
+              <h3>Servicios Extras</h3>
+            </div>
+            <strong>{{ moneda() }} {{ totalServicios() | number:'1.2-2' }}</strong>
+          </div>
+
+          <div class="table-responsive detail-table">
+            <table class="table align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Servicio</th>
+                  <th class="text-center">Cantidad</th>
+                  <th class="text-end">Precio</th>
+                  <th class="text-end">Impuesto</th>
+                  <th class="text-end">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of servicios()">
+                  <td>
+                    <strong>{{ serviceDescription(item) }}</strong>
+                    <span>{{ item.codSrv || item.codServ || 'N/D' }}</span>
+                  </td>
+                  <td class="text-center">{{ toNumber(item.cantidad) }}</td>
+                  <td class="text-end">{{ moneda() }} {{ toNumber(item.precio) | number:'1.2-2' }}</td>
+                  <td class="text-end">{{ moneda() }} {{ toNumber(item.impuesto) | number:'1.2-2' }}</td>
+                  <td class="text-end fw-semibold">{{ moneda() }} {{ toNumber(item.total || item.totServ) | number:'1.2-2' }}</td>
+                </tr>
+                <tr *ngIf="servicios().length === 0">
+                  <td colspan="5" class="empty-cell">Sin servicios extras registrados.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+
+      <aside class="detail-side">
+        <section class="summary-card">
+          <div class="summary-title">
+            <i class="bi bi-receipt"></i>
+            <h3>Resumen</h3>
+          </div>
+          <div class="summary-list">
+            <div><span>Habitaciones</span><strong>{{ moneda() }} {{ totalHabitaciones() | number:'1.2-2' }}</strong></div>
+            <div><span>Inclusiones</span><strong>{{ moneda() }} {{ totalInclusiones() | number:'1.2-2' }}</strong></div>
+            <div><span>Servicios</span><strong>{{ moneda() }} {{ totalServicios() | number:'1.2-2' }}</strong></div>
+            <div><span>Impuestos servicios</span><strong>{{ moneda() }} {{ totalImpuestos() | number:'1.2-2' }}</strong></div>
+          </div>
+          <div class="summary-total">
+            <span>Total PMS</span>
+            <strong>{{ moneda() }} {{ toNumber(r.totalRsv) | number:'1.2-2' }}</strong>
+          </div>
+        </section>
+
+        <section class="timeline-card">
+          <h3>Fechas de control</h3>
+          <div class="timeline-list">
+            <div><span>Creacion</span><strong>{{ r.fecCreacion | date:'dd/MM/yyyy' }}</strong></div>
+            <div><span>Confirmacion</span><strong>{{ r.fecConfirma | date:'dd/MM/yyyy' }}</strong></div>
+            <div><span>Prepago</span><strong>{{ r.fecPrepago | date:'dd/MM/yyyy' }}</strong></div>
+            <div><span>Anulada</span><strong>{{ r.fecAnulada | date:'dd/MM/yyyy' }}</strong></div>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </ng-container>
+</section>
