@@ -1,0 +1,202 @@
+<div class="modal fade" tabindex="-1" role="dialog" aria-modal="true" [ngClass]="{ show: open, 'd-block': open }" *ngIf="open">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl prepay-dialog" role="document">
+    <div class="modal-content prepay-modal">
+      <div class="modal-header prepay-header">
+        <div>
+          <h5 class="modal-title">
+            <i class="bi bi-cash-stack"></i>
+            {{ modalTitle() }}
+          </h5>
+          <div class="prepay-resume" *ngIf="reserva">
+            <span><strong>Reserva</strong> {{ reserva.codReserva }}</span>
+            <span><strong>Agencia</strong> {{ reserva.agencia || reserva.codAgencia }}</span>
+            <span><strong>Cliente</strong> {{ reserva.cliente || 'N/D' }}</span>
+            <span><strong>Ingreso</strong> {{ reserva.ingreso | date:'dd/MM/yyyy' }}</span>
+            <span><strong>Salida</strong> {{ reserva.salida | date:'dd/MM/yyyy' }}</span>
+            <span><strong>Estado</strong> {{ reserva.estado }}</span>
+          </div>
+        </div>
+        <button type="button" class="btn-close" aria-label="Cerrar" (click)="onClose()"></button>
+      </div>
+
+      <div class="modal-body prepay-body">
+        <div class="prepay-kpis">
+          <div class="prepay-kpi" *ngFor="let card of cards()" [ngClass]="'prepay-kpi--' + card.tone">
+            <span class="prepay-kpi__icon"><i class="bi" [ngClass]="card.icon"></i></span>
+            <span class="prepay-kpi__label">{{ card.label }}</span>
+            <strong *ngIf="card.value">{{ moneySymbol(card.currency) }} {{ card.value | number:'1.2-2' }}</strong>
+            <strong *ngIf="!card.value">{{ card.currency }}</strong>
+          </div>
+        </div>
+
+        <div class="alert alert-warning py-2" *ngIf="errorMessage">
+          <i class="bi bi-exclamation-triangle me-1"></i>
+          {{ errorMessage }}
+        </div>
+
+        <div class="prepay-layout">
+          <section class="prepay-panel prepay-panel--history">
+            <div class="prepay-section-head">
+              <div>
+                <h6><i class="bi bi-clock-history"></i> Historial de prepagos</h6>
+                <small>{{ prepayments().length }} registro(s) asociados a la reserva</small>
+              </div>
+              <span class="prepay-loading" *ngIf="loading()">
+                <span class="spinner-border spinner-border-sm"></span>
+                Consultando
+              </span>
+            </div>
+
+            <div class="table-responsive prepay-table-wrap">
+              <table class="table table-hover align-middle prepay-table">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Concepto</th>
+                    <th>Forma Pago</th>
+                    <th>Operación</th>
+                    <th>Moneda</th>
+                    <th class="text-end">Monto</th>
+                    <th>Estado</th>
+                    <th class="text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let item of prepayments(); trackBy: trackByNumInterno">
+                    <td>{{ item.fechaDepo | date:'dd/MM/yyyy' }}</td>
+                    <td>
+                      <strong>{{ item.concepto || 'Prepago' }}</strong>
+                    </td>
+                    <td>{{ formaPagoLabel(item.frmPago) }}</td>
+                    <td>{{ item.nOperacion || 'N/D' }}</td>
+                    <td><span class="prepay-currency">{{ item.moneda }}</span></td>
+                    <td class="text-end fw-semibold">{{ moneySymbol(item.moneda) }} {{ item.totalPrepa | number:'1.2-2' }}</td>
+                    <td><span class="prepay-status" [class.prepay-status--closed]="item.procesado">{{ item.procesado ? 'Procesado' : 'Registrado' }}</span></td>
+                    <td class="text-center">
+                      <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-light" title="Ver" (click)="ver(item)" [disabled]="saving()"><i class="bi bi-eye"></i></button>
+                        <button type="button" class="btn btn-light" title="Editar" (click)="editar(item)" [disabled]="saving() || item.procesado"><i class="bi bi-pencil-square"></i></button>
+                        <button type="button" class="btn btn-light text-danger" title="Eliminar" (click)="eliminar(item)" [disabled]="saving() || item.procesado"><i class="bi bi-trash"></i></button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr *ngIf="prepayments().length === 0 && !loading()">
+                    <td colspan="8" class="text-center text-muted py-4">
+                      <i class="bi bi-inbox me-1"></i>
+                      No hay prepagos registrados para esta reserva.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="prepay-panel prepay-panel--form">
+            <div class="prepay-section-head">
+              <div>
+                <h6><i class="bi bi-credit-card"></i> {{ isEditing() ? 'Editar Prepago' : isViewing() ? 'Detalle del Prepago' : 'Nuevo Prepago' }}</h6>
+                <small>Registro financiero de garantía</small>
+              </div>
+            </div>
+
+            <form [formGroup]="form" class="prepay-form" (ngSubmit)="guardar()">
+              <div class="row g-2">
+                <div class="col-md-6">
+                  <label class="form-label">Fecha Depósito</label>
+                  <input type="date" class="form-control" formControlName="fechaDepo" [class.is-invalid]="isInvalid('fechaDepo')">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Fecha Registro</label>
+                  <input type="date" class="form-control" formControlName="fechaReg" [class.is-invalid]="isInvalid('fechaReg')">
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Concepto</label>
+                  <input type="text" class="form-control" formControlName="concepto" placeholder="Ej. Depósito garantía reserva" [class.is-invalid]="isInvalid('concepto')">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Forma Pago</label>
+                  <select class="form-select" formControlName="frmPago" [class.is-invalid]="isInvalid('frmPago')">
+                    <option value="">Seleccione</option>
+                    <option *ngFor="let item of formasPago()" [value]="item.codigo">{{ item.descripcion }}</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Moneda</label>
+                  <select class="form-select" formControlName="moneda" [class.is-invalid]="isInvalid('moneda')">
+                    <option value="">Seleccione</option>
+                    <option *ngFor="let item of monedas()" [value]="item.codMoneda">{{ item.codMoneda }} - {{ item.moneda }}</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Tipo Cambio</label>
+                  <input type="number" class="form-control text-end" formControlName="tCambio" min="0" step="0.0001" [class.is-invalid]="isInvalid('tCambio')">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Monto Prepago</label>
+                  <input type="number" class="form-control text-end" formControlName="totalPrepa" min="0" step="0.01" [class.is-invalid]="isInvalid('totalPrepa')">
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Número Operación</label>
+                  <input type="text" class="form-control" formControlName="nOperacion" [class.is-invalid]="isInvalid('nOperacion')">
+                </div>
+
+                <ng-container *ngIf="isCardPayment()">
+                  <div class="col-md-6">
+                    <label class="form-label">Número Tarjeta</label>
+                    <input type="text" class="form-control" formControlName="numTarjeta">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Vencimiento</label>
+                    <input type="text" class="form-control" formControlName="venTarjeta" placeholder="MM/AA">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Código Seguridad</label>
+                    <input type="password" class="form-control" formControlName="codSeguridad">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Tipo Tarjeta</label>
+                    <input type="text" class="form-control" formControlName="tipTarjeta">
+                  </div>
+                </ng-container>
+ 
+              </div>
+
+              <div class="prepay-conversion" *ngIf="conversionVisible()">
+                <div>
+                  <span>Prepago</span>
+                  <strong>{{ moneySymbol(form.controls.moneda.value) }} {{ form.controls.totalPrepa.value | number:'1.2-2' }}</strong>
+                </div>
+                <i class="bi bi-arrow-down"></i>
+                <div>
+                  <span>Equivale</span>
+                  <strong>{{ reservationCurrency() }} {{ conversionAmount() | number:'1.2-2' }}</strong>
+                </div>
+                <div class="prepay-rate">
+                  <span>Tipo Cambio</span>
+                  <strong>{{ moneySymbol('CRC') }} {{ form.controls.tCambio.value | number:'1.2-4' }}</strong>
+                </div>
+              </div>
+
+              <div class="prepay-projected">
+                <span>Saldo estimado después del registro</span>
+                <strong>{{ moneySymbol(reservationCurrency()) }} {{ projectedBalance() | number:'1.2-2' }}</strong>
+              </div>
+
+              <div class="prepay-actions">
+                <button type="submit" class="btn btn-primary" [disabled]="saving() || isViewing()">
+                  <span class="spinner-border spinner-border-sm me-1" *ngIf="saving()"></span>
+                  <i class="bi bi-save me-1" *ngIf="!saving()"></i>
+                  {{ submitLabel() }}
+                </button>
+                <button type="button" class="btn btn-outline-secondary" (click)="cancelarEdicion()" [disabled]="saving()" *ngIf="isEditing() || isViewing()">Cancelar</button>
+                <button type="button" class="btn btn-light" (click)="limpiar()" [disabled]="saving()" *ngIf="!isViewing()">Limpiar</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="open"></div>

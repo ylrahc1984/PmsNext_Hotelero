@@ -11,6 +11,8 @@ import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { WalkInAgenciaOption } from 'src/app/modules/front-desk/walk-in/models/walk-in.model';
 import { WalkInService } from 'src/app/modules/front-desk/walk-in/services/walk-in.service';
 import { ReservaConsulta, ReservaFiltro } from '../models/reserva-consulta.model';
+import { ReservationPrepaymentsComponent } from '../reservation-prepayments/reservation-prepayments.component';
+import { ReservationPrepaymentSummary, buildReservationPrepaymentSummary } from '../reservation-prepayments/models/reservation-prepayment.model';
 import { ReservaHabitacionService } from '../services/reserva-habitacion.service';
 
 interface ConsultaReservasFilterForm {
@@ -25,10 +27,12 @@ interface EstadoReservaOption {
   etiqueta: string;
 }
 
+type EstadoCambioReserva = 'WLT' | 'CCR';
+
 @Component({
   selector: 'app-consulta-reservas',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, SharedModule, DatePipe],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, SharedModule, DatePipe, ReservationPrepaymentsComponent],
   templateUrl: './consulta-reservas.component.html',
   styleUrls: ['./consulta-reservas.component.scss']
 })
@@ -50,7 +54,11 @@ export class ConsultaReservasComponent implements OnInit {
   readonly totalPages = signal(1);
   readonly loading = signal(false);
   readonly cancellingReserva = signal('');
+  readonly changingEstadoReserva = signal('');
+  readonly changingEstadoDestino = signal<EstadoCambioReserva | ''>('');
   readonly printingReserva = signal('');
+  readonly prepaymentsOpen = signal(false);
+  readonly selectedPrepaymentReserva = signal<ReservationPrepaymentSummary | null>(null);
   readonly errorMessage = signal('');
   readonly filtro = signal<ReservaFiltro>({
     fechaInicio: '',
@@ -203,6 +211,102 @@ export class ConsultaReservasComponent implements OnInit {
     return !!reserva.reserva.trim() && estado !== 'CHK' && estado !== 'ANU';
   }
 
+  puedeCambiarEstadoReserva(reserva: ReservaConsulta, estadoDestino: EstadoCambioReserva): boolean {
+    const estadoActual = this.normalizeEstadoCode(reserva.estado);
+    return !!reserva.reserva.trim() && estadoActual !== estadoDestino && estadoActual !== 'CHK' && estadoActual !== 'ANU';
+  }
+
+  async cambiarEstadoReserva(reserva: ReservaConsulta, estadoDestino: EstadoCambioReserva): Promise<void> {
+    const codReserva = reserva.reserva.trim();
+    if (!codReserva || !this.puedeCambiarEstadoReserva(reserva, estadoDestino)) {
+      return;
+    }
+
+    const operador = this.auth.getCurrentUser()?.usuario?.trim();
+    if (!operador) {
+      await Swal.fire({
+        title: 'Usuario requerido',
+        text: 'No se pudo identificar el usuario autenticado para enviar el operador.',
+        icon: 'warning',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#0d6efd'
+      });
+      return;
+    }
+
+    const etiquetaDestino = this.estadoLabel(estadoDestino);
+    const result = await Swal.fire({
+      title: `Cambiar a ${etiquetaDestino}`,
+      html: `¿Desea cambiar la reserva <strong>${this.escapeHtml(codReserva)}</strong> a <strong>${this.escapeHtml(etiquetaDestino)}</strong>?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, cambiar',
+      cancelButtonText: 'No, volver',
+      confirmButtonColor: estadoDestino === 'CCR' ? '#198754' : '#f59e0b',
+      cancelButtonColor: '#6c757d'
+    });
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
+    this.changingEstadoReserva.set(codReserva);
+    this.changingEstadoDestino.set(estadoDestino);
+
+    void Swal.fire({
+      title: 'Actualizando reserva',
+      text: 'Enviando el cambio de estado al servidor...',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    try {
+      const response = await firstValueFrom(
+        this.reservaService.cambiarEstadoReserva(codReserva, estadoDestino, operador).pipe(
+          finalize(() => {
+            this.changingEstadoReserva.set('');
+            this.changingEstadoDestino.set('');
+            Swal.close();
+          })
+        )
+      );
+
+      if (response?.ok === false) {
+        await Swal.fire({
+          title: 'No se pudo actualizar',
+          text: response.respuesta || response.mensaje || 'El endpoint no confirmó el cambio de estado.',
+          icon: 'error',
+          confirmButtonText: 'Aceptar',
+          confirmButtonColor: '#dc3545'
+        });
+        return;
+      }
+
+      await Swal.fire({
+        title: 'Reserva actualizada',
+        text: response?.respuesta || response?.mensaje || `La reserva ${codReserva} fue cambiada a ${etiquetaDestino}.`,
+        icon: 'success',
+        timer: 1800,
+        showConfirmButton: false
+      });
+      this.loadReservas();
+    } catch (error) {
+      console.error('No se pudo cambiar el estado de la reserva.', error);
+      this.changingEstadoReserva.set('');
+      this.changingEstadoDestino.set('');
+      Swal.close();
+      await Swal.fire({
+        title: 'Error al cambiar estado',
+        text: this.getOperacionReservaErrorMessage(error, 'No se pudo cambiar el estado de la reserva. Revise la conexión con el API o la respuesta del servidor.'),
+        icon: 'error',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#dc3545'
+      });
+    }
+  }
+
   imprimirConfirmacion(reserva: ReservaConsulta): void {
     const codReserva = reserva.reserva.trim();
     if (!codReserva || this.printingReserva()) {
@@ -226,6 +330,25 @@ export class ConsultaReservasComponent implements OnInit {
           });
         }
       });
+  }
+
+  abrirPrepagos(reserva: ReservaConsulta): void {
+    const codReserva = reserva.reserva.trim();
+    if (!codReserva) {
+      return;
+    }
+
+    this.selectedPrepaymentReserva.set(buildReservationPrepaymentSummary(reserva));
+    this.prepaymentsOpen.set(true);
+  }
+
+  cerrarPrepagos(): void {
+    this.prepaymentsOpen.set(false);
+    this.selectedPrepaymentReserva.set(null);
+  }
+
+  onPrepagosChanged(): void {
+    this.loadReservas();
   }
 
   buscar(): void {
@@ -439,7 +562,10 @@ export class ConsultaReservasComponent implements OnInit {
   }
 
   private getAnulacionErrorMessage(error: unknown): string {
-    const fallback = 'No se pudo anular la reserva. Revise la conexión con el API o la respuesta del servidor.';
+    return this.getOperacionReservaErrorMessage(error, 'No se pudo anular la reserva. Revise la conexión con el API o la respuesta del servidor.');
+  }
+
+  private getOperacionReservaErrorMessage(error: unknown, fallback: string): string {
     if (!error || typeof error !== 'object') {
       return fallback;
     }

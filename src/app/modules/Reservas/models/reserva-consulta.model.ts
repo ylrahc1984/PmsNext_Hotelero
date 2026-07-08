@@ -13,7 +13,9 @@ export interface ReservaConsulta {
   ninos: number;
   estado: string;
   total: number;
+  prepago: number;
   moneda: string;
+  tCambio: number;
   operador: string;
 }
 

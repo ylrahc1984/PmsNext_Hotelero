@@ -7,5 +7,6 @@ export abstract class ReservaHabitacionRepository {
   abstract getReservaDetalle(codReserva: string): Observable<ReservaHabitacionDetalle>;
   abstract updateReserva(codReserva: string, request: ReservaHabitacionRequest): Observable<ReservaHabitacionResponse>;
   abstract anularReserva(codReserva: string, fecAnulada: string, operador: string, procesa: number): Observable<ReservaHabitacionResponse>;
+  abstract cambiarEstadoReserva(codReserva: string, estado: string, operador: string): Observable<ReservaHabitacionResponse>;
   abstract getConfirmacionPdf(codReserva: string): Observable<Blob>;
 }

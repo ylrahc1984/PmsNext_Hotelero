@@ -76,6 +76,19 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
     return this.http.delete<ReservaHabitacionResponse>(url, { params });
   }
 
+  cambiarEstadoReserva(codReserva: string, estado: string, operador: string): Observable<ReservaHabitacionResponse> {
+    const url = `${this.apiUrl}/${encodeURIComponent(codReserva.trim())}/estado`;
+    const params = new HttpParams().set('estado', estado.trim().toUpperCase()).set('operador', operador.trim());
+
+    console.groupCollapsed('[Reservas] PATCH cambiar estado reserva');
+    console.log('method', 'PATCH');
+    console.log('url', url);
+    console.log('query', { estado, operador });
+    console.groupEnd();
+
+    return this.http.patch<ReservaHabitacionResponse>(url, null, { params });
+  }
+
   getConfirmacionPdf(codReserva: string): Observable<Blob> {
     const url = `${this.apiUrl}/${encodeURIComponent(codReserva.trim())}/confirmacion-pdf`;
     return this.http.get(url, {
@@ -166,7 +179,9 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
       ninos: Number(item.nChild ?? 0),
       estado: (item.estado ?? '').trim(),
       total: Number(item.totalRsv ?? 0),
+      prepago: Number(item.prepago ?? 0),
       moneda: (item.moneda ?? '').trim(),
+      tCambio: Number(item.tCambio ?? 0),
       operador: (item.operador ?? '').trim()
     };
   }

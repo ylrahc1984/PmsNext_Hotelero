@@ -172,6 +172,50 @@
                       type="button"
                       ngbDropdownItem
                       class="dropdown-item action-item"
+                      (click)="abrirPrepagos(reserva)"
+                      [disabled]="!reserva.reserva"
+                    >
+                      <span class="action-item__icon action-item__icon--money">
+                        <i class="bi bi-cash-stack" aria-hidden="true"></i>
+                      </span>
+                      <span class="action-item__content">
+                        <span class="action-item__label">Prepagos</span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      ngbDropdownItem
+                      class="dropdown-item action-item"
+                      (click)="cambiarEstadoReserva(reserva, 'WLT')"
+                      [disabled]="!puedeCambiarEstadoReserva(reserva, 'WLT') || changingEstadoReserva() === reserva.reserva"
+                    >
+                      <span class="action-item__icon action-item__icon--warning">
+                        <span class="spinner-border spinner-border-sm" *ngIf="changingEstadoReserva() === reserva.reserva && changingEstadoDestino() === 'WLT'" aria-hidden="true"></span>
+                        <i class="feather icon-clock" *ngIf="changingEstadoReserva() !== reserva.reserva || changingEstadoDestino() !== 'WLT'" aria-hidden="true"></i>
+                      </span>
+                      <span class="action-item__content">
+                        <span class="action-item__label">{{ changingEstadoReserva() === reserva.reserva && changingEstadoDestino() === 'WLT' ? 'Actualizando...' : 'Lista de espera' }}</span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      ngbDropdownItem
+                      class="dropdown-item action-item"
+                      (click)="cambiarEstadoReserva(reserva, 'CCR')"
+                      [disabled]="!puedeCambiarEstadoReserva(reserva, 'CCR') || changingEstadoReserva() === reserva.reserva"
+                    >
+                      <span class="action-item__icon action-item__icon--success">
+                        <span class="spinner-border spinner-border-sm" *ngIf="changingEstadoReserva() === reserva.reserva && changingEstadoDestino() === 'CCR'" aria-hidden="true"></span>
+                        <i class="feather icon-check-circle" *ngIf="changingEstadoReserva() !== reserva.reserva || changingEstadoDestino() !== 'CCR'" aria-hidden="true"></i>
+                      </span>
+                      <span class="action-item__content">
+                        <span class="action-item__label">{{ changingEstadoReserva() === reserva.reserva && changingEstadoDestino() === 'CCR' ? 'Confirmando...' : 'Confirmar reserva' }}</span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      ngbDropdownItem
+                      class="dropdown-item action-item"
                       (click)="imprimirConfirmacion(reserva)"
                       [disabled]="!reserva.reserva || !!printingReserva()"
                     >
@@ -223,4 +267,11 @@
       </div>
     </div>
   </div>
+
+  <app-reservation-prepayments
+    [open]="prepaymentsOpen()"
+    [reserva]="selectedPrepaymentReserva()"
+    (close)="cerrarPrepagos()"
+    (changed)="onPrepagosChanged()"
+  ></app-reservation-prepayments>
 </div>
