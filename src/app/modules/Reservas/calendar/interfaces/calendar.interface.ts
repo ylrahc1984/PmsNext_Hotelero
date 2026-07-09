@@ -5,12 +5,54 @@ export type CalendarFilterStatus = CalendarReservationStatus | 'DISPONIBLE' | nu
 
 export interface CalendarReservation {
   id: string;
+  reservationCode?: string;
   roomNumber: string;
+  sourceRoom?: string;
+  categoryCode?: string;
   startDate: string;
   endDate: string;
   status: CalendarReservationStatus;
   guestName: string;
   source: string;
+}
+
+export interface CalendarAssignableReservation {
+  id: string;
+  reservationCode: string;
+  categoryCode: string;
+  sourceRoom: string;
+  startDate: string;
+  endDate: string;
+  nights: number;
+  rooms: number;
+  guestName: string;
+  agency: string;
+  status: string;
+  operator: string;
+  pax: number;
+  children: number;
+}
+
+export interface CalendarAssignmentTarget {
+  roomNumber: string;
+  categoryCode: string;
+  targetDate: string;
+  valid: boolean;
+}
+
+export interface CalendarRoomAssignmentRequest {
+  codReserva: string;
+  oldHabita: string;
+  newHabita: string;
+  categoria: string;
+  operador: string;
+}
+
+export interface CalendarRoomAssignmentResponse {
+  ok?: boolean;
+  success?: boolean;
+  respuesta?: string;
+  mensaje?: string;
 }
 
 export interface CalendarDate {
@@ -55,9 +97,16 @@ export interface CalendarDropTarget {
 
 export interface CalendarReservationDropRequest {
   reservationId: string;
-  fromRoomNumber: string;
+  fromRoomNumber: string | null;
   toRoomNumber: string;
+  toCategoryCode: string;
   targetDate: string;
+  pendingReservation?: CalendarAssignableReservation;
+}
+
+export interface CalendarReservationBlockSelect {
+  block: CalendarReservationBlockView;
+  event: MouseEvent;
 }
 
 export interface CalendarRoomRowView {

@@ -5,6 +5,17 @@
         <app-calendar-cell *ngFor="let date of dates; trackBy: trackByDate" [isToday]="date.isToday" [isWeekend]="date.isWeekend"></app-calendar-cell>
       </div>
 
+      <div class="calendar-grid__assignment-targets" *ngIf="assignmentMode">
+        <button
+          type="button"
+          class="calendar-grid__assignment-cell"
+          *ngFor="let date of dates; let dateIndex = index; trackBy: trackByDate"
+          [class.calendar-grid__assignment-cell--invalid]="!isAssignmentTargetValid(row, dateIndex)"
+          [title]="'Asignar en habitacion ' + row.room.roomNumber + ' desde ' + date.isoDate"
+          (click)="onAssignmentTargetSelect(row, date, dateIndex)"
+        ></button>
+      </div>
+
       <div class="calendar-grid__overlay">
         <app-reservation-block
           *ngFor="let block of row.blocks; trackBy: trackByBlock"
@@ -18,16 +29,26 @@
 
     <div class="calendar-grid__drag-layer" *ngIf="dragPreview as preview">
       <div
+        class="calendar-grid__drop-guide"
+        [class.calendar-grid__drop-guide--invalid]="!preview.valid"
+        [style.left.px]="preview.left"
+        [style.top.px]="preview.top"
+        [style.width.px]="preview.width"
+      ></div>
+
+      <div
         class="calendar-grid__drag-preview"
         [class.calendar-grid__drag-preview--invalid]="!preview.valid"
         [class.calendar-grid__drag-preview--ocupada]="preview.statusClass === 'ocupada'"
         [class.calendar-grid__drag-preview--reservada]="preview.statusClass === 'reservada'"
         [class.calendar-grid__drag-preview--bloqueada]="preview.statusClass === 'bloqueada'"
-        [style.left.px]="preview.left"
-        [style.top.px]="preview.top"
+        [style.left.px]="preview.floatingLeft"
+        [style.top.px]="preview.floatingTop"
         [style.width.px]="preview.width"
       >
-        {{ preview.label }}
+        <span class="calendar-grid__drag-preview-label">{{ preview.label }}</span>
+        <span class="calendar-grid__drag-preview-meta">{{ preview.roomNumber }} · {{ preview.targetDate }}</span>
+        <span class="calendar-grid__drag-preview-status">{{ preview.valid ? 'Disponible' : 'No disponible' }}</span>
       </div>
     </div>
   </div>

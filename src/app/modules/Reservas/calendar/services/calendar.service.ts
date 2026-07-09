@@ -8,8 +8,11 @@ import { RoomHousekeepingStatus, RoomOperationalStatus, RoomStatus, RoomType } f
 import {
   CalendarData,
   CalendarDate,
+  CalendarAssignableReservation,
   CalendarFilterStatus,
   CalendarQuery,
+  CalendarRoomAssignmentRequest,
+  CalendarRoomAssignmentResponse,
   CalendarReservation,
   CalendarReservationBlockView,
   CalendarRoomRowView
@@ -37,6 +40,7 @@ interface CalendarApiDay {
   numHab: number | string;
   categoria?: string | null;
   codGrp?: string | null;
+  habOrigen?: string | null;
   fecha: string;
   estado?: string | null;
   codReserva?: string | null;
@@ -58,6 +62,33 @@ interface CalendarApiResponse {
   totalDias?: number;
 }
 
+interface PrecheckingReservationApiItem {
+  numHabita?: string | null;
+  catHabita?: string | null;
+  tipHabita?: string | null;
+  codReserva?: string | null;
+  descripcion?: string | null;
+  fechaIng?: string | null;
+  fechaSal?: string | null;
+  estado?: string | null;
+  numPax?: number | null;
+  numChild?: number | null;
+  orden?: number | null;
+  habOrigen?: string | null;
+  observacion?: string | null;
+  nomAgencia?: string | null;
+  codPlan?: string | null;
+  totNoches?: number | null;
+  codAgencia?: string | null;
+  listaHabitaciones?: string | number | null;
+  roomingList?: string | null;
+}
+
+interface PrecheckingReservationApiResponse {
+  success?: boolean;
+  data?: PrecheckingReservationApiItem[];
+}
+
 export interface CalendarApiDataSource {
   rooms: RoomStatus[];
   reservations: CalendarReservation[];
@@ -68,6 +99,7 @@ export interface CalendarApiDataSource {
 export class CalendarService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `${(environment.apiUrl || 'http://localhost:5000/api').toString().replace(/\/+$/, '')}/calendario-habitaciones`;
+  private readonly precheckingUrl = `${(environment.apiUrl || 'http://localhost:5000/api').toString().replace(/\/+$/, '')}/prechecking`;
 
   getCalendarApiData(startDate: string, endDate: string): Observable<CalendarApiDataSource> {
     const params = new HttpParams()
@@ -78,6 +110,21 @@ export class CalendarService {
     return this.http
       .get<CalendarApiResponse>(this.apiUrl, { params })
       .pipe(map((response) => this.mapApiResponse(response)));
+  }
+
+  assignReservationRoom(request: CalendarRoomAssignmentRequest): Observable<CalendarRoomAssignmentResponse> {
+    return this.http.put<CalendarRoomAssignmentResponse>(`${this.precheckingUrl}/asignar-habitacion`, request);
+  }
+
+  getPendingPrecheckingReservations(startDate: string, endDate: string): Observable<CalendarAssignableReservation[]> {
+    const params = new HttpParams().set('fechaIng', this.toDisplayDate(startDate)).set('fechaSal', this.toDisplayDate(endDate));
+
+    return this.http.get<PrecheckingReservationApiResponse>(`${this.precheckingUrl}/reservas`, { params }).pipe(
+      map((response) => {
+        const reservations = Array.isArray(response?.data) ? response.data : [];
+        return reservations.map((reservation) => this.mapPrecheckingReservation(reservation, startDate, endDate));
+      })
+    );
   }
 
   getRooms(): RoomStatus[] {
@@ -167,7 +214,10 @@ export class CalendarService {
 
         byReservation.set(key, {
           id: key,
+          reservationCode,
           roomNumber,
+          sourceRoom: this.cleanText(item.habOrigen),
+          categoryCode: this.cleanText(item.categoria || item.codGrp),
           startDate,
           endDate,
           status: this.mapReservationStatus(item.estado, item.estadoReserva),
@@ -183,6 +233,36 @@ export class CalendarService {
 
       return left.startDate.localeCompare(right.startDate);
     });
+  }
+
+  private mapPrecheckingReservation(
+    reservation: PrecheckingReservationApiItem,
+    fallbackStartDate: string,
+    fallbackEndDate: string
+  ): CalendarAssignableReservation {
+    const reservationCode = this.cleanText(reservation.codReserva);
+    const startDate = this.toIsoDateValue(this.cleanText(reservation.fechaIng)) || fallbackStartDate;
+    const explicitEndDate = this.toIsoDateValue(this.cleanText(reservation.fechaSal));
+    const nights = Math.max(Number(reservation.totNoches || this.diffDays(startDate, explicitEndDate || fallbackEndDate) || 1), 1);
+    const endDate = explicitEndDate || this.shiftIsoDate(startDate, nights);
+    const order = reservation.orden ?? 0;
+
+    return {
+      id: `${reservationCode || 'RESERVA'}|${order}|${startDate}`,
+      reservationCode,
+      categoryCode: this.cleanText(reservation.catHabita),
+      sourceRoom: this.cleanText(reservation.habOrigen || reservation.numHabita),
+      startDate,
+      endDate,
+      nights,
+      rooms: Math.max(Number(reservation.listaHabitaciones || 1), 1),
+      guestName: this.cleanText(reservation.descripcion || reservation.observacion || reservation.roomingList || reservationCode),
+      agency: this.cleanText(reservation.nomAgencia || reservation.codAgencia || 'Directo'),
+      status: this.cleanText(reservation.estado || 'ABI'),
+      operator: '',
+      pax: Number(reservation.numPax || 0),
+      children: Number(reservation.numChild || 0)
+    };
   }
 
   private filterRooms(rooms: RoomStatus[], query: CalendarQuery): RoomStatus[] {
@@ -330,9 +410,10 @@ export class CalendarService {
       return value.slice(0, 10);
     }
 
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
-      const [day, month, year] = value.split('/');
-      return `${year}-${month}-${day}`;
+    const displayDateMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (displayDateMatch) {
+      const [, day, month, year] = displayDateMatch;
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     }
 
     return this.toIsoDate(new Date(value));

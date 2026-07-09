@@ -26,6 +26,47 @@
 .calendar-grid__overlay {
   position: absolute;
   inset: 0 0 0 132px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.calendar-grid__overlay app-reservation-block {
+  pointer-events: auto;
+}
+
+.calendar-grid__assignment-targets {
+  position: absolute;
+  inset: 0 0 0 132px;
+  display: flex;
+  z-index: 1;
+}
+
+.calendar-grid__assignment-cell {
+  width: 42px;
+  height: 48px;
+  flex: 0 0 42px;
+  border: 0;
+  border-right: 1px solid transparent;
+  background: rgba(47, 95, 141, 0.06);
+  cursor: copy;
+}
+
+.calendar-grid__assignment-cell:hover,
+.calendar-grid__assignment-cell:focus-visible {
+  outline: 2px solid rgba(47, 95, 141, 0.45);
+  outline-offset: -3px;
+  background: rgba(47, 95, 141, 0.16);
+}
+
+.calendar-grid__assignment-cell--invalid {
+  background: rgba(222, 95, 85, 0.08);
+  cursor: not-allowed;
+}
+
+.calendar-grid__assignment-cell--invalid:hover,
+.calendar-grid__assignment-cell--invalid:focus-visible {
+  outline-color: rgba(222, 95, 85, 0.45);
+  background: rgba(222, 95, 85, 0.16);
 }
 
 .calendar-grid__drag-layer {
@@ -35,39 +76,125 @@
   z-index: 20;
 }
 
+.calendar-grid__drop-guide {
+  position: absolute;
+  height: 36px;
+  border: 2px solid rgba(25, 135, 84, 0.72);
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, rgba(25, 135, 84, 0.18), rgba(33, 160, 104, 0.09)),
+    repeating-linear-gradient(90deg, rgba(25, 135, 84, 0.14) 0, rgba(25, 135, 84, 0.14) 1px, transparent 1px, transparent 42px);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.78),
+    0 0 0 4px rgba(25, 135, 84, 0.08),
+    0 16px 30px rgba(15, 23, 42, 0.16);
+  transition: left 90ms ease-out, top 90ms ease-out, width 90ms ease-out, border-color 90ms ease-out, background 90ms ease-out;
+}
+
+.calendar-grid__drop-guide--invalid {
+  border-color: rgba(220, 53, 69, 0.78);
+  background:
+    linear-gradient(135deg, rgba(220, 53, 69, 0.17), rgba(255, 236, 238, 0.46)),
+    repeating-linear-gradient(90deg, rgba(220, 53, 69, 0.14) 0, rgba(220, 53, 69, 0.14) 1px, transparent 1px, transparent 42px);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.82),
+    0 0 0 4px rgba(220, 53, 69, 0.08),
+    0 16px 30px rgba(127, 29, 29, 0.16);
+}
+
 .calendar-grid__drag-preview {
   position: absolute;
   height: 36px;
-  border-radius: 10px;
-  display: inline-flex;
+  border-radius: 11px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: 1fr 1fr;
+  column-gap: 0.45rem;
   align-items: center;
-  padding: 0 0.55rem;
+  padding: 0.18rem 0.48rem 0.2rem 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  box-shadow:
+    0 22px 34px rgba(15, 23, 42, 0.28),
+    0 6px 10px rgba(15, 23, 42, 0.16);
+  opacity: 0.98;
+  transform: translateY(-2px) scale(1.015);
+  backdrop-filter: blur(4px);
+  animation: drag-lift 120ms ease-out;
+  will-change: left, top;
+}
+
+.calendar-grid__drag-preview-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.calendar-grid__drag-preview-meta {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.58rem;
   font-weight: 700;
-  box-shadow: 0 16px 28px rgba(15, 23, 42, 0.24);
-  opacity: 0.92;
-  backdrop-filter: blur(2px);
+  line-height: 1;
+  opacity: 0.78;
+}
+
+.calendar-grid__drag-preview-status {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.24);
+  padding: 0.16rem 0.38rem;
+  font-size: 0.56rem;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .calendar-grid__drag-preview--ocupada {
-  background: linear-gradient(135deg, rgba(46, 96, 143, 0.93), rgba(69, 125, 176, 0.93));
+  background: linear-gradient(135deg, rgba(42, 91, 139, 0.98), rgba(66, 123, 174, 0.98));
   color: #ffffff;
 }
 
 .calendar-grid__drag-preview--reservada {
-  background: linear-gradient(135deg, rgba(230, 188, 87, 0.95), rgba(241, 213, 131, 0.95));
+  background: linear-gradient(135deg, rgba(221, 171, 47, 0.98), rgba(245, 210, 107, 0.98));
   color: #5b430e;
 }
 
 .calendar-grid__drag-preview--bloqueada {
-  background: linear-gradient(135deg, rgba(140, 152, 171, 0.95), rgba(178, 188, 201, 0.95));
+  background: linear-gradient(135deg, rgba(121, 132, 151, 0.98), rgba(171, 181, 195, 0.98));
   color: #f7fbff;
 }
 
 .calendar-grid__drag-preview--invalid {
-  filter: grayscale(0.25);
-  outline: 2px dashed #de5f55;
-  opacity: 0.75;
+  color: #ffffff;
+  background: linear-gradient(135deg, rgba(190, 18, 60, 0.96), rgba(239, 68, 68, 0.94));
+  border-color: rgba(255, 255, 255, 0.65);
+  box-shadow:
+    0 22px 34px rgba(127, 29, 29, 0.26),
+    0 0 0 3px rgba(220, 53, 69, 0.12);
+}
+
+.calendar-grid__drag-preview--invalid .calendar-grid__drag-preview-status {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+@keyframes drag-lift {
+  from {
+    opacity: 0.82;
+    transform: translateY(1px) scale(0.99);
+  }
+
+  to {
+    opacity: 0.98;
+    transform: translateY(-2px) scale(1.015);
+  }
 }
 
 @media (max-width: 991.98px) {

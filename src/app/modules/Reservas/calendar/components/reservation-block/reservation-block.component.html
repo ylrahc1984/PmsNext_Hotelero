@@ -7,7 +7,7 @@
   [style.width.px]="block.width"
   [attr.title]="block.tooltip"
   (pointerdown)="onDragStart($event)"
-  (click)="onSelect()"
+  (click)="onSelect($event)"
 >
   <span class="reservation-block__guest">{{ block.label }}</span>
 

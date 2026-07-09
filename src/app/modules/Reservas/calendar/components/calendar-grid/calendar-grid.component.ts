@@ -1,9 +1,29 @@
-import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, Output, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
-import { CalendarDate, CalendarReservationBlockView, CalendarReservationDropRequest, CalendarRoomRowView } from '../../interfaces/calendar.interface';
+import {
+  CalendarAssignableReservation,
+  CalendarAssignmentTarget,
+  CalendarDate,
+  CalendarReservationBlockSelect,
+  CalendarReservationBlockView,
+  CalendarReservationDropRequest,
+  CalendarReservationStatus,
+  CalendarRoomRowView
+} from '../../interfaces/calendar.interface';
 import { CalendarCellComponent } from '../calendar-cell/calendar-cell.component';
 import { ReservationBlockComponent } from '../reservation-block/reservation-block.component';
+
+interface CalendarGridDragState {
+  reservationId: string;
+  fromRoomNumber: string | null;
+  span: number;
+  label: string;
+  status: CalendarReservationStatus;
+  pointerOffsetX: number;
+  block?: CalendarReservationBlockView;
+  pendingReservation?: CalendarAssignableReservation;
+}
 
 @Component({
   selector: 'app-calendar-grid',
@@ -14,13 +34,19 @@ import { ReservationBlockComponent } from '../reservation-block/reservation-bloc
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CalendarGridComponent {
+  private readonly cdr = inject(ChangeDetectorRef);
+
   @Input({ required: true }) dates: CalendarDate[] = [];
   @Input({ required: true }) rows: CalendarRoomRowView[] = [];
+  @Input() assignmentMode = false;
+  @Input() assignmentSpan = 1;
+  @Input() assignmentReservationId: string | null = null;
 
   @Output() scrollTopChange = new EventEmitter<number>();
   @Output() scrollLeftChange = new EventEmitter<number>();
-  @Output() reservationSelect = new EventEmitter<CalendarReservationBlockView>();
+  @Output() reservationSelect = new EventEmitter<CalendarReservationBlockSelect>();
   @Output() reservationDrop = new EventEmitter<CalendarReservationDropRequest>();
+  @Output() assignmentTargetSelect = new EventEmitter<CalendarAssignmentTarget>();
 
   @ViewChild('scrollContainer') private scrollContainer?: ElementRef<HTMLDivElement>;
 
@@ -28,28 +54,33 @@ export class CalendarGridComponent {
   readonly rowHeight = 48;
   readonly timelineOffset = 132;
 
-  dragState: {
-    block: CalendarReservationBlockView;
-    pointerOffsetX: number;
-  } | null = null;
+  dragState: CalendarGridDragState | null = null;
 
   dragPreview: {
     left: number;
     top: number;
+    floatingLeft: number;
+    floatingTop: number;
     width: number;
     label: string;
+    roomNumber: string;
+    targetDate: string;
     statusClass: string;
     valid: boolean;
   } | null = null;
 
   private dropCandidate: {
     roomNumber: string;
+    categoryCode: string;
     targetDate: string;
     valid: boolean;
   } | null = null;
 
   private suppressScrollEvent = false;
   private isDragging = false;
+  private hasDragMoved = false;
+  private dragStartClientX = 0;
+  private dragStartClientY = 0;
   private wasDragCommitted = false;
 
   setScrollTop(value: number): void {
@@ -84,34 +115,46 @@ export class CalendarGridComponent {
   }
 
   onReservationDragStart(payload: { block: CalendarReservationBlockView; event: PointerEvent }): void {
-    if (!this.scrollContainer || this.isDragging) {
-      return;
-    }
+    this.beginDrag(
+      {
+        reservationId: payload.block.reservation.id,
+        fromRoomNumber: payload.block.reservation.roomNumber,
+        span: payload.block.span,
+        label: payload.block.label,
+        status: payload.block.reservation.status,
+        pointerOffsetX: payload.event.offsetX,
+        block: payload.block
+      },
+      payload.event
+    );
+  }
 
-    this.isDragging = true;
-    this.wasDragCommitted = false;
-
-    this.dragState = {
-      block: payload.block,
-      pointerOffsetX: payload.event.offsetX
-    };
-
-    this.updateDragPreview(payload.event);
-    window.addEventListener('pointermove', this.handlePointerMove, { passive: true });
-    window.addEventListener('pointerup', this.handlePointerUp, { passive: true });
+  startPendingReservationDrag(payload: { reservation: CalendarAssignableReservation; event: PointerEvent }): void {
+    this.beginDrag(
+      {
+        reservationId: payload.reservation.id,
+        fromRoomNumber: null,
+        span: Math.max(payload.reservation.nights, 1),
+        label: this.abbreviateName(payload.reservation.guestName),
+        status: 'RESERVADA',
+        pointerOffsetX: 16,
+        pendingReservation: payload.reservation
+      },
+      payload.event
+    );
   }
 
   isDraggedReservation(block: CalendarReservationBlockView): boolean {
-    return this.dragState?.block.reservation.id === block.reservation.id;
+    return this.dragState?.block?.reservation.id === block.reservation.id;
   }
 
-  onReservationSelect(block: CalendarReservationBlockView): void {
+  onReservationSelect(payload: CalendarReservationBlockSelect): void {
     if (this.wasDragCommitted) {
       this.wasDragCommitted = false;
       return;
     }
 
-    this.reservationSelect.emit(block);
+    this.reservationSelect.emit(payload);
   }
 
   trackByRoom(_: number, row: CalendarRoomRowView): string {
@@ -126,8 +169,52 @@ export class CalendarGridComponent {
     return block.reservation.id;
   }
 
+  onAssignmentTargetSelect(row: CalendarRoomRowView, date: CalendarDate, dateIndex: number): void {
+    if (!this.assignmentMode) {
+      return;
+    }
+
+    const span = Math.max(this.assignmentSpan, 1);
+    this.assignmentTargetSelect.emit({
+      roomNumber: row.room.roomNumber,
+      categoryCode: row.room.type,
+      targetDate: date.isoDate,
+      valid: this.isPlacementValid(row, dateIndex, span, this.assignmentReservationId ?? '')
+    });
+  }
+
+  isAssignmentTargetValid(row: CalendarRoomRowView, dateIndex: number): boolean {
+    return this.isPlacementValid(row, dateIndex, Math.max(this.assignmentSpan, 1), this.assignmentReservationId ?? '');
+  }
+
+  private beginDrag(state: CalendarGridDragState, event: PointerEvent): void {
+    if (!this.scrollContainer || this.isDragging) {
+      return;
+    }
+
+    this.isDragging = true;
+    this.hasDragMoved = false;
+    this.dragStartClientX = event.clientX;
+    this.dragStartClientY = event.clientY;
+    this.wasDragCommitted = false;
+    this.dragState = state;
+
+    window.addEventListener('pointermove', this.handlePointerMove, { passive: true });
+    window.addEventListener('pointerup', this.handlePointerUp, { passive: true });
+  }
+
   private handlePointerMove = (event: PointerEvent): void => {
     if (!this.isDragging || !this.dragState) {
+      return;
+    }
+
+    if (!this.hasDragMoved) {
+      const distanceX = Math.abs(event.clientX - this.dragStartClientX);
+      const distanceY = Math.abs(event.clientY - this.dragStartClientY);
+      this.hasDragMoved = distanceX > 4 || distanceY > 4;
+    }
+
+    if (!this.hasDragMoved) {
       return;
     }
 
@@ -135,12 +222,14 @@ export class CalendarGridComponent {
   };
 
   private handlePointerUp = (): void => {
-    if (this.dragState && this.dropCandidate?.valid) {
+    if (this.hasDragMoved && this.dragState && this.dropCandidate?.valid) {
       this.reservationDrop.emit({
-        reservationId: this.dragState.block.reservation.id,
-        fromRoomNumber: this.dragState.block.reservation.roomNumber,
+        reservationId: this.dragState.reservationId,
+        fromRoomNumber: this.dragState.fromRoomNumber,
         toRoomNumber: this.dropCandidate.roomNumber,
-        targetDate: this.dropCandidate.targetDate
+        toCategoryCode: this.dropCandidate.categoryCode,
+        targetDate: this.dropCandidate.targetDate,
+        pendingReservation: this.dragState.pendingReservation
       });
       this.wasDragCommitted = true;
     }
@@ -157,8 +246,10 @@ export class CalendarGridComponent {
     const rect = element.getBoundingClientRect();
     const x = event.clientX - rect.left + element.scrollLeft - this.timelineOffset - this.dragState.pointerOffsetX;
     const y = event.clientY - rect.top + element.scrollTop;
+    const floatingLeft = event.clientX - rect.left + element.scrollLeft - this.timelineOffset - this.dragState.pointerOffsetX;
+    const floatingTop = event.clientY - rect.top + element.scrollTop - 18;
 
-    const maxStartIndex = Math.max(0, this.dates.length - this.dragState.block.span);
+    const maxStartIndex = Math.max(0, this.dates.length - this.dragState.span);
     const startIndex = this.clamp(Math.round(x / this.cellWidth), 0, maxStartIndex);
     const rowIndex = this.clamp(Math.floor(y / this.rowHeight), 0, Math.max(0, this.rows.length - 1));
     const targetDate = this.dates[startIndex]?.isoDate;
@@ -167,25 +258,33 @@ export class CalendarGridComponent {
     if (!targetDate || !targetRow) {
       this.dragPreview = null;
       this.dropCandidate = null;
+      this.cdr.detectChanges();
       return;
     }
 
-    const valid = this.isPlacementValid(targetRow, startIndex, this.dragState.block.span, this.dragState.block.reservation.id);
+    const valid = this.isPlacementValid(targetRow, startIndex, this.dragState.span, this.dragState.reservationId);
 
     this.dragPreview = {
       left: this.timelineOffset + startIndex * this.cellWidth + 2,
       top: rowIndex * this.rowHeight + 6,
-      width: Math.max(36, this.dragState.block.span * this.cellWidth - 4),
-      label: this.dragState.block.label,
-      statusClass: this.dragState.block.reservation.status.toLowerCase(),
+      floatingLeft: this.timelineOffset + floatingLeft,
+      floatingTop,
+      width: Math.max(36, this.dragState.span * this.cellWidth - 4),
+      label: this.dragState.label,
+      roomNumber: targetRow.room.roomNumber,
+      targetDate,
+      statusClass: this.dragState.status.toLowerCase(),
       valid
     };
 
     this.dropCandidate = {
       roomNumber: targetRow.room.roomNumber,
+      categoryCode: targetRow.room.type,
       targetDate,
       valid
     };
+
+    this.cdr.detectChanges();
   }
 
   private isPlacementValid(row: CalendarRoomRowView, startIndex: number, span: number, reservationId: string): boolean {
@@ -201,14 +300,25 @@ export class CalendarGridComponent {
 
   private clearDragState(): void {
     this.isDragging = false;
+    this.hasDragMoved = false;
     this.dragState = null;
     this.dragPreview = null;
     this.dropCandidate = null;
     window.removeEventListener('pointermove', this.handlePointerMove);
     window.removeEventListener('pointerup', this.handlePointerUp);
+    this.cdr.detectChanges();
   }
 
   private clamp(value: number, min: number, max: number): number {
     return Math.min(max, Math.max(min, value));
+  }
+
+  private abbreviateName(fullName: string): string {
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length === 1) {
+      return parts[0] || 'Reserva';
+    }
+
+    return `${parts[0]} ${parts[1].charAt(0)}.`;
   }
 }

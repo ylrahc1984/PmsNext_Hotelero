@@ -3,6 +3,8 @@ export interface ReservaConsulta {
   codAgencia: string;
   codTarifa: string;
   codPlan: string;
+  categoria: string;
+  habOrigen: string;
   agencia: string;
   descripcion: string;
   ingreso: string;
@@ -32,6 +34,18 @@ export interface ReservaConsultaApiItem {
   codAgencia?: string;
   codTarifa?: string;
   codPlan?: string;
+  categoria?: string;
+  Categoria?: string;
+  catHabita?: string;
+  CatHabita?: string;
+  cateHab?: string;
+  CateHab?: string;
+  habOrigen?: string;
+  HabOrigen?: string;
+  oldHabita?: string;
+  OldHabita?: string;
+  numHabita?: string;
+  NumHabita?: string;
   fecIngresa?: string;
   fecSalida?: string;
   fecCreacion?: string;

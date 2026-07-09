@@ -169,6 +169,8 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
       codAgencia: (item.codAgencia ?? '').trim(),
       codTarifa: (item.codTarifa ?? '').trim(),
       codPlan: (item.codPlan ?? '').trim(),
+      categoria: (item.categoria ?? item.Categoria ?? item.catHabita ?? item.CatHabita ?? item.cateHab ?? item.CateHab ?? '').trim(),
+      habOrigen: (item.habOrigen ?? item.HabOrigen ?? item.oldHabita ?? item.OldHabita ?? item.numHabita ?? item.NumHabita ?? '').trim(),
       agencia: (item.nomAgencia ?? item.codAgencia ?? '').trim(),
       descripcion: (item.descripcion ?? item.observacion ?? '').trim(),
       ingreso: item.fecIngresa ?? '',

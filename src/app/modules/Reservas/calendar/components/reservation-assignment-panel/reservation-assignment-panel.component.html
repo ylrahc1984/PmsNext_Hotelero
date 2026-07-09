@@ -1,0 +1,82 @@
+<aside class="assignment-panel" [class.assignment-panel--collapsed]="collapsed">
+  <button type="button" class="assignment-panel__rail" (click)="toggleCollapsed()" [attr.aria-expanded]="!collapsed">
+    <i class="feather" [ngClass]="collapsed ? 'icon-chevrons-left' : 'icon-chevrons-right'"></i>
+    <span>{{ filteredReservations.length }}</span>
+  </button>
+
+  <div class="assignment-panel__content" *ngIf="!collapsed">
+    <header class="assignment-panel__header">
+      <div>
+        <p>Rooming</p>
+        <h2>Reservas pendientes</h2>
+      </div>
+      <button type="button" class="assignment-panel__icon-btn" (click)="reload()" [disabled]="isLoading" aria-label="Actualizar reservas">
+        <i class="feather icon-refresh-cw"></i>
+      </button>
+    </header>
+
+    <div class="assignment-panel__filters">
+      <label class="assignment-panel__field assignment-panel__field--search">
+        <span>Buscar</span>
+        <div>
+          <i class="feather icon-search"></i>
+          <input type="search" class="form-control" [(ngModel)]="search" placeholder="Reserva, agencia..." />
+        </div>
+      </label>
+
+      <label class="assignment-panel__field">
+        <span>Estado</span>
+        <select class="form-control" [(ngModel)]="status" (ngModelChange)="loadReservations()">
+          <option *ngFor="let option of statusOptions" [value]="option.value">{{ option.label }}</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="assignment-panel__summary">
+      <strong>{{ filteredReservations.length }}</strong>
+      <span>{{ usingDemoData ? 'datos demo' : 'reservas' }}</span>
+    </div>
+
+    <div class="assignment-panel__list">
+      <button
+        type="button"
+        class="assignment-card"
+        [class.assignment-card--selected]="selectedReservationId === reservation.id"
+        *ngFor="let reservation of filteredReservations; trackBy: trackByReservation"
+        (click)="selectReservation(reservation)"
+      >
+        <span class="assignment-card__topline">
+          <strong>{{ reservation.reservationCode }}</strong>
+          <span>{{ statusLabel(reservation.status) }}</span>
+        </span>
+        <span class="assignment-card__guest">{{ reservation.guestName }}</span>
+        <span class="assignment-card__agency">{{ reservation.agency }}</span>
+        <span class="assignment-card__route">
+          <span>Cat. {{ reservation.categoryCode || 'N/D' }}</span>
+          <span>Origen {{ reservation.sourceRoom || 'N/D' }}</span>
+        </span>
+        <span class="assignment-card__meta">
+          <span>{{ reservation.startDate }} - {{ reservation.endDate }}</span>
+          <span>{{ reservation.nights }}N</span>
+          <span>{{ reservation.pax }} Pax</span>
+        </span>
+        <span class="assignment-card__actions">
+          <span>Click para seleccionar</span>
+          <span class="assignment-card__drag" (pointerdown)="onReservationPointerDown(reservation, $event)" title="Arrastrar reserva">
+            <i class="feather icon-move"></i>
+          </span>
+        </span>
+      </button>
+
+      <div class="assignment-panel__empty" *ngIf="!isLoading && filteredReservations.length === 0">
+        <i class="feather icon-inbox"></i>
+        <span>Sin reservas pendientes</span>
+      </div>
+
+      <div class="assignment-panel__empty" *ngIf="isLoading">
+        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+        <span>Cargando reservas</span>
+      </div>
+    </div>
+  </div>
+</aside>

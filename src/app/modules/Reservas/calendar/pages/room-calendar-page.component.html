@@ -41,19 +41,58 @@
     (today)="goToday()"
   ></app-calendar-toolbar>
 
-  <section class="calendar-shell">
-    <app-room-sidebar class="calendar-shell__sidebar" [rows]="calendarData.rows" (scrollTopChange)="onSidebarScrollTop($event)"></app-room-sidebar>
-
-    <section class="calendar-shell__timeline">
-      <app-calendar-header [dates]="calendarData.dates" [monthLabel]="calendarData.monthLabel" [scrollLeft]="headerScrollLeft"></app-calendar-header>
-      <app-calendar-grid
-        [dates]="calendarData.dates"
-        [rows]="calendarData.rows"
-        (scrollLeftChange)="onGridScrollLeft($event)"
-        (scrollTopChange)="onGridScrollTop($event)"
-        (reservationSelect)="openReservation($event)"
-        (reservationDrop)="onReservationDrop($event)"
-      ></app-calendar-grid>
-    </section>
+  <section class="assignment-state" *ngIf="selectedPendingReservation as selected">
+    <div>
+      <span>Reserva seleccionada</span>
+      <strong>{{ selected.reservationCode }}</strong>
+      <small>{{ selected.guestName }} | Cat. {{ selected.categoryCode || 'N/D' }} | {{ selected.startDate }} - {{ selected.endDate }}</small>
+    </div>
+    <button type="button" class="assignment-state__clear" (click)="clearSelectedReservation()" [disabled]="isAssigningRoom">
+      <i class="feather icon-x"></i>
+      Cancelar
+    </button>
   </section>
+
+  <section class="calendar-workspace" [class.calendar-workspace--panel-collapsed]="assignmentPanelCollapsed">
+    <section class="calendar-shell">
+      <app-room-sidebar class="calendar-shell__sidebar" [rows]="calendarData.rows" (scrollTopChange)="onSidebarScrollTop($event)"></app-room-sidebar>
+
+      <section class="calendar-shell__timeline">
+        <app-calendar-header [dates]="calendarData.dates" [monthLabel]="calendarData.monthLabel" [scrollLeft]="headerScrollLeft"></app-calendar-header>
+        <app-calendar-grid
+          [dates]="calendarData.dates"
+          [rows]="calendarData.rows"
+          [assignmentMode]="!!selectedPendingReservation"
+          [assignmentSpan]="selectedPendingReservation?.nights ?? 1"
+          [assignmentReservationId]="selectedPendingReservation?.id ?? null"
+          (scrollLeftChange)="onGridScrollLeft($event)"
+          (scrollTopChange)="onGridScrollTop($event)"
+          (reservationSelect)="openReservationActionMenu($event)"
+          (reservationDrop)="onReservationDrop($event)"
+          (assignmentTargetSelect)="onAssignmentTargetSelect($event)"
+        ></app-calendar-grid>
+      </section>
+    </section>
+
+    <app-reservation-assignment-panel
+      class="calendar-workspace__assignment"
+      [startDate]="startDate"
+      [endDate]="endDate"
+      [collapsed]="assignmentPanelCollapsed"
+      [assignedReservationIds]="demoAssignedReservationIds"
+      [selectedReservationId]="selectedPendingReservation?.id ?? null"
+      (collapsedChange)="assignmentPanelCollapsed = $event"
+      (reservationSelect)="onPendingReservationSelect($event)"
+      (dragStart)="onPendingReservationDragStart($event)"
+    ></app-reservation-assignment-panel>
+  </section>
+
+  <div class="reservation-action-backdrop" *ngIf="reservationActionMenu as menu" (click)="closeReservationActionMenu()">
+    <div class="reservation-action-menu" [style.left.px]="menu.x" [style.top.px]="menu.y" (click)="$event.stopPropagation()">
+      <button type="button" class="reservation-action-menu__item" (click)="onUnassignReservationFromMenu(menu.block)" [disabled]="isAssigningRoom">
+        <i class="feather icon-log-out"></i>
+        Desasignar habitacion
+      </button>
+    </div>
+  </div>
 </section>

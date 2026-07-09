@@ -187,13 +187,13 @@ export class ReservaHospedajeComponent implements OnInit {
     codTarifa: this.fb.control(''),
     codPlan: this.fb.control(''),
     fecIngreso: this.fb.control(this.todayAsInputDate()),
-    fecSalida: this.fb.control(this.addDaysAsInputDate(3)),
+    fecSalida: this.fb.control(this.addDaysAsInputDate(1)),
     fecCreacion: this.fb.control(this.todayAsInputDate()),
     fecConfirma: this.fb.control(''),
     fecPrepago: this.fb.control(''),
     fecAnulada: this.fb.control(''),
-    totNoches: this.fb.control(3),
-    totDias: this.fb.control(4),
+    totNoches: this.fb.control(1),
+    totDias: this.fb.control(2),
     descripcion: this.fb.control('Reserva familiar para vacaciones de junio.'),
     tCambio: this.fb.control(535.25, { validators: [Validators.min(0)] }),
     folio: this.fb.control(''),
@@ -639,14 +639,7 @@ export class ReservaHospedajeComponent implements OnInit {
       codAgencia: '0000000010',
       codTarifa: '',
       codPlan: '',
-      fecIngreso: this.todayAsInputDate(),
-      fecSalida: this.addDaysAsInputDate(3),
-      fecCreacion: this.todayAsInputDate(),
-      fecConfirma: '',
-      fecPrepago: '',
-      fecAnulada: '',
-      totNoches: 3,
-      totDias: 4,
+      ...this.defaultReservationDates(),
       descripcion: '',
       tCambio: 535.25,
       folio: '',
@@ -1022,7 +1015,7 @@ export class ReservaHospedajeComponent implements OnInit {
 
     try {
       const draft = JSON.parse(storedDraft) as ReservaHospedajeDraft;
-      this.reservaForm.patchValue(draft.reserva, { emitEvent: false });
+      this.reservaForm.patchValue(this.normalizeDraftReservationDefaults(draft.reserva), { emitEvent: false });
       this.restoreFormArray(this.habitaciones, draft.reserva.habitaciones, (item) => this.createHabitacionGroup(item));
       this.restoreFormArray(this.inclusiones, draft.reserva.inclusiones, (item) => this.createInclusionGroup(item));
       this.restoreFormArray(this.servicios, draft.reserva.servicios, (item) => this.createServicioGroup(item));
@@ -1629,6 +1622,32 @@ export class ReservaHospedajeComponent implements OnInit {
 
   private defaultServicio(): ReservaServicioItem {
     return { codSrv: '', descripcion: '', cantidad: 1, precio: 0, impuesto: 0, tipPax: 'Reserva', total: 0 };
+  }
+
+  private defaultReservationDates(): Pick<
+    ReturnType<FormGroup<ReservaHeaderForm>['getRawValue']>,
+    'fecIngreso' | 'fecSalida' | 'fecCreacion' | 'fecConfirma' | 'fecPrepago' | 'fecAnulada' | 'totNoches' | 'totDias'
+  > {
+    return {
+      fecIngreso: this.todayAsInputDate(),
+      fecSalida: this.addDaysAsInputDate(1),
+      fecCreacion: this.todayAsInputDate(),
+      fecConfirma: '',
+      fecPrepago: '',
+      fecAnulada: '',
+      totNoches: 1,
+      totDias: 2
+    };
+  }
+
+  private normalizeDraftReservationDefaults(
+    draftReserva: ReservaHospedajeDraft['reserva']
+  ): ReservaHospedajeDraft['reserva'] {
+    const defaults = this.defaultReservationDates();
+    return {
+      ...draftReserva,
+      ...defaults
+    };
   }
 
   private todayAsInputDate(): string {
