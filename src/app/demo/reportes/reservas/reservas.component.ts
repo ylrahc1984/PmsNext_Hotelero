@@ -1,280 +1,209 @@
-// angular import
-import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { NgbTypeaheadModule, NgbTypeaheadSelectItemEvent } from '@ng-bootstrap/ng-bootstrap';
-import { OperatorFunction } from 'rxjs';
-import { debounceTime, distinctUntilChanged, map } from 'rxjs/operators';
 
-// project import
 import { SharedModule } from 'src/app/theme/shared/shared.module';
-import { ReporteOperacionItem, ReservasReporteService } from './reservas-reporte.service';
 
-type EstadoReserva = 'confirmada' | 'pendiente' | 'cancelada';
-
-interface ReservaReporte {
-  codigo: string;
-  fecha: string;
-  cliente: string;
-  servicio: string;
-  origen: string;
-  destino: string;
-  hora: string;
-  pax: number;
-  agencia: string;
-  estado: EstadoReserva;
-  total: number;
+interface OperationalKpi {
+  label: string;
+  value: number;
+  format: 'currency' | 'percent' | 'number';
+  detail: string;
+  trend: string;
+  tone: 'positive' | 'warning' | 'neutral';
 }
 
-interface FiltrosReservaReporte {
-  buscar: string;
-  estado: 'todos' | EstadoReserva;
-  agencia: string;
-  desde: string;
-  hasta: string;
+interface RoomStatus {
+  label: string;
+  value: number;
+  detail: string;
+  tone: 'available' | 'occupied' | 'warning' | 'blocked';
+}
+
+interface MovementItem {
+  label: string;
+  count: number;
+  completed: number;
+  detail: string;
+}
+
+interface WorkloadPoint {
+  label: string;
+  arrivals: number;
+  departures: number;
+}
+
+interface OperationalFocus {
+  title: string;
+  detail: string;
+  impact: string;
+  tone: 'positive' | 'warning' | 'neutral';
 }
 
 @Component({
   selector: 'app-reservas-reporte',
   standalone: true,
-  imports: [CommonModule, FormsModule, SharedModule, NgbTypeaheadModule],
+  imports: [CommonModule, FormsModule, SharedModule],
   templateUrl: './reservas.component.html',
   styleUrls: ['./reservas.component.scss']
 })
-export class ReservasComponent implements OnInit {
-  private readonly reservasReporteService = inject(ReservasReporteService);
+export class ReservasComponent {
+  readonly todayDisplay = this.getTodayDisplayDate();
+  readonly periodOptions = ['Hoy', 'Manana', 'Semana actual', 'Proximos 7 dias'];
 
-  reservas: ReservaReporte[] = [];
-
-  filtros: FiltrosReservaReporte = {
-    buscar: '',
-    estado: 'todos',
-    agencia: 'todos',
-    desde: '',
-    hasta: ''
+  filters = {
+    period: 'Hoy',
+    from: this.getTodayInputDate(),
+    to: this.getTodayInputDate()
   };
 
-  agencias: string[] = [];
-  agenciaSearchValue = '';
-
-  page = 1;
-  pageSize = 5;
-  pageSizes = [5, 10, 20];
-
-  readonly searchAgencias: OperatorFunction<string, readonly string[]> = (text$) =>
-    text$.pipe(
-      debounceTime(200),
-      distinctUntilChanged(),
-      map((term) => this.filterAgencias(term))
-    );
-
-  ngOnInit() {
-    this.cargarReservas();
-  }
-
-  filteredReservas() {
-    const texto = this.filtros.buscar.trim().toLowerCase();
-    const estado = this.filtros.estado;
-    const agencia = this.filtros.agencia;
-    const desde = this.filtros.desde ? new Date(this.filtros.desde) : null;
-    const hasta = this.filtros.hasta ? new Date(this.filtros.hasta) : null;
-
-    return this.reservas.filter((r) => {
-      const coincideTexto =
-        !texto ||
-        (r.codigo || '').toLowerCase().includes(texto) ||
-        (r.cliente || '').toLowerCase().includes(texto) ||
-        (r.servicio || '').toLowerCase().includes(texto);
-      const coincideEstado = estado === 'todos' || r.estado === estado;
-      const coincideAgencia = agencia === 'todos' || r.agencia === agencia;
-      const fecha = new Date(r.fecha);
-      const coincideDesde = !desde || fecha >= desde;
-      const coincideHasta = !hasta || fecha <= hasta;
-      return coincideTexto && coincideEstado && coincideAgencia && coincideDesde && coincideHasta;
-    });
-  }
-
-  pagedReservas() {
-    const start = (this.page - 1) * this.pageSize;
-    return this.filteredReservas().slice(start, start + this.pageSize);
-  }
-
-  totalPaginas() {
-    return Math.max(1, Math.ceil(this.filteredReservas().length / this.pageSize));
-  }
-
-  totalFiltrado() {
-    return this.filteredReservas().reduce((sum, r) => sum + r.total, 0);
-  }
-
-  changePage(delta: number) {
-    const next = this.page + delta;
-    this.page = Math.min(Math.max(next, 1), this.totalPaginas());
-  }
-
-  onPageSizeChange(size: number | string) {
-    this.pageSize = Number(size) || 5;
-    this.page = 1;
-  }
-
-  resetFiltros() {
-    this.filtros = { buscar: '', estado: 'todos', agencia: 'todos', desde: '', hasta: '' };
-    this.agenciaSearchValue = '';
-    this.page = 1;
-  }
-
-  resetPagina() {
-    this.page = 1;
-  }
-
-  getEstadoClase(estado: EstadoReserva) {
-    switch (estado) {
-      case 'confirmada':
-        return 'estado-confirmada';
-      case 'cancelada':
-        return 'estado-cancelada';
-      default:
-        return 'estado-pendiente';
+  readonly kpis: OperationalKpi[] = [
+    {
+      label: 'Ocupacion operativa',
+      value: 78,
+      format: 'percent',
+      detail: 'Habitaciones ocupadas vs inventario disponible',
+      trend: '+6 pts vs ayer',
+      tone: 'positive'
+    },
+    {
+      label: 'Llegadas pendientes',
+      value: 9,
+      format: 'number',
+      detail: 'Check-ins por completar hoy',
+      trend: '4 llegadas antes de las 15:00',
+      tone: 'warning'
+    },
+    {
+      label: 'Salidas pendientes',
+      value: 5,
+      format: 'number',
+      detail: 'Check-outs por cerrar en front desk',
+      trend: '2 cuentas con cargos abiertos',
+      tone: 'neutral'
+    },
+    {
+      label: 'Valor en riesgo',
+      value: 1260,
+      format: 'currency',
+      detail: 'Habitaciones bloqueadas o fuera de servicio',
+      trend: 'Requiere accion de mantenimiento',
+      tone: 'warning'
     }
+  ];
+
+  readonly roomStatuses: RoomStatus[] = [
+    { label: 'Disponibles', value: 18, detail: 'Listas para venta inmediata', tone: 'available' },
+    { label: 'Ocupadas', value: 42, detail: 'Con huesped en casa', tone: 'occupied' },
+    { label: 'Sucias', value: 11, detail: 'Pendientes de limpieza', tone: 'warning' },
+    { label: 'Fuera de servicio', value: 3, detail: 'Impactan inventario vendible', tone: 'blocked' }
+  ];
+
+  readonly movements: MovementItem[] = [
+    { label: 'Llegadas', count: 24, completed: 15, detail: 'Check-ins completados' },
+    { label: 'Salidas', count: 19, completed: 14, detail: 'Check-outs cerrados' },
+    { label: 'Stayovers', count: 37, completed: 25, detail: 'Habitaciones que permanecen' },
+    { label: 'Cambios de habitacion', count: 4, completed: 2, detail: 'Movimientos coordinados' }
+  ];
+
+  readonly workloadPoints: WorkloadPoint[] = [
+    { label: '08:00', arrivals: 2, departures: 7 },
+    { label: '11:00', arrivals: 4, departures: 9 },
+    { label: '14:00', arrivals: 8, departures: 3 },
+    { label: '17:00', arrivals: 7, departures: 0 },
+    { label: '20:00', arrivals: 3, departures: 0 }
+  ];
+
+  readonly focusItems: OperationalFocus[] = [
+    {
+      title: 'Housekeeping bajo presion',
+      detail: '11 habitaciones sucias coinciden con llegadas tempranas.',
+      impact: 'Priorizar salidas con llegada asignada',
+      tone: 'warning'
+    },
+    {
+      title: 'Mantenimiento afecta venta',
+      detail: '3 habitaciones fuera de servicio reducen inventario disponible.',
+      impact: this.formatCurrency(1260),
+      tone: 'warning'
+    },
+    {
+      title: 'Front desk estable',
+      detail: 'La mayoria de salidas ya fue procesada antes del bloque fuerte de llegadas.',
+      impact: 'Riesgo moderado',
+      tone: 'positive'
+    }
+  ];
+
+  readonly recommendations = [
+    'Asignar prioridad de limpieza a habitaciones con llegada confirmada antes de las 15:00.',
+    'Escalar mantenimiento de habitaciones fuera de servicio con impacto comercial directo.',
+    'Revisar cuentas abiertas de salidas pendientes antes del cierre de turno.'
+  ];
+
+  get maxWorkloadValue(): number {
+    return Math.max(...this.workloadPoints.flatMap((item) => [item.arrivals, item.departures]));
   }
 
-  exportarExcel() {
-    console.log('Exportar reservas', this.filteredReservas());
+  getMovementPercent(item: MovementItem): number {
+    return item.count ? Math.round((item.completed / item.count) * 100) : 0;
   }
 
-  imprimir() {
-    window.print();
+  getWorkloadHeight(value: number): number {
+    return this.maxWorkloadValue ? Math.max(8, Math.round((value / this.maxWorkloadValue) * 100)) : 8;
   }
 
-  onAgenciaSelected(event: NgbTypeaheadSelectItemEvent): void {
-    const agencia = (event.item ?? '').toString().trim();
-    this.filtros.agencia = agencia || 'todos';
-    this.agenciaSearchValue = agencia;
-    this.resetPagina();
+  trackByLabel(_: number, item: { label?: string; title?: string }): string {
+    return item.label || item.title || '';
   }
 
-  onAgenciaInputChange(value: string): void {
-    const term = (value ?? '').toString();
-    this.agenciaSearchValue = term;
-
-    if (!term.trim()) {
-      if (this.filtros.agencia !== 'todos') {
-        this.filtros.agencia = 'todos';
-        this.resetPagina();
-      }
-      return;
+  formatValue(kpi: OperationalKpi): string {
+    if (kpi.format === 'percent') {
+      return `${kpi.value.toFixed(0)}%`;
     }
 
-    const exactMatch = this.findAgenciaExacta(term);
-    if (exactMatch && this.filtros.agencia !== exactMatch) {
-      this.filtros.agencia = exactMatch;
-      this.resetPagina();
-    }
-  }
-
-  onAgenciaBlur(): void {
-    const term = this.agenciaSearchValue.trim();
-    if (!term) {
-      this.agenciaSearchValue = '';
-      this.filtros.agencia = 'todos';
-      return;
+    if (kpi.format === 'number') {
+      return kpi.value.toLocaleString('es-CR');
     }
 
-    const exactMatch = this.findAgenciaExacta(term);
-    if (exactMatch) {
-      this.agenciaSearchValue = exactMatch;
-      this.filtros.agencia = exactMatch;
-      return;
-    }
-
-    this.syncAgenciaSearchValue();
+    return this.formatCurrency(kpi.value);
   }
 
-  private cargarReservas() {
-    this.reservasReporteService.getTodasLasOperaciones().subscribe({
-      next: (response) => {
-        this.reservas = (response.datos ?? []).map((item) => this.mapReserva(item));
-        this.agencias = this.getAgencias(this.reservas);
-        if (!this.agencias.includes(this.filtros.agencia)) {
-          this.filtros.agencia = 'todos';
-        }
-        this.syncAgenciaSearchValue();
-        this.page = 1;
-      },
-      error: (error) => {
-        console.error('No se pudo cargar el reporte de reservas.', error);
-        this.reservas = [];
-        this.agencias = [];
-        this.agenciaSearchValue = '';
-        this.page = 1;
-      }
-    });
+  formatCurrency(value: number): string {
+    return new Intl.NumberFormat('es-CR', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0
+    }).format(value);
   }
 
-  private mapReserva(item: ReporteOperacionItem): ReservaReporte {
-    return {
-      codigo: (item.numeroReserva ?? '').toString().trim(),
-      fecha: item.fecha,
-      cliente: (item.cliente ?? '').toString().trim(),
-      servicio: (item.servicio ?? '').toString().trim(),
-      origen: (item.origen ?? '').toString().trim(),
-      destino: (item.destino ?? '').toString().trim(),
-      hora: (item.hora ?? '').toString().trim(),
-      pax: Number(item.pax ?? 0),
-      agencia: (item.agenciaOCliente ?? '').toString().trim(),
-      estado: this.normalizarEstado(item.estado),
-      total: Number(item.total ?? 0)
+  resetFilters(): void {
+    this.filters = {
+      period: 'Hoy',
+      from: this.getTodayInputDate(),
+      to: this.getTodayInputDate()
     };
   }
 
-  private normalizarEstado(estado: string | null | undefined): EstadoReserva {
-    const valor = (estado ?? '').toString().trim().toUpperCase();
-
-    if (['CAN', 'ANU', 'CANCELADA', 'CANCELADO'].includes(valor)) {
-      return 'cancelada';
-    }
-
-    if (['CON', 'CONF', 'CONFIRMADA', 'COM', 'COMPLETADA', 'ASI', 'ASIGNADA'].includes(valor)) {
-      return 'confirmada';
-    }
-
-    return 'pendiente';
+  exportReport(): void {
+    console.log('Exportar reporte operativo hotelero', this.filters);
   }
 
-  private getAgencias(reservas: ReservaReporte[]): string[] {
-    return [...new Set(reservas.map((reserva) => reserva.agencia).filter((agencia) => !!agencia))]
-      .sort((a, b) => a.localeCompare(b));
+  printReport(): void {
+    window.print();
   }
 
-  private filterAgencias(term: string): string[] {
-    const query = this.normalizeText(term);
-    const agencias = this.agencias ?? [];
-
-    if (!query) {
-      return agencias.slice(0, 20);
-    }
-
-    return agencias
-      .filter((agencia) => this.normalizeText(agencia).includes(query))
-      .slice(0, 20);
+  private getTodayDisplayDate(): string {
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    return `${day}/${month}/${now.getFullYear()}`;
   }
 
-  private findAgenciaExacta(value: string): string | null {
-    const query = this.normalizeText(value);
-    if (!query) return null;
-    return this.agencias.find((agencia) => this.normalizeText(agencia) === query) ?? null;
-  }
-
-  private syncAgenciaSearchValue(): void {
-    this.agenciaSearchValue = this.filtros.agencia === 'todos' ? '' : this.filtros.agencia;
-  }
-
-  private normalizeText(value: string | null | undefined): string {
-    return (value ?? '')
-      .toString()
-      .trim()
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
+  private getTodayInputDate(): string {
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${now.getFullYear()}-${month}-${day}`;
   }
 }

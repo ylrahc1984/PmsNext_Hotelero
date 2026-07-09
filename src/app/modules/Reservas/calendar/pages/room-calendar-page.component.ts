@@ -1,8 +1,11 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, ViewChild, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { of } from 'rxjs';
+import { catchError, finalize } from 'rxjs/operators';
 
-import { RoomType } from '../../interfaces/room-status.interface';
+import { RoomStatus, RoomType } from '../../interfaces/room-status.interface';
 import { CalendarGridComponent } from '../components/calendar-grid/calendar-grid.component';
 import { CalendarHeaderComponent } from '../components/calendar-header/calendar-header.component';
 import { CalendarToolbarComponent } from '../components/calendar-toolbar/calendar-toolbar.component';
@@ -24,14 +27,16 @@ import { CalendarService } from '../services/calendar.service';
   styleUrls: ['./room-calendar-page.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class RoomCalendarPageComponent implements AfterViewInit {
+export class RoomCalendarPageComponent implements OnInit {
   private readonly calendarService = inject(CalendarService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   @ViewChild(RoomSidebarComponent) roomSidebar?: RoomSidebarComponent;
   @ViewChild(CalendarGridComponent) calendarGrid?: CalendarGridComponent;
 
-  readonly typeOptions: RoomType[] = ['STD', 'JUNIOR', 'DELUXE', 'SUITE'];
+  typeOptions: RoomType[] = [];
   readonly statusOptions: Array<{ label: string; value: CalendarFilterStatus }> = [
     { label: 'Todos', value: null },
     { label: 'Disponible', value: 'DISPONIBLE' },
@@ -46,11 +51,14 @@ export class RoomCalendarPageComponent implements AfterViewInit {
   type: RoomType | null = null;
   status: CalendarFilterStatus = null;
   headerScrollLeft = 0;
-  private workingReservations: CalendarReservation[] = this.calendarService.getReservations();
-  calendarData: CalendarData = this.calendarService.getCalendarData(this.buildQuery(), this.workingReservations);
+  isLoading = false;
+  errorMessage = '';
+  private rooms: RoomStatus[] = [];
+  private workingReservations: CalendarReservation[] = [];
+  calendarData: CalendarData = this.calendarService.getCalendarData(this.buildQuery(), this.rooms, this.workingReservations);
 
-  ngAfterViewInit(): void {
-    this.reloadCalendar();
+  ngOnInit(): void {
+    this.loadCalendar(true);
   }
 
   onStartDateChange(value: string): void {
@@ -58,7 +66,7 @@ export class RoomCalendarPageComponent implements AfterViewInit {
     if (this.startDate > this.endDate) {
       this.endDate = this.startDate;
     }
-    this.reloadCalendar();
+    this.loadCalendar();
   }
 
   onEndDateChange(value: string): void {
@@ -66,7 +74,7 @@ export class RoomCalendarPageComponent implements AfterViewInit {
     if (this.endDate < this.startDate) {
       this.startDate = this.endDate;
     }
-    this.reloadCalendar();
+    this.loadCalendar();
   }
 
   onSearchChange(value: string): void {
@@ -88,14 +96,14 @@ export class RoomCalendarPageComponent implements AfterViewInit {
     const range = this.rangeLength;
     this.startDate = this.toIsoDate(new Date());
     this.endDate = this.shiftDate(this.startDate, range - 1);
-    this.reloadCalendar(true);
+    this.loadCalendar(true);
   }
 
   shiftWindow(direction: -1 | 1): void {
     const range = this.rangeLength;
     this.startDate = this.shiftDate(this.startDate, range * direction);
     this.endDate = this.shiftDate(this.endDate, range * direction);
-    this.reloadCalendar(true);
+    this.loadCalendar(true);
   }
 
   onGridScrollLeft(scrollLeft: number): void {
@@ -115,27 +123,7 @@ export class RoomCalendarPageComponent implements AfterViewInit {
   }
 
   onReservationDrop(drop: CalendarReservationDropRequest): void {
-    const current = this.workingReservations.find((reservation) => reservation.id === drop.reservationId);
-    if (!current) {
-      return;
-    }
-
-    const span = this.diffDays(current.startDate, current.endDate);
-    const nextStartDate = drop.targetDate;
-    const nextEndDate = this.shiftDate(nextStartDate, span);
-
-    this.workingReservations = this.workingReservations.map((reservation) =>
-      reservation.id === drop.reservationId
-        ? {
-            ...reservation,
-            roomNumber: drop.toRoomNumber,
-            startDate: nextStartDate,
-            endDate: nextEndDate
-          }
-        : reservation
-    );
-
-    this.reloadCalendar();
+    console.info('[RoomCalendar] Drag/drop pendiente de integracion backend.', drop);
   }
 
   get visibleWindowLabel(): string {
@@ -143,12 +131,43 @@ export class RoomCalendarPageComponent implements AfterViewInit {
   }
 
   private reloadCalendar(resetScroll = false): void {
-    this.calendarData = this.calendarService.getCalendarData(this.buildQuery(), this.workingReservations);
+    this.calendarData = this.calendarService.getCalendarData(this.buildQuery(), this.rooms, this.workingReservations);
     if (resetScroll) {
       this.headerScrollLeft = 0;
       this.calendarGrid?.resetScroll();
       this.roomSidebar?.resetScroll();
     }
+  }
+
+  private loadCalendar(resetScroll = false): void {
+    this.isLoading = true;
+    this.errorMessage = '';
+
+    this.calendarService
+      .getCalendarApiData(this.startDate, this.endDate)
+      .pipe(
+        catchError((error) => {
+          console.error('No se pudo cargar el calendario de habitaciones.', error);
+          this.errorMessage = 'No se pudo cargar el calendario de habitaciones.';
+          return of({ rooms: [] as RoomStatus[], reservations: [] as CalendarReservation[], typeOptions: [] as RoomType[] });
+        }),
+        finalize(() => {
+          this.isLoading = false;
+          this.cdr.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((data) => {
+        this.rooms = data.rooms;
+        this.workingReservations = data.reservations;
+        this.typeOptions = data.typeOptions;
+
+        if (this.type && !this.typeOptions.includes(this.type)) {
+          this.type = null;
+        }
+
+        this.reloadCalendar(resetScroll);
+      });
   }
 
   private buildQuery() {
@@ -174,7 +193,10 @@ export class RoomCalendarPageComponent implements AfterViewInit {
   }
 
   private toIsoDate(date: Date): string {
-    return date.toISOString().slice(0, 10);
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const day = `${date.getDate()}`.padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   private diffDays(startDate: string, endDate: string): number {

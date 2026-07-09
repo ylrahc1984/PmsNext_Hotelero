@@ -433,6 +433,13 @@ $line: rgba(11, 23, 36, 0.1);
   grid-column: 1 / -1;
 }
 
+.panel-note {
+  margin-top: 14px;
+  color: rgba($ink, 0.62);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .alert-list {
   display: grid;
   gap: 10px;
@@ -484,18 +491,6 @@ $line: rgba(11, 23, 36, 0.1);
   font-weight: 850;
 }
 
-.chart-slot {
-  min-height: 195px;
-}
-
-.chart-placeholder {
-  min-height: 195px;
-  border-radius: 14px;
-  background:
-    linear-gradient(180deg, rgba($next-blue, 0.08), rgba($next-cyan, 0.04)),
-    repeating-linear-gradient(90deg, transparent 0 34px, rgba($next-bg, 0.05) 35px 36px);
-}
-
 .chart-placeholder--list {
   display: flex;
   flex-direction: column;
@@ -515,21 +510,176 @@ $line: rgba(11, 23, 36, 0.1);
   font-weight: 750;
 }
 
-.forecast-strip {
-  display: flex;
-  align-items: end;
+.summary-list {
+  display: grid;
   gap: 12px;
   min-height: 195px;
+  align-content: center;
+}
+
+.summary-list div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  align-items: center;
+  padding: 12px;
+  background: $paper;
+  border: 1px solid $line;
+  border-radius: 12px;
+}
+
+.summary-list span,
+.metric-breakdown span,
+.metric-breakdown small,
+.empty-summary {
+  color: rgba($ink, 0.62);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.summary-list strong,
+.metric-breakdown strong {
+  color: $ink;
+  font-size: 1rem;
+  font-weight: 850;
+}
+
+.summary-list em {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  height: 7px;
+  background: rgba($next-bg, 0.08);
+  border-radius: 999px;
+}
+
+.summary-list em i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, $next-cyan, $next-blue);
+  border-radius: inherit;
+}
+
+.metric-breakdown {
+  display: grid;
+  min-height: 195px;
+  align-content: center;
+  gap: 10px;
   padding: 18px;
   background: rgba($next-bg, 0.035);
+  border: 1px solid $line;
   border-radius: 14px;
 }
 
-.forecast-strip span {
-  flex: 1;
-  min-height: 28px;
+.metric-breakdown strong {
+  font-size: 1.55rem;
+}
+
+.empty-summary {
+  display: flex !important;
+  grid-template-columns: none !important;
+  min-height: 110px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.forecast-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.forecast-summary div {
+  min-height: 70px;
+  padding: 12px;
+  background: $paper;
+  border: 1px solid $line;
+  border-radius: 12px;
+}
+
+.forecast-summary span,
+.forecast-summary small,
+.forecast-day em,
+.forecast-footnote,
+.forecast-empty {
+  color: rgba($ink, 0.62);
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.forecast-summary strong {
+  display: block;
+  margin-top: 4px;
+  color: $ink;
+  font-size: 1.2rem;
+  font-weight: 850;
+  line-height: 1.1;
+}
+
+.forecast-summary small {
+  display: block;
+  margin-top: 3px;
+}
+
+.forecast-strip {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  align-items: end;
+  gap: 8px;
+  min-height: 130px;
+  padding: 14px;
+  background: rgba($next-bg, 0.035);
+  border: 1px solid $line;
+  border-radius: 14px;
+}
+
+.forecast-day {
+  display: grid;
+  grid-template-rows: minmax(68px, 1fr) auto auto;
+  align-items: end;
+  gap: 5px;
+  min-width: 0;
+  text-align: center;
+}
+
+.forecast-day span {
+  justify-self: stretch;
+  min-height: 12px;
   background: linear-gradient(180deg, $next-cyan, $next-blue);
   border-radius: 999px 999px 6px 6px;
+}
+
+.forecast-day strong {
+  color: $ink;
+  font-size: 0.78rem;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.forecast-day--today span {
+  background: linear-gradient(180deg, $next-burgundy, $next-blue);
+  box-shadow: 0 0 0 2px rgba($next-burgundy, 0.12);
+}
+
+.forecast-footnote {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.forecast-empty {
+  display: flex;
+  min-height: 130px;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba($next-bg, 0.035);
+  border: 1px solid $line;
+  border-radius: 14px;
+  text-align: center;
 }
 
 @media (max-width: 1399.98px) {

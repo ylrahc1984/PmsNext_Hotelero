@@ -1,5 +1,5 @@
 <div class="calendar-grid__scroll" #scrollContainer (scroll)="onScroll($event)">
-  <div class="calendar-grid__content" [style.width.px]="dates.length * cellWidth">
+  <div class="calendar-grid__content" [style.width.px]="dates.length * cellWidth + timelineOffset">
     <div class="calendar-grid__row" *ngFor="let row of rows; trackBy: trackByRoom">
       <div class="calendar-grid__cells">
         <app-calendar-cell *ngFor="let date of dates; trackBy: trackByDate" [isToday]="date.isToday" [isWeekend]="date.isWeekend"></app-calendar-cell>

@@ -2,19 +2,18 @@
   display: block;
 }
 
-$ink: #111827;
+$ink: #102033;
 $muted: #667085;
 $line: #e4e7ec;
 $paper: #ffffff;
-$soft: #f8fafc;
-$blue: #2563eb;
-$cyan: #0ea5e9;
+$soft: #f7f9fc;
+$navy: #16436f;
+$teal: #0ea5a3;
 $green: #16a34a;
-$amber: #d97706;
-$red: #b42318;
-$slate: #475569;
+$amber: #d98a16;
+$rose: #b4233c;
 
-.operations-report {
+.commercial-report {
   display: grid;
   gap: 18px;
   color: $ink;
@@ -27,7 +26,7 @@ $slate: #475569;
   border: 1px solid $line;
   border-radius: 14px;
   background: rgba($paper, 0.97);
-  box-shadow: 0 14px 34px rgba(17, 24, 39, 0.06);
+  box-shadow: 0 14px 34px rgba(16, 32, 51, 0.06);
 }
 
 .report-header {
@@ -40,7 +39,7 @@ $slate: #475569;
 
 .eyebrow {
   display: block;
-  color: $blue;
+  color: $teal;
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -96,7 +95,7 @@ $slate: #475569;
 .kpi-card {
   min-height: 150px;
   padding: 16px;
-  border-left: 5px solid $slate;
+  border-left: 5px solid $navy;
 }
 
 .kpi-card--positive {
@@ -108,9 +107,11 @@ $slate: #475569;
 }
 
 .kpi-card span,
+.row-meta,
+.summary-badge span,
 .date-badge,
 .legend,
-.row-meta {
+.segment-list span {
   color: $muted;
   font-size: 0.78rem;
   font-weight: 720;
@@ -134,7 +135,7 @@ $slate: #475569;
 .kpi-card em {
   display: block;
   margin-top: 10px;
-  color: $blue;
+  color: $teal;
   font-size: 0.78rem;
   font-style: normal;
   font-weight: 800;
@@ -146,7 +147,7 @@ $slate: #475569;
 
 .report-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.95fr);
+  grid-template-columns: minmax(0, 1.18fr) minmax(0, 0.92fr);
   gap: 18px;
 }
 
@@ -170,6 +171,7 @@ $slate: #475569;
   font-size: 1.08rem;
 }
 
+.summary-badge,
 .date-badge {
   padding: 8px 10px;
   border: 1px solid $line;
@@ -179,66 +181,56 @@ $slate: #475569;
   white-space: nowrap;
 }
 
-.room-status-grid {
+.summary-badge strong {
+  display: block;
+  color: $navy;
+  font-size: 0.94rem;
+}
+
+.channel-list,
+.segment-list,
+.opportunity-list,
+.decision-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
-.room-status-grid > div,
-.movement-list > div,
-.focus-list > div,
-.decision-list div {
-  padding: 13px;
-  background: $soft;
-  border: 1px solid $line;
-  border-radius: 12px;
+.row-main,
+.row-meta,
+.segment-list div > div,
+.opportunity-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.room-status-grid > div {
-  border-left: 4px solid $slate;
-}
-
-.room-status--available {
-  border-left-color: $green !important;
-}
-
-.room-status--occupied {
-  border-left-color: $blue !important;
-}
-
-.room-status--warning {
-  border-left-color: $amber !important;
-}
-
-.room-status--blocked {
-  border-left-color: $red !important;
-}
-
-.room-status-grid span {
-  color: $muted;
-  font-size: 0.78rem;
-  font-weight: 750;
-}
-
-.room-status-grid strong {
-  display: block;
-  margin-top: 5px;
+.row-main span,
+.row-main strong,
+.segment-list strong,
+.opportunity-head strong {
   color: $ink;
-  font-size: 1.42rem;
-  font-weight: 880;
+  font-weight: 850;
 }
 
-.room-status-grid p,
-.focus-list p {
-  margin: 5px 0 0;
-  color: $muted;
-  font-size: 0.83rem;
+.bar-track {
+  display: block;
+  overflow: hidden;
+  height: 8px;
+  margin: 8px 0 6px;
+  background: #edf2f7;
+  border-radius: 999px;
 }
 
-.workload-chart {
+.bar-track i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, $teal, $navy);
+  border-radius: inherit;
+}
+
+.demand-chart {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   min-height: 220px;
   padding: 16px;
@@ -247,7 +239,7 @@ $slate: #475569;
   border-radius: 12px;
 }
 
-.workload-chart > div {
+.demand-chart > div {
   display: grid;
   grid-template-rows: minmax(150px, 1fr) auto;
   gap: 8px;
@@ -264,20 +256,20 @@ $slate: #475569;
 }
 
 .bar {
-  width: 18px;
+  width: 19px;
   min-height: 10px;
   border-radius: 8px 8px 3px 3px;
 }
 
-.bar--arrival {
-  background: linear-gradient(180deg, #60a5fa, $blue);
+.bar--demand {
+  background: linear-gradient(180deg, #2dd4bf, $teal);
 }
 
-.bar--departure {
-  background: linear-gradient(180deg, #22d3ee, $cyan);
+.bar--pickup {
+  background: linear-gradient(180deg, #60a5fa, $navy);
 }
 
-.workload-chart strong {
+.demand-chart strong {
   color: #475467;
   font-size: 0.8rem;
 }
@@ -296,74 +288,51 @@ $slate: #475569;
   border-radius: 999px;
 }
 
-.legend-dot--arrival {
-  background: $blue;
+.legend-dot--demand {
+  background: $teal;
 }
 
-.legend-dot--departure {
-  background: $cyan;
+.legend-dot--pickup {
+  background: $navy;
 }
 
-.movement-list,
-.focus-list,
-.decision-list {
-  display: grid;
-  gap: 12px;
+.segment-list > div,
+.opportunity-list > div,
+.decision-list div {
+  padding: 13px;
+  background: $soft;
+  border: 1px solid $line;
+  border-radius: 12px;
 }
 
-.row-main,
-.row-meta {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
+.segment-list p,
+.opportunity-list p {
+  margin: 5px 0 0;
+  color: $muted;
+  font-size: 0.82rem;
 }
 
-.row-main span,
-.row-main strong,
-.focus-list strong {
-  color: $ink;
-  font-weight: 850;
-}
-
-.bar-track {
-  display: block;
-  overflow: hidden;
-  height: 8px;
-  margin: 8px 0 6px;
-  background: #edf2f7;
+.opportunity-head span {
+  padding: 4px 8px;
+  color: $navy;
+  background: #eaf2fb;
   border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
 }
 
-.bar-track i {
-  display: block;
-  height: 100%;
-  background: linear-gradient(90deg, $cyan, $blue);
-  border-radius: inherit;
+.opportunity-head .priority-high {
+  color: $rose;
+  background: #fff1f3;
 }
 
-.focus-list > div {
-  border-left: 4px solid $slate;
-}
-
-.focus-item--positive {
-  border-left-color: $green !important;
-}
-
-.focus-item--warning {
-  border-left-color: $amber !important;
-}
-
-.focus-list em {
+.opportunity-list em {
   display: block;
   margin-top: 8px;
-  color: $blue;
-  font-size: 0.85rem;
+  color: $teal;
+  font-size: 0.9rem;
   font-style: normal;
   font-weight: 850;
-}
-
-.focus-item--warning em {
-  color: $amber;
 }
 
 .decision-list div {
@@ -379,7 +348,7 @@ $slate: #475569;
   width: 28px;
   height: 28px;
   color: $paper;
-  background: $blue;
+  background: $navy;
   border-radius: 999px;
   font-size: 0.8rem;
 }
@@ -407,8 +376,7 @@ $slate: #475569;
   .filters-panel,
   .kpi-grid,
   .report-grid,
-  .report-grid--secondary,
-  .room-status-grid {
+  .report-grid--secondary {
     grid-template-columns: 1fr;
   }
 

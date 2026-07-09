@@ -1,4 +1,4 @@
-export type RoomType = 'STD' | 'JUNIOR' | 'DELUXE' | 'SUITE';
+export type RoomType = string;
 export type RoomHousekeepingStatus = 'LIMPIA' | 'SUCIA' | 'INSPECCION';
 export type RoomOperationalStatus = 'DISPONIBLE' | 'OCUPADA' | 'RESERVADA' | 'BLOQUEADA';
 

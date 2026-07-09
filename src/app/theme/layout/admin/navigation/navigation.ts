@@ -61,7 +61,7 @@ export const NavigationItems: NavigationItem[] = [
           { id: 'reservas-calendario', title: 'Calendario de Reservas', type: 'item', url: '/reservas/calendario', icon: 'feather icon-calendar', classes: 'nav-item' },
           { id: 'reservas-consulta', title: 'Consulta de Reservas', type: 'item', url: '/reservas/consulta-reservas', icon: 'feather icon-search', classes: 'nav-item' },
           { id: 'reservas-forecast', title: 'Forecast de Ocupación', type: 'item', url: '/front-desk/forecast-ocupacion', icon: 'feather icon-trending-up', classes: 'nav-item' },
-          { id: 'reservas-tarifas', title: 'Tarifas y Planes', type: 'item', url: '/catalogos/listas-precios', icon: 'feather icon-tag', classes: 'nav-item' },
+          { id: 'reservas-tarifas', title: 'Tarifas y Planes', type: 'item', url: '/reservas/tarifas-planes', icon: 'feather icon-tag', classes: 'nav-item' },
           { id: 'reservas-agencias-canales', title: 'Agencias / Canales', type: 'item', url: '/reservas/configuracion/agencias', icon: 'feather icon-share-2', classes: 'nav-item' },
           { id: 'reservas-canales', title: 'Clientes / Facturación', type: 'item', url: '/catalogos/clientes', icon: 'feather icon-share-2', classes: 'nav-item' }
         ]
@@ -71,6 +71,7 @@ export const NavigationItems: NavigationItem[] = [
         title: 'Housekeeping',
         type: 'collapse',
         icon: 'feather icon-check-square',
+        locked: true,
         children: [
           { id: 'housekeeping-panel', title: 'Panel de Limpieza', type: 'item', url: '/housekeeping/panel-limpieza', icon: 'feather icon-layout', classes: 'nav-item' },
           { id: 'housekeeping-camareras', title: 'Asignación de Camareras', type: 'item', url: '/housekeeping/asignacion-camareras', icon: 'feather icon-users', classes: 'nav-item' }
@@ -86,7 +87,7 @@ export const NavigationItems: NavigationItem[] = [
           { id: 'restaurante-facturacion', title: 'Facturación Restaurante', type: 'item', url: '/restaurant/puntos-venta', icon: 'feather icon-credit-card', classes: 'nav-item' },
           { id: 'restaurante-cargos-habitacion', title: 'Cargos a Habitación', type: 'item', url: '/restaurante/cargos-habitacion', icon: 'feather icon-home', classes: 'nav-item' },
           { id: 'restaurante-servicios', title: 'Catalogo Comercial', type: 'item', url: '/restaurante/servicios', icon: 'feather icon-tag', classes: 'nav-item' },
-          { id: 'restaurante-agencias', title: 'Agencias', type: 'item', url: '/restaurante/agencias', icon: 'feather icon-share-2', classes: 'nav-item' },
+          { id: 'restaurante-agencias', title: 'Clientes-Facturacion', type: 'item', url: '/restaurante/agencias', icon: 'feather icon-share-2', classes: 'nav-item' },
           { id: 'restaurante-configuracion', title: 'Configuración Restaurante', type: 'item', url: '/restaurante/configuracion', icon: 'feather icon-sliders', classes: 'nav-item' }
         ]
       },
@@ -171,6 +172,7 @@ export const NavigationItems: NavigationItem[] = [
         title: 'Mantenimiento',
         type: 'collapse',
         icon: 'feather icon-settings',
+        locked: true,
         children: [
           { id: 'mantenimiento-incidentes', title: 'Reporte de Incidentes', type: 'item', url: '/mantenimiento/incidentes', icon: 'feather icon-alert-circle', classes: 'nav-item' },
           { id: 'mantenimiento-ordenes', title: 'Órdenes de Mantenimiento', type: 'item', url: '/mantenimiento/ordenes', icon: 'feather icon-file-text', classes: 'nav-item' },
@@ -188,11 +190,11 @@ export const NavigationItems: NavigationItem[] = [
         children: [
           { id: 'reporte-operaciones', title: 'Reportes Operativos', type: 'item', url: '/reportes/operaciones', icon: 'feather icon-activity', classes: 'nav-item' },
           { id: 'reporte-finanzas', title: 'Reportes Financieros', type: 'item', url: '/reportes/finanzas', icon: 'feather icon-trending-up', classes: 'nav-item' },
-          { id: 'reporte-comercial', title: 'Reportes Comerciales', type: 'item', url: '/reportes/comercial', icon: 'feather icon-dollar-sign', classes: 'nav-item' },
+          { id: 'reporte-comercial', title: 'Reportes Comerciales', type: 'item', url: '/reportes/comercial', icon: 'feather icon-target', classes: 'nav-item' },
           { id: 'reporte-restaurante', title: 'Reportes Restaurante', type: 'item', url: '/reportes/restaurante', icon: 'feather icon-shopping-cart', classes: 'nav-item' },
-          { id: 'reporte-ocupacion', title: 'Reportes de Ocupación', type: 'item', url: '/reportes/ocupacion', icon: 'feather icon-home', classes: 'nav-item' },
-          { id: 'reporte-housekeeping', title: 'Reportes de Housekeeping', type: 'item', url: '/reportes/housekeeping', icon: 'feather icon-check-square', classes: 'nav-item' },
-          { id: 'reporte-mantenimiento', title: 'Reportes de Mantenimiento', type: 'item', url: '/reportes/mantenimiento', icon: 'feather icon-settings', classes: 'nav-item' }
+          { id: 'reporte-ocupacion', title: 'Reportes de Ocupación', type: 'item', url: '/reportes/ocupacion', icon: 'feather icon-home', classes: 'nav-item', hidden: true },
+          { id: 'reporte-housekeeping', title: 'Reportes de Housekeeping', type: 'item', url: '/reportes/housekeeping', icon: 'feather icon-check-square', classes: 'nav-item', hidden: true },
+          { id: 'reporte-mantenimiento', title: 'Reportes de Mantenimiento', type: 'item', url: '/reportes/mantenimiento', icon: 'feather icon-settings', classes: 'nav-item', hidden: true }
         ]
       },
       {

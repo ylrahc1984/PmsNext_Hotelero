@@ -2,19 +2,18 @@
   display: block;
 }
 
-$ink: #111827;
+$ink: #172033;
 $muted: #667085;
 $line: #e4e7ec;
 $paper: #ffffff;
 $soft: #f8fafc;
-$blue: #2563eb;
-$cyan: #0ea5e9;
-$green: #16a34a;
-$amber: #d97706;
+$green: #148f62;
+$teal: #0ea5a3;
+$amber: #d58a13;
 $red: #b42318;
-$slate: #475569;
+$plum: #6d2f6a;
 
-.operations-report {
+.restaurant-report {
   display: grid;
   gap: 18px;
   color: $ink;
@@ -27,7 +26,7 @@ $slate: #475569;
   border: 1px solid $line;
   border-radius: 14px;
   background: rgba($paper, 0.97);
-  box-shadow: 0 14px 34px rgba(17, 24, 39, 0.06);
+  box-shadow: 0 14px 34px rgba(23, 32, 51, 0.06);
 }
 
 .report-header {
@@ -40,7 +39,7 @@ $slate: #475569;
 
 .eyebrow {
   display: block;
-  color: $blue;
+  color: $green;
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -96,7 +95,7 @@ $slate: #475569;
 .kpi-card {
   min-height: 150px;
   padding: 16px;
-  border-left: 5px solid $slate;
+  border-left: 5px solid $plum;
 }
 
 .kpi-card--positive {
@@ -108,9 +107,10 @@ $slate: #475569;
 }
 
 .kpi-card span,
+.row-meta,
+.summary-badge span,
 .date-badge,
-.legend,
-.row-meta {
+.legend {
   color: $muted;
   font-size: 0.78rem;
   font-weight: 720;
@@ -134,7 +134,7 @@ $slate: #475569;
 .kpi-card em {
   display: block;
   margin-top: 10px;
-  color: $blue;
+  color: $green;
   font-size: 0.78rem;
   font-style: normal;
   font-weight: 800;
@@ -146,7 +146,7 @@ $slate: #475569;
 
 .report-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.95fr);
+  grid-template-columns: minmax(0, 1.18fr) minmax(0, 0.92fr);
   gap: 18px;
 }
 
@@ -170,6 +170,7 @@ $slate: #475569;
   font-size: 1.08rem;
 }
 
+.summary-badge,
 .date-badge {
   padding: 8px 10px;
   border: 1px solid $line;
@@ -179,15 +180,26 @@ $slate: #475569;
   white-space: nowrap;
 }
 
-.room-status-grid {
+.summary-badge strong {
+  display: block;
+  max-width: 180px;
+  overflow: hidden;
+  color: $plum;
+  font-size: 0.94rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bestseller-list,
+.area-list,
+.alert-list,
+.decision-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
-.room-status-grid > div,
-.movement-list > div,
-.focus-list > div,
+.bestseller-list > div,
+.alert-list > div,
 .decision-list div {
   padding: 13px;
   background: $soft;
@@ -195,50 +207,39 @@ $slate: #475569;
   border-radius: 12px;
 }
 
-.room-status-grid > div {
-  border-left: 4px solid $slate;
+.row-main,
+.row-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.room-status--available {
-  border-left-color: $green !important;
-}
-
-.room-status--occupied {
-  border-left-color: $blue !important;
-}
-
-.room-status--warning {
-  border-left-color: $amber !important;
-}
-
-.room-status--blocked {
-  border-left-color: $red !important;
-}
-
-.room-status-grid span {
-  color: $muted;
-  font-size: 0.78rem;
-  font-weight: 750;
-}
-
-.room-status-grid strong {
-  display: block;
-  margin-top: 5px;
+.row-main span,
+.row-main strong,
+.alert-list strong {
   color: $ink;
-  font-size: 1.42rem;
-  font-weight: 880;
+  font-weight: 850;
 }
 
-.room-status-grid p,
-.focus-list p {
-  margin: 5px 0 0;
-  color: $muted;
-  font-size: 0.83rem;
+.bar-track {
+  display: block;
+  overflow: hidden;
+  height: 8px;
+  margin: 8px 0 6px;
+  background: #edf2f7;
+  border-radius: 999px;
 }
 
-.workload-chart {
+.bar-track i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, $teal, $green);
+  border-radius: inherit;
+}
+
+.shift-chart {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   min-height: 220px;
   padding: 16px;
@@ -247,7 +248,7 @@ $slate: #475569;
   border-radius: 12px;
 }
 
-.workload-chart > div {
+.shift-chart > div {
   display: grid;
   grid-template-rows: minmax(150px, 1fr) auto;
   gap: 8px;
@@ -264,20 +265,20 @@ $slate: #475569;
 }
 
 .bar {
-  width: 18px;
+  width: 19px;
   min-height: 10px;
   border-radius: 8px 8px 3px 3px;
 }
 
-.bar--arrival {
-  background: linear-gradient(180deg, #60a5fa, $blue);
+.bar--revenue {
+  background: linear-gradient(180deg, #34d399, $green);
 }
 
-.bar--departure {
-  background: linear-gradient(180deg, #22d3ee, $cyan);
+.bar--tickets {
+  background: linear-gradient(180deg, #fbbf24, $amber);
 }
 
-.workload-chart strong {
+.shift-chart strong {
   color: #475467;
   font-size: 0.8rem;
 }
@@ -296,74 +297,37 @@ $slate: #475569;
   border-radius: 999px;
 }
 
-.legend-dot--arrival {
-  background: $blue;
+.legend-dot--revenue {
+  background: $green;
 }
 
-.legend-dot--departure {
-  background: $cyan;
+.legend-dot--tickets {
+  background: $amber;
 }
 
-.movement-list,
-.focus-list,
-.decision-list {
-  display: grid;
-  gap: 12px;
+.area-list > div {
+  padding: 12px;
+  background: $soft;
+  border: 1px solid $line;
+  border-radius: 12px;
 }
 
-.row-main,
-.row-meta {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
+.alert-list p {
+  margin: 5px 0 0;
+  color: $muted;
+  font-size: 0.84rem;
 }
 
-.row-main span,
-.row-main strong,
-.focus-list strong {
-  color: $ink;
-  font-weight: 850;
+.alert-list > div {
+  border-left: 4px solid $plum;
 }
 
-.bar-track {
-  display: block;
-  overflow: hidden;
-  height: 8px;
-  margin: 8px 0 6px;
-  background: #edf2f7;
-  border-radius: 999px;
-}
-
-.bar-track i {
-  display: block;
-  height: 100%;
-  background: linear-gradient(90deg, $cyan, $blue);
-  border-radius: inherit;
-}
-
-.focus-list > div {
-  border-left: 4px solid $slate;
-}
-
-.focus-item--positive {
+.alert-item--positive {
   border-left-color: $green !important;
 }
 
-.focus-item--warning {
+.alert-item--warning {
   border-left-color: $amber !important;
-}
-
-.focus-list em {
-  display: block;
-  margin-top: 8px;
-  color: $blue;
-  font-size: 0.85rem;
-  font-style: normal;
-  font-weight: 850;
-}
-
-.focus-item--warning em {
-  color: $amber;
 }
 
 .decision-list div {
@@ -379,7 +343,7 @@ $slate: #475569;
   width: 28px;
   height: 28px;
   color: $paper;
-  background: $blue;
+  background: $plum;
   border-radius: 999px;
   font-size: 0.8rem;
 }
@@ -407,8 +371,7 @@ $slate: #475569;
   .filters-panel,
   .kpi-grid,
   .report-grid,
-  .report-grid--secondary,
-  .room-status-grid {
+  .report-grid--secondary {
     grid-template-columns: 1fr;
   }
 

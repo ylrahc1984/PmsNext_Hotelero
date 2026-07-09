@@ -1,0 +1,365 @@
+<div class="tarifas-page container-fluid">
+  <div class="tarifas-header">
+    <div>
+      <span class="tarifas-header__module">Reservas</span>
+      <h4 class="tarifas-header__title">
+        <i class="feather icon-tag me-2"></i>
+        Tarifas y Planes
+      </h4>
+      <p class="tarifas-header__subtitle mb-0">Administración de tarifas de hospedaje</p>
+    </div>
+    <div class="tarifas-header__actions">
+      <button type="button" class="btn btn-primary" (click)="openCreateModal()" [disabled]="isLoading || isSaving">
+        <i class="feather icon-plus me-1"></i>
+        Nueva tarifa
+      </button>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-xl-3 col-md-6">
+      <div class="tarifa-kpi card">
+        <div class="card-body">
+          <i class="feather icon-layers"></i>
+          <div class="tarifa-kpi__content">
+            <span>Total de tarifas</span>
+            <strong>{{ totalTarifas }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+      <div class="tarifa-kpi card">
+        <div class="card-body">
+          <i class="feather icon-check-circle"></i>
+          <div class="tarifa-kpi__content">
+            <span>Tarifas activas</span>
+            <strong>{{ activeTarifas }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+      <div class="tarifa-kpi card">
+        <div class="card-body">
+          <i class="feather icon-slash"></i>
+          <div class="tarifa-kpi__content">
+            <span>Tarifas inactivas</span>
+            <strong>{{ inactiveTarifas }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+      <div class="tarifa-kpi card">
+        <div class="card-body">
+          <i class="feather icon-dollar-sign"></i>
+          <div class="tarifa-kpi__content">
+            <span>Moneda principal</span>
+            <strong>{{ monedaPrincipal }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tarifas-toolbar card">
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+        <div class="col-xl-4 col-lg-6">
+          <label class="form-label" for="searchTarifa">Buscar</label>
+          <div class="input-group">
+            <span class="input-group-text">
+              <i class="feather icon-search"></i>
+            </span>
+            <input
+              id="searchTarifa"
+              type="search"
+              class="form-control"
+              placeholder="Código o descripción"
+              [formControl]="searchControl"
+              [disabled]="isLoading"
+            >
+          </div>
+        </div>
+        <div class="col-xl-2 col-lg-3 col-md-6">
+          <label class="form-label" for="monedaFilter">Moneda</label>
+          <select id="monedaFilter" class="form-select" [formControl]="monedaControl" [disabled]="isLoading">
+            <option value="">Todas</option>
+            <option *ngFor="let moneda of monedas" [value]="moneda">{{ moneda }}</option>
+          </select>
+        </div>
+        <div class="col-xl-2 col-lg-3 col-md-6">
+          <label class="form-label" for="estadoFilter">Estado</label>
+          <select id="estadoFilter" class="form-select" [formControl]="estadoControl" [disabled]="isLoading">
+            <option *ngFor="let estado of estadoOptions" [ngValue]="estado.value">{{ estado.label }}</option>
+          </select>
+        </div>
+        <div class="col-xl-4 col-lg-12">
+          <div class="tarifas-toolbar__actions">
+            <button type="button" class="btn btn-outline-secondary" (click)="clearFilters()" [disabled]="isLoading">
+              <i class="feather icon-x me-1"></i>
+              Limpiar filtros
+            </button>
+            <button type="button" class="btn btn-outline-secondary" (click)="refresh()" [disabled]="isLoading">
+              <i class="feather icon-refresh-cw me-1"></i>
+              Actualizar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tarifas-list card">
+    <div class="card-body">
+      <div *ngIf="errorMessage" class="alert alert-danger mb-3" role="alert">
+        {{ errorMessage }}
+      </div>
+
+      <div *ngIf="isLoading" class="alert alert-info d-flex align-items-center" role="alert">
+        <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+        <span>Cargando tarifas...</span>
+      </div>
+
+      <div class="tarifas-table table-responsive" *ngIf="filteredTarifas.length > 0">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Código</th>
+              <th>Descripción</th>
+              <th>Moneda</th>
+              <th>Fecha inicial</th>
+              <th>Fecha final</th>
+              <th class="text-center">Estado</th>
+              <th>Operador</th>
+              <th class="text-center action-column">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let tarifa of filteredTarifas; trackBy: trackByCode" (dblclick)="administrarTarifa(tarifa)" class="tarifa-row">
+              <td>
+                <span class="badge bg-light text-dark">{{ tarifa.MR03_CodTarifa }}</span>
+              </td>
+              <td>
+                <div class="tarifa-name">{{ tarifa.MR03_NomTarifa || 'N/D' }}</div>
+              </td>
+              <td>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                  {{ tarifa.MR03_Moneda || 'N/D' }}
+                </span>
+              </td>
+              <td>{{ formatDate(tarifa.MR03_FecInicial) }}</td>
+              <td>{{ formatDate(tarifa.MR03_FecFin) }}</td>
+              <td class="text-center">
+                <span class="badge" [ngClass]="isActive(tarifa) ? 'bg-success' : 'bg-secondary'">
+                  {{ isActive(tarifa) ? 'Activo' : 'Inactivo' }}
+                </span>
+              </td>
+              <td>{{ tarifa.MR03_Operador || 'N/D' }}</td>
+              <td class="text-center action-column">
+                <div class="tarifas-action-buttons" role="group" aria-label="Acciones de tarifa">
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary tarifas-action-btn"
+                    (click)="administrarTarifa(tarifa)"
+                    [disabled]="isLoading"
+                    aria-label="Administrar tarifa"
+                    title="Administrar tarifa"
+                  >
+                    <i class="feather icon-settings"></i>
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-outline-primary tarifas-action-btn"
+                    (click)="openEditModal(tarifa)"
+                    [disabled]="isLoading || isSaving"
+                    aria-label="Editar tarifa"
+                    title="Editar"
+                  >
+                    <i class="feather icon-edit-2"></i>
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-outline-danger tarifas-action-btn"
+                    (click)="deleteTarifa(tarifa)"
+                    [disabled]="isLoading || isDeleting"
+                    aria-label="Eliminar tarifa"
+                    title="Eliminar"
+                  >
+                    <i class="feather icon-trash-2"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tarifas-mobile-list" *ngIf="filteredTarifas.length > 0">
+        <article class="tarifas-mobile-card" *ngFor="let tarifa of filteredTarifas; trackBy: trackByCode">
+          <div class="tarifas-mobile-card__header">
+            <div>
+              <span class="badge bg-light text-dark">{{ tarifa.MR03_CodTarifa }}</span>
+              <h5>{{ tarifa.MR03_NomTarifa || 'N/D' }}</h5>
+            </div>
+            <span class="badge" [ngClass]="isActive(tarifa) ? 'bg-success' : 'bg-secondary'">
+              {{ isActive(tarifa) ? 'Activo' : 'Inactivo' }}
+            </span>
+          </div>
+          <div class="tarifas-mobile-card__grid">
+            <span>Moneda</span>
+            <strong>{{ tarifa.MR03_Moneda || 'N/D' }}</strong>
+            <span>Fecha inicial</span>
+            <strong>{{ formatDate(tarifa.MR03_FecInicial) }}</strong>
+            <span>Fecha final</span>
+            <strong>{{ formatDate(tarifa.MR03_FecFin) }}</strong>
+            <span>Operador</span>
+            <strong>{{ tarifa.MR03_Operador || 'N/D' }}</strong>
+          </div>
+          <div class="tarifas-mobile-card__actions">
+            <button type="button" class="btn btn-outline-primary btn-sm" (click)="openEditModal(tarifa)" [disabled]="isLoading || isSaving">
+              <i class="feather icon-edit-2 me-1"></i>
+              Editar
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" (click)="administrarTarifa(tarifa)" [disabled]="isLoading">
+              <i class="feather icon-settings me-1"></i>
+              Administrar
+            </button>
+            <button type="button" class="btn btn-outline-danger btn-sm" (click)="deleteTarifa(tarifa)" [disabled]="isLoading || isDeleting">
+              <i class="feather icon-trash-2 me-1"></i>
+              Eliminar
+            </button>
+          </div>
+        </article>
+      </div>
+
+      <div *ngIf="!isLoading && filteredTarifas.length === 0" class="tarifas-empty">
+        <i class="feather icon-inbox"></i>
+        <p>{{ emptyMessage }}</p>
+        <button type="button" class="btn btn-primary" (click)="openCreateModal()">
+          <i class="feather icon-plus me-1"></i>
+          Nueva tarifa
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="showModal"></div>
+<div class="modal d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="tarifaModalTitle" *ngIf="showModal" (click)="closeModal()">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="tarifaModalTitle">
+          <i class="feather icon-tag me-2"></i>
+          {{ modalTitle }}
+        </h5>
+        <button type="button" class="btn-close" aria-label="Cerrar" (click)="closeModal()" [disabled]="isSaving"></button>
+      </div>
+
+      <form [formGroup]="tarifaForm" (ngSubmit)="saveTarifa()">
+        <div class="modal-body">
+          <div class="tarifa-form-card">
+            <div class="tarifa-form-card__title">
+              <i class="feather icon-file-text"></i>
+              Información de la tarifa
+            </div>
+
+            <div class="row g-3">
+              <div class="col-lg-4 col-md-6">
+                <label for="codigo" class="form-label">Código <span class="text-danger">*</span></label>
+                <input
+                  id="codigo"
+                  type="text"
+                  class="form-control text-uppercase"
+                  formControlName="codigo"
+                  maxlength="20"
+                  [class.is-invalid]="isFieldInvalid('codigo')"
+                >
+                <div class="invalid-feedback">{{ getFieldError('codigo') }}</div>
+              </div>
+
+              <div class="col-lg-8 col-md-6">
+                <label for="descripcion" class="form-label">Descripción <span class="text-danger">*</span></label>
+                <input
+                  id="descripcion"
+                  type="text"
+                  class="form-control"
+                  formControlName="descripcion"
+                  maxlength="150"
+                  [class.is-invalid]="isFieldInvalid('descripcion')"
+                >
+                <div class="invalid-feedback">{{ getFieldError('descripcion') }}</div>
+              </div>
+
+              <div class="col-lg-4 col-md-6">
+                <label for="moneda" class="form-label">Moneda <span class="text-danger">*</span></label>
+                <select id="moneda" class="form-select" formControlName="moneda" [class.is-invalid]="isFieldInvalid('moneda')">
+                  <option *ngFor="let moneda of monedas" [value]="moneda">{{ moneda }}</option>
+                </select>
+                <div class="invalid-feedback">{{ getFieldError('moneda') }}</div>
+              </div>
+
+              <div class="col-lg-4 col-md-6">
+                <label for="fechaInicial" class="form-label">Fecha inicial <span class="text-danger">*</span></label>
+                <input
+                  id="fechaInicial"
+                  type="date"
+                  class="form-control"
+                  formControlName="fechaInicial"
+                  [class.is-invalid]="isFieldInvalid('fechaInicial') || hasDateRangeError()"
+                >
+                <div class="invalid-feedback">{{ getFieldError('fechaInicial') }}</div>
+              </div>
+
+              <div class="col-lg-4 col-md-6">
+                <label for="fechaFin" class="form-label">Fecha final <span class="text-danger">*</span></label>
+                <input
+                  id="fechaFin"
+                  type="date"
+                  class="form-control"
+                  formControlName="fechaFin"
+                  [class.is-invalid]="isFieldInvalid('fechaFin') || hasDateRangeError()"
+                >
+                <div class="invalid-feedback">{{ getFieldError('fechaFin') }}</div>
+              </div>
+
+              <div class="col-lg-4 col-md-6">
+                <label for="operador" class="form-label">Operador <span class="text-danger">*</span></label>
+                <input
+                  id="operador"
+                  type="text"
+                  class="form-control text-uppercase"
+                  formControlName="operador"
+                  maxlength="50"
+                  [class.is-invalid]="isFieldInvalid('operador')"
+                >
+                <div class="invalid-feedback">{{ getFieldError('operador') }}</div>
+              </div>
+
+              <div class="col-lg-4 col-md-6">
+                <label class="form-label d-block">Activo</label>
+                <div class="form-check form-switch tarifa-switch">
+                  <input id="activo" class="form-check-input" type="checkbox" formControlName="activo">
+                  <label class="form-check-label" for="activo">
+                    {{ tarifaForm.controls.activo.value ? 'Activo' : 'Inactivo' }}
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" (click)="closeModal()" [disabled]="isSaving">Cancelar</button>
+          <button type="submit" class="btn btn-primary" [disabled]="isSaving">
+            <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+            <i class="feather icon-save me-1" *ngIf="!isSaving"></i>
+            Guardar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

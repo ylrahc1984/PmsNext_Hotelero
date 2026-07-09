@@ -20,11 +20,12 @@
 
 .calendar-grid__cells {
   display: flex;
+  padding-left: 132px;
 }
 
 .calendar-grid__overlay {
   position: absolute;
-  inset: 0;
+  inset: 0 0 0 132px;
 }
 
 .calendar-grid__drag-layer {

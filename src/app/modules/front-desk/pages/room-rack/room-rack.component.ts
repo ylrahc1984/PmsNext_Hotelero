@@ -53,7 +53,7 @@ export class RoomRackComponent implements OnInit {
 
   readonly hotelActual                  = 'Hotel PMSNext Central';
   readonly ultimaActualizacion          = new Date();
-  readonly fechaOperacion               = '01/07/2026';
+  readonly fechaOperacion               = this.getTodayDisplayDate();
 
   readonly estados: EstadoHabitacion[]  = [
     'Disponible',
@@ -129,11 +129,11 @@ export class RoomRackComponent implements OnInit {
   }
 
   getCleanLabel(habitacion: HabitacionRack): string {
-    return habitacion.data.CR05_Clean === 'S' ? 'Habitación sucia' : 'Habitación limpia';
+    return this.normalizeText(habitacion.data.CR05_Clean).toUpperCase() === 'S' ? 'Habitación sucia' : 'Habitación limpia';
   }
 
   getCleanIndicatorStyle(habitacion: HabitacionRack): Record<string, string> {
-    const isDirty = habitacion.data.CR05_Clean === 'S';
+    const isDirty = this.normalizeText(habitacion.data.CR05_Clean).toUpperCase() === 'S';
 
     return {
       position        : 'absolute',
@@ -251,11 +251,11 @@ export class RoomRackComponent implements OnInit {
 
   private contarPorEstado(estado: EstadoHabitacion): number {
     if (estado === 'Sucia') {
-      return this.habitaciones.filter((habitacion) => habitacion.data.CR05_Clean === 'S').length;
+      return this.habitaciones.filter((habitacion) => this.normalizeText(habitacion.data.CR05_Clean).toUpperCase() === 'S').length;
     }
 
     if (estado === 'Limpia') {
-      return this.habitaciones.filter((habitacion) => habitacion.data.CR05_Clean === 'L').length;
+      return this.habitaciones.filter((habitacion) => this.normalizeText(habitacion.data.CR05_Clean).toUpperCase() === 'L').length;
     }
 
     return this.habitaciones.filter((habitacion) => habitacion.estado === estado).length;
@@ -268,7 +268,7 @@ export class RoomRackComponent implements OnInit {
       O: 'Ocupada'
     };
 
-    return estados[room.CR05_EstHab] ?? 'Disponible';
+    return estados[this.normalizeText(room.CR05_EstHab).toUpperCase()] ?? 'Disponible';
   }
 
   private slugEstado(estado: EstadoHabitacion | 'Todas'): string {
@@ -277,5 +277,16 @@ export class RoomRackComponent implements OnInit {
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
       .replace(/\s+/g, '-');
+  }
+
+  private getTodayDisplayDate(): string {
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    return `${day}/${month}/${now.getFullYear()}`;
+  }
+
+  private normalizeText(value: unknown): string {
+    return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '';
   }
 }

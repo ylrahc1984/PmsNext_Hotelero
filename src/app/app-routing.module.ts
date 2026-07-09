@@ -400,8 +400,13 @@ const routes: Routes = [
       },
       {
         path: 'tarifas-planes',
-        redirectTo: '/catalogos/listas-precios',
-        pathMatch: 'full'
+        loadComponent: () =>
+          import('./modules/Reservas/tarifas-planes/tarifas-planes.component').then((c) => c.TarifasPlanesComponent)
+      },
+      {
+        path: 'tarifas-planes/:codigo/detalle',
+        loadComponent: () =>
+          import('./modules/Reservas/detalle-tarifa/detalle-tarifa.component').then((c) => c.DetalleTarifaComponent)
       },
       {
         path: 'configuracion/agencias',
@@ -1034,11 +1039,11 @@ const routes: Routes = [
       },
       {
         path: 'finanzas',
-        loadComponent: () => import('./demo/reportes/ingresos/ingresos.component').then((c) => c.IngresosComponent)
+        loadComponent: () => import('./demo/reportes/finanzas/finanzas.component').then((c) => c.FinanzasComponent)
       },
       {
         path: 'comercial',
-        loadComponent: () => import('./demo/reportes/ventas/ventas.component').then((c) => c.VentasComponent)
+        loadComponent: () => import('./demo/reportes/comercial/comercial.component').then((c) => c.ComercialComponent)
       },
       {
         path: 'ventas',
@@ -1058,8 +1063,7 @@ const routes: Routes = [
       },
       {
         path: 'restaurante',
-        loadComponent: loadPmsPlaceholder,
-        data: { module: 'Reportes', title: 'Reportes Restaurante' }
+        loadComponent: () => import('./demo/reportes/restaurante/restaurante.component').then((c) => c.RestauranteReporteComponent)
       },
       {
         path: 'ocupacion',

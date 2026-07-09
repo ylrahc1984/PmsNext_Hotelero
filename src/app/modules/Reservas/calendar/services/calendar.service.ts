@@ -1,7 +1,10 @@
-import { Injectable } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { Observable, map } from 'rxjs';
 
+import { environment } from 'src/environments/environment';
 import { ROOMS_MOCK } from '../../mock-data/rooms.mock';
-import { RoomStatus } from '../../interfaces/room-status.interface';
+import { RoomHousekeepingStatus, RoomOperationalStatus, RoomStatus, RoomType } from '../../interfaces/room-status.interface';
 import {
   CalendarData,
   CalendarDate,
@@ -17,8 +20,66 @@ const CELL_WIDTH = 42;
 const DAY_NAMES = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
 const MONTH_NAMES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
+interface CalendarApiInventoryRoom {
+  numHab: number | string;
+  cateHab?: string | null;
+  tipoHab?: string | null;
+  codGrp?: string | null;
+  numPax?: number | null;
+  totCamas?: number | null;
+  descripcion?: string | null;
+  estHab?: string | null;
+  clean?: string | null;
+  activo?: string | null;
+}
+
+interface CalendarApiDay {
+  numHab: number | string;
+  categoria?: string | null;
+  codGrp?: string | null;
+  fecha: string;
+  estado?: string | null;
+  codReserva?: string | null;
+  codigoPlan?: string | null;
+  numPax?: number | null;
+  numChild?: number | null;
+  estadoReserva?: string | null;
+  reservaDescripcion?: string | null;
+  agenciaNombre?: string | null;
+  fechaIngEvento?: string | null;
+  fechaSalEvento?: string | null;
+}
+
+interface CalendarApiResponse {
+  inventario?: CalendarApiInventoryRoom[];
+  calendario?: CalendarApiDay[];
+  respuesta?: string;
+  totalHabitaciones?: number;
+  totalDias?: number;
+}
+
+export interface CalendarApiDataSource {
+  rooms: RoomStatus[];
+  reservations: CalendarReservation[];
+  typeOptions: RoomType[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class CalendarService {
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = `${(environment.apiUrl || 'http://localhost:5000/api').toString().replace(/\/+$/, '')}/calendario-habitaciones`;
+
+  getCalendarApiData(startDate: string, endDate: string): Observable<CalendarApiDataSource> {
+    const params = new HttpParams()
+      .set('fechaInicio', this.toDisplayDate(startDate))
+      .set('fechaFin', this.toDisplayDate(endDate))
+      .set('soloActivas', 'true');
+
+    return this.http
+      .get<CalendarApiResponse>(this.apiUrl, { params })
+      .pipe(map((response) => this.mapApiResponse(response)));
+  }
+
   getRooms(): RoomStatus[] {
     return [...ROOMS_MOCK].sort((left, right) => left.roomNumber.localeCompare(right.roomNumber));
   }
@@ -33,9 +94,9 @@ export class CalendarService {
     });
   }
 
-  getCalendarData(query: CalendarQuery, reservationsSource?: CalendarReservation[]): CalendarData {
+  getCalendarData(query: CalendarQuery, roomsSource?: RoomStatus[], reservationsSource?: CalendarReservation[]): CalendarData {
     const dates = this.buildDateRange(query.startDate, query.endDate);
-    const rooms = this.filterRooms(this.getRooms(), query);
+    const rooms = this.filterRooms(roomsSource ?? this.getRooms(), query);
     const reservations = (reservationsSource ?? this.getReservations()).slice().sort((left, right) => {
       if (left.roomNumber !== right.roomNumber) {
         return left.roomNumber.localeCompare(right.roomNumber);
@@ -57,11 +118,82 @@ export class CalendarService {
     };
   }
 
+  private mapApiResponse(response: CalendarApiResponse | null | undefined): CalendarApiDataSource {
+    const inventory = Array.isArray(response?.inventario) ? response.inventario : [];
+    const calendar = Array.isArray(response?.calendario) ? response.calendario : [];
+    const rooms = inventory.map((room) => this.mapApiRoom(room, calendar)).sort((left, right) => this.compareRoomNumbers(left.roomNumber, right.roomNumber));
+    const reservations = this.mapApiReservations(calendar);
+
+    return {
+      rooms,
+      reservations,
+      typeOptions: [...new Set(rooms.map((room) => room.type).filter(Boolean))].sort()
+    };
+  }
+
+  private mapApiRoom(room: CalendarApiInventoryRoom, calendar: CalendarApiDay[]): RoomStatus {
+    const roomNumber = this.cleanText(room.numHab);
+    const todayIso = this.toIsoDate(new Date());
+    const todayEvent = calendar.find((item) => this.cleanText(item.numHab) === roomNumber && this.toIsoDateValue(item.fecha) === todayIso);
+
+    return {
+      roomNumber,
+      type: this.cleanText(room.cateHab || room.descripcion || room.tipoHab || todayEvent?.categoria || 'SIN CATEGORIA'),
+      status: this.mapRoomStatus(todayEvent?.estado || room.estHab),
+      housekeepingStatus: this.mapHousekeepingStatus(room.clean),
+      floor: this.getRoomFloor(roomNumber),
+      guestName: this.cleanText(todayEvent?.reservaDescripcion || todayEvent?.agenciaNombre) || undefined
+    };
+  }
+
+  private mapApiReservations(calendar: CalendarApiDay[]): CalendarReservation[] {
+    const byReservation = new Map<string, CalendarReservation>();
+
+    calendar
+      .filter((item) => !!this.cleanText(item.codReserva))
+      .forEach((item) => {
+        const roomNumber = this.cleanText(item.numHab);
+        const reservationCode = this.cleanText(item.codReserva);
+        const startDate = this.toIsoDateValue(item.fechaIngEvento || item.fecha);
+        const endDate = this.toIsoDateValue(item.fechaSalEvento || this.shiftIsoDate(startDate, 1));
+        const key = `${reservationCode}|${roomNumber}|${startDate}|${endDate}`;
+
+        if (byReservation.has(key)) {
+          return;
+        }
+
+        const description = this.cleanText(item.reservaDescripcion);
+        const agency = this.cleanText(item.agenciaNombre);
+
+        byReservation.set(key, {
+          id: key,
+          roomNumber,
+          startDate,
+          endDate,
+          status: this.mapReservationStatus(item.estado, item.estadoReserva),
+          guestName: description || agency || reservationCode,
+          source: agency || this.cleanText(item.codigoPlan) || reservationCode
+        });
+      });
+
+    return [...byReservation.values()].sort((left, right) => {
+      if (left.roomNumber !== right.roomNumber) {
+        return this.compareRoomNumbers(left.roomNumber, right.roomNumber);
+      }
+
+      return left.startDate.localeCompare(right.startDate);
+    });
+  }
+
   private filterRooms(rooms: RoomStatus[], query: CalendarQuery): RoomStatus[] {
     const search = query.search.trim().toLowerCase();
 
     return rooms.filter((room) => {
-      const matchesSearch = !search || room.roomNumber.toLowerCase().includes(search);
+      const matchesSearch =
+        !search ||
+        room.roomNumber.toLowerCase().includes(search) ||
+        room.type.toLowerCase().includes(search) ||
+        (room.guestName ?? '').toLowerCase().includes(search);
       const matchesType = !query.type || room.type === query.type;
       return matchesSearch && matchesType;
     });
@@ -178,6 +310,109 @@ export class CalendarService {
   }
 
   private toIsoDate(date: Date): string {
-    return date.toISOString().slice(0, 10);
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const day = `${date.getDate()}`.padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private toDisplayDate(isoDate: string): string {
+    const [year, month, day] = isoDate.split('-');
+    return day && month && year ? `${day}/${month}/${year}` : isoDate;
+  }
+
+  private toIsoDateValue(value: string): string {
+    if (!value) {
+      return '';
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
+      return value.slice(0, 10);
+    }
+
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+      const [day, month, year] = value.split('/');
+      return `${year}-${month}-${day}`;
+    }
+
+    return this.toIsoDate(new Date(value));
+  }
+
+  private shiftIsoDate(baseIsoDate: string, offset: number): string {
+    const date = this.parseDate(baseIsoDate);
+    date.setDate(date.getDate() + offset);
+    return this.toIsoDate(date);
+  }
+
+  private cleanText(value: string | number | null | undefined): string {
+    return (value ?? '').toString().trim();
+  }
+
+  private mapRoomStatus(status: string | null | undefined): RoomOperationalStatus {
+    switch (this.cleanText(status).toUpperCase()) {
+      case 'O':
+      case 'OCUPADA':
+      case 'OCUPADO':
+        return 'OCUPADA';
+      case 'B':
+      case 'BLOQUEADA':
+      case 'BLOQUEADO':
+        return 'BLOQUEADA';
+      case 'R':
+      case 'RESERVADA':
+      case 'RESERVADO':
+        return 'RESERVADA';
+      default:
+        return 'DISPONIBLE';
+    }
+  }
+
+  private mapHousekeepingStatus(status: string | null | undefined): RoomHousekeepingStatus {
+    switch (this.cleanText(status).toUpperCase()) {
+      case 'S':
+      case 'SUCIA':
+        return 'SUCIA';
+      case 'I':
+      case 'INSPECCION':
+        return 'INSPECCION';
+      default:
+        return 'LIMPIA';
+    }
+  }
+
+  private mapReservationStatus(status: string | null | undefined, reservationStatus: string | null | undefined): CalendarReservation['status'] {
+    const normalizedStatus = this.cleanText(status).toUpperCase();
+    const normalizedReservationStatus = this.cleanText(reservationStatus).toUpperCase();
+
+    if (normalizedStatus.includes('BLOQUE') || normalizedReservationStatus === 'BLQ') {
+      return 'BLOQUEADA';
+    }
+
+    if (normalizedStatus.includes('OCUP') || normalizedReservationStatus === 'CHK') {
+      return 'OCUPADA';
+    }
+
+    return 'RESERVADA';
+  }
+
+  private getRoomFloor(roomNumber: string): number {
+    const numericRoom = Number(roomNumber);
+
+    if (!Number.isFinite(numericRoom) || numericRoom <= 0) {
+      return 0;
+    }
+
+    return Math.floor(numericRoom / 100) || 1;
+  }
+
+  private compareRoomNumbers(left: string, right: string): number {
+    const leftNumber = Number(left);
+    const rightNumber = Number(right);
+
+    if (Number.isFinite(leftNumber) && Number.isFinite(rightNumber)) {
+      return leftNumber - rightNumber;
+    }
+
+    return left.localeCompare(right);
   }
 }

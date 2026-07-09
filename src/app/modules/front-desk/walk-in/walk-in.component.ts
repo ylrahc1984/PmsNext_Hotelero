@@ -114,7 +114,7 @@ export class WalkInComponent implements OnInit {
     apellidos           : this.fb.control('', { validators: [Validators.required, Validators.maxLength(120)] }),
     direccion           : this.fb.control('', { validators: [Validators.maxLength(220)] }),
     correo              : this.fb.control('', { validators: [Validators.email, Validators.maxLength(120)] }),
-    fechaNacimiento     : this.fb.control('', { validators: [Validators.required] }),
+    fechaNacimiento     : this.fb.control(this.todayAsInputDate(), { validators: [Validators.required] }),
     tipoPax             : this.fb.control('', { validators: [Validators.required] }),
     creditoActivo       : this.fb.control(false)
   });
@@ -199,7 +199,7 @@ export class WalkInComponent implements OnInit {
       apellidos           : '',
       direccion           : '',
       correo              : '',
-      fechaNacimiento     : '',
+      fechaNacimiento     : this.todayAsInputDate(),
       tipoPax             : this.tiposPax[0]?.CR03_CodTipo ?? '',
       creditoActivo       : false
     });

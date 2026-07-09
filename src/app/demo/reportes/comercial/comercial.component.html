@@ -1,0 +1,166 @@
+<section class="commercial-report" aria-label="Reporte comercial hotelero">
+  <header class="report-header">
+    <div>
+      <span class="eyebrow">Reportes / Comercial</span>
+      <h1>Reporte Comercial</h1>
+      <p>Lectura ejecutiva de demanda, canales y oportunidades para impulsar ventas del hotel.</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-outline-secondary" (click)="printReport()">
+        <i class="feather icon-printer"></i>
+        Imprimir
+      </button>
+      <button type="button" class="btn btn-primary" (click)="exportReport()">
+        <i class="feather icon-download"></i>
+        Exportar
+      </button>
+    </div>
+  </header>
+
+  <section class="filters-panel" aria-label="Filtros del reporte comercial">
+    <div>
+      <label>Periodo</label>
+      <select class="form-control" [(ngModel)]="filters.period">
+        <option *ngFor="let option of periodOptions" [value]="option">{{ option }}</option>
+      </select>
+    </div>
+    <div>
+      <label>Desde</label>
+      <input type="date" class="form-control" [(ngModel)]="filters.from" />
+    </div>
+    <div>
+      <label>Hasta</label>
+      <input type="date" class="form-control" [(ngModel)]="filters.to" />
+    </div>
+    <div>
+      <label>Moneda</label>
+      <input type="text" class="form-control" value="USD" readonly />
+    </div>
+    <button type="button" class="btn btn-light" (click)="resetFilters()">
+      <i class="feather icon-rotate-ccw"></i>
+      Limpiar
+    </button>
+  </section>
+
+  <section class="kpi-grid" aria-label="Indicadores comerciales">
+    <article class="kpi-card" *ngFor="let kpi of kpis; trackBy: trackByLabel" [ngClass]="'kpi-card--' + kpi.tone">
+      <span>{{ kpi.label }}</span>
+      <strong>{{ formatValue(kpi) }}</strong>
+      <p>{{ kpi.detail }}</p>
+      <em>{{ kpi.trend }}</em>
+    </article>
+  </section>
+
+  <section class="report-grid">
+    <article class="report-panel channel-panel">
+      <div class="panel-heading">
+        <div>
+          <span class="eyebrow">Canales</span>
+          <h2>Produccion por canal</h2>
+        </div>
+        <div class="summary-badge">
+          <span>Mejor canal</span>
+          <strong>{{ bestChannel.name }}</strong>
+        </div>
+      </div>
+
+      <div class="channel-list">
+        <div *ngFor="let channel of channels; trackBy: trackByLabel">
+          <div class="row-main">
+            <span>{{ channel.name }}</span>
+            <strong>{{ formatCurrency(channel.revenue) }}</strong>
+          </div>
+          <div class="bar-track">
+            <i [style.width.%]="getChannelPercent(channel.revenue)"></i>
+          </div>
+          <div class="row-meta">
+            <span>{{ channel.nights }} noches</span>
+            <span>{{ channel.conversion }}% conversion</span>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <article class="report-panel demand-panel">
+      <div class="panel-heading">
+        <div>
+          <span class="eyebrow">Demanda</span>
+          <h2>Pickup proximas semanas</h2>
+        </div>
+        <span class="date-badge">{{ todayDisplay }}</span>
+      </div>
+
+      <div class="demand-chart">
+        <div *ngFor="let point of demandPoints; trackBy: trackByLabel">
+          <div class="bars">
+            <span class="bar bar--demand" [style.height.%]="getDemandHeight(point.demand)"></span>
+            <span class="bar bar--pickup" [style.height.%]="getDemandHeight(point.pickup)"></span>
+          </div>
+          <strong>{{ point.label }}</strong>
+        </div>
+      </div>
+      <div class="legend">
+        <span><i class="legend-dot legend-dot--demand"></i> Demanda</span>
+        <span><i class="legend-dot legend-dot--pickup"></i> Pickup</span>
+      </div>
+    </article>
+  </section>
+
+  <section class="report-grid report-grid--secondary">
+    <article class="report-panel">
+      <div class="panel-heading">
+        <div>
+          <span class="eyebrow">Segmentos</span>
+          <h2>Mix comercial</h2>
+        </div>
+        <span class="date-badge">{{ totalNights }} noches</span>
+      </div>
+
+      <div class="segment-list">
+        <div *ngFor="let segment of segments; trackBy: trackByLabel">
+          <div>
+            <span>{{ segment.name }}</span>
+            <strong>{{ segment.share }}%</strong>
+          </div>
+          <p>{{ formatCurrency(segment.revenue) }} · ADR {{ formatCurrency(segment.adr) }}</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="report-panel">
+      <div class="panel-heading">
+        <div>
+          <span class="eyebrow">Pipeline</span>
+          <h2>Oportunidades clave</h2>
+        </div>
+      </div>
+
+      <div class="opportunity-list">
+        <div *ngFor="let opportunity of opportunities; trackBy: trackByLabel">
+          <div class="opportunity-head">
+            <strong>{{ opportunity.title }}</strong>
+            <span [class.priority-high]="opportunity.priority === 'Alta'">{{ opportunity.priority }}</span>
+          </div>
+          <p>{{ opportunity.detail }}</p>
+          <em>{{ formatCurrency(opportunity.value) }}</em>
+        </div>
+      </div>
+    </article>
+
+    <article class="report-panel decision-panel">
+      <div class="panel-heading">
+        <div>
+          <span class="eyebrow">Acciones</span>
+          <h2>Lectura recomendada</h2>
+        </div>
+      </div>
+
+      <div class="decision-list">
+        <div *ngFor="let recommendation of recommendations; let index = index">
+          <strong>{{ index + 1 }}</strong>
+          <span>{{ recommendation }}</span>
+        </div>
+      </div>
+    </article>
+  </section>
+</section>

@@ -26,6 +26,7 @@ export class CalendarGridComponent {
 
   readonly cellWidth = 42;
   readonly rowHeight = 48;
+  readonly timelineOffset = 132;
 
   dragState: {
     block: CalendarReservationBlockView;
@@ -154,7 +155,7 @@ export class CalendarGridComponent {
 
     const element = this.scrollContainer.nativeElement;
     const rect = element.getBoundingClientRect();
-    const x = event.clientX - rect.left + element.scrollLeft - this.dragState.pointerOffsetX;
+    const x = event.clientX - rect.left + element.scrollLeft - this.timelineOffset - this.dragState.pointerOffsetX;
     const y = event.clientY - rect.top + element.scrollTop;
 
     const maxStartIndex = Math.max(0, this.dates.length - this.dragState.block.span);
@@ -172,7 +173,7 @@ export class CalendarGridComponent {
     const valid = this.isPlacementValid(targetRow, startIndex, this.dragState.block.span, this.dragState.block.reservation.id);
 
     this.dragPreview = {
-      left: startIndex * this.cellWidth + 2,
+      left: this.timelineOffset + startIndex * this.cellWidth + 2,
       top: rowIndex * this.rowHeight + 6,
       width: Math.max(36, this.dragState.block.span * this.cellWidth - 4),
       label: this.dragState.block.label,

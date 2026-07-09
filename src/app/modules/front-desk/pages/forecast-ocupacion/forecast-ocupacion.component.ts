@@ -69,8 +69,8 @@ export class ForecastOcupacionComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
 
   hotel = '';
-  fechaInicial = '2026-06-16';
-  fechaFinal = '2026-06-30';
+  fechaInicial = '2026-07-08';
+  fechaFinal = '2026-07-30';
   tipoVista: 'ocupacion' | 'disponibilidad' = 'ocupacion';
   busqueda = '';
   pageSize = 10;

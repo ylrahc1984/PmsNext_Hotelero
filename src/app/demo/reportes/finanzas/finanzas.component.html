@@ -1,0 +1,163 @@
+<section class="financial-report" aria-label="Reporte financiero hotelero">
+  <header class="report-header">
+    <div>
+      <span class="eyebrow">Reportes / Finanzas</span>
+      <h1>Reporte Financiero</h1>
+      <p>Vista ejecutiva para entender ingresos, cartera y flujo operativo del hotel.</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-outline-secondary" (click)="printReport()">
+        <i class="feather icon-printer"></i>
+        Imprimir
+      </button>
+      <button type="button" class="btn btn-primary" (click)="exportReport()">
+        <i class="feather icon-download"></i>
+        Exportar
+      </button>
+    </div>
+  </header>
+
+  <section class="filters-panel" aria-label="Filtros del reporte">
+    <div>
+      <label>Periodo</label>
+      <select class="form-control" [(ngModel)]="filters.period">
+        <option *ngFor="let option of periodOptions" [value]="option">{{ option }}</option>
+      </select>
+    </div>
+    <div>
+      <label>Desde</label>
+      <input type="date" class="form-control" [(ngModel)]="filters.from" />
+    </div>
+    <div>
+      <label>Hasta</label>
+      <input type="date" class="form-control" [(ngModel)]="filters.to" />
+    </div>
+    <div>
+      <label>Moneda</label>
+      <input type="text" class="form-control" value="USD" readonly />
+    </div>
+    <button type="button" class="btn btn-light" (click)="resetFilters()">
+      <i class="feather icon-rotate-ccw"></i>
+      Limpiar
+    </button>
+  </section>
+
+  <section class="kpi-grid" aria-label="Indicadores financieros">
+    <article class="kpi-card" *ngFor="let kpi of kpis; trackBy: trackByLabel" [ngClass]="'kpi-card--' + kpi.tone">
+      <span>{{ kpi.label }}</span>
+      <strong>{{ formatValue(kpi) }}</strong>
+      <p>{{ kpi.detail }}</p>
+      <em>{{ kpi.trend }}</em>
+    </article>
+  </section>
+
+  <section class="report-grid">
+    <article class="report-panel revenue-panel">
+      <div class="panel-heading">
+        <div>
+          <span class="eyebrow">Ingresos</span>
+          <h2>Centros de ingreso</h2>
+        </div>
+        <div class="variance" [class.variance--positive]="budgetVariance >= 0">
+          <span>Vs presupuesto</span>
+          <strong>{{ formatCurrency(budgetVariance) }}</strong>
+        </div>
+      </div>
+
+      <div class="revenue-list">
+        <div *ngFor="let center of revenueCenters; trackBy: trackByLabel">
+          <div class="row-main">
+            <span>{{ center.name }}</span>
+            <strong>{{ formatCurrency(center.amount) }}</strong>
+          </div>
+          <div class="bar-track">
+            <i [style.width.%]="getCenterPercent(center.amount)"></i>
+          </div>
+          <div class="row-meta">
+            <span>{{ getCenterPercent(center.amount) }}% del ingreso</span>
+            <span>Margen {{ center.margin }}%</span>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <article class="report-panel trend-panel">
+      <div class="panel-heading">
+        <div>
+          <span class="eyebrow">Tendencia</span>
+          <h2>Ingreso vs gasto</h2>
+        </div>
+        <span class="date-badge">{{ todayDisplay }}</span>
+      </div>
+
+      <div class="trend-chart">
+        <div *ngFor="let point of monthlyPoints; trackBy: trackByLabel">
+          <div class="bars">
+            <span class="bar bar--revenue" [style.height.%]="getMonthlyHeight(point.revenue)"></span>
+            <span class="bar bar--expense" [style.height.%]="getMonthlyHeight(point.expenses)"></span>
+          </div>
+          <strong>{{ point.month }}</strong>
+        </div>
+      </div>
+      <div class="legend">
+        <span><i class="legend-dot legend-dot--revenue"></i> Ingreso</span>
+        <span><i class="legend-dot legend-dot--expense"></i> Gasto</span>
+      </div>
+    </article>
+  </section>
+
+  <section class="report-grid report-grid--secondary">
+    <article class="report-panel">
+      <div class="panel-heading">
+        <div>
+          <span class="eyebrow">Flujo</span>
+          <h2>Caja operativa</h2>
+        </div>
+      </div>
+
+      <div class="cash-list">
+        <div *ngFor="let item of cashItems; trackBy: trackByLabel">
+          <span>{{ item.label }}</span>
+          <strong>{{ formatCurrency(item.amount) }}</strong>
+          <small>{{ item.detail }}</small>
+        </div>
+      </div>
+    </article>
+
+    <article class="report-panel">
+      <div class="panel-heading">
+        <div>
+          <span class="eyebrow">Cartera</span>
+          <h2>Cuentas por cobrar</h2>
+        </div>
+        <span class="date-badge">{{ formatCurrency(totalReceivables) }}</span>
+      </div>
+
+      <div class="receivable-list">
+        <div *ngFor="let bucket of receivableBuckets; trackBy: trackByLabel">
+          <div>
+            <span>{{ bucket.label }}</span>
+            <strong>{{ formatCurrency(bucket.amount) }}</strong>
+          </div>
+          <em><i [style.width.%]="bucket.percent"></i></em>
+        </div>
+      </div>
+    </article>
+
+    <article class="report-panel decision-panel">
+      <div class="panel-heading">
+        <div>
+          <span class="eyebrow">Decisiones</span>
+          <h2>Lectura recomendada</h2>
+        </div>
+      </div>
+
+      <div class="decision-list">
+        <div *ngFor="let decision of decisions; let index = index">
+          <strong>{{ index + 1 }}</strong>
+          <span>{{ decision }}</span>
+        </div>
+      </div>
+    </article>
+  </section>
+</section>
