@@ -395,3 +395,104 @@
     </div>
   </div>
 </div>
+
+<div
+  *ngIf="showCargoHabitacionModal"
+  class="modal d-block"
+  tabindex="-1"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="cargoHabitacionTitle"
+  style="background: rgba(11, 23, 36, 0.52);"
+  (click)="cerrarModalCargoHabitacion()"
+>
+  <div class="modal-dialog modal-dialog-centered modal-lg" role="document" (click)="$event.stopPropagation()">
+    <div class="modal-content border-0 shadow cargo-habitacion-modal">
+      <div class="modal-header border-0 pb-2">
+        <div>
+          <h5 id="cargoHabitacionTitle" class="modal-title fw-bold mb-1">Cargo a Habitacion</h5>
+          <small class="text-muted">Seleccione una habitacion ocupada para aplicar el consumo de la mesa.</small>
+        </div>
+        <button
+          type="button"
+          class="btn-close"
+          aria-label="Cerrar"
+          [disabled]="isCargoHabitacionSaving"
+          (click)="cerrarModalCargoHabitacion()"
+        ></button>
+      </div>
+
+      <div class="modal-body pt-2">
+        <div class="cargo-habitacion-tools mb-3">
+          <input
+            type="search"
+            class="form-control"
+            placeholder="Buscar por habitacion, reserva, huesped o agencia"
+            [(ngModel)]="cargoHabitacionSearch"
+            [disabled]="isCargoHabitacionLoading || isCargoHabitacionSaving"
+          />
+          <div class="cargo-habitacion-total">
+            Total a cargar
+            <strong>{{ total | currency:monedaActual:'symbol':'1.2-2' }}</strong>
+          </div>
+        </div>
+
+        <div *ngIf="isCargoHabitacionLoading" class="d-flex align-items-center gap-2 text-muted small fw-semibold py-3">
+          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+          <span>Cargando habitaciones ocupadas...</span>
+        </div>
+
+        <div *ngIf="cargoHabitacionError" class="alert alert-danger py-2 mb-2" role="alert">
+          {{ cargoHabitacionError }}
+        </div>
+
+        <div class="cargo-habitacion-list" *ngIf="!isCargoHabitacionLoading">
+          <button
+            type="button"
+            class="cargo-room-card"
+            *ngFor="let room of habitacionesCargoFiltradas"
+            [class.cargo-room-card--active]="habitacionCargoSeleccionada?.roomNumber === room.roomNumber"
+            [class.cargo-room-card--disabled]="!room.isOccupied"
+            [disabled]="!room.isOccupied || isCargoHabitacionSaving"
+            (click)="seleccionarHabitacionCargo(room)"
+          >
+            <div class="cargo-room-card__head">
+              <strong>Habitacion {{ room.roomNumber }}</strong>
+              <span class="badge bg-success">Ocupada</span>
+            </div>
+            <div class="cargo-room-card__meta">
+              <span>Reserva {{ room.reservationCode || '-' }}</span>
+              <span>{{ room.guestName || 'Sin huesped' }}</span>
+              <span>{{ room.agencyName || 'Sin agencia' }}</span>
+              <span>{{ room.checkIn }} - {{ room.checkOut }}</span>
+            </div>
+          </button>
+
+          <div *ngIf="!habitacionesCargoFiltradas.length" class="text-center text-muted py-4 small fw-semibold">
+            No se encontraron habitaciones ocupadas para seleccionar.
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer border-0 pt-0">
+        <button
+          type="button"
+          class="btn btn-light"
+          [disabled]="isCargoHabitacionSaving"
+          (click)="cerrarModalCargoHabitacion()"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          [disabled]="!habitacionCargoSeleccionada || isCargoHabitacionSaving"
+          (click)="confirmarCargoHabitacion()"
+        >
+          <span *ngIf="isCargoHabitacionSaving" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+          {{ isCargoHabitacionSaving ? 'Aplicando...' : 'Aplicar cargo' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -45,6 +45,14 @@ export const NavigationItems: NavigationItem[] = [
         icon: 'feather icon-log-in',
         children: [
           { id: 'front-desk-habitaciones', title: 'Habitaciones', type: 'item', url: '/front-desk/room-rack', icon: 'feather icon-home', classes: 'nav-item' },
+          {
+            id: 'front-desk-habitaciones-bloqueadas',
+            title: 'Habitaciones Bloqueadas',
+            type: 'item',
+            url: '/front-desk/habitaciones-bloqueadas',
+            icon: 'feather icon-slash',
+            classes: 'nav-item'
+          },
           { id: 'front-desk-pronostico-ocupacion', title: 'Pronóstico de Ocupación', type: 'item', url: '/front-desk/occupancy-forecast', icon: 'feather icon-trending-up', classes: 'nav-item' },
           { id: 'front-desk-cierre-caja', title: 'Cierre de Caja', type: 'item', url: '/front-desk/cierre-caja', icon: 'feather icon-lock', classes: 'nav-item' },
           { id: 'front-desk-consulta-documentos', title: 'Consulta de Documentos', type: 'item', url: '/front-desk/consulta-documentos', icon: 'feather icon-search', classes: 'nav-item' },
@@ -83,7 +91,6 @@ export const NavigationItems: NavigationItem[] = [
         type: 'collapse',
         icon: 'feather icon-shopping-cart',
         children: [
-          { id: 'restaurante-dashboard', title: 'Dashboard Restaurante', type: 'item', url: '/restaurante/dashboard', icon: 'feather icon-pie-chart', classes: 'nav-item' },
           { id: 'restaurante-facturacion', title: 'Facturación Restaurante', type: 'item', url: '/restaurant/puntos-venta', icon: 'feather icon-credit-card', classes: 'nav-item' },
           { id: 'restaurante-cargos-habitacion', title: 'Cargos a Habitación', type: 'item', url: '/restaurante/cargos-habitacion', icon: 'feather icon-home', classes: 'nav-item' },
           { id: 'restaurante-servicios', title: 'Catalogo Comercial', type: 'item', url: '/restaurante/servicios', icon: 'feather icon-tag', classes: 'nav-item' },

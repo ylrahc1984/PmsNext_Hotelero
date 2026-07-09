@@ -1,0 +1,265 @@
+:host {
+  display: block;
+}
+
+$ink: #12263a;
+$muted: #6b7c93;
+$surface: #ffffff;
+$border: rgba(18, 38, 58, 0.12);
+$shadow: 0 16px 32px rgba(18, 38, 58, 0.08);
+
+.blocked-rooms-page {
+  display: grid;
+  gap: 12px;
+}
+
+.blocked-rooms-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px 20px;
+  border-radius: 18px;
+  border: 1px solid rgba(#ffffff, 0.18);
+  color: #ffffff;
+  background:
+    radial-gradient(circle at 90% 14%, rgba(#1fb6ff, 0.28), transparent 34%),
+    radial-gradient(circle at 12% 86%, rgba(#f43f5e, 0.24), transparent 30%),
+    linear-gradient(135deg, #123b73 0%, #0f2861 52%, #0b1f43 100%);
+  box-shadow: $shadow;
+}
+
+.blocked-rooms-header h1 {
+  margin: 0;
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.blocked-rooms-header p {
+  margin: 4px 0 0;
+  opacity: 0.9;
+}
+
+.blocked-rooms-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.blocked-rooms-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid $border;
+  border-radius: 14px;
+  background: $surface;
+  box-shadow: $shadow;
+}
+
+.blocked-rooms-search {
+  display: grid;
+  gap: 4px;
+  min-width: min(420px, 100%);
+}
+
+.blocked-rooms-search span,
+.blocked-rooms-counter span {
+  color: $muted;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.blocked-rooms-search input {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid $border;
+  border-radius: 10px;
+}
+
+.blocked-rooms-counter {
+  display: grid;
+  justify-items: end;
+}
+
+.blocked-rooms-counter strong {
+  color: $ink;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.blocked-rooms-table-card {
+  border: 1px solid $border;
+  border-radius: 14px;
+  background: $surface;
+  box-shadow: $shadow;
+  overflow: hidden;
+}
+
+.blocked-rooms-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  color: $muted;
+  font-weight: 600;
+}
+
+.blocked-rooms-table {
+  color: $ink;
+}
+
+.blocked-rooms-table thead th {
+  border-bottom: 1px solid $border;
+  background: #f8fbff;
+  color: #44607f;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.room-cell {
+  display: grid;
+  gap: 2px;
+}
+
+.room-cell strong {
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.room-cell span {
+  color: $muted;
+  font-size: 0.8rem;
+}
+
+.date-range {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #36577a;
+  font-weight: 600;
+}
+
+.action-group {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.blocked-rooms-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1080;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(5, 17, 34, 0.55);
+}
+
+.blocked-rooms-dialog {
+  width: min(680px, 100%);
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: #ffffff;
+  box-shadow: 0 24px 60px rgba(5, 17, 34, 0.22);
+}
+
+.blocked-rooms-dialog__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.blocked-rooms-dialog__header span {
+  color: #466489;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.blocked-rooms-dialog__header h2 {
+  margin: 3px 0 0;
+  color: $ink;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.blocked-rooms-dialog__close {
+  width: 34px;
+  height: 34px;
+  border: 1px solid $border;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.blocked-rooms-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.blocked-rooms-field {
+  display: grid;
+  gap: 5px;
+}
+
+.blocked-rooms-field span {
+  color: #456181;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.blocked-rooms-field input,
+.blocked-rooms-field textarea {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid $border;
+  border-radius: 10px;
+  color: $ink;
+}
+
+.blocked-rooms-field textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.blocked-rooms-error {
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(#dc3545, 0.2);
+  color: #b42333;
+  background: rgba(#dc3545, 0.08);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.blocked-rooms-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 767px) {
+  .blocked-rooms-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .blocked-rooms-header {
+    padding: 14px;
+  }
+
+  .blocked-rooms-dialog {
+    padding: 14px;
+  }
+}

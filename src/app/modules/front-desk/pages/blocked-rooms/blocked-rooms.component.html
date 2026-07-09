@@ -1,0 +1,180 @@
+<section class="blocked-rooms-page" aria-label="Habitaciones bloqueadas">
+  <header class="blocked-rooms-header">
+    <div>
+      <h1>Habitaciones bloqueadas</h1>
+      <p>Control operativo para bloquear, extender y desbloquear habitaciones.</p>
+    </div>
+
+    <div class="blocked-rooms-header__actions">
+      <button type="button" class="btn btn-outline-secondary" [disabled]="isLoading" (click)="cargarBloqueos()">
+        <i class="feather icon-refresh-cw me-2" aria-hidden="true"></i>
+        Actualizar
+      </button>
+      <button type="button" class="btn btn-primary" [disabled]="isSaving" (click)="abrirModalCrear()">
+        <i class="feather icon-plus me-2" aria-hidden="true"></i>
+        Nuevo bloqueo
+      </button>
+    </div>
+  </header>
+
+  <section class="blocked-rooms-toolbar" aria-label="Filtros">
+    <label class="blocked-rooms-search">
+      <span>Buscar</span>
+      <input
+        type="search"
+        [(ngModel)]="filtro"
+        placeholder="Habitacion, categoria, descripcion u operador"
+        [disabled]="isLoading"
+      />
+    </label>
+
+    <div class="blocked-rooms-counter">
+      <span>Registros visibles</span>
+      <strong>{{ bloqueosFiltrados.length }}</strong>
+    </div>
+  </section>
+
+  <div *ngIf="errorMessage" class="alert alert-danger mb-2" role="alert">
+    {{ errorMessage }}
+  </div>
+
+  <div *ngIf="successMessage" class="alert alert-success mb-2" role="status">
+    {{ successMessage }}
+  </div>
+
+  <section class="blocked-rooms-table-card" aria-label="Listado de bloqueos">
+    <div *ngIf="isLoading" class="blocked-rooms-loading" role="status">
+      <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+      <span>Cargando bloqueos...</span>
+    </div>
+
+    <div class="table-responsive" *ngIf="!isLoading">
+      <table class="table blocked-rooms-table align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Habitación</th>
+            <th>Categoría</th>
+            <th>Rango de bloqueo</th>
+            <th>Motivo</th>
+            <th>Observaciones</th>
+            <th>Operador</th>
+            <th class="text-end">Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr *ngFor="let item of bloqueosFiltrados; trackBy: trackByRoom">
+            <td>
+              <div class="room-cell">
+                <strong>{{ item.roomNumber }}</strong>
+                <span>{{ item.roomDescription }}</span>
+              </div>
+            </td>
+            <td>{{ item.categoryCode }}</td>
+            <td>
+              <div class="date-range">
+                <span>{{ formatearFecha(item.startDate) }}</span>
+                <i class="feather icon-arrow-right" aria-hidden="true"></i>
+                <span>{{ formatearFecha(item.endDate) }}</span>
+              </div>
+            </td>
+            <td>{{ item.description || '-' }}</td>
+            <td>{{ item.observations || '-' }}</td>
+            <td>{{ item.operator || '-' }}</td>
+            <td class="text-end">
+              <div class="action-group">
+                <button type="button" class="btn btn-outline-primary btn-sm" [disabled]="isSaving" (click)="abrirModalExtender(item)">
+                  Extender
+                </button>
+                <button type="button" class="btn btn-outline-danger btn-sm" [disabled]="isSaving" (click)="desbloquear(item)">
+                  Desbloquear
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <tr *ngIf="!bloqueosFiltrados.length">
+            <td colspan="7" class="text-center py-4 text-muted">
+              No hay habitaciones bloqueadas para mostrar.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div
+    class="blocked-rooms-modal"
+    *ngIf="modalMode"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="blockedRoomsModalTitle"
+    (click)="cerrarModal()"
+    (keydown.escape)="cerrarModal()"
+  >
+    <form class="blocked-rooms-dialog" (ngSubmit)="guardarModal()" (click)="$event.stopPropagation()">
+      <header class="blocked-rooms-dialog__header">
+        <div>
+          <span>{{ modalMode === 'create' ? 'Nuevo bloqueo' : 'Extender bloqueo' }}</span>
+          <h2 id="blockedRoomsModalTitle">
+            {{ modalMode === 'create' ? 'Registrar habitación bloqueada' : 'Habitación ' + (selectedRoom?.roomNumber || '') }}
+          </h2>
+        </div>
+        <button type="button" class="blocked-rooms-dialog__close" [disabled]="isSaving" (click)="cerrarModal()" aria-label="Cerrar">
+          <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+      </header>
+
+      <div class="blocked-rooms-grid" *ngIf="modalMode === 'create'">
+        <label class="blocked-rooms-field">
+          <span>Habitación</span>
+          <input type="number" min="1" [(ngModel)]="form.roomNumber" name="roomNumber" [disabled]="isSaving" required />
+        </label>
+
+        <label class="blocked-rooms-field">
+          <span>Categoría</span>
+          <input type="text" maxlength="12" [(ngModel)]="form.categoryCode" name="categoryCode" [disabled]="isSaving" required />
+        </label>
+      </div>
+
+      <label class="blocked-rooms-field" *ngIf="modalMode === 'create'">
+        <span>Descripción de habitación</span>
+        <input type="text" maxlength="80" [(ngModel)]="form.roomDescription" name="roomDescription" [disabled]="isSaving" />
+      </label>
+
+      <div class="blocked-rooms-grid">
+        <label class="blocked-rooms-field">
+          <span>Fecha inicial</span>
+          <input type="date" [(ngModel)]="form.startDate" name="startDate" [disabled]="isSaving || modalMode === 'extend'" required />
+        </label>
+
+        <label class="blocked-rooms-field">
+          <span>Fecha final</span>
+          <input type="date" [(ngModel)]="form.endDate" name="endDate" [disabled]="isSaving" required />
+        </label>
+      </div>
+
+      <label class="blocked-rooms-field" *ngIf="modalMode === 'create'">
+        <span>Motivo</span>
+        <input type="text" maxlength="120" [(ngModel)]="form.description" name="description" [disabled]="isSaving" required />
+      </label>
+
+      <label class="blocked-rooms-field">
+        <span>Observaciones</span>
+        <textarea rows="3" maxlength="240" [(ngModel)]="form.observations" name="observations" [disabled]="isSaving"></textarea>
+      </label>
+
+      <div class="blocked-rooms-error" *ngIf="modalErrorMessage" role="alert">
+        {{ modalErrorMessage }}
+      </div>
+
+      <footer class="blocked-rooms-dialog__actions">
+        <button type="button" class="btn btn-outline-secondary" [disabled]="isSaving" (click)="cerrarModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving">
+          <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+          {{ modalMode === 'create' ? 'Guardar bloqueo' : 'Guardar extensión' }}
+        </button>
+      </footer>
+    </form>
+  </div>
+</section>

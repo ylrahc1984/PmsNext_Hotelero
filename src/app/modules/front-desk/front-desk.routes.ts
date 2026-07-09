@@ -20,6 +20,10 @@ export const FRONT_DESK_ROUTES: Routes = [
         loadComponent: () => import('./pages/room-rack/room-rack.component').then((c) => c.RoomRackComponent)
       },
       {
+        path: 'habitaciones-bloqueadas',
+        loadComponent: () => import('./pages/blocked-rooms/blocked-rooms.component').then((c) => c.BlockedRoomsComponent)
+      },
+      {
         path: 'walk-in',
         loadComponent: () => import('./walk-in/walk-in.component').then((c) => c.WalkInComponent)
       },

@@ -172,6 +172,49 @@ export interface DivideProductoParams {
   partes: number;
 }
 
+export interface RestaurantRoomChargeDetailPayload {
+  codRsv: string;
+  numHab: string;
+  pntVenta: string;
+  fecha: string;
+  hora: string;
+  grupo: string;
+  categoria: string;
+  codConsumo: string;
+  nomConsumo: string;
+  cantidad: number;
+  precio: number;
+  total: number;
+  moneda: string;
+  tipNPedido: string;
+  numNPedido: string;
+  codMozo: string;
+  incluido: number;
+  exonerado: number;
+  orden: number;
+  comentario: string;
+  operador: string;
+}
+
+export interface RestaurantRoomChargePayload {
+  proceso: number;
+  tipCrgHab: string;
+  numCrgHab: string;
+  codRsv: string;
+  numHab: string;
+  pntVenta: string;
+  fecha: string;
+  hora: string;
+  numDocu: string;
+  nombrePax: string;
+  mtoTotal: number;
+  moneda: string;
+  cierre: number;
+  numCierre: number;
+  operador: string;
+  detalle: RestaurantRoomChargeDetailPayload[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -205,6 +248,10 @@ export class NotaPedidoRestauranteService {
       `${this.baseUrl}/divide-producto/producto`,
       this.buildDividirProductoPayload(params)
     );
+  }
+
+  registrarCargoHabitacion(payload: RestaurantRoomChargePayload): Observable<unknown> {
+    return this.http.post(`${this.baseUrl}/cargo-habitacion`, payload);
   }
 
   obtenerDetallePedido(

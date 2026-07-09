@@ -32,23 +32,66 @@
         </div>
 
         <div class="rooms-grid">
-          <button
-            type="button"
+          <article
             class="room-card"
-            style="position: relative;"
             *ngFor="let habitacion of habitaciones; trackBy: trackByHabitacion"
             [ngClass]="getEstadoClass(habitacion.estado)"
             (click)="seleccionarHabitacion(habitacion)"
+            (keydown)="onRoomCardKeydown($event, habitacion)"
+            role="button"
+            tabindex="0"
             [attr.aria-label]="'Habitacion ' + habitacion.numero + ' ' + habitacion.categoria"
           >
             <span
+              class="room-card__clean-indicator"
               [ngStyle]="getCleanIndicatorStyle(habitacion)"
               [attr.title]="getCleanLabel(habitacion)"
               [attr.aria-label]="getCleanLabel(habitacion)"
             ></span>
-            <strong>{{ habitacion.numero }}</strong>
-            <span>{{ habitacion.categoria }}</span>
-          </button>
+            <div class="room-card__content">
+              <strong class="room-card__number">{{ habitacion.numero }}</strong>
+              <span class="room-card__category">{{ habitacion.categoria }}</span>
+              <span class="room-card__status" [ngClass]="getEstadoClass(habitacion.estado)">
+                {{ habitacion.estado }}
+              </span>
+            </div>
+
+            <div class="room-card__quick-actions" aria-label="Acciones rapidas de habitacion">
+              <button
+                type="button"
+                class="quick-action quick-action--clean"
+                title="Enviar a limpieza"
+                [attr.aria-label]="'Enviar a limpieza habitacion ' + habitacion.numero"
+                [disabled]="isActualizandoLimpieza(habitacion)"
+                (click)="$event.stopPropagation(); onLimpiarHabitacion(habitacion)"
+                (keydown)="$event.stopPropagation()"
+              >
+                <i class="bi bi-brush" aria-hidden="true"></i>
+              </button>
+              <button
+                type="button"
+                class="quick-action quick-action--refresh"
+                title="Repasar habitación"
+                [attr.aria-label]="'Repasar habitacion ' + habitacion.numero"
+                [disabled]="isActualizandoLimpieza(habitacion)"
+                (click)="$event.stopPropagation(); onRepasarHabitacion(habitacion)"
+                (keydown)="$event.stopPropagation()"
+              >
+                <i class="bi bi-stars" aria-hidden="true"></i>
+              </button>
+              <button
+                type="button"
+                class="quick-action quick-action--block"
+                title="Bloquear habitación"
+                [attr.aria-label]="'Bloquear habitacion ' + habitacion.numero"
+                [disabled]="bloqueandoHabitacion && bloqueoModalRoom?.numero === habitacion.numero"
+                (click)="$event.stopPropagation(); onBloquearHabitacion(habitacion)"
+                (keydown)="$event.stopPropagation()"
+              >
+                <i class="bi bi-lock" aria-hidden="true"></i>
+              </button>
+            </div>
+          </article>
         </div>
 
         <div *ngIf="!isLoading && !errorMessage && habitaciones.length === 0" class="d-inline-flex align-items-center gap-2 mt-2 text-muted fw-semibold small">
@@ -121,4 +164,150 @@
       </section>
     </aside>
   </section>
+
+  <div
+    class="room-block-modal"
+    *ngIf="bloqueoModalRoom"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="roomBlockTitle"
+    (click)="cerrarModalBloqueo()"
+    (keydown.escape)="cerrarModalBloqueo()"
+  >
+    <form class="room-block-dialog" (ngSubmit)="confirmarBloqueoHabitacion()" (click)="$event.stopPropagation()">
+      <header class="room-block-dialog__header">
+        <div>
+          <span>Bloqueo de habitación</span>
+          <h2 id="roomBlockTitle">Habitación {{ bloqueoModalRoom.numero }}</h2>
+        </div>
+        <button
+          type="button"
+          class="room-block-dialog__close"
+          title="Cerrar"
+          aria-label="Cerrar bloqueo de habitación"
+          [disabled]="bloqueandoHabitacion"
+          (click)="cerrarModalBloqueo()"
+        >
+          <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+      </header>
+
+      <div class="room-block-room">
+        <strong>{{ bloqueoModalRoom.categoria }}</strong>
+        <span>{{ bloqueoModalRoom.data.CR05_Descripcion || bloqueoModalRoom.data.CR05_TipoHab || 'Habitación operativa' }}</span>
+      </div>
+
+      <div class="room-block-grid">
+        <label class="room-block-field">
+          <span>Desde</span>
+          <div class="room-block-date-control">
+            <input
+              type="text"
+              name="fechaInicial"
+              [(ngModel)]="bloqueoForm.fechaInicial"
+              placeholder="dd/MM/yyyy"
+              [disabled]="bloqueandoHabitacion"
+              (click)="openDatePicker(fechaInicialPicker)"
+              readonly
+              required
+            />
+            <input
+              #fechaInicialPicker
+              class="room-block-native-date"
+              type="date"
+              [value]="toIsoDate(bloqueoForm.fechaInicial)"
+              [disabled]="bloqueandoHabitacion"
+              tabindex="-1"
+              aria-hidden="true"
+              (change)="onBloqueoDateSelected('fechaInicial', $event)"
+            />
+            <button
+              type="button"
+              class="room-block-calendar-button"
+              title="Seleccionar fecha inicial"
+              aria-label="Seleccionar fecha inicial"
+              [disabled]="bloqueandoHabitacion"
+              (click)="openDatePicker(fechaInicialPicker)"
+            >
+              <i class="bi bi-calendar3" aria-hidden="true"></i>
+            </button>
+          </div>
+        </label>
+
+        <label class="room-block-field">
+          <span>Hasta</span>
+          <div class="room-block-date-control">
+            <input
+              type="text"
+              name="fechaFin"
+              [(ngModel)]="bloqueoForm.fechaFin"
+              placeholder="dd/MM/yyyy"
+              [disabled]="bloqueandoHabitacion"
+              (click)="openDatePicker(fechaFinPicker)"
+              readonly
+              required
+            />
+            <input
+              #fechaFinPicker
+              class="room-block-native-date"
+              type="date"
+              [value]="toIsoDate(bloqueoForm.fechaFin)"
+              [disabled]="bloqueandoHabitacion"
+              tabindex="-1"
+              aria-hidden="true"
+              (change)="onBloqueoDateSelected('fechaFin', $event)"
+            />
+            <button
+              type="button"
+              class="room-block-calendar-button"
+              title="Seleccionar fecha final"
+              aria-label="Seleccionar fecha final"
+              [disabled]="bloqueandoHabitacion"
+              (click)="openDatePicker(fechaFinPicker)"
+            >
+              <i class="bi bi-calendar3" aria-hidden="true"></i>
+            </button>
+          </div>
+        </label>
+      </div>
+
+      <label class="room-block-field">
+        <span>Motivo</span>
+        <input
+          type="text"
+          name="descripcion"
+          [(ngModel)]="bloqueoForm.descripcion"
+          maxlength="120"
+          [disabled]="bloqueandoHabitacion"
+          required
+        />
+      </label>
+
+      <label class="room-block-field">
+        <span>Observaciones</span>
+        <textarea
+          name="observaciones"
+          [(ngModel)]="bloqueoForm.observaciones"
+          rows="3"
+          maxlength="240"
+          placeholder="Detalle interno del bloqueo"
+          [disabled]="bloqueandoHabitacion"
+        ></textarea>
+      </label>
+
+      <div class="room-block-error" *ngIf="bloqueoErrorMessage" role="alert">
+        {{ bloqueoErrorMessage }}
+      </div>
+
+      <footer class="room-block-dialog__actions">
+        <button type="button" class="room-block-action room-block-action--ghost" [disabled]="bloqueandoHabitacion" (click)="cerrarModalBloqueo()">
+          Cancelar
+        </button>
+        <button type="submit" class="room-block-action room-block-action--primary" [disabled]="bloqueandoHabitacion">
+          <span *ngIf="bloqueandoHabitacion" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+          <span>{{ bloqueandoHabitacion ? 'Bloqueando...' : 'Bloquear' }}</span>
+        </button>
+      </footer>
+    </form>
+  </div>
 </section>

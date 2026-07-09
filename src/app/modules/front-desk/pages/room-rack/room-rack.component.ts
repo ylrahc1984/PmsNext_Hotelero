@@ -5,10 +5,11 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { of } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
 
+import { AuthService } from 'src/app/core/services/auth.service';
 import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { RoomRackNavigationState, RoomRackRoom } from './models/room-rack-room.model';
-import { RoomRackService } from './services/room-rack.service';
+import { RoomBlockRequest, RoomRackService } from './services/room-rack.service';
 
 type EstadoHabitacion =
   | 'Disponible'
@@ -37,6 +38,13 @@ interface AccionOperativa {
   accent    ?: 'primary' | 'muted';
 }
 
+interface BloqueoHabitacionForm {
+  fechaInicial  : string;
+  fechaFin      : string;
+  descripcion   : string;
+  observaciones : string;
+}
+
 @Component({
   selector: 'app-room-rack',
   standalone: true,
@@ -48,6 +56,7 @@ interface AccionOperativa {
 export class RoomRackComponent implements OnInit {
   private readonly roomRackService      = inject(RoomRackService);
   private readonly tipoCambioService    = inject(TipoCambioService);
+  private readonly authService          = inject(AuthService);
   private readonly destroyRef           = inject(DestroyRef);
   private readonly cdr                  = inject(ChangeDetectorRef);
 
@@ -68,9 +77,15 @@ export class RoomRackComponent implements OnInit {
   resumen               = this.generarResumen();
   isLoading             = false;
   errorMessage          = '';
+  cleanActionMessage    = '';
   tipoCambio            : TipoCambio | null = null;
   tipoCambioLoading     = false;
   tipoCambioError       = '';
+  updatingCleanRooms    = new Set<string>();
+  bloqueandoHabitacion  = false;
+  bloqueoModalRoom      : HabitacionRack | null = null;
+  bloqueoErrorMessage   = '';
+  bloqueoForm           : BloqueoHabitacionForm = this.createDefaultBloqueoForm();
 
   readonly acciones: AccionOperativa[] = [
     { label: 'Asignar Habitacion', icon: 'home', accent: 'primary' },
@@ -98,6 +113,126 @@ export class RoomRackComponent implements OnInit {
     }
 
     this.router.navigate(['/front-desk/habitaciones/room-stay-management', habitacion.numero], extras);
+  }
+
+  onRoomCardKeydown(event: KeyboardEvent, habitacion: HabitacionRack): void {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+
+    event.preventDefault();
+    this.seleccionarHabitacion(habitacion);
+  }
+
+  onLimpiarHabitacion(room: HabitacionRack): void {
+    this.actualizarLimpiezaHabitacion(room, 'L');
+  }
+
+  onRepasarHabitacion(room: HabitacionRack): void {
+    this.actualizarLimpiezaHabitacion(room, 'S');
+  }
+
+  onBloquearHabitacion(room: HabitacionRack): void {
+    this.abrirModalBloqueo(room);
+  }
+
+  abrirModalBloqueo(room: HabitacionRack): void {
+    this.bloqueoModalRoom = room;
+    this.bloqueoErrorMessage = '';
+    this.bloqueoForm = this.createDefaultBloqueoForm();
+  }
+
+  cerrarModalBloqueo(): void {
+    if (this.bloqueandoHabitacion) {
+      return;
+    }
+
+    this.bloqueoModalRoom = null;
+    this.bloqueoErrorMessage = '';
+  }
+
+  confirmarBloqueoHabitacion(): void {
+    const room = this.bloqueoModalRoom;
+
+    if (!room || this.bloqueandoHabitacion) {
+      return;
+    }
+
+    const validationMessage = this.validarBloqueoForm();
+    if (validationMessage) {
+      this.bloqueoErrorMessage = validationMessage;
+      return;
+    }
+
+    const payload = this.buildBloqueoPayload(room);
+
+    this.bloqueandoHabitacion = true;
+    this.bloqueoErrorMessage = '';
+    this.cdr.markForCheck();
+
+    this.roomRackService
+      .blockRoom(payload)
+      .pipe(
+        finalize(() => {
+          this.bloqueandoHabitacion = false;
+          this.cdr.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: () => {
+          room.data.CR05_EstHab = 'B';
+          room.estado = 'Bloqueada';
+          this.kpis = this.generarKpis();
+          this.resumen = this.generarResumen();
+          this.cleanActionMessage = 'Habitacion bloqueada correctamente.';
+          this.bloqueoModalRoom = null;
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          console.error('No se pudo bloquear la habitacion.', error);
+          this.bloqueoErrorMessage = 'No se pudo bloquear la habitacion. Revise los datos e intente nuevamente.';
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  openDatePicker(input: HTMLInputElement): void {
+    if (this.bloqueandoHabitacion) {
+      return;
+    }
+
+    const picker = input as HTMLInputElement & { showPicker?: () => void };
+
+    if (picker.showPicker) {
+      picker.showPicker();
+      return;
+    }
+
+    input.focus();
+    input.click();
+  }
+
+  onBloqueoDateSelected(field: 'fechaInicial' | 'fechaFin', event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    const formatted = this.isoToDisplayDate(value);
+
+    if (!formatted) {
+      return;
+    }
+
+    this.bloqueoForm[field] = formatted;
+    this.bloqueoErrorMessage = '';
+  }
+
+  toIsoDate(value: string): string {
+    const date = this.parseDisplayDate(value);
+
+    if (!date) {
+      return '';
+    }
+
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   }
 
   actualizarVentana(): void {
@@ -162,6 +297,10 @@ export class RoomRackComponent implements OnInit {
     return accion.label;
   }
 
+  isActualizandoLimpieza(habitacion: HabitacionRack): boolean {
+    return this.updatingCleanRooms.has(habitacion.numero);
+  }
+
   private cargarHabitaciones(): void {
     this.isLoading = true;
     this.errorMessage = '';
@@ -185,6 +324,136 @@ export class RoomRackComponent implements OnInit {
         this.kpis = this.generarKpis();
         this.resumen = this.generarResumen();
       });
+  }
+
+  private actualizarLimpiezaHabitacion(room: HabitacionRack, clean: 'L' | 'S'): void {
+    const roomNumber = room.data.CR05_NumHab || room.numero;
+    const roomKey = room.numero;
+
+    if (this.updatingCleanRooms.has(roomKey)) {
+      return;
+    }
+
+    this.cleanActionMessage = '';
+    this.updatingCleanRooms.add(roomKey);
+    this.cdr.markForCheck();
+
+    this.roomRackService
+      .updateRoomCleanStatus(roomNumber, clean)
+      .pipe(
+        finalize(() => {
+          this.updatingCleanRooms.delete(roomKey);
+          this.cdr.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: () => {
+          room.data.CR05_Clean = clean;
+          this.kpis = this.generarKpis();
+          this.resumen = this.generarResumen();
+          this.cleanActionMessage = clean === 'L' ? 'Habitacion marcada como limpia.' : 'Habitacion marcada para repaso.';
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          console.error('No se pudo actualizar la limpieza de la habitacion.', error);
+          this.cleanActionMessage = 'No se pudo actualizar el estado de limpieza.';
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  private createDefaultBloqueoForm(): BloqueoHabitacionForm {
+    const today = this.getTodayDisplayDate();
+
+    return {
+      fechaInicial: today,
+      fechaFin: today,
+      descripcion: 'Bloqueo operativo',
+      observaciones: ''
+    };
+  }
+
+  private validarBloqueoForm(): string {
+    const fechaInicial = this.normalizeText(this.bloqueoForm.fechaInicial);
+    const fechaFin = this.normalizeText(this.bloqueoForm.fechaFin);
+    const descripcion = this.normalizeText(this.bloqueoForm.descripcion);
+
+    if (!this.isDisplayDate(fechaInicial) || !this.isDisplayDate(fechaFin)) {
+      return 'Seleccione fechas validas en formato dd/MM/yyyy.';
+    }
+
+    if (!descripcion) {
+      return 'Indique el motivo del bloqueo.';
+    }
+
+    const start = this.parseDisplayDate(fechaInicial);
+    const end = this.parseDisplayDate(fechaFin);
+
+    if (!start || !end || end.getTime() < start.getTime()) {
+      return 'La fecha final no puede ser menor que la fecha inicial.';
+    }
+
+    return '';
+  }
+
+  private buildBloqueoPayload(room: HabitacionRack): RoomBlockRequest {
+    return {
+      proceso: 0,
+      numeroHabitacion: Number(room.data.CR05_NumHab || room.numero || 0),
+      categoriaHabitacion: this.normalizeText(room.data.CR05_CateHab || room.categoria),
+      descripcionHabitacion: this.normalizeText(room.data.CR05_Descripcion || room.data.CR05_TipoHab || room.categoria),
+      fechaInicial: this.normalizeText(this.bloqueoForm.fechaInicial),
+      fechaFin: this.normalizeText(this.bloqueoForm.fechaFin),
+      descripcion: this.normalizeText(this.bloqueoForm.descripcion),
+      observaciones: this.normalizeText(this.bloqueoForm.observaciones),
+      operador: this.getOperador(),
+      respuesta: 'string'
+    };
+  }
+
+  private getOperador(): string {
+    const user = this.authService.getCurrentUser();
+    return this.normalizeText(user?.usuario ?? user?.nombre ?? user?.nombreUsu ?? 'Admin') || 'Admin';
+  }
+
+  private isDisplayDate(value: string): boolean {
+    return /^\d{2}\/\d{2}\/\d{4}$/.test(value) && !!this.parseDisplayDate(value);
+  }
+
+  private parseDisplayDate(value: string): Date | null {
+    const [dayRaw, monthRaw, yearRaw] = value.split('/');
+    const day = Number(dayRaw);
+    const month = Number(monthRaw);
+    const year = Number(yearRaw);
+    const date = new Date(year, month - 1, day);
+
+    if (
+      !Number.isInteger(day) ||
+      !Number.isInteger(month) ||
+      !Number.isInteger(year) ||
+      date.getFullYear() !== year ||
+      date.getMonth() !== month - 1 ||
+      date.getDate() !== day
+    ) {
+      return null;
+    }
+
+    return date;
+  }
+
+  private isoToDisplayDate(value: string): string {
+    if (!value) {
+      return '';
+    }
+
+    const [year, month, day] = value.split('-');
+
+    if (!year || !month || !day) {
+      return '';
+    }
+
+    return `${day}/${month}/${year}`;
   }
 
   private cargarTipoCambio(): void {
