@@ -62,7 +62,6 @@ export class RoomCalendarPageComponent implements OnInit {
   assignmentPanelCollapsed = false;
   isAssigningRoom = false;
   selectedPendingReservation: CalendarAssignableReservation | null = null;
-  demoAssignedReservationIds: string[] = [];
   reservationActionMenu: { block: CalendarReservationBlockView; x: number; y: number } | null = null;
   private rooms: RoomStatus[] = [];
   private workingReservations: CalendarReservation[] = [];
@@ -132,6 +131,10 @@ export class RoomCalendarPageComponent implements OnInit {
   openReservationActionMenu(payload: CalendarReservationBlockSelect): void {
     payload.event.preventDefault();
     payload.event.stopPropagation();
+    if (this.isCheckedInReservation(payload.block.reservation)) {
+      this.onCheckedInReservationMoveBlocked(payload.block.reservation);
+      return;
+    }
     this.reservationActionMenu = {
       block: payload.block,
       x: Math.min(payload.event.clientX, window.innerWidth - 220),
@@ -151,6 +154,16 @@ export class RoomCalendarPageComponent implements OnInit {
     }
 
     void this.confirmAndReassignCalendarReservation(drop);
+  }
+
+  onCheckedInReservationMoveBlocked(reservation: CalendarReservation): void {
+    void Swal.fire({
+      title: 'Movimiento no permitido',
+      text: `La reserva ${reservation.reservationCode || reservation.id} ya tiene Check-In realizado y no puede moverse de habitación.`,
+      icon: 'warning',
+      confirmButtonText: 'Aceptar',
+      confirmButtonColor: '#2f5f8d'
+    });
   }
 
   onPendingReservationDragStart(payload: { reservation: CalendarAssignableReservation; event: PointerEvent }): void {
@@ -179,11 +192,20 @@ export class RoomCalendarPageComponent implements OnInit {
 
   onUnassignReservationFromMenu(block: CalendarReservationBlockView): void {
     this.closeReservationActionMenu();
+    if (this.isCheckedInReservation(block.reservation)) {
+      this.onCheckedInReservationMoveBlocked(block.reservation);
+      return;
+    }
     void this.confirmAndUnassignCalendarReservation(block);
   }
 
   get visibleWindowLabel(): string {
-    return `${this.startDate} - ${this.endDate}`;
+    return `${this.formatDisplayDate(this.startDate)} - ${this.formatDisplayDate(this.endDate)}`;
+  }
+
+  private formatDisplayDate(isoDate: string): string {
+    const [year, month, day] = isoDate.split('-');
+    return year && month && day ? `${day}/${month}/${year}` : isoDate;
   }
 
   private reloadCalendar(resetScroll = false): void {
@@ -212,7 +234,6 @@ export class RoomCalendarPageComponent implements OnInit {
 
     this.workingReservations = this.workingReservations.filter((item) => item.id !== calendarReservation.id);
     this.workingReservations = [...this.workingReservations, calendarReservation];
-    this.demoAssignedReservationIds = [...new Set([...this.demoAssignedReservationIds, reservation.id])];
     this.reloadCalendar();
     console.info('[RoomCalendar] Asignacion visual pendiente de integracion backend.', {
       reserva: reservation.reservationCode,
@@ -365,6 +386,11 @@ export class RoomCalendarPageComponent implements OnInit {
       return;
     }
 
+    if (this.isCheckedInReservation(sourceReservation)) {
+      this.onCheckedInReservationMoveBlocked(sourceReservation);
+      return;
+    }
+
     if (sourceReservation.roomNumber === drop.toRoomNumber && sourceReservation.startDate === drop.targetDate) {
       return;
     }
@@ -375,6 +401,7 @@ export class RoomCalendarPageComponent implements OnInit {
       reservationCode: sourceReservation.reservationCode || this.extractReservationCode(sourceReservation.id),
       categoryCode: sourceReservation.categoryCode || sourceRoom?.type || '',
       sourceRoom: sourceReservation.roomNumber,
+      roomNumber: sourceReservation.roomNumber,
       startDate: sourceReservation.startDate,
       endDate: sourceReservation.endDate,
       nights: this.diffDays(sourceReservation.startDate, sourceReservation.endDate),
@@ -610,6 +637,10 @@ export class RoomCalendarPageComponent implements OnInit {
     }
 
     return httpError.message ? `${httpError.message}${statusDetail}` : fallback;
+  }
+
+  private isCheckedInReservation(reservation: CalendarReservation): boolean {
+    return reservation.reservationState?.trim().toUpperCase() === 'CHK';
   }
 
   private normalizeCode(value: string | null | undefined): string {

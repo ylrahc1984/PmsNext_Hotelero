@@ -3,9 +3,9 @@
 }
 
 .room-sidebar {
-  width: 180px;
-  min-width: 180px;
-  max-width: 180px;
+  width: 168px;
+  min-width: 168px;
+  max-width: 168px;
   border: 1px solid #e2e9f3;
   border-radius: 16px;
   background: #ffffff;
@@ -15,7 +15,7 @@
 
 .room-sidebar__head {
   height: 58px;
-  padding: 0 0.7rem;
+  padding: 0 0.5rem;
   border-bottom: 1px solid #e7edf6;
   display: flex;
   align-items: center;
@@ -48,7 +48,7 @@
 
 .room-sidebar__row {
   height: 48px;
-  padding: 0 0.65rem;
+  padding: 0 0.45rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;

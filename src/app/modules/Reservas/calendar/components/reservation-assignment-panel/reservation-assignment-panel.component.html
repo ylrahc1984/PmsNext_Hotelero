@@ -10,20 +10,41 @@
         <p>Rooming</p>
         <h2>Reservas pendientes</h2>
       </div>
-      <button type="button" class="assignment-panel__icon-btn" (click)="reload()" [disabled]="isLoading" aria-label="Actualizar reservas">
-        <i class="feather icon-refresh-cw"></i>
-      </button>
+      <div class="assignment-panel__header-actions">
+        <button
+          type="button"
+          class="assignment-panel__icon-btn"
+          [class.assignment-panel__icon-btn--active]="showDateSettings"
+          (click)="toggleDateSettings()"
+          aria-label="Configurar fechas de consulta"
+          title="Configurar fechas"
+        >
+          <i class="feather icon-settings"></i>
+        </button>
+        <button type="button" class="assignment-panel__icon-btn" (click)="reload()" [disabled]="isLoading" aria-label="Actualizar reservas">
+          <i class="feather icon-refresh-cw"></i>
+        </button>
+      </div>
     </header>
 
-    <div class="assignment-panel__filters">
-      <label class="assignment-panel__field assignment-panel__field--search">
-        <span>Buscar</span>
-        <div>
-          <i class="feather icon-search"></i>
-          <input type="search" class="form-control" [(ngModel)]="search" placeholder="Reserva, agencia..." />
-        </div>
-      </label>
+    <form class="assignment-panel__date-settings" *ngIf="showDateSettings" (ngSubmit)="applyDateFilter()">
+      <div class="assignment-panel__date-fields">
+        <label class="assignment-panel__field">
+          <span>Fecha ingreso</span>
+          <input type="date" class="form-control" name="filterStartDate" [(ngModel)]="filterStartDate" />
+        </label>
+        <label class="assignment-panel__field">
+          <span>Fecha salida</span>
+          <input type="date" class="form-control" name="filterEndDate" [(ngModel)]="filterEndDate" />
+        </label>
+      </div>
+      <button type="submit" class="assignment-panel__apply-btn" [disabled]="!filterStartDate || !filterEndDate || filterStartDate > filterEndDate || isLoading">
+        Aplicar filtro
+      </button>
+      <small *ngIf="filterStartDate && filterEndDate && filterStartDate > filterEndDate">La fecha de salida debe ser igual o posterior al ingreso.</small>
+    </form>
 
+    <div class="assignment-panel__filters">
       <label class="assignment-panel__field">
         <span>Estado</span>
         <select class="form-control" [(ngModel)]="status" (ngModelChange)="loadReservations()">
@@ -34,7 +55,7 @@
 
     <div class="assignment-panel__summary">
       <strong>{{ filteredReservations.length }}</strong>
-      <span>{{ usingDemoData ? 'datos demo' : 'reservas' }}</span>
+      <span>reservas</span>
     </div>
 
     <div class="assignment-panel__list">
@@ -42,6 +63,8 @@
         type="button"
         class="assignment-card"
         [class.assignment-card--selected]="selectedReservationId === reservation.id"
+        [class.assignment-card--assigned]="!isAssignable(reservation)"
+        [disabled]="!isAssignable(reservation)"
         *ngFor="let reservation of filteredReservations; trackBy: trackByReservation"
         (click)="selectReservation(reservation)"
       >
@@ -53,7 +76,7 @@
         <span class="assignment-card__agency">{{ reservation.agency }}</span>
         <span class="assignment-card__route">
           <span>Cat. {{ reservation.categoryCode || 'N/D' }}</span>
-          <span>Origen {{ reservation.sourceRoom || 'N/D' }}</span>
+          <span>Origen {{ reservation.roomNumber || 'N/D' }}</span>
         </span>
         <span class="assignment-card__meta">
           <span>{{ reservation.startDate }} - {{ reservation.endDate }}</span>
@@ -61,14 +84,23 @@
           <span>{{ reservation.pax }} Pax</span>
         </span>
         <span class="assignment-card__actions">
-          <span>Click para seleccionar</span>
-          <span class="assignment-card__drag" (pointerdown)="onReservationPointerDown(reservation, $event)" title="Arrastrar reserva">
+          <span>{{ isAssignable(reservation) ? 'Click para seleccionar' : 'Reserva asignada' }}</span>
+          <span class="assignment-card__drag" *ngIf="isAssignable(reservation)" (pointerdown)="onReservationPointerDown(reservation, $event)" title="Arrastrar reserva">
             <i class="feather icon-move"></i>
+          </span>
+          <span class="assignment-card__assigned-badge" *ngIf="!isAssignable(reservation)">
+            <i class="feather icon-check-circle"></i>
+            Asignada
           </span>
         </span>
       </button>
 
-      <div class="assignment-panel__empty" *ngIf="!isLoading && filteredReservations.length === 0">
+      <div class="assignment-panel__empty" *ngIf="!isLoading && errorMessage" role="alert">
+        <i class="feather icon-alert-circle"></i>
+        <span>{{ errorMessage }}</span>
+      </div>
+
+      <div class="assignment-panel__empty" *ngIf="!isLoading && !errorMessage && filteredReservations.length === 0">
         <i class="feather icon-inbox"></i>
         <span>Sin reservas pendientes</span>
       </div>

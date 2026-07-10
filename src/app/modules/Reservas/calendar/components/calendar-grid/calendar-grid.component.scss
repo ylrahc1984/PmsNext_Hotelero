@@ -20,12 +20,11 @@
 
 .calendar-grid__cells {
   display: flex;
-  padding-left: 132px;
 }
 
 .calendar-grid__overlay {
   position: absolute;
-  inset: 0 0 0 132px;
+  inset: 0;
   z-index: 2;
   pointer-events: none;
 }
@@ -36,7 +35,7 @@
 
 .calendar-grid__assignment-targets {
   position: absolute;
-  inset: 0 0 0 132px;
+  inset: 0;
   display: flex;
   z-index: 1;
 }

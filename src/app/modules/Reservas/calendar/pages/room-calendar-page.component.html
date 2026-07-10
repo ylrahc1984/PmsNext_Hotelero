@@ -69,6 +69,7 @@
           (scrollTopChange)="onGridScrollTop($event)"
           (reservationSelect)="openReservationActionMenu($event)"
           (reservationDrop)="onReservationDrop($event)"
+          (reservationMoveBlocked)="onCheckedInReservationMoveBlocked($event)"
           (assignmentTargetSelect)="onAssignmentTargetSelect($event)"
         ></app-calendar-grid>
       </section>
@@ -79,7 +80,6 @@
       [startDate]="startDate"
       [endDate]="endDate"
       [collapsed]="assignmentPanelCollapsed"
-      [assignedReservationIds]="demoAssignedReservationIds"
       [selectedReservationId]="selectedPendingReservation?.id ?? null"
       (collapsedChange)="assignmentPanelCollapsed = $event"
       (reservationSelect)="onPendingReservationSelect($event)"

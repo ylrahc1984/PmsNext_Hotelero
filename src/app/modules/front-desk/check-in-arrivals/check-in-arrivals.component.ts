@@ -1,18 +1,25 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { of } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
+import Swal from 'sweetalert2';
+
+import { AuthService } from 'src/app/core/services/auth.service';
 
 import {
   CheckInArrival,
   CheckInArrivalKpi,
   CheckInArrivalSortColumn,
-  CheckInArrivalSortDirection
+  CheckInArrivalSortDirection,
+  RoomingListGuest
 } from './models/check-in-arrival.model';
 import { CheckInArrivalsService } from './services/check-in-arrivals.service';
+import { Nationality } from '../settings/nationalities/models/nationality.model';
+import { WalkInOption } from '../walk-in/models/walk-in.model';
+import { WalkInService } from '../walk-in/services/walk-in.service';
 
 interface CheckInArrivalFilterForm {
   fechaIngreso: string;
@@ -39,6 +46,8 @@ export class CheckInArrivalsComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly router = inject(Router);
+  private readonly authService = inject(AuthService);
+  private readonly walkInService = inject(WalkInService);
 
   readonly pageSizeOptions: PaginationOption[] = [
     { label: '10', value: 10 },
@@ -68,6 +77,23 @@ export class CheckInArrivalsComponent implements OnInit {
     busqueda: ''
   });
 
+  readonly roomingGuestForm = this.fb.nonNullable.group({
+    codNacion: ['', Validators.required],
+    tipDocu: ['', Validators.required],
+    numDocu: ['', Validators.required],
+    nombre: ['', Validators.required],
+    apellido: ['', Validators.required],
+    fecNac: [this.formatDateInput(new Date()), Validators.required],
+    sexo: [''],
+    estCivil: [''],
+    tiPax: ['PAX', Validators.required],
+    direccion: [''],
+    email: ['', Validators.email],
+    motivo: [''],
+    procede: [''],
+    mdoArribo: ['']
+  });
+
   arrivals: CheckInArrival[] = [];
   filteredArrivals: CheckInArrival[] = [];
   pagedArrivals: CheckInArrival[] = [];
@@ -83,8 +109,18 @@ export class CheckInArrivalsComponent implements OnInit {
   sortColumn: CheckInArrivalSortColumn = 'fechaIng';
   sortDirection: CheckInArrivalSortDirection = 'asc';
   activeObservationKey: string | null = null;
+  roomingArrival: CheckInArrival | null = null;
+  roomingGuests: RoomingListGuest[] = [];
+  roomingLoading = false;
+  roomingSaving = false;
+  roomingError = '';
+  showRoomingForm = false;
+  checkingInKey: string | null = null;
+  documentTypes: WalkInOption[] = [];
+  nationalities: Nationality[] = [];
 
   ngOnInit(): void {
+    this.loadRoomingCatalogs();
     this.buscar();
   }
 
@@ -263,11 +299,67 @@ export class CheckInArrivalsComponent implements OnInit {
   }
 
   isCheckInDisabled(arrival: CheckInArrival | null): boolean {
-    return !arrival || Number(arrival.procesado) === 1;
+    return !arrival || Number(arrival.procesado) === 1 || this.checkingInKey === this.getArrivalKey(arrival);
   }
 
-  realizarCheckIn(reserva: CheckInArrival): void {
-    console.log(reserva);
+  isCheckingIn(arrival: CheckInArrival): boolean {
+    return this.checkingInKey === this.getArrivalKey(arrival);
+  }
+
+  async realizarCheckIn(reserva: CheckInArrival): Promise<void> {
+    if (this.isCheckInDisabled(reserva)) return;
+    if (!this.hasHabitacion(reserva)) {
+      await Swal.fire({ title: 'Habitación requerida', text: 'Asigne una habitación antes de realizar el Check-In.', icon: 'warning' });
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: 'Confirmar Check-In',
+      html: `<div style="text-align:left"><p>Se registrará el ingreso de la reserva <strong>${this.escapeHtml(reserva.codReserva)}</strong>.</p><p style="margin:0">Habitación: <strong>${this.escapeHtml(reserva.numHabita)}</strong></p></div>`,
+      icon: 'question', showCancelButton: true, confirmButtonText: 'Realizar Check-In', cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#198754'
+    });
+    if (!result.isConfirmed) return;
+
+    const fecIngreso = this.formatCheckInDate(reserva.fechaIng);
+    const fecSalida = this.formatCheckInDate(reserva.fechaSal);
+    if (!fecIngreso || !fecSalida) {
+      await Swal.fire({ title: 'Fechas inválidas', text: 'No fue posible preparar las fechas de ingreso y salida.', icon: 'error' });
+      return;
+    }
+
+    this.checkingInKey = this.getArrivalKey(reserva);
+    this.cdr.markForCheck();
+    this.arrivalsService.checkIn({
+      proceso: 0,
+      numHabitacion: reserva.numHabita,
+      categoria: reserva.catHabita,
+      tipo: reserva.tipHabita,
+      codReserva: reserva.codReserva,
+      codAgencia: reserva.codAgencia,
+      codTarifa: reserva.codTarifa,
+      codPlan: reserva.codPlan,
+      fecIngreso,
+      fecSalida,
+      totNoches: Number(reserva.totNoches) || 0,
+      numPax: Number(reserva.numPax) || 0,
+      numChild: Number(reserva.numChild) || 0,
+      folio: reserva.folio,
+      comentarios: reserva.observacion,
+      operador: this.authService.getCurrentUser()?.usuario?.trim() || 'admin'
+    }).pipe(
+      finalize(() => { this.checkingInKey = null; this.cdr.markForCheck(); }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: () => {
+        void Swal.fire({ title: 'Check-In realizado', text: `La reserva ${reserva.codReserva} fue procesada correctamente.`, icon: 'success', timer: 1800, showConfirmButton: false });
+        this.buscar();
+      },
+      error: (error) => {
+        console.error('No se pudo realizar el Check-In.', error);
+        void Swal.fire({ title: 'No se pudo realizar el Check-In', text: error?.error?.respuesta || error?.error?.mensaje || 'Intente nuevamente.', icon: 'error' });
+      }
+    });
   }
 
   verReserva(reserva: CheckInArrival): void {
@@ -275,7 +367,94 @@ export class CheckInArrivalsComponent implements OnInit {
   }
 
   roomingList(reserva: CheckInArrival): void {
-    console.log('Rooming List', reserva);
+    this.roomingArrival = reserva;
+    this.roomingGuests = [];
+    this.roomingError = '';
+    this.openRoomingGuestForm();
+    this.loadRoomingList();
+  }
+
+  closeRoomingList(): void {
+    if (this.roomingSaving) return;
+    this.roomingArrival = null;
+    this.showRoomingForm = false;
+  }
+
+  openRoomingGuestForm(): void {
+    this.roomingGuestForm.reset({
+      codNacion: '', tipDocu: '', numDocu: '', nombre: '', apellido: '',
+      fecNac: this.formatDateInput(new Date()), sexo: '', estCivil: '', tiPax: 'PAX',
+      direccion: '', email: '', motivo: '', procede: '', mdoArribo: ''
+    });
+    this.showRoomingForm = true;
+  }
+
+  saveRoomingGuest(): void {
+    const arrival = this.roomingArrival;
+    if (!arrival || this.roomingGuestForm.invalid || this.roomingSaving) {
+      this.roomingGuestForm.markAllAsTouched();
+      return;
+    }
+    const value = this.roomingGuestForm.getRawValue();
+    const operador = this.authService.getCurrentUser()?.usuario?.trim() || 'admin';
+    this.roomingSaving = true;
+    this.roomingError = '';
+    this.arrivalsService.addRoomingListGuest({
+      proceso: 0, idOpe: '', codRsv: arrival.codReserva, numHabita: arrival.numHabita,
+      ...value, fecNac: this.formatDateApi(value.fecNac), orden: this.roomingGuests.length + 1, operador
+    }).pipe(
+      finalize(() => { this.roomingSaving = false; this.cdr.markForCheck(); }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: () => { this.openRoomingGuestForm(); this.loadRoomingList(); },
+      error: () => { this.roomingError = 'No se pudo guardar el huésped.'; this.cdr.markForCheck(); }
+    });
+  }
+
+  async deleteRoomingGuest(guest: RoomingListGuest): Promise<void> {
+    if (!this.roomingArrival || this.roomingSaving) return;
+    const result = await Swal.fire({
+      title: 'Eliminar huésped', text: `${guest.nombre} ${guest.apellidos}`, icon: 'warning',
+      showCancelButton: true, confirmButtonText: 'Eliminar', cancelButtonText: 'Cancelar', confirmButtonColor: '#dc3545'
+    });
+    if (!result.isConfirmed || !this.roomingArrival) return;
+    this.roomingSaving = true;
+    this.arrivalsService.deleteRoomingListGuest(guest.numInterno, this.roomingArrival.codReserva).pipe(
+      finalize(() => { this.roomingSaving = false; this.cdr.markForCheck(); }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: () => this.loadRoomingList(),
+      error: () => { this.roomingError = 'No se pudo eliminar el huésped.'; this.cdr.markForCheck(); }
+    });
+  }
+
+  trackByRoomingGuest(_: number, guest: RoomingListGuest): string {
+    return guest.numInterno;
+  }
+
+  private loadRoomingList(): void {
+    const arrival = this.roomingArrival;
+    if (!arrival) return;
+    this.roomingLoading = true;
+    this.roomingError = '';
+    this.arrivalsService.getRoomingList(arrival.codReserva, arrival.numHabita).pipe(
+      finalize(() => { this.roomingLoading = false; this.cdr.markForCheck(); }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (guests) => { this.roomingGuests = guests; this.cdr.markForCheck(); },
+      error: () => { this.roomingError = 'No se pudo consultar el rooming list.'; this.cdr.markForCheck(); }
+    });
+  }
+
+  private loadRoomingCatalogs(): void {
+    forkJoin({
+      documentTypes: this.walkInService.getTiposDocumento().pipe(catchError(() => of([] as WalkInOption[]))),
+      nationalities: this.walkInService.getNacionalidades().pipe(catchError(() => of([] as Nationality[])))
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(({ documentTypes, nationalities }) => {
+      this.documentTypes = documentTypes;
+      this.nationalities = nationalities;
+      this.cdr.markForCheck();
+    });
   }
 
   generarHojaRegistro(reserva: CheckInArrival): void {
@@ -446,5 +625,22 @@ export class CheckInArrivalsComponent implements OnInit {
     }
 
     return `${day}/${month}/${year}`;
+  }
+
+  private formatCheckInDate(value: string): string {
+    const normalized = (value || '').trim();
+    const displayMatch = normalized.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (displayMatch) {
+      return `${displayMatch[1].padStart(2, '0')}/${displayMatch[2].padStart(2, '0')}/${displayMatch[3]}`;
+    }
+    const isoMatch = normalized.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (isoMatch) {
+      return `${isoMatch[3].padStart(2, '0')}/${isoMatch[2].padStart(2, '0')}/${isoMatch[1]}`;
+    }
+    return '';
+  }
+
+  private escapeHtml(value: string): string {
+    return (value || '').replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character] || character);
   }
 }

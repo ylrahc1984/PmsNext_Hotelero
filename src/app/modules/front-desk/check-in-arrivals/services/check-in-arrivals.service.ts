@@ -3,12 +3,14 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, map, throwError } from 'rxjs';
 
 import { environment } from 'src/environments/environment';
-import { CheckInArrival } from '../models/check-in-arrival.model';
+import { CheckInArrival, CheckInRequest, RoomingListGuest, RoomingListSaveRequest } from '../models/check-in-arrival.model';
 
 @Injectable({ providedIn: 'root' })
 export class CheckInArrivalsService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/checkin/pendientes`;
+  private readonly checkInUrl = `${environment.apiUrl}/checkin`;
+  private readonly roomingListUrl = `${environment.apiUrl}/rooming-list`;
 
   getPendientes(fecha: string, soloPendientes: boolean): Observable<CheckInArrival[]> {
     const params = new HttpParams()
@@ -21,5 +23,24 @@ export class CheckInArrivalsService {
         map((response) => (Array.isArray(response) ? response : response?.datos ?? [])),
         catchError((error) => throwError(() => error))
       );
+  }
+
+  checkIn(request: CheckInRequest): Observable<unknown> {
+    return this.http.post(this.checkInUrl, request);
+  }
+
+  getRoomingList(codRsv: string, numHabita: string): Observable<RoomingListGuest[]> {
+    const params = new HttpParams().set('codRsv', codRsv).set('numHabita', numHabita);
+    return this.http
+      .get<{ success?: boolean; data?: RoomingListGuest[] } | RoomingListGuest[]>(this.roomingListUrl, { params })
+      .pipe(map((response) => (Array.isArray(response) ? response : response?.data ?? [])));
+  }
+
+  addRoomingListGuest(request: RoomingListSaveRequest): Observable<unknown> {
+    return this.http.post(this.roomingListUrl, request);
+  }
+
+  deleteRoomingListGuest(idOpe: string, codRsv: string): Observable<unknown> {
+    return this.http.delete(this.roomingListUrl, { body: { idOpe, codRsv } });
   }
 }

@@ -5,6 +5,7 @@ import {
   CalendarAssignableReservation,
   CalendarAssignmentTarget,
   CalendarDate,
+  CalendarReservation,
   CalendarReservationBlockSelect,
   CalendarReservationBlockView,
   CalendarReservationDropRequest,
@@ -46,13 +47,14 @@ export class CalendarGridComponent {
   @Output() scrollLeftChange = new EventEmitter<number>();
   @Output() reservationSelect = new EventEmitter<CalendarReservationBlockSelect>();
   @Output() reservationDrop = new EventEmitter<CalendarReservationDropRequest>();
+  @Output() reservationMoveBlocked = new EventEmitter<CalendarReservation>();
   @Output() assignmentTargetSelect = new EventEmitter<CalendarAssignmentTarget>();
 
   @ViewChild('scrollContainer') private scrollContainer?: ElementRef<HTMLDivElement>;
 
   readonly cellWidth = 42;
   readonly rowHeight = 48;
-  readonly timelineOffset = 132;
+  readonly timelineOffset = 0;
 
   dragState: CalendarGridDragState | null = null;
 
@@ -115,6 +117,11 @@ export class CalendarGridComponent {
   }
 
   onReservationDragStart(payload: { block: CalendarReservationBlockView; event: PointerEvent }): void {
+    if (payload.block.reservation.reservationState?.trim().toUpperCase() === 'CHK') {
+      this.reservationMoveBlocked.emit(payload.block.reservation);
+      return;
+    }
+
     this.beginDrag(
       {
         reservationId: payload.block.reservation.id,

@@ -82,7 +82,7 @@
 
 .calendar-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) 356px;
   gap: 0.55rem;
   align-items: start;
 }
@@ -142,7 +142,7 @@
 
 .calendar-shell {
   display: grid;
-  grid-template-columns: 180px minmax(0, 1fr);
+  grid-template-columns: 168px minmax(0, 1fr);
   gap: 0.55rem;
   align-items: start;
   min-width: 0;

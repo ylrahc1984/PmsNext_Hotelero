@@ -117,7 +117,10 @@ export class CalendarService {
   }
 
   getPendingPrecheckingReservations(startDate: string, endDate: string): Observable<CalendarAssignableReservation[]> {
-    const params = new HttpParams().set('fechaIng', this.toDisplayDate(startDate)).set('fechaSal', this.toDisplayDate(endDate));
+    const params = new HttpParams()
+      .set('fechaIng', this.toDisplayDate(startDate))
+      .set('fechaSal', this.toDisplayDate(endDate))
+      .set('_ts', Date.now().toString());
 
     return this.http.get<PrecheckingReservationApiResponse>(`${this.precheckingUrl}/reservas`, { params }).pipe(
       map((response) => {
@@ -221,6 +224,7 @@ export class CalendarService {
           startDate,
           endDate,
           status: this.mapReservationStatus(item.estado, item.estadoReserva),
+          reservationState: this.cleanText(item.estadoReserva),
           guestName: description || agency || reservationCode,
           source: agency || this.cleanText(item.codigoPlan) || reservationCode
         });
@@ -252,6 +256,7 @@ export class CalendarService {
       reservationCode,
       categoryCode: this.cleanText(reservation.catHabita),
       sourceRoom: this.cleanText(reservation.habOrigen || reservation.numHabita),
+      roomNumber: this.cleanText(reservation.numHabita),
       startDate,
       endDate,
       nights,

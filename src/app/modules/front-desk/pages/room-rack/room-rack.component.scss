@@ -132,7 +132,7 @@ $line: rgba(15, 33, 51, 0.1);
 
 .status-kpis {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 6px;
   padding: 4px 6px;
   border: 1px solid $line;
@@ -189,12 +189,14 @@ $line: rgba(15, 33, 51, 0.1);
   display: grid;
   grid-template-columns: minmax(0, 1fr) 310px;
   gap: 10px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .rooms-column {
   display: grid;
   gap: 8px;
+  height: 0;
+  min-height: 100%;
   min-width: 0;
 }
 
@@ -207,7 +209,10 @@ $line: rgba(15, 33, 51, 0.1);
 }
 
 .rooms-panel {
+  height: 100%;
+  min-height: 0;
   padding: 12px;
+  overflow-y: auto;
 }
 
 .rooms-grid {
@@ -1015,6 +1020,16 @@ $line: rgba(15, 33, 51, 0.1);
 
   .room-rack-workspace {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rooms-column {
+    height: auto;
+    min-height: 0;
+  }
+
+  .rooms-panel {
+    height: auto;
+    overflow-y: visible;
   }
 
   .side-panel {

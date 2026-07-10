@@ -12,6 +12,7 @@ export interface CalendarReservation {
   startDate: string;
   endDate: string;
   status: CalendarReservationStatus;
+  reservationState?: string;
   guestName: string;
   source: string;
 }
@@ -21,6 +22,7 @@ export interface CalendarAssignableReservation {
   reservationCode: string;
   categoryCode: string;
   sourceRoom: string;
+  roomNumber: string;
   startDate: string;
   endDate: string;
   nights: number;

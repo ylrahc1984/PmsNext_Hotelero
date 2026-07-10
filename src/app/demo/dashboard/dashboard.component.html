@@ -186,7 +186,7 @@
         <div><span>Mesas Ocupadas</span><strong>{{ mesasOcupadas }} / {{ mesasTotal }}</strong></div>
         <div><span>Pedidos Activos</span><strong>{{ pedidosActivos }}</strong></div>
         <div><span>Tickets Abiertos</span><strong>{{ ticketsAbiertos }}</strong></div>
-        <div><span>Ventas del Dia</span><strong>{{ ventasRestaurante ? ('CRC ' + (ventasRestaurante | number:'1.0-0')) : 'CRC 0' }}</strong></div>
+        <div><span>Ventas del Dia</span><strong>{{ ventasRestaurante ? ('USD ' + (ventasRestaurante | number:'1.0-0')) : 'USD 0' }}</strong></div>
         <div><span>Room Service Activo</span><strong>{{ roomServiceActivo }}</strong></div>
       </div>
 
@@ -258,7 +258,7 @@
         <h3>Ingresos del Dia</h3>
         <div class="metric-breakdown">
           <span>Reservas creadas hoy</span>
-          <strong>{{ ingresosEstimados ? ('CRC ' + (ingresosEstimados | number:'1.0-0')) : 'CRC 0' }}</strong>
+          <strong>{{ ingresosEstimados ? ('USD ' + (ingresosEstimados | number:'1.0-0')) : 'USD 0' }}</strong>
           <small>{{ reservasDia }} reservas registradas</small>
         </div>
       </article>

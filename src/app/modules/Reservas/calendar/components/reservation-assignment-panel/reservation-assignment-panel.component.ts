@@ -20,11 +20,11 @@ export class ReservationAssignmentPanelComponent implements OnChanges {
   private readonly calendarService = inject(CalendarService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
+  private loadSequence = 0;
 
   @Input({ required: true }) startDate!: string;
   @Input({ required: true }) endDate!: string;
   @Input() collapsed = false;
-  @Input() assignedReservationIds: string[] = [];
   @Input() selectedReservationId: string | null = null;
 
   @Output() collapsedChange = new EventEmitter<boolean>();
@@ -35,7 +35,10 @@ export class ReservationAssignmentPanelComponent implements OnChanges {
   search = '';
   status = '';
   isLoading = false;
-  usingDemoData = false;
+  errorMessage = '';
+  showDateSettings = false;
+  filterStartDate = '';
+  filterEndDate = '';
   reservations: CalendarAssignableReservation[] = [];
 
   readonly statusOptions = [
@@ -47,17 +50,17 @@ export class ReservationAssignmentPanelComponent implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['startDate'] || changes['endDate']) {
+      this.filterStartDate = this.startDate;
+      this.filterEndDate = this.endDate;
       this.loadReservations();
     }
   }
 
   get filteredReservations(): CalendarAssignableReservation[] {
-    const assigned = new Set(this.assignedReservationIds);
     const search = this.normalize(this.search);
     const status = this.status.trim().toUpperCase();
 
     return this.reservations.filter((reservation) => {
-      const matchesAssigned = !assigned.has(reservation.id);
       const matchesStatus = !status || this.normalizeStatus(reservation.status) === status;
       const matchesSearch =
         !search ||
@@ -65,7 +68,7 @@ export class ReservationAssignmentPanelComponent implements OnChanges {
         this.normalize(reservation.agency).includes(search) ||
         this.normalize(reservation.guestName).includes(search);
 
-      return matchesAssigned && matchesStatus && matchesSearch;
+      return matchesStatus && matchesSearch;
     });
   }
 
@@ -74,12 +77,28 @@ export class ReservationAssignmentPanelComponent implements OnChanges {
   }
 
   reload(): void {
-    this.refresh.emit();
     this.loadReservations();
   }
 
+  toggleDateSettings(): void {
+    this.showDateSettings = !this.showDateSettings;
+  }
+
+  applyDateFilter(): void {
+    if (!this.filterStartDate || !this.filterEndDate || this.filterStartDate > this.filterEndDate) {
+      return;
+    }
+
+    this.showDateSettings = false;
+    this.loadReservations();
+  }
+
+  isAssignable(reservation: CalendarAssignableReservation): boolean {
+    return reservation.roomNumber.trim().toUpperCase().startsWith('HB');
+  }
+
   onReservationPointerDown(reservation: CalendarAssignableReservation, event: PointerEvent): void {
-    if (event.button !== 0) {
+    if (event.button !== 0 || !this.isAssignable(reservation)) {
       return;
     }
 
@@ -89,6 +108,9 @@ export class ReservationAssignmentPanelComponent implements OnChanges {
   }
 
   selectReservation(reservation: CalendarAssignableReservation): void {
+    if (!this.isAssignable(reservation)) {
+      return;
+    }
     this.reservationSelect.emit(reservation);
   }
 
@@ -108,88 +130,41 @@ export class ReservationAssignmentPanelComponent implements OnChanges {
   }
 
   loadReservations(): void {
-    if (!this.startDate || !this.endDate) {
+    const queryStartDate = this.filterStartDate || this.startDate;
+    const queryEndDate = this.filterEndDate || this.endDate;
+    if (!queryStartDate || !queryEndDate || queryStartDate > queryEndDate) {
       return;
     }
 
+    const loadId = ++this.loadSequence;
     this.isLoading = true;
-    this.usingDemoData = false;
+    this.errorMessage = '';
 
     this.calendarService
-      .getPendingPrecheckingReservations(this.startDate, this.endDate)
+      .getPendingPrecheckingReservations(queryStartDate, queryEndDate)
       .pipe(
         catchError((error) => {
           console.error('No se pudieron cargar las reservas pendientes de asignacion.', error);
-          this.usingDemoData = true;
-          return of(this.getDemoReservations());
+          this.errorMessage = 'No se pudieron cargar las reservas pendientes.';
+          return of([] as CalendarAssignableReservation[]);
         }),
         finalize(() => {
-          this.isLoading = false;
-          this.cdr.markForCheck();
+          if (loadId === this.loadSequence) {
+            this.isLoading = false;
+            this.cdr.markForCheck();
+          }
         }),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((reservations) => {
-        this.reservations = reservations.length ? reservations : this.getDemoReservations();
-        this.usingDemoData = !reservations.length;
+        if (loadId !== this.loadSequence) {
+          return;
+        }
+
+        this.reservations = reservations;
+        this.refresh.emit();
+        this.cdr.markForCheck();
       });
-  }
-
-  private getDemoReservations(): CalendarAssignableReservation[] {
-    const start = this.startDate || this.toIsoDate(new Date());
-    const secondStart = this.shiftIsoDate(start, 1);
-    const thirdStart = this.shiftIsoDate(start, 2);
-
-    return [
-      {
-        id: 'DEMO-2601|1',
-        reservationCode: 'DEMO-2601',
-        categoryCode: 'LOVE',
-        sourceRoom: 'HB0001',
-        startDate: start,
-        endDate: this.shiftIsoDate(start, 2),
-        nights: 2,
-        rooms: 1,
-        guestName: 'RIVAS CELIS / DAVID IVAN',
-        agency: 'SWISS',
-        status: 'CCR',
-        operator: '',
-        pax: 2,
-        children: 0
-      },
-      {
-        id: 'DEMO-2602|1',
-        reservationCode: 'DEMO-2602',
-        categoryCode: 'DELUX',
-        sourceRoom: 'HB0001',
-        startDate: secondStart,
-        endDate: this.shiftIsoDate(secondStart, 3),
-        nights: 3,
-        rooms: 1,
-        guestName: 'MAURICIO AVILA',
-        agency: 'EXPEDIA',
-        status: 'ABI',
-        operator: '',
-        pax: 4,
-        children: 0
-      },
-      {
-        id: 'DEMO-2603|1',
-        reservationCode: 'DEMO-2603',
-        categoryCode: 'SUITF',
-        sourceRoom: 'HB0001',
-        startDate: thirdStart,
-        endDate: this.shiftIsoDate(thirdStart, 1),
-        nights: 1,
-        rooms: 1,
-        guestName: 'SARA ISABEL MORENO',
-        agency: 'DIRECTOS',
-        status: 'WLT',
-        operator: '',
-        pax: 3,
-        children: 1
-      }
-    ];
   }
 
   private normalizeStatus(status: string | null | undefined): string {
@@ -198,19 +173,6 @@ export class ReservationAssignmentPanelComponent implements OnChanges {
 
   private normalize(value: string | number | null | undefined): string {
     return (value ?? '').toString().trim().toLowerCase();
-  }
-
-  private shiftIsoDate(baseIsoDate: string, offset: number): string {
-    const date = new Date(`${baseIsoDate}T00:00:00`);
-    date.setDate(date.getDate() + offset);
-    return this.toIsoDate(date);
-  }
-
-  private toIsoDate(date: Date): string {
-    const year = date.getFullYear();
-    const month = `${date.getMonth() + 1}`.padStart(2, '0');
-    const day = `${date.getDate()}`.padStart(2, '0');
-    return `${year}-${month}-${day}`;
   }
 
 }

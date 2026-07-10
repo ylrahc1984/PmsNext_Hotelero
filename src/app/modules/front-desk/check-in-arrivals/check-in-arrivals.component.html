@@ -141,13 +141,12 @@
                     <div class="row-actions" (click)="$event.stopPropagation()">
                       <button
                         type="button"
-                        class="action-checkin"
-                        [disabled]="isCheckInDisabled(arrival)"
-                        [attr.title]="isCheckInDisabled(arrival) ? 'Check-In realizado' : 'Realizar Check-In'"
-                        (click)="realizarCheckIn(arrival)"
+                        class="action-icon action-icon--rooming"
+                        title="Rooming list"
+                        aria-label="Abrir rooming list"
+                        (click)="roomingList(arrival)"
                       >
-                        <span class="material-icons" aria-hidden="true">how_to_reg</span>
-                        <span>Check-In</span>
+                        <span class="material-icons" aria-hidden="true">group_add</span>
                       </button>
 
                       <button
@@ -176,6 +175,18 @@
                           }
                         </button>
                       </div>
+
+                      <button
+                        type="button"
+                        class="action-checkin"
+                        [disabled]="isCheckInDisabled(arrival)"
+                        [attr.title]="isCheckInDisabled(arrival) ? 'Check-In realizado' : 'Confirmar ingreso del huésped'"
+                        (click)="realizarCheckIn(arrival)"
+                      >
+                        @if (isCheckingIn(arrival)) { <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> }
+                        @else { <span class="material-icons" aria-hidden="true">how_to_reg</span> }
+                        <span>{{ isCheckingIn(arrival) ? 'Procesando' : (arrival.procesado === 1 ? 'Realizado' : 'Check-In') }}</span>
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -220,13 +231,18 @@
                 </article>
               }
               <div class="mobile-actions">
-                <button type="button" class="btn btn-primary btn-sm" [disabled]="isCheckInDisabled(arrival)" (click)="realizarCheckIn(arrival); $event.stopPropagation()">
-                  <span class="material-icons" aria-hidden="true">how_to_reg</span>
-                  Check-In
+                <button type="button" class="btn btn-outline-primary btn-sm" (click)="roomingList(arrival); $event.stopPropagation()">
+                  <span class="material-icons" aria-hidden="true">group_add</span>
+                  Rooming
                 </button>
                 <button type="button" class="btn btn-outline-secondary btn-sm" (click)="generarHojaRegistro(arrival); $event.stopPropagation()">
                   <span class="material-icons" aria-hidden="true">print</span>
                   Hoja
+                </button>
+                <button type="button" class="btn btn-success btn-sm mobile-checkin" [disabled]="isCheckInDisabled(arrival)" (click)="realizarCheckIn(arrival); $event.stopPropagation()">
+                  @if (isCheckingIn(arrival)) { <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> }
+                  @else { <span class="material-icons" aria-hidden="true">how_to_reg</span> }
+                  {{ isCheckingIn(arrival) ? 'Procesando' : (arrival.procesado === 1 ? 'Realizado' : 'Check-In') }}
                 </button>
               </div>
             </article>
@@ -246,3 +262,79 @@
     </main>
   </section>
 </section>
+
+@if (roomingArrival) {
+  <div class="rooming-modal" role="dialog" aria-modal="true" aria-labelledby="roomingTitle" (click)="closeRoomingList()">
+    <section class="rooming-dialog" (click)="$event.stopPropagation()">
+      <header class="rooming-dialog__header">
+        <div>
+          <span>Reserva {{ roomingArrival.codReserva }}</span>
+          <h2 id="roomingTitle">Rooming list · Hab. {{ roomingArrival.numHabita }}</h2>
+        </div>
+        <button type="button" class="rooming-close" aria-label="Cerrar" (click)="closeRoomingList()"><span class="material-icons">close</span></button>
+      </header>
+
+      @if (roomingError) { <div class="rooming-error" role="alert">{{ roomingError }}</div> }
+
+      <div class="rooming-workspace">
+        <section class="rooming-pane rooming-pane--form">
+          <div class="rooming-pane__title">
+            <span class="material-icons">person_add</span>
+            <div><strong>Nuevo huésped</strong><small>Complete la información personal</small></div>
+          </div>
+          <form class="rooming-form" [formGroup]="roomingGuestForm" (ngSubmit)="saveRoomingGuest()">
+          <label>
+            <span>Tipo documento *</span>
+            <select class="form-select" formControlName="tipDocu">
+              <option value="">Seleccione...</option>
+              @for (item of documentTypes; track item.codigo) { <option [value]="item.codigo">{{ item.descripcion }}</option> }
+            </select>
+          </label>
+          <label><span>Número documento *</span><input class="form-control" formControlName="numDocu" /></label>
+          <label>
+            <span>Nacionalidad *</span>
+            <select class="form-select" formControlName="codNacion">
+              <option value="">Seleccione...</option>
+              @for (item of nationalities; track item.CR06_Codigo) { <option [value]="item.CR06_Codigo">{{ item.CR06_Descripcion }}</option> }
+            </select>
+          </label>
+          <label><span>Nombre *</span><input class="form-control" formControlName="nombre" /></label>
+          <label><span>Apellidos *</span><input class="form-control" formControlName="apellido" /></label>
+          <label><span>Fecha nacimiento *</span><input type="date" class="form-control" formControlName="fecNac" /></label>
+          <label><span>Tipo Pax *</span><select class="form-select" formControlName="tiPax"><option value="PAX">PAX</option><option value="CHD">CHD</option></select></label>
+          <label><span>Dirección</span><input class="form-control" formControlName="direccion" /></label>
+          <label><span>Email</span><input type="email" class="form-control" formControlName="email" /></label>
+          <footer class="rooming-form__actions">
+            <button type="button" class="btn btn-light btn-sm" (click)="openRoomingGuestForm()">Limpiar</button>
+            <button type="submit" class="btn btn-primary btn-sm" [disabled]="roomingSaving">
+              @if (roomingSaving) { <span class="spinner-border spinner-border-sm"></span> } Guardar huésped
+            </button>
+          </footer>
+          </form>
+        </section>
+
+        <section class="rooming-pane rooming-pane--list">
+          <div class="rooming-pane__title">
+            <span class="material-icons">groups</span>
+            <div><strong>Huéspedes registrados</strong><small>{{ roomingGuests.length }} en esta habitación</small></div>
+          </div>
+          @if (roomingLoading) {
+            <div class="rooming-state"><span class="spinner-border spinner-border-sm"></span> Consultando huéspedes...</div>
+          } @else {
+            <div class="rooming-list">
+              @for (guest of roomingGuests; track trackByRoomingGuest($index, guest)) {
+                <article class="rooming-guest">
+                  <span class="rooming-guest__avatar">{{ guest.nombre.charAt(0) }}{{ guest.apellidos.charAt(0) }}</span>
+                  <div><strong>{{ guest.nombre }} {{ guest.apellidos }}</strong><span>{{ guest.tipDocu }} · {{ guest.numDocu }} · {{ guest.nacionalidad || 'Sin nacionalidad' }}</span></div>
+                  <button type="button" title="Eliminar huésped" [disabled]="roomingSaving" (click)="deleteRoomingGuest(guest)"><span class="material-icons">delete_outline</span></button>
+                </article>
+              } @empty {
+                <div class="rooming-state"><span class="material-icons">group_off</span> No hay huéspedes registrados.</div>
+              }
+            </div>
+          }
+        </section>
+      </div>
+    </section>
+  </div>
+}

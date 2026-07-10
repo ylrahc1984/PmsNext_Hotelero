@@ -16,6 +16,7 @@ type EstadoHabitacion =
   | 'Ocupada'
   | 'Bloqueada'
   | 'Sucia'
+  | 'Reservada'
   | 'Limpia';
 
 interface HabitacionRack {
@@ -241,6 +242,11 @@ export class RoomRackComponent implements OnInit {
   }
 
   ejecutarAccion(accion: AccionOperativa): void {
+    if (accion.label === 'Asignar Habitacion') {
+      this.router.navigate(['/reservas/calendario']);
+      return;
+    }
+
     if (accion.label === 'Ingresar Arribos') {
       this.router.navigate(['/front-desk/arribos-dia']);
       return;
@@ -497,6 +503,12 @@ export class RoomRackComponent implements OnInit {
 
     return [
       todos,
+      {
+        label: 'Entradas hoy',
+        estado: 'Reservada',
+        cantidad: this.contarPorEstado('Reservada'),
+        className: this.getEstadoClass('Reservada')
+      },
       ...this.estados.map((estado) => ({
         label: estado,
         estado,
@@ -534,7 +546,8 @@ export class RoomRackComponent implements OnInit {
     const estados: Record<string, EstadoHabitacion> = {
       B: 'Bloqueada',
       D: 'Disponible',
-      O: 'Ocupada'
+      O: 'Ocupada',
+      R: 'Reservada'
     };
 
     return estados[this.normalizeText(room.CR05_EstHab).toUpperCase()] ?? 'Disponible';
