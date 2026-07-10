@@ -374,7 +374,9 @@ export class DashboardComponent implements OnInit {
     const roomsForOccupancy = activeRooms.length ? activeRooms : rooms;
 
     this.habitacionesTotal = roomsForOccupancy.length;
-    this.habitacionesOcupadas = roomsForOccupancy.filter((room) => this.normalizeText(room.CR05_EstHab).toUpperCase() === 'O').length;
+    this.habitacionesOcupadas = roomsForOccupancy.filter((room) =>
+      ['O', 'M'].includes(this.normalizeText(room.CR05_EstHab).toUpperCase())
+    ).length;
     this.habitacionesDisponibles = roomsForOccupancy.filter((room) => this.normalizeText(room.CR05_EstHab).toUpperCase() === 'D').length;
     this.habitacionesBloqueadas = roomsForOccupancy.filter((room) => this.normalizeText(room.CR05_EstHab).toUpperCase() === 'B').length;
     this.habitacionesLimpias = roomsForOccupancy.filter((room) => this.normalizeText(room.CR05_Clean).toUpperCase() === 'L').length;

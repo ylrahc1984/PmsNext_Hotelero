@@ -227,9 +227,7 @@ export const NavigationItems: NavigationItem[] = [
         icon: 'feather icon-settings',
         children: [
           { id: 'usuarios', title: 'Usuarios', type: 'item', url: '/usuarios', icon: 'feather icon-user', classes: 'nav-item' },
-          { id: 'configuracion-general', title: 'Configuración General', type: 'item', url: '/administracion/configuracion', icon: 'feather icon-sliders', classes: 'nav-item' },
-          { id: 'catalogos-generales', title: 'Catálogos Generales', type: 'item', url: '/administracion/catalogos-generales', icon: 'feather icon-folder', classes: 'nav-item' },
-          { id: 'auditoria-sistema', title: 'Auditoría del Sistema', type: 'item', url: '/administracion/auditoria-sistema', icon: 'feather icon-activity', classes: 'nav-item' }
+          { id: 'configuracion-general', title: 'Configuración General', type: 'item', url: '/administracion/configuracion', icon: 'feather icon-sliders', classes: 'nav-item' }
         ]
       }
     ]
