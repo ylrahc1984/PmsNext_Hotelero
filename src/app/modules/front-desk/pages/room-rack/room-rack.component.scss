@@ -132,9 +132,12 @@ $line: rgba(15, 33, 51, 0.1);
 
 .status-kpis {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(105px, 1fr);
   gap: 6px;
   padding: 4px 6px;
+  overflow-x: auto;
+  scrollbar-width: thin;
   border: 1px solid $line;
   border-radius: 16px;
   background: $paper;
@@ -165,10 +168,13 @@ $line: rgba(15, 33, 51, 0.1);
 }
 
 .status-kpi span {
+  overflow: hidden;
   color: $muted;
   font-size: 0.7rem;
   font-weight: 760;
   line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .status-kpi strong {
@@ -309,6 +315,20 @@ $line: rgba(15, 33, 51, 0.1);
   border-color: rgba($blue, 0.18) !important;
   color: #1554c8 !important;
   background: #edf5ff !important;
+}
+
+.room-card__status.estado-salida-hoy {
+  border-left: 1px solid rgba(#e56f61, 0.16) !important;
+  border-color: rgba(#e56f61, 0.2) !important;
+  color: #b83f34 !important;
+  background: #fff0ed !important;
+}
+
+.room-card__status.estado-salida-manana {
+  border-left: 1px solid rgba(#15b8c6, 0.16) !important;
+  border-color: rgba(#15b8c6, 0.2) !important;
+  color: #087e89 !important;
+  background: #ecfbfd !important;
 }
 
 .room-card__status.estado-bloqueada {
@@ -965,14 +985,38 @@ $line: rgba(15, 33, 51, 0.1);
   background: linear-gradient(180deg, #edf5ff, #ffffff);
 }
 
-.estado-salida-hoy {
-  border-left-color: #e56f61;
-  background: linear-gradient(180deg, #fff0ed, #ffffff);
+.room-card.estado-salida-hoy,
+.status-kpi.estado-salida-hoy {
+  border-left-color: #dc4f43;
+  background: linear-gradient(145deg, #ffe1dc 0%, #fff7f5 72%, #ffffff 100%);
 }
 
-.estado-salida-manana {
-  border-left-color: #15b8c6;
-  background: linear-gradient(180deg, #ecfbfd, #ffffff);
+.room-card.estado-salida-manana,
+.status-kpi.estado-salida-manana {
+  border-left-color: #0891b2;
+  background: linear-gradient(145deg, #cffafe 0%, #ecfeff 72%, #ffffff 100%);
+}
+
+.room-card.estado-salida-hoy:hover,
+.room-card.estado-salida-hoy:focus {
+  border-left-color: #dc4f43;
+  background: linear-gradient(145deg, #ffd6cf 0%, #fff3f0 72%, #ffffff 100%);
+}
+
+.room-card.estado-salida-manana:hover,
+.room-card.estado-salida-manana:focus {
+  border-left-color: #0891b2;
+  background: linear-gradient(145deg, #bae6fd 0%, #e6fbff 72%, #ffffff 100%);
+}
+
+.status-kpi.estado-salida-hoy strong {
+  color: #b42318;
+  background: #ffd9d3;
+}
+
+.status-kpi.estado-salida-manana strong {
+  color: #0e7490;
+  background: #bae6fd;
 }
 
 .estado-reservada {
@@ -1014,10 +1058,6 @@ $line: rgba(15, 33, 51, 0.1);
 }
 
 @media (max-width: 1199.98px) {
-  .status-kpis {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
   .room-rack-workspace {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1071,10 +1111,6 @@ $line: rgba(15, 33, 51, 0.1);
 
   .refresh-button {
     justify-content: center;
-  }
-
-  .status-kpis {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .side-panel {

@@ -1,0 +1,98 @@
+<section class="daily-close" aria-labelledby="daily-close-title">
+  <header class="operation-header">
+    <div class="operation-header__copy">
+      <span class="operation-header__eyebrow">Centro de operaciones</span>
+      <h1 id="daily-close-title">Operación</h1>
+      <p>Centro de Validación para el Cierre Diario</p>
+    </div>
+    <div class="operational-date" aria-label="Fecha operativa">
+      <span><i class="bi bi-calendar-event" aria-hidden="true"></i> Fecha Operativa</span>
+      <strong>{{ operationStatus().operationalDate }}</strong>
+    </div>
+  </header>
+
+  <article class="system-status card border-0">
+    <div class="system-status__heading">
+      <div>
+        <span class="section-label">Validación operativa</span>
+        <h2>{{ operationStatus().title }}</h2>
+      </div>
+      <span class="status-badge" [class.status-badge--pending]="pendingValidations()">
+        <i class="bi bi-shield-exclamation" aria-hidden="true"></i> Revisión requerida
+      </span>
+    </div>
+
+    <div class="progress-summary">
+      <div class="progress-summary__value">
+        <span>Progreso del análisis</span>
+        <strong>{{ operationStatus().progress }} %</strong>
+      </div>
+      <div class="progress" role="progressbar" aria-label="Estado general del sistema" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="operationStatus().progress">
+        <div class="progress-bar" [style.width.%]="operationStatus().progress"></div>
+      </div>
+      <p><i class="bi bi-info-circle" aria-hidden="true"></i>{{ operationStatus().description }}</p>
+    </div>
+
+    <div class="system-status__action">
+      <button type="button" class="btn btn-primary" (click)="analyzeSystem()">
+        <i class="bi bi-search" aria-hidden="true"></i> Analizar Sistema
+      </button>
+    </div>
+  </article>
+
+  <section class="validation-section" aria-labelledby="validation-title">
+    <div class="section-heading">
+      <div>
+        <span class="section-label">Monitoreo por área</span>
+        <h2 id="validation-title">Validaciones del Hotel</h2>
+      </div>
+      <span class="section-heading__meta">{{ validationCards().length }} áreas supervisadas</span>
+    </div>
+
+    <div class="validation-grid">
+      @for (card of validationCards(); track card.id) {
+        <article class="validation-card" [class]="'validation-card validation-card--' + card.color">
+          <header class="validation-card__header">
+            <span class="validation-card__icon"><i class="bi" [class]="'bi bi-' + card.icon" aria-hidden="true"></i></span>
+            <div>
+              <span>Área operativa</span>
+              <h3>{{ card.title }}</h3>
+            </div>
+          </header>
+          <ul class="validation-list">
+            @for (item of card.items; track item.text) {
+              <li [class]="'validation-item validation-item--' + item.level">
+                <i class="bi" [class.bi-check-circle-fill]="item.level === 'success'" [class.bi-exclamation-triangle-fill]="item.level === 'warning'" [class.bi-x-circle-fill]="item.level === 'error'" aria-hidden="true"></i>
+                <span>{{ item.text }}</span>
+              </li>
+            }
+          </ul>
+        </article>
+      }
+    </div>
+  </section>
+
+  <section class="analysis-summary" aria-labelledby="summary-title">
+    <div class="section-heading">
+      <div>
+        <span class="section-label">Resultado consolidado</span>
+        <h2 id="summary-title">Resumen del Análisis</h2>
+      </div>
+    </div>
+    <div class="summary-grid">
+      @for (summary of summaryCards(); track summary.id) {
+        <article [class]="'summary-card summary-card--' + summary.level">
+          <span class="summary-card__icon"><i class="bi" [class]="'bi bi-' + summary.icon" aria-hidden="true"></i></span>
+          <div><span>{{ summary.label }}</span><strong>{{ summary.value }}</strong></div>
+        </article>
+      }
+    </div>
+  </section>
+
+  <footer class="close-action">
+    <button type="button" class="btn btn-primary btn-lg" disabled title="Disponible en una próxima versión" aria-describedby="close-help">
+      <i class="bi bi-lock" aria-hidden="true"></i> Ejecutar Cierre Diario
+    </button>
+    <span id="close-help">Disponible en una próxima versión.</span>
+  </footer>
+</section>

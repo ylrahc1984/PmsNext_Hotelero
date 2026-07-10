@@ -205,6 +205,22 @@ export const NavigationItems: NavigationItem[] = [
         ]
       },
       {
+        id: 'operacion',
+        title: 'Operación',
+        type: 'collapse',
+        icon: 'feather icon-activity',
+        children: [
+          {
+            id: 'operacion-cierre-diario',
+            title: 'Cierre Diario',
+            type: 'item',
+            url: '/operacion/cierre-diario',
+            icon: 'feather icon-check-circle',
+            classes: 'nav-item'
+          }
+        ]
+      },
+      {
         id: 'administracion',
         title: 'Administración',
         type: 'collapse',

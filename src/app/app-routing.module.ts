@@ -82,6 +82,12 @@ const routes: Routes = [
     loadChildren: () => import('./modules/front-desk/front-desk.routes').then((m) => m.FRONT_DESK_ROUTES)
   },
   {
+    path: 'operacion',
+    canActivate: [AuthGuard],
+    canActivateChild: [AuthGuard],
+    loadChildren: () => import('./modules/operacion/cierre-diario/cierre-diario.routes').then((m) => m.CIERRE_DIARIO_ROUTES)
+  },
+  {
     path: 'hotel',
     component: AdminComponent,
     canActivate: [AuthGuard],

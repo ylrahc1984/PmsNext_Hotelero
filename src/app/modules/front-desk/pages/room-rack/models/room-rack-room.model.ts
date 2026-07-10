@@ -5,7 +5,7 @@ export interface RoomRackRoom {
   CR05_CodGrp         : string;
   CR05_TotCamas       : number;
   CR05_NumPax         : number;
-  CR05_EstHab         : 'B' | 'D' | 'O' | string;
+  CR05_EstHab         : 'B' | 'D' | 'H' | 'M' | 'O' | 'R' | string;
   RSV                 : string;
   CR05_Clean          : 'L' | 'S' | string;
   CR05_Anexo          : string;

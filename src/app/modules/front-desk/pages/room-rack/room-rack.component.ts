@@ -14,6 +14,8 @@ import { RoomBlockRequest, RoomRackService } from './services/room-rack.service'
 type EstadoHabitacion =
   | 'Disponible'
   | 'Ocupada'
+  | 'Salida Hoy'
+  | 'Salida Mañana'
   | 'Bloqueada'
   | 'Sucia'
   | 'Reservada'
@@ -68,6 +70,8 @@ export class RoomRackComponent implements OnInit {
   readonly estados: EstadoHabitacion[]  = [
     'Disponible',
     'Ocupada',
+    'Salida Hoy',
+    'Salida Mañana',
     'Bloqueada',
     'Sucia',
     'Limpia'
@@ -531,6 +535,13 @@ export class RoomRackComponent implements OnInit {
   }
 
   private contarPorEstado(estado: EstadoHabitacion): number {
+    if (estado === 'Ocupada') {
+      const estadosOcupados = new Set(['O', 'H', 'M']);
+      return this.habitaciones.filter((habitacion) =>
+        estadosOcupados.has(this.normalizeText(habitacion.data.CR05_EstHab).toUpperCase())
+      ).length;
+    }
+
     if (estado === 'Sucia') {
       return this.habitaciones.filter((habitacion) => this.normalizeText(habitacion.data.CR05_Clean).toUpperCase() === 'S').length;
     }
@@ -546,6 +557,8 @@ export class RoomRackComponent implements OnInit {
     const estados: Record<string, EstadoHabitacion> = {
       B: 'Bloqueada',
       D: 'Disponible',
+      H: 'Salida Hoy',
+      M: 'Salida Mañana',
       O: 'Ocupada',
       R: 'Reservada'
     };
