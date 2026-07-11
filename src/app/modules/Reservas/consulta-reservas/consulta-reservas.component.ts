@@ -112,12 +112,16 @@ export class ConsultaReservasComponent implements OnInit {
   }
 
   editarReserva(reserva: ReservaConsulta): void {
-    const codReserva = reserva.reserva.trim();
-    if (!codReserva) {
+    if (!this.puedeEditarReserva(reserva)) {
       return;
     }
 
+    const codReserva = reserva.reserva.trim();
     void this.router.navigate(['/reservas/editar-hospedaje', codReserva]);
+  }
+
+  puedeEditarReserva(reserva: ReservaConsulta): boolean {
+    return !!reserva.reserva.trim() && this.normalizeEstadoCode(reserva.estado) !== 'CHK';
   }
 
   consultarReserva(reserva: ReservaConsulta): void {

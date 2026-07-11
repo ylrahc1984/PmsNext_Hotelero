@@ -156,7 +156,7 @@
                       ngbDropdownItem
                       class="dropdown-item action-item"
                       (click)="editarReserva(reserva)"
-                      [disabled]="!reserva.reserva"
+                      [disabled]="!puedeEditarReserva(reserva)"
                     >
                       <span class="action-item__icon action-item__icon--primary">
                         <i class="feather icon-edit-2" aria-hidden="true"></i>
