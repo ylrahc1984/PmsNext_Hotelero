@@ -60,17 +60,18 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
     return this.http.put<ReservaHabitacionResponse>(url, request);
   }
 
-  anularReserva(codReserva: string, fecAnulada: string, operador: string, procesa = 1): Observable<ReservaHabitacionResponse> {
+  anularReserva(codReserva: string, fecAnulada: string, operador: string, observaciones: string, procesa = 1): Observable<ReservaHabitacionResponse> {
     const url = `${this.apiUrl}/${encodeURIComponent(codReserva.trim())}`;
     const params = new HttpParams()
       .set('fecAnulada', fecAnulada.trim())
       .set('operador', operador.trim())
+      .set('observaciones', observaciones.trim())
       .set('procesa', String(procesa));
 
     console.groupCollapsed('[Reservas] DELETE anular reserva');
     console.log('method', 'DELETE');
     console.log('url', url);
-    console.log('query', { fecAnulada, operador, procesa });
+    console.log('query', { fecAnulada, operador, observaciones, procesa });
     console.groupEnd();
 
     return this.http.delete<ReservaHabitacionResponse>(url, { params });
@@ -172,7 +173,15 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
       categoria: (item.categoria ?? item.Categoria ?? item.catHabita ?? item.CatHabita ?? item.cateHab ?? item.CateHab ?? '').trim(),
       habOrigen: (item.habOrigen ?? item.HabOrigen ?? item.oldHabita ?? item.OldHabita ?? item.numHabita ?? item.NumHabita ?? '').trim(),
       agencia: (item.nomAgencia ?? item.codAgencia ?? '').trim(),
-      descripcion: (item.descripcion ?? item.observacion ?? '').trim(),
+      descripcion: (
+        item.descripcion ??
+        item.Descripcion ??
+        item.observaciones ??
+        item.Observaciones ??
+        item.observacion ??
+        item.Observacion ??
+        ''
+      ).trim(),
       ingreso: item.fecIngresa ?? '',
       salida: item.fecSalida ?? '',
       noches: Number(item.totNoches ?? 0),
@@ -181,7 +190,7 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
       ninos: Number(item.nChild ?? 0),
       estado: (item.estado ?? '').trim(),
       total: Number(item.totalRsv ?? 0),
-      prepago: Number(item.prepago ?? 0),
+      prepago: (item.prepago ?? '').trim().toUpperCase() === 'S' ? 'S' : 'N',
       moneda: (item.moneda ?? '').trim(),
       tCambio: Number(item.tCambio ?? 0),
       operador: (item.operador ?? '').trim()

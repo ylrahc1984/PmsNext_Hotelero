@@ -194,13 +194,13 @@ export class ReservaHospedajeComponent implements OnInit {
     fecAnulada: this.fb.control(''),
     totNoches: this.fb.control(1),
     totDias: this.fb.control(2),
-    descripcion: this.fb.control('Reserva familiar para vacaciones de junio.'),
+    descripcion: this.fb.control(''),
     tCambio: this.fb.control(535.25, { validators: [Validators.min(0)] }),
     folio: this.fb.control(''),
     estado: this.fb.control('ABI'),
     moneda: this.fb.control(''),
     totalRsv: this.fb.control(0),
-    observaciones: this.fb.control('Cliente solicita habitacion en piso alto.'),
+    observaciones: this.fb.control(''),
     procesa: this.fb.control('WEB'),
     directo: this.fb.control(false),
     operador: this.fb.control(this.auth.getCurrentUser()?.usuario ?? 'admin'),
@@ -267,8 +267,9 @@ export class ReservaHospedajeComponent implements OnInit {
     this.loadCatalogs();
     this.bindCatalogSearch();
     if (!this.isEditMode()) {
-      this.restoreDraft();
-      this.bindDraftPersistence();
+      // Una reserva nueva siempre debe comenzar limpia, incluso si existe un
+      // borrador creado por una versión anterior de esta pantalla.
+      this.clearDraft();
     }
     this.recalculateStay();
     this.reservaForm.controls.fecIngreso.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.recalculateStay());
@@ -285,17 +286,6 @@ export class ReservaHospedajeComponent implements OnInit {
     });
     this.inclusionForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.updateInclusionDraftTotal());
     this.servicioForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.updateServicioDraftTotal());
-  }
-
-  @HostListener('window:beforeunload')
-  protectDraftOnUnload(): void {
-    if (this.isEditMode()) {
-      return;
-    }
-
-    if (this.hasMeaningfulDraft() && !this.saving()) {
-      this.persistDraft();
-    }
   }
 
   get habitaciones(): FormArray<FormGroup<HabitacionForm>> {
@@ -439,6 +429,14 @@ export class ReservaHospedajeComponent implements OnInit {
     this.agenciaSuggestions = [];
     this.agenciaSearchOpen = false;
     this.showAgencyModal = false;
+  }
+
+  clearAgencia(): void {
+    this.reservaForm.controls.codAgencia.setValue('');
+    this.agenciaSearchControl.setValue('');
+    this.agenciaSuggestions = [];
+    this.agenciaSearchOpen = false;
+    this.openAgenciaSuggestions();
   }
 
   selectTarifa(tarifa: WalkInTarifaOption): void {
@@ -662,9 +660,24 @@ export class ReservaHospedajeComponent implements OnInit {
     this.mealPlanError = '';
     this.inclusionForm.reset(this.defaultInclusion());
     this.servicioForm.reset(this.defaultServicio());
+    this.editingRoomIndex.set(null);
+    this.editingPlanIndex.set(null);
+    this.editingServiceIndex.set(null);
+    this.showPlanModal.set(false);
+    this.showServiceModal.set(false);
+    this.showAgencyModal = false;
+    this.showTarifaModal = false;
+    this.agenciaSuggestions = [];
+    this.tarifaSuggestions = [];
+    this.agenciaSearchOpen = false;
+    this.tarifaSearchOpen = false;
     this.applyPlanDefault();
     this.recalculateStay();
     this.syncTotal();
+    this.reservaForm.markAsPristine();
+    this.reservaForm.markAsUntouched();
+    this.habitacionForm.markAsPristine();
+    this.habitacionForm.markAsUntouched();
   }
 
   private loadReservaForEdit(codReserva: string): void {
@@ -721,6 +734,7 @@ export class ReservaHospedajeComponent implements OnInit {
     this.mealPlanRequestKey = '';
     this.mealPlanError = '';
     this.recalculateStay();
+    this.refreshMealPlanForCurrentSelection(true);
     this.syncTotal();
   }
 

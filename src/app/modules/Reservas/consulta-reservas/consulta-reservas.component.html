@@ -102,6 +102,7 @@
           <thead>
             <tr>
               <th>Reserva</th>
+              <th>Descripción</th>
               <th>Agencia</th>
               <th>Ingreso</th>
               <th>Salida</th>
@@ -109,6 +110,7 @@
               <th class="text-center">Habitaciones</th>
               <th>Estado</th>
               <th class="text-end">Total</th>
+              <th class="text-end prepago-column">Prepago</th>
               <th>Operador</th>
               <th class="text-center">Acciones</th>
             </tr>
@@ -117,7 +119,9 @@
             <tr *ngFor="let reserva of pagedReservas(); trackBy: trackByReserva">
               <td>
                 <strong>{{ reserva.reserva }}</strong>
-                <span>{{ reserva.descripcion }}</span>
+              </td>
+              <td class="reservation-description" [title]="reserva.descripcion || 'Sin descripción'">
+                {{ reserva.descripcion || 'Sin descripción' }}
               </td>
               <td>{{ reserva.agencia }}</td>
               <td>{{ reserva.ingreso | date: 'dd/MM/yyyy' }}</td>
@@ -126,6 +130,13 @@
               <td class="text-center">{{ reserva.habitaciones }}</td>
               <td><span class="badge border" [ngClass]="statusClass(reserva.estado)">{{ estadoLabel(reserva.estado) }}</span></td>
               <td class="text-end fw-semibold">{{ reserva.moneda || 'USD' }} {{ reserva.total | number: '1.2-2' }}</td>
+              <td
+                class="text-end prepago-column"
+                [class.prepago-column--active]="reserva.prepago === 'S'"
+                [title]="reserva.prepago === 'S' ? 'Reserva con prepago' : 'Reserva sin prepago'"
+              >
+                <span class="prepago-badge">{{ reserva.prepago === 'S' ? 'Sí' : 'No' }}</span>
+              </td>
               <td>{{ reserva.operador }}</td>
               <td class="text-end action-cell">
                 <div ngbDropdown container="body" placement="bottom-end" class="action-menu">

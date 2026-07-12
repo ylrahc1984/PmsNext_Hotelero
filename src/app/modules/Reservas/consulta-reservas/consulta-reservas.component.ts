@@ -121,7 +121,7 @@ export class ConsultaReservasComponent implements OnInit {
   }
 
   puedeEditarReserva(reserva: ReservaConsulta): boolean {
-    return !!reserva.reserva.trim() && this.normalizeEstadoCode(reserva.estado) !== 'CHK';
+    return !!reserva.reserva.trim() && this.normalizeEstadoCode(reserva.estado) !== 'CHK' && this.normalizeEstadoCode(reserva.estado) !== 'ANU';
   }
 
   consultarReserva(reserva: ReservaConsulta): void {
@@ -141,8 +141,22 @@ export class ConsultaReservasComponent implements OnInit {
 
     const result = await Swal.fire({
       title: 'Anular reserva',
-      html: `¿Está seguro de anular la reserva <strong>${this.escapeHtml(codReserva)}</strong>?`,
+      html: `Indique el motivo por el que desea anular la reserva <strong>${this.escapeHtml(codReserva)}</strong>.`,
       icon: 'warning',
+      input: 'textarea',
+      inputLabel: 'Motivo de la anulación',
+      inputPlaceholder: 'Digite el motivo de la anulación...',
+      inputAttributes: {
+        maxlength: '500',
+        rows: '4',
+        'aria-label': 'Motivo de la anulación'
+      },
+      inputValidator: (value) => {
+        if (!value?.trim()) {
+          return 'Debe indicar el motivo de la anulación.';
+        }
+        return null;
+      },
       showCancelButton: true,
       confirmButtonText: 'Sí, anular',
       cancelButtonText: 'No, volver',
@@ -154,6 +168,7 @@ export class ConsultaReservasComponent implements OnInit {
       return;
     }
 
+    const observaciones = String(result.value ?? '').trim();
     const operador = this.auth.getCurrentUser()?.usuario?.trim() || reserva.operador?.trim() || 'admin';
     const fecAnulada = this.formatDateForApi(new Date());
     this.cancellingReserva.set(codReserva);
@@ -169,7 +184,7 @@ export class ConsultaReservasComponent implements OnInit {
 
     try {
       const response = await firstValueFrom(
-        this.reservaService.anularReserva(codReserva, fecAnulada, operador, 1).pipe(
+        this.reservaService.anularReserva(codReserva, fecAnulada, operador, observaciones, 1).pipe(
           finalize(() => {
             this.cancellingReserva.set('');
             Swal.close();

@@ -34,9 +34,10 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
   readonly servicios = computed(() => this.reserva()?.servicios ?? []);
   readonly moneda = computed(() => this.reserva()?.moneda?.trim() || 'USD');
 
+  readonly cantidadHabitaciones = computed(() => this.habitaciones().reduce((total, item) => total + this.toNumber(item.cantHab), 0));
   readonly totalHabitaciones = computed(() => this.habitaciones().reduce((total, item) => total + this.toNumber(item.total), 0));
   readonly totalInclusiones = computed(() => this.inclusiones().reduce((total, item) => total + this.toNumber(item.totServ), 0));
-  readonly totalServicios = computed(() => this.servicios().reduce((total, item) => total + this.toNumber(item.total ?? item.totServ), 0));
+  readonly totalServicios = computed(() => this.servicios().reduce((total, item) => total + this.serviceTotal(item), 0));
   readonly totalImpuestos = computed(() => this.servicios().reduce((total, item) => total + this.toNumber(item.impuesto), 0));
   readonly totalPax = computed(() => this.habitaciones().reduce((total, item) => total + this.toNumber(item.numPax) * this.toNumber(item.cantHab), 0));
   readonly totalNinos = computed(() => this.habitaciones().reduce((total, item) => total + this.toNumber(item.numChild), 0));
@@ -119,6 +120,18 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
 
   serviceDescription(item: ReservaServicioDetalleItem): string {
     return String(item.descripcion ?? item.desServ ?? item.codSrv ?? item.codServ ?? '').trim() || 'Servicio';
+  }
+
+  serviceTotal(item: ReservaServicioDetalleItem): number {
+    if (item.total != null) {
+      return this.toNumber(item.total);
+    }
+
+    if (item.totServ != null) {
+      return this.toNumber(item.totServ);
+    }
+
+    return this.toNumber(item.cantidad) * this.toNumber(item.precio);
   }
 
   toNumber(value: unknown): number {

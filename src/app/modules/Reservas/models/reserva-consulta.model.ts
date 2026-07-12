@@ -15,7 +15,7 @@ export interface ReservaConsulta {
   ninos: number;
   estado: string;
   total: number;
-  prepago: number;
+  prepago: 'S' | 'N';
   moneda: string;
   tCambio: number;
   operador: string;
@@ -55,12 +55,16 @@ export interface ReservaConsultaApiItem {
   totNoches?: number;
   totDias?: number;
   descripcion?: string;
+  Descripcion?: string;
   tCambio?: number;
   folio?: string;
   estado?: string;
   moneda?: string;
   totalRsv?: number;
   observacion?: string;
+  observaciones?: string;
+  Observacion?: string;
+  Observaciones?: string;
   procesado?: number;
   directo?: string;
   operador?: string;

@@ -21,10 +21,6 @@
         <i class="bi bi-eraser"></i>
         {{ clearButtonText() }}
       </button>
-      <button type="button" class="btn btn-outline-light action-button" (click)="guardarBorrador()" *ngIf="!isEditMode()">
-        <i class="bi bi-floppy"></i>
-        Guardar borrador
-      </button>
       <button type="submit" class="btn btn-primary action-button action-button--primary" [disabled]="saving() || loadingDetalle()">
         <span class="spinner-border spinner-border-sm" *ngIf="saving() || loadingDetalle()"></span>
         <i class="bi bi-check-circle" *ngIf="!saving() && !loadingDetalle()"></i>
@@ -52,7 +48,7 @@
         <div class="general-form">
           <label class="field span-2 lookup-field">
             <span>Agencia <b>*</b></span>
-            <div class="lookup-row">
+            <div class="lookup-row lookup-row-with-clear">
               <input
                 type="text"
                 class="form-control"
@@ -61,6 +57,16 @@
                 autocomplete="off"
                 (focus)="openAgenciaSuggestions()"
               >
+              <button
+                *ngIf="agenciaSearchControl.value"
+                type="button"
+                class="lookup-button lookup-clear-button"
+                aria-label="Limpiar agencia"
+                title="Limpiar agencia"
+                (click)="clearAgencia()"
+              >
+                <i class="bi bi-x-lg"></i>
+              </button>
               <button type="button" class="lookup-button" aria-label="Buscar agencia" (click)="openAgencyModal()">
                 <i class="bi bi-search"></i>
               </button>
@@ -148,12 +154,12 @@
 
           <label class="field span-2">
             <span>Descripción de la reserva</span>
-            <textarea class="form-control" rows="3" formControlName="descripcion"></textarea>
+            <textarea class="form-control" rows="3" formControlName="descripcion" placeholder="Reserva familiar para vacaciones"></textarea>
           </label>
 
           <label class="field span-2">
             <span>Observaciones internas</span>
-            <textarea class="form-control" rows="4" formControlName="observaciones"></textarea>
+            <textarea class="form-control" rows="4" formControlName="observaciones" placeholder="Notas internas sobre la reserva"></textarea>
           </label>
         </div>
       </section>

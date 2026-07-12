@@ -4,6 +4,7 @@ import { Router, NavigationExtras } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { of } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
+import Swal from 'sweetalert2';
 
 import { AuthService } from 'src/app/core/services/auth.service';
 import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
@@ -102,11 +103,31 @@ export class RoomRackComponent implements OnInit {
   constructor(private readonly router: Router) {}
 
   ngOnInit(): void {
+    const navigationState = history.state as { checkoutCompleted?: boolean; checkedOutRoom?: string };
+    if (navigationState.checkoutCompleted) {
+      this.cleanActionMessage = navigationState.checkedOutRoom
+        ? `Check Out de la habitación ${navigationState.checkedOutRoom} completado. Inventario actualizado.`
+        : 'Check Out completado. Inventario actualizado.';
+    }
+
+    // La consulta se ejecuta nuevamente al volver de un Check Out para mostrar
+    // inmediatamente el estado actualizado de la habitación.
     this.cargarHabitaciones();
     this.cargarTipoCambio();
   }
 
   seleccionarHabitacion(habitacion: HabitacionRack): void {
+    if (habitacion.estado === 'Reservada') {
+      void Swal.fire({
+        title: 'Habitación reservada',
+        html: `La habitación <strong>${this.escapeHtml(habitacion.numero)}</strong> está pendiente de ingreso o de realizar el Check In.`,
+        icon: 'info',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#0d6efd'
+      });
+      return;
+    }
+
     const navigationState: RoomRackNavigationState = {
       ...habitacion.data
     };
@@ -118,6 +139,15 @@ export class RoomRackComponent implements OnInit {
     }
 
     this.router.navigate(['/front-desk/habitaciones/room-stay-management', habitacion.numero], extras);
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   onRoomCardKeydown(event: KeyboardEvent, habitacion: HabitacionRack): void {

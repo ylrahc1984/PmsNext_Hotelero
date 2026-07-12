@@ -106,6 +106,10 @@
   padding: 1rem;
 }
 
+.center-column .module-card {
+  padding-block: 0.75rem;
+}
+
 .left-column,
 .center-column,
 .right-column {
@@ -318,6 +322,17 @@ textarea.form-control {
   display: grid;
   grid-template-columns: 1fr 40px;
   gap: 0.4rem;
+}
+
+.lookup-row-with-clear {
+  grid-template-columns: 1fr auto 40px;
+}
+
+.lookup-clear-button {
+  min-width: 32px;
+  min-height: 32px;
+  align-self: center;
+  color: #6c757d;
 }
 
 .lookup-field {

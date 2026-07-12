@@ -102,6 +102,22 @@ export interface DepartureDateChangePayload {
   operador        : string;
 }
 
+export interface RoomCheckoutPayload {
+  proceso         : number;
+  fecCheckout     : string;
+  codReserva      : string;
+  numHabitacion   : string;
+  folio           : string;
+  operador        : string;
+}
+
+export interface RoomCheckoutResponse {
+  mensaje         : string;
+  codReserva      : string;
+  numHabitacion   : string;
+  fecCheckout     : string;
+}
+
 export interface PointOfSalePaymentMethodApi {
   CA05_Codigo         : string;
   CA05_Descripcion    : string;
@@ -372,6 +388,7 @@ export class RoomStayManagementService {
   private readonly precheckingUrl                  = `${this.baseApiUrl}/prechecking`;
   private readonly roomChangeUrl                   = `${this.baseApiUrl}/roomchange`;
   private readonly departureDateChangeUrl          = `${this.baseApiUrl}/cambio-fecha-salida`;
+  private readonly roomCheckoutUrl                  = `${this.baseApiUrl}/checkout/habitacion`;
   private readonly pointOfSalePaymentMethodsUrl    = `${this.baseApiUrl}/forma-pago-punto-venta`;
   private readonly roomChargeUrl                   = `${this.baseApiUrl}/cargo-habitacion`;
   private readonly roomChargeLookupUrl             = `${this.baseApiUrl}/consultar-cargos-habitacion/numero`;
@@ -406,6 +423,10 @@ export class RoomStayManagementService {
 
   changeDepartureDate(payload: DepartureDateChangePayload): Observable<unknown> {
     return this.http.put<unknown>(this.departureDateChangeUrl, payload);
+  }
+
+  checkoutRoom(payload: RoomCheckoutPayload): Observable<RoomCheckoutResponse> {
+    return this.http.post<RoomCheckoutResponse>(this.roomCheckoutUrl, payload);
   }
 
   getPointOfSalePaymentMethods(puntoVenta = 'PF'): Observable<PointOfSalePaymentMethodApi[]> {

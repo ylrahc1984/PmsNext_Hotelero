@@ -824,17 +824,27 @@
           }
 
           @if (action.kind === 'critical') {
-            <div class="action-modal__notice action-modal__notice--danger">
-              <strong>Validacion antes del cierre</strong>
-              <p>La habitacion mantiene un saldo operativo de {{ formatCurrency(currentBalance()) }}. Este flujo dejara rastro en timeline y observaciones antes de un check out definitivo.</p>
+            <div class="action-modal__notice" [class.action-modal__notice--danger]="hasPendingExtraCharges()">
+              <strong>{{ hasPendingExtraCharges() ? 'Check Out bloqueado' : 'Cargos Extras verificados' }}</strong>
+              <p>
+                {{ hasPendingExtraCharges()
+                  ? 'Existen Cargos Extras pendientes por ' + formatCurrency(extrasSubtotal()) + '. Deben cancelarse antes de continuar.'
+                  : 'No existen Cargos Extras pendientes. Puede continuar con el Check Out.' }}
+              </p>
             </div>
+            @if (hasPendingLodgingCharges()) {
+              <div class="action-modal__notice action-modal__notice--soft">
+                <strong>Advertencia de estancia</strong>
+                <p>Existen Cargos de Estancia por {{ formatCurrency(lodgingSubtotal()) }}. Se solicitará confirmación, pero no bloquean el Check Out.</p>
+              </div>
+            }
           }
         </div>
 
         <footer class="action-modal__footer">
           <button type="button" class="action-modal__secondary" (click)="closeActionModal()">Cancelar</button>
           <button type="button" class="action-modal__primary" [class.action-modal__primary--danger]="action.tone === 'danger'" [disabled]="!canExecuteActiveAction()" (click)="executeActiveAction()">
-            {{ action.confirmText }}
+            {{ isActionSelected('check-out') && isCheckoutSubmitting() ? 'Procesando...' : action.confirmText }}
           </button>
         </footer>
         }

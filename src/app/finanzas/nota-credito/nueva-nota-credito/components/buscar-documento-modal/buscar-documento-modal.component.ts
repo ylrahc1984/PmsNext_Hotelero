@@ -19,6 +19,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { ConsultaDocumentosService } from 'src/app/finanzas/services/consulta-documentos.service';
 import { Documento } from 'src/app/finanzas/pages-factura/consulta-documentos/consulta-documentos.interface';
+import { AuthService } from 'src/app/core/services/auth.service';
 
 @Component({
   selector: 'app-buscar-documento-modal',
@@ -50,6 +51,7 @@ export class BuscarDocumentoModalComponent implements OnChanges, OnDestroy {
   private readonly consultaService = inject(ConsultaDocumentosService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly auth = inject(AuthService);
   private requestId = 0;
   private loadingTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
@@ -91,20 +93,32 @@ export class BuscarDocumentoModalComponent implements OnChanges, OnDestroy {
 
     this.consultaService
       .buscarDocumentos({
+        proceso: 90,
         pageNumber: this.pageNumber,
         pageSize: this.pageSize,
-        fechaDesde,
-        fechaHasta,
-        nombreCliente: this.searchTerm.trim(),
-        tipoDocu: '',
-        condicionVenta: '',
-        estadoDocu: ''
+        fechaDocu: fechaDesde || '',
+        fechaPago: fechaHasta || '',
+        fechaVen: fechaHasta || '',
+        operador: this.auth.getCurrentUser()?.usuario?.trim() || 'ADMIN',
+        nomClie: this.searchTerm.trim(),
+        tipDocu: ''
       })
       .pipe(
         timeout(10000),
         catchError((error: unknown) => {
           this.errorMsg = this.getErrorMessage(error);
-          return of({ totalRegistros: 0, detalle: [] });
+          return of({
+            documentos: [],
+            paginacion: {
+              paginaActual: 1,
+              tamanoPagina: this.pageSize,
+              totalRegistros: 0,
+              totalPaginas: 0,
+              tienePaginaAnterior: false,
+              tienePaginaSiguiente: false
+            },
+            mensaje: ''
+          });
         }),
         finalize(() => {
           if (currentRequest === this.requestId) {
@@ -123,9 +137,9 @@ export class BuscarDocumentoModalComponent implements OnChanges, OnDestroy {
           if (currentRequest !== this.requestId) {
             return;
           }
-          this.documentos = res.detalle ?? [];
-          this.totalRegistros = res.totalRegistros ?? 0;
-          this.totalPages = Math.max(1, Math.ceil(this.totalRegistros / this.pageSize));
+          this.documentos = res.documentos ?? [];
+          this.totalRegistros = res.paginacion.totalRegistros ?? 0;
+          this.totalPages = Math.max(1, res.paginacion.totalPaginas || 1);
           this.documentosLoading = false;
           this.cdr.markForCheck();
         },

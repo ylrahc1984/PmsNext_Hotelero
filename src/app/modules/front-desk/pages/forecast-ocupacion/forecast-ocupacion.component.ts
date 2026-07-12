@@ -69,8 +69,8 @@ export class ForecastOcupacionComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
 
   hotel = '';
-  fechaInicial = '2026-07-08';
-  fechaFinal = '2026-07-30';
+  fechaInicial = new Date().toISOString().split('T')[0];
+  fechaFinal = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 15 dias despues
   tipoVista: 'ocupacion' | 'disponibilidad' = 'ocupacion';
   busqueda = '';
   pageSize = 10;

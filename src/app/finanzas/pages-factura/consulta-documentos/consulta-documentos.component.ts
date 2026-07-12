@@ -7,17 +7,21 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize, map, switchMap } from 'rxjs/operators';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
+import { AuthService } from 'src/app/core/services/auth.service';
 import { ConsultaDocumentosService } from '../../services/consulta-documentos.service';
 import { DocumentoDetalleService } from '../../services/documento-detalle.service';
 import { ConsultaDocumentosFiltros, ConsultaDocumentosResponse, Documento } from './consulta-documentos.interface';
 
 type ConsultaDocumentosForm = {
   tipoDocu: FormControl<string>;
+  serieDocu: FormControl<string>;
+  numDocu: FormControl<string>;
   fechaDesde: FormControl<string>;
   fechaHasta: FormControl<string>;
   nombreCliente: FormControl<string>;
-  condicionVenta: FormControl<string>;
-  estadoDocu: FormControl<string>;
+  codCliente: FormControl<string>;
+  codReserva: FormControl<string>;
+  pntVenta: FormControl<string>;
 };
 
 interface ConsultaDocumentosViewModel {
@@ -52,17 +56,21 @@ export class ConsultaDocumentosComponent implements OnInit {
   private readonly detalleService = inject(DocumentoDetalleService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly auth = inject(AuthService);
 
   readonly pageSizeOptions = [10, 25, 50];
   private readonly defaultDateRange = this.getDefaultDateRange();
 
   readonly filtrosForm: FormGroup<ConsultaDocumentosForm> = this.fb.group({
     tipoDocu: this.fb.control(''),
+    serieDocu: this.fb.control(''),
+    numDocu: this.fb.control(''),
     fechaDesde: this.fb.control(this.defaultDateRange.fechaDesde, { validators: [Validators.required] }),
     fechaHasta: this.fb.control(this.defaultDateRange.fechaHasta),
     nombreCliente: this.fb.control(''),
-    condicionVenta: this.fb.control(''),
-    estadoDocu: this.fb.control('')
+    codCliente: this.fb.control(''),
+    codReserva: this.fb.control(''),
+    pntVenta: this.fb.control('')
   });
 
   private readonly vmSubject = new BehaviorSubject<ConsultaDocumentosViewModel>({
@@ -83,7 +91,7 @@ export class ConsultaDocumentosComponent implements OnInit {
 
   readonly vm$ = this.vmSubject.asObservable();
 
-  private filtrosBase: Omit<ConsultaDocumentosFiltros, 'pageNumber' | 'pageSize'> = {};
+  private filtrosBase!: Omit<ConsultaDocumentosFiltros, 'pageNumber' | 'pageSize'>;
   private activeRequest?: Subscription;
   private printingDocs = new Set<string>();
 
@@ -106,13 +114,15 @@ export class ConsultaDocumentosComponent implements OnInit {
     const { fechaDesde, fechaHasta } = this.getDefaultDateRange();
     this.filtrosForm.reset({
       tipoDocu: '',
+      serieDocu: '',
+      numDocu: '',
       fechaDesde,
       fechaHasta,
       nombreCliente: '',
-      condicionVenta: '',
-      estadoDocu: ''
+      codCliente: '',
+      codReserva: '',
+      pntVenta: ''
     });
-    this.filtrosBase = {};
     this.activeRequest?.unsubscribe();
     this.vmSubject.next({
       documentos: [],
@@ -280,12 +290,18 @@ export class ConsultaDocumentosComponent implements OnInit {
   private updateFiltrosBase(): void {
     const value = this.filtrosForm.getRawValue();
     this.filtrosBase = {
-      tipoDocu: this.normalize(value.tipoDocu),
-      fechaDesde: this.formatDateToApi(this.normalize(value.fechaDesde)),
-      fechaHasta: this.formatDateToApi(this.normalize(value.fechaHasta)),
-      nombreCliente: this.normalize(value.nombreCliente),
-      condicionVenta: this.normalize(value.condicionVenta),
-      estadoDocu: this.normalize(value.estadoDocu)
+      proceso: 90,
+      fechaDocu: this.formatDateToApi(this.normalize(value.fechaDesde)) || '',
+      fechaPago: this.formatDateToApi(this.normalize(value.fechaHasta)) || '',
+      fechaVen: this.formatDateToApi(this.normalize(value.fechaHasta)) || '',
+      operador: this.auth.getCurrentUser()?.usuario?.trim() || 'ADMIN',
+      tipDocu: this.normalize(value.tipoDocu),
+      serieDocu: this.normalize(value.serieDocu),
+      numDocu: this.normalize(value.numDocu),
+      codReserva: this.normalize(value.codReserva),
+      codCliente: this.normalize(value.codCliente),
+      nomClie: this.normalize(value.nombreCliente),
+      pntVenta: this.normalize(value.pntVenta)
     };
   }
 
@@ -310,13 +326,15 @@ export class ConsultaDocumentosComponent implements OnInit {
   }
 
   private updateVmSuccess(response: ConsultaDocumentosResponse, pageNumber: number, pageSize: number): void {
-    const totalRegistros = response?.totalRegistros ?? 0;
-    const documentos = response?.detalle ?? [];
+    const totalRegistros = response.paginacion.totalRegistros;
+    const documentos = response.documentos;
     const totalDocuVisible = this.sumDocumentos(documentos, (documento) => documento.PPV00_TotalDocu);
-    const totalPagoVisible = this.sumDocumentos(documentos, (documento) => documento.PPV00_TotalPago);
+    const totalPagoVisible = this.sumDocumentos(documentos, (documento) => documento.impuesto);
     const monedaResumen = this.resolveMonedaResumen(documentos);
-    const totalPages = Math.max(1, Math.ceil(totalRegistros / pageSize));
-    const pageStart = totalRegistros === 0 ? 0 : (pageNumber - 1) * pageSize + 1;
+    const resolvedPage = response.paginacion.paginaActual || pageNumber;
+    const resolvedPageSize = response.paginacion.tamanoPagina || pageSize;
+    const totalPages = Math.max(1, response.paginacion.totalPaginas || 1);
+    const pageStart = totalRegistros === 0 ? 0 : (resolvedPage - 1) * resolvedPageSize + 1;
     const pageEnd = totalRegistros === 0 ? 0 : Math.min(pageStart + pageSize - 1, totalRegistros);
 
     this.vmSubject.next({
@@ -325,8 +343,8 @@ export class ConsultaDocumentosComponent implements OnInit {
       totalDocuVisible,
       totalPagoVisible,
       monedaResumen,
-      pageNumber,
-      pageSize,
+      pageNumber: resolvedPage,
+      pageSize: resolvedPageSize,
       totalPages,
       pageStart,
       pageEnd,

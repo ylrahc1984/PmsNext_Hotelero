@@ -157,11 +157,42 @@
   padding-bottom: 0.55rem;
 }
 
-.table td:first-child span {
-  display: block;
+.reservation-description {
+  min-width: 180px;
+  max-width: 280px;
+  color: #607080;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.prepago-column {
+  width: 1%;
+  min-width: 62px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+td.prepago-column {
   color: #7a8794;
-  font-size: 0.78rem;
-  margin-top: 0.15rem;
+  font-size: 0.8rem;
+}
+
+td.prepago-column--active {
+  color: #198754;
+  font-weight: 700;
+}
+
+.prepago-badge {
+  display: inline-block;
+  min-width: 28px;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  text-align: center;
+  background: #f1f3f5;
+}
+
+.prepago-column--active .prepago-badge {
+  background: #d1e7dd;
 }
 
 .action-cell {

@@ -88,7 +88,8 @@ export interface ReservationPrepaymentSummary {
 
 export function buildReservationPrepaymentSummary(reserva: ReservaConsulta): ReservationPrepaymentSummary {
   const totalRsv = Number(reserva.total ?? 0) || 0;
-  const totalPrepa = Number(reserva.prepago ?? 0) || 0;
+  // `prepago` en la consulta es únicamente un indicador S/N, no un monto.
+  const totalPrepa = 0;
 
   return {
     codReserva: reserva.reserva,

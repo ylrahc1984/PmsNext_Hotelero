@@ -58,8 +58,8 @@ export class OccupancyForecastComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
 
-  fechaInicial = '2026-07-07';
-  fechaFinal = '2026-07-22';
+  fechaInicial = new Date().toISOString().split('T')[0];
+  fechaFinal = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 15 dias despues
   tipoVista: 'ocupacion' | 'disponibilidad' = 'ocupacion';
   busqueda = '';
   pageSize = 10;

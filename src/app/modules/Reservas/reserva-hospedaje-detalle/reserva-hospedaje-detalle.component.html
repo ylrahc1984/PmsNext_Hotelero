@@ -93,7 +93,7 @@
         <span class="metric-icon metric-icon--room"><i class="bi bi-building"></i></span>
         <div>
           <span>Habitaciones</span>
-          <strong>{{ habitaciones().length }}</strong>
+          <strong>{{ cantidadHabitaciones() }}</strong>
         </div>
       </article>
       <article class="metric-card">
@@ -255,7 +255,7 @@
                   <td class="text-center">{{ toNumber(item.cantidad) }}</td>
                   <td class="text-end">{{ moneda() }} {{ toNumber(item.precio) | number:'1.2-2' }}</td>
                   <td class="text-end">{{ moneda() }} {{ toNumber(item.impuesto) | number:'1.2-2' }}</td>
-                  <td class="text-end fw-semibold">{{ moneda() }} {{ toNumber(item.total || item.totServ) | number:'1.2-2' }}</td>
+                  <td class="text-end fw-semibold">{{ moneda() }} {{ serviceTotal(item) | number:'1.2-2' }}</td>
                 </tr>
                 <tr *ngIf="servicios().length === 0">
                   <td colspan="5" class="empty-cell">Sin servicios extras registrados.</td>

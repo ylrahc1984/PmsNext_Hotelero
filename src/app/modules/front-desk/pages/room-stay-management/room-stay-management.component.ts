@@ -32,6 +32,8 @@ import {
   RoomInvoicePayload,
   RoomingListUpdatePayload,
   RoomChangePayload,
+  RoomCheckoutPayload,
+  RoomCheckoutResponse,
   RoomStayApiCharge,
   RoomStayApiData,
   RoomStayManagementService
@@ -308,6 +310,7 @@ export class RoomStayManagementComponent implements OnInit {
   readonly availableRoomsLoaded                  = signal(false);
   readonly isRoomChangeSubmitting                = signal(false);
   readonly isDepartureChangeSubmitting           = signal(false);
+  readonly isCheckoutSubmitting                  = signal(false);
   readonly isRoomChargeCatalogLoading            = signal(false);
   readonly isRoomChargeItemsLoading              = signal(false);
   readonly isRoomChargeSubmitting                = signal(false);
@@ -529,6 +532,8 @@ export class RoomStayManagementComponent implements OnInit {
 
   readonly lodgingSubtotal          = computed(() => this.sumCharges(this.room().lodgingCharges));
   readonly extrasSubtotal           = computed(() => this.sumCharges(this.room().extraCharges));
+  readonly hasPendingExtraCharges   = computed(() => this.extrasSubtotal() > 0.009);
+  readonly hasPendingLodgingCharges = computed(() => this.lodgingSubtotal() > 0.009);
   readonly totalToCharge            = computed(() => this.lodgingSubtotal() + this.extrasSubtotal());
   readonly lodgingInvoiceSubtotal   = computed(() => this.sumSelectedCharges(this.room().lodgingCharges));
   readonly extrasInvoiceSubtotal    = computed(() => this.sumSelectedCharges(this.room().extraCharges));
@@ -672,7 +677,18 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   backToRoomRack(): void {
-    this.router.navigate(['/front-desk/room-rack']);
+    void this.router.navigate(['/front-desk/room-rack']);
+  }
+
+  private refreshRoomRackAfterCheckout(): void {
+    void this.router.navigate(['/front-desk/room-rack'], {
+      replaceUrl: true,
+      state: {
+        refreshRoomRack: true,
+        checkoutCompleted: true,
+        checkedOutRoom: this.room().roomNumber
+      }
+    });
   }
 
   openActionModal(action: StayOperation): void {
@@ -746,6 +762,10 @@ export class RoomStayManagementComponent implements OnInit {
       return !this.isInvoiceSubmitting();
     }
 
+    if (this.isActionSelected('check-out')) {
+      return !this.hasPendingExtraCharges() && !this.isCheckoutSubmitting();
+    }
+
     return true;
   }
 
@@ -796,7 +816,8 @@ export class RoomStayManagementComponent implements OnInit {
         this.submitRoomInvoice();
         break;
       case 'check-out':
-        this.applyCheckOutFlow();
+        shouldClose = false;
+        void this.submitCheckOut();
         break;
       default:
         break;
@@ -2772,18 +2793,85 @@ export class RoomStayManagementComponent implements OnInit {
     this.toastService.success('Facturacion de habitacion confirmada correctamente.', 4000, 'Documentos');
   }
 
-  private applyCheckOutFlow(): void {
-    this.room.update((currentRoom) => ({
-      ...currentRoom,
-      observations: [
-        `Proceso de check out iniciado con saldo pendiente de ${this.formatCurrency(this.currentBalance())}.`,
-        ...currentRoom.observations
-      ]
-    }));
+  private async submitCheckOut(): Promise<void> {
+    const room = this.room();
 
-    this.addTimelineEntry('Check out en preparacion', 'Se genero la verificacion final de cargos y documentos.');
-    this.activeTab.set('timeline');
-    this.toastService.warning('Se inicio el flujo previo de Check Out.', 4500, 'Salida');
+    if (this.hasPendingExtraCharges()) {
+      this.toastService.warning(
+        `Debe cancelar los Cargos Extras pendientes (${this.formatCurrency(this.extrasSubtotal())}) antes del Check Out.`,
+        5000,
+        'Check Out'
+      );
+      return;
+    }
+
+    if (this.hasPendingLodgingCharges()) {
+      const confirmation = await Swal.fire({
+        title: 'Cargos de estancia pendientes',
+        html: `La estancia mantiene cargos por <strong>${this.escapeHtml(this.formatCurrency(this.lodgingSubtotal()))}</strong>. Estos cargos no bloquean el Check Out. ¿Desea continuar?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, procesar Check Out',
+        cancelButtonText: 'Volver',
+        confirmButtonColor: '#dc3545',
+        reverseButtons: true
+      });
+
+      if (!confirmation.isConfirmed) {
+        return;
+      }
+    }
+
+    const operador = this.cleanText(this.authService.getCurrentUser()?.usuario || room.operator);
+    if (!operador) {
+      this.toastService.warning('No se pudo identificar el operador autenticado.', 4000, 'Check Out');
+      return;
+    }
+
+    const payload: RoomCheckoutPayload = {
+      proceso: 1,
+      fecCheckout: this.todayDisplayDate(),
+      codReserva: this.cleanText(room.reservationNumber),
+      numHabitacion: this.cleanText(room.roomNumber),
+      folio: 'N',
+      operador
+    };
+
+    if (!payload.codReserva || !payload.numHabitacion) {
+      this.toastService.warning('La reserva o la habitación no están disponibles para procesar el Check Out.', 4500, 'Check Out');
+      return;
+    }
+
+    this.isCheckoutSubmitting.set(true);
+    this.roomStayManagementService.checkoutRoom(payload)
+      .pipe(
+        finalize(() => this.isCheckoutSubmitting.set(false)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (response: RoomCheckoutResponse) => {
+          this.closeActionModal();
+          this.addTimelineEntry('Check Out realizado', response.mensaje || 'Checkout realizado exitosamente');
+          void Swal.fire({
+            title: 'Check Out completado',
+            text: response.mensaje || 'Checkout realizado exitosamente',
+            icon: 'success',
+            confirmButtonText: 'Aceptar',
+            confirmButtonColor: '#198754'
+          }).then(() => this.refreshRoomRackAfterCheckout());
+        },
+        error: (error) => {
+          console.error('No se pudo procesar el Check Out.', error);
+          const apiMessage = error?.error?.mensaje || error?.error?.message || error?.message;
+          void Swal.fire({
+            title: 'No se pudo realizar el Check Out',
+            text: apiMessage || 'Revise la conexión con el API e inténtelo nuevamente.',
+            icon: 'error',
+            confirmButtonText: 'Aceptar',
+            confirmButtonColor: '#dc3545'
+          });
+        }
+      });
   }
 
   private addTimelineEntry(title: string, detail: string): void {
