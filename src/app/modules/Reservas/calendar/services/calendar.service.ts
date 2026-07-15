@@ -311,10 +311,10 @@ export class CalendarService {
   }
 
   private toBlockView(reservation: CalendarReservation, startDate: string, totalDays: number): CalendarReservationBlockView {
+    const visibleEndDate = this.shiftIsoDate(startDate, totalDays);
     const startIndex = Math.max(0, this.diffDays(startDate, reservation.startDate));
     const endIndex = Math.min(totalDays, this.diffDays(startDate, reservation.endDate));
     const span = Math.max(1, endIndex - startIndex);
-    const label = this.abbreviateName(reservation.guestName);
 
     return {
       reservation,
@@ -322,7 +322,10 @@ export class CalendarService {
       span,
       left: startIndex * CELL_WIDTH + 2,
       width: Math.max(36, span * CELL_WIDTH - 4),
-      label,
+      continuesBefore: reservation.startDate < startDate,
+      continuesAfter: reservation.endDate > visibleEndDate,
+      colorIndex: this.getReservationColorIndex(reservation.id),
+      label: reservation.guestName,
       tooltip: `${reservation.guestName} | ${reservation.status} | ${reservation.startDate} -> ${reservation.endDate} | ${reservation.source}`
     };
   }
@@ -381,13 +384,14 @@ export class CalendarService {
     return Math.floor((end - start) / 86400000);
   }
 
-  private abbreviateName(fullName: string): string {
-    const parts = fullName.trim().split(/\s+/);
-    if (parts.length === 1) {
-      return parts[0];
+  private getReservationColorIndex(reservationId: string): number {
+    let hash = 0;
+
+    for (let index = 0; index < reservationId.length; index += 1) {
+      hash = (hash * 31 + reservationId.charCodeAt(index)) | 0;
     }
 
-    return `${parts[0]} ${parts[1].charAt(0)}.`;
+    return Math.abs(hash) % 8;
   }
 
   private parseDate(value: string): Date {

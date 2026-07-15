@@ -12,7 +12,7 @@ import { ProductoService, ProductoFiltros } from './producto.service';
 import { Producto } from './interfaces/Producto.interface';
 import { LineaProducto } from './interfaces/LineaProducto.interface';
 import { CategoriaProducto } from './interfaces/CategoriaProducto.interface';
-import { ProductoResponse } from './interfaces/ProductoResponse.interface';
+import { ProductoPaginacion, ProductoResponse } from './interfaces/ProductoResponse.interface';
 
 interface ProductoFiltrosForm {
   linea: FormControl<string>;
@@ -283,7 +283,7 @@ export class ProductoListComponent implements OnInit {
   private handleProductosResponse(response: ProductoResponse, pageNumber: number, pageSize: number): void {
     const productos = response?.datos ?? [];
     this.productos = productos;
-    this.updatePagination(productos, pageNumber, pageSize);
+    this.updatePagination(productos, pageNumber, pageSize, response?.paginacion?.[0]);
   }
 
   private buildFiltros(pageNumber: number, pageSize: number): ProductoFiltros {
@@ -298,7 +298,12 @@ export class ProductoListComponent implements OnInit {
     };
   }
 
-  private updatePagination(productos: Producto[], pageNumber: number, pageSize: number): void {
+  private updatePagination(
+    productos: Producto[],
+    pageNumber: number,
+    pageSize: number,
+    paginacion?: ProductoPaginacion
+  ): void {
     if (productos.length === 0) {
       this.pageNumber = pageNumber;
       this.pageSize = pageSize;
@@ -309,10 +314,9 @@ export class ProductoListComponent implements OnInit {
       return;
     }
 
-    const meta = productos[0];
-    const totalRegistros = this.toNumber(meta.TotalRegistros, productos.length);
-    const totalPages = this.toNumber(meta.TotalPaginas, Math.ceil(totalRegistros / pageSize) || 1);
-    const paginaActual = this.toNumber(meta.PaginaActual, pageNumber);
+    const totalRegistros = this.toNumber(paginacion?.TotalRegistros, productos.length);
+    const totalPages = this.toNumber(paginacion?.TotalPaginas, Math.ceil(totalRegistros / pageSize) || 1);
+    const paginaActual = this.toNumber(paginacion?.PaginaActual, pageNumber);
 
     this.totalRegistros = totalRegistros;
     this.totalPages = Math.max(1, totalPages);

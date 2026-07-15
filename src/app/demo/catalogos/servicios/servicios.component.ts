@@ -2,6 +2,9 @@
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
+import { NgbTypeaheadSelectItemEvent } from '@ng-bootstrap/ng-bootstrap';
+import { OperatorFunction } from 'rxjs';
+import { debounceTime, distinctUntilChanged, map } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
@@ -22,6 +25,10 @@ export class ServiciosComponent implements OnInit {
   filterCategoria = '';
   filterGrupo = '';
   filterVisible = '1';
+  categoriaSearchValue: CategoriaOption | string = '';
+  grupoSearchValue: CentroCostoOption | string = '';
+  lookupModal: 'categoria' | 'grupo' | null = null;
+  lookupModalQuery = '';
 
   categoriaOptions: CategoriaOption[] = [];
   grupoOptions: CentroCostoOption[] = [];
@@ -34,6 +41,24 @@ export class ServiciosComponent implements OnInit {
 
   private serviciosService = inject(ServiciosService);
   private router = inject(Router);
+
+  readonly searchCategorias: OperatorFunction<string, readonly CategoriaOption[]> = (text$) => text$.pipe(
+    debounceTime(150),
+    distinctUntilChanged(),
+    map((term) => this.filterLookupOptions(this.categoriaOptions, term))
+  );
+
+  readonly searchGrupos: OperatorFunction<string, readonly CentroCostoOption[]> = (text$) => text$.pipe(
+    debounceTime(150),
+    distinctUntilChanged(),
+    map((term) => this.filterLookupOptions(this.grupoOptions, term))
+  );
+
+  readonly categoriaFormatter = (item: CategoriaOption | string): string =>
+    typeof item === 'string' ? item : `${item.codigo} - ${item.nombre}`;
+
+  readonly grupoFormatter = (item: CentroCostoOption | string): string =>
+    typeof item === 'string' ? item : `${item.codigo} - ${item.nombre}`;
 
   get baseRoute(): string {
     return this.router.url.startsWith('/restaurante/servicios') ? '/restaurante/servicios' : '/catalogos/servicios';
@@ -61,8 +86,14 @@ export class ServiciosComponent implements OnInit {
     const nombre = this.normalizeNombre(this.filterNombre);
 
     const request = nombre
-      ? this.serviciosService.buscarServicios(nombre, visible, this.currentPage, this.pageSize, codGrupo, codCateg)
-      : this.serviciosService.getServicios(visible, this.currentPage, this.pageSize, codGrupo, codCateg);
+      ? this.serviciosService.consultarServiciosPorNombre(nombre, visible, this.currentPage, this.pageSize)
+      : this.serviciosService.consultarServiciosPorGrupo(
+          visible,
+          this.currentPage,
+          this.pageSize,
+          codGrupo,
+          codCateg
+        );
 
     request.subscribe({
       next: (result) => {
@@ -149,6 +180,8 @@ export class ServiciosComponent implements OnInit {
     this.filterNombre = '';
     this.filterCategoria = '';
     this.filterGrupo = '';
+    this.categoriaSearchValue = '';
+    this.grupoSearchValue = '';
     this.filterVisible = '1';
     this.currentPage = 1;
     this.loadServicios();
@@ -173,8 +206,79 @@ export class ServiciosComponent implements OnInit {
     this.filterVisible = checked ? '1' : '0';
   }
 
+  onCategoriaSelected(event: NgbTypeaheadSelectItemEvent<CategoriaOption>): void {
+    this.filterCategoria = event.item.codigo;
+    this.categoriaSearchValue = event.item;
+  }
+
+  onGrupoSelected(event: NgbTypeaheadSelectItemEvent<CentroCostoOption>): void {
+    this.filterGrupo = event.item.codigo;
+    this.grupoSearchValue = event.item;
+  }
+
+  onCategoriaInputChange(value: CategoriaOption | string): void {
+    this.categoriaSearchValue = value;
+    this.filterCategoria = typeof value === 'string' ? this.resolveLookupCode(this.categoriaOptions, value) : value.codigo;
+  }
+
+  onGrupoInputChange(value: CentroCostoOption | string): void {
+    this.grupoSearchValue = value;
+    this.filterGrupo = typeof value === 'string' ? this.resolveLookupCode(this.grupoOptions, value) : value.codigo;
+  }
+
+  openLookupModal(type: 'categoria' | 'grupo'): void {
+    this.lookupModal = type;
+    this.lookupModalQuery = '';
+  }
+
+  closeLookupModal(): void {
+    this.lookupModal = null;
+    this.lookupModalQuery = '';
+  }
+
+  get lookupModalTitle(): string {
+    return this.lookupModal === 'categoria' ? 'Seleccionar categoria' : 'Seleccionar grupo';
+  }
+
+  get lookupModalOptions(): Array<CategoriaOption | CentroCostoOption> {
+    const options = this.lookupModal === 'categoria' ? this.categoriaOptions : this.grupoOptions;
+    return this.filterLookupOptions(options, this.lookupModalQuery, 50);
+  }
+
+  selectLookupModalOption(option: CategoriaOption | CentroCostoOption): void {
+    if (this.lookupModal === 'categoria') {
+      this.filterCategoria = option.codigo;
+      this.categoriaSearchValue = option;
+    } else {
+      this.filterGrupo = option.codigo;
+      this.grupoSearchValue = option;
+    }
+    this.closeLookupModal();
+  }
+
   private normalizeNombre(value: string): string {
     return (value || '').trim().replace(/\s+/g, ' ');
+  }
+
+  private filterLookupOptions<T extends { codigo: string; nombre: string }>(options: T[], term: string, limit = 12): T[] {
+    const normalized = (term || '').trim().toLowerCase();
+    if (!normalized) {
+      return options.slice(0, limit);
+    }
+    return options
+      .filter((item) => item.codigo.toLowerCase().includes(normalized) || item.nombre.toLowerCase().includes(normalized))
+      .slice(0, limit);
+  }
+
+  private resolveLookupCode<T extends { codigo: string; nombre: string }>(options: T[], value: string): string {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+      return '';
+    }
+    const match = options.find((item) =>
+      item.codigo.toLowerCase() === normalized || `${item.codigo} - ${item.nombre}`.toLowerCase() === normalized
+    );
+    return match?.codigo ?? '';
   }
 
   deleteServicio(servicio: ServicioUI): void {

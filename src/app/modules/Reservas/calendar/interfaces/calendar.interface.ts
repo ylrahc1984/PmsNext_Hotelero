@@ -80,6 +80,9 @@ export interface CalendarReservationBlockView {
   span: number;
   left: number;
   width: number;
+  continuesBefore: boolean;
+  continuesAfter: boolean;
+  colorIndex: number;
   label: string;
   tooltip: string;
 }

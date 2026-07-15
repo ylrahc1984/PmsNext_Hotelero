@@ -92,9 +92,34 @@ export const NavigationItems: NavigationItem[] = [
         icon: 'feather icon-shopping-cart',
         children: [
           { id: 'restaurante-facturacion', title: 'Facturación Restaurante', type: 'item', url: '/restaurant/puntos-venta', icon: 'feather icon-credit-card', classes: 'nav-item' },
+          { id: 'restaurante-cierre-caja', title: 'Cierre de Caja', type: 'item', url: '/restaurante/cierre-caja', icon: 'feather icon-lock', classes: 'nav-item' },
           { id: 'restaurante-cargos-habitacion', title: 'Cargos a Habitación', type: 'item', url: '/restaurante/cargos-habitacion', icon: 'feather icon-home', classes: 'nav-item' },
           { id: 'restaurante-servicios', title: 'Catalogo Comercial', type: 'item', url: '/restaurante/servicios', icon: 'feather icon-tag', classes: 'nav-item' },
           { id: 'restaurante-agencias', title: 'Clientes-Facturacion', type: 'item', url: '/restaurante/agencias', icon: 'feather icon-share-2', classes: 'nav-item' },
+          {
+            id: 'restaurante-analysis',
+            title: 'Análisis',
+            type: 'collapse',
+            icon: 'feather icon-bar-chart-2',
+            children: [
+              {
+                id: 'restaurante-analysis-productos',
+                title: 'Productos más vendidos',
+                type: 'item',
+                url: '/restaurante/analysis/productos-mas-vendidos',
+                icon: 'feather icon-trending-up',
+                classes: 'nav-item'
+              },
+              {
+                id: 'restaurante-analysis-meseros',
+                title: 'Ventas por mesero',
+                type: 'item',
+                url: '/restaurante/analysis/ventas-por-mesero',
+                icon: 'feather icon-users',
+                classes: 'nav-item'
+              }
+            ]
+          },
           { id: 'restaurante-configuracion', title: 'Configuración Restaurante', type: 'item', url: '/restaurante/configuracion', icon: 'feather icon-sliders', classes: 'nav-item' }
         ]
       },

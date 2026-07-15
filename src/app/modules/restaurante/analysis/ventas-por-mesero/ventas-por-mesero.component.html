@@ -1,0 +1,32 @@
+<section class="analysis-page" aria-label="Análisis de ventas por mesero">
+  <app-analysis-page-header title="Ventas por mesero" description="Compare el desempeño comercial, volumen de atención y ticket promedio del equipo de servicio." />
+  <section class="analysis-card filter-card" aria-label="Filtros de ventas por mesero">
+    <div class="card-heading"><div class="card-heading__title"><i class="feather icon-filter"></i><span>Filtros de consulta</span></div><small>Combine criterios para delimitar el período de análisis.</small></div>
+    <div class="filters-grid">
+      <div class="filter-field"><label for="meseroFechaInicial">Fecha Inicial</label><input id="meseroFechaInicial" type="date" class="form-control" [ngModel]="fechaInicial()" (ngModelChange)="fechaInicial.set($event)"></div>
+      <div class="filter-field"><label for="meseroFechaFinal">Fecha Final</label><input id="meseroFechaFinal" type="date" class="form-control" [ngModel]="fechaFinal()" (ngModelChange)="fechaFinal.set($event)"></div>
+      <div class="filter-field"><label for="meseroPuntoVenta">Punto de Venta</label><select id="meseroPuntoVenta" class="form-select" [ngModel]="puntoVenta()" (ngModelChange)="puntoVenta.set($event)"><option value="">Todos</option><option>Restaurante Principal</option><option>Bar Piscina</option><option>Room Service</option></select></div>
+      <div class="filter-field"><label for="meseroNombre">Mesero</label><select id="meseroNombre" class="form-select" [ngModel]="mesero()" (ngModelChange)="mesero.set($event)"><option value="">Todos</option><option>Carlos Pérez</option><option>María Rodríguez</option><option>Andrés Vargas</option></select></div>
+      <div class="filter-field"><label for="meseroEstado">Estado</label><select id="meseroEstado" class="form-select" [ngModel]="estado()" (ngModelChange)="estado.set($event)"><option value="">Todos</option><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></div>
+      <div class="filter-actions"><button type="button" class="btn btn-outline-secondary" (click)="limpiar()"><i class="feather icon-rotate-ccw"></i>Limpiar</button><button type="button" class="btn btn-primary" (click)="buscar()"><i class="feather icon-search"></i>Buscar</button></div>
+    </div>
+  </section>
+  <div class="results-layout">
+    <section class="analysis-card results-card" aria-label="Resultados de ventas por mesero">
+      <div class="results-card__header"><h2>Detalle por mesero</h2><span class="result-count">{{ ventas().length }} meseros</span></div>
+      <div class="table-responsive">
+        <table class="table analysis-table">
+          <thead><tr><th>#</th><th>Mesero</th><th class="text-end">Facturas</th><th class="text-end">Clientes</th><th class="text-end">Subtotal</th><th class="text-end">Impuestos</th><th class="text-end">Total</th><th class="text-end">Ticket Promedio</th></tr></thead>
+          <tbody>
+            @for (item of ventas(); track item.mesero; let index = $index) {
+              <tr><td>{{ index + 1 }}</td><td class="primary-cell">{{ item.mesero }}</td><td class="text-end">{{ item.facturas }}</td><td class="text-end">{{ item.clientes }}</td><td class="text-end">{{ item.subtotal | currency:'USD' }}</td><td class="text-end">{{ item.impuestos | currency:'USD' }}</td><td class="text-end primary-cell">{{ item.total | currency:'USD' }}</td><td class="text-end primary-cell">{{ item.ticketPromedio | currency:'USD' }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <aside class="analysis-card chart-placeholder" aria-label="Espacio reservado para gráfico">
+      <div class="placeholder-content"><span class="placeholder-icon"><i class="feather icon-bar-chart-2"></i></span><h2>Gráfico de Ventas por Mesero</h2><p>Próximamente</p></div>
+    </aside>
+  </div>
+</section>

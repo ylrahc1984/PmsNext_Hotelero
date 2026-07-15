@@ -27,8 +27,12 @@
       </div>
 
       <div class="filters-card mb-3">
-        <div class="row filters-row">
-          <div class="col-lg-3 col-md-6 mb-3">
+        <div class="filters-heading">
+          <div><i class="feather icon-filter"></i><span>Filtrar catalogo</span></div>
+          <small>Busca y combina criterios para encontrar productos.</small>
+        </div>
+        <div class="filters-grid">
+          <div class="filter-field filter-field--name">
             <label class="small-label">Nombre</label>
             <input
               type="search"
@@ -38,27 +42,37 @@
               (keyup.enter)="onBuscar()"
             >
           </div>
-          <div class="col-lg-3 col-md-6 mb-3">
+          <div class="filter-field">
             <label class="small-label">Categoria</label>
-            <select class="form-control" [(ngModel)]="filterCategoria">
-              <option value="">Todas</option>
-              <option *ngFor="let categoria of categoriaOptions" [value]="categoria.codigo">
-                {{ categoria.codigo }} - {{ categoria.nombre }}
-              </option>
-            </select>
+            <div class="lookup-filter-control">
+              <input type="search" class="form-control" placeholder="Buscar categoria"
+                     autocomplete="off" [ngbTypeahead]="searchCategorias" [inputFormatter]="categoriaFormatter"
+                     [resultFormatter]="categoriaFormatter" [editable]="true"
+                     [ngModel]="categoriaSearchValue" (ngModelChange)="onCategoriaInputChange($event)"
+                     (selectItem)="onCategoriaSelected($event)">
+              <button type="button" class="btn btn-outline-secondary lookup-filter-button" (click)="openLookupModal('categoria')"
+                      title="Abrir catalogo de categorias" aria-label="Abrir catalogo de categorias">
+                <i class="feather icon-search"></i>
+              </button>
+            </div>
           </div>
-          <div class="col-lg-3 col-md-6 mb-3">
+          <div class="filter-field">
             <label class="small-label">Grupo</label>
-            <select class="form-control" [(ngModel)]="filterGrupo">
-              <option value="">Todos</option>
-              <option *ngFor="let grupo of grupoOptions" [value]="grupo.codigo">
-                {{ grupo.codigo }} - {{ grupo.nombre }}
-              </option>
-            </select>
+            <div class="lookup-filter-control">
+              <input type="search" class="form-control" placeholder="Buscar grupo"
+                     autocomplete="off" [ngbTypeahead]="searchGrupos" [inputFormatter]="grupoFormatter"
+                     [resultFormatter]="grupoFormatter" [editable]="true"
+                     [ngModel]="grupoSearchValue" (ngModelChange)="onGrupoInputChange($event)"
+                     (selectItem)="onGrupoSelected($event)">
+              <button type="button" class="btn btn-outline-secondary lookup-filter-button" (click)="openLookupModal('grupo')"
+                      title="Abrir catalogo de grupos" aria-label="Abrir catalogo de grupos">
+                <i class="feather icon-search"></i>
+              </button>
+            </div>
           </div>
-          <div class="col-lg-3 col-md-6 mb-3 visible-col">
+          <div class="filter-field filter-field--visible">
+            <span class="small-label">Estado</span>
             <div class="visible-inline">
-              <span class="small-label">Visible</span>
               <label
                 class="visible-filter"
                 [attr.data-state]="filterVisible === '1' ? 'yes' : 'no'"
@@ -71,44 +85,78 @@
                 >
                 <span class="visible-track"></span>
                 <span class="visible-text">
-                  {{ filterVisible === '1' ? 'Si' : 'No' }}
+                  {{ filterVisible === '1' ? 'Visibles' : 'Ocultos' }}
                 </span>
               </label>
             </div>
           </div>
-        </div>
-        <div class="row align-items-end">
-          <div class="col-12">
-            <button class="btn btn-outline-secondary mr-2" (click)="onLimpiar()" [disabled]="isLoading">Limpiar</button>
-            <button class="btn btn-primary" (click)="onBuscar()" [disabled]="isLoading">Buscar</button>
+          <div class="filter-actions">
+            <button class="btn btn-outline-secondary" (click)="onLimpiar()" [disabled]="isLoading">
+              <i class="feather icon-rotate-ccw"></i><span>Limpiar</span>
+            </button>
+            <button class="btn btn-primary" (click)="onBuscar()" [disabled]="isLoading">
+              <span *ngIf="isLoading" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+              <i *ngIf="!isLoading" class="feather icon-search"></i><span>Buscar</span>
+            </button>
           </div>
         </div>
       </div>
       <div class="table-responsive">
-        <table class="table table-striped table-compact">
+        <table class="table commercial-table">
+          <colgroup>
+            <col class="commercial-col-code">
+            <col class="commercial-col-product">
+            <col class="commercial-col-category">
+            <col class="commercial-col-group">
+            <col class="commercial-col-cabys">
+            <col class="commercial-col-unit">
+            <col class="commercial-col-cost">
+            <col class="commercial-col-price">
+            <col class="commercial-col-status">
+            <col class="commercial-col-user">
+            <col class="commercial-col-actions">
+          </colgroup>
           <thead>
             <tr>
               <th>Codigo</th>
-              <th>Nombre</th>
+              <th>Producto</th>
               <th>Categoria</th>
               <th>Grupo</th>
-              <th>Cabys</th>
-              <th>Visible</th>
+              <th>CABYS</th>
+              <th>Unidad</th>
+              <th class="text-end">Costo real</th>
+              <th class="text-end">Precio final</th>
+              <th>Estado</th>
+              <th>Usuario</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
+            <tr *ngIf="isLoading && !filteredServicios.length">
+              <td colspan="11" class="commercial-state-cell">
+                <span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>
+                Cargando catalogo comercial...
+              </td>
+            </tr>
             <tr *ngFor="let servicio of filteredServicios">
-              <td>{{ servicio.codReceta }}</td>
-              <td>{{ servicio.nomReceta }}</td>
-              <td>{{ servicio.codCateg }}</td>
-              <td>{{ servicio.codGrupo }}</td>
-              <td>{{ servicio.cabys }}</td>
+              <td><span class="service-code">{{ servicio.codReceta }}</span></td>
               <td>
-                <span class="badge {{ getVisibleBadge(servicio.visible) }}">
-                  {{ servicio.visible === 1 ? 'Si' : 'No' }}
+                <div class="servicio-name">{{ servicio.nomReceta }}</div>
+                <small class="servicio-short-name" *ngIf="servicio.nomCorto">{{ servicio.nomCorto }}</small>
+              </td>
+              <td>{{ servicio.codCateg || '—' }}</td>
+              <td>{{ servicio.codGrupo || '—' }}</td>
+              <td><span class="cabys-cell">{{ servicio.cabys || '—' }}</span></td>
+              <td>{{ servicio.uMedida || '—' }}</td>
+              <td class="text-end numeric-cell">₡{{ servicio.ctoTotal | number:'1.2-2' }}</td>
+              <td class="text-end numeric-cell numeric-cell--final">₡{{ servicio.totalCUtilidad | number:'1.2-2' }}</td>
+              <td>
+                <span class="status-pill" [class.status-pill--visible]="servicio.visible === 1">
+                  <span class="status-dot"></span>
+                  {{ servicio.visible === 1 ? 'Visible' : 'Oculto' }}
                 </span>
               </td>
+              <td><span class="user-cell">{{ servicio.operador || '—' }}</span></td>
               <td class="text-center">
                 <div class="servicio-actions">
                   <button
@@ -132,6 +180,13 @@
                 </div>
               </td>
             </tr>
+            <tr *ngIf="!isLoading && !filteredServicios.length">
+              <td colspan="11" class="commercial-state-cell commercial-state-cell--empty">
+                <i class="feather icon-inbox" aria-hidden="true"></i>
+                <strong>No se encontraron productos</strong>
+                <span>Prueba cambiando los filtros de busqueda.</span>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -153,5 +208,39 @@
         </div>
       </div>
     </app-card>
+  </div>
+</div>
+
+<div class="lookup-modal-overlay" *ngIf="lookupModal" (click)="closeLookupModal()">
+  <div class="lookup-modal" role="dialog" aria-modal="true" [attr.aria-label]="lookupModalTitle" (click)="$event.stopPropagation()">
+    <div class="lookup-modal-header">
+      <div>
+        <h6>{{ lookupModalTitle }}</h6>
+        <small>Busca por codigo o descripcion</small>
+      </div>
+      <button type="button" class="btn btn-sm btn-light" (click)="closeLookupModal()" aria-label="Cerrar">
+        <i class="feather icon-x"></i>
+      </button>
+    </div>
+    <div class="lookup-modal-body">
+      <div class="lookup-modal-search">
+        <i class="feather icon-search"></i>
+        <input type="search" class="form-control" [(ngModel)]="lookupModalQuery"
+               [placeholder]="lookupModal === 'categoria' ? 'Buscar categoria' : 'Buscar grupo'" autofocus>
+      </div>
+      <div class="lookup-modal-results">
+        <button type="button" class="lookup-option" *ngFor="let option of lookupModalOptions"
+                (click)="selectLookupModalOption(option)">
+          <span class="lookup-option-code">{{ option.codigo }}</span>
+          <span class="lookup-option-name">{{ option.nombre }}</span>
+          <i class="feather icon-chevron-right"></i>
+        </button>
+        <div class="lookup-modal-empty" *ngIf="!lookupModalOptions.length">
+          <i class="feather icon-search"></i>
+          <span>No se encontraron coincidencias.</span>
+        </div>
+      </div>
+      <small class="lookup-modal-limit" *ngIf="lookupModalOptions.length === 50">Mostrando las primeras 50 coincidencias.</small>
+    </div>
   </div>
 </div>

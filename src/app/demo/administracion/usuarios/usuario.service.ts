@@ -314,14 +314,14 @@ export class UsuarioService {
 
   private mapPuntoVentaFromApi(apiData: PuntoVenta): PuntoVentaUI {
     return {
-      codigo: this.normalizeCatalogText(apiData.MPV07_CodPntVenta),
-      descripcion: this.normalizeCatalogText(apiData.MPV07_NomPntVenta),
+      codigo: this.normalizeCatalogText(apiData.MPV07_CodPntVenta ?? apiData.MPV08_CodPntVenta ?? apiData.codPntVenta),
+      descripcion: this.normalizeCatalogText(apiData.MPV07_NomPntVenta ?? apiData.MPV08_NomPntVenta ?? apiData.nomPntVenta),
       codComanda: this.normalizeCatalogText(apiData.MPV07_CodComanda),
       codDocumento: this.normalizeCatalogText(apiData.MPV07_CodDocumento),
       codLstPrecio: this.normalizeCatalogText(apiData.MPV07_CodLstPrecio),
-      numMesas: apiData.MPV07_NumMesas,
-      pntTouch: apiData.MPV07_PntTouch,
-      orden: apiData.MPV07_Orden,
+      numMesas: Number(apiData.MPV07_NumMesas ?? 0),
+      pntTouch: Number(apiData.MPV07_PntTouch ?? 0),
+      orden: Number(apiData.MPV07_Orden ?? apiData.MPV08_Orden ?? 0),
       operador: this.normalizeCatalogText(apiData.MPV07_Operador),
       impresoraA: this.normalizeCatalogText(apiData.MPV07_ImpresoraA),
       impresoraB: this.normalizeCatalogText(apiData.MPV07_ImpresoraB)

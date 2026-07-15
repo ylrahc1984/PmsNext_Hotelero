@@ -116,17 +116,22 @@ export interface PrivilegioCatalogoUI {
 }
 
 export interface PuntoVenta {
-  MPV07_CodPntVenta: string;
-  MPV07_NomPntVenta: string;
-  MPV07_CodComanda: string;
-  MPV07_CodDocumento: unknown;
-  MPV07_CodLstPrecio: unknown;
-  MPV07_NumMesas: number;
-  MPV07_PntTouch: number;
-  MPV07_Orden: number;
-  MPV07_Operador: string;
-  MPV07_ImpresoraA: unknown;
-  MPV07_ImpresoraB: unknown;
+  MPV07_CodPntVenta?: string;
+  MPV07_NomPntVenta?: string;
+  MPV07_CodComanda?: string;
+  MPV07_CodDocumento?: unknown;
+  MPV07_CodLstPrecio?: unknown;
+  MPV07_NumMesas?: number;
+  MPV07_PntTouch?: number;
+  MPV07_Orden?: number;
+  MPV07_Operador?: string;
+  MPV07_ImpresoraA?: unknown;
+  MPV07_ImpresoraB?: unknown;
+  MPV08_CodPntVenta?: string;
+  MPV08_NomPntVenta?: string;
+  MPV08_Orden?: number;
+  codPntVenta?: string;
+  nomPntVenta?: string;
 }
 
 export interface PuntoVentaUI {

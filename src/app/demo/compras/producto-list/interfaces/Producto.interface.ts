@@ -21,7 +21,4 @@ export interface Producto {
   MAC02_URL: string;
   MAC02_CABYS: string;
   Stock: number;
-  TotalRegistros: number;
-  PaginaActual: number;
-  TotalPaginas: number;
 }

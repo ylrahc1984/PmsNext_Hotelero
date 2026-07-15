@@ -21,7 +21,7 @@ export interface ServicioDto {
   MPV01_CtoTotal: number;
   MPV01_Descripcion: string;
   MPV01_Visible: number;
-  MPV01_UrlImagen: string;
+  MPV01_UrlImagen: unknown;
   MPV01_Operador: string;
   MPV01_CABYS: string;
   MPV01_Compuesto: string;
@@ -54,6 +54,85 @@ export interface ServicioPost {
   respuesta: string;
 }
 
+export interface RecetaDetallePayload {
+  dR_Tipo: string;
+  dR_CodProducto: string;
+  dR_NomProducto: string;
+  dR_UnMProducto: string;
+  dR_CodEquival: string;
+  dR_PorMerma: number;
+  dR_CanProducto: number;
+  dR_UMDestino: string;
+  dR_CtoProducto: number;
+  dR_CtoTotal: number;
+  dR_Orden: number;
+}
+
+export interface ManejoRecetaPayload {
+  proceso: number;
+  tmpdetalle: RecetaDetallePayload[];
+  codcateg: string;
+  codgrupo: string;
+  codreceta: string;
+  nomreceta: string;
+  nomcorto: string;
+  umedida: string;
+  numporciones: number;
+  ctoreceta: number;
+  ctoproduccion: number;
+  ctoneto: number;
+  utilidad: number;
+  totalcutilidad: number;
+  ctototal: number;
+  descripcion: string;
+  visible: number;
+  urlimagen: string;
+  operador: string;
+  cabys: string;
+  compuesto: string;
+  pageNumber: number;
+  pageSize: number;
+}
+
+export interface EquivalenciaGeneralDto {
+  MPV03_CodEqui: number;
+  MPV03_UMOrigen: string;
+  MPV03_Cantidad: number;
+  MPV03_UMDestino: string;
+  MPV03_Equivalencia: number;
+  MPV03_Descripcion: string;
+  MPV03_Operador: string;
+}
+
+interface RecetaDetalleDto {
+  MPV02_CodReceta: string;
+  MPV02_Tipo: string;
+  MPV02_CodProducto: string;
+  MPV02_NomProducto: string;
+  MPV02_UnMProducto: string;
+  MPV02_CodEquival: number;
+  MPV02_PorMerma: number;
+  MPV02_CanProducto: number;
+  MPV02_UnMDestino: string;
+  MPV02_CtoProducto: number;
+  MPV02_CtoTotal: number;
+  MPV02_Orden: number;
+}
+
+interface EstructuraRecetaResponse {
+  mensaje?: string;
+  encabezado?: ServicioDto;
+  detalle?: RecetaDetalleDto[];
+  totalDetalles?: number;
+}
+
+export interface EstructuraRecetaCompleta {
+  mensaje: string;
+  encabezado: ServicioUI | null;
+  detalle: RecetaDetallePayload[];
+  totalDetalles: number;
+}
+
 export interface ServicioUI {
   codCateg: string;
   codGrupo: string;
@@ -73,6 +152,7 @@ export interface ServicioUI {
   urlImagen: string;
   cabys: string;
   compuesto: string;
+  operador?: string;
 }
 
 export interface CentroCostoDto {
@@ -125,16 +205,76 @@ export interface UnidadMedidaOption {
   descripcion: string;
 }
 
+export interface ServiciosPaginados {
+  data: ServicioUI[];
+  totalRegistros: number;
+  paginaActual: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class ServiciosService {
   private apiUrl = `${environment.apiUrl}/encreceta`;
+  private manejoRecetaUrl = `${environment.apiUrl}/manejo-receta`;
   private centroCostoUrl = `${environment.apiUrl}/centrocosto`;
   private categoriaUrl = `${environment.apiUrl}/categoria`;
   private unidadMedidaUrl = `${environment.apiUrl}/unidadmedida`;
+  private equivalenciaGeneralUrl = `${environment.apiUrl}/equivalencia-general`;
 
   constructor(private http: HttpClient, private auth: AuthService) {}
+
+  consultarServiciosPorGrupo(
+    visible: number | undefined,
+    pageNumber = 1,
+    pageSize = 20,
+    codGrupo?: string,
+    codCateg?: string,
+    nomReceta?: string
+  ): Observable<ServiciosPaginados> {
+    let params = new HttpParams()
+      .set('pageNumber', String(pageNumber))
+      .set('pageSize', String(pageSize));
+
+    if (typeof visible === 'number') {
+      params = params.set('visible', String(visible));
+    }
+    if (codGrupo?.trim()) {
+      params = params.set('codGrupo', codGrupo.trim());
+    }
+    if (codCateg?.trim()) {
+      params = params.set('codCateg', codCateg.trim());
+    }
+    if (nomReceta?.trim()) {
+      params = params.set('nomReceta', nomReceta.trim());
+    }
+
+    return this.http
+      .get<{ datos?: ServicioDto[]; paginacion?: unknown }>(`${this.manejoRecetaUrl}/consultar-por-grupo`, { params })
+      .pipe(map((response) => this.mapPagedResponse(response, pageNumber, pageSize)));
+  }
+
+  consultarServiciosPorNombre(
+    nomReceta: string,
+    visible: number | undefined,
+    pageNumber = 1,
+    pageSize = 20
+  ): Observable<ServiciosPaginados> {
+    let params = new HttpParams()
+      .set('nomReceta', nomReceta.trim())
+      .set('pageNumber', String(pageNumber))
+      .set('pageSize', String(pageSize));
+
+    if (typeof visible === 'number') {
+      params = params.set('visible', String(visible));
+    }
+
+    return this.http
+      .get<{ datos?: ServicioDto[]; paginacion?: unknown }>(`${this.manejoRecetaUrl}/consultar-por-nombre`, { params })
+      .pipe(map((response) => this.mapPagedResponse(response, pageNumber, pageSize)));
+  }
 
   getServicios(
     visible: number | undefined,
@@ -219,6 +359,23 @@ export class ServiciosService {
     );
   }
 
+  getEstructuraRecetaCompleta(codReceta: string): Observable<EstructuraRecetaCompleta> {
+    const codigo = encodeURIComponent(codReceta.trim());
+    return this.http
+      .get<EstructuraRecetaResponse>(`${this.manejoRecetaUrl}/consultar-estructura-completa/${codigo}`)
+      .pipe(map((response) => {
+        const detalle = (response?.detalle ?? [])
+          .map((item) => this.mapDetalleFromApi(item))
+          .sort((a, b) => a.dR_Orden - b.dR_Orden);
+        return {
+          mensaje: response?.mensaje ?? '',
+          encabezado: response?.encabezado ? this.mapFromApi(response.encabezado) : null,
+          detalle,
+          totalDetalles: Number(response?.totalDetalles ?? detalle.length) || detalle.length
+        };
+      }));
+  }
+
   getServiciosActivosAll(pageSize = 20): Observable<ServicioUI[]> {
     return this.buscarServicios('', 1, 1, pageSize).pipe(
       switchMap((result) => {
@@ -292,9 +449,28 @@ export class ServiciosService {
     );
   }
 
+  getEquivalenciasPorUnidadOrigen(umOrigen: string): Observable<EquivalenciaGeneralDto[]> {
+    const params = new HttpParams().set('umOrigen', umOrigen.trim());
+    return this.http
+      .get<EquivalenciaGeneralDto[]>(`${this.equivalenciaGeneralUrl}/consultar-por-umorigen`, { params })
+      .pipe(map((response) => Array.isArray(response) ? response : []));
+  }
+
   crearServicio(payload: ServicioPost): Observable<{ respuesta?: string }> {
     const normalized = this.normalizePayload(payload, 1);
     return this.http.post(this.apiUrl, normalized, { responseType: 'text' }).pipe(map((res) => this.parseTextResponse(res)));
+  }
+
+  insertarManejoReceta(payload: ManejoRecetaPayload): Observable<{ respuesta?: string }> {
+    return this.http
+      .post(`${this.manejoRecetaUrl}/insertar`, { ...payload, operador: this.getOperador() }, { responseType: 'text' })
+      .pipe(map((response) => this.parseTextResponse(response)));
+  }
+
+  actualizarManejoReceta(payload: ManejoRecetaPayload): Observable<{ respuesta?: string }> {
+    return this.http
+      .put(`${this.manejoRecetaUrl}/actualizar`, { ...payload, operador: this.getOperador() }, { responseType: 'text' })
+      .pipe(map((response) => this.parseTextResponse(response)));
   }
 
   editarServicio(codReceta: string, payload: ServicioPost): Observable<{ respuesta?: string }> {
@@ -365,10 +541,42 @@ export class ServiciosService {
       ctoTotal: apiData.MPV01_CtoTotal ?? 0,
       descripcion: apiData.MPV01_Descripcion,
       visible: apiData.MPV01_Visible ?? 0,
-      urlImagen: apiData.MPV01_UrlImagen,
+      urlImagen: typeof apiData.MPV01_UrlImagen === 'string' ? apiData.MPV01_UrlImagen.trim() : '',
       cabys: apiData.MPV01_CABYS,
-      compuesto: apiData.MPV01_Compuesto || 'N'
+      compuesto: apiData.MPV01_Compuesto || 'N',
+      operador: (apiData.MPV01_Operador || '').trim()
     };
+  }
+
+  private mapDetalleFromApi(item: RecetaDetalleDto): RecetaDetallePayload {
+    return {
+      dR_Tipo: (item.MPV02_Tipo || '').trim(),
+      dR_CodProducto: (item.MPV02_CodProducto || '').trim(),
+      dR_NomProducto: (item.MPV02_NomProducto || '').trim(),
+      dR_UnMProducto: (item.MPV02_UnMProducto || '').trim(),
+      dR_CodEquival: String(item.MPV02_CodEquival ?? ''),
+      dR_PorMerma: Number(item.MPV02_PorMerma) || 0,
+      dR_CanProducto: Number(item.MPV02_CanProducto) || 0,
+      dR_UMDestino: (item.MPV02_UnMDestino || '').trim(),
+      dR_CtoProducto: Number(item.MPV02_CtoProducto) || 0,
+      dR_CtoTotal: Number(item.MPV02_CtoTotal) || 0,
+      dR_Orden: Number(item.MPV02_Orden) || 0
+    };
+  }
+
+  private mapPagedResponse(
+    response: { datos?: ServicioDto[]; paginacion?: unknown },
+    pageNumber: number,
+    pageSize: number
+  ): ServiciosPaginados {
+    const data = (response?.datos ?? []).map((item) => this.mapFromApi(item));
+    const { totalRegistros, paginaActual, size, totalPages } = this.resolvePagination(response?.paginacion, {
+      fallbackPageNumber: pageNumber,
+      fallbackPageSize: pageSize,
+      fallbackTotalRegistros: data.length
+    });
+
+    return { data, totalRegistros, paginaActual, pageSize: size, totalPages };
   }
 
   private parseTextResponse(response: string): { respuesta?: string } {

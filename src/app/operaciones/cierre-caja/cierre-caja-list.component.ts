@@ -105,28 +105,6 @@ export class CierreCajaListComponent implements OnInit {
   }
 
   private loadPuntosVenta(): void {
-    if (!this.currentUsuario) {
-      this.loadPuntosVentaCatalogo();
-      return;
-    }
-
-    this.puntosVentaLoading = true;
-    this.usuarioService
-      .getPuntosVentaUsuario(this.currentUsuario)
-      .pipe(catchError(() => of([] as PuntoVentaUI[])))
-      .subscribe((data) => {
-        const puntosVenta = this.sortPuntosVenta(data);
-        if (puntosVenta.length > 0) {
-          this.applyPuntosVentaCatalogo(puntosVenta);
-          this.puntosVentaLoading = false;
-          return;
-        }
-
-        this.loadPuntosVentaCatalogo();
-      });
-  }
-
-  private loadPuntosVentaCatalogo(): void {
     this.puntosVentaLoading = true;
     this.usuarioService
       .getPuntosVenta()

@@ -4,33 +4,60 @@
 
 .reservation-block {
   position: absolute;
-  top: 6px;
-  height: 36px;
+  top: 9px;
+  height: 30px;
   border: 0;
-  border-radius: 10px;
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
-  padding: 0 0.55rem;
-  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.12);
+  padding: 0 0.72rem;
+  background: transparent;
   color: #ffffff;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
   overflow: visible;
   white-space: nowrap;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  transition: transform 0.16s ease, filter 0.16s ease;
   z-index: 2;
+  isolation: isolate;
+  cursor: grab;
+}
+
+.reservation-block::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--reservation-background);
+  clip-path: polygon(9px 0, 100% 0, calc(100% - 9px) 100%, 0 100%);
+  filter: drop-shadow(0 3px 5px rgba(15, 23, 42, 0.14));
+}
+
+.reservation-block--continues-before::before {
+  clip-path: polygon(0 0, 100% 0, calc(100% - 9px) 100%, 0 100%);
+}
+
+.reservation-block--continues-after::before {
+  clip-path: polygon(9px 0, 100% 0, 100% 100%, 0 100%);
+}
+
+.reservation-block--continues-before.reservation-block--continues-after::before {
+  clip-path: none;
 }
 
 .reservation-block__guest {
+  min-width: 0;
+  width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
+  position: relative;
+  z-index: 1;
 }
 
 .reservation-block:hover,
 .reservation-block:focus-visible {
   transform: translateY(-1px);
-  box-shadow: 0 14px 22px rgba(15, 23, 42, 0.18);
+  filter: brightness(1.04) saturate(1.03);
   z-index: 8;
 }
 
@@ -38,7 +65,10 @@
   opacity: 0.22;
   filter: grayscale(0.25);
   transform: translateY(0);
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.55), 0 0 0 2px rgba(71, 85, 105, 0.08);
+}
+
+.reservation-block--ghost::before {
+  filter: grayscale(0.25);
 }
 
 .reservation-block:focus-visible {
@@ -107,14 +137,56 @@
 }
 
 .reservation-block--ocupada {
-  background: linear-gradient(135deg, #2e608f, #457db0);
+  --reservation-background: linear-gradient(90deg, #93b4f2, #a8c3f7);
+  color: #18345f;
 }
 
 .reservation-block--reservada {
-  background: linear-gradient(135deg, #e6bc57, #f1d583);
-  color: #5b430e;
+  --reservation-background: linear-gradient(90deg, #8bd8c8, #9be0d2);
+  color: #164d48;
 }
 
 .reservation-block--bloqueada {
-  background: linear-gradient(135deg, #8c98ab, #b2bcc9);
+  --reservation-background: linear-gradient(90deg, #cfd3da, #dfe2e7);
+  color: #3f4754;
+}
+
+.reservation-block--color-0 {
+  --reservation-background: linear-gradient(90deg, #91d9ca, #a6e3d7);
+  color: #174c47;
+}
+
+.reservation-block--color-1 {
+  --reservation-background: linear-gradient(90deg, #9cbaf2, #b0c8f7);
+  color: #1c3d70;
+}
+
+.reservation-block--color-2 {
+  --reservation-background: linear-gradient(90deg, #f3aaa8, #f7bebc);
+  color: #71302f;
+}
+
+.reservation-block--color-3 {
+  --reservation-background: linear-gradient(90deg, #c5afea, #d5c4f0);
+  color: #49336b;
+}
+
+.reservation-block--color-4 {
+  --reservation-background: linear-gradient(90deg, #f1cf82, #f6dda4);
+  color: #654b12;
+}
+
+.reservation-block--color-5 {
+  --reservation-background: linear-gradient(90deg, #86cedd, #a1dce7);
+  color: #174b57;
+}
+
+.reservation-block--color-6 {
+  --reservation-background: linear-gradient(90deg, #b2d88f, #c5e4aa);
+  color: #365421;
+}
+
+.reservation-block--color-7 {
+  --reservation-background: linear-gradient(90deg, #d7b2ca, #e3c5d8);
+  color: #59384e;
 }

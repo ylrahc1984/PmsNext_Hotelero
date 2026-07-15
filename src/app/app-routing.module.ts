@@ -126,6 +126,10 @@ const routes: Routes = [
     canActivate: [AuthGuard],
     canActivateChild: [AuthGuard],
     children: [
+      {
+        path: 'analysis',
+        loadChildren: () => import('./modules/restaurante/analysis/analysis.routes').then((routes) => routes.ANALYSIS_ROUTES)
+      },
       ...pmsPlaceholderChildRoutes('Restaurante', [
         ['dashboard', 'Dashboard Restaurante'],
         ['mesas', 'Mesas / Salones'],
@@ -141,6 +145,10 @@ const routes: Routes = [
         path: 'facturacion',
         redirectTo: '/restaurant/puntos-venta',
         pathMatch: 'full'
+      },
+      {
+        path: 'cierre-caja',
+        loadComponent: () => import('./operaciones/cierre-caja/cierre-caja-list.component').then((c) => c.CierreCajaListComponent)
       },
       {
         path: 'mesa/:id',

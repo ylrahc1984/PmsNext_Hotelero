@@ -15,14 +15,14 @@
       <div class="row">
         <div class="col-12">
           <form class="servicio-form" #servicioForm="ngForm" (ngSubmit)="saveServicio(servicioForm)">
-            <div class="form-section">
+            <div class="form-section general-info-section">
               <h6 class="section-title">
                 <i class="feather icon-info"></i>
                 Informacion General Comercial
               </h6>
-              <div class="row">
-                <div class="col-md-6">
-                  <div class="form-group">
+              <div class="row general-info-row">
+                <div class="col-lg-7 col-md-6">
+                  <div class="form-group general-info-field">
                     <label class="form-label">
                       <i class="feather icon-tag"></i>
                       Nombre Comercial *
@@ -31,8 +31,8 @@
                            placeholder="Nombre comercial">
                   </div>
                 </div>
-                <div class="col-md-6">
-                  <div class="form-group">
+                <div class="col-lg-5 col-md-6">
+                  <div class="form-group general-info-field">
                     <label class="form-label">
                       <i class="feather icon-edit-2"></i>
                       Nombre Corto
@@ -42,9 +42,9 @@
                   </div>
                 </div>
               </div>
-              <div class="row">
+              <div class="row general-info-row">
                 <div class="col-md-4">
-                  <div class="form-group">
+                  <div class="form-group general-info-field">
                     <label class="form-label">
                       <i class="feather icon-layers"></i>
                       Categoria *
@@ -58,7 +58,7 @@
                   </div>
                 </div>
                 <div class="col-md-4">
-                  <div class="form-group">
+                  <div class="form-group general-info-field">
                     <label class="form-label">
                       <i class="feather icon-grid"></i>
                       Grupo *
@@ -72,7 +72,7 @@
                   </div>
                 </div>
                 <div class="col-md-4">
-                  <div class="form-group">
+                  <div class="form-group general-info-field">
                     <label class="form-label">
                       <i class="feather icon-shuffle"></i>
                       Unidad de Medida *
@@ -85,9 +85,9 @@
                   </div>
                 </div>
               </div>
-              <div class="row">
-                <div class="col-md-6">
-                  <div class="form-group">
+              <div class="row general-info-row general-info-row--media">
+                <div class="col-lg-5 col-md-6">
+                  <div class="form-group general-info-field">
                     <label class="form-label">
                       <i class="feather icon-hash"></i>
                       CABYS
@@ -102,8 +102,8 @@
                     <small class="text-muted">Consulta el codigo CABYS en Hacienda.</small>
                   </div>
                 </div>
-                <div class="col-md-6">
-                  <div class="form-group">
+                <div class="col-lg-7 col-md-6">
+                  <div class="form-group general-info-field">
                     <label class="form-label">
                       <i class="feather icon-image"></i>
                       Imagen (URL)
@@ -140,13 +140,133 @@
                   </div>
                 </div>
               </div>
-              <div class="form-group">
+              <div class="form-group general-info-field general-description-field">
                 <label class="form-label">
                   <i class="feather icon-file-text"></i>
                   Descripcion
                 </label>
-                <textarea class="form-control" [(ngModel)]="formData.descripcion" name="descripcion" rows="4"
+                <textarea class="form-control" [(ngModel)]="formData.descripcion" name="descripcion" rows="1"
                           placeholder="Describa detalladamente el registro comercial..."></textarea>
+              </div>
+            </div>
+
+            <div class="form-section recipe-section">
+              <div class="recipe-heading">
+                <div>
+                  <h6 class="section-title mb-1">
+                    <i class="feather icon-book-open"></i>
+                    Composicion del producto
+                  </h6>
+                  <p class="recipe-help mb-0">Define si este registro se vende directamente o si se prepara a partir de ingredientes.</p>
+                </div>
+                <span class="recipe-status" [class.recipe-status--active]="requiereReceta">
+                  {{ requiereReceta ? recetaDetalle.length + ' ingredientes' : 'Sin receta' }}
+                </span>
+              </div>
+
+              <div class="recipe-mode-grid">
+                <button type="button" class="recipe-mode" [class.recipe-mode--selected]="!requiereReceta"
+                        (click)="onRequiereRecetaChange(false)">
+                  <span class="recipe-mode-icon"><i class="feather icon-package"></i></span>
+                  <span>
+                    <strong>Producto sin receta</strong>
+                    <small>Servicio, bebida empacada o articulo que no requiere preparacion.</small>
+                  </span>
+                  <i class="feather icon-check-circle recipe-check"></i>
+                </button>
+                <button type="button" class="recipe-mode" [class.recipe-mode--selected]="requiereReceta"
+                        (click)="onRequiereRecetaChange(true)">
+                  <span class="recipe-mode-icon"><i class="feather icon-coffee"></i></span>
+                  <span>
+                    <strong>Producto con receta</strong>
+                    <small>Platillo o bebida preparada cuyo costo depende de sus ingredientes.</small>
+                  </span>
+                  <i class="feather icon-check-circle recipe-check"></i>
+                </button>
+              </div>
+
+              <div class="recipe-editor" *ngIf="requiereReceta">
+                <div class="recipe-toolbar">
+                  <div>
+                    <strong>Ingredientes</strong>
+                    <small class="d-block text-muted">El costo incluye la cantidad y el porcentaje de merma.</small>
+                  </div>
+                  <button type="button" class="btn btn-primary" (click)="openProductoModal()" [disabled]="isLoading">
+                    <i class="feather icon-plus"></i> Agregar ingrediente
+                  </button>
+                </div>
+
+                <div class="table-responsive" *ngIf="recetaDetalle.length; else recetaVacia">
+                  <table class="table recipe-table mb-0">
+                    <thead>
+                      <tr>
+                        <th>Ingrediente</th>
+                        <th>Medir en</th>
+                        <th class="text-end">Cantidad</th>
+                        <th class="text-end">Merma %</th>
+                        <th class="text-end">Costo unitario</th>
+                        <th class="text-end">Costo total</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let item of recetaDetalle; let i = index">
+                        <td>
+                          <strong>{{ item.dR_NomProducto }}</strong>
+                          <small class="d-block text-muted">{{ item.dR_CodProducto }}</small>
+                        </td>
+                        <td>
+                          <div class="equivalence-field">
+                            <select class="form-control form-control-sm" [(ngModel)]="item.dR_CodEquival"
+                                    [name]="'equivalencia' + i" (ngModelChange)="onEquivalenciaChange(item)"
+                                    [disabled]="equivalenciasLoading[item.dR_CodProducto]">
+                              <option value="" *ngIf="!getEquivalencias(item).length">{{ item.dR_UnMProducto }}</option>
+                              <option *ngFor="let equivalencia of getEquivalencias(item)" [value]="equivalencia.MPV03_CodEqui">
+                                {{ equivalencia.MPV03_UMDestino }} — {{ equivalencia.MPV03_Descripcion }}
+                              </option>
+                            </select>
+                            <small class="conversion-hint" *ngIf="equivalenciasLoading[item.dR_CodProducto]">
+                              Consultando equivalencias...
+                            </small>
+                            <small class="conversion-hint" *ngIf="!equivalenciasLoading[item.dR_CodProducto]">
+                              {{ getConversionLabel(item) }}
+                            </small>
+                          </div>
+                        </td>
+                        <td>
+                          <input type="number" class="form-control form-control-sm recipe-number numeric-control" min="0" step="0.001"
+                                 [(ngModel)]="item.dR_CanProducto" [name]="'cantidadIngrediente' + i"
+                                 (ngModelChange)="recalculateRecipeCosts()" required>
+                        </td>
+                        <td>
+                          <input type="number" class="form-control form-control-sm recipe-number numeric-control" min="0" max="100" step="0.01"
+                                 [(ngModel)]="item.dR_PorMerma" [name]="'mermaIngrediente' + i"
+                                 (ngModelChange)="recalculateRecipeCosts()">
+                        </td>
+                        <td>
+                          <input type="number" class="form-control form-control-sm recipe-number numeric-control" min="0" step="0.01"
+                                 [(ngModel)]="item.costoUnidadOrigen" [name]="'costoIngrediente' + i"
+                                 placeholder="No disponible"
+                                 (ngModelChange)="recalculateRecipeCosts()" (blur)="normalizeIngredientCost(item)">
+                        </td>
+                        <td class="recipe-total">{{ item.dR_CtoTotal | number:'1.2-2' }}</td>
+                        <td>
+                          <button type="button" class="btn btn-sm btn-outline-danger" (click)="removeIngrediente(i)"
+                                  title="Quitar ingrediente" aria-label="Quitar ingrediente">
+                            <i class="feather icon-trash-2"></i>
+                          </button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <ng-template #recetaVacia>
+                  <div class="recipe-empty">
+                    <i class="feather icon-shopping-bag"></i>
+                    <strong>Aun no hay ingredientes</strong>
+                    <span>Agrega productos del inventario para construir la receta.</span>
+                  </div>
+                </ng-template>
               </div>
             </div>
 
@@ -155,54 +275,95 @@
                 <i class="feather icon-dollar-sign"></i>
                 Informacion Operativa y Costos
               </h6>
-              <div class="row">
-                <div class="col-md-4">
-                  <div class="form-group">
-                    <label class="form-label">
-                      <i class="feather icon-users"></i>
-                      Cupos *
-                    </label>
-                    <input type="number" class="form-control form-control-lg" [(ngModel)]="formData.numPorciones" name="numPorciones"
-                           min="1" step="1" required>
+              <div class="operative-block">
+                <div class="operative-block-header">
+                  <span class="operative-step">1</span>
+                  <div><strong>Rendimiento y costo de preparacion</strong><small>Define cuánto produce y cuánto cuesta elaborarlo.</small></div>
+                </div>
+                <div class="operative-flow operative-flow--cost">
+                  <div class="operative-control">
+                    <label class="form-label"><i class="feather icon-users"></i> Porciones *</label>
+                    <input type="number" class="form-control form-control-lg numeric-control" [(ngModel)]="formData.numPorciones"
+                           name="numPorciones" min="1" step="1" required>
+                    <small>Rendimiento de la preparación.</small>
+                  </div>
+                  <div class="operative-control">
+                    <label class="form-label">Costo base</label>
+                    <div class="cost-input cost-input--calculated">
+                      <span class="cost-prefix">₡</span>
+                      <input type="number" class="form-control form-control-lg numeric-control" [(ngModel)]="formData.ctoReceta"
+                             name="ctoReceta" min="0" step="0.01" [readonly]="requiereReceta" (blur)="normalizeCostField('ctoReceta')">
+                    </div>
+                    <small>{{ requiereReceta ? 'Calculado desde los ingredientes.' : 'Costo del producto sin receta.' }}</small>
+                  </div>
+                  <div class="operative-operator" aria-hidden="true">+</div>
+                  <div class="operative-control">
+                    <label class="form-label">Produccion</label>
+                    <div class="cost-input cost-input--percentage">
+                      <input type="number" class="form-control form-control-lg numeric-control" [(ngModel)]="formData.ctoProduccion"
+                             name="ctoProduccion" min="0" step="0.01" (blur)="normalizeCostField('ctoProduccion')">
+                      <span class="cost-suffix">%</span>
+                    </div>
+                    <small>Recargo operativo sobre el costo base.</small>
+                  </div>
+                  <div class="operative-operator" aria-hidden="true">=</div>
+                  <div class="operative-control operative-control--result">
+                    <label class="form-label">Costo total real</label>
+                    <div class="cost-input cost-input--primary">
+                      <span class="cost-prefix">₡</span>
+                      <input type="number" class="form-control form-control-lg numeric-control" [(ngModel)]="formData.ctoTotal"
+                             name="ctoTotal" min="0" step="0.01" readonly>
+                    </div>
+                    <small>Base más costo de producción.</small>
                   </div>
                 </div>
               </div>
-              <div class="row">
-                <div class="col-md-4">
-                  <div class="form-group">
-                    <label class="form-label">Costo Total Estimado</label>
-                    <input type="number" class="form-control form-control-lg" [(ngModel)]="formData.ctoTotal" name="ctoTotal"
-                           min="0" step="0.01" readonly>
-                  </div>
+
+              <div class="operative-block">
+                <div class="operative-block-header">
+                  <span class="operative-step">2</span>
+                  <div><strong>Precio y rentabilidad</strong><small>Establece la base comercial y el margen esperado.</small></div>
                 </div>
-                <div class="col-md-4">
-                  <div class="form-group">
-                    <label class="form-label">
-                      <i class="feather icon-eye"></i>
-                      Visible
-                    </label>
+                <div class="operative-flow operative-flow--pricing">
+                  <div class="operative-control">
+                    <label class="form-label">Costo neto</label>
+                    <div class="cost-input">
+                      <span class="cost-prefix">₡</span>
+                      <input type="number" class="form-control form-control-lg numeric-control" [(ngModel)]="formData.ctoNeto"
+                             name="ctoNeto" min="0" step="0.01" readonly>
+                    </div>
+                    <small>Se toma automáticamente del costo total real.</small>
+                  </div>
+                  <div class="operative-operator" aria-hidden="true">+</div>
+                  <div class="operative-control">
+                    <label class="form-label">Utilidad</label>
+                    <div class="cost-input cost-input--percentage">
+                      <input type="number" class="form-control form-control-lg numeric-control" [(ngModel)]="formData.utilidad"
+                             name="utilidad" min="0" step="0.01" (blur)="normalizeCostField('utilidad')">
+                      <span class="cost-suffix">%</span>
+                    </div>
+                    <small>Margen aplicado al costo neto.</small>
+                  </div>
+                  <div class="operative-operator" aria-hidden="true">=</div>
+                  <div class="operative-control operative-control--final">
+                    <label class="form-label">Total con utilidad</label>
+                    <div class="cost-input">
+                      <span class="cost-prefix">₡</span>
+                      <input type="number" class="form-control form-control-lg numeric-control" [(ngModel)]="formData.totalCUtilidad"
+                             name="totalCUtilidad" min="0" step="0.01" readonly>
+                    </div>
+                    <small>Resultado comercial calculado.</small>
+                  </div>
+                  <div class="operative-control operative-control--visibility">
+                    <label class="form-label"><i class="feather icon-eye"></i> Disponibilidad</label>
                     <div class="custom-control custom-switch">
                       <input type="checkbox" class="custom-control-input" id="visibleSwitch"
                              [checked]="formData.visible === 1" (change)="onVisibleToggle($event.target.checked)">
                       <label class="custom-control-label" for="visibleSwitch">
-                        {{ formData.visible === 1 ? 'Si' : 'No' }}
+                        {{ formData.visible === 1 ? 'Visible para la venta' : 'Oculto' }}
                       </label>
                     </div>
-                  </div>
-                </div>
-                <div class="col-md-4">
-                  <div class="form-group">
-                    <label class="form-label">
-                      <i class="feather icon-layers"></i>
-                      Compuesto
-                    </label>
-                    <div class="custom-control custom-switch">
-                      <input type="checkbox" class="custom-control-input" id="compuestoSwitch"
-                             [checked]="formData.compuesto === 'S'" (change)="onCompuestoToggle($event.target.checked)">
-                      <label class="custom-control-label" for="compuestoSwitch">
-                        {{ formData.compuesto === 'S' ? 'Si' : 'No' }}
-                      </label>
-                    </div>
+                    <small>Publicación en puntos de venta.</small>
                   </div>
                 </div>
               </div>
@@ -222,6 +383,80 @@
         </div>
       </div>
     </app-card>
+  </div>
+</div>
+
+<div class="cabys-modal-overlay" *ngIf="showProductoModal" (click)="closeProductoModal()">
+  <div class="cabys-modal product-modal" (click)="$event.stopPropagation()">
+    <div class="cabys-modal-header">
+      <div>
+        <h6 class="m-0">Agregar ingrediente</h6>
+        <small class="text-muted">Selecciona un producto del inventario</small>
+      </div>
+      <button type="button" class="btn btn-sm btn-light" (click)="closeProductoModal()" [disabled]="productosLoading">
+        <i class="feather icon-x"></i>
+      </button>
+    </div>
+    <div class="cabys-modal-body">
+      <form class="product-search" (ngSubmit)="buscarProductos()">
+        <input type="search" class="form-control" [(ngModel)]="productoQuery" name="productoQuery"
+               placeholder="Buscar por nombre del ingrediente">
+        <button type="submit" class="btn btn-primary" [disabled]="productosLoading">
+          <span *ngIf="productosLoading" class="spinner-border spinner-border-sm mr-1"></span>
+          Buscar
+        </button>
+      </form>
+      <div class="product-results" *ngIf="!productosLoading">
+        <div class="table-responsive">
+          <table class="table table-hover product-table mb-0">
+          <colgroup>
+            <col class="product-col-code">
+            <col class="product-col-name">
+            <col class="product-col-unit">
+            <col class="product-col-cost">
+            <col class="product-col-action">
+          </colgroup>
+          <thead><tr><th>Codigo</th><th>Producto</th><th>Unidad</th><th class="text-end">Costo</th><th></th></tr></thead>
+          <tbody>
+            <tr *ngFor="let producto of productos">
+              <td class="product-code-cell">{{ producto.MAC02_CodProducto }}</td>
+              <td class="product-name-cell" [title]="producto.MAC02_NomProducto">{{ producto.MAC02_NomProducto }}</td>
+              <td>{{ producto.MAC02_UnmProdu }}</td>
+              <td class="text-end">{{ (producto.MAC02_UltimoCto || producto.MAC02_CostoPro || 0) | number:'1.2-2' }}</td>
+              <td class="text-end">
+                <button type="button" class="btn btn-sm btn-outline-primary" (click)="seleccionarProducto(producto)">Agregar</button>
+              </td>
+            </tr>
+            <tr *ngIf="!productos.length"><td colspan="5" class="text-center text-muted py-4">No se encontraron productos.</td></tr>
+          </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="product-loading" *ngIf="productosLoading">
+        <span class="spinner-border text-primary" aria-hidden="true"></span>
+        <span>Consultando productos...</span>
+      </div>
+      <div class="product-pagination">
+        <div class="product-pagination-summary">
+          Mostrando {{ productoPageStart }}–{{ productoPageEnd }} de {{ productoTotalRegistros }} productos
+        </div>
+        <select class="form-control form-control-sm product-page-size" [(ngModel)]="productoPageSize"
+                (change)="onProductoPageSizeChange()" [disabled]="productosLoading">
+          <option *ngFor="let size of productoPageSizeOptions" [value]="size">{{ size }} por pagina</option>
+        </select>
+        <div class="product-page-controls">
+          <button type="button" class="btn btn-sm btn-outline-secondary"
+                  [disabled]="productoPageNumber === 1 || productosLoading" (click)="goToProductoPage(-1)">
+            <i class="feather icon-chevron-left"></i>
+          </button>
+          <span>Pagina {{ productoPageNumber }} de {{ productoTotalPages }}</span>
+          <button type="button" class="btn btn-sm btn-outline-secondary"
+                  [disabled]="productoPageNumber === productoTotalPages || productosLoading" (click)="goToProductoPage(1)">
+            <i class="feather icon-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 

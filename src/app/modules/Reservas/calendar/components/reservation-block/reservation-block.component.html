@@ -3,13 +3,23 @@
   class="reservation-block"
   [ngClass]="'reservation-block--' + block.reservation.status.toLowerCase()"
   [class.reservation-block--ghost]="isGhost"
+  [class.reservation-block--continues-before]="block.continuesBefore"
+  [class.reservation-block--continues-after]="block.continuesAfter"
+  [class.reservation-block--color-0]="block.colorIndex === 0"
+  [class.reservation-block--color-1]="block.colorIndex === 1"
+  [class.reservation-block--color-2]="block.colorIndex === 2"
+  [class.reservation-block--color-3]="block.colorIndex === 3"
+  [class.reservation-block--color-4]="block.colorIndex === 4"
+  [class.reservation-block--color-5]="block.colorIndex === 5"
+  [class.reservation-block--color-6]="block.colorIndex === 6"
+  [class.reservation-block--color-7]="block.colorIndex === 7"
   [style.left.px]="block.left"
   [style.width.px]="block.width"
   [attr.title]="block.tooltip"
   (pointerdown)="onDragStart($event)"
   (click)="onSelect($event)"
 >
-  <span class="reservation-block__guest">{{ block.label }}</span>
+  <span class="reservation-block__guest" aria-hidden="true">{{ block.label }}</span>
 
   <span class="reservation-block__popover" role="tooltip">
     <strong class="reservation-block__popover-name">{{ block.reservation.guestName }}</strong>

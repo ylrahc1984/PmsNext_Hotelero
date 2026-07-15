@@ -523,7 +523,7 @@ export class CierreCajaFormComponent implements OnInit, OnDestroy {
         })
       );
 
-      this.applyPuntosVentaCatalogo(puntosVenta ?? []);
+      this.applyPuntosVentaCatalogo((puntosVenta ?? []).filter((item) => !!item.codigo));
       this.formasPago = [...(formasPago ?? [])].sort((a, b) => a.orden - b.orden);
 
       const recordId = String(this.route.snapshot.paramMap.get('id') ?? '').trim();

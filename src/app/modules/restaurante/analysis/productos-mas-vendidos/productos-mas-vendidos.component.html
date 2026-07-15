@@ -1,0 +1,68 @@
+<section class="analysis-page" aria-label="Análisis de productos más vendidos">
+  <app-analysis-page-header
+    title="Productos más vendidos"
+    description="Identifique los productos con mayor demanda y su participación en las ventas del restaurante."
+  />
+
+  <section class="analysis-card filter-card" aria-label="Filtros de productos">
+    <div class="card-heading">
+      <div class="card-heading__title"><i class="feather icon-filter"></i><span>Filtros de consulta</span></div>
+      <small>Combine criterios para delimitar el período de análisis.</small>
+    </div>
+    <div class="filters-grid">
+      <div class="filter-field">
+        <label for="productosFechaInicial">Fecha Inicial</label>
+        <input id="productosFechaInicial" type="date" class="form-control" [ngModel]="fechaInicial()" (ngModelChange)="fechaInicial.set($event)">
+      </div>
+      <div class="filter-field">
+        <label for="productosFechaFinal">Fecha Final</label>
+        <input id="productosFechaFinal" type="date" class="form-control" [ngModel]="fechaFinal()" (ngModelChange)="fechaFinal.set($event)">
+      </div>
+      <div class="filter-field">
+        <label for="productosPuntoVenta">Punto de Venta</label>
+        <select id="productosPuntoVenta" class="form-select" [ngModel]="puntoVenta()" (ngModelChange)="puntoVenta.set($event)">
+          <option value="">Todos</option><option>Restaurante Principal</option><option>Bar Piscina</option><option>Room Service</option>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label for="productosCategoria">Categoría</label>
+        <select id="productosCategoria" class="form-select" [ngModel]="categoria()" (ngModelChange)="categoria.set($event)">
+          <option value="">Todas</option><option>Platos fuertes</option><option>Entradas</option><option>Bebidas</option><option>Postres</option>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label for="productosMesero">Mesero</label>
+        <select id="productosMesero" class="form-select" [ngModel]="mesero()" (ngModelChange)="mesero.set($event)">
+          <option value="">Todos</option><option>Carlos Pérez</option><option>María Rodríguez</option><option>Andrés Vargas</option>
+        </select>
+      </div>
+      <div class="filter-actions">
+        <button type="button" class="btn btn-outline-secondary" (click)="limpiar()"><i class="feather icon-rotate-ccw"></i>Limpiar</button>
+        <button type="button" class="btn btn-primary" (click)="buscar()"><i class="feather icon-search"></i>Buscar</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="results-layout">
+    <section class="analysis-card results-card" aria-label="Resultados de productos más vendidos">
+      <div class="results-card__header"><h2>Detalle de productos</h2><span class="result-count">{{ productos().length }} productos</span></div>
+      <div class="table-responsive">
+        <table class="table analysis-table">
+          <thead><tr><th>#</th><th>Producto</th><th>Categoría</th><th class="text-end">Cantidad Vendida</th><th class="text-end">Monto Vendido</th><th>Participación %</th></tr></thead>
+          <tbody>
+            @for (item of productos(); track item.producto; let index = $index) {
+              <tr>
+                <td>{{ index + 1 }}</td><td class="primary-cell">{{ item.producto }}</td><td><span class="category-badge">{{ item.categoria }}</span></td>
+                <td class="text-end">{{ item.cantidad }}</td><td class="text-end primary-cell">{{ item.monto | currency:'USD':'symbol':'1.0-0' }}</td>
+                <td><div class="participation"><div class="participation__bar"><span [style.width.%]="item.participacion * 4"></span></div><strong>{{ item.participacion }}%</strong></div></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <aside class="analysis-card chart-placeholder" aria-label="Espacio reservado para gráfico">
+      <div class="placeholder-content"><span class="placeholder-icon"><i class="feather icon-pie-chart"></i></span><h2>Gráfico de Productos</h2><p>Próximamente</p></div>
+    </aside>
+  </div>
+</section>
