@@ -20,133 +20,232 @@
                 <i class="feather icon-info"></i>
                 Informacion General Comercial
               </h6>
-              <div class="row general-info-row">
-                <div class="col-lg-7 col-md-6">
-                  <div class="form-group general-info-field">
-                    <label class="form-label">
-                      <i class="feather icon-tag"></i>
-                      Nombre Comercial *
-                    </label>
-                    <input type="text" class="form-control form-control-lg" [(ngModel)]="formData.nomReceta" name="nomReceta" required
-                           placeholder="Nombre comercial">
-                  </div>
-                </div>
-                <div class="col-lg-5 col-md-6">
-                  <div class="form-group general-info-field">
-                    <label class="form-label">
-                      <i class="feather icon-edit-2"></i>
-                      Nombre Corto
-                    </label>
-                    <input type="text" class="form-control form-control-lg" [(ngModel)]="formData.nomCorto" name="nomCorto"
-                           placeholder="Nombre corto">
-                  </div>
-                </div>
-              </div>
-              <div class="row general-info-row">
-                <div class="col-md-4">
-                  <div class="form-group general-info-field">
-                    <label class="form-label">
-                      <i class="feather icon-layers"></i>
-                      Categoria *
-                    </label>
-                    <select class="form-control form-control-lg" [(ngModel)]="formData.codCateg" name="codCateg" required>
-                      <option value="">Seleccionar</option>
-                      <option *ngFor="let categoria of categoriaOptions" [value]="categoria.codigo">
-                        {{ categoria.nombre }}
-                      </option>
-                    </select>
-                  </div>
-                </div>
-                <div class="col-md-4">
-                  <div class="form-group general-info-field">
-                    <label class="form-label">
-                      <i class="feather icon-grid"></i>
-                      Grupo *
-                    </label>
-                    <select class="form-control form-control-lg" [(ngModel)]="formData.codGrupo" name="codGrupo" required>
-                      <option value="">Seleccionar</option>
-                      <option *ngFor="let grupo of grupoOptions" [value]="grupo.codigo">
-                        {{ grupo.nombre }}
-                      </option>
-                    </select>
-                  </div>
-                </div>
-                <div class="col-md-4">
-                  <div class="form-group general-info-field">
-                    <label class="form-label">
-                      <i class="feather icon-shuffle"></i>
-                      Unidad de Medida *
-                    </label>
-                    <select class="form-control form-control-lg" [(ngModel)]="formData.uMedida" name="uMedida" required>
-                      <option *ngFor="let unidad of unidadOptions" [value]="unidad.codigo">
-                        {{ unidad.codigo }} - {{ unidad.descripcion }}
-                      </option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <div class="row general-info-row general-info-row--media">
-                <div class="col-lg-5 col-md-6">
-                  <div class="form-group general-info-field">
-                    <label class="form-label">
-                      <i class="feather icon-hash"></i>
-                      CABYS
-                    </label>
-                    <div class="cabys-input-group">
-                      <input type="text" class="form-control form-control-lg" [(ngModel)]="formData.cabys" name="cabys"
-                             placeholder="Codigo CABYS">
-                      <button type="button" class="btn btn-outline-primary" (click)="openCabysModal()" [disabled]="isLoading">
-                        <i class="feather icon-search"></i>
-                      </button>
+              <div class="general-info-layout">
+                <div class="general-info-main">
+                  <div class="row general-info-row">
+                    <div class="col-lg-8 col-md-7">
+                      <div class="form-group general-info-field">
+                        <label class="form-label">
+                          <i class="feather icon-tag"></i>
+                          Nombre Comercial *
+                        </label>
+                        <input type="text" class="form-control form-control-lg" [(ngModel)]="formData.nomReceta" name="nomReceta" required
+                               placeholder="Nombre comercial">
+                      </div>
                     </div>
-                    <small class="text-muted">Consulta el codigo CABYS en Hacienda.</small>
+                    <div class="col-lg-4 col-md-5">
+                      <div class="form-group general-info-field">
+                        <label class="form-label">
+                          <i class="feather icon-edit-2"></i>
+                          Nombre Corto
+                        </label>
+                        <input type="text" class="form-control form-control-lg" [(ngModel)]="formData.nomCorto" name="nomCorto"
+                               placeholder="Nombre corto">
+                      </div>
+                    </div>
+
                   </div>
-                </div>
-                <div class="col-lg-7 col-md-6">
-                  <div class="form-group general-info-field">
-                    <label class="form-label">
-                      <i class="feather icon-image"></i>
-                      Imagen (URL)
-                    </label>
-                    <div class="image-field">
-                      <div
-                        class="image-preview"
-                        [class.has-image]="!!formData.urlImagen"
-                        [ngStyle]="{ 'background-image': formData.urlImagen ? 'url(' + formData.urlImagen + ')' : 'none' }"
-                      >
-                        <div class="image-placeholder">
+                  <div class="row general-info-row">
+                    <div class="col-lg-4 col-md-6">
+                      <div class="form-group general-info-field">
+                        <label class="form-label">
+                          <i class="feather icon-layers"></i>
+                          Categoria *
+                        </label>
+                        <select class="form-control form-control-lg" [(ngModel)]="formData.codCateg" name="codCateg" required>
+                          <option value="">Seleccionar</option>
+                          <option *ngFor="let categoria of categoriaOptions" [value]="categoria.codigo">
+                            {{ categoria.nombre }}
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                      <div class="form-group general-info-field">
+                        <label class="form-label">
+                          <i class="feather icon-grid"></i>
+                          Grupo *
+                        </label>
+                        <select class="form-control form-control-lg" [(ngModel)]="formData.codGrupo" name="codGrupo" required>
+                          <option value="">Seleccionar</option>
+                          <option *ngFor="let grupo of grupoOptions" [value]="grupo.codigo">
+                            {{ grupo.nombre }}
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                      <div class="form-group general-info-field">
+                        <label class="form-label">
+                          <i class="feather icon-shuffle"></i>
+                          Unidad de Medida *
+                        </label>
+                        <select class="form-control form-control-lg" [(ngModel)]="formData.uMedida" name="uMedida" required>
+                          <option *ngFor="let unidad of unidadOptions" [value]="unidad.codigo">
+                            {{ unidad.codigo }} - {{ unidad.descripcion }}
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+
+                  </div>
+                  <div class="row general-info-row">  
+                    <div class="col-lg-3 col-md-6">
+                      <div class="form-group general-info-field">
+                        <label class="form-label">
+                          <i class="feather icon-users"></i>
+                          Porciones *
+                        </label>
+                        <input type="number" class="form-control form-control-lg numeric-control" [(ngModel)]="formData.numPorciones"
+                               name="numPorciones" min="1" step="1" required>
+                        <small class="text-muted">Rendimiento de la preparación.</small>
+                      </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                      <div class="form-group general-info-field">
+                        <label class="form-label">
+                          <i class="feather icon-hash"></i>
+                          CABYS
+                        </label>
+                        <div class="cabys-input-group">
+                          <input type="text" class="form-control form-control-lg" [(ngModel)]="formData.cabys" name="cabys"
+                                 placeholder="Codigo CABYS">
+                          <button type="button" class="btn btn-outline-primary" (click)="openCabysModal()" [disabled]="isLoading">
+                            <i class="feather icon-search"></i>
+                          </button>
+                        </div>
+                        <small class="text-muted">Consulta el codigo CABYS en Hacienda.</small>
+                      </div>
+                    </div>
+                    <div class="col-lg-6 col-md-6">
+                      <div class="form-group general-info-field">
+                        <label class="form-label">
                           <i class="feather icon-image"></i>
-                          <span>Sin imagen</span>
-                        </div>
-                      </div>
-                      <div class="image-actions">
-                        <div class="image-url-row">
-                          <input
-                            type="url"
-                            class="form-control form-control-lg image-url-input"
-                            [(ngModel)]="formData.urlImagen"
-                            name="urlImagen"
-                            placeholder="https://"
+                          Imagen (URL)
+                        </label>
+                        <div class="image-field">
+                          <div
+                            class="image-preview"
+                            [class.has-image]="!!formData.urlImagen"
+                            [ngStyle]="{ 'background-image': formData.urlImagen ? 'url(' + formData.urlImagen + ')' : 'none' }"
                           >
-                          <label class="btn btn-outline-primary btn-sm image-upload-btn">
-                            <input type="file" class="image-file-input" accept="image/*">
-                            <i class="feather icon-upload"></i>
-                            Subir
-                          </label>
+                            <div class="image-placeholder">
+                              <i class="feather icon-image"></i>
+                              <span>Sin imagen</span>
+                            </div>
+                          </div>
+                          <div class="image-actions">
+                            <div class="image-url-row">
+                              <input
+                                type="url"
+                                class="form-control form-control-lg image-url-input"
+                                [(ngModel)]="formData.urlImagen"
+                                name="urlImagen"
+                                placeholder="https://"
+                              >
+                              <label class="btn btn-outline-primary btn-sm image-upload-btn">
+                                <input type="file" class="image-file-input" accept="image/*">
+                                <i class="feather icon-upload"></i>
+                                Subir
+                              </label>
+                            </div>
+                            <small class="text-muted">La subida a Cloudinary se habilitará pronto. Por ahora pega la URL.</small>
+                          </div>
                         </div>
-                        <small class="text-muted">La subida a Cloudinary se habilitará pronto. Por ahora pega la URL.</small>
                       </div>
                     </div>
+                  
+                  </div>
+                  <div class="row general-info-row general-info-row--media">
+                    <div class="col-lg-12 col-md-12">
+                      <div class="form-group general-info-field">
+                        <label class="form-label">
+                          <i class="feather icon-file-text"></i>
+                          Descripcion
+                        </label>
+                        <textarea class="form-control" [(ngModel)]="formData.descripcion" name="descripcion" rows="3"
+                                  placeholder="Describa detalladamente el registro comercial..."></textarea>
+                      </div>
+                    </div>
+            
                   </div>
                 </div>
-              </div>
-              <div class="form-group general-info-field general-description-field">
-                <label class="form-label">
-                  <i class="feather icon-file-text"></i>
-                  Descripcion
-                </label>
-                <textarea class="form-control" [(ngModel)]="formData.descripcion" name="descripcion" rows="1"
-                          placeholder="Describa detalladamente el registro comercial..."></textarea>
+                <aside class="general-info-summary" aria-label="Resumen financiero">
+                  <div class="summary-head">
+                    <strong>Resumen en tiempo real</strong>
+                    <small>Secuencia de costo base, margen, IVA y total final.</small>
+                  </div>
+                  <div class="summary-pipeline">
+                    <div class="summary-stage summary-stage--base">
+                      <div class="summary-stage__header">
+                        <span>Costo base</span>
+                        <small>Suma de ingredientes</small>
+                      </div>
+                      <div class="summary-stage__content">
+                        <div class="summary-value summary-value--editable">
+                          <span class="cost-prefix">₡</span>
+                          <input type="number" class="form-control form-control-sm numeric-control" [(ngModel)]="formData.ctoReceta"
+                                 name="ctoReceta" min="0" step="0.01" [readonly]="requiereReceta" (blur)="normalizeCostField('ctoReceta')">
+                        </div>
+                        <small>{{ requiereReceta ? 'Calculado desde ingredientes.' : 'Costo del producto sin receta.' }}</small>
+                      </div>
+                    </div>
+
+                    <div class="summary-stage-row">
+                      <div class="summary-stage summary-stage--formula">
+                        <div class="summary-stage__header">
+                          <span>Producción</span>
+                          <small>Porcentaje operativo</small>
+                        </div>
+                        <div class="summary-stage__content">
+                          <div class="summary-value summary-value--editable summary-value--percent">
+                            <input type="number" class="form-control form-control-sm numeric-control" [(ngModel)]="formData.ctoProduccion"
+                                   name="ctoProduccion" min="0" step="0.01" (blur)="normalizeCostField('ctoProduccion')">
+                            <span class="cost-suffix">%</span>
+                          </div>
+                          <small class="summary-stage__result">Costo neto: ₡{{ formData.ctoNeto | number:'1.2-2' }}</small>
+                        </div>
+                      </div>
+
+                      <div class="summary-stage summary-stage--formula">
+                        <div class="summary-stage__header">
+                          <span>Utilidad</span>
+                          <small>Margen comercial</small>
+                        </div>
+                        <div class="summary-stage__content">
+                          <div class="summary-value summary-value--editable summary-value--percent">
+                            <input type="number" class="form-control form-control-sm numeric-control" [(ngModel)]="formData.utilidad"
+                                   name="utilidad" min="0" step="0.01" (blur)="normalizeCostField('utilidad')">
+                            <span class="cost-suffix">%</span>
+                          </div>
+                          <small class="summary-stage__result">Subtotal: ₡{{ formData.totalCUtilidad | number:'1.2-2' }}</small>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="summary-stage summary-stage--tax">
+                      <div class="summary-stage__header">
+                        <span>IVA</span>
+                        <small>23% sobre subtotal</small>
+                      </div>
+                      <div class="summary-stage__content summary-stage__content--inline">
+                        <strong>₡{{ formData.ctoIva | number:'1.2-2' }}</strong>
+                        <small>Impuesto: 23%</small>
+                      </div>
+                    </div>
+
+                    <article class="summary-card summary-card--accent summary-card--total">
+                      <small>Total final</small>
+                      <strong>₡{{ formData.ctoTotal | number:'1.2-2' }}</strong>
+                    </article>
+                  </div>
+                  <div class="summary-footnote">
+                    <span>Modo:</span>
+                    <strong>{{ requiereReceta ? 'Con receta' : 'Sin receta' }}</strong>
+                    <span class="summary-separator">•</span>
+                    <span>{{ requiereReceta ? (recetaDetalle.length + ' ingredientes') : 'Sin ingredientes' }}</span>
+                  </div>
+                </aside>
               </div>
             </div>
 
@@ -196,7 +295,7 @@
                   </button>
                 </div>
 
-                <div class="table-responsive" *ngIf="recetaDetalle.length; else recetaVacia">
+                <div class="table-responsive recipe-table-scroll" *ngIf="recetaDetalle.length; else recetaVacia">
                   <table class="table recipe-table mb-0">
                     <thead>
                       <tr>
@@ -267,105 +366,6 @@
                     <span>Agrega productos del inventario para construir la receta.</span>
                   </div>
                 </ng-template>
-              </div>
-            </div>
-
-            <div class="form-section">
-              <h6 class="section-title">
-                <i class="feather icon-dollar-sign"></i>
-                Informacion Operativa y Costos
-              </h6>
-              <div class="operative-block">
-                <div class="operative-block-header">
-                  <span class="operative-step">1</span>
-                  <div><strong>Rendimiento y costo de preparacion</strong><small>Define cuánto produce y cuánto cuesta elaborarlo.</small></div>
-                </div>
-                <div class="operative-flow operative-flow--cost">
-                  <div class="operative-control">
-                    <label class="form-label"><i class="feather icon-users"></i> Porciones *</label>
-                    <input type="number" class="form-control form-control-lg numeric-control" [(ngModel)]="formData.numPorciones"
-                           name="numPorciones" min="1" step="1" required>
-                    <small>Rendimiento de la preparación.</small>
-                  </div>
-                  <div class="operative-control">
-                    <label class="form-label">Costo base</label>
-                    <div class="cost-input cost-input--calculated">
-                      <span class="cost-prefix">₡</span>
-                      <input type="number" class="form-control form-control-lg numeric-control" [(ngModel)]="formData.ctoReceta"
-                             name="ctoReceta" min="0" step="0.01" [readonly]="requiereReceta" (blur)="normalizeCostField('ctoReceta')">
-                    </div>
-                    <small>{{ requiereReceta ? 'Calculado desde los ingredientes.' : 'Costo del producto sin receta.' }}</small>
-                  </div>
-                  <div class="operative-operator" aria-hidden="true">+</div>
-                  <div class="operative-control">
-                    <label class="form-label">Produccion</label>
-                    <div class="cost-input cost-input--percentage">
-                      <input type="number" class="form-control form-control-lg numeric-control" [(ngModel)]="formData.ctoProduccion"
-                             name="ctoProduccion" min="0" step="0.01" (blur)="normalizeCostField('ctoProduccion')">
-                      <span class="cost-suffix">%</span>
-                    </div>
-                    <small>Recargo operativo sobre el costo base.</small>
-                  </div>
-                  <div class="operative-operator" aria-hidden="true">=</div>
-                  <div class="operative-control operative-control--result">
-                    <label class="form-label">Costo total real</label>
-                    <div class="cost-input cost-input--primary">
-                      <span class="cost-prefix">₡</span>
-                      <input type="number" class="form-control form-control-lg numeric-control" [(ngModel)]="formData.ctoTotal"
-                             name="ctoTotal" min="0" step="0.01" readonly>
-                    </div>
-                    <small>Base más costo de producción.</small>
-                  </div>
-                </div>
-              </div>
-
-              <div class="operative-block">
-                <div class="operative-block-header">
-                  <span class="operative-step">2</span>
-                  <div><strong>Precio y rentabilidad</strong><small>Establece la base comercial y el margen esperado.</small></div>
-                </div>
-                <div class="operative-flow operative-flow--pricing">
-                  <div class="operative-control">
-                    <label class="form-label">Costo neto</label>
-                    <div class="cost-input">
-                      <span class="cost-prefix">₡</span>
-                      <input type="number" class="form-control form-control-lg numeric-control" [(ngModel)]="formData.ctoNeto"
-                             name="ctoNeto" min="0" step="0.01" readonly>
-                    </div>
-                    <small>Se toma automáticamente del costo total real.</small>
-                  </div>
-                  <div class="operative-operator" aria-hidden="true">+</div>
-                  <div class="operative-control">
-                    <label class="form-label">Utilidad</label>
-                    <div class="cost-input cost-input--percentage">
-                      <input type="number" class="form-control form-control-lg numeric-control" [(ngModel)]="formData.utilidad"
-                             name="utilidad" min="0" step="0.01" (blur)="normalizeCostField('utilidad')">
-                      <span class="cost-suffix">%</span>
-                    </div>
-                    <small>Margen aplicado al costo neto.</small>
-                  </div>
-                  <div class="operative-operator" aria-hidden="true">=</div>
-                  <div class="operative-control operative-control--final">
-                    <label class="form-label">Total con utilidad</label>
-                    <div class="cost-input">
-                      <span class="cost-prefix">₡</span>
-                      <input type="number" class="form-control form-control-lg numeric-control" [(ngModel)]="formData.totalCUtilidad"
-                             name="totalCUtilidad" min="0" step="0.01" readonly>
-                    </div>
-                    <small>Resultado comercial calculado.</small>
-                  </div>
-                  <div class="operative-control operative-control--visibility">
-                    <label class="form-label"><i class="feather icon-eye"></i> Disponibilidad</label>
-                    <div class="custom-control custom-switch">
-                      <input type="checkbox" class="custom-control-input" id="visibleSwitch"
-                             [checked]="formData.visible === 1" (change)="onVisibleToggle($event.target.checked)">
-                      <label class="custom-control-label" for="visibleSwitch">
-                        {{ formData.visible === 1 ? 'Visible para la venta' : 'Oculto' }}
-                      </label>
-                    </div>
-                    <small>Publicación en puntos de venta.</small>
-                  </div>
-                </div>
               </div>
             </div>
 

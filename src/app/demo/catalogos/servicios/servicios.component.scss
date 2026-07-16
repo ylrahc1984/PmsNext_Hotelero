@@ -40,6 +40,7 @@
 }
 
 .filters-card {
+  width: 100%;
   background: #ffffff;
   border: 1px solid #e6e8ed;
   border-radius: 10px;
@@ -420,9 +421,18 @@
   text-align: right;
 }
 
+.commercial-table-shell {
+  width: 100%;
+  box-sizing: border-box;
+  margin-right: 0;
+  margin-left: 0;
+  border-top: 1px solid #e8edf3;
+  border-bottom: 1px solid #e8edf3;
+}
+
 .commercial-table {
   width: 100%;
-  min-width: 1370px;
+  min-width: 100%;
   margin-bottom: 0;
   table-layout: fixed;
   border-collapse: separate;
@@ -462,17 +472,24 @@
   background: #f8fbff;
 }
 
-.commercial-col-code { width: 90px; }
-.commercial-col-product { width: 260px; }
-.commercial-col-category { width: 95px; }
-.commercial-col-group { width: 110px; }
-.commercial-col-cabys { width: 135px; }
-.commercial-col-unit { width: 80px; }
-.commercial-col-cost { width: 125px; }
-.commercial-col-price { width: 125px; }
-.commercial-col-status { width: 95px; }
-.commercial-col-user { width: 125px; }
-.commercial-col-actions { width: 100px; }
+.commercial-col-code { width: 6%; }
+.commercial-col-product { width: 17%; }
+.commercial-col-group { width: 7%; }
+.commercial-col-cabys { width: 8%; }
+.commercial-col-unit { width: 6%; }
+.commercial-col-cost-recipe { width: 8%; }
+.commercial-col-cost-net { width: 10%; }
+.commercial-col-profit { width: 8%; }
+.commercial-col-price { width: 10%; }
+.commercial-col-status { width: 6%; }
+.commercial-col-user { width: 8%; }
+.commercial-col-actions { width: 6%; }
+
+@media (max-width: 1399px) {
+  .commercial-table {
+    min-width: 1200px;
+  }
+}
 
 .service-code {
   color: #334155;
@@ -482,8 +499,16 @@
 }
 
 .servicio-name {
+  display: -webkit-box;
+  overflow: hidden;
   color: #0f172a;
   font-weight: 600;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-clamp: 2;
+  white-space: normal;
 }
 
 .servicio-short-name {
@@ -569,6 +594,66 @@
 .numeric-cell--final {
   color: #047857;
   font-weight: 700;
+}
+
+.numeric-cell__value,
+.numeric-cell__detail {
+  display: block;
+}
+
+.numeric-cell__detail {
+  margin-top: 0.2rem;
+  color: #94a3b8;
+  font-size: 0.68rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+
+.status-cell {
+  padding-right: 0.5rem !important;
+  padding-left: 0.5rem !important;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-width: 82px;
+  padding: 0.36rem 0.65rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.status-badge__dot {
+  width: 0.42rem;
+  height: 0.42rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 3px currentColor;
+}
+
+.status-badge--active {
+  border-color: #a7f3d0;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.status-badge--inactive {
+  border-color: #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.status-badge--active .status-badge__dot,
+.status-badge--inactive .status-badge__dot {
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 14%, transparent);
 }
 
 .user-cell {

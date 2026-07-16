@@ -25,39 +25,40 @@ interface RecetaDetalleForm extends RecetaDetallePayload {
 }
 
 interface ServicioFormData {
-  codReceta: string;
-  nomReceta: string;
-  nomCorto: string;
-  codCateg: string;
-  codGrupo: string;
-  uMedida: string;
-  numPorciones: number;
-  ctoReceta: number;
-  ctoProduccion: number;
-  ctoNeto: number;
-  utilidad: number;
-  totalCUtilidad: number;
-  ctoTotal: number;
-  descripcion: string;
-  visible: number;
-  urlImagen: string;
-  cabys: string;
-  compuesto: string;
+  codReceta         : string;
+  nomReceta         : string;
+  nomCorto          : string;
+  codCateg          : string;
+  codGrupo          : string;
+  uMedida           : string;
+  numPorciones      : number;
+  ctoReceta         : number;
+  ctoProduccion     : number;
+  ctoNeto           : number;
+  utilidad          : number;
+  totalCUtilidad    : number;
+  ctoIva            : number;
+  ctoTotal          : number;
+  descripcion       : string;
+  visible           : number;
+  urlImagen         : string;
+  cabys             : string;
+  compuesto         : string;
 }
 
 interface CabysItem {
-  codigo: string;
-  descripcion: string;
-  categorias: string[];
-  impuesto: number;
-  uri: string;
-  estado: string;
+  codigo          : string;
+  descripcion     : string;
+  categorias      : string[];
+  impuesto        : number;
+  uri             : string;
+  estado          : string;
 }
 
 interface CabysResponse {
-  total: number;
-  cantidad: number;
-  cabys: CabysItem[];
+  total       : number;
+  cantidad    : number;
+  cabys       : CabysItem[];
 }
 
 @Component({
@@ -72,22 +73,22 @@ export class ServicioFormComponent implements OnInit {
   isLoading = false;
   title = 'Nuevo Registro Comercial';
 
-  categoriaOptions: CategoriaOption[] = [];
-  grupoOptions: CentroCostoOption[] = [];
-  unidadOptions: UnidadMedidaOption[] = [];
-  requiereReceta = false;
-  recetaDetalle: RecetaDetalleForm[] = [];
-  showProductoModal = false;
-  productoQuery = '';
-  productos: Producto[] = [];
-  productosLoading = false;
-  productoPageNumber = 1;
-  productoPageSize = 10;
-  productoTotalPages = 1;
-  productoTotalRegistros = 0;
-  productoPageSizeOptions = [10, 25, 50];
-  equivalenciasPorProducto: Record<string, EquivalenciaGeneralDto[]> = {};
-  equivalenciasLoading: Record<string, boolean> = {};
+  categoriaOptions             : CategoriaOption[] = [];
+  grupoOptions                 : CentroCostoOption[] = [];
+  unidadOptions                : UnidadMedidaOption[] = [];
+  requiereReceta               = false;
+  recetaDetalle                : RecetaDetalleForm[] = [];
+  showProductoModal            = false;
+  productoQuery                = '';
+  productos                    : Producto[] = [];
+  productosLoading             = false;
+  productoPageNumber           = 1;
+  productoPageSize             = 10;
+  productoTotalPages           = 1;
+  productoTotalRegistros       = 0;
+  productoPageSizeOptions      = [10, 25, 50];
+  equivalenciasPorProducto     : Record<string, EquivalenciaGeneralDto[]> = {};
+  equivalenciasLoading         : Record<string, boolean> = {};
 
   private serviciosService = inject(ServiciosService);
   private route = inject(ActivatedRoute);
@@ -133,6 +134,7 @@ export class ServicioFormComponent implements OnInit {
       ctoNeto: 0,
       utilidad: 0,
       totalCUtilidad: 0,
+      ctoIva: 0,
       ctoTotal: 0,
       descripcion: '',
       visible: 1,
@@ -263,6 +265,7 @@ export class ServicioFormComponent implements OnInit {
       ctoNeto: this.roundCost(Number(servicio.ctoNeto || 0)),
       utilidad: this.roundCost(Number(servicio.utilidad || 0)),
       totalCUtilidad: this.roundCost(Number(servicio.totalCUtilidad || 0)),
+      ctoIva: this.roundCost(Number((servicio as ServicioUI & { ctoIva?: number }).ctoIva || 0)),
       ctoTotal: this.roundCost(Number(servicio.ctoTotal || 0)),
       descripcion: servicio.descripcion || '',
       visible: Number(servicio.visible ?? 0),
@@ -471,7 +474,7 @@ export class ServicioFormComponent implements OnInit {
     this.formData.ctoTotal = this.roundCost(this.formData.ctoTotal);
   }
 
-  normalizeCostField(field: 'ctoReceta' | 'ctoProduccion' | 'ctoNeto' | 'utilidad' | 'ctoTotal'): void {
+  normalizeCostField(field: 'ctoReceta' | 'ctoProduccion' | 'ctoNeto' | 'utilidad' | 'ctoIva' | 'ctoTotal'): void {
     this.formData[field] = this.roundCost(this.formData[field]);
     if (field === 'ctoProduccion' || field === 'utilidad') {
       this.formData[field] = Math.max(0, this.formData[field]);
@@ -483,10 +486,12 @@ export class ServicioFormComponent implements OnInit {
     const costoReceta = Math.max(0, Number(this.formData.ctoReceta) || 0);
     const porcentajeProduccion = Math.max(0, Number(this.formData.ctoProduccion) || 0);
     const porcentajeUtilidad = Math.max(0, Number(this.formData.utilidad) || 0);
+    const porcentajeIva = 23;
 
-    this.formData.ctoTotal = this.roundCost(costoReceta * (1 + porcentajeProduccion / 100));
-    this.formData.ctoNeto = this.formData.ctoTotal;
+    this.formData.ctoNeto = this.roundCost(costoReceta * (1 + porcentajeProduccion / 100));
     this.formData.totalCUtilidad = this.roundCost(this.formData.ctoNeto * (1 + porcentajeUtilidad / 100));
+    this.formData.ctoIva = this.roundCost(this.formData.totalCUtilidad * (porcentajeIva / 100));
+    this.formData.ctoTotal = this.roundCost(this.formData.totalCUtilidad + this.formData.ctoIva);
   }
 
   onEquivalenciaChange(item: RecetaDetalleForm): void {
@@ -581,24 +586,25 @@ export class ServicioFormComponent implements OnInit {
     }
 
     const cleaned: ServicioUI = {
-      codReceta: this.formData.codReceta.trim(),
-      nomReceta: this.formData.nomReceta.trim(),
-      nomCorto: this.formData.nomCorto?.trim() || '',
-      codCateg: this.formData.codCateg.trim(),
-      codGrupo: this.formData.codGrupo.trim(),
-      uMedida: this.formData.uMedida.trim(),
-      numPorciones: Number(this.formData.numPorciones || 0),
-      ctoReceta: Number(this.formData.ctoReceta || 0),
-      ctoProduccion: Number(this.formData.ctoProduccion || 0),
-      ctoNeto: Number(this.formData.ctoNeto || 0),
-      utilidad: Number(this.formData.utilidad || 0),
-      totalCUtilidad: Number(this.formData.totalCUtilidad || 0),
-      ctoTotal: Number(this.formData.ctoTotal || 0),
-      descripcion: this.formData.descripcion?.trim() || '',
-      visible: Number(this.formData.visible ?? 0),
-      urlImagen: this.formData.urlImagen?.trim() || '',
-      cabys: this.formData.cabys?.trim() || '',
-      compuesto: this.formData.compuesto || 'N'
+      codReceta           : this.formData.codReceta.trim(),
+      nomReceta           : this.formData.nomReceta.trim(),
+      nomCorto            : this.formData.nomCorto?.trim() || '',
+      codCateg            : this.formData.codCateg.trim(),
+      codGrupo            : this.formData.codGrupo.trim(),
+      uMedida             : this.formData.uMedida.trim(),
+      numPorciones        : Number(this.formData.numPorciones || 0),
+      ctoReceta           : Number(this.formData.ctoReceta || 0),
+      ctoProduccion       : Number(this.formData.ctoProduccion || 0),
+      ctoNeto             : Number(this.formData.ctoNeto || 0),
+      utilidad            : Number(this.formData.utilidad || 0),
+      totalCUtilidad      : Number(this.formData.totalCUtilidad || 0),
+      ctoIva              : Number(this.formData.ctoIva || 0),
+      ctoTotal            : Number(this.formData.ctoTotal || 0),
+      descripcion         : this.formData.descripcion?.trim() || '',
+      visible             : Number(this.formData.visible ?? 0),
+      urlImagen           : this.formData.urlImagen?.trim() || '',
+      cabys               : this.formData.cabys?.trim() || '',
+      compuesto           : this.formData.compuesto || 'N'
     };
 
     const payload: ManejoRecetaPayload = {

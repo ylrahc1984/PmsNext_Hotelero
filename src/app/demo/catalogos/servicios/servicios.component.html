@@ -101,16 +101,17 @@
           </div>
         </div>
       </div>
-      <div class="table-responsive">
+      <div class="table-responsive commercial-table-shell">
         <table class="table commercial-table">
           <colgroup>
             <col class="commercial-col-code">
             <col class="commercial-col-product">
-            <col class="commercial-col-category">
             <col class="commercial-col-group">
             <col class="commercial-col-cabys">
             <col class="commercial-col-unit">
-            <col class="commercial-col-cost">
+            <col class="commercial-col-cost-recipe">
+            <col class="commercial-col-cost-net">
+            <col class="commercial-col-profit">
             <col class="commercial-col-price">
             <col class="commercial-col-status">
             <col class="commercial-col-user">
@@ -120,12 +121,13 @@
             <tr>
               <th>Codigo</th>
               <th>Producto</th>
-              <th>Categoria</th>
               <th>Grupo</th>
               <th>CABYS</th>
               <th>Unidad</th>
-              <th class="text-end">Costo real</th>
-              <th class="text-end">Precio final</th>
+              <th class="text-end">Costo Receta</th>
+              <th class="text-end">Costo Neto</th>
+              <th class="text-end">Utilidad</th>
+              <th class="text-end">Precio Sugerido</th>
               <th>Estado</th>
               <th>Usuario</th>
               <th>Acciones</th>
@@ -133,7 +135,7 @@
           </thead>
           <tbody>
             <tr *ngIf="isLoading && !filteredServicios.length">
-              <td colspan="11" class="commercial-state-cell">
+              <td colspan="12" class="commercial-state-cell">
                 <span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>
                 Cargando catalogo comercial...
               </td>
@@ -144,16 +146,29 @@
                 <div class="servicio-name">{{ servicio.nomReceta }}</div>
                 <small class="servicio-short-name" *ngIf="servicio.nomCorto">{{ servicio.nomCorto }}</small>
               </td>
-              <td>{{ servicio.codCateg || '—' }}</td>
               <td>{{ servicio.codGrupo || '—' }}</td>
               <td><span class="cabys-cell">{{ servicio.cabys || '—' }}</span></td>
               <td>{{ servicio.uMedida || '—' }}</td>
+              <td class="text-end numeric-cell">₡{{ servicio.ctoReceta | number:'1.2-2' }}</td>
+              <td class="text-end numeric-cell numeric-cell--final">
+                <span class="numeric-cell__value">₡{{ servicio.ctoNeto | number:'1.2-2' }}</span>
+                <small class="numeric-cell__detail">Producción: ₡{{ servicio.ctoProduccion | number:'1.2-2' }}</small>
+              </td>
+              <td class="text-end numeric-cell">
+                <span class="numeric-cell__value">₡{{ servicio.totalCUtilidad | number:'1.2-2' }}</span>
+                <small class="numeric-cell__detail">Margen: {{ servicio.utilidad | number:'1.2-2' }}%</small>
+              </td>
               <td class="text-end numeric-cell">₡{{ servicio.ctoTotal | number:'1.2-2' }}</td>
-              <td class="text-end numeric-cell numeric-cell--final">₡{{ servicio.totalCUtilidad | number:'1.2-2' }}</td>
-              <td>
-                <span class="status-pill" [class.status-pill--visible]="servicio.visible === 1">
-                  <span class="status-dot"></span>
-                  {{ servicio.visible === 1 ? 'Visible' : 'Oculto' }}
+              <td class="text-center status-cell">
+                <span
+                  class="status-badge"
+                  [ngClass]="{
+                    'status-badge--active': servicio.visible === 1,
+                    'status-badge--inactive': servicio.visible !== 1
+                  }"
+                >
+                  <span class="status-badge__dot" aria-hidden="true"></span>
+                  {{ servicio.visible === 1 ? 'Activo' : 'Inactivo' }}
                 </span>
               </td>
               <td><span class="user-cell">{{ servicio.operador || '—' }}</span></td>
@@ -181,7 +196,7 @@
               </td>
             </tr>
             <tr *ngIf="!isLoading && !filteredServicios.length">
-              <td colspan="11" class="commercial-state-cell commercial-state-cell--empty">
+              <td colspan="12" class="commercial-state-cell commercial-state-cell--empty">
                 <i class="feather icon-inbox" aria-hidden="true"></i>
                 <strong>No se encontraron productos</strong>
                 <span>Prueba cambiando los filtros de busqueda.</span>

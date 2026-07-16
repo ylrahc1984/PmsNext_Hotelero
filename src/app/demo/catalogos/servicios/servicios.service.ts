@@ -18,6 +18,7 @@ export interface ServicioDto {
   MPV01_CtoNeto: number;
   MPV01_Utilidad: number;
   MPV01_TotalCUtilidad: number;
+  MPV01_CtoIva: number;
   MPV01_CtoTotal: number;
   MPV01_Descripcion: string;
   MPV01_Visible: number;
@@ -42,6 +43,7 @@ export interface ServicioPost {
   ctoNeto: number;
   utilidad: number;
   totalCUtilidad: number;
+  ctoIva: number;
   ctoTotal: number;
   descripcion: string;
   visible: number;
@@ -134,25 +136,26 @@ export interface EstructuraRecetaCompleta {
 }
 
 export interface ServicioUI {
-  codCateg: string;
-  codGrupo: string;
-  codReceta: string;
-  nomReceta: string;
-  nomCorto: string;
-  uMedida: string;
-  numPorciones: number;
-  ctoReceta: number;
-  ctoProduccion: number;
-  ctoNeto: number;
-  utilidad: number;
-  totalCUtilidad: number;
-  ctoTotal: number;
-  descripcion: string;
-  visible: number;
-  urlImagen: string;
-  cabys: string;
-  compuesto: string;
-  operador?: string;
+  codCateg          : string;
+  codGrupo          : string;
+  codReceta         : string;
+  nomReceta         : string;
+  nomCorto          : string;
+  uMedida           : string;
+  numPorciones      : number;
+  ctoReceta         : number;
+  ctoProduccion     : number;
+  ctoNeto           : number;
+  utilidad          : number;
+  totalCUtilidad    : number;
+  ctoTotal          : number;
+  descripcion       : string;
+  visible           : number;
+  urlImagen         : string;
+  cabys             : string;
+  compuesto         : string;
+  operador          ?: string;
+  ctoIva            : number;
 }
 
 export interface CentroCostoDto {
@@ -500,6 +503,7 @@ export class ServiciosService {
         ctoNeto: Number(value.ctoNeto || 0),
         utilidad: Number(value.utilidad || 0),
         totalCUtilidad: Number(value.totalCUtilidad || 0),
+        ctoIva: Number(value.ctoIva || 0),
         ctoTotal: Number(value.ctoTotal || 0),
         descripcion: value.descripcion || '',
         visible: Number(value.visible ?? 0),
@@ -538,6 +542,7 @@ export class ServiciosService {
       ctoNeto: apiData.MPV01_CtoNeto ?? 0,
       utilidad: apiData.MPV01_Utilidad ?? 0,
       totalCUtilidad: apiData.MPV01_TotalCUtilidad ?? 0,
+      ctoIva: apiData.MPV01_CtoIva ?? 0,
       ctoTotal: apiData.MPV01_CtoTotal ?? 0,
       descripcion: apiData.MPV01_Descripcion,
       visible: apiData.MPV01_Visible ?? 0,
