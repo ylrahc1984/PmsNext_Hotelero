@@ -438,7 +438,7 @@ export class ServiciosService {
       map((response) => {
         const uniqueByCodigo = new Map<string, UnidadMedidaOption>();
         (response ?? []).forEach((item) => {
-          const codigo = (item?.CAC04_UnmMed || '').trim().toUpperCase();
+          const codigo = (item?.CAC04_UnmMed || '').trim();
           if (!codigo) {
             return;
           }
@@ -535,7 +535,7 @@ export class ServiciosService {
       codReceta: (apiData.MPV01_CodReceta || '').trim(),
       nomReceta: apiData.MPV01_NomReceta,
       nomCorto: apiData.MPV01_NomCorto,
-      uMedida: (apiData.MPV01_UMedida || '').trim().toUpperCase(),
+      uMedida: (apiData.MPV01_UMedida || '').trim(),
       numPorciones: apiData.MPV01_NumPorciones ?? 0,
       ctoReceta: apiData.MPV01_CtoReceta ?? 0,
       ctoProduccion: apiData.MPV01_CtoProduccion ?? 0,

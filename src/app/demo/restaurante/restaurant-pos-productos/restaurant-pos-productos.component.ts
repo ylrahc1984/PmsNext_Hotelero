@@ -60,7 +60,7 @@ export class RestaurantPosProductosComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
   readonly restaurantCartStore = inject(RestaurantCartStore);
 
-  readonly listaPrecio = 'LSTLG';
+  readonly listaPrecio = 'LSTRE';
   readonly mesaId = Number(this.route.snapshot.paramMap.get('id') ?? '0');
   readonly selectedTableContext = this.readSelectedTableContext();
   readonly codPuntoVenta = this.route.snapshot.queryParamMap.get('puntoVenta') || this.selectedTableContext?.puntoVenta?.codigo || '';
@@ -330,6 +330,7 @@ export class RestaurantPosProductosComponent implements OnInit {
   private cargarCategorias(): void {
     this.loadingCategorias = true;
     this.errorCategorias = '';
+    console.log('Cargando categorias para lista', this.listaPrecio);
     this.categoriasService
       .obtenerCategoriasVisibles(this.listaPrecio)
       .pipe(
@@ -344,6 +345,7 @@ export class RestaurantPosProductosComponent implements OnInit {
       )
       .subscribe((categorias) => {
         this.categorias = categorias;
+        
         if (categorias.length) {
           this.seleccionarCategoria(categorias[0]);
         }
