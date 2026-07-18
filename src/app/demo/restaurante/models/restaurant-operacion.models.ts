@@ -11,7 +11,7 @@ export interface PuntoVentaUsuario {
 export interface SelectedPointOfSale {
   codigo        : string;
   descripcion   : string;
-  detalle       ?: PuntoVentaUsuario;
+  detalle       : PuntoVentaUsuario;
 }
 
 export interface UbicacionMesasResponse {
@@ -62,7 +62,7 @@ export interface MozoPuntoVenta {
 }
 
 export interface SelectedRestaurantTableContext {
-  puntoVenta      : SelectedPointOfSale | null;
+  puntoVenta      : SelectedPointOfSale;
   areaOperativa   : UbicacionMesa;
   mesa            : MesaVisual;
   mozo            : MozoPuntoVenta;

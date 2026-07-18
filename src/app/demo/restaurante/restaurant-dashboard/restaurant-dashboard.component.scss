@@ -312,11 +312,50 @@ $line: #dbe5ef;
 }
 
 .panel-header--areas {
+  min-height: 20px;
   margin-bottom: 4px;
 }
 
 .panel-header--areas h2 {
   font-size: 0.96rem;
+}
+
+.areas-exchange {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 20px;
+  color: $muted;
+  font-size: 0.66rem;
+  font-weight: 720;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.areas-exchange i {
+  color: $blue;
+  font-size: 0.72rem;
+}
+
+.areas-exchange strong {
+  margin-left: 2px;
+  color: $ink;
+  font-size: 0.72rem;
+  font-weight: 880;
+}
+
+.areas-exchange__label {
+  color: $blue;
+  font-weight: 880;
+}
+
+.areas-exchange--warning i,
+.areas-exchange--warning .areas-exchange__label {
+  color: $orange;
+}
+
+.areas-exchange__spinner {
+  animation: exchange-spin 850ms linear infinite;
 }
 
 .area-card {
@@ -646,6 +685,15 @@ $line: #dbe5ef;
     flex-direction: column;
   }
 
+  .panel-header--areas {
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .areas-exchange__label {
+    display: none;
+  }
+
   .tables-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
@@ -683,5 +731,11 @@ $line: #dbe5ef;
 @keyframes pulse {
   to {
     opacity: 0.55;
+  }
+}
+
+@keyframes exchange-spin {
+  to {
+    transform: rotate(360deg);
   }
 }

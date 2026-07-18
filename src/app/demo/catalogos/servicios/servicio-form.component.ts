@@ -90,23 +90,23 @@ export class ServicioFormComponent implements OnInit {
   equivalenciasPorProducto     : Record<string, EquivalenciaGeneralDto[]> = {};
   equivalenciasLoading         : Record<string, boolean> = {};
 
-  private serviciosService = inject(ServiciosService);
-  private route = inject(ActivatedRoute);
-  private router = inject(Router);
-  private http = inject(HttpClient);
-  private productoService = inject(ProductoService);
+  private serviciosService     = inject(ServiciosService);
+  private route                = inject(ActivatedRoute);
+  private router               = inject(Router);
+  private http                 = inject(HttpClient);
+  private productoService      = inject(ProductoService);
 
   get listRoute(): string {
     return this.router.url.startsWith('/restaurante/servicios') ? '/restaurante/servicios' : '/catalogos/servicios';
   }
 
-  showCabysModal = false;
-  cabysQuery = '';
-  cabysTop = 10;
-  cabysResults: CabysItem[] = [];
-  cabysTotal = 0;
-  cabysLoading = false;
-  cabysError = '';
+  showCabysModal     = false;
+  cabysQuery         = '';
+  cabysTop           = 10;
+  cabysResults       : CabysItem[] = [];
+  cabysTotal         = 0;
+  cabysLoading       = false;
+  cabysError         = '';
 
   ngOnInit() {
     const codReceta = this.route.snapshot.paramMap.get('codReceta') ?? '';
@@ -122,25 +122,25 @@ export class ServicioFormComponent implements OnInit {
 
   private createEmpty(): ServicioFormData {
     return {
-      codReceta: '',
-      nomReceta: '',
-      nomCorto: '',
-      codCateg: '',
-      codGrupo: '',
-      uMedida: 'Unid',
-      numPorciones: 1,
-      ctoReceta: 0,
-      ctoProduccion: 0,
-      ctoNeto: 0,
-      utilidad: 0,
-      totalCUtilidad: 0,
-      ctoIva: 0,
-      ctoTotal: 0,
-      descripcion: '',
-      visible: 1,
-      urlImagen: '',
-      cabys: '',
-      compuesto: 'N'
+      codReceta         : '',
+      nomReceta         : '',
+      nomCorto          : '',
+      codCateg          : '',
+      codGrupo          : '',
+      uMedida           : 'Unid',
+      numPorciones      : 1,
+      ctoReceta         : 0,
+      ctoProduccion     : 0,
+      ctoNeto           : 0,
+      utilidad          : 0,
+      totalCUtilidad    : 0,
+      ctoIva            : 0,
+      ctoTotal          : 0,
+      descripcion       : '',
+      visible           : 1,
+      urlImagen         : '',
+      cabys             : '',
+      compuesto         : 'N'
     };
   }
 
@@ -253,25 +253,25 @@ export class ServicioFormComponent implements OnInit {
   private applyServicio(servicio: ServicioUI): void {
     this.formData = {
       ...this.createEmpty(),
-      codReceta: servicio.codReceta,
-      nomReceta: servicio.nomReceta,
-      nomCorto: servicio.nomCorto,
-      codCateg: servicio.codCateg,
-      codGrupo: servicio.codGrupo,
-      uMedida: servicio.uMedida || 'Unid',
-      numPorciones: Number(servicio.numPorciones || 0),
-      ctoReceta: this.roundCost(Number(servicio.ctoReceta || 0)),
-      ctoProduccion: this.roundCost(Number(servicio.ctoProduccion || 0)),
-      ctoNeto: this.roundCost(Number(servicio.ctoNeto || 0)),
-      utilidad: this.roundCost(Number(servicio.utilidad || 0)),
-      totalCUtilidad: this.roundCost(Number(servicio.totalCUtilidad || 0)),
-      ctoIva: this.roundCost(Number((servicio as ServicioUI & { ctoIva?: number }).ctoIva || 0)),
-      ctoTotal: this.roundCost(Number(servicio.ctoTotal || 0)),
-      descripcion: servicio.descripcion || '',
-      visible: Number(servicio.visible ?? 0),
-      urlImagen: servicio.urlImagen || '',
-      cabys: servicio.cabys || '',
-      compuesto: servicio.compuesto || 'N'
+      codReceta           : servicio.codReceta,
+      nomReceta           : servicio.nomReceta,
+      nomCorto            : servicio.nomCorto,
+      codCateg            : servicio.codCateg,
+      codGrupo            : servicio.codGrupo,
+      uMedida             : servicio.uMedida || 'Unid',
+      numPorciones        : Number(servicio.numPorciones || 0),
+      ctoReceta           : this.roundCost(Number(servicio.ctoReceta || 0)),
+      ctoProduccion       : this.roundCost(Number(servicio.ctoProduccion || 0)),
+      ctoNeto             : this.roundCost(Number(servicio.ctoNeto || 0)),
+      utilidad            : this.roundCost(Number(servicio.utilidad || 0)),
+      totalCUtilidad      : this.roundCost(Number(servicio.totalCUtilidad || 0)),
+      ctoIva              : this.roundCost(Number((servicio as ServicioUI & { ctoIva?: number }).ctoIva || 0)),
+      ctoTotal            : this.roundCost(Number(servicio.ctoTotal || 0)),
+      descripcion         : servicio.descripcion || '',
+      visible             : Number(servicio.visible ?? 0),
+      urlImagen           : servicio.urlImagen || '',
+      cabys               : servicio.cabys || '',
+      compuesto           : servicio.compuesto || 'N'
     };
     this.requiereReceta = this.formData.compuesto === 'S';
 
@@ -403,18 +403,18 @@ export class ServicioFormComponent implements OnInit {
     const costo = this.roundCost(Number(producto.MAC02_UltimoCto ?? producto.MAC02_CostoPro ?? 0) || 0);
     const unidad = (producto.MAC02_UnmProdu || '').trim();
     const detalle: RecetaDetalleForm = {
-      dR_Tipo: 'P',
-      dR_CodProducto: codigo,
-      dR_NomProducto: (producto.MAC02_NomProducto || '').trim(),
-      dR_UnMProducto: unidad,
-      dR_CodEquival: '',
-      dR_PorMerma: 0,
-      dR_CanProducto: 1,
-      dR_UMDestino: unidad,
-      dR_CtoProducto: costo,
-      dR_CtoTotal: costo,
-      dR_Orden: this.recetaDetalle.length + 1,
-      costoUnidadOrigen: costo
+      dR_Tipo               : 'P',
+      dR_CodProducto        : codigo,
+      dR_NomProducto        : (producto.MAC02_NomProducto || '').trim(),
+      dR_UnMProducto        : unidad,
+      dR_CodEquival         : '',
+      dR_PorMerma           : 0,
+      dR_CanProducto        : 1,
+      dR_UMDestino          : unidad,
+      dR_CtoProducto        : costo,
+      dR_CtoTotal           : costo,
+      dR_Orden              : this.recetaDetalle.length + 1,
+      costoUnidadOrigen     : costo
     };
     this.recetaDetalle.push(detalle);
     this.loadEquivalencias(detalle);
@@ -610,39 +610,39 @@ export class ServicioFormComponent implements OnInit {
     const payload: ManejoRecetaPayload = {
       proceso: this.isEditing ? 2 : 1,
       tmpdetalle: this.requiereReceta ? this.recetaDetalle.map((item, index) => ({
-        dR_Tipo: item.dR_Tipo,
-        dR_CodProducto: item.dR_CodProducto,
-        dR_NomProducto: item.dR_NomProducto,
-        dR_UnMProducto: item.dR_UnMProducto,
-        dR_CodEquival: item.dR_CodEquival,
-        dR_PorMerma: item.dR_PorMerma,
-        dR_CanProducto: item.dR_CanProducto,
-        dR_UMDestino: item.dR_UMDestino,
-        dR_CtoProducto: item.dR_CtoProducto,
-        dR_CtoTotal: item.dR_CtoTotal,
-        dR_Orden: index + 1
+        dR_Tipo           : item.dR_Tipo,
+        dR_CodProducto    : item.dR_CodProducto,
+        dR_NomProducto    : item.dR_NomProducto,
+        dR_UnMProducto    : item.dR_UnMProducto,
+        dR_CodEquival     : item.dR_CodEquival,
+        dR_PorMerma       : item.dR_PorMerma,
+        dR_CanProducto    : item.dR_CanProducto,
+        dR_UMDestino      : item.dR_UMDestino,
+        dR_CtoProducto    : item.dR_CtoProducto,
+        dR_CtoTotal       : item.dR_CtoTotal,
+        dR_Orden          : index + 1
       })) : [],
-      codcateg: cleaned.codCateg,
-      codgrupo: cleaned.codGrupo,
-      codreceta: cleaned.codReceta,
-      nomreceta: cleaned.nomReceta,
-      nomcorto: cleaned.nomCorto,
-      umedida: cleaned.uMedida,
-      numporciones: cleaned.numPorciones,
-      ctoreceta: cleaned.ctoReceta,
-      ctoproduccion: cleaned.ctoProduccion,
-      ctoneto: cleaned.ctoNeto,
-      utilidad: cleaned.utilidad,
-      totalcutilidad: cleaned.totalCUtilidad,
-      ctototal: cleaned.ctoTotal,
-      descripcion: cleaned.descripcion,
-      visible: cleaned.visible,
-      urlimagen: cleaned.urlImagen,
-      operador: '',
-      cabys: cleaned.cabys,
-      compuesto: this.requiereReceta ? 'S' : 'N',
-      pageNumber: 0,
-      pageSize: 0
+      codcateg            : cleaned.codCateg,
+      codgrupo            : cleaned.codGrupo,
+      codreceta           : cleaned.codReceta,
+      nomreceta           : cleaned.nomReceta,
+      nomcorto            : cleaned.nomCorto,
+      umedida             : cleaned.uMedida,
+      numporciones        : cleaned.numPorciones,
+      ctoreceta           : cleaned.ctoReceta,
+      ctoproduccion       : cleaned.ctoProduccion,
+      ctoneto             : cleaned.ctoNeto,
+      utilidad            : cleaned.utilidad,
+      totalcutilidad      : cleaned.totalCUtilidad,
+      ctototal            : cleaned.ctoTotal,
+      descripcion         : cleaned.descripcion,
+      visible             : cleaned.visible,
+      urlimagen           : cleaned.urlImagen,
+      operador            : '',
+      cabys               : cleaned.cabys,
+      compuesto           : this.requiereReceta ? 'S' : 'N',
+      pageSize            : 0,
+      pageNumber          : 0,
     };
 
     const actionLabel = this.isEditing ? 'actualizar' : 'crear';

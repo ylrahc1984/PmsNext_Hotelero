@@ -58,6 +58,14 @@ export interface FacturacionPuntoVentaRequest {
   respuesta: string;
 }
 
+export interface DocumentoPuntoVenta {
+  MPV31_CodPntVenta: string;
+  MPV31_CodDocu: string;
+  MPV31_Descripcion: string;
+  MPV31_Principal: number;
+  MPV31_Operador: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -67,5 +75,10 @@ export class RestaurantInvoiceService {
 
   facturarPuntoVenta(request: FacturacionPuntoVentaRequest): Observable<unknown> {
     return this.http.post<unknown>(`${this.baseUrl}/facturacion/venta-pntvta-web`, request);
+  }
+
+  obtenerDocumentosPorPuntoVenta(codPuntoVenta: string): Observable<DocumentoPuntoVenta[]> {
+    const codigo = encodeURIComponent((codPuntoVenta || '').trim());
+    return this.http.get<DocumentoPuntoVenta[]>(`${this.baseUrl}/documento-puntoventa/${codigo}`);
   }
 }

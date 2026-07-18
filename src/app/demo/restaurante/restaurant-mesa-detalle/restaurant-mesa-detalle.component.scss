@@ -184,6 +184,11 @@ $next-ink: #10263b;
   overflow-wrap: anywhere;
 }
 
+.info-item--warning i,
+.info-item--warning strong {
+  color: #d97706;
+}
+
 .mesa-comment {
   margin-top: 6px;
   min-height: 34px;

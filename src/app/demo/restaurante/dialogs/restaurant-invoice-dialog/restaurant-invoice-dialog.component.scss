@@ -31,10 +31,16 @@ input,select{width:100%;min-width:0;padding:0 11px;font-size:.86rem}
 .search-field input{border:0;padding:0;background:transparent}
 input:focus,select:focus{outline:2px solid rgba($c,.38);border-color:rgba($b,.42)}
 .client-state,.loading-box,.processing{display:flex;align-items:center;gap:8px;color:$m;font-size:.82rem}
+.document-state{display:flex;align-items:center;gap:8px;margin-top:14px;color:$m;font-size:.82rem}
 .processing{margin-right:auto;color:$b;font-weight:800}
 .spinner{width:16px;height:16px;border:2px solid rgba($b,.18);border-top-color:$b;border-radius:50%;animation:spin .8s linear infinite}
 .client-results,.selected-client dl,.summary-list,.payment-summary,.payment-form{display:grid;gap:8px}
 .client-results,.selected-client,.payments-table,.empty-state,.detail-button,.inline-error{margin-top:14px}
+.selected-document{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;align-items:center;margin-top:14px;padding:11px 12px;border:1px solid rgba($b,.2);border-radius:14px;background:rgba($b,.06)}
+.selected-document__icon{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;color:$b;background:#fff}
+.selected-document div{display:grid;gap:2px;min-width:0}.selected-document div>span,.selected-document small{color:$m;font-size:.7rem}.selected-document strong{font-size:.8rem;overflow-wrap:anywhere}
+.selected-document--invoice{border-color:rgba(22,129,90,.25);background:rgba(22,129,90,.07)}.selected-document--invoice .selected-document__icon{color:#16815a}
+.selected-document--ticket{border-color:rgba(31,107,255,.22);background:rgba(31,107,255,.06)}
 .client-result,.payment-summary div,.summary-list div,.selected-client,.payment-form,.empty-state,.inline-error{border:1px solid rgba($l,.9);border-radius:14px;background:#f8fbff}
 .client-result{display:grid;gap:3px;width:100%;padding:10px 11px;text-align:left}
 .selected-client,.payment-form{padding:12px}
@@ -44,8 +50,14 @@ input:focus,select:focus{outline:2px solid rgba($c,.38);border-color:rgba($b,.42
 .payment-summary{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:14px}
 .payment-summary div,.summary-list div{min-width:0;padding:10px}
 .payment-summary strong{display:block;margin-top:4px;font-size:.9rem}
-.payment-form{grid-template-columns:minmax(180px,1.2fr) minmax(110px,.65fr) minmax(150px,.9fr) 42px;align-items:end}
+.payment-form{grid-template-columns:minmax(180px,1.2fr) minmax(180px,.65fr) minmax(95px,.9fr) 42px;grid-template-areas:'method currency amount amount' 'reference reference conversion add';align-items:end}
+.payment-form__method{grid-area:method}.payment-form__currency{grid-area:currency}.payment-form__amount{grid-area:amount}.payment-form__reference{grid-area:reference}
+.payment-form__conversion{grid-area:conversion;display:grid;align-content:center;min-height:38px;padding:4px 10px;border:1px solid rgba($b,.16);border-radius:11px;background:rgba($b,.05);text-align:right}
+.payment-form__conversion span{color:$m;font-size:.65rem}.payment-form__conversion strong{color:$b;font-size:.76rem}
 .add-payment-btn{width:42px;height:38px;color:#fff}
+.payment-form .add-payment-btn{grid-area:add}
+.payment-balance{display:flex;align-items:center;gap:8px;margin-top:9px;padding:8px 11px;border:1px solid rgba($w,.2);border-radius:12px;color:$m;background:rgba($w,.07);font-size:.76rem}
+.payment-balance strong{color:$i;font-size:.85rem}.payment-balance small{margin-left:auto;color:#7b5a20;font-weight:780}
 .payments-table{overflow:auto;border:1px solid $l;border-radius:14px}
 table{width:100%;border-collapse:collapse}
 th,td{padding:10px 12px;border-bottom:1px solid $l;color:$i;font-size:.82rem;text-align:left}
@@ -64,4 +76,4 @@ button:disabled{cursor:not-allowed;opacity:.58}
 .inline-error{padding:9px 11px;border-color:rgba(194,71,45,.2);color:#b4233d;background:rgba(194,71,45,.08);font-size:.78rem;font-weight:760}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:1180px){.invoice-body{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.invoice-card--payments{grid-column:1/-1}}
-@media(max-width:760px){.invoice-dialog{width:96vw;max-height:96vh;margin:2vh auto}.invoice-header,.invoice-footer,.invoice-stepper,.invoice-body{padding-left:14px;padding-right:14px}.invoice-stepper,.invoice-body,.payment-summary,.payment-form{grid-template-columns:minmax(0,1fr)}.invoice-footer{flex-wrap:wrap}.processing{width:100%;margin-right:0}}
+@media(max-width:760px){.invoice-dialog{width:96vw;max-height:96vh;margin:2vh auto}.invoice-header,.invoice-footer,.invoice-stepper,.invoice-body{padding-left:14px;padding-right:14px}.invoice-stepper,.invoice-body,.payment-summary{grid-template-columns:minmax(0,1fr)}.payment-form{grid-template-columns:minmax(0,1fr) 42px;grid-template-areas:'method method' 'currency amount' 'reference reference' 'conversion add'}.payment-balance{align-items:flex-start;flex-wrap:wrap}.payment-balance small{width:100%;margin-left:0}.invoice-footer{flex-wrap:wrap}.processing{width:100%;margin-right:0}}

@@ -6,6 +6,7 @@ import { Router } from '@angular/router';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { PuntoVentaUsuario } from '../models/restaurant-operacion.models';
 import { RestaurantPuntoVentaService } from './restaurant-punto-venta.service';
+import { RestaurantOperationContextService } from '../services/restaurant-operation-context.service';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 
 @Component({
@@ -18,6 +19,7 @@ import { SharedModule } from 'src/app/theme/shared/shared.module';
 })
 export class RestaurantPuntoVentaComponent implements OnInit {
   private readonly service = inject(RestaurantPuntoVentaService);
+  private readonly operationContext = inject(RestaurantOperationContextService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -54,16 +56,8 @@ export class RestaurantPuntoVentaComponent implements OnInit {
   }
 
   seleccionarPuntoVenta(item: PuntoVentaUsuario): void {
-    sessionStorage.setItem(
-      'selectedPointOfSale',
-      JSON.stringify({
-        codigo: item.MPV07_CodPntVenta,
-        descripcion: item.MPV07_NomPntVenta,
-        detalle: item
-      })
-    );
-
-    this.router.navigate(['/restaurant/dashboard', item.MPV07_CodPntVenta]);
+    const selected = this.operationContext.selectPointOfSale(item);
+    this.router.navigate(['/restaurant/dashboard', selected.codigo]);
   }
 
   getIconClass(item: PuntoVentaUsuario): string {

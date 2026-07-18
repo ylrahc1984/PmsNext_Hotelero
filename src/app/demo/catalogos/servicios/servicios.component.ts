@@ -316,6 +316,45 @@ export class ServiciosComponent implements OnInit {
     });
   }
 
+  cambiarVisibilidadServicio(servicio: ServicioUI, visible: 0 | 1): void {
+    const accion = visible === 1 ? 'mostrar' : 'ocultar';
+    const accionPasada = visible === 1 ? 'mostrado' : 'ocultado';
+
+    Swal.fire({
+      title: `${visible === 1 ? 'Mostrar' : 'Ocultar'} servicio`,
+      text: `¿Está seguro de ${accion} el servicio ${servicio.codReceta}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: `Sí, ${accion}`,
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (!result.isConfirmed) {
+        return;
+      }
+
+      this.isLoading = true;
+      this.serviciosService.actualizarVisibilidad(servicio.codReceta, visible).subscribe({
+        next: () => {
+          Swal.fire({
+            title: `Servicio ${accionPasada}`,
+            text: `El servicio se ha ${accionPasada} correctamente.`,
+            icon: 'success'
+          });
+          this.loadServicios();
+        },
+        error: (error) => {
+          console.error(`Error al ${accion} servicio:`, error);
+          Swal.fire({
+            title: 'Error',
+            text: `No se pudo ${accion} el servicio.`,
+            icon: 'error'
+          });
+          this.isLoading = false;
+        }
+      });
+    });
+  }
+
   getVisibleBadge(visible: number): string {
     return visible === 1 ? 'badge-success' : 'badge-secondary';
   }

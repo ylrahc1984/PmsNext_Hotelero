@@ -46,6 +46,19 @@
         <div class="info-group" *ngIf="notaPedidoInfo">
           <div class="info-item"><i class="feather icon-calendar"></i><span>Fecha NP</span><strong>{{ notaPedidoInfo.fecha }}</strong></div>
         </div>
+
+        <div class="info-group info-group--exchange" [attr.title]="tipoCambioError || 'Tipo de cambio COL / USD'">
+          <div class="info-item" [class.info-item--warning]="tipoCambioError">
+            <i class="feather icon-arrow-down-left"></i>
+            <span>TC Compra USD</span>
+            <strong>{{ tipoCambioLoading ? 'Consultando...' : (compraTipoCambio !== null ? (compraTipoCambio | number:'1.2-2') : '--') }}</strong>
+          </div>
+          <div class="info-item" [class.info-item--warning]="tipoCambioError">
+            <i class="feather icon-arrow-up-right"></i>
+            <span>TC Venta USD</span>
+            <strong>{{ tipoCambioLoading ? 'Consultando...' : (ventaTipoCambio !== null ? (ventaTipoCambio | number:'1.2-2') : '--') }}</strong>
+          </div>
+        </div>
       </div>
 
       <div class="mesa-comment">
@@ -269,6 +282,12 @@
   [data]="invoiceDialogData"
   (closed)="onInvoiceDialogClosed($event)"
 ></app-restaurant-invoice-dialog>
+
+<app-restaurant-collaborator-charge-dialog
+  *ngIf="showCollaboratorChargeDialog && collaboratorChargeDialogData"
+  [data]="collaboratorChargeDialogData"
+  (closed)="onCollaboratorChargeDialogClosed($event)"
+></app-restaurant-collaborator-charge-dialog>
 
 <div
   *ngIf="cuentaModalItem"

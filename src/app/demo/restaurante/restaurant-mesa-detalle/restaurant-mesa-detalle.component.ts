@@ -1,17 +1,25 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import Swal from 'sweetalert2';
 
 import { AuthService } from 'src/app/core/services/auth.service';
+import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
 import { InHouseGuest } from 'src/app/modules/front-desk/in-house-guests/models/in-house-guest.model';
 import { InHouseGuestsService } from 'src/app/modules/front-desk/in-house-guests/services/in-house-guests.service';
+import {
+  RestaurantCollaboratorChargeDialogComponent,
+  RestaurantCollaboratorChargeDialogData,
+  RestaurantCollaboratorChargeDialogResult
+} from '../dialogs/restaurant-collaborator-charge-dialog/restaurant-collaborator-charge-dialog.component';
 import {
   RestaurantInvoiceDialogComponent,
   RestaurantInvoiceDialogData,
   RestaurantInvoiceDialogResult
 } from '../dialogs/restaurant-invoice-dialog/restaurant-invoice-dialog.component';
 import { SelectedRestaurantTableContext } from '../models/restaurant-operacion.models';
+import { RestaurantOperationContextService } from '../services/restaurant-operation-context.service';
 import {
   NotaPedidoRestauranteProceso91Response,
   NotaPedidoRestauranteService
@@ -83,7 +91,7 @@ interface HabitacionCargoOption {
 @Component({
   selector: 'app-restaurant-mesa-detalle',
   standalone: true,
-  imports: [CommonModule, RestaurantInvoiceDialogComponent],
+  imports: [CommonModule, RestaurantInvoiceDialogComponent, RestaurantCollaboratorChargeDialogComponent],
   templateUrl: './restaurant-mesa-detalle.component.html',
   styleUrls: ['./restaurant-mesa-detalle.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -92,8 +100,11 @@ export class RestaurantMesaDetalleComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly notaPedidoService = inject(NotaPedidoRestauranteService);
+  private readonly operationContext = inject(RestaurantOperationContextService);
   private readonly inHouseGuestsService = inject(InHouseGuestsService);
   private readonly authService = inject(AuthService);
+  private readonly tipoCambioService = inject(TipoCambioService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
 
   readonly mesaId = Number(this.route.snapshot.paramMap.get('id') ?? '12');
@@ -117,34 +128,39 @@ export class RestaurantMesaDetalleComponent implements OnInit {
     comentario      : 'Orden de mesa para 4 personas, sin requerimientos especiales.'
   };
 
-  consumoActual             : ConsumoMesa[] = [];
-  notaPedidoInfo            : NotaPedidoMesaInfo | null = null;
-  monedaActual              = 'USD';
-  subtotal                  = 0;
-  descuento                 = 0;
-  impuestos                 = 0;
-  propina                   = 0;
-  total                     = 0;
-  showInvoiceDialog         = false;
-  notaPedidoDetalleValido   = false;
-  invoiceDialogData         : RestaurantInvoiceDialogData | null = null;
-  eliminandoItems           = new Set<number>();
-  cambiandoCuentaItems      = new Set<number>();
-  dividiendoItems           = new Set<number>();
-  cuentaModalItem           : ConsumoMesa | null = null;
-  dividirModalItem          : ConsumoMesa | null = null;
-  cuentaSeleccionada        = 1;
-  cuentaFiltroActual        = 0;
-  partesSeleccionadas       = 2;
-  readonly cuentasDisponibles = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-  readonly partesDisponibles = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-  showCargoHabitacionModal = false;
-  isCargoHabitacionLoading = false;
-  isCargoHabitacionSaving = false;
-  cargoHabitacionError = '';
-  cargoHabitacionSearch = '';
-  habitacionesCargo: HabitacionCargoOption[] = [];
-  habitacionCargoSeleccionada: HabitacionCargoOption | null = null;
+  consumoActual                 : ConsumoMesa[] = [];
+  notaPedidoInfo                : NotaPedidoMesaInfo | null = null;
+  monedaActual                  = 'USD';
+  subtotal                      = 0;
+  descuento                     = 0;
+  impuestos                     = 0;
+  propina                       = 0;
+  total                         = 0;
+  tipoCambio                   : TipoCambio | null = null;
+  tipoCambioLoading            = false;
+  tipoCambioError              = '';
+  showInvoiceDialog             = false;
+  notaPedidoDetalleValido       = false;
+  invoiceDialogData             : RestaurantInvoiceDialogData | null = null;
+  showCollaboratorChargeDialog  = false;
+  collaboratorChargeDialogData : RestaurantCollaboratorChargeDialogData | null = null;
+  eliminandoItems               = new Set<number>();
+  cambiandoCuentaItems          = new Set<number>();
+  dividiendoItems               = new Set<number>();
+  cuentaModalItem               : ConsumoMesa | null = null;
+  dividirModalItem              : ConsumoMesa | null = null;
+  cuentaSeleccionada            = 1;
+  cuentaFiltroActual            = 0;
+  partesSeleccionadas           = 2;
+  readonly cuentasDisponibles   = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  readonly partesDisponibles    = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  showCargoHabitacionModal      = false;
+  isCargoHabitacionLoading      = false;
+  isCargoHabitacionSaving       = false;
+  cargoHabitacionError          = '';
+  cargoHabitacionSearch         = '';
+  habitacionesCargo             : HabitacionCargoOption[] = [];
+  habitacionCargoSeleccionada   : HabitacionCargoOption | null = null;
 
   readonly acciones: AccionOperativa[] = [
     { id: 'imprimir-cuenta', titulo: 'Imprimir Cuenta', icono: 'icon-printer' },
@@ -158,12 +174,25 @@ export class RestaurantMesaDetalleComponent implements OnInit {
   ];
 
   ngOnInit(): void {
+    this.cargarTipoCambio();
     this.cargarNotaPedidoActual();
+  }
+
+  get compraTipoCambio(): number | null {
+    return this.tipoCambio?.compra ?? null;
+  }
+
+  get ventaTipoCambio(): number | null {
+    return this.tipoCambio?.venta ?? null;
   }
 
   onAccionClick(accion: AccionOperativa): void {
     if (accion.id === 'facturar-mesa') {
       this.abrirModalFacturacion();
+      return;
+    }
+    if (accion.id === 'cargo-colaborador') {
+      this.abrirModalCargoColaborador();
       return;
     }
     if (accion.id === 'cargo-habitacion') {
@@ -190,6 +219,47 @@ export class RestaurantMesaDetalleComponent implements OnInit {
         || this.normalizeText(room.agencyName).includes(term)
       );
     });
+  }
+
+  abrirModalCargoColaborador(): void {
+    if (!this.notaPedidoInfo || !this.consumoActual.length) {
+      void Swal.fire({
+        title: 'Sin consumo para cargar',
+        text: 'Debe existir una nota de pedido con consumos para registrar el cargo a un colaborador.',
+        icon: 'warning',
+        confirmButtonText: 'Aceptar',
+        customClass: {
+          popup: 'next-confirm-modal'
+        }
+      });
+      return;
+    }
+
+    const detallePuntoVenta = this.selectedTableContext?.puntoVenta.detalle;
+    this.collaboratorChargeDialogData = {
+      puntoVenta: this.codPuntoVenta,
+      vendedor: this.codMozo,
+      total: Number(this.total || 0),
+      moneda: this.monedaActual || detallePuntoVenta?.MPV04_Moneda || 'USD',
+      tipoCambio: 1,
+      listaPrecio: detallePuntoVenta?.MPV10_CodLstPrecio || '',
+      tipNP: this.notaPedidoInfo.tipNp,
+      serieNP: this.notaPedidoInfo.serieNp,
+      numNP: this.notaPedidoInfo.numNp,
+      numCuenta: Number(this.cuentaFiltroActual || 0),
+      operador: this.getOperador()
+    };
+    this.showCollaboratorChargeDialog = true;
+    this.cdr.markForCheck();
+  }
+
+  onCollaboratorChargeDialogClosed(result: RestaurantCollaboratorChargeDialogResult | null): void {
+    this.showCollaboratorChargeDialog = false;
+    this.collaboratorChargeDialogData = null;
+    if (result?.guardado) {
+      this.reconciliarMesaTrasProceso();
+    }
+    this.cdr.markForCheck();
   }
 
   abrirModalCargoHabitacion(): void {
@@ -597,6 +667,7 @@ export class RestaurantMesaDetalleComponent implements OnInit {
   }
 
   abrirModalFacturacion(): void {
+    const moneda = this.monedaActual || this.selectedTableContext?.puntoVenta?.detalle?.MPV04_Moneda || 'USD';
     this.invoiceDialogData = {
       mesa          : this.mesaDetalle.numeroMesa || String(this.mesaId),
       salon         : this.mesaDetalle.salon || 'Salón Principal',
@@ -604,8 +675,12 @@ export class RestaurantMesaDetalleComponent implements OnInit {
       puntoVenta    : this.codPuntoVenta || 'PL',
       codArea       : this.codAreaOperativa || '08',
       codMozo       : this.codMozo || 'FFUENTES',
-      moneda        : this.monedaActual || this.selectedTableContext?.puntoVenta?.detalle?.MPV04_Moneda || 'USD',
+      moneda        ,
       tipoCambio    : 1,
+      tipoCambioCompra: Number(this.tipoCambio?.compra || 0),
+      tipoCambioVenta : Number(this.tipoCambio?.venta || 0),
+      monedaBaseTipoCambio       : this.tipoCambio?.monedaBase || 'COL',
+      monedaReferenciaTipoCambio : this.tipoCambio?.monedaReferencia || 'USD',
       subtotal      : Number(this.subtotal || 0),
       impuesto      : Number(this.impuestos || 0),
       total         : Number(this.total || 0),
@@ -622,21 +697,35 @@ export class RestaurantMesaDetalleComponent implements OnInit {
     this.showInvoiceDialog = false;
     this.invoiceDialogData = null;
     if (result?.facturado) {
-      this.limpiarMesaFacturada();
+      this.reconciliarMesaTrasProceso();
     }
     this.cdr.markForCheck();
   }
 
   private readSelectedTableContext(): SelectedRestaurantTableContext | null {
-    const raw = sessionStorage.getItem('selectedRestaurantTableContext');
-    if (!raw) {
-      return null;
-    }
-    try {
-      return JSON.parse(raw) as SelectedRestaurantTableContext;
-    } catch {
-      return null;
-    }
+    return this.operationContext.getSelectedTableContext();
+  }
+
+  private cargarTipoCambio(): void {
+    this.tipoCambioLoading = true;
+    this.tipoCambioError = '';
+
+    this.tipoCambioService
+      .fetchTipoCambio(this.formatDate(new Date()), 'usd')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (items) => {
+          this.tipoCambio = items[0] ?? this.tipoCambioService.getActual() ?? null;
+          this.tipoCambioLoading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.tipoCambio = this.tipoCambioService.getActual() ?? null;
+          this.tipoCambioLoading = false;
+          this.tipoCambioError = 'Referencia no actualizada';
+          this.cdr.markForCheck();
+        }
+      });
   }
 
   private cargarNotaPedidoActual(): void {
@@ -731,7 +820,57 @@ export class RestaurantMesaDetalleComponent implements OnInit {
       });
   }
 
-  private limpiarMesaFacturada(): void {
+  private reconciliarMesaTrasProceso(): void {
+    const notaProcesada = this.notaPedidoInfo;
+    sessionStorage.removeItem('restaurantLastNotaPedido');
+
+    if (!notaProcesada) {
+      this.finalizarMesaProcesada();
+      return;
+    }
+
+    this.notaPedidoService
+      .obtenerDetallePedido({
+        tipNp: notaProcesada.tipNp,
+        serieNp: notaProcesada.serieNp,
+        numNp: notaProcesada.numNp,
+        pntVta: this.codPuntoVenta,
+        fecha: this.normalizeDateDDMMYYYY(notaProcesada.fecha),
+        exonerado: 0
+      })
+      .subscribe({
+        next: (response) => {
+          const detallesPendientes = response.detalles ?? [];
+          if (!detallesPendientes.length) {
+            this.finalizarMesaProcesada();
+            this.cdr.markForCheck();
+            return;
+          }
+
+          this.cuentaFiltroActual = 0;
+          this.notaPedidoInfo = {
+            ...notaProcesada,
+            respuesta: response.respuesta || notaProcesada.respuesta
+          };
+          this.aplicarDetallePedido(response);
+        },
+        error: (error) => {
+          console.error('No se pudo verificar si quedaron cargos pendientes en la nota.', error);
+          void Swal.fire({
+            title: 'Cargo procesado',
+            text: 'El cargo fue registrado, pero no se pudo actualizar el detalle pendiente de la mesa. Intente recargar la información.',
+            icon: 'warning',
+            confirmButtonText: 'Aceptar',
+            customClass: {
+              popup: 'next-confirm-modal'
+            }
+          });
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  private finalizarMesaProcesada(): void {
     sessionStorage.removeItem('restaurantLastNotaPedido');
     this.limpiarSelectedTableContextActual();
     this.limpiarNotaPedidoEnPantalla(true);
@@ -787,7 +926,7 @@ export class RestaurantMesaDetalleComponent implements OnInit {
     const mismaArea = !this.codAreaOperativa || context.areaOperativa?.MPV09_CodUbicacion === this.codAreaOperativa;
 
     if (mismaMesa && mismoPuntoVenta && mismaArea) {
-      sessionStorage.removeItem('selectedRestaurantTableContext');
+      this.operationContext.clearSelectedTableContext();
     }
   }
 

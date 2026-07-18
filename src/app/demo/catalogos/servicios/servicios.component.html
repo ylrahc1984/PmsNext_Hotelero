@@ -172,26 +172,71 @@
                 </span>
               </td>
               <td><span class="user-cell">{{ servicio.operador || '—' }}</span></td>
-              <td class="text-center">
-                <div class="servicio-actions">
-                  <button
-                    type="button"
-                    class="servicio-action-btn servicio-action-btn--edit"
-                    [routerLink]="[baseRoute, 'editar', servicio.codReceta]"
-                    title="Editar registro"
-                    aria-label="Editar registro"
-                  >
-                    <i class="feather icon-edit" aria-hidden="true"></i>
+              <td class="text-end action-cell">
+                <div ngbDropdown container="body" placement="bottom-end" class="action-menu">
+                  <button type="button" ngbDropdownToggle class="action-toggle" aria-label="Abrir acciones del servicio">
+                    <span class="action-toggle__icon">
+                      <i class="feather icon-more-horizontal" aria-hidden="true"></i>
+                    </span>
+                    <i class="feather icon-chevron-down action-toggle__caret" aria-hidden="true"></i>
                   </button>
-                  <button
-                    type="button"
-                    class="servicio-action-btn servicio-action-btn--danger"
-                    (click)="deleteServicio(servicio)"
-                    title="Eliminar registro"
-                    aria-label="Eliminar registro"
-                  >
-                    <i class="feather icon-trash" aria-hidden="true"></i>
-                  </button>
+                  <div ngbDropdownMenu class="dropdown-menu action-dropdown">
+                    <div class="action-dropdown__section-title">Servicio</div>
+                    <button
+                      type="button"
+                      ngbDropdownItem
+                      class="dropdown-item action-item"
+                      [routerLink]="[baseRoute, 'editar', servicio.codReceta]"
+                    >
+                      <span class="action-item__icon action-item__icon--primary">
+                        <i class="feather icon-edit-2" aria-hidden="true"></i>
+                      </span>
+                      <span class="action-item__content">
+                        <span class="action-item__label">Editar servicio</span>
+                      </span>
+                    </button>
+
+                    <div class="action-dropdown__divider"></div>
+                    <div class="action-dropdown__section-title">Visibilidad</div>
+                    <button
+                      type="button"
+                      ngbDropdownItem
+                      class="dropdown-item action-item"
+                      (click)="cambiarVisibilidadServicio(servicio, servicio.visible === 1 ? 0 : 1)"
+                    >
+                      <span
+                        class="action-item__icon"
+                        [ngClass]="servicio.visible === 1 ? 'action-item__icon--warning' : 'action-item__icon--success'"
+                      >
+                        <i
+                          class="feather"
+                          [ngClass]="servicio.visible === 1 ? 'icon-eye-off' : 'icon-eye'"
+                          aria-hidden="true"
+                        ></i>
+                      </span>
+                      <span class="action-item__content">
+                        <span class="action-item__label">
+                          {{ servicio.visible === 1 ? 'Ocultar servicio' : 'Mostrar servicio' }}
+                        </span>
+                      </span>
+                    </button>
+
+                    <div class="action-dropdown__divider"></div>
+                    <div class="action-dropdown__section-title">Administración</div>
+                    <button
+                      type="button"
+                      ngbDropdownItem
+                      class="dropdown-item action-item"
+                      (click)="deleteServicio(servicio)"
+                    >
+                      <span class="action-item__icon action-item__icon--danger">
+                        <i class="feather icon-trash-2" aria-hidden="true"></i>
+                      </span>
+                      <span class="action-item__content">
+                        <span class="action-item__label">Eliminar servicio</span>
+                      </span>
+                    </button>
+                  </div>
                 </div>
               </td>
             </tr>

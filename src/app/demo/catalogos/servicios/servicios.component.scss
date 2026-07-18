@@ -780,57 +780,154 @@
   color: #212529 !important;
 }
 
-.servicio-actions {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.45rem;
-  flex-wrap: nowrap;
+.action-cell {
+  width: 1%;
+  white-space: nowrap;
 }
 
-.servicio-action-btn {
+.action-menu .action-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  min-height: 32px;
-  padding: 0;
-  border: 1px solid #d7dfeb;
-  border-radius: 8px;
-  background: #ffffff;
+  gap: 0.38rem;
+  min-height: 30px;
+  padding: 0.2rem 0.6rem 0.2rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
   color: #334155;
-  font-size: 0.95rem;
+  font-size: 0.76rem;
   font-weight: 700;
+  letter-spacing: 0;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
   transition:
-    border-color 0.2s ease,
-    background-color 0.2s ease,
-    color 0.2s ease,
-    box-shadow 0.2s ease;
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease,
+    background-color 0.18s ease;
 }
 
-.servicio-action-btn:hover,
-.servicio-action-btn:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.12);
+.action-menu .action-toggle:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: #cbd5e1;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
 }
 
-.servicio-action-btn--edit {
-  color: #0b5ed7;
+.action-menu .action-toggle:focus {
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
-.servicio-action-btn--edit:hover,
-.servicio-action-btn--edit:focus {
-  border-color: rgba(13, 110, 253, 0.35);
-  background: #f3f7ff;
+.action-toggle__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 999px;
+  color: #1d4ed8;
+  background: #eef4ff;
 }
 
-.servicio-action-btn--danger {
-  color: #b42318;
+.action-toggle__icon i {
+  font-size: 0.72rem;
 }
 
-.servicio-action-btn--danger:hover,
-.servicio-action-btn--danger:focus {
-  border-color: rgba(220, 38, 38, 0.3);
-  background: #fef2f2;
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+.action-toggle__caret {
+  color: #64748b;
+  font-size: 0.64rem;
+}
+
+.action-menu .dropdown-menu {
+  min-width: 14.25rem;
+  padding: 0.3rem;
+  border-radius: 12px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98));
+  box-shadow: 0 20px 38px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(10px);
+}
+
+.action-dropdown__section-title {
+  margin: 0.1rem 0 0.22rem;
+  padding: 0 0.45rem;
+  color: #7b879d;
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.action-dropdown__divider {
+  height: 1px;
+  margin: 0.32rem 0;
+  background: linear-gradient(90deg, transparent, rgba(203, 213, 225, 0.9), transparent);
+}
+
+.action-menu .dropdown-item.action-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.42rem 0.55rem;
+  border-radius: 10px;
+  color: #1f2a44;
+  font-size: 0.76rem;
+}
+
+.action-menu .dropdown-item.action-item:hover,
+.action-menu .dropdown-item.action-item:focus {
+  background: #f3f7fd;
+  transform: translateX(1px);
+}
+
+.action-item__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  border-radius: 8px;
+  border: 1px solid transparent;
+}
+
+.action-item__icon i {
+  font-size: 0.78rem;
+}
+
+.action-item__icon--primary {
+  color: #2563eb;
+  border-color: #d7e6ff;
+  background: #edf4ff;
+}
+
+.action-item__icon--warning {
+  color: #b45309;
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+
+.action-item__icon--success {
+  color: #15803d;
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.action-item__icon--danger {
+  color: #dc2626;
+  border-color: #fecaca;
+  background: #fff1f2;
+}
+
+.action-item__content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.action-item__label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.15;
 }

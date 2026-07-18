@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
 
 import {
   MesaEstado,
@@ -13,6 +14,7 @@ import {
   UbicacionMesa
 } from '../models/restaurant-operacion.models';
 import { RestaurantDashboardService } from './restaurant-dashboard.service';
+import { RestaurantOperationContextService } from '../services/restaurant-operation-context.service';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 
 interface RestaurantKpi {
@@ -36,11 +38,14 @@ export class RestaurantDashboardComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly service = inject(RestaurantDashboardService);
+  private readonly operationContext = inject(RestaurantOperationContextService);
+  private readonly tipoCambioService = inject(TipoCambioService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
 
   codPuntoVenta = '';
   descripcionPuntoVenta = '';
+  puntoVentaSeleccionado: SelectedPointOfSale | null = null;
   ubicaciones: UbicacionMesa[] = [];
   salonSeleccionado: UbicacionMesa | null = null;
   mesas: MesaVisual[] = [];
@@ -54,6 +59,9 @@ export class RestaurantDashboardComponent implements OnInit {
   errorMessage = '';
   mesasErrorMessage = '';
   mozosErrorMessage = '';
+  tipoCambio: TipoCambio | null = null;
+  tipoCambioLoading = false;
+  tipoCambioError = '';
 
   ngOnInit(): void {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
@@ -63,7 +71,11 @@ export class RestaurantDashboardComponent implements OnInit {
         return;
       }
 
-      this.loadPointOfSaleContext();
+      if (!this.loadPointOfSaleContext()) {
+        this.router.navigate(['/restaurant/puntos-venta']);
+        return;
+      }
+      this.cargarTipoCambio();
       this.cargarUbicaciones();
     });
   }
@@ -170,18 +182,18 @@ export class RestaurantDashboardComponent implements OnInit {
   }
 
   seleccionarMozo(mozo: MozoPuntoVenta): void {
-    if (!this.salonSeleccionado || !this.mesaPendienteMozo) {
+    if (!this.puntoVentaSeleccionado || !this.salonSeleccionado || !this.mesaPendienteMozo) {
       return;
     }
 
     const context: SelectedRestaurantTableContext = {
-      puntoVenta: this.readSelectedPointOfSale(),
+      puntoVenta: this.puntoVentaSeleccionado,
       areaOperativa: this.salonSeleccionado,
       mesa: this.mesaPendienteMozo,
       mozo
     };
 
-    sessionStorage.setItem('selectedRestaurantTableContext', JSON.stringify(context));
+    this.operationContext.setSelectedTableContext(context);
 
     this.router.navigate(['/restaurant/mesa', this.mesaPendienteMozo.numero], {
       queryParams: {
@@ -208,6 +220,14 @@ export class RestaurantDashboardComponent implements OnInit {
 
   getMesaClass(mesa: MesaVisual): string {
     return `table-card--${mesa.estado.toLowerCase()}`;
+  }
+
+  get compraTipoCambio(): number | null {
+    return this.tipoCambio?.compra ?? null;
+  }
+
+  get ventaTipoCambio(): number | null {
+    return this.tipoCambio?.venta ?? null;
   }
 
   trackBySalon(_: number, salon: UbicacionMesa): string {
@@ -249,25 +269,33 @@ export class RestaurantDashboardComponent implements OnInit {
       });
   }
 
-  private loadPointOfSaleContext(): void {
-    const selected = this.readSelectedPointOfSale();
-    if (selected?.codigo === this.codPuntoVenta) {
-      this.descripcionPuntoVenta = selected.descripcion || this.codPuntoVenta;
-      return;
-    }
+  private loadPointOfSaleContext(): boolean {
+    const selected = this.operationContext.getSelectedPointOfSale(this.codPuntoVenta);
+    this.puntoVentaSeleccionado = selected;
     this.descripcionPuntoVenta = selected?.descripcion || this.codPuntoVenta;
+    return !!selected;
   }
 
-  private readSelectedPointOfSale(): SelectedPointOfSale | null {
-    const raw = sessionStorage.getItem('selectedPointOfSale');
-    if (!raw) {
-      return null;
-    }
-    try {
-      return JSON.parse(raw) as SelectedPointOfSale;
-    } catch {
-      return null;
-    }
+  private cargarTipoCambio(): void {
+    this.tipoCambioLoading = true;
+    this.tipoCambioError = '';
+
+    this.tipoCambioService
+      .fetchTipoCambio(this.getTodayDisplayDate(), 'usd')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (items) => {
+          this.tipoCambio = items[0] ?? this.tipoCambioService.getActual() ?? null;
+          this.tipoCambioLoading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.tipoCambio = this.tipoCambioService.getActual() ?? null;
+          this.tipoCambioLoading = false;
+          this.tipoCambioError = 'Referencia no actualizada';
+          this.cdr.markForCheck();
+        }
+      });
   }
 
   private rebuildKpis(): void {
@@ -368,13 +396,13 @@ export class RestaurantDashboardComponent implements OnInit {
   }
 
   private abrirMesaOcupada(mesa: MesaVisual): void {
-    if (!this.salonSeleccionado) {
+    if (!this.puntoVentaSeleccionado || !this.salonSeleccionado) {
       return;
     }
 
     const codVendedor = mesa.notaPedido?.codVendedor || '';
     const context: SelectedRestaurantTableContext = {
-      puntoVenta: this.readSelectedPointOfSale(),
+      puntoVenta: this.puntoVentaSeleccionado,
       areaOperativa: this.salonSeleccionado,
       mesa,
       mozo: {
@@ -383,7 +411,7 @@ export class RestaurantDashboardComponent implements OnInit {
         MPV12_PntVenta: this.codPuntoVenta
       }
     };
-    sessionStorage.setItem('selectedRestaurantTableContext', JSON.stringify(context));
+    this.operationContext.setSelectedTableContext(context);
 
     this.router.navigate(['/restaurant/mesa', mesa.numero], {
       queryParams: {
@@ -415,5 +443,12 @@ export class RestaurantDashboardComponent implements OnInit {
     }
 
     return normalized;
+  }
+
+  private getTodayDisplayDate(): string {
+    const today = new Date();
+    const day = String(today.getDate()).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    return `${day}/${month}/${today.getFullYear()}`;
   }
 }

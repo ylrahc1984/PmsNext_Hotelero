@@ -4,7 +4,7 @@
   <section class="invoice-dialog" (click)="$event.stopPropagation()">
     <header class="invoice-header">
       <div>
-        <span class="invoice-eyebrow">PMSNext Hotelero</span>
+
         <h2 id="invoice-dialog-title">Facturación de Mesa</h2>
         <p>Mesa {{ data.mesa }} · {{ data.salon }} · {{ data.pax }} Pax</p>
       </div>
@@ -60,6 +60,27 @@
             <div><dt>Dirección</dt><dd>{{ clienteFacturacion.direccion || 'S/D' }}</dd></div>
           </dl>
         </article>
+
+        <div class="document-state" *ngIf="loadingDocumentos">
+          <span class="spinner"></span>
+          Consultando el tipo de documento...
+        </div>
+        <div class="inline-error" *ngIf="errorDocumentos">{{ errorDocumentos }}</div>
+        <article
+          class="selected-document"
+          *ngIf="tipoDocumentoSeleccionado"
+          [class.selected-document--invoice]="tipoDocumentoSeleccionado.MPV31_CodDocu.startsWith('F')"
+          [class.selected-document--ticket]="tipoDocumentoSeleccionado.MPV31_CodDocu.startsWith('T')"
+        >
+          <span class="selected-document__icon"><i class="feather icon-file-text"></i></span>
+          <div>
+            <span>Documento que se generará</span>
+            <strong>
+              {{ tipoDocumentoSeleccionado.MPV31_CodDocu }} · {{ tipoDocumentoSeleccionado.MPV31_Descripcion }}
+            </strong>
+            <small>{{ documentoSelectionMessage }}</small>
+          </div>
+        </article>
       </section>
 
       <section class="invoice-card invoice-card--payments">
@@ -72,9 +93,10 @@
           Cargando formas de pago...
         </div>
         <div class="inline-error" *ngIf="errorFormasPago">{{ errorFormasPago }}</div>
+        <div class="inline-error" *ngIf="errorMonedas">{{ errorMonedas }}</div>
 
         <div class="payment-form">
-          <label>
+          <label class="payment-form__method">
             <span>Forma de pago</span>
             <select [(ngModel)]="formaPagoSeleccionada" [disabled]="loadingFormasPago || !formasPago.length">
               <option value="">Seleccionar</option>
@@ -83,17 +105,54 @@
               </option>
             </select>
           </label>
-          <label>
-            <span>Monto</span>
-            <input type="number" min="0" step="0.01" [(ngModel)]="montoPago" />
+          <label class="payment-form__currency">
+            <span>Moneda</span>
+            <select
+              [ngModel]="monedaPagoSeleccionada"
+              (ngModelChange)="onMonedaPagoChange($event)"
+              [disabled]="loadingMonedas || !monedas.length"
+            >
+              <option value="">Seleccionar</option>
+              <option *ngFor="let moneda of monedas; trackBy: trackByMoneda" [value]="moneda.codMoneda">
+                {{ moneda.codMoneda }} · {{ moneda.moneda }}
+              </option>
+            </select>
           </label>
-          <label>
+          <label class="payment-form__amount">
+            <span>Monto</span>
+            <input
+              style="text-align: right;"
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              [ngModel]="montoPagoTexto"
+              (ngModelChange)="onMontoPagoChange($event)"
+              (focus)="onMontoPagoFocus()"
+              (blur)="onMontoPagoBlur()"
+              placeholder="0.00"
+            />
+          </label>
+          <label class="payment-form__reference">
             <span>Referencia</span>
             <input type="text" [(ngModel)]="referenciaPago" placeholder="Opcional" />
           </label>
-          <button type="button" class="add-payment-btn" (click)="agregarPago()" [disabled]="loadingFormasPago">
+          <div class="payment-form__conversion" *ngIf="pagoRequiereConversion">
+            <span>Aplicado a la cuenta</span>
+            <strong *ngIf="montoPagoConvertido !== null; else conversionUnavailable">
+              {{ montoPagoConvertido | currency:data.moneda:'symbol':'1.2-2' }}
+            </strong>
+            <ng-template #conversionUnavailable><strong>No disponible</strong></ng-template>
+          </div>
+          <button type="button" class="add-payment-btn" (click)="agregarPago()" [disabled]="loadingFormasPago || loadingMonedas">
             <i class="feather icon-plus"></i>
           </button>
+        </div>
+        <div class="payment-balance">
+          <span>Saldo pendiente</span>
+          <strong>{{ pendiente | currency:data.moneda:'symbol':'1.2-2' }}</strong>
+          <small *ngIf="pagoRequiereConversion && saldoMonedaPago !== null">
+            Equivalente: {{ saldoMonedaPago | currency:monedaPagoSeleccionada:'symbol':'1.2-2' }}
+          </small>
         </div>
         <div class="inline-error" *ngIf="validationMessage">{{ validationMessage }}</div>
 
@@ -104,6 +163,7 @@
                 <th>Forma de Pago</th>
                 <th>Referencia</th>
                 <th class="text-end">Monto</th>
+                <th class="text-end">Aplicado</th>
                 <th class="text-center">Acciones</th>
               </tr>
             </thead>
@@ -112,6 +172,10 @@
                 <td><strong>{{ pago.descripcion }}</strong><span>{{ pago.frmPago }}</span></td>
                 <td>{{ pago.numTarjeta || '-' }}</td>
                 <td class="text-end">{{ pago.monto | currency:pago.moneda:'symbol':'1.2-2' }}</td>
+                <td class="text-end">
+                  <strong>{{ pago.mtoTotal | currency:data.moneda:'symbol':'1.2-2' }}</strong>
+                  <span *ngIf="pago.moneda !== data.moneda">T.C. {{ pago.tCambio | number:'1.2-2' }}</span>
+                </td>
                 <td class="text-center">
                   <button type="button" class="row-action" aria-label="Eliminar pago" (click)="eliminarPago(i)">
                     <i class="feather icon-trash-2"></i>

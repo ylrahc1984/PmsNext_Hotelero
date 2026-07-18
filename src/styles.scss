@@ -1013,6 +1013,11 @@ gmpx-place-autocomplete.places-autocomplete-themed {
   .available-table { min-width: 680px; }
 }
 
+/* Mantiene las confirmaciones de SweetAlert por encima de los dialogos operativos. */
+.swal2-container.next-confirm-container {
+  z-index: 2000 !important;
+}
+
 .charge-detail-backdrop {
   position: fixed;
   inset: 0;

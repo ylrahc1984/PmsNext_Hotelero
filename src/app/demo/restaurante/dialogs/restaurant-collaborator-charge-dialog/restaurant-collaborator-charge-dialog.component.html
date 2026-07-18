@@ -1,0 +1,80 @@
+<div class="collaborator-dialog-panel" role="dialog" aria-modal="true" aria-labelledby="collaborator-dialog-title">
+  <div class="collaborator-backdrop" (click)="cerrar()"></div>
+  <section class="collaborator-dialog" (click)="$event.stopPropagation()">
+    <header class="collaborator-header">
+      <div>
+        <span class="eyebrow">Consumo interno</span>
+        <h2 id="collaborator-dialog-title">Cargo a colaborador</h2>
+        <p>Seleccione el colaborador y confirme la información del consumo.</p>
+      </div>
+      <button type="button" class="icon-button" aria-label="Cerrar" (click)="cerrar()" [disabled]="saving"><i class="feather icon-x"></i></button>
+    </header>
+
+    <main class="collaborator-body">
+      <section class="collaborator-column collaborator-column--list">
+        <div class="section-heading">
+          <div><span>1</span><strong>Seleccionar colaborador</strong></div>
+          <small>{{ colaboradoresFiltrados.length }} registros</small>
+        </div>
+        <label class="search-box">
+          <i class="feather icon-search"></i>
+          <input type="search" [(ngModel)]="busqueda" placeholder="Buscar por código, nombre, RUC o centro de costo" [disabled]="loading || saving" />
+        </label>
+        <div class="loading-state" *ngIf="loading"><span class="spinner"></span>Cargando colaboradores...</div>
+        <div class="collaborator-list" *ngIf="!loading">
+          <button
+            type="button"
+            class="collaborator-card"
+            *ngFor="let item of colaboradoresFiltrados; trackBy: trackByColaborador"
+            [class.collaborator-card--active]="colaboradorSeleccionado?.MPV30_Codigo === item.MPV30_Codigo"
+            (click)="seleccionarColaborador(item)"
+            [disabled]="saving"
+          >
+            <span class="collaborator-avatar"><i class="feather icon-user"></i></span>
+            <span class="collaborator-card__content">
+              <strong>{{ item.MPV30_Nombre }}</strong>
+              <small>{{ item.MPV30_Codigo }} · {{ item.MPV30_CentroCosto || 'Sin centro de costo' }}</small>
+              <small>{{ item.MPV30_Telefono || 'Sin teléfono' }}</small>
+            </span>
+            <i class="feather icon-check-circle selected-check" aria-hidden="true"></i>
+          </button>
+          <div class="empty-state" *ngIf="!colaboradoresFiltrados.length && !errorMessage">
+            <i class="feather icon-users"></i><strong>No se encontraron colaboradores</strong><span>Pruebe con otro criterio de búsqueda.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="collaborator-column collaborator-column--detail">
+        <div class="section-heading"><div><span>2</span><strong>Detalle del cargo</strong></div></div>
+        <article class="selected-summary" *ngIf="colaboradorSeleccionado; else noSelection">
+          <span class="selected-summary__icon"><i class="feather icon-user-check"></i></span>
+          <div><small>Colaborador seleccionado</small><strong>{{ colaboradorSeleccionado.MPV30_Nombre }}</strong><span>{{ colaboradorSeleccionado.MPV30_Codigo }}</span></div>
+        </article>
+        <ng-template #noSelection>
+          <div class="selection-placeholder"><i class="feather icon-user-plus"></i><strong>Seleccione un colaborador</strong><span>La información aparecerá en este espacio.</span></div>
+        </ng-template>
+        <dl class="collaborator-meta" *ngIf="colaboradorSeleccionado">
+          <div><dt>Cedula</dt><dd>{{ colaboradorSeleccionado.MPV30_Ruc || 'No registrado' }}</dd></div>
+          <div><dt>Centro de costo</dt><dd>{{ colaboradorSeleccionado.MPV30_CentroCosto || 'No registrado' }}</dd></div>
+        </dl>
+        <label class="observations-field">
+          <span>Comentarios y observaciones</span>
+          <textarea rows="5" maxlength="500" [(ngModel)]="observaciones" placeholder="Ingrese el motivo o detalle del cargo..." [disabled]="saving"></textarea>
+          <small>{{ observaciones.length }}/500 ·</small>
+        </label>
+        <div class="charge-total">
+          <span>Total a cargar</span><strong>{{ data.total | currency:data.moneda:'symbol':'1.2-2' }}</strong>
+          <small>Nota {{ data.tipNP }}-{{ data.serieNP }}-{{ data.numNP }}</small>
+        </div>
+        <div class="inline-error" *ngIf="errorMessage">{{ errorMessage }}</div>
+      </section>
+    </main>
+
+    <footer class="collaborator-footer">
+      <button type="button" class="secondary-button" (click)="cerrar()" [disabled]="saving">Cancelar</button>
+      <button type="button" class="primary-button" (click)="confirmar()" [disabled]="!colaboradorSeleccionado || saving">
+        <span class="spinner spinner--button" *ngIf="saving"></span>{{ saving ? 'Guardando...' : 'Confirmar cargo' }}
+      </button>
+    </footer>
+  </section>
+</div>

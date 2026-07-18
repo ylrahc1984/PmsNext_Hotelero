@@ -486,6 +486,16 @@ export class ServiciosService {
     return this.http.delete( `${this.apiUrl}/${codReceta}`, { responseType: 'text' }).pipe(map((res) => this.parseTextResponse(res)));
   }
 
+  actualizarVisibilidad(codReceta: string, visible: number): Observable<{ respuesta?: string }> {
+    return this.http
+      .patch(
+        `${this.manejoRecetaUrl}/visibilidad`,
+        { codReceta: codReceta.trim(), visible },
+        { responseType: 'text' }
+      )
+      .pipe(map((response) => this.parseTextResponse(response)));
+  }
+
   buildPayloadFromUI(value: Partial<ServicioUI>, proceso: number, pageNumber = 0, pageSize = 0): ServicioPost {
     return this.normalizePayload(
       {

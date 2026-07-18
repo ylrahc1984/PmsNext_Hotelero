@@ -19,6 +19,7 @@ import {
   NotaPedidoRestauranteService
 } from '../services/nota-pedido-restaurante.service';
 import { ProductosMenuService } from '../services/productos-menu.service';
+import { RestaurantOperationContextService } from '../services/restaurant-operation-context.service';
 import { RestaurantCartStore } from '../store/restaurant-cart.store';
 
 type PosTab = 'categorias' | 'productos' | 'pedido';
@@ -51,25 +52,32 @@ interface NotaPedidoActiva {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RestaurantPosProductosComponent implements OnInit {
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
-  private readonly categoriasService = inject(CategoriasMenuService);
-  private readonly productosService = inject(ProductosMenuService);
-  private readonly notaPedidoService = inject(NotaPedidoRestauranteService);
-  private readonly authService = inject(AuthService);
-  private readonly cdr = inject(ChangeDetectorRef);
-  readonly restaurantCartStore = inject(RestaurantCartStore);
+  private readonly route                   = inject(ActivatedRoute);
+  private readonly router                  = inject(Router);
+  private readonly categoriasService       = inject(CategoriasMenuService);
+  private readonly productosService        = inject(ProductosMenuService);
+  private readonly notaPedidoService       = inject(NotaPedidoRestauranteService);
+  private readonly operationContext        = inject(RestaurantOperationContextService);
+  private readonly authService             = inject(AuthService);
+  private readonly cdr                     = inject(ChangeDetectorRef);
+  readonly restaurantCartStore             = inject(RestaurantCartStore);
 
-  readonly listaPrecio = 'LSTRE';
-  readonly mesaId = Number(this.route.snapshot.paramMap.get('id') ?? '0');
-  readonly selectedTableContext = this.readSelectedTableContext();
-  readonly codPuntoVenta = this.route.snapshot.queryParamMap.get('puntoVenta') || this.selectedTableContext?.puntoVenta?.codigo || '';
-  readonly codAreaOperativa =
+  readonly mesaId                   = Number(this.route.snapshot.paramMap.get('id') ?? '0');
+  readonly selectedTableContext     = this.readSelectedTableContext();
+  readonly selectedPointOfSale      =
+    this.selectedTableContext?.puntoVenta ?? this.operationContext.getSelectedPointOfSale();
+  readonly puntoVentaDetalle        = this.selectedPointOfSale?.detalle ?? null;
+  readonly codPuntoVenta            = this.route.snapshot.queryParamMap.get('puntoVenta') || this.selectedPointOfSale?.codigo || '';
+  readonly codAreaOperativa         =
     this.route.snapshot.queryParamMap.get('ubicacion') || this.selectedTableContext?.areaOperativa.MPV09_CodUbicacion || '';
-  readonly codMozo = this.route.snapshot.queryParamMap.get('mozo') || this.selectedTableContext?.mozo.MPV11_CodUsuario || '';
-  readonly codComanda = this.selectedTableContext?.puntoVenta?.detalle?.MPV07_CodComanda || '';
-  readonly notaPedidoActiva = this.readNotaPedidoActiva();
-  readonly operador = this.getOperador();
+  readonly codMozo                 = this.route.snapshot.queryParamMap.get('mozo') || this.selectedTableContext?.mozo.MPV11_CodUsuario || '';
+  readonly codComanda              = this.puntoVentaDetalle?.MPV07_CodComanda || '';
+  readonly listaPrecio             = this.puntoVentaDetalle?.MPV10_CodLstPrecio || '';
+  readonly monedaPuntoVenta        = this.puntoVentaDetalle?.MPV04_Moneda || '';
+  readonly impresoraA              = this.puntoVentaDetalle?.MPV07_ImpresoraA ?? null;
+  readonly impresoraB              = this.puntoVentaDetalle?.MPV07_ImpresoraB ?? null;
+  readonly notaPedidoActiva        = this.readNotaPedidoActiva();
+  readonly operador                = this.getOperador();
 
   categorias              : CategoriaVisible[] = [];
   productos               : ProductoMenu[] = [];
@@ -296,7 +304,7 @@ export class RestaurantPosProductosComponent implements OnInit {
   }
 
   moneda(): string {
-    return this.restaurantCartStore.items()[0]?.moneda || this.productos[0]?.MPV05_Moneda || 'USD';
+    return this.monedaPuntoVenta || this.restaurantCartStore.items()[0]?.moneda || this.productos[0]?.MPV05_Moneda || 'USD';
   }
 
   iconoCategoria(nombre: string): string {
@@ -328,6 +336,12 @@ export class RestaurantPosProductosComponent implements OnInit {
   }
 
   private cargarCategorias(): void {
+    if (!this.listaPrecio) {
+      this.errorCategorias = 'El punto de venta seleccionado no tiene una lista de precios configurada.';
+      this.cdr.markForCheck();
+      return;
+    }
+
     this.loadingCategorias = true;
     this.errorCategorias = '';
     console.log('Cargando categorias para lista', this.listaPrecio);
@@ -476,15 +490,7 @@ export class RestaurantPosProductosComponent implements OnInit {
   }
 
   private readSelectedTableContext(): SelectedRestaurantTableContext | null {
-    const raw = sessionStorage.getItem('selectedRestaurantTableContext');
-    if (!raw) {
-      return null;
-    }
-    try {
-      return JSON.parse(raw) as SelectedRestaurantTableContext;
-    } catch {
-      return null;
-    }
+    return this.operationContext.getSelectedTableContext();
   }
 
   private readNotaPedidoActiva(): NotaPedidoActiva | null {
