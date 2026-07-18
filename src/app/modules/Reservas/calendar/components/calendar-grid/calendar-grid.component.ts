@@ -5,12 +5,14 @@ import {
   CalendarAssignableReservation,
   CalendarAssignmentTarget,
   CalendarDate,
+  CalendarExchangeTrayAssignmentRequest,
   CalendarReservation,
   CalendarReservationBlockSelect,
   CalendarReservationBlockView,
   CalendarReservationDropRequest,
   CalendarReservationStatus,
-  CalendarRoomRowView
+  CalendarRoomRowView,
+  ExchangeTrayReservation
 } from '../../interfaces/calendar.interface';
 import { CalendarCellComponent } from '../calendar-cell/calendar-cell.component';
 import { ReservationBlockComponent } from '../reservation-block/reservation-block.component';
@@ -22,7 +24,10 @@ interface CalendarGridDragState {
   label: string;
   status: CalendarReservationStatus;
   pointerOffsetX: number;
+  categoryCode: string;
+  preserveDates: boolean;
   block?: CalendarReservationBlockView;
+  trayItem?: ExchangeTrayReservation;
   pendingReservation?: CalendarAssignableReservation;
 }
 
@@ -42,6 +47,9 @@ export class CalendarGridComponent {
   @Input() assignmentMode = false;
   @Input() assignmentSpan = 1;
   @Input() assignmentReservationId: string | null = null;
+  @Input() exchangeMode = false;
+  @Input() exchangeTrayReservations: ExchangeTrayReservation[] = [];
+  @Input() exchangeTrayHeight = 64;
 
   @Output() scrollTopChange = new EventEmitter<number>();
   @Output() scrollLeftChange = new EventEmitter<number>();
@@ -49,6 +57,9 @@ export class CalendarGridComponent {
   @Output() reservationDrop = new EventEmitter<CalendarReservationDropRequest>();
   @Output() reservationMoveBlocked = new EventEmitter<CalendarReservation>();
   @Output() assignmentTargetSelect = new EventEmitter<CalendarAssignmentTarget>();
+  @Output() reservationTrayDrop = new EventEmitter<string>();
+  @Output() trayReservationDrop = new EventEmitter<CalendarExchangeTrayAssignmentRequest>();
+  @Output() trayReservationSelect = new EventEmitter<string>();
 
   @ViewChild('scrollContainer') private scrollContainer?: ElementRef<HTMLDivElement>;
 
@@ -69,6 +80,8 @@ export class CalendarGridComponent {
     targetDate: string;
     statusClass: string;
     valid: boolean;
+    warning: boolean;
+    overExchangeTray: boolean;
   } | null = null;
 
   private dropCandidate: {
@@ -76,6 +89,7 @@ export class CalendarGridComponent {
     categoryCode: string;
     targetDate: string;
     valid: boolean;
+    overExchangeTray: boolean;
   } | null = null;
 
   private suppressScrollEvent = false;
@@ -130,6 +144,8 @@ export class CalendarGridComponent {
         label: payload.block.label,
         status: payload.block.reservation.status,
         pointerOffsetX: payload.event.offsetX,
+        categoryCode: payload.block.reservation.categoryCode || '',
+        preserveDates: this.exchangeMode,
         block: payload.block
       },
       payload.event
@@ -145,10 +161,48 @@ export class CalendarGridComponent {
         label: this.abbreviateName(payload.reservation.guestName),
         status: 'RESERVADA',
         pointerOffsetX: 16,
+        categoryCode: payload.reservation.categoryCode,
+        preserveDates: false,
         pendingReservation: payload.reservation
       },
       payload.event
     );
+  }
+
+  onTrayReservationDragStart(item: ExchangeTrayReservation, event: PointerEvent): void {
+    if (event.button !== 0) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.currentTarget instanceof HTMLElement) {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+    this.beginDrag(
+      {
+        reservationId: item.reservation.id,
+        fromRoomNumber: null,
+        span: item.block.span,
+        label: item.block.label,
+        status: item.reservation.status,
+        pointerOffsetX: event.offsetX,
+        categoryCode: item.reservation.categoryCode || '',
+        preserveDates: true,
+        block: item.block,
+        trayItem: item
+      },
+      event
+    );
+  }
+
+  onTrayReservationSelect(item: ExchangeTrayReservation, event: MouseEvent): void {
+    if (this.wasDragCommitted) {
+      this.wasDragCommitted = false;
+      return;
+    }
+    event.stopPropagation();
+    this.trayReservationSelect.emit(item.reservation.id);
   }
 
   isDraggedReservation(block: CalendarReservationBlockView): boolean {
@@ -174,6 +228,15 @@ export class CalendarGridComponent {
 
   trackByBlock(_: number, block: CalendarReservationBlockView): string {
     return block.reservation.id;
+  }
+
+  trackByTrayReservation(_: number, item: ExchangeTrayReservation): string {
+    return item.reservation.id;
+  }
+
+  get exchangeTrayContentHeight(): number {
+    const laneCount = this.exchangeTrayReservations.length ? Math.max(...this.exchangeTrayReservations.map((item) => item.lane)) + 1 : 0;
+    return Math.max(this.exchangeTrayHeight, laneCount * 42 + 16);
   }
 
   onAssignmentTargetSelect(row: CalendarRoomRowView, date: CalendarDate, dateIndex: number): void {
@@ -230,12 +293,35 @@ export class CalendarGridComponent {
 
   private handlePointerUp = (): void => {
     if (this.hasDragMoved && this.dragState && this.dropCandidate?.valid) {
+      if (this.dropCandidate.overExchangeTray && this.exchangeMode && !this.dragState.trayItem && !this.dragState.pendingReservation) {
+        this.reservationTrayDrop.emit(this.dragState.reservationId);
+        this.wasDragCommitted = true;
+        this.clearDragState();
+        return;
+      }
+
+      if (this.dragState.trayItem && !this.dropCandidate.overExchangeTray) {
+        this.trayReservationDrop.emit({
+          reservationId: this.dragState.reservationId,
+          toRoomNumber: this.dropCandidate.roomNumber,
+          toCategoryCode: this.dropCandidate.categoryCode
+        });
+        this.wasDragCommitted = true;
+        this.clearDragState();
+        return;
+      }
+
+      if (this.dropCandidate.overExchangeTray) {
+        this.clearDragState();
+        return;
+      }
+
       this.reservationDrop.emit({
         reservationId: this.dragState.reservationId,
         fromRoomNumber: this.dragState.fromRoomNumber,
         toRoomNumber: this.dropCandidate.roomNumber,
         toCategoryCode: this.dropCandidate.categoryCode,
-        targetDate: this.dropCandidate.targetDate,
+        targetDate: this.dragState.preserveDates && this.dragState.block ? this.dragState.block.reservation.startDate : this.dropCandidate.targetDate,
         pendingReservation: this.dragState.pendingReservation
       });
       this.wasDragCommitted = true;
@@ -251,13 +337,46 @@ export class CalendarGridComponent {
 
     const element = this.scrollContainer.nativeElement;
     const rect = element.getBoundingClientRect();
+    const overExchangeTray = this.exchangeMode && event.clientY >= rect.top && event.clientY <= rect.top + this.exchangeTrayHeight;
+
+    if (overExchangeTray) {
+      const block = this.dragState.block;
+      const trayLeft = block?.left ?? 2;
+      const trayWidth = block?.width ?? Math.max(36, this.dragState.span * this.cellWidth - 4);
+      const valid = !this.dragState.pendingReservation && !this.dragState.trayItem;
+      this.dragPreview = {
+        left: trayLeft,
+        top: 8,
+        floatingLeft: event.clientX - rect.left + element.scrollLeft - this.dragState.pointerOffsetX,
+        floatingTop: element.scrollTop + 10,
+        width: trayWidth,
+        label: this.dragState.label,
+        roomNumber: 'Bandeja de intercambio',
+        targetDate: this.dragState.block?.reservation.startDate || '',
+        statusClass: this.dragState.status.toLowerCase(),
+        valid,
+        warning: false,
+        overExchangeTray: true
+      };
+      this.dropCandidate = {
+        roomNumber: '',
+        categoryCode: '',
+        targetDate: this.dragState.block?.reservation.startDate || '',
+        valid,
+        overExchangeTray: true
+      };
+      this.cdr.detectChanges();
+      return;
+    }
+
     const x = event.clientX - rect.left + element.scrollLeft - this.timelineOffset - this.dragState.pointerOffsetX;
-    const y = event.clientY - rect.top + element.scrollTop;
+    const y = event.clientY - rect.top + element.scrollTop - (this.exchangeMode ? this.exchangeTrayHeight : 0);
     const floatingLeft = event.clientX - rect.left + element.scrollLeft - this.timelineOffset - this.dragState.pointerOffsetX;
     const floatingTop = event.clientY - rect.top + element.scrollTop - 18;
 
     const maxStartIndex = Math.max(0, this.dates.length - this.dragState.span);
-    const startIndex = this.clamp(Math.round(x / this.cellWidth), 0, maxStartIndex);
+    const preservedStartIndex = this.dragState.block?.startIndex ?? 0;
+    const startIndex = this.dragState.preserveDates ? preservedStartIndex : this.clamp(Math.round(x / this.cellWidth), 0, maxStartIndex);
     const rowIndex = this.clamp(Math.floor(y / this.rowHeight), 0, Math.max(0, this.rows.length - 1));
     const targetDate = this.dates[startIndex]?.isoDate;
     const targetRow = this.rows[rowIndex];
@@ -270,10 +389,12 @@ export class CalendarGridComponent {
     }
 
     const valid = this.isPlacementValid(targetRow, startIndex, this.dragState.span, this.dragState.reservationId);
+    const warning = valid && !!this.dragState.categoryCode && this.dragState.categoryCode.trim().toUpperCase() !== targetRow.room.type.trim().toUpperCase();
+    const rowTop = (this.exchangeMode ? this.exchangeTrayHeight : 0) + rowIndex * this.rowHeight;
 
     this.dragPreview = {
       left: this.timelineOffset + startIndex * this.cellWidth + 2,
-      top: rowIndex * this.rowHeight + 6,
+      top: rowTop + 6,
       floatingLeft: this.timelineOffset + floatingLeft,
       floatingTop,
       width: Math.max(36, this.dragState.span * this.cellWidth - 4),
@@ -281,14 +402,17 @@ export class CalendarGridComponent {
       roomNumber: targetRow.room.roomNumber,
       targetDate,
       statusClass: this.dragState.status.toLowerCase(),
-      valid
+      valid,
+      warning,
+      overExchangeTray: false
     };
 
     this.dropCandidate = {
       roomNumber: targetRow.room.roomNumber,
       categoryCode: targetRow.room.type,
       targetDate,
-      valid
+      valid,
+      overExchangeTray: false
     };
 
     this.cdr.detectChanges();

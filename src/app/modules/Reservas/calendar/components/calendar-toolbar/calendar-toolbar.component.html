@@ -46,6 +46,18 @@
   </div>
 
   <div class="calendar-toolbar__metrics">
+    <button
+      type="button"
+      class="toolbar-btn toolbar-btn--exchange"
+      [class.toolbar-btn--exchange-active]="exchangeMode"
+      [disabled]="exchangeDisabled"
+      [attr.aria-pressed]="exchangeMode"
+      aria-label="Activar modo para reasignar habitaciones"
+      (click)="exchangeToggle.emit()"
+    >
+      <i class="feather icon-repeat"></i>
+      {{ exchangeMode ? 'Reasignando' : 'Reasignar habitaciones' }}
+    </button>
     <article class="toolbar-metric">
       <span>Habitaciones</span>
       <strong>{{ visibleRooms }}</strong>

@@ -53,11 +53,6 @@
       </label>
     </div>
 
-    <div class="assignment-panel__summary">
-      <strong>{{ filteredReservations.length }}</strong>
-      <span>reservas</span>
-    </div>
-
     <div class="assignment-panel__list">
       <button
         type="button"
@@ -69,20 +64,25 @@
         (click)="selectReservation(reservation)"
       >
         <span class="assignment-card__topline">
-          <strong>{{ reservation.reservationCode }}</strong>
-          <span>{{ statusLabel(reservation.status) }}</span>
+          <strong class="assignment-card__agency" [title]="reservation.agency">{{ reservation.agency || 'Agencia no indicada' }}</strong>
+          <span class="assignment-card__category">Cat. {{ reservation.categoryCode || 'N/D' }}</span>
         </span>
-        <span class="assignment-card__guest">{{ reservation.guestName }}</span>
-        <span class="assignment-card__agency">{{ reservation.agency }}</span>
-        <span class="assignment-card__route">
-          <span>Cat. {{ reservation.categoryCode || 'N/D' }}</span>
-          <span>Origen {{ reservation.roomNumber || 'N/D' }}</span>
+
+        <span class="assignment-card__identity">
+          <strong class="assignment-card__guest" [title]="reservation.guestName">{{ reservation.guestName || 'Huésped no indicado' }}</strong>
+          <small class="assignment-card__code">#{{ reservation.reservationCode }}</small>
         </span>
+
         <span class="assignment-card__meta">
-          <span>{{ reservation.startDate }} - {{ reservation.endDate }}</span>
-          <span>{{ reservation.nights }}N</span>
-          <span>{{ reservation.pax }} Pax</span>
+          <span class="assignment-card__dates">
+            <i class="feather icon-calendar" aria-hidden="true"></i>
+            {{ formatDate(reservation.startDate) }} – {{ formatDate(reservation.endDate) }}
+          </span>
+          <span class="assignment-card__metric">{{ reservation.nights }}N</span>
+          <span class="assignment-card__metric">{{ reservation.pax }} Pax</span>
+          <span class="assignment-card__metric">{{ reservation.roomNumber }} Hab</span>
         </span>
+
         <span class="assignment-card__actions">
           <span>{{ isAssignable(reservation) ? 'Click para seleccionar' : 'Reserva asignada' }}</span>
           <span class="assignment-card__drag" *ngIf="isAssignable(reservation)" (pointerdown)="onReservationPointerDown(reservation, $event)" title="Arrastrar reserva">

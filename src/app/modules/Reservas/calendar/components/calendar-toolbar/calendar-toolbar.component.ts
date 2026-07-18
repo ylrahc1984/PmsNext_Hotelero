@@ -23,6 +23,8 @@ export class CalendarToolbarComponent {
   @Input({ required: true }) statusOptions!: Array<{ label: string; value: CalendarFilterStatus }>;
   @Input({ required: true }) visibleRooms = 0;
   @Input({ required: true }) visibleReservations = 0;
+  @Input() exchangeMode = false;
+  @Input() exchangeDisabled = false;
 
   @Output() startDateChange = new EventEmitter<string>();
   @Output() endDateChange = new EventEmitter<string>();
@@ -32,6 +34,7 @@ export class CalendarToolbarComponent {
   @Output() previous = new EventEmitter<void>();
   @Output() next = new EventEmitter<void>();
   @Output() today = new EventEmitter<void>();
+  @Output() exchangeToggle = new EventEmitter<void>();
 
   onTypeModelChange(value: string): void {
     this.typeChange.emit((value || null) as RoomType | null);

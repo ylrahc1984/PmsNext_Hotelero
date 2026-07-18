@@ -1,5 +1,45 @@
 <div class="calendar-grid__scroll" #scrollContainer (scroll)="onScroll($event)">
   <div class="calendar-grid__content" [style.width.px]="dates.length * cellWidth + timelineOffset">
+    <section
+      class="exchange-tray"
+      *ngIf="exchangeMode"
+      [style.height.px]="exchangeTrayHeight"
+      [class.exchange-tray--active]="dragPreview?.overExchangeTray"
+      [class.exchange-tray--invalid]="dragPreview?.overExchangeTray && !dragPreview?.valid"
+      aria-label="Bandeja de intercambio"
+    >
+      <span class="exchange-tray__axis-label">
+        <i class="feather icon-clock"></i>
+        Línea temporal · {{ dates.length }} días
+      </span>
+
+      <div class="exchange-tray__empty" *ngIf="!exchangeTrayReservations.length">
+        <i class="feather icon-repeat"></i>
+        <span>{{ dragPreview?.overExchangeTray ? 'Suelte aquí para desasignar temporalmente' : 'Arrastre aquí una reserva para liberarla temporalmente' }}</span>
+        <small>Las fechas y la duración se conservarán</small>
+      </div>
+
+      <div class="exchange-tray__lanes" *ngIf="exchangeTrayReservations.length" [style.height.px]="exchangeTrayContentHeight">
+        <button
+          type="button"
+          class="exchange-tray__reservation"
+          *ngFor="let item of exchangeTrayReservations; trackBy: trackByTrayReservation"
+          [ngClass]="'exchange-tray__reservation--color-' + item.block.colorIndex"
+          [style.left.px]="item.block.left"
+          [style.top.px]="item.lane * 42 + 8"
+          [style.width.px]="item.block.width"
+          [attr.aria-label]="'Asignar reserva ' + item.reservation.guestName + ' a una habitación'"
+          [attr.title]="item.block.tooltip + ' | Habitación anterior: ' + item.originalRoomNumber"
+          (pointerdown)="onTrayReservationDragStart(item, $event)"
+          (click)="onTrayReservationSelect(item, $event)"
+        >
+          <span class="exchange-tray__reservation-name">{{ item.block.label }}</span>
+          <span class="exchange-tray__reservation-badge">Temporal</span>
+          <small>Hab. anterior {{ item.originalRoomNumber }}</small>
+        </button>
+      </div>
+    </section>
+
     <div class="calendar-grid__row" *ngFor="let row of rows; trackBy: trackByRoom">
       <div class="calendar-grid__cells">
         <app-calendar-cell *ngFor="let date of dates; trackBy: trackByDate" [isToday]="date.isToday" [isWeekend]="date.isWeekend"></app-calendar-cell>
@@ -31,6 +71,7 @@
       <div
         class="calendar-grid__drop-guide"
         [class.calendar-grid__drop-guide--invalid]="!preview.valid"
+        [class.calendar-grid__drop-guide--warning]="preview.warning"
         [style.left.px]="preview.left"
         [style.top.px]="preview.top"
         [style.width.px]="preview.width"
@@ -39,6 +80,7 @@
       <div
         class="calendar-grid__drag-preview"
         [class.calendar-grid__drag-preview--invalid]="!preview.valid"
+        [class.calendar-grid__drag-preview--warning]="preview.warning"
         [class.calendar-grid__drag-preview--ocupada]="preview.statusClass === 'ocupada'"
         [class.calendar-grid__drag-preview--reservada]="preview.statusClass === 'reservada'"
         [class.calendar-grid__drag-preview--bloqueada]="preview.statusClass === 'bloqueada'"
@@ -48,7 +90,7 @@
       >
         <span class="calendar-grid__drag-preview-label">{{ preview.label }}</span>
         <span class="calendar-grid__drag-preview-meta">{{ preview.roomNumber }} · {{ preview.targetDate }}</span>
-        <span class="calendar-grid__drag-preview-status">{{ preview.valid ? 'Disponible' : 'No disponible' }}</span>
+        <span class="calendar-grid__drag-preview-status">{{ !preview.valid ? 'No disponible' : preview.warning ? 'Otra categoría' : preview.overExchangeTray ? 'Liberar temporalmente' : 'Disponible' }}</span>
       </div>
     </div>
   </div>

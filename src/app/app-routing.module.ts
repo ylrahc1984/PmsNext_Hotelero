@@ -385,6 +385,7 @@ const routes: Routes = [
     children: [
       {
         path: 'calendario',
+        canDeactivate: [CanDeactivateReservaCreateGuard],
         loadComponent: () => import('./modules/Reservas/calendar/pages/room-calendar-page.component').then((c) => c.RoomCalendarPageComponent)
       },
       {

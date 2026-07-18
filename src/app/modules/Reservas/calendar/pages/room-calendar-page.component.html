@@ -31,6 +31,8 @@
     [statusOptions]="statusOptions"
     [visibleRooms]="calendarData.visibleRooms"
     [visibleReservations]="calendarData.visibleReservations"
+    [exchangeMode]="exchangeMode"
+    [exchangeDisabled]="isAssigningRoom || isLoading"
     (startDateChange)="onStartDateChange($event)"
     (endDateChange)="onEndDateChange($event)"
     (searchChange)="onSearchChange($event)"
@@ -39,7 +41,29 @@
     (previous)="shiftWindow(-1)"
     (next)="shiftWindow(1)"
     (today)="goToday()"
+    (exchangeToggle)="toggleExchangeMode()"
   ></app-calendar-toolbar>
+
+  <section class="exchange-mode-toolbar" *ngIf="exchangeMode" aria-live="polite">
+    <div class="exchange-mode-toolbar__status">
+      <i class="feather icon-repeat"></i>
+      <div>
+        <strong>Modo de reasignación activo</strong>
+        <span>{{ pendingExchangeChangesCount }} {{ pendingExchangeChangesCount === 1 ? 'cambio pendiente' : 'cambios pendientes' }}</span>
+      </div>
+    </div>
+    <p>La bandeja libera habitaciones temporalmente sin cambiar las fechas de las reservas.</p>
+    <div class="exchange-mode-toolbar__actions">
+      <button type="button" class="exchange-action exchange-action--cancel" (click)="cancelExchangeSession()" [disabled]="isAssigningRoom" aria-label="Cancelar reasignación">
+        <i class="feather icon-x"></i>
+        Cancelar cambios
+      </button>
+      <button type="button" class="exchange-action exchange-action--confirm" (click)="confirmExchangeSession()" [disabled]="isAssigningRoom" aria-label="Confirmar reasignación">
+        <i class="feather icon-check"></i>
+        Confirmar reasignación
+      </button>
+    </div>
+  </section>
 
   <section class="assignment-state" *ngIf="selectedPendingReservation as selected">
     <div>
@@ -53,24 +77,55 @@
     </button>
   </section>
 
+  <section class="assignment-state assignment-state--exchange" *ngIf="selectedExchangeTrayReservation as selectedTray">
+    <div>
+      <span>Reserva temporal seleccionada</span>
+      <strong>{{ selectedTray.reservation.reservationCode || selectedTray.reservation.guestName }}</strong>
+      <small>{{ selectedTray.reservation.guestName }} | Hab. anterior {{ selectedTray.originalRoomNumber }} | {{ selectedTray.reservation.startDate }} - {{ selectedTray.reservation.endDate }}</small>
+    </div>
+    <div class="assignment-state__actions">
+      <button type="button" class="assignment-state__restore" (click)="restoreReservationToOriginalRoom(selectedTray.reservation.id)" [disabled]="isReservationProcessing(selectedTray.reservation.id)">
+        <i class="feather icon-corner-up-left"></i>
+        Restaurar original
+      </button>
+      <button type="button" class="assignment-state__clear" (click)="clearSelectedReservation()" [disabled]="isAssigningRoom">
+        <i class="feather icon-x"></i>
+        Cerrar
+      </button>
+    </div>
+  </section>
+
   <section class="calendar-workspace" [class.calendar-workspace--panel-collapsed]="assignmentPanelCollapsed">
     <section class="calendar-shell">
-      <app-room-sidebar class="calendar-shell__sidebar" [rows]="calendarData.rows" (scrollTopChange)="onSidebarScrollTop($event)"></app-room-sidebar>
+      <app-room-sidebar
+        class="calendar-shell__sidebar"
+        [rows]="calendarData.rows"
+        [exchangeMode]="exchangeMode"
+        [exchangeTrayCount]="exchangeTrayReservations.length"
+        [exchangeTrayHeight]="exchangeTrayHeight"
+        (scrollTopChange)="onSidebarScrollTop($event)"
+      ></app-room-sidebar>
 
       <section class="calendar-shell__timeline">
         <app-calendar-header [dates]="calendarData.dates" [monthLabel]="calendarData.monthLabel" [scrollLeft]="headerScrollLeft"></app-calendar-header>
         <app-calendar-grid
           [dates]="calendarData.dates"
           [rows]="calendarData.rows"
-          [assignmentMode]="!!selectedPendingReservation"
-          [assignmentSpan]="selectedPendingReservation?.nights ?? 1"
-          [assignmentReservationId]="selectedPendingReservation?.id ?? null"
+          [assignmentMode]="!!selectedPendingReservation || !!selectedExchangeTrayReservation"
+          [assignmentSpan]="selectedExchangeTrayReservation?.block?.span ?? selectedPendingReservation?.nights ?? 1"
+          [assignmentReservationId]="selectedExchangeTrayReservation?.reservation?.id ?? selectedPendingReservation?.id ?? null"
+          [exchangeMode]="exchangeMode"
+          [exchangeTrayReservations]="exchangeTrayReservations"
+          [exchangeTrayHeight]="exchangeTrayHeight"
           (scrollLeftChange)="onGridScrollLeft($event)"
           (scrollTopChange)="onGridScrollTop($event)"
           (reservationSelect)="openReservationActionMenu($event)"
           (reservationDrop)="onReservationDrop($event)"
           (reservationMoveBlocked)="onCheckedInReservationMoveBlocked($event)"
           (assignmentTargetSelect)="onAssignmentTargetSelect($event)"
+          (reservationTrayDrop)="onReservationTrayDrop($event)"
+          (trayReservationDrop)="onTrayReservationDrop($event)"
+          (trayReservationSelect)="onTrayReservationSelect($event)"
         ></app-calendar-grid>
       </section>
     </section>
@@ -92,6 +147,17 @@
       <button type="button" class="reservation-action-menu__item" (click)="onUnassignReservationFromMenu(menu.block)" [disabled]="isAssigningRoom">
         <i class="feather icon-log-out"></i>
         Desasignar habitacion
+      </button>
+      <button
+        *ngIf="exchangeMode"
+        type="button"
+        class="reservation-action-menu__item reservation-action-menu__item--exchange"
+        (click)="onMoveReservationToTrayFromMenu(menu.block)"
+        [disabled]="isAssigningRoom"
+        aria-label="Mover reserva a la bandeja de intercambio"
+      >
+        <i class="feather icon-repeat"></i>
+        Mover a Bandeja de intercambio
       </button>
     </div>
   </div>

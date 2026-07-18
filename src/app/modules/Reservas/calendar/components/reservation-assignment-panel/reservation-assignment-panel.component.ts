@@ -118,15 +118,10 @@ export class ReservationAssignmentPanelComponent implements OnChanges {
     return reservation.id;
   }
 
-  statusLabel(status: string): string {
-    const normalized = this.normalizeStatus(status);
-    const labels: Record<string, string> = {
-      ABI: 'Abierta',
-      CCR: 'Confirmada',
-      WLT: 'Lista espera'
-    };
-
-    return labels[normalized] ?? (status || 'Pendiente');
+  formatDate(value: string): string {
+    const isoDate = (value || '').trim().split('T')[0];
+    const [year, month, day] = isoDate.split('-');
+    return year && month && day ? `${day}/${month}/${year}` : value;
   }
 
   loadReservations(): void {

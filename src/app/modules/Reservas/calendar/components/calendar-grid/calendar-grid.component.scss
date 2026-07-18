@@ -16,11 +16,168 @@
 .calendar-grid__row {
   position: relative;
   height: 48px;
+  z-index: 0;
+}
+
+.calendar-grid__row:hover,
+.calendar-grid__row:focus-within {
+  z-index: 10;
 }
 
 .calendar-grid__cells {
   display: flex;
 }
+
+.exchange-tray {
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  min-width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-bottom: 1px dashed #9bb1ca;
+  background:
+    repeating-linear-gradient(90deg, rgba(49, 83, 121, 0.16) 0, rgba(49, 83, 121, 0.16) 1px, transparent 1px, transparent 42px),
+    linear-gradient(135deg, #edf4fb, #e3edf7);
+  box-shadow: 0 5px 12px rgba(15, 23, 42, 0.08);
+  transition: background 140ms ease, box-shadow 140ms ease;
+}
+
+.exchange-tray::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  z-index: 0;
+  border-top: 2px dashed rgba(47, 95, 141, 0.42);
+  pointer-events: none;
+}
+
+.exchange-tray__axis-label {
+  position: absolute;
+  top: 4px;
+  left: 8px;
+  z-index: 3;
+  width: max-content;
+  border: 1px solid #b8cce0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #315d88;
+  padding: 0.12rem 0.42rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.54rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+
+.exchange-tray--active {
+  background:
+    repeating-linear-gradient(90deg, rgba(25, 135, 84, 0.1) 0, rgba(25, 135, 84, 0.1) 1px, transparent 1px, transparent 42px),
+    linear-gradient(135deg, #e9f8f0, #dff3e9);
+  box-shadow: inset 0 0 0 2px rgba(25, 135, 84, 0.5), 0 7px 16px rgba(15, 23, 42, 0.12);
+}
+
+.exchange-tray--invalid {
+  background: #fff1f2;
+  box-shadow: inset 0 0 0 2px rgba(220, 53, 69, 0.45);
+}
+
+.exchange-tray__empty {
+  height: 100%;
+  min-height: 56px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.08rem;
+  color: #58718f;
+  pointer-events: none;
+  position: relative;
+  z-index: 1;
+}
+
+.exchange-tray__empty span {
+  border: 1px solid rgba(184, 204, 224, 0.9);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.16rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.exchange-tray__empty small {
+  font-size: 0.62rem;
+  color: #74869b;
+}
+
+.exchange-tray__lanes {
+  position: relative;
+  z-index: 1;
+  min-width: 100%;
+  min-height: 100%;
+}
+
+.exchange-tray__reservation {
+  position: absolute;
+  height: 34px;
+  min-width: 36px;
+  border: 1px dashed rgba(31, 51, 75, 0.55);
+  border-radius: 9px;
+  padding: 0.15rem 0.35rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 0.25rem;
+  overflow: hidden;
+  color: var(--tray-color, #174c47);
+  background: var(--tray-background, linear-gradient(90deg, #91d9ca, #a6e3d7));
+  box-shadow: 0 3px 7px rgba(15, 23, 42, 0.13);
+  cursor: grab;
+  text-align: left;
+}
+
+.exchange-tray__reservation:focus-visible {
+  outline: 2px solid #2f5f8d;
+  outline-offset: 1px;
+}
+
+.exchange-tray__reservation-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
+.exchange-tray__reservation-badge {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.68);
+  padding: 0.08rem 0.25rem;
+  font-size: 0.48rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.exchange-tray__reservation small {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.52rem;
+  opacity: 0.8;
+}
+
+.exchange-tray__reservation--color-1 { --tray-background: linear-gradient(90deg, #9cbaf2, #b0c8f7); --tray-color: #1c3d70; }
+.exchange-tray__reservation--color-2 { --tray-background: linear-gradient(90deg, #f3aaa8, #f7bebc); --tray-color: #71302f; }
+.exchange-tray__reservation--color-3 { --tray-background: linear-gradient(90deg, #c5afea, #d5c4f0); --tray-color: #49336b; }
+.exchange-tray__reservation--color-4 { --tray-background: linear-gradient(90deg, #f1cf82, #f6dda4); --tray-color: #654b12; }
+.exchange-tray__reservation--color-5 { --tray-background: linear-gradient(90deg, #86cedd, #a1dce7); --tray-color: #174b57; }
+.exchange-tray__reservation--color-6 { --tray-background: linear-gradient(90deg, #b2d88f, #c5e4aa); --tray-color: #365421; }
+.exchange-tray__reservation--color-7 { --tray-background: linear-gradient(90deg, #d7b2ca, #e3c5d8); --tray-color: #59384e; }
 
 .calendar-grid__overlay {
   position: absolute;
@@ -101,6 +258,11 @@
     0 16px 30px rgba(127, 29, 29, 0.16);
 }
 
+.calendar-grid__drop-guide--warning {
+  border-color: rgba(217, 119, 6, 0.8);
+  background: rgba(255, 247, 220, 0.78);
+}
+
 .calendar-grid__drag-preview {
   position: absolute;
   height: 36px;
@@ -178,6 +340,11 @@
   box-shadow:
     0 22px 34px rgba(127, 29, 29, 0.26),
     0 0 0 3px rgba(220, 53, 69, 0.12);
+}
+
+.calendar-grid__drag-preview--warning {
+  color: #5f4308;
+  background: linear-gradient(135deg, #f6cf6a, #ffe49b);
 }
 
 .calendar-grid__drag-preview--invalid .calendar-grid__drag-preview-status {

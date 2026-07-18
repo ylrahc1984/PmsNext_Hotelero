@@ -168,6 +168,10 @@ export class CalendarService {
     };
   }
 
+  getReservationBlockView(reservation: CalendarReservation, visibleStartDate: string, totalDays: number): CalendarReservationBlockView {
+    return this.toBlockView(reservation, visibleStartDate, totalDays);
+  }
+
   private mapApiResponse(response: CalendarApiResponse | null | undefined): CalendarApiDataSource {
     const inventory = Array.isArray(response?.inventario) ? response.inventario : [];
     const calendar = Array.isArray(response?.calendario) ? response.calendario : [];

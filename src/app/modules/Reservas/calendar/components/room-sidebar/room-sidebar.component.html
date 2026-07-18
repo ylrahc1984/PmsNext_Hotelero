@@ -5,6 +5,13 @@
   </div>
 
   <div class="room-sidebar__scroll" #scrollContainer (scroll)="onScroll($event)">
+    <section class="room-sidebar__exchange" *ngIf="exchangeMode" [style.height.px]="exchangeTrayHeight">
+      <div class="room-sidebar__exchange-icon"><i class="feather icon-repeat"></i></div>
+      <div>
+        <strong>Bandeja de intercambio</strong>
+        <p>{{ exchangeTrayCount }} {{ exchangeTrayCount === 1 ? 'reserva temporal' : 'reservas temporales' }}</p>
+      </div>
+    </section>
     <article class="room-sidebar__row" *ngFor="let row of rows">
       <div class="room-sidebar__icon"><i class="feather icon-home"></i></div>
       <div>

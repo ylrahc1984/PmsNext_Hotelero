@@ -13,6 +13,9 @@ import { CalendarRoomRowView } from '../../interfaces/calendar.interface';
 })
 export class RoomSidebarComponent {
   @Input({ required: true }) rows: CalendarRoomRowView[] = [];
+  @Input() exchangeMode = false;
+  @Input() exchangeTrayCount = 0;
+  @Input() exchangeTrayHeight = 64;
   @Output() scrollTopChange = new EventEmitter<number>();
 
   @ViewChild('scrollContainer') private scrollContainer?: ElementRef<HTMLDivElement>;

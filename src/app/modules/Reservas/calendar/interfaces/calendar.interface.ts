@@ -87,6 +87,33 @@ export interface CalendarReservationBlockView {
   tooltip: string;
 }
 
+export type RoomExchangeChangeStatus = 'in-tray' | 'assigned' | 'restored';
+
+export interface ExchangeTrayReservation {
+  reservation: CalendarReservation;
+  originalRoomNumber: string;
+  backendSourceRoom: string;
+  currentRoomNumber: string | null;
+  status: RoomExchangeChangeStatus;
+  lane: number;
+  block: CalendarReservationBlockView;
+}
+
+export interface RoomExchangeChange {
+  reservationId: string;
+  reservation: CalendarReservation;
+  originalRoomNumber: string;
+  backendSourceRoom: string;
+  newRoomNumber: string | null;
+  status: RoomExchangeChangeStatus;
+}
+
+export interface CalendarExchangeTrayAssignmentRequest {
+  reservationId: string;
+  toRoomNumber: string;
+  toCategoryCode: string;
+}
+
 export interface CalendarReservationDragPayload {
   reservationId: string;
   roomNumber: string;
