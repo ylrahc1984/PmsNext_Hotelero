@@ -1,5 +1,7 @@
 export interface DocumentoFacturadoApi {
   tipoDocu: string;
+  serie?: string;
+  serieDocu?: string;
   numDocu: string;
   numeroConsecutivo: string;
   rucCliente: string;
@@ -31,7 +33,7 @@ export interface DocumentoFacturadoApi {
 export interface Documento extends DocumentoFacturadoApi {
   // Alias de compatibilidad usados por detalle, impresión y nota de crédito.
   PPV00_TipoDocu: string;
-  PPV00_Serie?: string;
+  PPV00_Serie: string;
   PPV00_NumDocu: string;
   PPV00_FechaDocu: string;
   PPV00_NomCliente: string;

@@ -179,7 +179,10 @@ export class ConsultaDocumentosComponent implements OnInit {
 
   verDocumento(documento: Documento): void {
     const serie = documento.PPV00_Serie || '000';
-    this.router.navigate(['/finanzas/documento', documento.tipoDocu, serie, documento.numDocu]);
+    const operador = this.auth.getCurrentUser()?.usuario?.trim() || documento.operador?.trim() || '';
+    this.router.navigate(['/finanzas/documento', documento.tipoDocu, serie, documento.numDocu], {
+      queryParams: { operador }
+    });
   }
 
   crearNotaCredito(documento: Documento): void {

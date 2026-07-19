@@ -66,7 +66,7 @@ export class ConsultaDocumentosService {
     return {
       ...item,
       PPV00_TipoDocu: item.tipoDocu ?? '',
-      PPV00_Serie: '',
+      PPV00_Serie: item.serieDocu?.trim() || item.serie?.trim() || '000',
       PPV00_NumDocu: item.numDocu ?? '',
       PPV00_FechaDocu: item.fechaDocu ?? '',
       PPV00_NomCliente: item.nomCliente ?? '',

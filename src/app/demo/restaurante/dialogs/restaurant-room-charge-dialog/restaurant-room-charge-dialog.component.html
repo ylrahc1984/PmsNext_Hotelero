@@ -1,0 +1,85 @@
+<div class="room-dialog-panel" role="dialog" aria-modal="true" aria-labelledby="room-dialog-title">
+  <div class="room-backdrop" (click)="cerrar()"></div>
+  <section class="room-dialog" (click)="$event.stopPropagation()">
+    <header class="room-header">
+      <div>
+        <span class="eyebrow">Consumo de restaurante</span>
+        <h2 id="room-dialog-title">Cargo a habitación</h2>
+        <p>Revise el consumo y seleccione una habitación habilitada para crédito.</p>
+      </div>
+      <button type="button" class="icon-button" aria-label="Cerrar" (click)="cerrar()" [disabled]="saving"><i class="feather icon-x"></i></button>
+    </header>
+
+    <main class="room-body">
+      <section class="room-column room-column--detail">
+        <div class="section-heading"><div><span>1</span><strong>Detalle del cargo</strong></div></div>
+
+        <article class="selected-summary" *ngIf="habitacionSeleccionada; else noSelection">
+          <span class="selected-summary__icon"><i class="feather icon-home"></i></span>
+          <div>
+            <small>Habitación seleccionada</small>
+            <strong>Habitación {{ habitacionSeleccionada.numHabita }}</strong>
+            <span>{{ habitacionSeleccionada.codReserva }} · Folio {{ habitacionSeleccionada.numFolio || '-' }}</span>
+          </div>
+        </article>
+        <ng-template #noSelection>
+          <div class="selection-placeholder"><i class="feather icon-home"></i><strong>Seleccione una habitación</strong><span>La información aparecerá en este espacio.</span></div>
+        </ng-template>
+
+        <dl class="room-meta" *ngIf="habitacionSeleccionada">
+          <div><dt>Huéspedes</dt><dd>{{ habitacionSeleccionada.nomPax || 'No registrado' }}</dd></div>
+          <div><dt>Estadía</dt><dd>{{ habitacionSeleccionada.fechaIng || '-' }} - {{ habitacionSeleccionada.fechaSal || '-' }}</dd></div>
+          <div><dt>Tipo / tarifa</dt><dd>{{ habitacionSeleccionada.tipHabi || '-' }} / {{ habitacionSeleccionada.codTarifa || '-' }}</dd></div>
+          <div><dt>Límite de crédito</dt><dd>{{ habitacionSeleccionada.limiteCre | currency:(habitacionSeleccionada.monedaLmt || data.moneda):'symbol':'1.2-2' }}</dd></div>
+        </dl>
+
+        <div class="charge-total">
+          <span>Total a cargar</span>
+          <strong>{{ data.total | currency:data.moneda:'symbol':'1.2-2' }}</strong>
+          <small>Nota {{ data.tipNP }}-{{ data.serieNP }}-{{ data.numNP }} · Cuenta {{ data.numCuenta || 'Todas' }}</small>
+        </div>
+        <div class="inline-error" *ngIf="errorMessage">{{ errorMessage }}</div>
+      </section>
+
+      <section class="room-column room-column--list">
+        <div class="section-heading">
+          <div><span>2</span><strong>Habitaciones con crédito</strong></div>
+          <small>{{ habitacionesFiltradas.length }} registros</small>
+        </div>
+        <label class="search-box">
+          <i class="feather icon-search"></i>
+          <input type="search" [(ngModel)]="busqueda" placeholder="Buscar habitación, huésped, reserva o folio" [disabled]="loading || saving" />
+        </label>
+        <div class="loading-state" *ngIf="loading"><span class="spinner"></span>Cargando habitaciones...</div>
+        <div class="room-list" *ngIf="!loading">
+          <button
+            type="button"
+            class="room-card"
+            *ngFor="let item of habitacionesFiltradas; trackBy: trackByHabitacion"
+            [class.room-card--active]="habitacionSeleccionada?.codReserva === item.codReserva && habitacionSeleccionada?.numFolio === item.numFolio"
+            (click)="seleccionarHabitacion(item)"
+            [disabled]="saving"
+          >
+            <span class="room-avatar"><i class="feather icon-home"></i></span>
+            <span class="room-card__content">
+              <strong>Habitación {{ item.numHabita }}</strong>
+              <small>{{ item.codReserva }} · {{ item.tipHabi || 'Sin tipo' }}</small>
+              <small>{{ item.nomPax || 'Sin huésped registrado' }}</small>
+            </span>
+            <i class="feather icon-check-circle selected-check" aria-hidden="true"></i>
+          </button>
+          <div class="empty-state" *ngIf="!habitacionesFiltradas.length && !errorMessage">
+            <i class="feather icon-home"></i><strong>No se encontraron habitaciones</strong><span>Pruebe con otro criterio de búsqueda.</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="room-footer">
+      <button type="button" class="secondary-button" (click)="cerrar()" [disabled]="saving">Cancelar</button>
+      <button type="button" class="primary-button" (click)="confirmar()" [disabled]="!habitacionSeleccionada || saving">
+        <span class="spinner spinner--button" *ngIf="saving"></span>{{ saving ? 'Guardando...' : 'Confirmar cargo a habitación' }}
+      </button>
+    </footer>
+  </section>
+</div>

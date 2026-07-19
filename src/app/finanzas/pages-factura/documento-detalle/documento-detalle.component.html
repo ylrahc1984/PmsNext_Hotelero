@@ -22,7 +22,7 @@
             </span>
           </div>
           <div class="text-muted small mb-1">
-            {{ empresa()?.MA04_Nombre || 'Empresa' }} · RUC: {{ empresa()?.MA04_Ruc || '-' }}
+            {{ empresa()?.MA04_Nombre || 'Empresa' }} · Cedula: {{ empresa()?.MA04_Ruc || '-' }}
           </div>
           <p class="text-muted mb-0 small">Resumen, detalle y pagos</p>
         </div>
@@ -147,8 +147,8 @@
         </section>
 
         <div class="row g-3 mt-1">
-          <div class="col-lg-8">
-            <div class="card shadow-none border h-100">
+          <div class="col-lg-8 d-flex">
+            <div class="card shadow-none border h-100 w-100 mb-0">
               <div class="card-body p-3">
                 <div class="d-flex align-items-center mb-2">
                   <i class="feather icon-file-text text-muted me-2"></i>
@@ -161,7 +161,7 @@
                     <div class="fw-semibold">{{ h.tipDocu || '—' }}</div>
                   </div>
                   <div class="col-md-4 mb-2">
-                    <div class="text-muted small">Serie / Número</div>
+                    <div class="text-muted small">Número</div>
                     <div class="fw-semibold">{{ documentoCodigo || '—' }}</div>
                   </div>
                   <div class="col-md-4 mb-2">
@@ -231,7 +231,7 @@
               </div>
             </div>
 
-            <div class="card shadow-none border mt-3">
+            <div class="card shadow-none border mt-3 mb-0">
               <div class="card-body p-3">
                 <div class="doc-summary-row">
                   <span>Subtotal</span>

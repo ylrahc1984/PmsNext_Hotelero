@@ -8,8 +8,6 @@ import Swal from 'sweetalert2';
 
 import { AuthService } from 'src/app/core/services/auth.service';
 import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
-import { InHouseGuest } from 'src/app/modules/front-desk/in-house-guests/models/in-house-guest.model';
-import { InHouseGuestsService } from 'src/app/modules/front-desk/in-house-guests/services/in-house-guests.service';
 import {
   RestaurantCollaboratorChargeDialogComponent,
   RestaurantCollaboratorChargeDialogData,
@@ -20,6 +18,11 @@ import {
   RestaurantInvoiceDialogData,
   RestaurantInvoiceDialogResult
 } from '../dialogs/restaurant-invoice-dialog/restaurant-invoice-dialog.component';
+import {
+  RestaurantRoomChargeDialogComponent,
+  RestaurantRoomChargeDialogData,
+  RestaurantRoomChargeDialogResult
+} from '../dialogs/restaurant-room-charge-dialog/restaurant-room-charge-dialog.component';
 import { SelectedRestaurantTableContext } from '../models/restaurant-operacion.models';
 import { RestaurantOperationContextService } from '../services/restaurant-operation-context.service';
 import {
@@ -82,20 +85,16 @@ interface AccionOperativa {
   tipo      ?: 'primary' | 'danger';
 }
 
-interface HabitacionCargoOption {
-  roomNumber      : string;
-  reservationCode : string;
-  guestName       : string;
-  agencyName      : string;
-  checkIn         : string;
-  checkOut        : string;
-  isOccupied      : boolean;
-}
-
 @Component({
   selector: 'app-restaurant-mesa-detalle',
   standalone: true,
-  imports: [CommonModule, FormsModule, RestaurantInvoiceDialogComponent, RestaurantCollaboratorChargeDialogComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RestaurantInvoiceDialogComponent,
+    RestaurantCollaboratorChargeDialogComponent,
+    RestaurantRoomChargeDialogComponent
+  ],
   templateUrl: './restaurant-mesa-detalle.component.html',
   styleUrls: ['./restaurant-mesa-detalle.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -105,7 +104,6 @@ export class RestaurantMesaDetalleComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly notaPedidoService = inject(NotaPedidoRestauranteService);
   private readonly operationContext = inject(RestaurantOperationContextService);
-  private readonly inHouseGuestsService = inject(InHouseGuestsService);
   private readonly authService = inject(AuthService);
   private readonly tipoCambioService = inject(TipoCambioService);
   private readonly destroyRef = inject(DestroyRef);
@@ -148,6 +146,8 @@ export class RestaurantMesaDetalleComponent implements OnInit {
   invoiceDialogData             : RestaurantInvoiceDialogData | null = null;
   showCollaboratorChargeDialog  = false;
   collaboratorChargeDialogData : RestaurantCollaboratorChargeDialogData | null = null;
+  showRoomChargeDialog          = false;
+  roomChargeDialogData          : RestaurantRoomChargeDialogData | null = null;
   eliminandoItems               = new Set<number>();
   cambiandoCuentaItems          = new Set<number>();
   dividiendoItems               = new Set<number>();
@@ -158,17 +158,11 @@ export class RestaurantMesaDetalleComponent implements OnInit {
   partesSeleccionadas           = 2;
   readonly cuentasDisponibles   = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   readonly partesDisponibles    = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-  showCargoHabitacionModal      = false;
-  isCargoHabitacionLoading      = false;
-  isCargoHabitacionSaving       = false;
-  cargoHabitacionError          = '';
-  cargoHabitacionSearch         = '';
-  habitacionesCargo             : HabitacionCargoOption[] = [];
-  habitacionCargoSeleccionada   : HabitacionCargoOption | null = null;
   showPropinaModal              = false;
   propinaMonto                  : number | null = null;
   isPropinaSaving               = false;
   propinaError                  = '';
+  isReturningToMain            = false;
 
   readonly acciones: AccionOperativa[] = [
     { id: 'imprimir-cuenta', titulo: 'Imprimir Cuenta', icono: 'icon-printer' },
@@ -299,25 +293,49 @@ export class RestaurantMesaDetalleComponent implements OnInit {
       return;
     }
     if (accion.id === 'regresar-principal') {
-      this.router.navigate(['/restaurant/dashboard', this.codPuntoVenta]);
+      this.regresarAPrincipal();
     }
   }
 
-  get habitacionesCargoFiltradas(): HabitacionCargoOption[] {
-    const term = this.normalizeText(this.cargoHabitacionSearch);
-
-    if (!term) {
-      return this.habitacionesCargo;
+  regresarAPrincipal(): void {
+    if (this.isReturningToMain) {
+      return;
     }
 
-    return this.habitacionesCargo.filter((room) => {
-      return (
-        this.normalizeText(room.roomNumber).includes(term)
-        || this.normalizeText(room.reservationCode).includes(term)
-        || this.normalizeText(room.guestName).includes(term)
-        || this.normalizeText(room.agencyName).includes(term)
-      );
-    });
+    const nota = this.notaPedidoInfo;
+    if (!nota) {
+      void this.router.navigate(['/restaurant/dashboard', this.codPuntoVenta]);
+      return;
+    }
+
+    this.isReturningToMain = true;
+    this.cdr.markForCheck();
+    this.notaPedidoService
+      .obtenerDetallePedido({
+        tipNp: nota.tipNp,
+        serieNp: nota.serieNp,
+        numNp: nota.numNp,
+        pntVta: this.codPuntoVenta,
+        fecha: this.normalizeDateDDMMYYYY(nota.fecha),
+        exonerado: 0
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          if ((response.detalles ?? []).length > 0) {
+            this.isReturningToMain = false;
+            this.cdr.markForCheck();
+            void this.router.navigate(['/restaurant/dashboard', this.codPuntoVenta]);
+            return;
+          }
+
+          this.finalizarNotaPedidoVacia(nota);
+        },
+        error: (error) => {
+          console.error('No se pudo validar el detalle antes de regresar.', error);
+          this.mostrarErrorRegreso('No se pudo verificar si la nota tiene consumos pendientes.');
+        }
+      });
   }
 
   abrirModalCargoColaborador(): void {
@@ -375,99 +393,29 @@ export class RestaurantMesaDetalleComponent implements OnInit {
       return;
     }
 
-    this.showCargoHabitacionModal = true;
-    this.cargoHabitacionSearch = '';
-    this.cargoHabitacionError = '';
-    this.habitacionCargoSeleccionada = null;
-    this.cdr.markForCheck();
-    this.cargarHabitacionesOcupadas();
-  }
-
-  cerrarModalCargoHabitacion(): void {
-    if (this.isCargoHabitacionSaving) {
-      return;
-    }
-
-    this.showCargoHabitacionModal = false;
-    this.isCargoHabitacionLoading = false;
-    this.cargoHabitacionError = '';
-    this.cargoHabitacionSearch = '';
-    this.habitacionCargoSeleccionada = null;
+    this.roomChargeDialogData = {
+      puntoVenta: this.codPuntoVenta,
+      total: Number(this.total || 0),
+      moneda: this.monedaActual || 'USD',
+      tipNP: this.notaPedidoInfo.tipNp,
+      serieNP: this.notaPedidoInfo.serieNp,
+      numNP: this.notaPedidoInfo.numNp,
+      numCuenta: Number(this.cuentaFiltroActual || 0),
+      operador: this.getOperador()
+    };
+    this.showRoomChargeDialog = true;
     this.cdr.markForCheck();
   }
 
-  seleccionarHabitacionCargo(room: HabitacionCargoOption): void {
-    if (!room.isOccupied || this.isCargoHabitacionSaving) {
-      return;
+  onRoomChargeDialogClosed(result: RestaurantRoomChargeDialogResult | null): void {
+    this.showRoomChargeDialog = false;
+    this.roomChargeDialogData = null;
+    if (result?.guardado) {
+      this.mesaDetalle.habitacion = result.habitacion.numHabita;
+      this.mesaDetalle.cliente = result.habitacion.nomPax || this.mesaDetalle.cliente;
+      this.reconciliarMesaTrasProceso();
     }
-
-    this.habitacionCargoSeleccionada = room;
-  }
-
-  async confirmarCargoHabitacion(): Promise<void> {
-    if (this.isCargoHabitacionSaving || !this.habitacionCargoSeleccionada || !this.notaPedidoInfo) {
-      return;
-    }
-
-    if (!this.habitacionCargoSeleccionada.isOccupied) {
-      this.cargoHabitacionError = 'Solo se puede registrar el cargo en habitaciones ocupadas.';
-      this.cdr.markForCheck();
-      return;
-    }
-
-    const confirmation = await Swal.fire({
-      title: 'Confirmar cargo a habitacion',
-      text: `Se registrara un cargo por ${this.total.toFixed(2)} ${this.monedaActual} a la habitacion ${this.habitacionCargoSeleccionada.roomNumber}.`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Si, registrar cargo',
-      cancelButtonText: 'Cancelar',
-      reverseButtons: true,
-      customClass: {
-        popup: 'next-confirm-modal'
-      }
-    });
-
-    if (!confirmation.isConfirmed) {
-      return;
-    }
-
-    const payload = this.buildCargoHabitacionPayload(this.habitacionCargoSeleccionada);
-    if (!payload) {
-      this.cargoHabitacionError = 'No se pudo preparar el cargo. Revise los datos de la nota de pedido.';
-      this.cdr.markForCheck();
-      return;
-    }
-
-    this.isCargoHabitacionSaving = true;
-    this.cargoHabitacionError = '';
     this.cdr.markForCheck();
-
-    this.notaPedidoService.registrarCargoHabitacion(payload).subscribe({
-      next: () => {
-        this.isCargoHabitacionSaving = false;
-        this.showCargoHabitacionModal = false;
-        this.mesaDetalle.habitacion = payload.numHab;
-        this.mesaDetalle.cliente = this.habitacionCargoSeleccionada?.guestName || this.mesaDetalle.cliente;
-        this.cdr.markForCheck();
-        void Swal.fire({
-          title: 'Cargo registrado',
-          text: `Se aplico el cargo a la habitacion ${payload.numHab} correctamente.`,
-          icon: 'success',
-          timer: 1500,
-          showConfirmButton: false,
-          customClass: {
-            popup: 'next-confirm-modal'
-          }
-        });
-      },
-      error: (error) => {
-        console.error('No se pudo registrar el cargo de habitacion.', error);
-        this.isCargoHabitacionSaving = false;
-        this.cargoHabitacionError = 'No se pudo registrar el cargo de habitacion.';
-        this.cdr.markForCheck();
-      }
-    });
   }
 
   abrirCatalogoProductos(): void {
@@ -1037,6 +985,47 @@ export class RestaurantMesaDetalleComponent implements OnInit {
       });
   }
 
+  private finalizarNotaPedidoVacia(nota: NotaPedidoMesaInfo): void {
+    this.notaPedidoService
+      .verificarFinalizarNotaPedido({
+        tipNp: nota.tipNp,
+        serieNp: nota.serieNp,
+        numNp: nota.numNp,
+        numMesa: this.mesaDetalle.numeroMesa || String(this.mesaId),
+        pntVta: this.codPuntoVenta,
+        codArea: this.codAreaOperativa
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          sessionStorage.removeItem('restaurantLastNotaPedido');
+          this.limpiarSelectedTableContextActual();
+          this.limpiarNotaPedidoEnPantalla(true);
+          this.isReturningToMain = false;
+          this.cdr.markForCheck();
+          void this.router.navigate(['/restaurant/dashboard', this.codPuntoVenta]);
+        },
+        error: (error) => {
+          console.error('No se pudo finalizar la nota de pedido vacía.', error);
+          this.mostrarErrorRegreso('La nota está vacía, pero no se pudo cerrar. Intente nuevamente.');
+        }
+      });
+  }
+
+  private mostrarErrorRegreso(message: string): void {
+    this.isReturningToMain = false;
+    this.cdr.markForCheck();
+    void Swal.fire({
+      title: 'No se puede regresar',
+      text: message,
+      icon: 'error',
+      confirmButtonText: 'Aceptar',
+      customClass: {
+        popup: 'next-confirm-modal'
+      }
+    });
+  }
+
   private finalizarMesaProcesada(): void {
     sessionStorage.removeItem('restaurantLastNotaPedido');
     this.limpiarSelectedTableContextActual();
@@ -1181,117 +1170,8 @@ export class RestaurantMesaDetalleComponent implements OnInit {
     return (user?.usuario || user?.Usuario || user?.Operador || 'charly').toString().trim() || 'charly';
   }
 
-  private cargarHabitacionesOcupadas(): void {
-    this.isCargoHabitacionLoading = true;
-    this.cargoHabitacionError = '';
-    this.habitacionesCargo = [];
-    this.cdr.markForCheck();
-
-    const today = this.formatDate(new Date());
-
-    this.inHouseGuestsService.getInHouseGuests(today, today, this.getOperador()).subscribe({
-      next: (response) => {
-        const rooms = (response.pax || [])
-          .map((guest) => this.mapInHouseToCargoRoom(guest))
-          .filter((room) => !!room.roomNumber);
-
-        this.habitacionesCargo = rooms;
-        this.isCargoHabitacionLoading = false;
-        this.cdr.markForCheck();
-      },
-      error: (error) => {
-        console.error('No se pudo cargar el listado de habitaciones ocupadas.', error);
-        this.isCargoHabitacionLoading = false;
-        this.cargoHabitacionError = 'No se pudo cargar el listado de habitaciones ocupadas.';
-        this.cdr.markForCheck();
-      }
-    });
-  }
-
-  private mapInHouseToCargoRoom(guest: InHouseGuest): HabitacionCargoOption {
-    return {
-      roomNumber: this.cleanValue(guest.numHabita),
-      reservationCode: this.cleanValue(guest.codReserva),
-      guestName: this.cleanValue(guest.paxIn),
-      agencyName: this.cleanValue(guest.nomAgencia),
-      checkIn: this.normalizeDateDDMMYYYY(guest.fechaIng),
-      checkOut: this.normalizeDateDDMMYYYY(guest.fechaSal),
-      isOccupied: true
-    };
-  }
-
-  private buildCargoHabitacionPayload(room: HabitacionCargoOption) {
-    if (!this.notaPedidoInfo) {
-      return null;
-    }
-
-    const fecha = this.formatDate(new Date());
-    const hora = this.currentTime();
-    const operador = this.getOperador();
-    const validLines = this.consumoActual.filter((item) => Number(item.cantidad) > 0 && Number(item.subtotal) > 0);
-
-    if (!room.roomNumber || !room.reservationCode || !validLines.length) {
-      return null;
-    }
-
-    return {
-      proceso: 1,
-      tipCrgHab: 'CH',
-      numCrgHab: '',
-      codRsv: room.reservationCode,
-      numHab: room.roomNumber,
-      pntVenta: this.cleanValue(this.codPuntoVenta || 'PF'),
-      fecha,
-      hora,
-      numDocu: room.reservationCode,
-      nombrePax: room.guestName || 'HUESPED',
-      mtoTotal: Number(this.total || 0),
-      moneda: this.cleanValue(this.monedaActual || 'USD'),
-      cierre: 0,
-      numCierre: 0,
-      operador,
-      detalle: validLines.map((line, index) => ({
-        codRsv: room.reservationCode,
-        numHab: room.roomNumber,
-        pntVenta: this.cleanValue(this.codPuntoVenta || 'PF'),
-        fecha,
-        hora,
-        grupo: '',
-        categoria: '',
-        codConsumo: this.cleanValue(line.codigo),
-        nomConsumo: this.cleanValue(line.producto),
-        cantidad: Number(line.cantidad || 0),
-        precio: Number(line.precio || 0),
-        total: Number(line.subtotal || 0),
-        moneda: this.cleanValue(line.moneda || this.monedaActual || 'USD'),
-        tipNPedido: this.cleanValue(this.notaPedidoInfo?.tipNp),
-        numNPedido: this.cleanValue(this.notaPedidoInfo?.numNp),
-        codMozo: this.cleanValue(this.codMozo),
-        incluido: 0,
-        exonerado: 0,
-        orden: index + 1,
-        comentario: this.cleanValue(this.mesaDetalle.comentario),
-        operador
-      }))
-    };
-  }
-
-  private currentTime(): string {
-    const now = new Date();
-    const hour = `${now.getHours()}`.padStart(2, '0');
-    const minute = `${now.getMinutes()}`.padStart(2, '0');
-    return `${hour}:${minute}`;
-  }
-
   private cleanValue(value: unknown): string {
     return (value ?? '').toString().trim();
-  }
-
-  private normalizeText(value: unknown): string {
-    return this.cleanValue(value)
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
   }
 
   private formatDate(date: Date): string {

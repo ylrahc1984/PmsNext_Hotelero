@@ -95,7 +95,7 @@ export const NavigationItems: NavigationItem[] = [
           { id: 'restaurante-cierre-caja', title: 'Cierre de Caja', type: 'item', url: '/restaurante/cierre-caja', icon: 'feather icon-lock', classes: 'nav-item' },
           { id: 'restaurante-consulta-documentos', title: 'Consulta de Documentos', type: 'item', url: '/restaurante/consulta-documentos', icon: 'feather icon-search', classes: 'nav-item' },
           { id: 'restaurante-cargos-habitacion', title: 'Cargos a Habitación', type: 'item', url: '/restaurante/cargos-habitacion', icon: 'feather icon-home', classes: 'nav-item' },
-          { id: 'restaurante-servicios', title: 'Catalogo Comercial', type: 'item', url: '/restaurante/servicios', icon: 'feather icon-tag', classes: 'nav-item' },
+          { id: 'restaurante-cargos-colaboradores', title: 'Cargos a Colaboradores', type: 'item', url: '/restaurante/cargos-colaboradores', icon: 'feather icon-users', classes: 'nav-item' },
           { id: 'restaurante-agencias', title: 'Clientes-Facturacion', type: 'item', url: '/restaurante/agencias', icon: 'feather icon-share-2', classes: 'nav-item' },
           {
             id: 'restaurante-analysis',

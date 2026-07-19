@@ -31,7 +31,7 @@ export class ConfiguracionRestauranteComponent {
       cards: [
         {
           id: 'servicios',
-          title: 'Servicios',
+          title: 'Catalogo Comercial',
           description: 'Productos, servicios y experiencias disponibles para venta',
           route: '/catalogos/servicios',
           icon: 'icon-layers',

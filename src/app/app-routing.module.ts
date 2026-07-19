@@ -137,10 +137,37 @@ const routes: Routes = [
         ['comandador', 'Comandador'],
         ['pedidos-activos', 'Pedidos Activos'],
         ['cocina-barra', 'Cocina / Barra'],
-        ['cargos-habitacion', 'Cargos a Habitación'],
         ['productos', 'Menú de Productos'],
         ['saloneros', 'Saloneros']
       ]),
+      {
+        path: 'cargos-habitacion/detalle/:tipCrgHab/:numCrgHab',
+        loadComponent: () =>
+          import('./demo/restaurante/cargos-habitacion-detalle/cargos-habitacion-detalle.component').then(
+            (c) => c.CargosHabitacionDetalleComponent
+          )
+      },
+      {
+        path: 'cargos-habitacion',
+        loadComponent: () =>
+          import('./demo/restaurante/cargos-habitacion/cargos-habitacion.component').then(
+            (c) => c.CargosHabitacionComponent
+          )
+      },
+      {
+        path: 'cargos-colaboradores/detalle/:tipOpe/:numOpe',
+        loadComponent: () =>
+          import('./demo/restaurante/cargos-colaboradores-detalle/cargos-colaboradores-detalle.component').then(
+            (c) => c.CargosColaboradoresDetalleComponent
+          )
+      },
+      {
+        path: 'cargos-colaboradores',
+        loadComponent: () =>
+          import('./demo/restaurante/cargos-colaboradores/cargos-colaboradores.component').then(
+            (c) => c.CargosColaboradoresComponent
+          )
+      },
       {
         path: 'facturacion',
         redirectTo: '/restaurant/puntos-venta',

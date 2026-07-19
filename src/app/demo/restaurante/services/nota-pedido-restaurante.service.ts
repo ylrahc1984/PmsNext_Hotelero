@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from 'src/environments/environment';
 
 export interface NotaPedidoRestauranteDetalleRequest {
@@ -181,28 +181,13 @@ export interface RegistrarPropinaParams {
   nCuenta: number;
 }
 
-export interface RestaurantRoomChargeDetailPayload {
-  codRsv: string;
-  numHab: string;
-  pntVenta: string;
-  fecha: string;
-  hora: string;
-  grupo: string;
-  categoria: string;
-  codConsumo: string;
-  nomConsumo: string;
-  cantidad: number;
-  precio: number;
-  total: number;
-  moneda: string;
-  tipNPedido: string;
-  numNPedido: string;
-  codMozo: string;
-  incluido: number;
-  exonerado: number;
-  orden: number;
-  comentario: string;
-  operador: string;
+export interface VerificarFinalizarNotaPedidoRequest {
+  tipNp: string;
+  serieNp: string;
+  numNp: string;
+  numMesa: string;
+  pntVta: string;
+  codArea: string;
 }
 
 export interface RestaurantRoomChargePayload {
@@ -220,8 +205,46 @@ export interface RestaurantRoomChargePayload {
   moneda: string;
   cierre: number;
   numCierre: number;
+  tipNP: string;
+  serieNP: string;
+  numNP: string;
+  numCuenta: number;
   operador: string;
-  detalle: RestaurantRoomChargeDetailPayload[];
+}
+
+export interface RestaurantCreditRoom {
+  numHabita: string;
+  codReserva: string;
+  codAgen: string;
+  codTarifa: string;
+  codPlan: string;
+  catHabi: string;
+  tipHabi: string;
+  fechaIng: string;
+  fechaSal: string;
+  noches: number;
+  numPax: number;
+  numChild: number;
+  credito: number;
+  limiteCre: number;
+  monedaLmt: string;
+  tarjeta: string;
+  vence: string;
+  autoriza: string;
+  tarxNoc: number;
+  monedaTar: string;
+  folio: string;
+  numFolio: string;
+  comentarios: string;
+  operador: string;
+  nomPax: string;
+}
+
+interface RestaurantCreditRoomsResponse {
+  success: boolean;
+  message: string;
+  data: RestaurantCreditRoom[];
+  totalRegistros: number;
 }
 
 @Injectable({
@@ -267,7 +290,13 @@ export class NotaPedidoRestauranteService {
   }
 
   registrarCargoHabitacion(payload: RestaurantRoomChargePayload): Observable<unknown> {
-    return this.http.post(`${this.baseUrl}/cargo-habitacion`, payload);
+    return this.http.post(`${this.baseUrl}/cargo-habitacion-restaurante`, payload);
+  }
+
+  obtenerHabitacionesConCredito(): Observable<RestaurantCreditRoom[]> {
+    return this.http
+      .get<RestaurantCreditRoomsResponse>(`${this.baseUrl}/cargo-habitacion/habitaciones-con-credito`)
+      .pipe(map((response) => Array.isArray(response?.data) ? response.data : []));
   }
 
   obtenerDetallePedido(
@@ -285,6 +314,10 @@ export class NotaPedidoRestauranteService {
       `${this.baseUrl}/nota-pedido-restaurante/proceso-91`,
       { params: httpParams }
     );
+  }
+
+  verificarFinalizarNotaPedido(payload: VerificarFinalizarNotaPedidoRequest): Observable<unknown> {
+    return this.http.put<unknown>(`${this.baseUrl}/nota-pedido-restaurante/verificar-finalizar`, payload);
   }
 
   private buildEliminarItemPayload(params: NotaPedidoRestauranteEliminarItemParams): NotaPedidoRestauranteRequest {

@@ -1,11 +1,79 @@
+/** Contrato devuelto por GET /documentos-facturados/detalle. */
 export interface DocumentoDetalleResponse {
-  encabezado?: DocumentoEncabezado;
-  detalle?: DocumentoDetalleItem[];
-  impuestos?: DocumentoImpuesto[];
-  pagos?: DocumentoPago[];
-  cobranzas?: DocumentoCobranza[];
-  totales?: DocumentoTotales;
-  data?: DocumentoDetalleResponse;
+  encabezado: DocumentoDetalleEncabezadoApi | null;
+  detalle: DocumentoDetalleItemApi[];
+  formasPago: DocumentoDetalleFormaPagoApi[];
+  respuesta: string;
+  totalRecords: number;
+}
+
+export interface DocumentoDetalleEncabezadoApi {
+  ppV00_TipoDocu: string;
+  ppV00_Serie: string;
+  ppV00_NumDocu: string;
+  ppV00_CodReserva: string;
+  ppV00_Habitacion: string;
+  ppV00_Master: string;
+  ppV00_FechaDocu: string;
+  ppV00_CodCliente: string;
+  ppV00_RucCliente: string;
+  ppV00_NomCliente: string;
+  ppV00_PntVenta: string;
+  ppV00_CodMozo: string;
+  ppV00_SubTotal: number;
+  ppV00_Descuento: number;
+  ppV00_Neto: number;
+  ppV00_Impuesto: number;
+  ppV00_TotalDocu: number;
+  ppV00_TotalPago: number;
+  ppV00_EstDocu: string;
+  ppV00_Moneda: string;
+  ppV00_TCambio: number;
+  ppV00_NumMesa: string;
+  ppV00_NumPax: string;
+  ppV15_NumeroConsecutivo: string;
+  ppV15_Clave: string;
+  ppV15_Vendedor: string;
+  ppV15_Condicion_Venta: string;
+  ppV15_Estado_Comprobante: string;
+}
+
+export interface DocumentoDetalleItemApi {
+  ppV01_FecConsumo: string;
+  ppV01_Area: string;
+  ppV01_CodProdu: string;
+  ppV01_Descripcion: string;
+  ppV01_Cantidad: number;
+  ppV01_UMedida: string;
+  ppV01_PUndLst: number;
+  ppV01_UniSinImp: number;
+  ppV01_PrecioSinImp: number;
+  ppV01_PorDescu: number;
+  ppV01_MtoDescu: number;
+  ppV01_TotalNeto: number;
+  ppV01_PorImp: number;
+  ppV01_Impuestos: number;
+  ppV01_PorExonera: number;
+  ppV01_MtoImpVarios: number;
+  ppV01_Precio: number;
+  ppV01_Almacen: string;
+  ppV01_Orden: number;
+  ppV01_TipComanda: string;
+  ppV01_Comanda: string;
+  ppV01_Mozo: string;
+  ppV01_PntVenta: string;
+  ppV01_NumHabita: string;
+}
+
+export interface DocumentoDetalleFormaPagoApi {
+  ppV03_FrmPago: string;
+  ppV03_Tipo: string;
+  ppV03_NumTarjeta: string;
+  ppV03_Moneda: string;
+  ppV03_Monto: number;
+  ppV03_Vencimiento: string;
+  ppV03_TCambio: number;
+  ppV03_Orden: number;
 }
 
 export interface DocumentoEncabezado {

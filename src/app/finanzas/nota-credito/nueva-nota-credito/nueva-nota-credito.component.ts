@@ -281,7 +281,7 @@ export class NuevaNotaCreditoComponent implements OnInit {
     this.cdr.markForCheck();
 
     this.documentoService
-      .getDetalle(tipo, serie, numero)
+      .getDetalle(tipo, serie, numero, this.getOperador().trim() || 'charly')
       .pipe(
         finalize(() => {
           this.loadingDocumento = false;

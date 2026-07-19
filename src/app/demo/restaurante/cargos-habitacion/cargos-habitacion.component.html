@@ -1,0 +1,107 @@
+<div class="row cargos-habitacion">
+  <div class="col-12">
+    <app-card [customHeader]="true">
+      <div class="app-card-header">
+        <div>
+          <span class="cargos-habitacion__origin">Restaurante</span>
+          <h5 class="mb-0">Cargos a Habitación</h5>
+        </div>
+        <div class="text-muted small">Total: <strong>{{ totalRecords }}</strong></div>
+      </div>
+
+      <form class="card shadow-none border mb-3" [formGroup]="filtrosForm" (ngSubmit)="onBuscar()">
+        <div class="card-body p-3">
+          <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
+            <div class="d-flex align-items-center"><i class="feather icon-filter text-muted me-2"></i><h6 class="mb-0">Filtros</h6></div>
+            <div class="d-flex align-items-center gap-2">
+              <button class="btn btn-sm btn-outline-secondary" type="button" (click)="onLimpiar()" [disabled]="loading"><i class="feather icon-rotate-ccw me-1"></i>Limpiar</button>
+              <button class="btn btn-sm btn-primary" type="submit" [disabled]="loading">
+                <span *ngIf="loading" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                <i *ngIf="!loading" class="feather icon-search me-1"></i>Buscar
+              </button>
+            </div>
+          </div>
+          <div class="row align-items-end">
+            <div class="col-md-3 mb-2">
+              <label for="cargo-hab-desde" class="form-label small text-muted">Fecha desde *</label>
+              <input id="cargo-hab-desde" type="date" class="form-control form-control-sm" formControlName="fechaDesde">
+              <div class="text-danger small mt-1" *ngIf="filtrosForm.controls.fechaDesde.touched && filtrosForm.controls.fechaDesde.invalid">Fecha desde es requerida</div>
+            </div>
+            <div class="col-md-3 mb-2">
+              <label for="cargo-hab-hasta" class="form-label small text-muted">Fecha hasta *</label>
+              <input id="cargo-hab-hasta" type="date" class="form-control form-control-sm" formControlName="fechaHasta">
+              <div class="text-danger small mt-1" *ngIf="filtrosForm.controls.fechaHasta.touched && filtrosForm.controls.fechaHasta.invalid">Fecha hasta es requerida</div>
+            </div>
+            <div class="col-md-6 mb-2">
+              <label for="cargo-hab-busqueda" class="form-label small text-muted">Búsqueda general</label>
+              <div class="input-group input-group-sm">
+                <span class="input-group-text"><i class="feather icon-search" aria-hidden="true"></i></span>
+                <input id="cargo-hab-busqueda" type="search" class="form-control" formControlName="busqueda" placeholder="Huésped, reserva, habitación, documento u operación">
+              </div>
+            </div>
+          </div>
+          <div *ngIf="dateRangeError" class="text-danger small mt-1">{{ dateRangeError }}</div>
+        </div>
+      </form>
+
+      <div *ngIf="error" class="alert alert-danger mb-3" role="alert"><i class="feather icon-alert-triangle me-2"></i>{{ error }}</div>
+      <div class="cargos-habitacion__loading" *ngIf="loading">
+        <div class="spinner-border text-primary spinner-border-sm" role="status" aria-hidden="true"></div><span>Cargando cargos a habitación...</span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 table-compact cargos-habitacion__table">
+          <thead class="table-light">
+            <tr>
+              <th>Operación</th><th>Fecha / Hora</th><th>Huésped</th><th>Reserva / Habitación</th>
+              <th>P. venta</th><th>Documento</th><th class="text-end">Total</th><th>Moneda</th>
+              <th>Estado</th><th>Cierre</th><th>Operador</th><th class="text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let cargo of cargosPagina; trackBy: trackByCargo">
+              <td><strong class="font-monospace text-nowrap">{{ cargo.PFD01_NumCrgHab }}</strong><small class="d-block text-muted">{{ cargo.PFD01_TipCrgHab }}</small></td>
+              <td class="text-nowrap">{{ cargo.PFD01_Fecha | date:'dd/MM/yyyy' }}<small class="d-block text-muted">{{ cargo.PFD01_Hora || 'Sin hora' }}</small></td>
+              <td><strong>{{ cargo.PFD01_NombrePax || 'N/D' }}</strong></td>
+              <td><span class="font-monospace">{{ cargo.PFD01_CodReserva || 'N/D' }}</span><small class="d-block text-muted">Hab. {{ cargo.PFD01_NumHab || 'N/D' }}</small></td>
+              <td>{{ cargo.PFD01_PntVenta || 'N/D' }}</td>
+              <td class="font-monospace">{{ cargo.PFD01_NumDocu || 'N/D' }}</td>
+              <td class="text-end fw-semibold">{{ cargo.PFD01_MtoTot | number:'1.2-2' }}</td>
+              <td>{{ cargo.PFD01_Moneda || 'N/D' }}</td>
+              <td><span class="badge rounded-pill" [ngClass]="estadoClass(cargo.PFD01_Estado)">{{ estadoTexto(cargo.PFD01_Estado) }}</span></td>
+              <td><span class="badge rounded-pill" [class.bg-light]="cargo.PFD01_Cierre === 0" [class.text-dark]="cargo.PFD01_Cierre === 0" [class.bg-secondary]="cargo.PFD01_Cierre > 0">{{ cierreTexto(cargo.PFD01_Cierre) }}</span></td>
+              <td>{{ cargo.PFD01_Operador || 'N/D' }}</td>
+              <td class="text-center">
+                <div ngbDropdown container="body" placement="bottom-end" class="doc-action-menu">
+                  <button type="button" ngbDropdownToggle class="doc-action-toggle" aria-label="Abrir acciones del cargo"><i class="feather icon-more-horizontal" aria-hidden="true"></i></button>
+                  <div ngbDropdownMenu class="dropdown-menu doc-action-dropdown">
+                    <button type="button" ngbDropdownItem class="dropdown-item" (click)="verDetalle(cargo)"><i class="feather icon-eye" aria-hidden="true"></i><span>Ver detalle</span></button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="!loading && hasSearched && cargosPagina.length === 0"><td colspan="12" class="text-center text-muted py-4">No hay cargos a habitación para los filtros seleccionados.</td></tr>
+          </tbody>
+          <tfoot class="table-light" *ngIf="cargosPagina.length">
+            <tr class="fw-semibold"><td colspan="6" class="text-end">Total de la página</td><td class="text-end">{{ totalVisible | number:'1.2-2' }}</td><td colspan="5"></td></tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 gap-2">
+        <div class="form-inline mb-2">
+          <label for="cargo-hab-page-size" class="me-2 mb-0">Mostrar</label>
+          <select id="cargo-hab-page-size" class="form-control" [value]="pageSize" (change)="onPageSizeChange($any($event.target).value)">
+            <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+          </select><span class="ms-2">por página</span>
+        </div>
+        <div class="mb-2 text-muted">Mostrando <strong>{{ pageStart }}</strong> - <strong>{{ pageEnd }}</strong> de <strong>{{ totalRecords }}</strong></div>
+        <div class="btn-group mb-2" role="group" aria-label="Paginación">
+          <button type="button" class="btn btn-light" (click)="changePage(-1)" [disabled]="pageNumber === 1 || loading"><i class="feather icon-chevron-left"></i></button>
+          <button type="button" class="btn btn-light" disabled>Página {{ pageNumber }} / {{ totalPages }}</button>
+          <button type="button" class="btn btn-light" (click)="changePage(1)" [disabled]="pageNumber === totalPages || loading"><i class="feather icon-chevron-right"></i></button>
+        </div>
+      </div>
+    </app-card>
+  </div>
+</div>

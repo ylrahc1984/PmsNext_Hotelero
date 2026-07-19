@@ -12,7 +12,10 @@ import { DocumentoDetalleService } from '../../services/documento-detalle.servic
 import { FacturacionDocumentosService } from '../../services/facturacion-documentos.service';
 import {
   CambioFormaPagoPayload,
+  DocumentoDetalleEncabezadoApi,
+  DocumentoDetalleFormaPagoApi,
   DocumentoDetalleItem,
+  DocumentoDetalleItemApi,
   DocumentoDetalleResponse,
   DocumentoEncabezado,
   DocumentoPago
@@ -65,6 +68,7 @@ export class DocumentoDetalleComponent implements OnInit {
   tipoDocu = '';
   serieDocu = '';
   numeroDocu = '';
+  operador = '';
 
   encabezado: DocumentoEncabezado | null = null;
   detalle: DocumentoDetalleItem[] = [];
@@ -115,13 +119,15 @@ export class DocumentoDetalleComponent implements OnInit {
       const tipo = (params.get('tipo') ?? '').toString().trim();
       const serie = (params.get('serie') ?? '000').toString().trim();
       const numero = (params.get('numero') ?? '').toString().trim();
-      if (!tipo || !numero) {
+      const operador = (this.route.snapshot.queryParamMap.get('operador') ?? this.operadorActual).toString().trim();
+      if (!tipo || !numero || !operador) {
         this.router.navigate(['/finanzas/consulta-documentos']);
         return;
       }
       this.tipoDocu = tipo;
       this.serieDocu = serie || '000';
       this.numeroDocu = numero;
+      this.operador = operador;
       this.fetchDetalle();
     });
   }
@@ -129,15 +135,16 @@ export class DocumentoDetalleComponent implements OnInit {
   get documentoCodigo(): string {
     if (!this.encabezado) return this.numeroDocu;
     const serie = (this.encabezado.serie ?? '').toString().trim();
-    const numero = (this.encabezado.numero ?? this.numeroDocu).toString();
+    const numero = (this.encabezado.numeroConsecutivo ?? this.numeroDocu).toString();
     const fallbackSerie = (this.serieDocu ?? '').toString().trim();
     const serieValue = serie || fallbackSerie;
-    return serieValue ? `${serieValue}-${numero}` : numero;
+    return serieValue ? `${numero}` : numero;
   }
 
   get hasReservaInfo(): boolean {
     const h = this.encabezado;
     if (!h) return false;
+    const numMesa = (h.numMesa ?? '').toString().trim();
     const flags = [
       h.codReserva,
       h.fechaInicio,
@@ -145,12 +152,11 @@ export class DocumentoDetalleComponent implements OnInit {
       h.voucherRsv,
       h.nProveedor,
       h.habitacion,
-      h.master,
-      h.numMesa
+      h.master
     ]
       .map((value) => (value ?? '').toString().trim())
       .some(Boolean);
-    return flags || Number.isFinite(h.numPax ?? NaN);
+    return flags || (!!numMesa && numMesa !== '0') || Number.isFinite(h.numPax ?? NaN);
   }
 
   reload(): void {
@@ -352,7 +358,7 @@ export class DocumentoDetalleComponent implements OnInit {
     this.cdr.markForCheck();
 
     this.activeRequest = this.detalleService
-      .getDetalle(this.tipoDocu, this.serieDocu || '000', this.numeroDocu)
+      .getDetalle(this.tipoDocu, this.serieDocu || '000', this.numeroDocu, this.operador)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (response) => {
@@ -374,112 +380,70 @@ export class DocumentoDetalleComponent implements OnInit {
   }
 
   private applyResponse(response: DocumentoDetalleResponse | null | undefined): void {
-    const normalized = this.normalizeResponse(response ?? {});
-    this.encabezado = this.mapEncabezado(normalized.encabezado ?? {});
-    this.detalle = (normalized.detalle ?? []).map((item) => this.mapDetalle(item));
-    this.pagos = (normalized.pagos ?? []).map((item) => this.mapPago(item));
+    this.encabezado = response?.encabezado ? this.mapEncabezado(response.encabezado) : null;
+    this.detalle = (response?.detalle ?? []).map((item) => this.mapDetalle(item));
+    this.pagos = (response?.formasPago ?? []).map((item) => this.mapPago(item));
     this.updateResumen();
   }
 
-  private normalizeResponse(response: DocumentoDetalleResponse): DocumentoDetalleResponse {
-    const data = (response as DocumentoDetalleResponse)?.data ?? (response as { datos?: DocumentoDetalleResponse })?.datos ?? response;
-    if (!data) return {};
+  private mapEncabezado(raw: DocumentoDetalleEncabezadoApi): DocumentoEncabezado {
     return {
-      encabezado: (data as DocumentoDetalleResponse).encabezado ?? (data as any).cabecera ?? (data as any).header ?? data,
-      detalle: (data as DocumentoDetalleResponse).detalle ?? (data as any).detalles ?? (data as any).lineas ?? (data as any).items ?? [],
-      impuestos: (data as DocumentoDetalleResponse).impuestos ?? (data as any).impuesto ?? (data as any).taxes ?? [],
-      pagos: (data as DocumentoDetalleResponse).pagos ?? (data as any).formasPago ?? (data as any).pagosDetalle ?? [],
-      cobranzas: (data as DocumentoDetalleResponse).cobranzas ?? (data as any).cobros ?? [],
-      totales: (data as DocumentoDetalleResponse).totales ?? (data as any).totals ?? undefined
+      tipDocu: raw.ppV00_TipoDocu || this.tipoDocu,
+      serie: raw.ppV00_Serie || this.serieDocu,
+      numero: raw.ppV00_NumDocu || this.numeroDocu,
+      numeroConsecutivo: raw.ppV15_NumeroConsecutivo || '',
+      clave: raw.ppV15_Clave || '',
+      fechaDocu: this.formatDate(raw.ppV00_FechaDocu),
+      condicionVenta: raw.ppV15_Condicion_Venta || '',
+      codCliente: raw.ppV00_CodCliente || '',
+      rucCliente: raw.ppV00_RucCliente || '',
+      nomCliente: raw.ppV00_NomCliente || '',
+      moneda: raw.ppV00_Moneda || '',
+      tCambio: this.toNumber(raw.ppV00_TCambio),
+      pntVenta: raw.ppV00_PntVenta || '',
+      numMesa: raw.ppV00_NumMesa || '',
+      numPax: this.toOptionalNumber(raw.ppV00_NumPax),
+      codVendedor: raw.ppV15_Vendedor || raw.ppV00_CodMozo || '',
+      codReserva: raw.ppV00_CodReserva || '',
+      habitacion: raw.ppV00_Habitacion || '',
+      master: raw.ppV00_Master || '',
+      subtotal: this.toOptionalNumber(raw.ppV00_SubTotal),
+      descuento: this.toOptionalNumber(raw.ppV00_Descuento),
+      impuesto: this.toOptionalNumber(raw.ppV00_Impuesto),
+      totalDocu: this.toOptionalNumber(raw.ppV00_TotalDocu),
+      totalPago: this.toOptionalNumber(raw.ppV00_TotalPago),
+      estadoDocu: raw.ppV00_EstDocu || '',
+      estadoElectronico: raw.ppV15_Estado_Comprobante || ''
     };
   }
 
-  private mapEncabezado(raw: any): DocumentoEncabezado {
-    const subtotalRaw =
-      raw?.ppV00_SubTotal ??
-      raw?.ppV00_Subtotal ??
-      raw?.PPV00_SubTotal ??
-      raw?.PPV00_Subtotal ??
-      raw?.ppV00_Neto ??
-      raw?.PPV00_Neto;
-    return {
-      tipDocu: raw?.tipDocu ?? raw?.ppV00_TipoDocu ?? raw?.PPV00_TipoDocu ?? this.tipoDocu,
-      serie: raw?.serie ?? raw?.ppV00_Serie ?? raw?.PPV00_Serie ?? this.serieDocu,
-      numero: raw?.numero ?? raw?.ppV00_NumDocu ?? raw?.PPV00_NumDocu ?? this.numeroDocu,
-      numeroConsecutivo:
-        raw?.numeroConsecutivo ??
-        raw?.ppV15_NumeroConsecutivo ??
-        raw?.PPV15_NumeroConsecutivo ??
-        raw?.ppv15_NumeroConsecutivo ??
-        '',
-      clave: raw?.clave ?? raw?.ppV15_Clave ?? raw?.PPV15_Clave ?? '',
-      fechaDocu: this.formatDate(raw?.fechaDocu ?? raw?.ppV00_FechaDocu ?? raw?.PPV00_FechaDocu ?? ''),
-      condicionVenta: raw?.condicionVenta ?? raw?.ppV00_CondicionVenta ?? raw?.PPV00_CondicionVenta ?? '',
-      codCliente: raw?.codCliente ?? raw?.ppV00_CodCliente ?? raw?.PPV00_CodCliente ?? '',
-      rucCliente: raw?.rucCliente ?? raw?.ppV00_RucCliente ?? raw?.PPV00_RucCliente ?? '',
-      nomCliente: raw?.nomCliente ?? raw?.ppV00_NomCliente ?? raw?.PPV00_NomCliente ?? '',
-      moneda: raw?.moneda ?? raw?.ppV00_Moneda ?? raw?.PPV00_Moneda ?? '',
-      tCambio: this.toNumber(raw?.tCambio ?? raw?.ppV00_TCambio ?? raw?.PPV00_TCambio ?? raw?.tipoCambio),
-      pntVenta: raw?.pntVenta ?? raw?.ppV00_PntVenta ?? raw?.PPV00_PntVenta ?? raw?.puntoVenta ?? '',
-      numMesa: raw?.numMesa ?? raw?.ppV00_NumMesa ?? raw?.PPV00_NumMesa ?? '',
-      numPax: this.toOptionalNumber(raw?.numPax ?? raw?.ppV00_NumPax ?? raw?.PPV00_NumPax),
-      codVendedor: raw?.codVendedor ?? raw?.ppV00_CodVendedor ?? raw?.PPV00_CodVendedor ?? raw?.ppV00_UsuarioCreacion ?? '',
-      codigoActividad: raw?.codigoActividad ?? raw?.ppV00_CodigoActividad ?? raw?.PPV00_CodigoActividad ?? '',
-      observacion: raw?.observacion ?? raw?.ppV00_Observacion ?? raw?.PPV00_Observacion ?? '',
-      codReserva: raw?.codReserva ?? raw?.ppV00_CodReserva ?? raw?.PPV00_CodReserva ?? '',
-      fechaInicio: this.formatDate(raw?.fechaInicio ?? raw?.ppV00_FechaInicio ?? raw?.PPV00_FechaInicio ?? ''),
-      fechaFin: this.formatDate(raw?.fechaFin ?? raw?.ppV00_FechaFin ?? raw?.PPV00_FechaFin ?? ''),
-      voucherRsv: raw?.voucherRsv ?? raw?.ppV00_Voucher ?? raw?.PPV00_Voucher ?? '',
-      nProveedor: raw?.nProveedor ?? raw?.ppV00_Proveedor ?? raw?.PPV00_Proveedor ?? '',
-      habitacion: raw?.habitacion ?? raw?.ppV00_Habitacion ?? raw?.PPV00_Habitacion ?? '',
-      master: raw?.master ?? raw?.ppV00_Master ?? raw?.PPV00_Master ?? '',
-      subtotal: this.toOptionalNumber(raw?.subtotal ?? subtotalRaw),
-      descuento: this.toOptionalNumber(raw?.descuento ?? raw?.ppV00_Descuento ?? raw?.PPV00_Descuento),
-      impuesto: this.toOptionalNumber(raw?.impuesto ?? raw?.ppV00_Impuesto ?? raw?.PPV00_Impuesto),
-      totalDocu: this.toOptionalNumber(raw?.totalDocu ?? raw?.ppV00_TotalDocu ?? raw?.PPV00_TotalDocu ?? raw?.total),
-      totalPago: this.toOptionalNumber(raw?.totalPago ?? raw?.ppV00_TotalPago ?? raw?.PPV00_TotalPago),
-      estadoDocu: raw?.estadoDocu ?? raw?.ppV00_EstadoDocumento ?? raw?.PPV00_EstadoDocumento ?? '',
-      estadoElectronico: raw?.estadoElectronico ?? raw?.ppV15_EstadoElectronico ?? raw?.PPV15_EstadoElectronico ?? ''
-    };
-  }
-
-  private mapDetalle(raw: any): DocumentoDetalleItem {
+  private mapDetalle(raw: DocumentoDetalleItemApi): DocumentoDetalleItem {
     const item: DocumentoDetalleItem = {
-      orden: this.toNumber(raw?.orden ?? raw?.ppV01_Orden ?? raw?.PPV01_Orden),
-      fechaConsumo: this.formatDate(raw?.fechaConsumo ?? raw?.ppV01_FechaConsumo ?? raw?.PPV01_FechaConsumo ?? ''),
-      lstPrecio: raw?.lstPrecio ?? raw?.ppV01_LstPrecio ?? raw?.PPV01_LstPrecio ?? '',
-      codProdu: raw?.codProdu ?? raw?.ppV01_CodProdu ?? raw?.PPV01_CodProdu ?? raw?.codigo ?? '',
-      areaProdu: raw?.areaProdu ?? raw?.ppV01_AreaProdu ?? raw?.PPV01_AreaProdu ?? '',
-      descripcion: raw?.descripcion ?? raw?.ppV01_Descripcion ?? raw?.PPV01_Descripcion ?? raw?.nombre ?? '',
-      cantidad: this.toNumber(raw?.cantidad ?? raw?.ppV01_Cantidad ?? raw?.PPV01_Cantidad),
-      uMedida: raw?.uMedida ?? raw?.ppV01_UMedida ?? raw?.PPV01_UMedida ?? '',
-      pUndLst: this.toNumber(
-        raw?.pUndLst ??
-          raw?.ppV01_PUndLst ??
-          raw?.PPV01_PUndLst ??
-          raw?.ppV01_PrecioUnit ??
-          raw?.PPV01_PrecioUnit ??
-          raw?.precio
-      ),
-      uniSinImp: this.toNumber(
-        raw?.uniSinImp ?? raw?.ppV01_UniSinImp ?? raw?.PPV01_UniSinImp ?? raw?.ppV01_PrecioSinImp ?? raw?.PPV01_PrecioSinImp
-      ),
-      porDescu: this.toNumber(raw?.porDescu ?? raw?.ppV01_PorDescu ?? raw?.PPV01_PorDescu ?? 0),
-      porImp: this.toNumber(raw?.porImp ?? raw?.ppV01_PorImp ?? raw?.PPV01_PorImp ?? 0),
-      porExonera: this.toNumber(raw?.porExonera ?? raw?.ppV01_PorExonera ?? raw?.PPV01_PorExonera ?? 0),
-      mtoImpVarios: this.toNumber(raw?.mtoImpVarios ?? raw?.ppV01_MtoImpVarios ?? raw?.PPV01_MtoImpVarios ?? 0),
-      almacen: raw?.almacen ?? raw?.ppV01_Almacen ?? raw?.PPV01_Almacen ?? '',
-      area: raw?.area ?? raw?.ppV01_Area ?? raw?.PPV01_Area ?? '',
-      tipComanda: raw?.tipComanda ?? raw?.ppV01_TipComanda ?? raw?.PPV01_TipComanda ?? '',
-      comanda: raw?.comanda ?? raw?.ppV01_Comanda ?? raw?.PPV01_Comanda ?? '',
-      pntVenta: raw?.pntVenta ?? raw?.ppV01_PntVenta ?? raw?.PPV01_PntVenta ?? '',
-      mozo: raw?.mozo ?? raw?.ppV01_Mozo ?? raw?.PPV01_Mozo ?? '',
-      numHabita: raw?.numHabita ?? raw?.ppV01_NumHabita ?? raw?.PPV01_NumHabita ?? '',
-      subtotal: this.toOptionalNumber(raw?.subtotal ?? raw?.subTotal ?? raw?.ppV01_SubTotal ?? raw?.PPV01_SubTotal),
-      descuento: this.toOptionalNumber(raw?.descuento ?? raw?.ppV01_Descuento ?? raw?.PPV01_Descuento),
-      neto: this.toOptionalNumber(raw?.neto ?? raw?.ppV01_Neto ?? raw?.PPV01_Neto ?? raw?.ppV01_TotalNeto ?? raw?.PPV01_TotalNeto),
-      total: this.toNumber(raw?.total ?? raw?.ppV01_Precio ?? raw?.PPV01_Precio ?? raw?.ppV01_TotalNeto ?? raw?.PPV01_TotalNeto ?? raw?.monto),
-      impuesto: this.toNumber(raw?.impuesto ?? raw?.ppV01_Impuestos ?? raw?.PPV01_Impuestos ?? 0)
+      orden: this.toNumber(raw.ppV01_Orden),
+      fechaConsumo: this.formatDate(raw.ppV01_FecConsumo),
+      codProdu: raw.ppV01_CodProdu || '',
+      areaProdu: raw.ppV01_Area || '',
+      descripcion: raw.ppV01_Descripcion || '',
+      cantidad: this.toNumber(raw.ppV01_Cantidad),
+      uMedida: raw.ppV01_UMedida || '',
+      pUndLst: this.toNumber(raw.ppV01_PUndLst),
+      uniSinImp: this.toNumber(raw.ppV01_UniSinImp),
+      porDescu: this.toNumber(raw.ppV01_PorDescu),
+      porImp: this.toNumber(raw.ppV01_PorImp),
+      porExonera: this.toNumber(raw.ppV01_PorExonera),
+      mtoImpVarios: this.toNumber(raw.ppV01_MtoImpVarios),
+      almacen: raw.ppV01_Almacen || '',
+      area: raw.ppV01_Area || '',
+      tipComanda: raw.ppV01_TipComanda || '',
+      comanda: raw.ppV01_Comanda || '',
+      pntVenta: raw.ppV01_PntVenta || '',
+      mozo: raw.ppV01_Mozo || '',
+      numHabita: raw.ppV01_NumHabita || '',
+      subtotal: this.toOptionalNumber(raw.ppV01_PrecioSinImp),
+      descuento: this.toOptionalNumber(raw.ppV01_MtoDescu),
+      neto: this.toOptionalNumber(raw.ppV01_TotalNeto),
+      total: this.toNumber(raw.ppV01_Precio),
+      impuesto: this.toNumber(raw.ppV01_Impuestos)
     };
 
     const subtotal = this.coalesceNumber(item.subtotal, this.calcularLineaSubtotal(item));
@@ -494,17 +458,17 @@ export class DocumentoDetalleComponent implements OnInit {
     };
   }
 
-  private mapPago(raw: any): DocumentoPago {
+  private mapPago(raw: DocumentoDetalleFormaPagoApi): DocumentoPago {
     return {
-      orden: this.toNumber(raw?.orden ?? raw?.ppV03_Orden ?? raw?.PPV03_Orden),
-      frmPago: raw?.frmPago ?? raw?.ppV03_FrmPago ?? raw?.PPV03_FrmPago ?? raw?.formaPago ?? '',
-      tipo: raw?.tipo ?? raw?.ppV03_Tipo ?? raw?.PPV03_Tipo ?? '',
-      moneda: raw?.moneda ?? raw?.ppV03_Moneda ?? raw?.PPV03_Moneda ?? '',
-      monto: this.toNumber(raw?.monto ?? raw?.ppV03_Monto ?? raw?.PPV03_Monto ?? 0),
-      tCambio: this.toNumber(raw?.tCambio ?? raw?.ppV03_TCambio ?? raw?.PPV03_TCambio ?? 0),
-      referencia: raw?.referencia ?? raw?.ppV03_Referencia ?? raw?.PPV03_Referencia ?? '',
-      numTarjeta: raw?.numTarjeta ?? raw?.ppV03_NumTarjeta ?? raw?.PPV03_NumTarjeta ?? '',
-      vencimiento: this.formatDate(raw?.vencimiento ?? raw?.ppV03_Vencimiento ?? raw?.PPV03_Vencimiento ?? '')
+      orden: this.toNumber(raw.ppV03_Orden),
+      frmPago: raw.ppV03_FrmPago || '',
+      tipo: raw.ppV03_Tipo || '',
+      moneda: raw.ppV03_Moneda || '',
+      monto: this.toNumber(raw.ppV03_Monto),
+      tCambio: this.toNumber(raw.ppV03_TCambio),
+      referencia: '',
+      numTarjeta: raw.ppV03_NumTarjeta || '',
+      vencimiento: this.formatDate(raw.ppV03_Vencimiento)
     };
   }
 
@@ -587,6 +551,9 @@ export class DocumentoDetalleComponent implements OnInit {
   }
 
   private toOptionalNumber(value: unknown): number | undefined {
+    if (value === null || value === undefined || (typeof value === 'string' && !value.trim())) {
+      return undefined;
+    }
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : undefined;
   }

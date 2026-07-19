@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
@@ -13,17 +13,19 @@ import {
 @Injectable({ providedIn: 'root' })
 export class DocumentoDetalleService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = `${environment.apiUrl}/facturacion/consultar`;
+  private readonly apiUrl = `${(environment.apiUrl || 'http://localhost:5000/api').toString().replace(/\/+$/, '')}/documentos-facturados/detalle`;
   private readonly pdfUrl = `${environment.apiUrl}/facturas`;
   private readonly cambioFormaPagoUrl = `${environment.apiUrl}/cambio-forma-pago`;
 
-  getDetalle(tipoDocu: string, serie: string, numero: string): Observable<DocumentoDetalleResponse> {
-    const safeTipo = encodeURIComponent(tipoDocu);
-    const safeSerie = encodeURIComponent(serie || '000');
-    const safeNumero = encodeURIComponent(numero);
-    const url = `${this.apiUrl}/${safeTipo}/${safeSerie}/${safeNumero}`;
-    return this.http.get<DocumentoDetalleResponse>(url).pipe(
-      map((response) => response ?? {}),
+  getDetalle(tipoDocu: string, serieDocu: string, numDocu: string, operador: string): Observable<DocumentoDetalleResponse> {
+    const params = new HttpParams()
+      .set('tipDocu', tipoDocu.trim())
+      .set('serieDocu', (serieDocu || '000').trim())
+      .set('numDocu', numDocu.trim())
+      .set('operador', operador.trim());
+
+    return this.http.get<DocumentoDetalleResponse>(this.apiUrl, { params }).pipe(
+      map((response) => response),
       catchError((error: HttpErrorResponse) => {
         const message = error.error?.mensaje || error.error?.respuesta || error.message || 'Error al cargar el detalle del documento';
         return throwError(() => new Error(message));
