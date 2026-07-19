@@ -37,6 +37,16 @@ export class CierreCajaListComponent implements OnInit {
   currentUsuario = '';
   printingCierres = new Set<string>();
 
+  get baseRoute(): string {
+    if (this.router.url.startsWith('/restaurante/cierre-caja')) {
+      return '/restaurante/cierre-caja';
+    }
+    if (this.router.url.startsWith('/front-desk/cierre-caja')) {
+      return '/front-desk/cierre-caja';
+    }
+    return '/operaciones/cierre-caja';
+  }
+
   ngOnInit(): void {
     const user = this.authService.getCurrentUser();
     this.currentUsuario = String(user?.usuario ?? '').trim();
@@ -57,7 +67,7 @@ export class CierreCajaListComponent implements OnInit {
   }
 
   nuevaApertura(): void {
-    void this.router.navigate(['/operaciones/cierre-caja/nuevo']);
+    void this.router.navigate([this.baseRoute, 'nuevo']);
   }
 
   verDetalle(item: ReporteCierreEncabezado): void {
@@ -66,7 +76,7 @@ export class CierreCajaListComponent implements OnInit {
       return;
     }
 
-    void this.router.navigate(['/operaciones/cierre-caja', numCierre, 'detalle']);
+    void this.router.navigate([this.baseRoute, numCierre, 'detalle']);
   }
 
   imprimirCierre(item: ReporteCierreEncabezado): void {

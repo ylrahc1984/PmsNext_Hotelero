@@ -29,6 +29,12 @@ export class ListaPrecioFormComponent implements OnInit {
   monedas: MonedaUI[] = [];
   planesTarifas: PlanTarifaUI[] = [];
 
+  get listRoute(): string {
+    return this.router.url.startsWith('/restaurante/configuracion/listas-precios')
+      ? '/restaurante/configuracion/listas-precios'
+      : '/catalogos/listas-precios';
+  }
+
   ngOnInit() {
     this.buildForm();
     this.loadMonedas();
@@ -76,7 +82,7 @@ export class ListaPrecioFormComponent implements OnInit {
             icon: 'warning'
           });
           this.isLoading = false;
-          this.router.navigate(['/catalogos/listas-precios']);
+          this.router.navigate([this.listRoute]);
           return;
         }
         this.form.patchValue({
@@ -146,7 +152,7 @@ export class ListaPrecioFormComponent implements OnInit {
             text: 'Lista de precios actualizada correctamente.',
             icon: 'success'
           });
-          this.router.navigate(['/catalogos/listas-precios']);
+          this.router.navigate([this.listRoute]);
         },
         error: (error) => {
           console.error('Error al actualizar lista de precios:', error);
@@ -169,7 +175,7 @@ export class ListaPrecioFormComponent implements OnInit {
           text: 'Lista de precios creada correctamente.',
           icon: 'success'
         });
-        this.router.navigate(['/catalogos/listas-precios']);
+        this.router.navigate([this.listRoute]);
       },
       error: (error) => {
         console.error('Error al crear lista de precios:', error);
@@ -184,7 +190,7 @@ export class ListaPrecioFormComponent implements OnInit {
   }
 
   cancelar() {
-    this.router.navigate(['/catalogos/listas-precios']);
+    this.router.navigate([this.listRoute]);
   }
 
   get isVigente() {

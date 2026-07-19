@@ -61,15 +61,19 @@ export class ServiciosComponent implements OnInit {
     typeof item === 'string' ? item : `${item.codigo} - ${item.nombre}`;
 
   get baseRoute(): string {
-    return this.router.url.startsWith('/restaurante/servicios') ? '/restaurante/servicios' : '/catalogos/servicios';
+    return this.isRestaurantConfiguration ? '/restaurante/configuracion/servicios' : '/catalogos/servicios';
   }
 
   get parentRoute(): string {
-    return this.router.url.startsWith('/restaurante/servicios') ? '/restaurante/dashboard' : '/restaurante/configuracion';
+    return '/restaurante/configuracion';
   }
 
   get parentLabel(): string {
-    return this.router.url.startsWith('/restaurante/servicios') ? 'Restaurante' : 'Configuracion Restaurante';
+    return 'Configuracion Restaurante';
+  }
+
+  get isRestaurantConfiguration(): boolean {
+    return this.router.url.startsWith('/restaurante/configuracion/servicios');
   }
 
   ngOnInit() {

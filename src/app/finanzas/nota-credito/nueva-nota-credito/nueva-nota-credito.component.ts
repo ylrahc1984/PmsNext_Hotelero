@@ -238,7 +238,7 @@ export class NuevaNotaCreditoComponent implements OnInit {
             timer: 1600,
             showConfirmButton: false
           });
-          this.router.navigate(['/finanzas/notas-credito']);
+          this.router.navigate([this.notasCreditoRoute]);
         },
         error: (error: unknown) => {
           this.errorMessage = this.getErrorMessage(error);
@@ -248,7 +248,11 @@ export class NuevaNotaCreditoComponent implements OnInit {
   }
 
   cancelar(): void {
-    this.router.navigate(['/finanzas/notas-credito']);
+    this.router.navigate([this.notasCreditoRoute]);
+  }
+
+  private get notasCreditoRoute(): string {
+    return this.router.url.startsWith('/front-desk/notas-credito') ? '/front-desk/notas-credito' : '/finanzas/notas-credito';
   }
 
   trackByDetalle(index: number, _item: FormGroup<DetalleNCForm>): number {

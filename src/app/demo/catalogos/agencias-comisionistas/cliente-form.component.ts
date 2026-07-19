@@ -45,7 +45,27 @@ export class ClienteFormComponent implements OnInit {
   private destroyRef = inject(DestroyRef);
 
   get listRoute(): string {
-    return this.router.url.startsWith('/restaurante/agencias') ? '/restaurante/agencias' : '/catalogos/clientes';
+    if (this.router.url.startsWith('/restaurante/agencias')) {
+      return '/restaurante/agencias';
+    }
+    if (this.router.url.startsWith('/reservas/clientes')) {
+      return '/reservas/clientes';
+    }
+    return '/catalogos/clientes';
+  }
+
+  get contextModuleLabel(): string {
+    if (this.router.url.startsWith('/restaurante/agencias')) {
+      return 'Restaurante';
+    }
+    if (this.router.url.startsWith('/reservas/clientes')) {
+      return 'Reservas';
+    }
+    return 'Catálogos';
+  }
+
+  get contextListLabel(): string {
+    return this.router.url.startsWith('/reservas/clientes') ? 'Clientes / Facturación' : 'Agencias';
   }
 
   form!: FormGroup;

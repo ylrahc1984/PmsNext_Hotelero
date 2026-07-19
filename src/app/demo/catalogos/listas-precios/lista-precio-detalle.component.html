@@ -3,7 +3,7 @@
     <!-- Header de contexto compacto con selector -->
     <div class="header-card">
       <div class="header-top">
-        <div class="breadcrumb-section">
+        <div class="breadcrumb-section" *ngIf="!isRestaurantConfiguration">
           <nav aria-label="breadcrumb">
             <ol class="breadcrumb breadcrumb-custom">
               <li class="breadcrumb-item">

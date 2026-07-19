@@ -45,7 +45,7 @@ export class NotaCreditoDetalleComponent implements OnInit {
       this.numero = (params.get('numero') ?? '').toString().trim();
 
       if (!this.tipo || !this.serie || !this.numero) {
-        this.router.navigate(['/finanzas/notas-credito']);
+        this.router.navigate([this.notasCreditoRoute]);
         return;
       }
 
@@ -91,7 +91,11 @@ export class NotaCreditoDetalleComponent implements OnInit {
   }
 
   volver(): void {
-    this.router.navigate(['/finanzas/notas-credito']);
+    this.router.navigate([this.notasCreditoRoute]);
+  }
+
+  private get notasCreditoRoute(): string {
+    return this.router.url.startsWith('/front-desk/notas-credito') ? '/front-desk/notas-credito' : '/finanzas/notas-credito';
   }
 
   imprimir(): void {

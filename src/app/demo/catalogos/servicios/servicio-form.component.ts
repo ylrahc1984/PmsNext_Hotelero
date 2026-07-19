@@ -97,7 +97,9 @@ export class ServicioFormComponent implements OnInit {
   private productoService      = inject(ProductoService);
 
   get listRoute(): string {
-    return this.router.url.startsWith('/restaurante/servicios') ? '/restaurante/servicios' : '/catalogos/servicios';
+    return this.router.url.startsWith('/restaurante/configuracion/servicios')
+      ? '/restaurante/configuracion/servicios'
+      : '/catalogos/servicios';
   }
 
   showCabysModal     = false;

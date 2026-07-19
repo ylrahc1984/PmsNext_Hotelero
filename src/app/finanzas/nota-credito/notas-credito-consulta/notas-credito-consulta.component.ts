@@ -78,6 +78,12 @@ export class NotasCreditoConsultaComponent implements OnInit {
 
   readonly vm$ = this.vmSubject.asObservable();
 
+  get nuevaNotaCreditoRoute(): string {
+    return this.router.url.startsWith('/front-desk/notas-credito')
+      ? '/front-desk/notas-credito/nueva'
+      : '/finanzas/notas-credito/nueva';
+  }
+
   private filtrosBase: { fecha: string; fechaFin: string; buscar?: string } = {
     fecha: this.formatDateToApi(this.defaultDateRange.fechaDesde),
     fechaFin: this.formatDateToApi(this.defaultDateRange.fechaHasta)
@@ -158,7 +164,10 @@ export class NotasCreditoConsultaComponent implements OnInit {
       return;
     }
 
-    this.router.navigate(['/finanzas/notas-credito/detalle', tipo, serie, numero]);
+    const baseRoute = this.router.url.startsWith('/front-desk/notas-credito')
+      ? '/front-desk/notas-credito/detalle'
+      : '/finanzas/notas-credito/detalle';
+    this.router.navigate([baseRoute, tipo, serie, numero]);
   }
 
   trackByNota(index: number, nota: NotaCredito): string {

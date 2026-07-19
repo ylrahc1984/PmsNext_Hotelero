@@ -4,10 +4,10 @@
       <a routerLink="/dashboard"><i class="feather icon-home"></i></a>
     </li>
     <li class="breadcrumb-item">
-      <a>Catalogos</a>
+      <a>{{ contextModuleLabel }}</a>
     </li>
     <li class="breadcrumb-item">
-      <a [routerLink]="listRoute">Agencias</a>
+      <a [routerLink]="listRoute">{{ contextListLabel }}</a>
     </li>
     <li class="breadcrumb-item">
       <a>{{ readOnly ? 'Detalle' : (isEditing ? 'Editar' : 'Nuevo') }}</a>

@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import Swal from 'sweetalert2';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { ClienteService } from '../agencias-comisionistas/cliente.service';
@@ -18,6 +18,7 @@ import { TarifaClienteUI } from './tarifas-cliente.models';
   styleUrls: ['./listas-precios-asignaciones.component.scss']
 })
 export class ListasPreciosAsignacionesComponent implements OnInit {
+  private readonly router = inject(Router);
   private clientesService = inject(ClienteService);
   private listasPreciosService = inject(ListaPrecioService);
   private tarifasClienteService = inject(TarifasClienteService);
@@ -42,6 +43,12 @@ export class ListasPreciosAsignacionesComponent implements OnInit {
   totalPages = 1;
   totalRegistros = 0;
   pageSizeOptions = [10, 25, 50, 100];
+
+  get listRoute(): string {
+    return this.router.url.startsWith('/restaurante/configuracion/listas-precios')
+      ? '/restaurante/configuracion/listas-precios'
+      : '/catalogos/listas-precios';
+  }
 
   ngOnInit(): void {
     this.loadListasPrecios();

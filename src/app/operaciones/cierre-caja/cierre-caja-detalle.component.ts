@@ -49,7 +49,13 @@ export class CierreCajaDetalleComponent implements OnInit {
   }
 
   volver(): void {
-    void this.router.navigate(['/operaciones/cierre-caja']);
+    let route = '/operaciones/cierre-caja';
+    if (this.router.url.startsWith('/restaurante/cierre-caja')) {
+      route = '/restaurante/cierre-caja';
+    } else if (this.router.url.startsWith('/front-desk/cierre-caja')) {
+      route = '/front-desk/cierre-caja';
+    }
+    void this.router.navigate([route]);
   }
 
   imprimirPdf(): void {

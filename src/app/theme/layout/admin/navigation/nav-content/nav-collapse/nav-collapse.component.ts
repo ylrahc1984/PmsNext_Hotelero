@@ -6,6 +6,7 @@ import { CommonModule } from '@angular/common';
 
 // project import
 import { NavigationItem } from '../../navigation';
+import { navigationItemMatchesUrl } from '../../navigation-route.util';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { NavItemComponent } from '../nav-item/nav-item.component';
 
@@ -39,7 +40,7 @@ export class NavCollapseComponent {
       return this.expandedRootId() === this.item().id;
     }
 
-    return this.visible || this.itemContainsUrl(this.item(), this.router.url);
+    return this.visible || navigationItemMatchesUrl(this.item(), this.router.url);
   }
 
   get currentRootSectionId(): string {
@@ -66,20 +67,4 @@ export class NavCollapseComponent {
     return this.rootSectionId() === null;
   }
 
-  private itemContainsUrl(item: NavigationItem, url: string): boolean {
-    const normalizedUrl = this.normalizeUrl(url);
-
-    if (item.url) {
-      const normalizedItemUrl = this.normalizeUrl(item.url);
-      if (normalizedItemUrl === normalizedUrl || normalizedUrl.startsWith(normalizedItemUrl + '/')) {
-        return true;
-      }
-    }
-
-    return item.children?.some((child) => this.itemContainsUrl(child, normalizedUrl)) ?? false;
-  }
-
-  private normalizeUrl(url: string): string {
-    return url.split('?')[0].split('#')[0];
-  }
 }

@@ -9,10 +9,10 @@
             type="button"
             (click)="irOperacionDiaria()"
             [disabled]="isSubmitting"
-            title="Volver a Operación Diaria"
+            [title]="returnContextLabel"
           >
             <i class="feather icon-arrow-left me-1"></i>
-            Volver a Operación Diaria
+            {{ returnContextLabel }}
           </button>
           <button class="btn btn-sm btn-outline-secondary" type="button" (click)="irConsulta()" [disabled]="isSubmitting">
             <i class="feather icon-list me-1"></i>

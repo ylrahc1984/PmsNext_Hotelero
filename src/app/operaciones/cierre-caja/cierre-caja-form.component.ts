@@ -42,6 +42,16 @@ export class CierreCajaFormComponent implements OnInit, OnDestroy {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+
+  get baseRoute(): string {
+    if (this.router.url.startsWith('/restaurante/cierre-caja')) {
+      return '/restaurante/cierre-caja';
+    }
+    if (this.router.url.startsWith('/front-desk/cierre-caja')) {
+      return '/front-desk/cierre-caja';
+    }
+    return '/operaciones/cierre-caja';
+  }
   private readonly authService = inject(AuthService);
   private readonly usuarioService = inject(UsuarioService);
   private readonly formaPagoService = inject(FormaPagoService);
@@ -185,7 +195,7 @@ export class CierreCajaFormComponent implements OnInit, OnDestroy {
         text: 'La caja quedó abierta y lista para completar el cierre.',
         icon: 'success'
       });
-      await this.router.navigate(['/operaciones/cierre-caja', record.id]);
+      await this.router.navigate([this.baseRoute, record.id]);
     } catch (error) {
       console.error('Error creando apertura de caja', error);
       await Swal.fire({
@@ -260,7 +270,7 @@ export class CierreCajaFormComponent implements OnInit, OnDestroy {
         text: numCierre ? `El cierre ${numCierre} fue generado correctamente.` : 'El turno quedó cerrado correctamente.',
         icon: 'success'
       });
-      await this.router.navigate(['/operaciones/cierre-caja']);
+      await this.router.navigate([this.baseRoute]);
     } catch (error) {
       console.error('Error cerrando caja', error);
       await Swal.fire({
@@ -274,7 +284,7 @@ export class CierreCajaFormComponent implements OnInit, OnDestroy {
   }
 
   cancelar(): void {
-    void this.router.navigate(['/operaciones/cierre-caja']);
+    void this.router.navigate([this.baseRoute]);
   }
 
   getLineDifference(index: number): number {
@@ -566,7 +576,7 @@ export class CierreCajaFormComponent implements OnInit, OnDestroy {
     });
 
     if (result.isConfirmed) {
-      await this.router.navigate(['/operaciones/cierre-caja', existing.id]);
+      await this.router.navigate([this.baseRoute, existing.id]);
       return true;
     }
 
@@ -581,7 +591,7 @@ export class CierreCajaFormComponent implements OnInit, OnDestroy {
         text: 'No se encontró el cierre de caja solicitado.',
         icon: 'warning'
       });
-      await this.router.navigate(['/operaciones/cierre-caja']);
+      await this.router.navigate([this.baseRoute]);
       return;
     }
 

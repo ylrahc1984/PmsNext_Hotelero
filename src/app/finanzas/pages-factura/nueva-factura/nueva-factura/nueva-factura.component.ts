@@ -500,18 +500,34 @@ export class NuevaFacturaComponent implements OnInit {
   }
 
   irOperacionDiaria(): void {
-    this.router.navigate(['/operaciones/operacion-diaria']);
+    this.router.navigate([this.isFrontDeskContext ? '/front-desk/room-rack' : '/operaciones/operacion-diaria']);
   }
 
   irConsulta(): void {
-    this.router.navigate(['/finanzas/consulta-documentos']);
+    this.router.navigate([this.consultaDocumentosRoute]);
   }
 
   verDocumento(): void {
     if (!this.facturaNumero) return;
     const tipo = this.form.controls.tipDocu.value;
     const serie = this.facturaSerie || '000';
-    this.router.navigate(['/finanzas/documento', tipo, serie, this.facturaNumero]);
+    this.router.navigate([this.documentoRoute, tipo, serie, this.facturaNumero]);
+  }
+
+  get isFrontDeskContext(): boolean {
+    return this.router.url.startsWith('/front-desk/factura-directa');
+  }
+
+  get returnContextLabel(): string {
+    return this.isFrontDeskContext ? 'Volver a Habitaciones' : 'Volver a Operación Diaria';
+  }
+
+  private get consultaDocumentosRoute(): string {
+    return this.isFrontDeskContext ? '/front-desk/consulta-documentos' : '/finanzas/consulta-documentos';
+  }
+
+  private get documentoRoute(): string {
+    return this.isFrontDeskContext ? '/front-desk/documento' : '/finanzas/documento';
   }
 
   trackByDetalle(index: number): number {
@@ -1798,6 +1814,11 @@ export class NuevaFacturaComponent implements OnInit {
   }
 
   private navigateAfterSuccess(): void {
+    if (this.isFrontDeskContext) {
+      void this.router.navigate([this.consultaDocumentosRoute]);
+      return;
+    }
+
     if (this.facturaOrigen === 'operacion-diaria') {
       void this.router.navigate(['/operaciones/operacion-diaria']);
       return;
@@ -1815,7 +1836,7 @@ export class NuevaFacturaComponent implements OnInit {
       }
     }
 
-    void this.router.navigate(['/finanzas/consulta-documentos']);
+    void this.router.navigate([this.consultaDocumentosRoute]);
   }
 
   private aplicarClienteReserva(cliente: ClienteUI | null, codAgencia: string): void {

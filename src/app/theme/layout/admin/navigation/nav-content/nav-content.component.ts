@@ -9,6 +9,7 @@ import { environment } from 'src/environments/environment';
 import { APP_BRANDING } from 'src/app/core/config/app-branding';
 import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
 import { NavigationItem, NavigationItems } from '../navigation';
+import { navigationItemMatchesUrl } from '../navigation-route.util';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { NavGroupComponent } from './nav-group/nav-group.component';
 import { NavItemComponent } from './nav-item/nav-item.component';
@@ -78,21 +79,13 @@ export class NavContentComponent {
       }
 
       for (const section of navigation.children) {
-        if (section.type === 'collapse' && this.itemContainsUrl(section, normalizedUrl)) {
+        if (section.type === 'collapse' && navigationItemMatchesUrl(section, normalizedUrl)) {
           return section.id;
         }
       }
     }
 
     return null;
-  }
-
-  private itemContainsUrl(item: NavigationItem, url: string): boolean {
-    if (item.url && this.normalizeUrl(item.url) === url) {
-      return true;
-    }
-
-    return item.children?.some((child) => this.itemContainsUrl(child, url)) ?? false;
   }
 
   private normalizeUrl(url: string): string {

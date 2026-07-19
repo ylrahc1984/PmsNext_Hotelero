@@ -33,7 +33,7 @@ export class ConfiguracionRestauranteComponent {
           id: 'servicios',
           title: 'Catalogo Comercial',
           description: 'Productos, servicios y experiencias disponibles para venta',
-          route: '/catalogos/servicios',
+          route: '/restaurante/configuracion/servicios',
           icon: 'icon-layers',
           iconColor: 'text-c-cyan'
         },
@@ -41,7 +41,7 @@ export class ConfiguracionRestauranteComponent {
           id: 'listas-precios',
           title: 'Listas de Precios',
           description: 'Tarifas, precios y reglas comerciales',
-          route: '/catalogos/listas-precios',
+          route: '/restaurante/configuracion/listas-precios',
           icon: 'icon-tag',
           iconColor: 'text-c-blue'
         },
@@ -70,7 +70,7 @@ export class ConfiguracionRestauranteComponent {
           id: 'saloneros',
           title: 'Saloneros',
           description: 'Equipo de atencion, salones y turnos',
-          route: '/restaurante/saloneros',
+          route: '/restaurante/configuracion/saloneros',
           icon: 'icon-users',
           iconColor: 'text-c-blue'
         }

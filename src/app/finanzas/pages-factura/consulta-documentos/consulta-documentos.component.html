@@ -11,7 +11,7 @@
             <button
               class="btn btn-primary app-action-btn app-action-btn--primary"
               type="button"
-              routerLink="/finanzas/nueva-factura"
+              [routerLink]="nuevaFacturaRoute"
               [queryParams]="{ origen: 'consulta-documentos' }"
             >
               <span class="app-action-btn__icon" aria-hidden="true">

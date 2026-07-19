@@ -1,5 +1,5 @@
 ﻿import { NgModule } from '@angular/core';
-import { Route, Routes, RouterModule } from '@angular/router';
+import { Data, Route, Routes, RouterModule } from '@angular/router';
 
 // project import
 import { AdminComponent } from './theme/layout/admin/admin.component';
@@ -9,6 +9,21 @@ import { LoginGuard } from './core/guards/login.guard';
 import { CanDeactivateReservaCreateGuard } from './core/guards/can-deactivate-reserva-create.guard';
 
 const loadPmsPlaceholder = () => import('./pages/pms-placeholder/pms-placeholder.component').then((c) => c.PmsPlaceholderComponent);
+
+const reservasSectionUrls: Record<string, string> = {
+  'Consulta de Reservas': '/reservas/consulta-reservas',
+  'Tarifas y Planes': '/reservas/tarifas-planes',
+  'Clientes / Facturación': '/reservas/clientes'
+};
+
+const reservasBreadcrumbData = (title: string, section?: string, extra: Data = {}): Data => ({
+  ...extra,
+  breadcrumbTrail: [
+    { title: 'Reservas', url: '/reservas/calendario' },
+    ...(section ? [{ title: section, url: reservasSectionUrls[section] || '/reservas/calendario' }] : []),
+    { title }
+  ]
+});
 
 const pmsPlaceholderChildRoutes = (module: string, entries: Array<[string, string]>): Routes =>
   entries.map(([path, title]) => ({
@@ -142,6 +157,11 @@ const routes: Routes = [
       ]),
       {
         path: 'cargos-habitacion/detalle/:tipCrgHab/:numCrgHab',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Cargos a Habitación', url: '/restaurante/cargos-habitacion' },
+          { title: 'Detalle' }
+        ] },
         loadComponent: () =>
           import('./demo/restaurante/cargos-habitacion-detalle/cargos-habitacion-detalle.component').then(
             (c) => c.CargosHabitacionDetalleComponent
@@ -149,6 +169,10 @@ const routes: Routes = [
       },
       {
         path: 'cargos-habitacion',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Cargos a Habitación' }
+        ] },
         loadComponent: () =>
           import('./demo/restaurante/cargos-habitacion/cargos-habitacion.component').then(
             (c) => c.CargosHabitacionComponent
@@ -156,6 +180,11 @@ const routes: Routes = [
       },
       {
         path: 'cargos-colaboradores/detalle/:tipOpe/:numOpe',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Cargos a Colaboradores', url: '/restaurante/cargos-colaboradores' },
+          { title: 'Detalle' }
+        ] },
         loadComponent: () =>
           import('./demo/restaurante/cargos-colaboradores-detalle/cargos-colaboradores-detalle.component').then(
             (c) => c.CargosColaboradoresDetalleComponent
@@ -163,6 +192,10 @@ const routes: Routes = [
       },
       {
         path: 'cargos-colaboradores',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Cargos a Colaboradores' }
+        ] },
         loadComponent: () =>
           import('./demo/restaurante/cargos-colaboradores/cargos-colaboradores.component').then(
             (c) => c.CargosColaboradoresComponent
@@ -175,15 +208,62 @@ const routes: Routes = [
       },
       {
         path: 'cierre-caja',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Cierre de Caja' }
+        ] },
         loadComponent: () => import('./operaciones/cierre-caja/cierre-caja-list.component').then((c) => c.CierreCajaListComponent)
       },
       {
+        path: 'cierre-caja/nuevo',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Cierre de Caja', url: '/restaurante/cierre-caja' },
+          { title: 'Nueva apertura' }
+        ] },
+        loadComponent: () => import('./operaciones/cierre-caja/cierre-caja-form.component').then((c) => c.CierreCajaFormComponent)
+      },
+      {
+        path: 'cierre-caja/:numCierre/detalle',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Cierre de Caja', url: '/restaurante/cierre-caja' },
+          { title: 'Detalle' }
+        ] },
+        loadComponent: () => import('./operaciones/cierre-caja/cierre-caja-detalle.component').then((c) => c.CierreCajaDetalleComponent)
+      },
+      {
+        path: 'cierre-caja/:id',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Cierre de Caja', url: '/restaurante/cierre-caja' },
+          { title: 'Apertura' }
+        ] },
+        loadComponent: () => import('./operaciones/cierre-caja/cierre-caja-form.component').then((c) => c.CierreCajaFormComponent)
+      },
+      {
         path: 'consulta-documentos',
-        data: { origenConsulta: 'restaurante' },
+        data: {
+          origenConsulta: 'restaurante',
+          breadcrumbTrail: [
+            { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+            { title: 'Consulta de Documentos' }
+          ]
+        },
         loadComponent: () =>
           import('./finanzas/pages-factura/consulta-documentos/consulta-documentos.component').then(
             (c) => c.ConsultaDocumentosComponent
           )
+      },
+      {
+        path: 'documento/:tipo/:serie/:numero',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Consulta de Documentos', url: '/restaurante/consulta-documentos' },
+          { title: 'Detalle del Documento' }
+        ] },
+        loadComponent: () =>
+          import('./finanzas/pages-factura/documento-detalle/documento-detalle.component').then((c) => c.DocumentoDetalleComponent)
       },
       {
         path: 'mesa/:id',
@@ -195,6 +275,10 @@ const routes: Routes = [
       {
         path: 'configuracion',
         pathMatch: 'full',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Configuración Restaurante' }
+        ] },
         loadComponent: () =>
           import('./demo/restaurante/configuracion-restaurante/configuracion-restaurante.component').then(
             (c) => c.ConfiguracionRestauranteComponent
@@ -231,6 +315,11 @@ const routes: Routes = [
       },
       {
         path: 'configuracion/categorias',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Configuración Restaurante', url: '/restaurante/configuracion' },
+          { title: 'Categorías' }
+        ] },
         loadComponent: () =>
           import('./demo/restaurante/categorias-restaurante/categorias-restaurante.component').then(
             (c) => c.CategoriasRestauranteComponent
@@ -238,10 +327,106 @@ const routes: Routes = [
       },
       {
         path: 'configuracion/puntos-venta',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Configuración Restaurante', url: '/restaurante/configuracion' },
+          { title: 'Puntos de Venta' }
+        ] },
         loadComponent: () =>
           import('./demo/restaurante/puntos-venta-restaurante/puntos-venta-restaurante.component').then(
             (c) => c.PuntosVentaRestauranteComponent
           )
+      },
+      {
+        path: 'configuracion/servicios',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Configuración Restaurante', url: '/restaurante/configuracion' },
+          { title: 'Catálogo Comercial' }
+        ] },
+        loadComponent: () => import('./demo/catalogos/servicios/servicios.component').then((c) => c.ServiciosComponent)
+      },
+      {
+        path: 'configuracion/servicios/nuevo',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Configuración Restaurante', url: '/restaurante/configuracion' },
+          { title: 'Catálogo Comercial', url: '/restaurante/configuracion/servicios' },
+          { title: 'Nuevo registro' }
+        ] },
+        loadComponent: () => import('./demo/catalogos/servicios/servicio-form.component').then((c) => c.ServicioFormComponent)
+      },
+      {
+        path: 'configuracion/servicios/editar/:codReceta',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Configuración Restaurante', url: '/restaurante/configuracion' },
+          { title: 'Catálogo Comercial', url: '/restaurante/configuracion/servicios' },
+          { title: 'Editar registro' }
+        ] },
+        loadComponent: () => import('./demo/catalogos/servicios/servicio-form.component').then((c) => c.ServicioFormComponent)
+      },
+      {
+        path: 'configuracion/listas-precios',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Configuración Restaurante', url: '/restaurante/configuracion' },
+          { title: 'Listas de Precios' }
+        ] },
+        loadComponent: () => import('./demo/catalogos/listas-precios/listas-precios.component').then((c) => c.ListasPreciosComponent)
+      },
+      {
+        path: 'configuracion/listas-precios/asignaciones',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Configuración Restaurante', url: '/restaurante/configuracion' },
+          { title: 'Listas de Precios', url: '/restaurante/configuracion/listas-precios' },
+          { title: 'Asignaciones' }
+        ] },
+        loadComponent: () => import('./demo/catalogos/listas-precios/listas-precios-asignaciones.component').then((c) => c.ListasPreciosAsignacionesComponent)
+      },
+      {
+        path: 'configuracion/listas-precios/nuevo',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Configuración Restaurante', url: '/restaurante/configuracion' },
+          { title: 'Listas de Precios', url: '/restaurante/configuracion/listas-precios' },
+          { title: 'Nueva lista' }
+        ] },
+        loadComponent: () => import('./demo/catalogos/listas-precios/lista-precio-form.component').then((c) => c.ListaPrecioFormComponent)
+      },
+      {
+        path: 'configuracion/listas-precios/:id/editar',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Configuración Restaurante', url: '/restaurante/configuracion' },
+          { title: 'Listas de Precios', url: '/restaurante/configuracion/listas-precios' },
+          { title: 'Editar lista' }
+        ] },
+        loadComponent: () => import('./demo/catalogos/listas-precios/lista-precio-form.component').then((c) => c.ListaPrecioFormComponent)
+      },
+      {
+        path: 'configuracion/listas-precios/:id/detalle',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Configuración Restaurante', url: '/restaurante/configuracion' },
+          { title: 'Listas de Precios', url: '/restaurante/configuracion/listas-precios' },
+          { title: 'Detalle' }
+        ] },
+        loadComponent: () => import('./demo/catalogos/listas-precios/lista-precio-detalle.component').then((c) => c.ListaPrecioDetalleComponent)
+      },
+      {
+        path: 'configuracion/saloneros',
+        loadComponent: loadPmsPlaceholder,
+        data: {
+          module: 'Restaurante',
+          title: 'Saloneros',
+          breadcrumbTrail: [
+            { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+            { title: 'Configuración Restaurante', url: '/restaurante/configuracion' },
+            { title: 'Saloneros' }
+          ]
+        }
       }
     ]
   },
@@ -258,6 +443,10 @@ const routes: Routes = [
       },
       {
         path: 'puntos-venta',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante' },
+          { title: 'Facturación Restaurante' }
+        ] },
         loadComponent: () =>
           import('./demo/restaurante/restaurant-punto-venta/restaurant-punto-venta.component').then(
             (c) => c.RestaurantPuntoVentaComponent
@@ -265,6 +454,11 @@ const routes: Routes = [
       },
       {
         path: 'dashboard/:codPuntoVenta',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Facturación Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Mesas' }
+        ] },
         loadComponent: () =>
           import('./demo/restaurante/restaurant-dashboard/restaurant-dashboard.component').then(
             (c) => c.RestaurantDashboardComponent
@@ -272,6 +466,11 @@ const routes: Routes = [
       },
       {
         path: 'mesa/:id',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Facturación Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Detalle de Mesa' }
+        ] },
         loadComponent: () =>
           import('./demo/restaurante/restaurant-mesa-detalle/restaurant-mesa-detalle.component').then(
             (c) => c.RestaurantMesaDetalleComponent
@@ -279,6 +478,12 @@ const routes: Routes = [
       },
       {
         path: 'pos-productos/:id',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Facturación Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Detalle de Mesa' },
+          { title: 'Productos' }
+        ] },
         loadComponent: () =>
           import('./demo/restaurante/restaurant-pos-productos/restaurant-pos-productos.component').then(
             (c) => c.RestaurantPosProductosComponent
@@ -421,25 +626,30 @@ const routes: Routes = [
       {
         path: 'calendario',
         canDeactivate: [CanDeactivateReservaCreateGuard],
+        data: reservasBreadcrumbData('Calendario de Reservas'),
         loadComponent: () => import('./modules/Reservas/calendar/pages/room-calendar-page.component').then((c) => c.RoomCalendarPageComponent)
       },
       {
         path: 'consulta-reservas',
+        data: reservasBreadcrumbData('Consulta de Reservas'),
         loadComponent: () =>
           import('./modules/Reservas/consulta-reservas/consulta-reservas.component').then((c) => c.ConsultaReservasComponent)
       },
       {
         path: 'nueva-hospedaje',
+        data: reservasBreadcrumbData('Nueva Reserva', 'Consulta de Reservas'),
         loadComponent: () =>
           import('./modules/Reservas/reserva-hospedaje/reserva-hospedaje.component').then((c) => c.ReservaHospedajeComponent)
       },
       {
         path: 'editar-hospedaje/:codReserva',
+        data: reservasBreadcrumbData('Editar Reserva', 'Consulta de Reservas'),
         loadComponent: () =>
           import('./modules/Reservas/reserva-hospedaje/reserva-hospedaje.component').then((c) => c.ReservaHospedajeComponent)
       },
       {
         path: 'detalle-hospedaje/:codReserva',
+        data: reservasBreadcrumbData('Detalle de Reserva', 'Consulta de Reservas'),
         loadComponent: () =>
           import('./modules/Reservas/reserva-hospedaje-detalle/reserva-hospedaje-detalle.component').then((c) => c.ReservaHospedajeDetalleComponent)
       },
@@ -450,22 +660,46 @@ const routes: Routes = [
       },
       {
         path: 'tarifas-planes',
+        data: reservasBreadcrumbData('Tarifas y Planes'),
         loadComponent: () =>
           import('./modules/Reservas/tarifas-planes/tarifas-planes.component').then((c) => c.TarifasPlanesComponent)
       },
       {
         path: 'tarifas-planes/:codigo/detalle',
+        data: reservasBreadcrumbData('Detalle de Tarifa', 'Tarifas y Planes'),
         loadComponent: () =>
           import('./modules/Reservas/detalle-tarifa/detalle-tarifa.component').then((c) => c.DetalleTarifaComponent)
       },
       {
         path: 'configuracion/agencias',
+        data: reservasBreadcrumbData('Agencias / Canales'),
         loadComponent: () =>
           import('./modules/Reservas/agency-management/agency-management.component').then((c) => c.AgencyManagementComponent)
       },
-      ...pmsPlaceholderChildRoutes('Reservas', [
-        ['disponibilidad', 'Disponibilidad']
-      ])
+      {
+        path: 'clientes',
+        data: reservasBreadcrumbData('Clientes / Facturación'),
+        loadComponent: () =>
+          import('./demo/catalogos/agencias-comisionistas/agencias-comisionistas.component').then((c) => c.AgenciasComisionistasComponent)
+      },
+      {
+        path: 'clientes/nuevo',
+        loadComponent: () => import('./demo/catalogos/agencias-comisionistas/cliente-form.component').then((c) => c.ClienteFormComponent)
+      },
+      {
+        path: 'clientes/:codigo/editar',
+        loadComponent: () => import('./demo/catalogos/agencias-comisionistas/cliente-form.component').then((c) => c.ClienteFormComponent)
+      },
+      {
+        path: 'clientes/:codigo/detalle',
+        loadComponent: () => import('./demo/catalogos/agencias-comisionistas/cliente-form.component').then((c) => c.ClienteFormComponent),
+        data: { readOnly: true }
+      },
+      {
+        path: 'disponibilidad',
+        loadComponent: loadPmsPlaceholder,
+        data: reservasBreadcrumbData('Disponibilidad', undefined, { module: 'Reservas', title: 'Disponibilidad' })
+      }
     ]
   },
   {

@@ -8,6 +8,7 @@ export interface NavigationItem {
   url?: string;
   classes?: string;
   exactMatch?: boolean;
+  activeUrls?: string[];
   external?: boolean;
   target?: boolean;
   breadcrumbs?: boolean;
@@ -44,7 +45,23 @@ export const NavigationItems: NavigationItem[] = [
         type: 'collapse',
         icon: 'feather icon-log-in',
         children: [
-          { id: 'front-desk-habitaciones', title: 'Habitaciones', type: 'item', url: '/front-desk/room-rack', icon: 'feather icon-home', classes: 'nav-item' },
+          {
+            id: 'front-desk-habitaciones',
+            title: 'Habitaciones',
+            type: 'item',
+            url: '/front-desk/room-rack',
+            activeUrls: [
+              '/front-desk/walk-in',
+              '/front-desk/habitaciones',
+              '/front-desk/arribos-dia',
+              '/front-desk/huespedes-in-house',
+              '/front-desk/factura-directa',
+              '/front-desk/rooming-asignaciones',
+              '/front-desk/estado-habitaciones'
+            ],
+            icon: 'feather icon-home',
+            classes: 'nav-item'
+          },
           {
             id: 'front-desk-habitaciones-bloqueadas',
             title: 'Habitaciones Bloqueadas',
@@ -55,7 +72,15 @@ export const NavigationItems: NavigationItem[] = [
           },
           { id: 'front-desk-pronostico-ocupacion', title: 'Pronóstico de Ocupación', type: 'item', url: '/front-desk/occupancy-forecast', icon: 'feather icon-trending-up', classes: 'nav-item' },
           { id: 'front-desk-cierre-caja', title: 'Cierre de Caja', type: 'item', url: '/front-desk/cierre-caja', icon: 'feather icon-lock', classes: 'nav-item' },
-          { id: 'front-desk-consulta-documentos', title: 'Consulta de Documentos', type: 'item', url: '/front-desk/consulta-documentos', icon: 'feather icon-search', classes: 'nav-item' },
+          {
+            id: 'front-desk-consulta-documentos',
+            title: 'Consulta de Documentos',
+            type: 'item',
+            url: '/front-desk/consulta-documentos',
+            activeUrls: ['/front-desk/consulta-documentos', '/front-desk/documento'],
+            icon: 'feather icon-search',
+            classes: 'nav-item'
+          },
           { id: 'front-desk-notas-credito', title: 'Notas de Crédito', type: 'item', url: '/front-desk/notas-credito', icon: 'feather icon-file-minus', classes: 'nav-item' },
           { id: 'front-desk-configuraciones', title: 'Configuraciones', type: 'item', url: '/front-desk/configuraciones', icon: 'feather icon-settings', classes: 'nav-item' }
         ]
@@ -65,13 +90,14 @@ export const NavigationItems: NavigationItem[] = [
         title: 'Reservas',
         type: 'collapse',
         icon: 'feather icon-calendar',
+        activeUrls: ['/reservas', '/front-desk/forecast-ocupacion'],
         children: [
           { id: 'reservas-calendario', title: 'Calendario de Reservas', type: 'item', url: '/reservas/calendario', icon: 'feather icon-calendar', classes: 'nav-item' },
-          { id: 'reservas-consulta', title: 'Consulta de Reservas', type: 'item', url: '/reservas/consulta-reservas', icon: 'feather icon-search', classes: 'nav-item' },
+          { id: 'reservas-consulta', title: 'Consulta de Reservas', type: 'item', url: '/reservas/consulta-reservas', activeUrls: ['/reservas/consulta-reservas', '/reservas/nueva-hospedaje', '/reservas/editar-hospedaje', '/reservas/detalle-hospedaje'], icon: 'feather icon-search', classes: 'nav-item' },
           { id: 'reservas-forecast', title: 'Forecast de Ocupación', type: 'item', url: '/front-desk/forecast-ocupacion', icon: 'feather icon-trending-up', classes: 'nav-item' },
           { id: 'reservas-tarifas', title: 'Tarifas y Planes', type: 'item', url: '/reservas/tarifas-planes', icon: 'feather icon-tag', classes: 'nav-item' },
           { id: 'reservas-agencias-canales', title: 'Agencias / Canales', type: 'item', url: '/reservas/configuracion/agencias', icon: 'feather icon-share-2', classes: 'nav-item' },
-          { id: 'reservas-canales', title: 'Clientes / Facturación', type: 'item', url: '/catalogos/clientes', icon: 'feather icon-share-2', classes: 'nav-item' }
+          { id: 'reservas-canales', title: 'Clientes / Facturación', type: 'item', url: '/reservas/clientes', icon: 'feather icon-share-2', classes: 'nav-item' }
         ]
       },
       {
@@ -90,10 +116,11 @@ export const NavigationItems: NavigationItem[] = [
         title: 'Restaurante',
         type: 'collapse',
         icon: 'feather icon-shopping-cart',
+        activeUrls: ['/restaurante', '/restaurant'],
         children: [
-          { id: 'restaurante-facturacion', title: 'Facturación Restaurante', type: 'item', url: '/restaurant/puntos-venta', icon: 'feather icon-credit-card', classes: 'nav-item' },
+          { id: 'restaurante-facturacion', title: 'Facturación Restaurante', type: 'item', url: '/restaurant/puntos-venta', activeUrls: ['/restaurant'], icon: 'feather icon-credit-card', classes: 'nav-item' },
           { id: 'restaurante-cierre-caja', title: 'Cierre de Caja', type: 'item', url: '/restaurante/cierre-caja', icon: 'feather icon-lock', classes: 'nav-item' },
-          { id: 'restaurante-consulta-documentos', title: 'Consulta de Documentos', type: 'item', url: '/restaurante/consulta-documentos', icon: 'feather icon-search', classes: 'nav-item' },
+          { id: 'restaurante-consulta-documentos', title: 'Consulta de Documentos', type: 'item', url: '/restaurante/consulta-documentos', activeUrls: ['/restaurante/consulta-documentos', '/restaurante/documento'], icon: 'feather icon-search', classes: 'nav-item' },
           { id: 'restaurante-cargos-habitacion', title: 'Cargos a Habitación', type: 'item', url: '/restaurante/cargos-habitacion', icon: 'feather icon-home', classes: 'nav-item' },
           { id: 'restaurante-cargos-colaboradores', title: 'Cargos a Colaboradores', type: 'item', url: '/restaurante/cargos-colaboradores', icon: 'feather icon-users', classes: 'nav-item' },
           { id: 'restaurante-agencias', title: 'Clientes-Facturacion', type: 'item', url: '/restaurante/agencias', icon: 'feather icon-share-2', classes: 'nav-item' },
@@ -121,7 +148,7 @@ export const NavigationItems: NavigationItem[] = [
               }
             ]
           },
-          { id: 'restaurante-configuracion', title: 'Configuración Restaurante', type: 'item', url: '/restaurante/configuracion', icon: 'feather icon-sliders', classes: 'nav-item' }
+          { id: 'restaurante-configuracion', title: 'Configuración Restaurante', type: 'item', url: '/restaurante/configuracion', activeUrls: ['/restaurante/configuracion'], icon: 'feather icon-sliders', classes: 'nav-item' }
         ]
       },
       {

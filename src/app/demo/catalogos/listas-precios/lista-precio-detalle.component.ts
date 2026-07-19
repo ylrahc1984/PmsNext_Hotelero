@@ -340,7 +340,14 @@ export class ListaPrecioDetalleComponent implements OnInit {
   }
 
   volverAListas() {
-    this.router.navigate(['/catalogos/listas-precios']);
+    const route = this.router.url.startsWith('/restaurante/configuracion/listas-precios')
+      ? '/restaurante/configuracion/listas-precios'
+      : '/catalogos/listas-precios';
+    this.router.navigate([route]);
+  }
+
+  get isRestaurantConfiguration(): boolean {
+    return this.router.url.startsWith('/restaurante/configuracion/listas-precios');
   }
 
   getEstadoBadge(activa: boolean) {

@@ -61,6 +61,7 @@ export class ConsultaDocumentosComponent implements OnInit {
 
   readonly pageSizeOptions = [20, 50, 100];
   readonly origenConsulta = this.resolveOrigenConsulta();
+  readonly nuevaFacturaRoute = this.origenConsulta === 'Front Desk' ? '/front-desk/factura-directa' : '/finanzas/nueva-factura';
   private readonly defaultDateRange = this.getDefaultDateRange();
   dateRangeError = '';
   puntosVenta: PuntoVentaUI[] = [];
@@ -180,7 +181,8 @@ export class ConsultaDocumentosComponent implements OnInit {
   verDocumento(documento: Documento): void {
     const serie = documento.PPV00_Serie || '000';
     const operador = this.auth.getCurrentUser()?.usuario?.trim() || documento.operador?.trim() || '';
-    this.router.navigate(['/finanzas/documento', documento.tipoDocu, serie, documento.numDocu], {
+    const baseRoute = this.getContextRoute('documento');
+    this.router.navigate([baseRoute, documento.tipoDocu, serie, documento.numDocu], {
       queryParams: { operador }
     });
   }
@@ -190,7 +192,7 @@ export class ConsultaDocumentosComponent implements OnInit {
       return;
     }
     const serie = documento.PPV00_Serie || '000';
-    this.router.navigate(['/finanzas/notas-credito/nueva'], {
+    this.router.navigate([this.getNuevaNotaCreditoRoute()], {
       queryParams: {
         tipoDocu: documento.tipoDocu,
         serie,
@@ -481,6 +483,20 @@ export class ConsultaDocumentosComponent implements OnInit {
       return 'Front Desk';
     }
     return 'Facturación';
+  }
+
+  private getContextRoute(path: string): string {
+    if (this.origenConsulta === 'Restaurante') {
+      return `/restaurante/${path}`;
+    }
+    if (this.origenConsulta === 'Front Desk') {
+      return `/front-desk/${path}`;
+    }
+    return `/finanzas/${path}`;
+  }
+
+  private getNuevaNotaCreditoRoute(): string {
+    return this.origenConsulta === 'Front Desk' ? '/front-desk/notas-credito/nueva' : '/finanzas/notas-credito/nueva';
   }
 
   private openPdfBlob(blob: Blob, filename: string): void {

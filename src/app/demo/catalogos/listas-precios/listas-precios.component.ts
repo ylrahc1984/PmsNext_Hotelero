@@ -33,6 +33,16 @@ export class ListasPreciosComponent implements OnInit {
   totalRegistros = 0;
   pageSizeOptions = [5, 10, 20, 50];
 
+  get baseRoute(): string {
+    return this.isRestaurantConfiguration
+      ? '/restaurante/configuracion/listas-precios'
+      : '/catalogos/listas-precios';
+  }
+
+  get isRestaurantConfiguration(): boolean {
+    return this.router.url.startsWith('/restaurante/configuracion/listas-precios');
+  }
+
   ngOnInit() {
     this.loadPlanesTarifas();
     this.loadListas();
@@ -142,19 +152,23 @@ export class ListasPreciosComponent implements OnInit {
 
   openForm(codigo?: string) {
     if (codigo) {
-      this.router.navigate(['/catalogos/listas-precios', codigo, 'editar']);
+      this.router.navigate([this.baseRoute, codigo, 'editar']);
     } else {
-      this.router.navigate(['/catalogos/listas-precios/nuevo']);
+      this.router.navigate([this.baseRoute, 'nuevo']);
     }
   }
 
   openAsignaciones() {
-    this.router.navigate(['/catalogos/listas-precios/asignaciones']);
+    this.router.navigate([this.baseRoute, 'asignaciones']);
   }
 
   verDetalle(lista: ListaPrecioUI) {
     const codigo = (lista.codigo || '').trim();
     if (!codigo) {
+      return;
+    }
+    if (this.baseRoute.startsWith('/restaurante/')) {
+      this.router.navigate([this.baseRoute, codigo, 'detalle']);
       return;
     }
     this.router.navigate(['/hotel/listas-precios', codigo]);

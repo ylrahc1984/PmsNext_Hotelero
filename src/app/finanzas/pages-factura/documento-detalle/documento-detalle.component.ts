@@ -121,7 +121,7 @@ export class DocumentoDetalleComponent implements OnInit {
       const numero = (params.get('numero') ?? '').toString().trim();
       const operador = (this.route.snapshot.queryParamMap.get('operador') ?? this.operadorActual).toString().trim();
       if (!tipo || !numero || !operador) {
-        this.router.navigate(['/finanzas/consulta-documentos']);
+        this.router.navigate([this.consultaDocumentosRoute]);
         return;
       }
       this.tipoDocu = tipo;
@@ -130,6 +130,16 @@ export class DocumentoDetalleComponent implements OnInit {
       this.operador = operador;
       this.fetchDetalle();
     });
+  }
+
+  get consultaDocumentosRoute(): string {
+    if (this.router.url.startsWith('/restaurante/documento')) {
+      return '/restaurante/consulta-documentos';
+    }
+    if (this.router.url.startsWith('/front-desk/documento')) {
+      return '/front-desk/consulta-documentos';
+    }
+    return '/finanzas/consulta-documentos';
   }
 
   get documentoCodigo(): string {

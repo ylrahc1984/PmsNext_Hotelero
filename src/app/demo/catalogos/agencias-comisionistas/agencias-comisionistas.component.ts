@@ -18,7 +18,13 @@ export class AgenciasComisionistasComponent implements OnInit {
   private router = inject(Router);
 
   get baseRoute(): string {
-    return this.router.url.startsWith('/restaurante/agencias') ? '/restaurante/agencias' : '/catalogos/clientes';
+    if (this.router.url.startsWith('/restaurante/agencias')) {
+      return '/restaurante/agencias';
+    }
+    if (this.router.url.startsWith('/reservas/clientes')) {
+      return '/reservas/clientes';
+    }
+    return '/catalogos/clientes';
   }
 
   clientes: ClienteUI[] = [];
