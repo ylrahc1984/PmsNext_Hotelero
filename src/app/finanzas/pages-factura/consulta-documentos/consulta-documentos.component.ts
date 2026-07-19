@@ -1,34 +1,33 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormControl, FormGroup, NonNullableFormBuilder, Validators } from '@angular/forms';
-import { BehaviorSubject, Subscription, throwError } from 'rxjs';
+import { BehaviorSubject, Subscription } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { finalize, map, switchMap } from 'rxjs/operators';
+import { finalize } from 'rxjs/operators';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { AuthService } from 'src/app/core/services/auth.service';
+import { PuntoVentaUI } from 'src/app/demo/administracion/usuarios/usuario.models';
+import { UsuarioService } from 'src/app/demo/administracion/usuarios/usuario.service';
 import { ConsultaDocumentosService } from '../../services/consulta-documentos.service';
 import { DocumentoDetalleService } from '../../services/documento-detalle.service';
 import { ConsultaDocumentosFiltros, ConsultaDocumentosResponse, Documento } from './consulta-documentos.interface';
 
 type ConsultaDocumentosForm = {
-  tipoDocu: FormControl<string>;
-  serieDocu: FormControl<string>;
-  numDocu: FormControl<string>;
   fechaDesde: FormControl<string>;
   fechaHasta: FormControl<string>;
-  nombreCliente: FormControl<string>;
-  codCliente: FormControl<string>;
-  codReserva: FormControl<string>;
   pntVenta: FormControl<string>;
+  busqueda: FormControl<string>;
 };
 
 interface ConsultaDocumentosViewModel {
   documentos: Documento[];
   totalRegistros: number;
   totalDocuVisible: number;
-  totalPagoVisible: number;
+  totalNetoVisible: number;
+  totalImpuestoVisible: number;
+  totalPropinaVisible: number;
   monedaResumen: string;
   pageNumber: number;
   pageSize: number;
@@ -40,7 +39,7 @@ interface ConsultaDocumentosViewModel {
   hasSearched: boolean;
 }
 
-const DEFAULT_PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 20;
 
 @Component({
   selector: 'app-consulta-documentos',
@@ -51,33 +50,37 @@ const DEFAULT_PAGE_SIZE = 10;
 })
 export class ConsultaDocumentosComponent implements OnInit {
   private readonly fb = inject(NonNullableFormBuilder);
+  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly consultaService = inject(ConsultaDocumentosService);
   private readonly detalleService = inject(DocumentoDetalleService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly auth = inject(AuthService);
+  private readonly usuarioService = inject(UsuarioService);
 
-  readonly pageSizeOptions = [10, 25, 50];
+  readonly pageSizeOptions = [20, 50, 100];
+  readonly origenConsulta = this.resolveOrigenConsulta();
   private readonly defaultDateRange = this.getDefaultDateRange();
+  dateRangeError = '';
+  puntosVenta: PuntoVentaUI[] = [];
+  puntosVentaLoading = false;
+  puntosVentaError = '';
 
   readonly filtrosForm: FormGroup<ConsultaDocumentosForm> = this.fb.group({
-    tipoDocu: this.fb.control(''),
-    serieDocu: this.fb.control(''),
-    numDocu: this.fb.control(''),
     fechaDesde: this.fb.control(this.defaultDateRange.fechaDesde, { validators: [Validators.required] }),
-    fechaHasta: this.fb.control(this.defaultDateRange.fechaHasta),
-    nombreCliente: this.fb.control(''),
-    codCliente: this.fb.control(''),
-    codReserva: this.fb.control(''),
-    pntVenta: this.fb.control('')
+    fechaHasta: this.fb.control(this.defaultDateRange.fechaHasta, { validators: [Validators.required] }),
+    pntVenta: this.fb.control(''),
+    busqueda: this.fb.control('')
   });
 
   private readonly vmSubject = new BehaviorSubject<ConsultaDocumentosViewModel>({
     documentos: [],
     totalRegistros: 0,
     totalDocuVisible: 0,
-    totalPagoVisible: 0,
+    totalNetoVisible: 0,
+    totalImpuestoVisible: 0,
+    totalPropinaVisible: 0,
     monedaResumen: '',
     pageNumber: 1,
     pageSize: DEFAULT_PAGE_SIZE,
@@ -96,6 +99,7 @@ export class ConsultaDocumentosComponent implements OnInit {
   private printingDocs = new Set<string>();
 
   ngOnInit(): void {
+    this.cargarPuntosVenta();
     this.onBuscar();
   }
 
@@ -105,6 +109,15 @@ export class ConsultaDocumentosComponent implements OnInit {
       return;
     }
 
+    const { fechaDesde, fechaHasta } = this.filtrosForm.getRawValue();
+    if (fechaDesde > fechaHasta) {
+      this.dateRangeError = 'La fecha desde no puede ser posterior a la fecha hasta.';
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.dateRangeError = '';
+
     this.updateFiltrosBase();
     const { pageSize } = this.vmSubject.getValue();
     this.cargarDocumentos(1, pageSize);
@@ -113,22 +126,20 @@ export class ConsultaDocumentosComponent implements OnInit {
   onLimpiar(): void {
     const { fechaDesde, fechaHasta } = this.getDefaultDateRange();
     this.filtrosForm.reset({
-      tipoDocu: '',
-      serieDocu: '',
-      numDocu: '',
       fechaDesde,
       fechaHasta,
-      nombreCliente: '',
-      codCliente: '',
-      codReserva: '',
-      pntVenta: ''
+      pntVenta: '',
+      busqueda: ''
     });
+    this.dateRangeError = '';
     this.activeRequest?.unsubscribe();
     this.vmSubject.next({
       documentos: [],
       totalRegistros: 0,
       totalDocuVisible: 0,
-      totalPagoVisible: 0,
+      totalNetoVisible: 0,
+      totalImpuestoVisible: 0,
+      totalPropinaVisible: 0,
       monedaResumen: '',
       pageNumber: 1,
       pageSize: DEFAULT_PAGE_SIZE,
@@ -168,7 +179,7 @@ export class ConsultaDocumentosComponent implements OnInit {
 
   verDocumento(documento: Documento): void {
     const serie = documento.PPV00_Serie || '000';
-    this.router.navigate(['/finanzas/documento', documento.PPV00_TipoDocu, serie, documento.PPV00_NumDocu]);
+    this.router.navigate(['/finanzas/documento', documento.tipoDocu, serie, documento.numDocu]);
   }
 
   crearNotaCredito(documento: Documento): void {
@@ -178,22 +189,22 @@ export class ConsultaDocumentosComponent implements OnInit {
     const serie = documento.PPV00_Serie || '000';
     this.router.navigate(['/finanzas/notas-credito/nueva'], {
       queryParams: {
-        tipoDocu: documento.PPV00_TipoDocu,
+        tipoDocu: documento.tipoDocu,
         serie,
-        numero: documento.PPV00_NumDocu,
+        numero: documento.numDocu,
         origen: 'consulta-documentos'
       }
     });
   }
 
   canCrearNotaCredito(documento: Documento): boolean {
-    const estadoDocumento = (documento.PPV00_EstadoDocumento || '').toString().trim().toUpperCase();
+    const estadoDocumento = (documento.estDocu || '').toString().trim().toUpperCase();
     const estadoElectronico = (documento.PPV15_EstadoElectronico || '').toString().trim().toUpperCase();
-    return !this.isDocumentoAnulado(estadoDocumento) && estadoElectronico === 'ACEPTADO' || estadoElectronico === 'ABIERTO' ;
+    return !this.isDocumentoAnulado(estadoDocumento) && (estadoElectronico === 'ACEPTADO' || estadoElectronico === 'ABIERTO');
   }
 
   getNotaCreditoDisabledReason(documento: Documento): string {
-    const estadoDocumento = (documento.PPV00_EstadoDocumento || '').toString().trim().toUpperCase();
+    const estadoDocumento = (documento.estDocu || '').toString().trim().toUpperCase();
     const estadoElectronico = (documento.PPV15_EstadoElectronico || '').toString().trim().toUpperCase();
     if (this.isDocumentoAnulado(estadoDocumento)) {
       return 'No se puede aplicar nota de crédito a un documento anulado.';
@@ -212,27 +223,24 @@ export class ConsultaDocumentosComponent implements OnInit {
   }
 
   imprimirDocumento(documento: Documento): void {
-    const tipo = documento.PPV00_TipoDocu;
+    const tipo = documento.tipoDocu;
     const serie = documento.PPV00_Serie || '000';
-    const numero = documento.PPV00_NumDocu;
+    const numero = documento.numDocu;
+    const consecutivo = (documento.numeroConsecutivo || '').trim();
     const key = this.getDocumentoKey(documento);
     if (this.printingDocs.has(key)) return;
+
+    if (!consecutivo) {
+      window.alert('No se encontró el número consecutivo para imprimir.');
+      return;
+    }
 
     this.printingDocs.add(key);
     this.cdr.markForCheck();
 
     this.detalleService
-      .getDetalle(tipo, serie, numero)
+      .getPdf(tipo, serie, consecutivo)
       .pipe(
-        map((response) => this.extractConsecutivo(response)),
-        switchMap((consecutivo) => {
-          if (!consecutivo) {
-            return throwError(() => new Error('No se encontró el número consecutivo para imprimir.'));
-          }
-          return this.detalleService.getPdf(tipo, serie, consecutivo).pipe(
-            map((blob) => ({ blob, consecutivo }))
-          );
-        }),
         finalize(() => {
           this.printingDocs.delete(key);
           this.cdr.markForCheck();
@@ -240,7 +248,7 @@ export class ConsultaDocumentosComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
-        next: ({ blob }) => {
+        next: (blob) => {
           this.openPdfBlob(blob, `Factura_${tipo}_${serie}_${numero}.pdf`);
         },
         error: (error: unknown) => {
@@ -254,7 +262,7 @@ export class ConsultaDocumentosComponent implements OnInit {
   }
 
   trackByDocumento(index: number, documento: Documento): string {
-    return `${documento.PPV00_TipoDocu}-${documento.PPV00_NumDocu}-${index}`;
+    return `${documento.tipoDocu}-${documento.numDocu}-${index}`;
   }
 
   estadoDocumentoClass(estado: string): string {
@@ -293,16 +301,35 @@ export class ConsultaDocumentosComponent implements OnInit {
       proceso: 90,
       fechaDocu: this.formatDateToApi(this.normalize(value.fechaDesde)) || '',
       fechaPago: this.formatDateToApi(this.normalize(value.fechaHasta)) || '',
-      fechaVen: this.formatDateToApi(this.normalize(value.fechaHasta)) || '',
-      operador: this.auth.getCurrentUser()?.usuario?.trim() || 'ADMIN',
-      tipDocu: this.normalize(value.tipoDocu),
-      serieDocu: this.normalize(value.serieDocu),
-      numDocu: this.normalize(value.numDocu),
-      codReserva: this.normalize(value.codReserva),
-      codCliente: this.normalize(value.codCliente),
-      nomClie: this.normalize(value.nombreCliente),
-      pntVenta: this.normalize(value.pntVenta)
+      operador: this.auth.getCurrentUser()?.usuario?.trim() || 'charly',
+      pntVenta: this.normalize(value.pntVenta) || '',
+      nomClie: this.normalize(value.busqueda) || ''
     };
+  }
+
+  private cargarPuntosVenta(): void {
+    this.puntosVentaLoading = true;
+    this.puntosVentaError = '';
+    this.usuarioService
+      .getPuntosVenta()
+      .pipe(
+        finalize(() => {
+          this.puntosVentaLoading = false;
+          this.cdr.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (response) => {
+          this.puntosVenta = (response ?? [])
+            .filter((item) => item.codigo)
+            .sort((a, b) => a.orden - b.orden || a.descripcion.localeCompare(b.descripcion));
+        },
+        error: () => {
+          this.puntosVenta = [];
+          this.puntosVentaError = 'No se pudo cargar el catálogo de puntos de venta.';
+        }
+      });
   }
 
   private buildFiltros(pageNumber: number, pageSize: number): ConsultaDocumentosFiltros {
@@ -328,8 +355,10 @@ export class ConsultaDocumentosComponent implements OnInit {
   private updateVmSuccess(response: ConsultaDocumentosResponse, pageNumber: number, pageSize: number): void {
     const totalRegistros = response.paginacion.totalRegistros;
     const documentos = response.documentos;
-    const totalDocuVisible = this.sumDocumentos(documentos, (documento) => documento.PPV00_TotalDocu);
-    const totalPagoVisible = this.sumDocumentos(documentos, (documento) => documento.impuesto);
+    const totalDocuVisible = this.sumDocumentos(documentos, (documento) => documento.totalDocu);
+    const totalNetoVisible = this.sumDocumentos(documentos, (documento) => documento.neto);
+    const totalImpuestoVisible = this.sumDocumentos(documentos, (documento) => documento.impuesto);
+    const totalPropinaVisible = this.sumDocumentos(documentos, (documento) => documento.propinas);
     const monedaResumen = this.resolveMonedaResumen(documentos);
     const resolvedPage = response.paginacion.paginaActual || pageNumber;
     const resolvedPageSize = response.paginacion.tamanoPagina || pageSize;
@@ -341,7 +370,9 @@ export class ConsultaDocumentosComponent implements OnInit {
       documentos,
       totalRegistros,
       totalDocuVisible,
-      totalPagoVisible,
+      totalNetoVisible,
+      totalImpuestoVisible,
+      totalPropinaVisible,
       monedaResumen,
       pageNumber: resolvedPage,
       pageSize: resolvedPageSize,
@@ -360,7 +391,9 @@ export class ConsultaDocumentosComponent implements OnInit {
       documentos: [],
       totalRegistros: 0,
       totalDocuVisible: 0,
-      totalPagoVisible: 0,
+      totalNetoVisible: 0,
+      totalImpuestoVisible: 0,
+      totalPropinaVisible: 0,
       monedaResumen: '',
       pageNumber,
       pageSize,
@@ -383,7 +416,7 @@ export class ConsultaDocumentosComponent implements OnInit {
   }
 
   private resolveMonedaResumen(documentos: Documento[]): string {
-    const monedas = [...new Set(documentos.map((documento) => (documento.PPV00_Moneda ?? '').toString().trim()).filter(Boolean))];
+    const monedas = [...new Set(documentos.map((documento) => (documento.moneda ?? '').toString().trim()).filter(Boolean))];
     if (monedas.length === 0) return '';
     return monedas.length === 1 ? monedas[0] : 'Mixta';
   }
@@ -408,9 +441,9 @@ export class ConsultaDocumentosComponent implements OnInit {
 
   private getDefaultDateRange(): { fechaDesde: string; fechaHasta: string } {
     const today = new Date();
-    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const firstDayOfYear = new Date(today.getFullYear(), 0, 1);
     return {
-      fechaDesde: this.formatDateToInput(firstDayOfMonth),
+      fechaDesde: this.formatDateToInput(firstDayOfYear),
       fechaHasta: this.formatDateToInput(today)
     };
   }
@@ -433,22 +466,18 @@ export class ConsultaDocumentosComponent implements OnInit {
   }
 
   private getDocumentoKey(documento: Documento): string {
-    return `${documento.PPV00_TipoDocu}-${documento.PPV00_Serie || '000'}-${documento.PPV00_NumDocu}`;
+    return `${documento.tipoDocu}-${documento.numDocu}`;
   }
 
-  private extractConsecutivo(response: unknown): string {
-    const data = (response as any)?.data ?? (response as any)?.datos ?? response;
-    if (!data) return '';
-    const encabezado = (data as any).encabezado ?? (data as any).cabecera ?? (data as any).header ?? data;
-    return (
-      encabezado?.numeroConsecutivo ??
-      encabezado?.ppV15_NumeroConsecutivo ??
-      encabezado?.PPV15_NumeroConsecutivo ??
-      encabezado?.ppv15_NumeroConsecutivo ??
-      ''
-    )
-      .toString()
-      .trim();
+  private resolveOrigenConsulta(): string {
+    const origen = (this.route.snapshot.data['origenConsulta'] || '').toString().trim().toLowerCase();
+    if (origen === 'restaurante') {
+      return 'Restaurante';
+    }
+    if (origen === 'front-desk') {
+      return 'Front Desk';
+    }
+    return 'Facturación';
   }
 
   private openPdfBlob(blob: Blob, filename: string): void {

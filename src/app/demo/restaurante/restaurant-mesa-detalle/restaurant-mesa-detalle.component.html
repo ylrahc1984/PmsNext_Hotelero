@@ -11,7 +11,7 @@
       <article><span>Mesero</span><strong>{{ mesaDetalle.mesero }}</strong></article>
       <article><span>Pax</span><strong>{{ mesaDetalle.personas }}</strong></article>
       <article><span>Tiempo</span><strong>{{ mesaDetalle.tiempoOcupada }}</strong></article>
-      <article><span>Consumo</span><strong>{{ total | currency:monedaActual:'symbol':'1.2-2' }}</strong></article>
+      <article><span>Consumo</span><strong>{{ total | number:'1.2-2' }} {{ monedaActual }}</strong></article>
     </div>
   </header>
 
@@ -28,7 +28,7 @@
         <div class="info-group">
           <div class="info-item"><i class="feather icon-user"></i><span>Mesero</span><strong>{{ mesaDetalle.mesero }}</strong></div>
           <div class="info-item"><i class="feather icon-users"></i><span>Pax</span><strong>{{ mesaDetalle.personas }}</strong></div>
-          <div class="info-item"><i class="feather icon-clock"></i><span>Hora Apertura</span><strong>{{ mesaDetalle.horaApertura }}</strong></div>
+          <div class="info-item"><i class="feather icon-clock"></i><span>Hora Apertura</span><strong>{{ notaPedidoInfo?.hora }}</strong></div>
         </div>
 
         <div class="info-group">
@@ -39,7 +39,6 @@
 
         <div class="info-group" *ngIf="notaPedidoInfo">
           <div class="info-item"><i class="feather icon-file-text"></i><span>Tipo NP</span><strong>{{ notaPedidoInfo.tipNp }}</strong></div>
-          <div class="info-item"><i class="feather icon-layers"></i><span>Serie</span><strong>{{ notaPedidoInfo.serieNp }}</strong></div>
           <div class="info-item"><i class="feather icon-check-circle"></i><span>Documento</span><strong>{{ notaPedidoInfo.numNp }}</strong></div>
         </div>
 
@@ -119,8 +118,8 @@
             <tr *ngFor="let item of consumoActual">
               <td>{{ item.producto }}</td>
               <td class="text-end">{{ item.cantidad }}</td>
-              <td class="text-end">{{ item.precio | currency:item.moneda:'symbol':'1.2-2' }}</td>
-              <td class="text-end">{{ item.subtotal | currency:item.moneda:'symbol':'1.2-2' }}</td>
+              <td class="text-end">{{ item.precio | number:'1.2-2' }}</td>
+              <td class="text-end">{{ item.subtotal | number:'1.2-2' }}</td>
               <td class="text-center">{{ item.cuenta || '-' }}</td>
               <td class="text-center">
                 <details class="acciones-dropdown line-dropdown">
@@ -172,9 +171,15 @@
           <i class="feather icon-shopping-bag"></i>
           <span>Service</span>
         </button>
-        <button type="button" class="consumo-action consumo-action--muted">
-          <i class="feather icon-minus-circle"></i>
-          <span>Quitar Servicio [10%]</span>
+        <button
+          type="button"
+          class="consumo-action consumo-action--muted"
+          [disabled]="!notaPedidoInfo || isPropinaSaving"
+          [attr.title]="notaPedidoInfo ? 'Cargar propina' : 'Requiere una nota de pedido activa'"
+          (click)="abrirModalPropina()"
+        >
+          <i class="feather icon-dollar-sign"></i>
+          <span>Cargar Propina/Tips</span>
         </button>
       </div>
     </article>
@@ -182,14 +187,14 @@
     <aside class="panel panel--resumen" aria-label="Resumen de cuenta">
       <h2>Resumen de Cuenta</h2>
       <div class="resumen-list">
-        <div><span>Subtotal</span><strong>{{ subtotal | currency:monedaActual:'symbol':'1.2-2' }}</strong></div>
-        <div><span>Descuento</span><strong>{{ descuento | currency:monedaActual:'symbol':'1.2-2' }}</strong></div>
-        <div><span>Impuestos</span><strong>{{ impuestos | currency:monedaActual:'symbol':'1.2-2' }}</strong></div>
-        <div><span>Propina</span><strong>{{ propina | currency:monedaActual:'symbol':'1.2-2' }}</strong></div>
+        <div><span>Subtotal</span><strong>{{ subtotal | number:'1.2-2' }}</strong></div>
+        <div><span>Descuento</span><strong>{{ descuento | number:'1.2-2' }}</strong></div>
+        <div><span>Impuestos</span><strong>{{ impuestos | number:'1.2-2' }}</strong></div>
+        <div><span>Propina</span><strong>{{ propina | number:'1.2-2' }}</strong></div>
       </div>
       <div class="resumen-total">
         <span>TOTAL</span>
-        <strong class="text-end">{{ total | currency:monedaActual:'symbol':'1.2-2' }}</strong>
+        <strong class="text-end">{{ total | number:'1.2-2' }} {{ monedaActual }}</strong>
       </div>
       <div class="resumen-state">
         <div><span>Metodo de Pago</span><strong class="resumen-badge resumen-badge--pending">Pendiente</strong></div>
@@ -288,6 +293,72 @@
   [data]="collaboratorChargeDialogData"
   (closed)="onCollaboratorChargeDialogClosed($event)"
 ></app-restaurant-collaborator-charge-dialog>
+
+<div
+  *ngIf="showPropinaModal"
+  class="modal d-block propina-modal-backdrop"
+  tabindex="-1"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="propinaTitle"
+  (click)="cerrarModalPropina()"
+>
+  <div class="modal-dialog modal-dialog-centered modal-sm" role="document" (click)="$event.stopPropagation()">
+    <div class="modal-content border-0 shadow propina-modal">
+      <div class="modal-header border-0 pb-1">
+        <div>
+          <h5 id="propinaTitle" class="modal-title fw-bold">Cargar Propina/Tips</h5>
+          <small class="text-muted">Nota {{ notaPedidoInfo?.numNp }}</small>
+        </div>
+        <button
+          type="button"
+          class="btn-close"
+          aria-label="Cerrar"
+          [disabled]="isPropinaSaving"
+          (click)="cerrarModalPropina()"
+        ></button>
+      </div>
+
+      <div class="modal-body pt-2">
+        <label for="propinaMonto" class="form-label fw-semibold">Monto de la propina</label>
+        <div class="input-group input-group-lg">
+          <span class="input-group-text propina-moneda">{{ monedaPuntoVenta }}</span>
+          <input
+            id="propinaMonto"
+            type="number"
+            class="form-control text-end"
+            min="0.01"
+            step="0.01"
+            inputmode="decimal"
+            placeholder="0.00"
+            [(ngModel)]="propinaMonto"
+            [disabled]="isPropinaSaving"
+            (keydown.enter)="confirmarPropina()"
+          />
+        </div>
+        <small class="form-text text-muted">La propina se registrará en la moneda principal del punto de venta.</small>
+        <div *ngIf="propinaError" class="alert alert-danger py-2 mt-3 mb-0" role="alert">
+          {{ propinaError }}
+        </div>
+      </div>
+
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-light" [disabled]="isPropinaSaving" (click)="cerrarModalPropina()">
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          [disabled]="isPropinaSaving || !propinaMonto || propinaMonto <= 0"
+          (click)="confirmarPropina()"
+        >
+          <span *ngIf="isPropinaSaving" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+          {{ isPropinaSaving ? 'Guardando...' : 'Cargar propina' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div
   *ngIf="cuentaModalItem"

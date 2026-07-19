@@ -1,7 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { timer } from 'rxjs';
 import Swal from 'sweetalert2';
 
 import { AuthService } from 'src/app/core/services/auth.service';
@@ -56,6 +58,7 @@ export interface NotaPedidoMesaInfo {
   serieNp     : string;
   numNp       : string;
   fecha       : string;
+  hora        : string;
   respuesta   : string;
 }
 
@@ -67,6 +70,7 @@ interface NotaPedidoMesaState {
   serieNp             : string;
   numNp               : string;
   fecha               : string;
+  hora                ?: string;
   cuentaFiltro        ?: number;
   detalleResponse     : NotaPedidoRestauranteProceso91Response | null;
 }
@@ -91,7 +95,7 @@ interface HabitacionCargoOption {
 @Component({
   selector: 'app-restaurant-mesa-detalle',
   standalone: true,
-  imports: [CommonModule, RestaurantInvoiceDialogComponent, RestaurantCollaboratorChargeDialogComponent],
+  imports: [CommonModule, FormsModule, RestaurantInvoiceDialogComponent, RestaurantCollaboratorChargeDialogComponent],
   templateUrl: './restaurant-mesa-detalle.component.html',
   styleUrls: ['./restaurant-mesa-detalle.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -121,7 +125,7 @@ export class RestaurantMesaDetalleComponent implements OnInit {
     estado          : 'Ocupada',
     mesero          : this.selectedTableContext?.mozo.MPV11_NomMozo || this.codMozo || 'Sin asignar',
     personas        : 4,
-    horaApertura    : '12:15 PM',
+    horaApertura    : this.selectedTableContext?.mesa.horaReserva || '12:30',
     tiempoOcupada   : '01:25 h',
     habitacion      : '000',
     cliente         : 'Cliente General',
@@ -161,6 +165,10 @@ export class RestaurantMesaDetalleComponent implements OnInit {
   cargoHabitacionSearch         = '';
   habitacionesCargo             : HabitacionCargoOption[] = [];
   habitacionCargoSeleccionada   : HabitacionCargoOption | null = null;
+  showPropinaModal              = false;
+  propinaMonto                  : number | null = null;
+  isPropinaSaving               = false;
+  propinaError                  = '';
 
   readonly acciones: AccionOperativa[] = [
     { id: 'imprimir-cuenta', titulo: 'Imprimir Cuenta', icono: 'icon-printer' },
@@ -176,6 +184,7 @@ export class RestaurantMesaDetalleComponent implements OnInit {
   ngOnInit(): void {
     this.cargarTipoCambio();
     this.cargarNotaPedidoActual();
+    this.iniciarRelojMesa();
   }
 
   get compraTipoCambio(): number | null {
@@ -184,6 +193,96 @@ export class RestaurantMesaDetalleComponent implements OnInit {
 
   get ventaTipoCambio(): number | null {
     return this.tipoCambio?.venta ?? null;
+  }
+
+  get monedaPuntoVenta(): string {
+    return this.selectedTableContext?.puntoVenta.detalle?.MPV04_Moneda || this.monedaActual || 'USD';
+  }
+
+  abrirModalPropina(): void {
+    if (!this.notaPedidoInfo) {
+      void Swal.fire({
+        title: 'Nota de pedido requerida',
+        text: 'Debe existir una nota de pedido activa para cargar una propina.',
+        icon: 'warning',
+        confirmButtonText: 'Aceptar',
+        customClass: {
+          popup: 'next-confirm-modal'
+        }
+      });
+      return;
+    }
+
+    this.propinaMonto = null;
+    this.propinaError = '';
+    this.showPropinaModal = true;
+    this.cdr.markForCheck();
+  }
+
+  cerrarModalPropina(): void {
+    if (this.isPropinaSaving) {
+      return;
+    }
+
+    this.showPropinaModal = false;
+    this.propinaMonto = null;
+    this.propinaError = '';
+    this.cdr.markForCheck();
+  }
+
+  confirmarPropina(): void {
+    const nota = this.notaPedidoInfo;
+    const monto = Number(this.propinaMonto || 0);
+
+    if (!nota || this.isPropinaSaving) {
+      return;
+    }
+
+    if (!Number.isFinite(monto) || monto <= 0) {
+      this.propinaError = 'Ingrese un monto de propina mayor que cero.';
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.isPropinaSaving = true;
+    this.propinaError = '';
+    this.cdr.markForCheck();
+
+    this.notaPedidoService.registrarPropina({
+      tipNp: nota.tipNp,
+      serieNp: nota.serieNp,
+      numNp: nota.numNp,
+      precio: Number(monto.toFixed(2)),
+      moneda: this.monedaPuntoVenta,
+      nCuenta: Number(this.cuentaFiltroActual || 0)
+    }).subscribe({
+      next: () => {
+        const { tipNp, serieNp, numNp, fecha } = nota;
+        this.isPropinaSaving = false;
+        this.showPropinaModal = false;
+        this.propinaMonto = null;
+        sessionStorage.removeItem('restaurantLastNotaPedido');
+        this.cdr.markForCheck();
+
+        void Swal.fire({
+          title: 'Propina cargada',
+          text: `La propina fue registrada en ${this.monedaPuntoVenta}.`,
+          icon: 'success',
+          timer: 1500,
+          showConfirmButton: false,
+          customClass: {
+            popup: 'next-confirm-modal'
+          }
+        });
+        this.consultarDetallePedido(tipNp, serieNp, numNp, fecha, this.cuentaFiltroActual);
+      },
+      error: (error) => {
+        console.error('No se pudo registrar la propina.', error);
+        this.isPropinaSaving = false;
+        this.propinaError = 'No se pudo registrar la propina. Revise la conexión e intente nuevamente.';
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   onAccionClick(accion: AccionOperativa): void {
@@ -734,9 +833,11 @@ export class RestaurantMesaDetalleComponent implements OnInit {
     const serieNp = this.route.snapshot.queryParamMap.get('serieNp');
     const numNp = this.route.snapshot.queryParamMap.get('numNp');
     const fecha = this.normalizeDateDDMMYYYY(this.route.snapshot.queryParamMap.get('fecha'));
+    const hora = this.route.snapshot.queryParamMap.get('hora');
     
+
     if (tipNp && serieNp && numNp && fecha) {
-      this.notaPedidoInfo = { tipNp, serieNp, numNp, fecha, respuesta: 'Pendiente' };
+      this.notaPedidoInfo = { tipNp, serieNp, numNp, fecha, hora: hora || '', respuesta: 'Pendiente' };
       this.consultarDetallePedido(tipNp, serieNp, numNp, fecha, this.cuentaFiltroActual);
       return;
     }
@@ -748,6 +849,8 @@ export class RestaurantMesaDetalleComponent implements OnInit {
         serieNp: state.serieNp,
         numNp: state.numNp,
         fecha: this.normalizeDateDDMMYYYY(state.fecha),
+        hora: hora || '',
+
         respuesta: state.detalleResponse?.respuesta || 'OK'
       };
       if (state.detalleResponse && Number(state.cuentaFiltro || 0) === this.cuentaFiltroActual) {
@@ -765,12 +868,13 @@ export class RestaurantMesaDetalleComponent implements OnInit {
     }
 
     const contextNotaPedido = this.selectedTableContext?.mesa.notaPedido;
-    if (contextNotaPedido?.tipNp && contextNotaPedido.serieNp && contextNotaPedido.numNp && contextNotaPedido.fecha) {
+    if (contextNotaPedido?.tipNp && contextNotaPedido.serieNp && contextNotaPedido.numNp && contextNotaPedido.fecha && contextNotaPedido.hora) {
       this.notaPedidoInfo = {
         tipNp: contextNotaPedido.tipNp,
         serieNp: contextNotaPedido.serieNp,
         numNp: contextNotaPedido.numNp,
         fecha: this.normalizeDateDDMMYYYY(contextNotaPedido.fecha),
+        hora: contextNotaPedido.hora || '',
         respuesta: 'Pendiente'
       };
       this.consultarDetallePedido(
@@ -784,6 +888,68 @@ export class RestaurantMesaDetalleComponent implements OnInit {
     }
 
     this.limpiarNotaPedidoEnPantalla();
+  }
+
+  private iniciarRelojMesa(): void {
+    timer(0, 30_000)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.actualizarTiempoTranscurrido());
+  }
+
+  private actualizarTiempoTranscurrido(): void {
+    const apertura = this.getFechaHoraApertura();
+    if (!apertura) {
+      this.mesaDetalle.tiempoOcupada = '-';
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const elapsedMilliseconds = Math.max(Date.now() - apertura.getTime(), 0);
+    const totalMinutes = Math.floor(elapsedMilliseconds / 60_000);
+    const days = Math.floor(totalMinutes / 1_440);
+    const hours = Math.floor((totalMinutes % 1_440) / 60);
+    const minutes = totalMinutes % 60;
+    const time = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')} h`;
+
+    this.mesaDetalle.tiempoOcupada = days > 0 ? `${days} d ${time}` : time;
+    this.cdr.markForCheck();
+  }
+
+  private getFechaHoraApertura(): Date | null {
+    const fecha = this.normalizeDateDDMMYYYY(this.notaPedidoInfo?.fecha);
+    const hora = (this.notaPedidoInfo?.hora || '').trim();
+    const dateMatch = fecha.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    const timeMatch = hora.match(/^(\d{1,2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?\s*(AM|PM)?$/i);
+
+    if (!dateMatch || !timeMatch) {
+      return null;
+    }
+
+    let hours = Number(timeMatch[1]);
+    const minutes = Number(timeMatch[2]);
+    const seconds = Number(timeMatch[3] || 0);
+    const period = (timeMatch[4] || '').toUpperCase();
+
+    if (period === 'PM' && hours < 12) {
+      hours += 12;
+    } else if (period === 'AM' && hours === 12) {
+      hours = 0;
+    }
+
+    if (hours > 23 || minutes > 59 || seconds > 59) {
+      return null;
+    }
+
+    const opening = new Date(
+      Number(dateMatch[3]),
+      Number(dateMatch[2]) - 1,
+      Number(dateMatch[1]),
+      hours,
+      minutes,
+      seconds
+    );
+
+    return Number.isNaN(opening.getTime()) ? null : opening;
   }
 
   private consultarDetallePedido(tipNp: string, serieNp: string, numNp: string, fecha: string, cuentaFiltro = this.cuentaFiltroActual): void {
@@ -806,6 +972,7 @@ export class RestaurantMesaDetalleComponent implements OnInit {
             serieNp,
             numNp,
             fecha: normalizedFecha,
+            hora: this.notaPedidoInfo?.hora || '',
             respuesta: response.respuesta || 'OK'
           };
           this.aplicarDetallePedido(response);
@@ -965,6 +1132,7 @@ export class RestaurantMesaDetalleComponent implements OnInit {
       };
       this.persistirNotaPedidoMesaState(response);
     }
+    this.actualizarTiempoTranscurrido();
     this.cdr.markForCheck();
   }
 
@@ -981,6 +1149,7 @@ export class RestaurantMesaDetalleComponent implements OnInit {
       serieNp           : this.notaPedidoInfo.serieNp,
       numNp             : this.notaPedidoInfo.numNp,
       fecha             : this.normalizeDateDDMMYYYY(this.notaPedidoInfo.fecha),
+      hora              : this.notaPedidoInfo.hora || '',
       cuentaFiltro      : this.cuentaFiltroActual,
       detalleResponse
     };

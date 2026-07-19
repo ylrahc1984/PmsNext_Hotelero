@@ -22,22 +22,22 @@ export class ConsultaDocumentosService {
       .set('Proceso', String(filtros.proceso))
       .set('FechaDocu', filtros.fechaDocu)
       .set('FechaPago', filtros.fechaPago)
-      .set('FechaVen', filtros.fechaVen)
       .set('Operador', filtros.operador)
+      .set('NomClie', filtros.nomClie?.trim() ?? '')
       .set('PageNumber', String(filtros.pageNumber))
       .set('PageSize', String(filtros.pageSize));
 
+    params = this.appendIfPresent(params, 'FechaVen', filtros.fechaVen);
+    params = this.appendIfPresent(params, 'PntVenta', filtros.pntVenta);
     params = this.appendIfPresent(params, 'TipDocu', filtros.tipDocu);
     params = this.appendIfPresent(params, 'SerieDocu', filtros.serieDocu);
     params = this.appendIfPresent(params, 'NumDocu', filtros.numDocu);
     params = this.appendIfPresent(params, 'CodReserva', filtros.codReserva);
     params = this.appendIfPresent(params, 'CodCliente', filtros.codCliente);
-    params = this.appendIfPresent(params, 'NomClie', filtros.nomClie);
-    params = this.appendIfPresent(params, 'PntVenta', filtros.pntVenta);
 
     return this.http.get<DocumentosFacturadosApiResponse>(this.apiUrl, { params }).pipe(
       map((response) => {
-        const documentos = (response.documentos ?? []).map((item) => this.mapDocumento(item));
+        const documentos = (Array.isArray(response.documentos) ? response.documentos : []).map((item) => this.mapDocumento(item));
         const pagination = response.paginacion ?? {};
         return {
           documentos,
@@ -46,8 +46,10 @@ export class ConsultaDocumentosService {
             tamanoPagina: Number(pagination.tamanoPagina ?? filtros.pageSize),
             totalRegistros: Number(pagination.totalRegistros ?? documentos.length),
             totalPaginas: Math.max(Number(pagination.totalPaginas ?? 0), documentos.length ? 1 : 0),
-            tienePaginaAnterior: Boolean(pagination.tienePaginaAnterior),
-            tienePaginaSiguiente: Boolean(pagination.tienePaginaSiguiente)
+            tienePaginaAnterior: pagination.tienePaginaAnterior ?? Number(pagination.paginaActual ?? filtros.pageNumber) > 1,
+            tienePaginaSiguiente:
+              pagination.tienePaginaSiguiente
+              ?? Number(pagination.paginaActual ?? filtros.pageNumber) < Number(pagination.totalPaginas ?? 0)
           },
           mensaje: response.mensaje ?? ''
         };

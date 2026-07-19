@@ -18,7 +18,7 @@ export interface DocumentoFacturadoApi {
   habitacion: string;
   codReserva: string;
   propinas: number;
-  numPax: number;
+  numPax: string;
   nc: string;
   xmlRespuesta: string;
   codCliente: string;
@@ -68,7 +68,7 @@ export interface ConsultaDocumentosFiltros {
   proceso: number;
   fechaDocu: string;
   fechaPago: string;
-  fechaVen: string;
+  fechaVen?: string;
   operador: string;
   tipDocu?: string;
   serieDocu?: string;

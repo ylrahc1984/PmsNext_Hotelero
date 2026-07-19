@@ -3,7 +3,10 @@
     <div class="col-12">
       <app-card [customHeader]="true">
         <div class="app-card-header">
-          <h5>Consulta de Documentos</h5>
+          <div>
+            <span class="consulta-documentos__origin">{{ origenConsulta }}</span>
+            <h5 class="mb-0">Consulta de Documentos</h5>
+          </div>
           <div class="card-header-right d-flex flex-wrap align-items-center gap-2">
             <button
               class="btn btn-primary app-action-btn app-action-btn--primary"
@@ -50,38 +53,37 @@
                 </div>
               </div>
               <div class="col-md-2 mb-2">
-                <label class="form-label small text-muted">Fecha hasta</label>
+                <label class="form-label small text-muted">Fecha hasta *</label>
                 <input type="date" class="form-control form-control-sm" formControlName="fechaHasta">
-              </div>
-              <div class="col-md-2 mb-2">
-                <label class="form-label small text-muted">Tipo documento</label>
-                <input type="text" class="form-control form-control-sm" formControlName="tipoDocu" placeholder="Ej. TFD">
-              </div>
-              <div class="col-md-2 mb-2">
-                <label class="form-label small text-muted">Serie</label>
-                <input type="text" class="form-control form-control-sm" formControlName="serieDocu" placeholder="Serie">
-              </div>
-              <div class="col-md-2 mb-2">
-                <label class="form-label small text-muted">Número</label>
-                <input type="text" class="form-control form-control-sm" formControlName="numDocu" placeholder="Número documento">
+                <div class="text-danger small mt-1" *ngIf="filtrosForm.controls.fechaHasta.touched && filtrosForm.controls.fechaHasta.invalid">
+                  Fecha hasta es requerida
+                </div>
               </div>
               <div class="col-md-3 mb-2">
-                <label class="form-label small text-muted">Cliente</label>
-                <input type="text" class="form-control form-control-sm" formControlName="nombreCliente" placeholder="Nombre o razón social">
-              </div>
-              <div class="col-md-2 mb-2">
-                <label class="form-label small text-muted">Código cliente</label>
-                <input type="text" class="form-control form-control-sm" formControlName="codCliente" placeholder="Código">
-              </div>
-              <div class="col-md-2 mb-2">
-                <label class="form-label small text-muted">Reserva</label>
-                <input type="text" class="form-control form-control-sm" formControlName="codReserva" placeholder="Código reserva">
-              </div>
-              <div class="col-md-2 mb-2">
                 <label class="form-label small text-muted">Punto de venta</label>
-                <input type="text" class="form-control form-control-sm" formControlName="pntVenta" placeholder="Ej. PF">
+                <select class="form-control form-control-sm" formControlName="pntVenta" [disabled]="puntosVentaLoading">
+                  <option value="">Todos los puntos de venta</option>
+                  <option *ngFor="let punto of puntosVenta" [value]="punto.codigo">
+                    {{ punto.codigo }} - {{ punto.descripcion }}
+                  </option>
+                </select>
+                <div *ngIf="puntosVentaLoading" class="text-muted small mt-1">Cargando puntos de venta...</div>
+                <div *ngIf="puntosVentaError" class="text-warning small mt-1">{{ puntosVentaError }}</div>
+              </div>
+              <div class="col-md-5 mb-2">
+                <label class="form-label small text-muted">Búsqueda general</label>
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text"><i class="feather icon-search" aria-hidden="true"></i></span>
+                  <input
+                    type="search"
+                    class="form-control"
+                    formControlName="busqueda"
+                    placeholder="Cliente, identificación, documento o reserva"
+                  >
+                </div>
               </div>
             </div>
+            <div *ngIf="dateRangeError" class="text-danger small mt-1">{{ dateRangeError }}</div>
           </div>
         </form>
 
@@ -100,37 +102,46 @@
             <thead class="table-light">
               <tr>
                 <th>Tipo</th>
-                <th>Número</th>
+                <th>Consecutivo</th>
                 <th>Fecha</th>
                 <th>Cliente</th>
-                <th class="text-end">Total</th>
+                <th>P. venta</th>
+                <th>Forma pago</th>
+                <th class="text-end">Neto</th>
                 <th class="text-end">Impuesto</th>
+                <th class="text-end">Propina</th>
+                <th class="text-end">Total</th>
                 <th>Moneda</th>
                 <th>Estado</th>
-                <th>Reserva / Hab.</th>
-                <th>Operador</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
               <tr *ngFor="let documento of vm.documentos; trackBy: trackByDocumento">
-                <td class="text-nowrap">{{ documento.PPV00_TipoDocu }}</td>
-                <td class="font-monospace">{{ documento.PPV00_NumDocu }}</td>
-                <td class="text-nowrap">{{ documento.PPV00_FechaDocu | date:'dd/MM/yyyy' }}</td>
-                <td>{{ documento.PPV00_NomCliente }}</td>
-                <td class="text-end">{{ documento.PPV00_TotalDocu | number:'1.2-2' }}</td>
-                <td class="text-end">{{ documento.impuesto | number:'1.2-2' }}</td>
-                <td>{{ documento.PPV00_Moneda }}</td>
+                <td class="text-nowrap">{{ documento.tipoDocu }}</td>
+                <td class="font-monospace text-nowrap">{{ documento.numeroConsecutivo || 'N/D' }}</td>
+                <td class="text-nowrap">{{ documento.fechaDocu | date:'dd/MM/yyyy' }}</td>
                 <td>
-                  <span class="badge rounded-pill" [ngClass]="estadoDocumentoClass(documento.PPV00_EstadoDocumento)">
-                    {{ documento.PPV00_EstadoDocumento || 'N/D' }}
-                  </span>
+                  {{ documento.nomCliente }}
+                  <small class="d-block text-muted">{{ documento.rucCliente || documento.codCliente || 'Sin identificación' }}</small>
                 </td>
                 <td class="text-nowrap">
-                  <strong>{{ documento.codReserva || 'N/D' }}</strong>
-                  <small class="d-block text-muted">Hab. {{ documento.habitacion || 'N/D' }}</small>
+                  <strong>{{ documento.pntVenta || 'N/D' }}</strong>
+                  <small *ngIf="documento.codReserva || documento.habitacion" class="d-block text-muted">
+                    {{ documento.codReserva || 'Sin reserva' }} · Hab. {{ documento.habitacion || 'N/D' }}
+                  </small>
                 </td>
-                <td class="text-center">{{ documento.PPV00_UsuarioCreacion || 'N/D' }}</td>
+                <td>{{ documento.frmPago || 'N/D' }}</td>
+                <td class="text-end">{{ documento.neto | number:'1.2-2' }}</td>
+                <td class="text-end">{{ documento.impuesto | number:'1.2-2' }}</td>
+                <td class="text-end">{{ documento.propinas | number:'1.2-2' }}</td>
+                <td class="text-end fw-semibold">{{ documento.totalDocu | number:'1.2-2' }}</td>
+                <td>{{ documento.moneda }}</td>
+                <td>
+                  <span class="badge rounded-pill" [ngClass]="estadoDocumentoClass(documento.estDocu)">
+                    {{ documento.estDocu || 'N/D' }}
+                  </span>
+                </td>
                 <td class="text-center">
 
                   <div ngbDropdown container="body" placement="bottom-end" class="doc-action-menu">
@@ -179,16 +190,18 @@
                 </td>
               </tr>
               <tr *ngIf="!vm.loading && vm.hasSearched && vm.documentos.length === 0">
-                <td colspan="11" class="text-center text-muted">No hay resultados para los filtros aplicados.</td>
+                <td colspan="14" class="text-center text-muted">No hay documentos facturados para el rango seleccionado.</td>
               </tr>
             </tbody>
             <tfoot class="table-light" *ngIf="vm.documentos.length">
               <tr class="fw-semibold">
-                <td colspan="4" class="text-end">Total mostrado</td>
+                <td colspan="7" class="text-end">Totales de la página</td>
+                <td class="text-end">{{ vm.totalNetoVisible | number:'1.2-2' }}</td>
+                <td class="text-end">{{ vm.totalImpuestoVisible | number:'1.2-2' }}</td>
+                <td class="text-end">{{ vm.totalPropinaVisible | number:'1.2-2' }}</td>
                 <td class="text-end">{{ vm.totalDocuVisible | number:'1.2-2' }}</td>
-                <td class="text-end">{{ vm.totalPagoVisible | number:'1.2-2' }}</td>
                 <td>{{ vm.monedaResumen || 'N/D' }}</td>
-                <td colspan="4"></td>
+                <td colspan="2"></td>
               </tr>
             </tfoot>
           </table>

@@ -50,6 +50,7 @@ export interface RestauranteMesaOperacion {
   ppV07_SerieNDP          : string | null;
   ppV07_NumNDP            : string | null;
   ppV07_FecDocu           : string | null;
+  ppV07_HorDocu           : string | null;
   ppV07_CodVendedor       : string | null;
   ppV07_TotalDocu         : number | null;
   estadoMesa              : string | null;
@@ -83,6 +84,7 @@ export interface MesaVisual {
     serieNp       : string;
     numNp         : string;
     fecha         : string;
+    hora          ?: string;
     codVendedor   ?: string;
   };
 }

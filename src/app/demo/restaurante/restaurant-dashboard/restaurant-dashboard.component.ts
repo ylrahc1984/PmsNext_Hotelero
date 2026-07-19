@@ -364,6 +364,7 @@ export class RestaurantDashboardComponent implements OnInit {
     const serieNp = this.normalizeText(item.ppV07_SerieNDP);
     const numNp = this.normalizeText(item.ppV07_NumNDP);
     const fecha = this.normalizeDateDDMMYYYY(item.ppV07_FecDocu);
+    const hora = this.normalizeText(item.ppV07_HorDocu) || '';
 
     return {
       idMesa: Number(item.cpV05_IdMesa || 0),
@@ -378,6 +379,7 @@ export class RestaurantDashboardComponent implements OnInit {
               serieNp,
               numNp,
               fecha,
+              hora,
               codVendedor: this.normalizeText(item.ppV07_CodVendedor)
             }
           : undefined
@@ -413,6 +415,8 @@ export class RestaurantDashboardComponent implements OnInit {
     };
     this.operationContext.setSelectedTableContext(context);
 
+    //console.log(mesa.notaPedido?.tipNp, mesa.notaPedido?.serieNp, mesa.notaPedido?.numNp, mesa.notaPedido?.fecha, mesa.notaPedido?.hora);
+
     this.router.navigate(['/restaurant/mesa', mesa.numero], {
       queryParams: {
         puntoVenta: this.codPuntoVenta,
@@ -421,7 +425,8 @@ export class RestaurantDashboardComponent implements OnInit {
         tipNp: mesa.notaPedido?.tipNp || null,
         serieNp: mesa.notaPedido?.serieNp || null,
         numNp: mesa.notaPedido?.numNp || null,
-        fecha: mesa.notaPedido?.fecha || null
+        fecha: mesa.notaPedido?.fecha || null,
+        hora: mesa.notaPedido?.hora || null
       }
     });
   }

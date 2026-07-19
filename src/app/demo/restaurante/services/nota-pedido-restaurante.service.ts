@@ -172,6 +172,15 @@ export interface DivideProductoParams {
   partes: number;
 }
 
+export interface RegistrarPropinaParams {
+  tipNp: string;
+  serieNp: string;
+  numNp: string;
+  precio: number;
+  moneda: string;
+  nCuenta: number;
+}
+
 export interface RestaurantRoomChargeDetailPayload {
   codRsv: string;
   numHab: string;
@@ -247,6 +256,13 @@ export class NotaPedidoRestauranteService {
     return this.http.post<NotaPedidoRestauranteEjecutarResponse>(
       `${this.baseUrl}/divide-producto/producto`,
       this.buildDividirProductoPayload(params)
+    );
+  }
+
+  registrarPropina(params: RegistrarPropinaParams): Observable<NotaPedidoRestauranteEjecutarResponse> {
+    return this.http.post<NotaPedidoRestauranteEjecutarResponse>(
+      `${this.baseUrl}/divide-producto/propina`,
+      this.buildPropinaPayload(params)
     );
   }
 
@@ -357,6 +373,32 @@ export class NotaPedidoRestauranteService {
       operador: '',
       ordenOrigen: Number(params.ordenOrigen || 0),
       partes: Number(params.partes || 0),
+      respuesta: ''
+    };
+  }
+
+  private buildPropinaPayload(params: RegistrarPropinaParams): DivideProductoRequest {
+    return {
+      proceso: 2,
+      tipNp: params.tipNp,
+      serieNp: params.serieNp,
+      numNp: params.numNp,
+      codProducto: '',
+      nomProducto: '',
+      grupo: '',
+      categoria: '',
+      uMedida: '',
+      cantidad: 0,
+      unidConImp: 0,
+      precio: Number(params.precio || 0),
+      incluido: 0,
+      moneda: params.moneda,
+      nCuenta: Number(params.nCuenta || 0),
+      tiempo: 0,
+      estado: 0,
+      operador: '',
+      ordenOrigen: 0,
+      partes: 0,
       respuesta: ''
     };
   }

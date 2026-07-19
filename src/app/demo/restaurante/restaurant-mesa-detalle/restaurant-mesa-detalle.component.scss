@@ -469,6 +469,30 @@ $next-ink: #10263b;
   font-weight: 780;
 }
 
+.consumo-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.propina-modal-backdrop {
+  z-index: 1055;
+  background: rgba(11, 23, 36, 0.52);
+}
+
+.propina-modal {
+  overflow: hidden;
+  border-radius: 14px;
+}
+
+.propina-moneda {
+  min-width: 64px;
+  justify-content: center;
+  color: $next-paper;
+  background: linear-gradient(135deg, $next-surface 0%, $next-blue 100%);
+  border-color: $next-blue;
+  font-weight: 850;
+}
+
 .resumen-list {
   display: flex;
   flex-direction: column;

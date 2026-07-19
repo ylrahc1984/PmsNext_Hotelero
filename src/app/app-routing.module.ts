@@ -151,6 +151,14 @@ const routes: Routes = [
         loadComponent: () => import('./operaciones/cierre-caja/cierre-caja-list.component').then((c) => c.CierreCajaListComponent)
       },
       {
+        path: 'consulta-documentos',
+        data: { origenConsulta: 'restaurante' },
+        loadComponent: () =>
+          import('./finanzas/pages-factura/consulta-documentos/consulta-documentos.component').then(
+            (c) => c.ConsultaDocumentosComponent
+          )
+      },
+      {
         path: 'mesa/:id',
         loadComponent: () =>
           import('./demo/restaurante/restaurant-mesa-detalle/restaurant-mesa-detalle.component').then(

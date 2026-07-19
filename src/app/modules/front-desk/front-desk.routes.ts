@@ -90,6 +90,7 @@ export const FRONT_DESK_ROUTES: Routes = [
       },
       {
         path: 'consulta-documentos',
+        data: { origenConsulta: 'front-desk' },
         loadComponent: () =>
           import('src/app/finanzas/pages-factura/consulta-documentos/consulta-documentos.component').then(
             (c) => c.ConsultaDocumentosComponent
