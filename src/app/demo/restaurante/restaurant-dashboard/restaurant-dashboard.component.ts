@@ -2,6 +2,8 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { OperationalAction } from 'src/app/core/models/operational-context.model';
+import { OperationalPolicyService } from 'src/app/core/services/operational-policy.service';
 import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
 
 import {
@@ -39,6 +41,7 @@ export class RestaurantDashboardComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly service = inject(RestaurantDashboardService);
   private readonly operationContext = inject(RestaurantOperationContextService);
+  private readonly operationalPolicy = inject(OperationalPolicyService);
   private readonly tipoCambioService = inject(TipoCambioService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -170,32 +173,46 @@ export class RestaurantDashboardComponent implements OnInit {
       });
   }
 
-  abrirMesa(mesa: MesaVisual): void {
+  async abrirMesa(mesa: MesaVisual): Promise<void> {
     this.mesaSeleccionada = mesa;
     if (mesa.estado === 'OCUPADA') {
       this.abrirMesaOcupada(mesa);
       return;
     }
+
+    const allowed = await this.operationalPolicy.require(OperationalAction.CreateOperation);
+    if (!allowed) {
+      this.mesaSeleccionada = null;
+      this.cdr.markForCheck();
+      return;
+    }
+
     this.mesaPendienteMozo = mesa;
     this.mozosErrorMessage = '';
     this.cargarMozos();
   }
 
-  seleccionarMozo(mozo: MozoPuntoVenta): void {
-    if (!this.puntoVentaSeleccionado || !this.salonSeleccionado || !this.mesaPendienteMozo) {
+  async seleccionarMozo(mozo: MozoPuntoVenta): Promise<void> {
+    const mesaPendiente = this.mesaPendienteMozo;
+    if (!this.puntoVentaSeleccionado || !this.salonSeleccionado || !mesaPendiente) {
       return;
     }
+
+    const allowed = await this.operationalPolicy.require(OperationalAction.CreateOperation, {
+      refresh: true
+    });
+    if (!allowed || this.mesaPendienteMozo?.numero !== mesaPendiente.numero) return;
 
     const context: SelectedRestaurantTableContext = {
       puntoVenta: this.puntoVentaSeleccionado,
       areaOperativa: this.salonSeleccionado,
-      mesa: this.mesaPendienteMozo,
+      mesa: mesaPendiente,
       mozo
     };
 
     this.operationContext.setSelectedTableContext(context);
 
-    this.router.navigate(['/restaurant/mesa', this.mesaPendienteMozo.numero], {
+    await this.router.navigate(['/restaurant/mesa', mesaPendiente.numero], {
       queryParams: {
         puntoVenta: this.codPuntoVenta,
         ubicacion: this.salonSeleccionado.MPV09_CodUbicacion,

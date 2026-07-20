@@ -21,48 +21,164 @@
       <div class="filter-field">
         <label for="productosPuntoVenta">Punto de Venta</label>
         <select id="productosPuntoVenta" class="form-select" [ngModel]="puntoVenta()" (ngModelChange)="puntoVenta.set($event)">
-          <option value="">Todos</option><option>Restaurante Principal</option><option>Bar Piscina</option><option>Room Service</option>
+          <option value="">Todos</option>
+          @for (punto of puntosVenta(); track punto.codPntVenta) {
+            <option [value]="punto.codPntVenta">{{ punto.nomPntVenta }} ({{ punto.codPntVenta }})</option>
+          }
         </select>
       </div>
       <div class="filter-field">
-        <label for="productosCategoria">Categoría</label>
-        <select id="productosCategoria" class="form-select" [ngModel]="categoria()" (ngModelChange)="categoria.set($event)">
-          <option value="">Todas</option><option>Platos fuertes</option><option>Entradas</option><option>Bebidas</option><option>Postres</option>
-        </select>
+        <label for="productosFiltro">Producto</label>
+        <input id="productosFiltro" type="search" class="form-control" placeholder="Código o descripción" [ngModel]="filtroProducto()" (ngModelChange)="actualizarFiltroProducto($event)">
       </div>
       <div class="filter-field">
-        <label for="productosMesero">Mesero</label>
-        <select id="productosMesero" class="form-select" [ngModel]="mesero()" (ngModelChange)="mesero.set($event)">
-          <option value="">Todos</option><option>Carlos Pérez</option><option>María Rodríguez</option><option>Andrés Vargas</option>
+        <label for="productosTamanoPagina">Filas por página</label>
+        <select id="productosTamanoPagina" class="form-select" [ngModel]="tamanoPagina()" (ngModelChange)="actualizarTamanoPagina($event)">
+          @for (opcion of opcionesTamanoPagina; track opcion) {
+            <option [value]="opcion">{{ opcion }}</option>
+          }
         </select>
       </div>
       <div class="filter-actions">
-        <button type="button" class="btn btn-outline-secondary" (click)="limpiar()"><i class="feather icon-rotate-ccw"></i>Limpiar</button>
-        <button type="button" class="btn btn-primary" (click)="buscar()"><i class="feather icon-search"></i>Buscar</button>
+        <button type="button" class="btn btn-outline-secondary" (click)="limpiar()" [disabled]="cargando()"><i class="feather icon-rotate-ccw"></i>Limpiar</button>
+        <button type="button" class="btn btn-primary" (click)="buscar()" [disabled]="cargando()"><i class="feather" [class.icon-search]="!cargando()" [class.icon-loader]="cargando()"></i>{{ cargando() ? 'Consultando' : 'Buscar' }}</button>
       </div>
     </div>
+    <div class="charge-options" role="group" aria-labelledby="productosTiposCargo">
+      <span id="productosTiposCargo" class="charge-options__title">Incluir en la consulta</span>
+      <label class="charge-option" for="productosCargoHabitacion">
+        <input id="productosCargoHabitacion" type="checkbox" [ngModel]="incluirCargoHabitacion()" (ngModelChange)="incluirCargoHabitacion.set($event)">
+        <span>Cargos de habitación</span>
+      </label>
+      <label class="charge-option" for="productosCargoIncluido">
+        <input id="productosCargoIncluido" type="checkbox" [ngModel]="incluirCargoIncluido()" (ngModelChange)="incluirCargoIncluido.set($event)">
+        <span>Cargos incluidos</span>
+      </label>
+      <label class="charge-option" for="productosCargoColaborador">
+        <input id="productosCargoColaborador" type="checkbox" [ngModel]="incluirCargoColaborador()" (ngModelChange)="incluirCargoColaborador.set($event)">
+        <span>Cargos de colaboradores</span>
+      </label>
+    </div>
+  </section>
+
+  <section class="kpi-strip" [class.kpi-strip--loading]="cargando()" aria-label="Indicadores totales del reporte">
+    <article class="kpi-item">
+      <span class="kpi-item__icon kpi-item__icon--billing"><i class="feather icon-dollar-sign"></i></span>
+      <div class="kpi-item__content">
+        <span>Facturación total</span>
+        <strong>{{ resumenKpis().facturacionTotal | currency:'USD':'symbol':'1.2-2' }}</strong>
+      </div>
+    </article>
+    <article class="kpi-item">
+      <span class="kpi-item__icon kpi-item__icon--quantity"><i class="feather icon-shopping-bag"></i></span>
+      <div class="kpi-item__content">
+        <span>Cantidad vendida</span>
+        <strong>{{ resumenKpis().cantidadVendida | number:'1.0-2' }}</strong>
+      </div>
+    </article>
+    <article class="kpi-item">
+      <span class="kpi-item__icon kpi-item__icon--profit"><i class="feather icon-trending-up"></i></span>
+      <div class="kpi-item__content">
+        <span>Ganancia bruta</span>
+        <strong>{{ resumenKpis().gananciaBruta | currency:'USD':'symbol':'1.2-2' }}</strong>
+        <small>{{ resumenKpis().margenBrutoPonderado | number:'1.1-1' }}% ponderado</small>
+      </div>
+    </article>
+    <article class="kpi-item">
+      <span class="kpi-item__icon kpi-item__icon--products"><i class="feather icon-package"></i></span>
+      <div class="kpi-item__content">
+        <span>Productos con venta</span>
+        <strong>{{ resumenKpis().productosConVenta | number }}</strong>
+      </div>
+    </article>
   </section>
 
   <div class="results-layout">
     <section class="analysis-card results-card" aria-label="Resultados de productos más vendidos">
-      <div class="results-card__header"><h2>Detalle de productos</h2><span class="result-count">{{ productos().length }} productos</span></div>
+      <div class="results-card__header"><h2>Detalle de productos</h2><span class="result-count">{{ productosFiltrados().length }} productos</span></div>
       <div class="table-responsive">
         <table class="table analysis-table">
-          <thead><tr><th>#</th><th>Producto</th><th>Categoría</th><th class="text-end">Cantidad Vendida</th><th class="text-end">Monto Vendido</th><th>Participación %</th></tr></thead>
+          <thead><tr><th>#</th><th>Código</th><th>Producto</th><th class="text-end">Cantidad</th><th class="text-end">Costo</th><th class="text-end">Precio</th><th class="text-end">Total facturado</th><th>Margen de ganancia bruto</th></tr></thead>
           <tbody>
-            @for (item of productos(); track item.producto; let index = $index) {
+            @if (cargando()) {
+              <tr class="status-row"><td colspan="8"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Consultando información...</td></tr>
+            } @else if (error()) {
+              <tr class="status-row status-row--error"><td colspan="8">{{ error() }}</td></tr>
+            } @else {
+            @for (item of productosPaginados(); track item.codigo; let index = $index) {
               <tr>
-                <td>{{ index + 1 }}</td><td class="primary-cell">{{ item.producto }}</td><td><span class="category-badge">{{ item.categoria }}</span></td>
-                <td class="text-end">{{ item.cantidad }}</td><td class="text-end primary-cell">{{ item.monto | currency:'USD':'symbol':'1.0-0' }}</td>
-                <td><div class="participation"><div class="participation__bar"><span [style.width.%]="item.participacion * 4"></span></div><strong>{{ item.participacion }}%</strong></div></td>
+                <td>{{ registroInicial() + index }}</td><td><span class="category-badge">{{ item.codigo }}</span></td><td class="primary-cell">{{ item.descripcion || 'Sin descripción' }}</td>
+                <td class="text-end">{{ item.cantidad | number:'1.0-4' }}</td><td class="text-end">{{ item.costo | currency:'USD':'symbol':'1.2-4' }}</td>
+                <td class="text-end">{{ item.precio | currency:'USD':'symbol':'1.2-4' }}</td><td class="text-end primary-cell">{{ item.total | currency:'USD':'symbol':'1.2-2' }}</td>
+                <td><div class="participation"><div class="participation__bar"><span [style.width.%]="anchoParticipacion(item.porcentaje)"></span></div><strong>{{ item.porcentaje | number:'1.2-4' }}%</strong></div></td>
               </tr>
+            } @empty {
+              <tr class="status-row"><td colspan="8">No se encontraron productos para los criterios seleccionados.</td></tr>
+            }
             }
           </tbody>
         </table>
       </div>
+      @if (!cargando() && !error() && productosFiltrados().length) {
+        <nav class="local-pagination" aria-label="Paginación de productos">
+          <span>Mostrando {{ registroInicial() }}–{{ registroFinal() }} de {{ productosFiltrados().length }}</span>
+          <div class="local-pagination__actions">
+            <button type="button" class="btn btn-outline-secondary btn-sm" (click)="irPagina(paginaActual() - 1)" [disabled]="paginaActual() === 1" aria-label="Página anterior"><i class="feather icon-chevron-left"></i></button>
+            <strong>Página {{ paginaActual() }} de {{ totalPaginas() }}</strong>
+            <button type="button" class="btn btn-outline-secondary btn-sm" (click)="irPagina(paginaActual() + 1)" [disabled]="paginaActual() === totalPaginas()" aria-label="Página siguiente"><i class="feather icon-chevron-right"></i></button>
+          </div>
+        </nav>
+      }
     </section>
-    <aside class="analysis-card chart-placeholder" aria-label="Espacio reservado para gráfico">
-      <div class="placeholder-content"><span class="placeholder-icon"><i class="feather icon-pie-chart"></i></span><h2>Gráfico de Productos</h2><p>Próximamente</p></div>
+    <aside class="analysis-card chart-placeholder products-chart" aria-label="Análisis Pareto de productos por facturación">
+      <div class="products-chart__header">
+        <div>
+          <span class="products-chart__eyebrow">Principio 80/20</span>
+          <h2>Concentración Pareto</h2>
+        </div>
+        <span class="products-chart__icon"><i class="feather icon-trending-up"></i></span>
+      </div>
+
+      @if (cargando()) {
+        <div class="products-chart__state"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Preparando análisis...</div>
+      } @else if (analisisPareto().totalProductos) {
+        <div class="pareto-summary">
+          <div class="pareto-summary__value">{{ analisisPareto().productosParaOchenta }}</div>
+          <div class="pareto-summary__copy">
+            <strong>de {{ analisisPareto().totalProductos }} productos</strong>
+            <span>generan el 80% de la facturación</span>
+          </div>
+          <span class="pareto-summary__badge">{{ analisisPareto().porcentajeCatalogo | number:'1.1-1' }}% del catálogo</span>
+        </div>
+        <div class="products-chart__list">
+          @for (item of analisisPareto().principales; track item.codigo; let posicion = $index) {
+            <article
+              class="product-ranking"
+              [attr.title]="item.descripcion + ' · Participación: ' + item.participacionFacturacion.toFixed(2) + '% · Acumulado: ' + item.porcentajeAcumulado.toFixed(2) + '%'"
+            >
+              <div class="product-ranking__heading">
+                <span class="product-ranking__position">{{ posicion + 1 }}</span>
+                <div class="product-ranking__identity">
+                  <strong>{{ item.descripcion || 'Sin descripción' }}</strong>
+                  <small>{{ item.codigo }}</small>
+                </div>
+                <span class="pareto-cumulative">{{ item.porcentajeAcumulado | number:'1.1-1' }}% acum.</span>
+              </div>
+              <div class="product-ranking__metric">
+                <div class="product-ranking__track"><span [style.width.%]="anchoBarraPareto(item.total)"></span></div>
+                <span class="pareto-share">{{ item.participacionFacturacion | number:'1.1-1' }}%</span>
+                <strong>{{ item.total | currency:'USD':'symbol':'1.2-2' }}</strong>
+              </div>
+            </article>
+          }
+        </div>
+        <div class="products-chart__legend">
+          <span><i class="legend-dot legend-dot--billing"></i>Facturación relativa al líder</span>
+          <span><i class="legend-dot legend-dot--cumulative"></i>Porcentaje acumulado</span>
+        </div>
+      } @else {
+        <div class="products-chart__state"><i class="feather icon-trending-up"></i>No hay datos para calcular Pareto.</div>
+      }
     </aside>
   </div>
 </section>

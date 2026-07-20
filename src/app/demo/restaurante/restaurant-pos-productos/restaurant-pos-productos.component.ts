@@ -4,7 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, finalize, map, of, switchMap, throwError } from 'rxjs';
 import Swal from 'sweetalert2';
+import { OperationalAction } from 'src/app/core/models/operational-context.model';
 import { AuthService } from 'src/app/core/services/auth.service';
+import { OperationalPolicyService } from 'src/app/core/services/operational-policy.service';
 import { RestaurantProductConfigDialogComponent } from '../dialogs/restaurant-product-config-dialog/restaurant-product-config-dialog.component';
 import { CategoriaVisible } from '../interfaces/categoria-visible.interface';
 import { ProductoMenu } from '../interfaces/producto-menu.interface';
@@ -58,6 +60,7 @@ export class RestaurantPosProductosComponent implements OnInit {
   private readonly productosService        = inject(ProductosMenuService);
   private readonly notaPedidoService       = inject(NotaPedidoRestauranteService);
   private readonly operationContext        = inject(RestaurantOperationContextService);
+  private readonly operationalPolicy       = inject(OperationalPolicyService);
   private readonly authService             = inject(AuthService);
   private readonly cdr                     = inject(ChangeDetectorRef);
   readonly restaurantCartStore             = inject(RestaurantCartStore);
@@ -187,6 +190,17 @@ export class RestaurantPosProductosComponent implements OnInit {
   async confirmarPedido(): Promise<void> {
     const items = this.restaurantCartStore.items();
     if (!items.length || this.guardandoPedido) {
+      return;
+    }
+
+    const requiredAction = this.notaPedidoActiva
+      ? OperationalAction.UpdateOperation
+      : OperationalAction.CreateOperation;
+    const operationAllowed = await this.operationalPolicy.require(requiredAction, {
+      refresh: true
+    });
+
+    if (!operationAllowed) {
       return;
     }
 
