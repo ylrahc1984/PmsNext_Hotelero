@@ -1,0 +1,192 @@
+$next-cyan: #17d4e0;
+$next-white: #ffffff;
+$next-burgundy: #c02b6d;
+
+:host {
+  display: block;
+}
+
+.operational-date-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 174px;
+  min-height: 48px;
+  padding: 6px 13px 6px 7px;
+  color: $next-white;
+  background: linear-gradient(135deg, rgba($next-cyan, 0.13), rgba($next-white, 0.05));
+  border: 1px solid rgba($next-cyan, 0.28);
+  border-radius: 17px;
+  box-shadow: inset 0 1px 0 rgba($next-white, 0.05), 0 8px 22px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.operational-date-indicator:hover,
+.operational-date-indicator:focus-visible {
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.operational-date-indicator__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  color: $next-cyan;
+  background: rgba($next-cyan, 0.12);
+  border-radius: 12px;
+  font-size: 17px;
+}
+
+.operational-date-indicator__copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.12;
+}
+
+.operational-date-indicator small {
+  color: rgba($next-white, 0.62);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.operational-date-indicator strong,
+.operational-date-indicator button {
+  margin-top: 3px;
+  color: $next-white;
+  font-size: 0.86rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.operational-date-indicator em {
+  max-width: 150px;
+  margin-top: 2px;
+  overflow: hidden;
+  color: rgba($next-white, 0.72);
+  font-size: 0.61rem;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.035em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.operational-date-indicator button {
+  padding: 0;
+  background: none;
+  border: 0;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.operational-date-indicator--error {
+  background: linear-gradient(135deg, rgba($next-burgundy, 0.18), rgba($next-white, 0.04));
+  border-color: rgba($next-burgundy, 0.42);
+}
+
+.operational-date-indicator--error .operational-date-indicator__icon {
+  color: #f9a8d4;
+  background: rgba($next-burgundy, 0.18);
+}
+
+.operational-date-indicator--warning {
+  background: linear-gradient(135deg, rgba(#f59e0b, 0.2), rgba($next-white, 0.04));
+  border-color: rgba(#fbbf24, 0.52);
+}
+
+.operational-date-indicator--warning .operational-date-indicator__icon {
+  color: #fbbf24;
+  background: rgba(#f59e0b, 0.18);
+}
+
+.operational-date-indicator--danger {
+  background: linear-gradient(135deg, rgba(#dc2626, 0.22), rgba($next-burgundy, 0.12));
+  border-color: rgba(#fb7185, 0.52);
+}
+
+.operational-date-indicator--danger .operational-date-indicator__icon {
+  color: #fda4af;
+  background: rgba(#dc2626, 0.2);
+}
+
+.operational-date-indicator--progress {
+  background: linear-gradient(135deg, rgba(#2563eb, 0.22), rgba($next-cyan, 0.08));
+  border-color: rgba(#60a5fa, 0.48);
+}
+
+.operational-date-indicator--progress .operational-date-indicator__icon {
+  color: #93c5fd;
+  background: rgba(#2563eb, 0.2);
+}
+
+.operational-date-indicator--compact {
+  min-width: 120px;
+  min-height: 38px;
+  gap: 7px;
+  padding: 4px 8px 4px 4px;
+  border-radius: 13px;
+}
+
+.operational-date-indicator--compact .operational-date-indicator__icon {
+  width: 30px;
+  height: 30px;
+  flex-basis: 30px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.operational-date-indicator--compact small {
+  display: none;
+}
+
+.operational-date-indicator--compact em {
+  display: none;
+}
+
+.operational-date-indicator--compact strong,
+.operational-date-indicator--compact button {
+  margin-top: 0;
+  font-size: 0.74rem;
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .operational-date-indicator {
+    min-width: 125px;
+    min-height: 42px;
+    gap: 7px;
+    padding: 4px 9px 4px 4px;
+    border-radius: 14px;
+  }
+
+  .operational-date-indicator__icon {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+    border-radius: 10px;
+  }
+
+  .operational-date-indicator small {
+    display: none;
+  }
+
+  .operational-date-indicator em {
+    display: none;
+  }
+
+  .operational-date-indicator strong,
+  .operational-date-indicator button {
+    margin-top: 0;
+    font-size: 0.76rem;
+  }
+}

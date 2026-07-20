@@ -6,7 +6,9 @@ import { of } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
+import { OperationalAction } from 'src/app/core/models/operational-context.model';
 import { AuthService } from 'src/app/core/services/auth.service';
+import { OperationalPolicyService } from 'src/app/core/services/operational-policy.service';
 import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { RoomRackNavigationState, RoomRackRoom } from './models/room-rack-room.model';
@@ -61,6 +63,7 @@ export class RoomRackComponent implements OnInit {
   private readonly roomRackService      = inject(RoomRackService);
   private readonly tipoCambioService    = inject(TipoCambioService);
   private readonly authService          = inject(AuthService);
+  private readonly operationalPolicy    = inject(OperationalPolicyService);
   private readonly destroyRef           = inject(DestroyRef);
   private readonly cdr                  = inject(ChangeDetectorRef);
 
@@ -116,7 +119,7 @@ export class RoomRackComponent implements OnInit {
     this.cargarTipoCambio();
   }
 
-  seleccionarHabitacion(habitacion: HabitacionRack): void {
+  async seleccionarHabitacion(habitacion: HabitacionRack): Promise<void> {
     if (habitacion.estado === 'Reservada') {
       void Swal.fire({
         title: 'Habitación reservada',
@@ -134,11 +137,14 @@ export class RoomRackComponent implements OnInit {
     const extras: NavigationExtras = { state: { roomRackRoom: navigationState } };
 
     if (habitacion.estado === 'Disponible') {
-      this.router.navigate(['/front-desk/walk-in'], extras);
+      const allowed = await this.operationalPolicy.require(OperationalAction.CreateOperation);
+      if (!allowed) return;
+
+      await this.router.navigate(['/front-desk/walk-in'], extras);
       return;
     }
 
-    this.router.navigate(['/front-desk/habitaciones/room-stay-management', habitacion.numero], extras);
+    await this.router.navigate(['/front-desk/habitaciones/room-stay-management', habitacion.numero], extras);
   }
 
   private escapeHtml(value: string): string {
@@ -156,7 +162,7 @@ export class RoomRackComponent implements OnInit {
     }
 
     event.preventDefault();
-    this.seleccionarHabitacion(habitacion);
+    void this.seleccionarHabitacion(habitacion);
   }
 
   onLimpiarHabitacion(room: HabitacionRack): void {
@@ -167,7 +173,10 @@ export class RoomRackComponent implements OnInit {
     this.actualizarLimpiezaHabitacion(room, 'S');
   }
 
-  onBloquearHabitacion(room: HabitacionRack): void {
+  async onBloquearHabitacion(room: HabitacionRack): Promise<void> {
+    const allowed = await this.operationalPolicy.require(OperationalAction.CreateOperation);
+    if (!allowed) return;
+
     this.abrirModalBloqueo(room);
   }
 
@@ -186,7 +195,7 @@ export class RoomRackComponent implements OnInit {
     this.bloqueoErrorMessage = '';
   }
 
-  confirmarBloqueoHabitacion(): void {
+  async confirmarBloqueoHabitacion(): Promise<void> {
     const room = this.bloqueoModalRoom;
 
     if (!room || this.bloqueandoHabitacion) {
@@ -198,6 +207,12 @@ export class RoomRackComponent implements OnInit {
       this.bloqueoErrorMessage = validationMessage;
       return;
     }
+
+    const allowed = await this.operationalPolicy.require(
+      OperationalAction.CreateOperation,
+      { refresh: true }
+    );
+    if (!allowed) return;
 
     const payload = this.buildBloqueoPayload(room);
 

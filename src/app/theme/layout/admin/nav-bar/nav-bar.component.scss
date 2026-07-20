@@ -9,6 +9,7 @@ $next-white: #ffffff;
 }
 
 header {
+  position: relative;
   min-height: 72px;
   background:
     radial-gradient(circle at 18% 0%, rgba($next-cyan, 0.1), transparent 32%),
@@ -47,4 +48,24 @@ header {
 
 .mobile-menu i {
   color: $next-white;
+}
+
+.mobile-operational-date {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .mobile-operational-date {
+    display: block;
+    position: absolute;
+    top: 17px;
+    right: 54px;
+    z-index: 1031;
+  }
+}
+
+@media (max-width: 389px) {
+  .mobile-brand span {
+    display: none;
+  }
 }

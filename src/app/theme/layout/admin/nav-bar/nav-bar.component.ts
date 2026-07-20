@@ -7,10 +7,11 @@ import { CommonModule } from '@angular/common';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { NavLeftComponent } from './nav-left/nav-left.component';
 import { NavRightComponent } from './nav-right/nav-right.component';
+import { OperationalDateIndicatorComponent } from './operational-date-indicator/operational-date-indicator.component';
 
 @Component({
   selector: 'app-nav-bar',
-  imports: [SharedModule, NavLeftComponent, NavRightComponent, RouterModule, CommonModule],
+  imports: [SharedModule, NavLeftComponent, NavRightComponent, OperationalDateIndicatorComponent, RouterModule, CommonModule],
   templateUrl: './nav-bar.component.html',
   styleUrls: ['./nav-bar.component.scss']
 })

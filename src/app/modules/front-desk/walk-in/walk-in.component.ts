@@ -7,7 +7,9 @@ import { debounceTime, distinctUntilChanged, finalize, forkJoin, of, switchMap }
 import { catchError } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
+import { OperationalAction } from 'src/app/core/models/operational-context.model';
 import { AuthService } from 'src/app/core/services/auth.service';
+import { OperationalPolicyService } from 'src/app/core/services/operational-policy.service';
 import { ToastService } from 'src/app/core/services/toast.service';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { PaxType } from '../settings/pax-types/models/pax-type.model';
@@ -73,6 +75,7 @@ export class WalkInComponent implements OnInit {
   private readonly router               = inject(Router);
   private readonly walkInService        = inject(WalkInService);
   private readonly authService          = inject(AuthService);
+  private readonly operationalPolicy    = inject(OperationalPolicyService);
   private readonly toastService         = inject(ToastService);
   private readonly destroyRef           = inject(DestroyRef);
   private readonly draftStorageKey      = 'pmsnext.walk-in.draft';
@@ -456,6 +459,14 @@ export class WalkInComponent implements OnInit {
         message: 'Complete la habitación, fechas, tarifa, plan y al menos un huésped.',
         type: 'warning'
       });
+      return;
+    }
+
+    const operationAllowed = await this.operationalPolicy.require(OperationalAction.CreateOperation, {
+      refresh: true
+    });
+
+    if (!operationAllowed) {
       return;
     }
 

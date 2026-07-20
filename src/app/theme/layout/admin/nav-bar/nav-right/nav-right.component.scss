@@ -279,6 +279,10 @@ $next-muted: rgba(255, 255, 255, 0.72);
     display: none;
   }
 
+  .topbar-operational-date {
+    display: none;
+  }
+
   .user-trigger {
     min-height: 40px;
     padding: 2px 6px 2px 2px;

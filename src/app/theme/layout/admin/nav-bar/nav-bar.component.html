@@ -9,6 +9,7 @@
   <a class="mobile-menu" [ngClass]="{ on: this.menuClass }" id="mobile-header" href="javascript:" (click)="toggleMobOption()">
     <i class="feather icon-more-horizontal"></i>
   </a>
+  <app-operational-date-indicator class="mobile-operational-date" [compact]="true" />
   <div class="collapse navbar-collapse topbar-shell px-4" [style.display]="this.collapseStyle">
     <app-nav-left class="me-auto" [style.display]="this.headerStyle" />
     <app-nav-right class="ms-auto" />

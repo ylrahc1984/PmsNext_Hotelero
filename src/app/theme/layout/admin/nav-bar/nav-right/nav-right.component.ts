@@ -11,10 +11,11 @@ import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { LockScreenService } from 'src/app/core/services/lock-screen.service';
 import { APP_BRANDING } from 'src/app/core/config/app-branding';
+import { OperationalDateIndicatorComponent } from '../operational-date-indicator/operational-date-indicator.component';
 
 @Component({
   selector: 'app-nav-right',
-  imports: [CommonModule, RouterModule, SharedModule],
+  imports: [CommonModule, RouterModule, SharedModule, OperationalDateIndicatorComponent],
   templateUrl: './nav-right.component.html',
   styleUrls: ['./nav-right.component.scss'],
   providers: [NgbDropdownConfig]

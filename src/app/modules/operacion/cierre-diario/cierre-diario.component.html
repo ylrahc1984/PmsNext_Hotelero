@@ -7,7 +7,7 @@
     </div>
     <div class="operational-date" aria-label="Fecha operativa">
       <span><i class="bi bi-calendar-event" aria-hidden="true"></i> Fecha Operativa</span>
-      <strong>{{ operationStatus().operationalDate }}</strong>
+      <strong>{{ operationStatus().operationalDate || (isLoadingOperationalDate() ? 'Consultando...' : 'No disponible') }}</strong>
     </div>
   </header>
 
@@ -17,8 +17,9 @@
         <span class="section-label">Validación operativa</span>
         <h2>{{ operationStatus().title }}</h2>
       </div>
-      <span class="status-badge" [class.status-badge--pending]="pendingValidations()">
-        <i class="bi bi-shield-exclamation" aria-hidden="true"></i> Revisión requerida
+      <span class="status-badge" [class.status-badge--pending]="pendingValidations()" [class.status-badge--success]="canExecuteClose() || isCloseCompleted()">
+        <i class="bi" [class.bi-shield-check]="canExecuteClose() || isCloseCompleted()" [class.bi-shield-exclamation]="!canExecuteClose() && !isCloseCompleted()" aria-hidden="true"></i>
+        {{ statusLabel() }}
       </span>
     </div>
 
@@ -34,8 +35,30 @@
     </div>
 
     <div class="system-status__action">
-      <button type="button" class="btn btn-primary" (click)="analyzeSystem()">
-        <i class="bi bi-search" aria-hidden="true"></i> Analizar Sistema
+      <div class="system-status__action-copy">
+        <span>Paso 1</span>
+        <strong>Analizar operaciones del hotel</strong>
+        <small>
+          @if (operationStatus().operationalDate) {
+            Se validarán los pendientes de la jornada {{ operationStatus().operationalDate }} antes de permitir el cierre.
+          } @else {
+            Primero se debe recuperar una fecha operativa válida.
+          }
+        </small>
+      </div>
+      <button
+        type="button"
+        class="btn btn-primary daily-close__analyze-button"
+        (click)="handleAnalyzeAction()"
+        [disabled]="isLoadingOperationalDate() || isAnalyzing() || isExecuting() || isCloseCompleted()"
+      >
+        @if (isAnalyzing()) {
+          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Analizando...
+        } @else if (operationalDateError()) {
+          <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Reintentar Fecha Operativa
+        } @else {
+          <i class="bi bi-search" aria-hidden="true"></i> Analizar Sistema
+        }
       </button>
     </div>
   </article>
@@ -90,9 +113,26 @@
   </section>
 
   <footer class="close-action">
-    <button type="button" class="btn btn-primary btn-lg" disabled title="Disponible en una próxima versión" aria-describedby="close-help">
-      <i class="bi bi-lock" aria-hidden="true"></i> Ejecutar Cierre Diario
+    <span class="close-action__step">Paso 2 · Cierre de jornada</span>
+    <button
+      type="button"
+      class="btn btn-primary btn-lg"
+      (click)="executeDailyClose()"
+      [disabled]="isLoadingOperationalDate() || operationalDateError() || !operationalCloseAllowed() || !canExecuteClose() || isExecuting() || isCloseCompleted()"
+      [title]="closeHelpText()"
+      aria-describedby="close-help"
+    >
+      @if (isExecuting()) {
+        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+        Ejecutando Cierre...
+      } @else if (isCloseCompleted()) {
+        <i class="bi bi-check-circle" aria-hidden="true"></i>
+        Cierre Diario Ejecutado
+      } @else {
+        <i class="bi" [class.bi-lock]="!canExecuteClose()" [class.bi-check-circle]="canExecuteClose()" aria-hidden="true"></i>
+        Ejecutar Cierre Diario
+      }
     </button>
-    <span id="close-help">Disponible en una próxima versión.</span>
+    <span id="close-help">{{ closeHelpText() }}</span>
   </footer>
 </section>

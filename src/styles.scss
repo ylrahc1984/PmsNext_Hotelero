@@ -1446,3 +1446,8 @@ gmpx-place-autocomplete.places-autocomplete-themed {
     width: 100%;
   }
 }
+// Estado visual común para acciones restringidas por la jornada operativa.
+.operational-action--blocked {
+  opacity: 0.58 !important;
+  cursor: not-allowed !important;
+}

@@ -1,0 +1,43 @@
+<div
+  class="operational-date-indicator"
+  [class.operational-date-indicator--compact]="compact()"
+  [class.operational-date-indicator--loading]="loading()"
+  [class.operational-date-indicator--error]="!!error()"
+  [class.operational-date-indicator--warning]="severity() === 'warning'"
+  [class.operational-date-indicator--danger]="severity() === 'danger'"
+  [class.operational-date-indicator--progress]="severity() === 'progress'"
+  role="status"
+  aria-live="polite"
+  [attr.tabindex]="context() ? 0 : null"
+  [attr.title]="error() || context()?.message || 'Fecha operativa vigente del sistema'"
+  (click)="viewDetails()"
+  (keydown)="handleKeyDown($event)"
+>
+  <span class="operational-date-indicator__icon" aria-hidden="true">
+    @if (loading()) {
+      <span class="spinner-border spinner-border-sm"></span>
+    } @else {
+      <i
+        class="bi"
+        [class.bi-calendar2-check]="severity() === 'normal'"
+        [class.bi-calendar2-x]="!!error()"
+        [class.bi-exclamation-triangle]="severity() === 'warning' || severity() === 'danger'"
+        [class.bi-arrow-repeat]="severity() === 'progress'"
+      ></i>
+    }
+  </span>
+
+  <span class="operational-date-indicator__copy">
+    <small>Fecha operativa</small>
+    @if (loading()) {
+      <strong>Consultando...</strong>
+    } @else if (operationalDate()) {
+      <strong>{{ operationalDate() }}</strong>
+      @if (context()?.status && severity() !== 'normal') {
+        <em>{{ context()?.status === 'CIERRE_PENDIENTE' ? 'Cierre pendiente' : context()?.status }}</em>
+      }
+    } @else {
+      <button type="button" (click)="$event.stopPropagation(); retry()">Reintentar</button>
+    }
+  </span>
+</div>
