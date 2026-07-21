@@ -28,10 +28,32 @@ export interface ReservaTarifaAlimento {
   impInclu: number;
 }
 
+export interface ReservaDisponibilidadCategoriaRequest {
+  proceso: number;
+  fechaIni: string;
+  fechaSal: string;
+  categoria: string;
+  cantHab: number;
+}
+
+export interface ReservaDisponibilidadCategoriaFecha {
+  fecha: string;
+  disponibles: number;
+}
+
+export interface ReservaDisponibilidadCategoriaResponse {
+  success: boolean;
+  message: string;
+  data: ReservaDisponibilidadCategoriaFecha[];
+  totalFechasInsuficientes: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ReservaHabitacionService implements ReservaHabitacionRepository {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = `${(environment.apiUrl || 'http://localhost:5000/api').toString().replace(/\/+$/, '')}/reservas-habitacion`;
+  private readonly baseApiUrl = (environment.apiUrl || 'http://localhost:5000/api').toString().replace(/\/+$/, '');
+  private readonly apiUrl = `${this.baseApiUrl}/reservas-habitacion`;
+  private readonly categoryAvailabilityUrl = `${this.baseApiUrl}/reservas/disponibilidad-categoria`;
 
   createReserva(request: ReservaHabitacionRequest): Observable<ReservaHabitacionResponse> {
     const requestSnapshot = JSON.parse(JSON.stringify(request)) as ReservaHabitacionRequest;
@@ -58,6 +80,12 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
     console.groupEnd();
 
     return this.http.put<ReservaHabitacionResponse>(url, request);
+  }
+
+  consultarDisponibilidadCategoria(
+    request: ReservaDisponibilidadCategoriaRequest
+  ): Observable<ReservaDisponibilidadCategoriaResponse> {
+    return this.http.post<ReservaDisponibilidadCategoriaResponse>(this.categoryAvailabilityUrl, request);
   }
 
   anularReserva(codReserva: string, fecAnulada: string, operador: string, observaciones: string, procesa = 1): Observable<ReservaHabitacionResponse> {

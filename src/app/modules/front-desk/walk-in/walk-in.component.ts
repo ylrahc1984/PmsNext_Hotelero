@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
 
 import { OperationalAction } from 'src/app/core/models/operational-context.model';
 import { AuthService } from 'src/app/core/services/auth.service';
+import { OperationalDateService } from 'src/app/core/services/operational-date.service';
 import { OperationalPolicyService } from 'src/app/core/services/operational-policy.service';
 import { ToastService } from 'src/app/core/services/toast.service';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
@@ -75,6 +76,7 @@ export class WalkInComponent implements OnInit {
   private readonly router               = inject(Router);
   private readonly walkInService        = inject(WalkInService);
   private readonly authService          = inject(AuthService);
+  private readonly operationalDateService = inject(OperationalDateService);
   private readonly operationalPolicy    = inject(OperationalPolicyService);
   private readonly toastService         = inject(ToastService);
   private readonly destroyRef           = inject(DestroyRef);
@@ -88,8 +90,8 @@ export class WalkInComponent implements OnInit {
   readonly mealPlanInclusions           = signal<WalkInDetInclu[]>([]);
 
   readonly stayForm: FormGroup<StayForm> = this.fb.group({
-    fechaEntrada          : this.fb.control(this.todayAsInputDate(), { validators: [Validators.required] }),
-    fechaSalida           : this.fb.control(this.addDaysAsInputDate(1), { validators: [Validators.required] }),
+    fechaEntrada          : this.fb.control('', { validators: [Validators.required] }),
+    fechaSalida           : this.fb.control('', { validators: [Validators.required] }),
     noches                : this.fb.control(1, { validators: [Validators.required, Validators.min(1)] }),
     habitacion            : this.fb.control(0, { validators: [Validators.required, Validators.min(1)] }),
     cantidadPax           : this.fb.control(1, { validators: [Validators.required, Validators.min(1)] }),
@@ -155,6 +157,8 @@ export class WalkInComponent implements OnInit {
   private allTarifas      : WalkInTarifaOption[] = [];
 
   isCatalogLoading         = false;
+  isOperationalDateLoading = false;
+  operationalDateError     = '';
   isSaving                 = false;
   showGuestModal           = false;
   showAgencyModal          = false;
@@ -187,6 +191,7 @@ export class WalkInComponent implements OnInit {
     this.loadCatalogs();
     this.bindStayCalculations();
     this.bindAutocomplete();
+    this.loadOperationalDate();
   }
 
   openAddGuestModal(): void {
@@ -452,6 +457,18 @@ export class WalkInComponent implements OnInit {
   }
 
   async saveWalkIn(): Promise<void> {
+    const operationalDate = this.operationalDateService.operationalDate();
+    if (!operationalDate) {
+      this.toastService.addToast({
+        title: 'Fecha operativa',
+        message: 'No se puede registrar el Walk In sin una fecha operativa válida.',
+        type: 'warning'
+      });
+      return;
+    }
+
+    this.applyOperationalDate(operationalDate);
+
     if (this.stayForm.invalid || !this.selectedRoom() || this.guests().length === 0 || !this.isValidDateRange()) {
       this.stayForm.markAllAsTouched();
       this.toastService.addToast({
@@ -467,6 +484,18 @@ export class WalkInComponent implements OnInit {
     });
 
     if (!operationAllowed) {
+      return;
+    }
+
+    // La validación operativa refresca el contexto; se vuelve a sincronizar por si
+    // la fecha cambió mientras el formulario permanecía abierto.
+    this.applyOperationalDate(this.operationalDateService.operationalDate());
+    if (this.stayForm.invalid || !this.isValidDateRange()) {
+      this.toastService.addToast({
+        title: 'Fecha operativa actualizada',
+        message: 'Revise la fecha de salida antes de guardar el Walk In.',
+        type: 'warning'
+      });
       return;
     }
 
@@ -563,6 +592,11 @@ export class WalkInComponent implements OnInit {
     return term ? `Resultados para "${term}"` : 'Tarifas registradas';
   }
 
+  minimumDepartureDate(): string {
+    const entryDate = this.stayForm.controls.fechaEntrada.value;
+    return entryDate ? this.addDaysToInputDate(entryDate, 1) : '';
+  }
+
   private patchRoom(): void {
     const room = this.selectedRoom();
     if (!room) return;
@@ -595,6 +629,58 @@ export class WalkInComponent implements OnInit {
         this.applyCatalogDefaults();
         this.isCatalogLoading  = false;
       });
+  }
+
+  private loadOperationalDate(): void {
+    this.isOperationalDateLoading = true;
+    this.operationalDateError = '';
+
+    this.operationalDateService
+      .ensureLoaded()
+      .pipe(
+        finalize(() => {
+          this.isOperationalDateLoading = false;
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (operationalDate) => this.applyOperationalDate(operationalDate),
+        error: () => {
+          this.operationalDateError = 'No fue posible obtener la fecha operativa.';
+        }
+      });
+  }
+
+  private applyOperationalDate(operationalDate: string): void {
+    const normalizedDate = this.normalizeOperationalDate(operationalDate);
+    if (!normalizedDate) return;
+
+    const previousEntry = this.stayForm.controls.fechaEntrada.value;
+    const currentExit = this.stayForm.controls.fechaSalida.value;
+    const previousDefaultExit = previousEntry ? this.addDaysToInputDate(previousEntry, 1) : '';
+    const defaultExit = this.addDaysToInputDate(normalizedDate, 1);
+    const shouldUseDefaultExit = !currentExit || currentExit === previousDefaultExit || currentExit <= normalizedDate;
+
+    this.stayForm.patchValue(
+      {
+        fechaEntrada: normalizedDate,
+        fechaSalida: shouldUseDefaultExit ? defaultExit : currentExit
+      },
+      { emitEvent: false }
+    );
+    this.updateNights();
+    this.persistDraft();
+  }
+
+  private normalizeOperationalDate(value: string): string {
+    const text = this.safeString(value);
+    const slashMatch = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (slashMatch) {
+      return `${slashMatch[3]}-${slashMatch[2].padStart(2, '0')}-${slashMatch[1].padStart(2, '0')}`;
+    }
+
+    const inputMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return inputMatch ? `${inputMatch[1]}-${inputMatch[2]}-${inputMatch[3]}` : '';
   }
 
   private bindStayCalculations(): void {
@@ -1014,7 +1100,8 @@ export class WalkInComponent implements OnInit {
   }
 
   private isValidDateRange(): boolean {
-    return this.stayForm.controls.noches.value > 0;
+    const expectedEntry = this.normalizeOperationalDate(this.operationalDateService.operationalDate());
+    return !!expectedEntry && this.stayForm.controls.fechaEntrada.value === expectedEntry && this.stayForm.controls.noches.value > 0;
   }
 
   private isNoMealPlan(codPlan: string): boolean {
@@ -1036,9 +1123,12 @@ export class WalkInComponent implements OnInit {
     return new Date().toISOString().substring(0, 10);
   }
 
-  private addDaysAsInputDate(days: number): string {
-    const date = new Date();
+  private addDaysToInputDate(inputDate: string, days: number): string {
+    const date = new Date(`${inputDate}T00:00:00`);
     date.setDate(date.getDate() + days);
-    return date.toISOString().substring(0, 10);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 }

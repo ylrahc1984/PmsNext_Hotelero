@@ -2466,6 +2466,7 @@ export class RoomStayManagementComponent implements OnInit {
 
           this.applyDepartureChange();
           this.closeActionModal();
+          this.loadRoomStay();
         },
         error: (error) => {
           console.error('No se pudo actualizar la fecha de salida.', error);

@@ -33,12 +33,14 @@
             <div class="row g-2">
               <div class="col-md-4">
                 <label class="form-label">Fecha Entrada <span class="text-danger">*</span></label>
-                <input type="date" class="form-control" formControlName="fechaEntrada" [class.is-invalid]="isStayFieldInvalid('fechaEntrada')">
+                <input type="date" class="form-control" formControlName="fechaEntrada" readonly [class.is-invalid]="isStayFieldInvalid('fechaEntrada')">
+                <small class="text-muted" *ngIf="isOperationalDateLoading">Consultando fecha operativa...</small>
+                <small class="text-danger" *ngIf="operationalDateError">{{ operationalDateError }}</small>
                 <div class="invalid-feedback">{{ getFieldError(stayForm.controls.fechaEntrada) }}</div>
               </div>
               <div class="col-md-4">
                 <label class="form-label">Fecha Salida <span class="text-danger">*</span></label>
-                <input type="date" class="form-control" formControlName="fechaSalida" [class.is-invalid]="isStayFieldInvalid('fechaSalida')">
+                <input type="date" class="form-control" formControlName="fechaSalida" [min]="minimumDepartureDate()" [class.is-invalid]="isStayFieldInvalid('fechaSalida')">
                 <div class="invalid-feedback">{{ getFieldError(stayForm.controls.fechaSalida) }}</div>
               </div>
               <div class="col-md-4">

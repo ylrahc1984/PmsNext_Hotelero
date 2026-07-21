@@ -110,14 +110,32 @@
           <label class="field">
             <span>Fecha ingreso <b>*</b></span>
             <div class="date-control">
-              <input type="date" class="form-control date-input--compact" formControlName="fecIngreso">
+              <input
+                type="date"
+                class="form-control date-input--compact"
+                formControlName="fecIngreso"
+                [min]="operationalDateForInput()"
+                [class.is-invalid]="reservaForm.controls.fecIngreso.touched && (reservaForm.controls.fecIngreso.invalid || reservaForm.hasError('entryBeforeOperationalDate'))"
+              >
             </div>
+            <small class="text-danger" *ngIf="reservaForm.controls.fecIngreso.touched && reservaForm.hasError('entryBeforeOperationalDate')">
+              La fecha de ingreso no puede ser menor a la fecha operativa {{ operationalDate() }}.
+            </small>
           </label>
           <label class="field">
             <span>Fecha salida <b>*</b></span>
             <div class="date-control">
-              <input type="date" class="form-control date-input--compact" formControlName="fecSalida">
+              <input
+                type="date"
+                class="form-control date-input--compact"
+                formControlName="fecSalida"
+                [min]="minimumDepartureDate()"
+                [class.is-invalid]="reservaForm.controls.fecSalida.touched && (reservaForm.controls.fecSalida.invalid || reservaForm.hasError('invalidStayDateRange'))"
+              >
             </div>
+            <small class="text-danger" *ngIf="reservaForm.controls.fecSalida.touched && reservaForm.hasError('invalidStayDateRange')">
+              La fecha de salida debe ser posterior a la fecha de ingreso.
+            </small>
           </label>
 
           <div class="metric-card">
@@ -248,9 +266,10 @@
               <button type="button" class="btn btn-light" (click)="habitacionForm.reset({ categoria: roomCategories[0]?.codigo || '', tipo: roomTypes[0]?.codigo || '', cantidad: 1, pax: roomTypes[0]?.pax || 0, precio: 200, cantidadNinos: 0, precioNino: 0, total: 0 })">
                 Cancelar
               </button>
-              <button type="button" class="btn btn-primary" (click)="agregarHabitacion()">
-                <i class="bi bi-plus-lg"></i>
-                {{ editingRoomIndex() === null ? 'Agregar a la reserva' : 'Actualizar habitación' }}
+              <button type="button" class="btn btn-primary" (click)="agregarHabitacion()" [disabled]="checkingRoomAvailability()">
+                <span class="spinner-border spinner-border-sm" *ngIf="checkingRoomAvailability()"></span>
+                <i class="bi bi-plus-lg" *ngIf="!checkingRoomAvailability()"></i>
+                {{ checkingRoomAvailability() ? 'Verificando disponibilidad...' : (editingRoomIndex() === null ? 'Agregar a la reserva' : 'Actualizar habitación') }}
               </button>
             </div>
           </div>
