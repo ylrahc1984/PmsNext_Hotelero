@@ -22,6 +22,7 @@ import {
 } from '../services/nota-pedido-restaurante.service';
 import { ProductosMenuService } from '../services/productos-menu.service';
 import { RestaurantOperationContextService } from '../services/restaurant-operation-context.service';
+import { normalizeRestaurantDateDDMMYYYY } from '../services/restaurant-date.util';
 import { RestaurantCartStore } from '../store/restaurant-cart.store';
 
 type PosTab = 'categorias' | 'productos' | 'pedido';
@@ -542,17 +543,6 @@ export class RestaurantPosProductosComponent implements OnInit {
   }
 
   private normalizeDateDDMMYYYY(value: unknown): string {
-    const normalized = typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '';
-    const slashDate = normalized.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-    if (slashDate) {
-      return `${slashDate[1].padStart(2, '0')}/${slashDate[2].padStart(2, '0')}/${slashDate[3]}`;
-    }
-
-    const isoDate = normalized.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-    if (isoDate) {
-      return `${isoDate[3].padStart(2, '0')}/${isoDate[2].padStart(2, '0')}/${isoDate[1]}`;
-    }
-
-    return normalized;
+    return normalizeRestaurantDateDDMMYYYY(value);
   }
 }

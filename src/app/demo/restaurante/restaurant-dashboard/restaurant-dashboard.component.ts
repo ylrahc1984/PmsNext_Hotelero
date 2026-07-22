@@ -17,6 +17,7 @@ import {
 } from '../models/restaurant-operacion.models';
 import { RestaurantDashboardService } from './restaurant-dashboard.service';
 import { RestaurantOperationContextService } from '../services/restaurant-operation-context.service';
+import { normalizeRestaurantDateDDMMYYYY } from '../services/restaurant-date.util';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 
 interface RestaurantKpi {
@@ -453,18 +454,7 @@ export class RestaurantDashboardComponent implements OnInit {
   }
 
   private normalizeDateDDMMYYYY(value: unknown): string {
-    const normalized = this.normalizeText(value);
-    const slashDate = normalized.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-    if (slashDate) {
-      return `${slashDate[1].padStart(2, '0')}/${slashDate[2].padStart(2, '0')}/${slashDate[3]}`;
-    }
-
-    const isoDate = normalized.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-    if (isoDate) {
-      return `${isoDate[3].padStart(2, '0')}/${isoDate[2].padStart(2, '0')}/${isoDate[1]}`;
-    }
-
-    return normalized;
+    return normalizeRestaurantDateDDMMYYYY(value);
   }
 
   private getTodayDisplayDate(): string {

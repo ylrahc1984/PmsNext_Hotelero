@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { environment } from 'src/environments/environment';
+import { normalizeRestaurantDateDDMMYYYY } from './restaurant-date.util';
 
 export interface NotaPedidoRestauranteDetalleRequest {
   codConsumo: string;
@@ -437,17 +438,6 @@ export class NotaPedidoRestauranteService {
   }
 
   private normalizeProceso91Fecha(value: string): string {
-    const normalized = (value || '').trim();
-    const slashDate = normalized.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-    if (slashDate) {
-      return `${slashDate[1].padStart(2, '0')}/${slashDate[2].padStart(2, '0')}/${slashDate[3]}`;
-    }
-
-    const isoDate = normalized.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-    if (isoDate) {
-      return `${isoDate[3].padStart(2, '0')}/${isoDate[2].padStart(2, '0')}/${isoDate[1]}`;
-    }
-
-    return normalized;
+    return normalizeRestaurantDateDDMMYYYY(value);
   }
 }
