@@ -267,6 +267,20 @@
   color: rgba(255, 255, 255, 0.62);
 }
 
+// Chrome aplica un fondo claro propio cuando completa credenciales guardadas.
+// Forzamos el mismo tratamiento oscuro del formulario para evitar campos blancos
+// o texto invisible sin desactivar el autocompletado del navegador.
+.form-field input:-webkit-autofill,
+.form-field input:-webkit-autofill:hover,
+.form-field input:-webkit-autofill:focus,
+.form-field input:-webkit-autofill:active {
+  caret-color: var(--white);
+  -webkit-text-fill-color: var(--white) !important;
+  -webkit-box-shadow: 0 0 0 1000px #0d1c2c inset !important;
+  box-shadow: 0 0 0 1000px #0d1c2c inset !important;
+  transition: background-color 9999s ease-out 0s;
+}
+
 .form-field input:disabled,
 .btn-login:disabled {
   cursor: not-allowed;
