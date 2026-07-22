@@ -6,6 +6,7 @@ import { finalize } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
 import { AuthService } from 'src/app/core/services/auth.service';
+import { normalizePmsDateDDMMYYYY, parsePmsDate, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { BlockedRoom, BlockedRoomsService, CreateBlockedRoomRequest } from './services/blocked-rooms.service';
 
@@ -201,20 +202,7 @@ export class BlockedRoomsComponent implements OnInit {
   }
 
   formatearFecha(value: string): string {
-    if (!value) {
-      return '-';
-    }
-
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return value;
-    }
-
-    return new Intl.DateTimeFormat('es-CR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    }).format(date);
+    return normalizePmsDateDDMMYYYY(value) || '-';
   }
 
   trackByRoom(_: number, item: BlockedRoom): number {
@@ -297,7 +285,9 @@ export class BlockedRoomsComponent implements OnInit {
       return 'Debe seleccionar fecha inicial y fecha final.';
     }
 
-    if (new Date(this.form.endDate) < new Date(this.form.startDate)) {
+    const startDate = parsePmsDate(this.form.startDate);
+    const endDate = parsePmsDate(this.form.endDate);
+    if (!startDate || !endDate || endDate.getTime() < startDate.getTime()) {
       return 'La fecha final no puede ser menor a la fecha inicial.';
     }
 
@@ -319,28 +309,11 @@ export class BlockedRoomsComponent implements OnInit {
   }
 
   private toApiDate(value: string): string {
-    if (!value) {
-      return '';
-    }
-
-    return `${value}T00:00:00`;
+    return normalizePmsDateDDMMYYYY(value);
   }
 
   private toDateInputValue(value: string): string {
-    if (!value) {
-      return '';
-    }
-
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return '';
-    }
-
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-
-    return `${year}-${month}-${day}`;
+    return toPmsDateInputValue(value);
   }
 
   private createDefaultForm(): BlockedRoomForm {
@@ -352,8 +325,8 @@ export class BlockedRoomsComponent implements OnInit {
       roomNumber: null,
       categoryCode: '',
       roomDescription: '',
-      startDate: this.toDateInputValue(today.toISOString()),
-      endDate: this.toDateInputValue(tomorrow.toISOString()),
+      startDate: this.toDateInputValue(normalizePmsDateDDMMYYYY(today)),
+      endDate: this.toDateInputValue(normalizePmsDateDDMMYYYY(tomorrow)),
       description: '',
       observations: ''
     };

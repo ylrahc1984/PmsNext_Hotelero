@@ -1,4 +1,4 @@
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -6,6 +6,7 @@ import { catchError, distinctUntilChanged, finalize, forkJoin, of } from 'rxjs';
 import Swal from 'sweetalert2';
 
 import { AuthService } from 'src/app/core/services/auth.service';
+import { normalizePmsDateDDMMYYYY, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 import { FormaPago } from 'src/app/demo/administracion/forma-pago/forma-pago.models';
 import { FormaPagoService } from 'src/app/demo/administracion/forma-pago/forma-pago.service';
 import { MonedaService, MonedaUI } from 'src/app/demo/administracion/monedas/moneda.service';
@@ -44,7 +45,7 @@ interface MoneyCard {
 @Component({
   selector: 'app-reservation-prepayments',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, DatePipe],
+  imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './reservation-prepayments.component.html',
   styleUrls: ['./reservation-prepayments.component.scss']
 })
@@ -268,6 +269,10 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
     return item.numInterno || `${item.codRsv}-${item.nOperacion}-${item.fechaDepo}`;
   }
 
+  formatDate(value: string | null | undefined): string {
+    return normalizePmsDateDDMMYYYY(value) || 'N/D';
+  }
+
   private initializeModal(): void {
     this.resetForm();
     this.loadCatalogs();
@@ -394,7 +399,7 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
     }
 
     this.tipoCambioService
-      .fetchTipoCambio(this.form.controls.fechaDepo.value || this.todayIso(), this.reservationCurrency())
+      .fetchTipoCambio(normalizePmsDateDDMMYYYY(this.form.controls.fechaDepo.value || this.todayIso()), this.reservationCurrency())
       .pipe(catchError(() => of([])), takeUntilDestroyed(this.destroyRef))
       .subscribe((items) => {
         const rate = Number(items[0]?.venta ?? this.reserva?.tCambio ?? 0) || 1;
@@ -511,14 +516,7 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
   }
 
   private normalizeDateForInput(value: string): string {
-    if (!value) {
-      return this.todayIso();
-    }
-    if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
-      return value.slice(0, 10);
-    }
-    const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
-    return match ? `${match[3]}-${match[2]}-${match[1]}` : this.todayIso();
+    return toPmsDateInputValue(value) || this.todayIso();
   }
 
   private todayIso(): string {

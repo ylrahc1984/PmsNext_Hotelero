@@ -26,7 +26,7 @@
   <span class="reservation-block__popover" role="tooltip">
     <strong class="reservation-block__popover-name">{{ block.reservation.guestName }}</strong>
     <span class="reservation-block__popover-line">{{ block.reservation.status }} | {{ block.reservation.source }}</span>
-    <span class="reservation-block__popover-line">{{ block.reservation.startDate }} -> {{ block.reservation.endDate }}</span>
+    <span class="reservation-block__popover-line">{{ formatDate(block.reservation.startDate) }} -> {{ formatDate(block.reservation.endDate) }}</span>
     <span class="reservation-block__popover-hint" *ngIf="!block.reservation.isOperationalBlock">Click para abrir detalle operativo</span>
     <span class="reservation-block__popover-hint" *ngIf="block.reservation.isOperationalBlock">Bloqueo operativo no asociado a una reserva</span>
   </span>

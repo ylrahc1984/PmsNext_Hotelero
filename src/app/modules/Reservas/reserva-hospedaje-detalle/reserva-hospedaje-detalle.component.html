@@ -56,12 +56,12 @@
           <div>
             <i class="bi bi-box-arrow-in-right"></i>
             <span>Ingreso</span>
-            <strong>{{ (r.fecIngresa || r.fecIngreso) | date:'dd/MM/yyyy' }}</strong>
+            <strong>{{ formatDate(r.fecIngresa || r.fecIngreso) }}</strong>
           </div>
           <div>
             <i class="bi bi-box-arrow-right"></i>
             <span>Salida</span>
-            <strong>{{ r.fecSalida | date:'dd/MM/yyyy' }}</strong>
+            <strong>{{ formatDate(r.fecSalida) }}</strong>
           </div>
           <div>
             <i class="bi bi-moon-stars"></i>
@@ -129,7 +129,7 @@
             <div><span>Plan</span><strong>{{ r.codPlan || 'N/D' }}<ng-container *ngIf="r.planAlimenticio"> - {{ r.planAlimenticio }}</ng-container></strong></div>
             <div><span>Moneda</span><strong>{{ moneda() }}</strong></div>
             <div><span>Operador</span><strong>{{ r.operador || 'N/D' }}</strong></div>
-            <div><span>Creacion</span><strong>{{ r.fecCreacion | date:'dd/MM/yyyy' }}</strong></div>
+            <div><span>Creacion</span><strong>{{ formatDate(r.fecCreacion) }}</strong></div>
             <div><span>Directo</span><strong>{{ (r.directo || '').toUpperCase() === 'S' ? 'Si' : 'No' }}</strong></div>
           </div>
 
@@ -285,10 +285,10 @@
             <h3>Fechas de control</h3>
           </div>
           <div class="timeline-list">
-            <div><span>Creacion</span><strong>{{ r.fecCreacion | date:'dd/MM/yyyy' }}</strong></div>
-            <div><span>Confirmacion</span><strong>{{ r.fecConfirma | date:'dd/MM/yyyy' }}</strong></div>
-            <div><span>Prepago</span><strong>{{ r.fecPrepago | date:'dd/MM/yyyy' }}</strong></div>
-            <div><span>Anulada</span><strong>{{ r.fecAnulada | date:'dd/MM/yyyy' }}</strong></div>
+            <div><span>Creacion</span><strong>{{ formatDate(r.fecCreacion) }}</strong></div>
+            <div><span>Confirmacion</span><strong>{{ formatDate(r.fecConfirma) }}</strong></div>
+            <div><span>Prepago</span><strong>{{ formatDate(r.fecPrepago) }}</strong></div>
+            <div><span>Anulada</span><strong>{{ formatDate(r.fecAnulada) }}</strong></div>
           </div>
         </section>
       </aside>

@@ -69,7 +69,7 @@
     <div>
       <span>Reserva seleccionada</span>
       <strong>{{ selected.reservationCode }}</strong>
-      <small>{{ selected.guestName }} | Cat. {{ selected.categoryCode || 'N/D' }} | {{ selected.startDate }} - {{ selected.endDate }}</small>
+      <small>{{ selected.guestName }} | Cat. {{ selected.categoryCode || 'N/D' }} | {{ formatDisplayDate(selected.startDate) }} - {{ formatDisplayDate(selected.endDate) }}</small>
     </div>
     <button type="button" class="assignment-state__clear" (click)="clearSelectedReservation()" [disabled]="isAssigningRoom">
       <i class="feather icon-x"></i>
@@ -81,7 +81,7 @@
     <div>
       <span>Reserva temporal seleccionada</span>
       <strong>{{ selectedTray.reservation.reservationCode || selectedTray.reservation.guestName }}</strong>
-      <small>{{ selectedTray.reservation.guestName }} | Hab. anterior {{ selectedTray.originalRoomNumber }} | {{ selectedTray.reservation.startDate }} - {{ selectedTray.reservation.endDate }}</small>
+      <small>{{ selectedTray.reservation.guestName }} | Hab. anterior {{ selectedTray.originalRoomNumber }} | {{ formatDisplayDate(selectedTray.reservation.startDate) }} - {{ formatDisplayDate(selectedTray.reservation.endDate) }}</small>
     </div>
     <div class="assignment-state__actions">
       <button type="button" class="assignment-state__restore" (click)="restoreReservationToOriginalRoom(selectedTray.reservation.id)" [disabled]="isReservationProcessing(selectedTray.reservation.id)">

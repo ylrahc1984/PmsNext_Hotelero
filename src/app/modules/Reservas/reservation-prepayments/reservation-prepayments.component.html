@@ -11,8 +11,8 @@
             <span><strong>Reserva</strong> {{ reserva.codReserva }}</span>
             <span><strong>Agencia</strong> {{ reserva.agencia || reserva.codAgencia }}</span>
             <span><strong>Cliente</strong> {{ reserva.cliente || 'N/D' }}</span>
-            <span><strong>Ingreso</strong> {{ reserva.ingreso | date:'dd/MM/yyyy' }}</span>
-            <span><strong>Salida</strong> {{ reserva.salida | date:'dd/MM/yyyy' }}</span>
+            <span><strong>Ingreso</strong> {{ formatDate(reserva.ingreso) }}</span>
+            <span><strong>Salida</strong> {{ formatDate(reserva.salida) }}</span>
             <span><strong>Estado</strong> {{ reserva.estado }}</span>
           </div>
         </div>
@@ -63,7 +63,7 @@
                 </thead>
                 <tbody>
                   <tr *ngFor="let item of prepayments(); trackBy: trackByNumInterno">
-                    <td>{{ item.fechaDepo | date:'dd/MM/yyyy' }}</td>
+                    <td>{{ formatDate(item.fechaDepo) }}</td>
                     <td>
                       <strong>{{ item.concepto || 'Prepago' }}</strong>
                     </td>

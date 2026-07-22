@@ -119,7 +119,7 @@
               >
             </div>
             <small class="text-danger" *ngIf="reservaForm.controls.fecIngreso.touched && reservaForm.hasError('entryBeforeOperationalDate')">
-              La fecha de ingreso no puede ser menor a la fecha operativa {{ operationalDate() }}.
+              La fecha de ingreso no puede ser menor a la fecha operativa {{ displayDate(operationalDate()) }}.
             </small>
           </label>
           <label class="field">
@@ -566,8 +566,8 @@
                 <td>{{ tarifa.descripcion || 'N/D' }}</td>
                 <td>{{ tarifa.moneda || 'N/D' }}</td>
                 <td>
-                  <span>{{ tarifa.fechaInicial ? (tarifa.fechaInicial | date:'yyyy-MM-dd') : 'N/D' }}</span>
-                  <span *ngIf="tarifa.fechaFinal"> / {{ tarifa.fechaFinal | date:'yyyy-MM-dd' }}</span>
+                  <span>{{ displayDate(tarifa.fechaInicial) }}</span>
+                  <span *ngIf="tarifa.fechaFinal"> / {{ displayDate(tarifa.fechaFinal) }}</span>
                 </td>
                 <td>{{ tarifa.operador || 'N/D' }}</td>
                 <td class="text-center">

@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map, of, switchMap } from 'rxjs';
 
+import { normalizePmsDateDDMMYYYY } from 'src/app/core/utils/pms-date.util';
 import { environment } from 'src/environments/environment';
 
 export interface RoomStayApiGuest {
@@ -408,8 +409,8 @@ export class RoomStayManagementService {
 
   getAvailableRooms(fechaIng: string, fechaSal: string, categoria: string): Observable<RoomAvailabilityApiRoom[]> {
     const params = new HttpParams()
-      .set('fechaIng', this.cleanParam(fechaIng))
-      .set('fechaSal', this.cleanParam(fechaSal))
+      .set('fechaIng', normalizePmsDateDDMMYYYY(fechaIng))
+      .set('fechaSal', normalizePmsDateDDMMYYYY(fechaSal))
       .set('categoria', this.cleanParam(categoria));
 
     return this.http
@@ -422,11 +423,19 @@ export class RoomStayManagementService {
   }
 
   changeDepartureDate(payload: DepartureDateChangePayload): Observable<unknown> {
-    return this.http.put<unknown>(this.departureDateChangeUrl, payload);
+    return this.http.put<unknown>(this.departureDateChangeUrl, {
+      ...payload,
+      fechaSalida: normalizePmsDateDDMMYYYY(payload.fechaSalida)
+    });
   }
 
   checkoutRoom(payload: RoomCheckoutPayload): Observable<RoomCheckoutResponse> {
-    return this.http.post<RoomCheckoutResponse>(this.roomCheckoutUrl, payload);
+    return this.http
+      .post<RoomCheckoutResponse>(this.roomCheckoutUrl, {
+        ...payload,
+        fecCheckout: normalizePmsDateDDMMYYYY(payload.fecCheckout)
+      })
+      .pipe(map((response) => ({ ...response, fecCheckout: normalizePmsDateDDMMYYYY(response.fecCheckout) })));
   }
 
   getPointOfSalePaymentMethods(puntoVenta = 'PF'): Observable<PointOfSalePaymentMethodApi[]> {
@@ -461,8 +470,17 @@ export class RoomStayManagementService {
   }
 
   createRoomCharge(payload: RoomChargePayload): Observable<unknown> {
+    const normalizedPayload: RoomChargePayload = {
+      ...payload,
+      fecha: normalizePmsDateDDMMYYYY(payload.fecha),
+      detalle: payload.detalle.map((item) => ({
+        ...item,
+        fecha: normalizePmsDateDDMMYYYY(item.fecha)
+      }))
+    };
+
     return this.http
-      .post(this.roomChargeUrl, payload, { responseType: 'text' })
+      .post(this.roomChargeUrl, normalizedPayload, { responseType: 'text' })
       .pipe(map((response) => this.parseTextResponse(response)));
   }
 
@@ -479,20 +497,39 @@ export class RoomStayManagementService {
       .get<RoomChargeLookupResponse>(`${this.roomChargeLookupUrl}/${numero}`)
       .pipe(
         map((response) => ({
-          encabezado: response.encabezado,
-          detalles: Array.isArray(response.detalles) ? response.detalles : []
+          encabezado: {
+            ...response.encabezado,
+            fecha: normalizePmsDateDDMMYYYY(response.encabezado?.fecha)
+          },
+          detalles: Array.isArray(response.detalles)
+            ? response.detalles.map((item) => ({ ...item, fecha: normalizePmsDateDDMMYYYY(item.fecha) }))
+            : []
         }))
       );
   }
 
   createRoomingListGuest(payload: RoomingListUpdatePayload): Observable<unknown> {
+    const normalizedPayload = {
+      ...payload,
+      fecNac: normalizePmsDateDDMMYYYY(payload.fecNac)
+    };
+
     return this.http
-      .post(this.roomingListUpdateUrl, payload, { responseType: 'text' })
+      .post(this.roomingListUpdateUrl, normalizedPayload, { responseType: 'text' })
       .pipe(map((response) => this.parseTextResponse(response)));
   }
 
   invoiceRoom(payload: RoomInvoicePayload): Observable<unknown> {
-    return this.http.post<unknown>(this.roomInvoiceUrl, payload);
+    return this.http.post<unknown>(this.roomInvoiceUrl, {
+      ...payload,
+      fechaDocu: normalizePmsDateDDMMYYYY(payload.fechaDocu),
+      fechaPago: normalizePmsDateDDMMYYYY(payload.fechaPago),
+      fechaVen: normalizePmsDateDDMMYYYY(payload.fechaVen),
+      detDocumento: payload.detDocumento.map((item) => ({
+        ...item,
+        fecha: normalizePmsDateDDMMYYYY(item.fecha)
+      }))
+    });
   }
 
   private getRoomStayDetail(baseStay: RoomStayApiData | null, fallbackCodReserva?: string): Observable<RoomStayApiData | null> {
@@ -524,10 +561,27 @@ export class RoomStayManagementService {
     }
 
     if (this.isApiEnvelope(response)) {
-      return response.data ?? null;
+      return response.data ? this.normalizeStayDates(response.data) : null;
     }
 
-    return response;
+    return this.normalizeStayDates(response);
+  }
+
+  private normalizeStayDates(stay: RoomStayApiData): RoomStayApiData {
+    return {
+      ...stay,
+      fechaIng: normalizePmsDateDDMMYYYY(stay.fechaIng),
+      fechaSal: normalizePmsDateDDMMYYYY(stay.fechaSal),
+      roomingList: Array.isArray(stay.roomingList)
+        ? stay.roomingList.map((guest) => ({ ...guest, fecNaci: normalizePmsDateDDMMYYYY(guest.fecNaci) }))
+        : [],
+      cargosFolioMaster: Array.isArray(stay.cargosFolioMaster)
+        ? stay.cargosFolioMaster.map((charge) => ({ ...charge, fecCargo: normalizePmsDateDDMMYYYY(charge.fecCargo) }))
+        : [],
+      cargosExtras: Array.isArray(stay.cargosExtras)
+        ? stay.cargosExtras.map((charge) => ({ ...charge, fecCargo: normalizePmsDateDDMMYYYY(charge.fecCargo) }))
+        : []
+    };
   }
 
   private isApiEnvelope(response: RoomStayApiResponse | RoomStayApiData): response is RoomStayApiResponse {

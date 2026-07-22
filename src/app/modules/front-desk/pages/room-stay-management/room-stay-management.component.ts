@@ -10,6 +10,7 @@ import Swal from 'sweetalert2';
 
 import { AuthService } from 'src/app/core/services/auth.service';
 import { ToastService } from 'src/app/core/services/toast.service';
+import { normalizePmsDateDDMMYYYY, parsePmsDate, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 import { ClienteService, SelectOption } from 'src/app/demo/catalogos/agencias-comisionistas/cliente.service';
 import { MonedaService, MonedaUI } from 'src/app/demo/administracion/monedas/moneda.service';
 import { TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
@@ -841,14 +842,7 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   formatHeaderDate(date: string): string {
-    const [day, month, year] = date.split('/');
-
-    if (!day || !month || !year) {
-      return '-';
-    }
-
-    const monthName = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'][Number(month) - 1] ?? month;
-    return `${Number(day)} ${monthName} ${year}`;
+    return normalizePmsDateDDMMYYYY(date) || '-';
   }
 
   formatCurrency(amount: number): string {
@@ -2078,14 +2072,7 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   private formatApiDate(value: string | null | undefined): string {
-    const rawDate = this.cleanText(value).split(' ')[0];
-    const [day, month, year] = rawDate.split('/');
-
-    if (!day || !month || !year) {
-      return '';
-    }
-
-    return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+    return normalizePmsDateDDMMYYYY(value);
   }
 
   private cleanText(value: string | number | null | undefined): string {
@@ -2767,13 +2754,7 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   private normalizeInvoiceDetailDate(value: string | null | undefined, fallback: string): string {
-    const date = this.cleanText(value);
-
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(date)) {
-      return date;
-    }
-
-    return fallback;
+    return normalizePmsDateDDMMYYYY(value) || normalizePmsDateDDMMYYYY(fallback);
   }
 
   private applyRoomInvoiceAction(payload: RoomInvoicePayload): void {
@@ -2884,22 +2865,11 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   todayDisplayDate(): string {
-    const now      = new Date();
-    const day      = `${now.getDate()}`.padStart(2, '0');
-    const month    = `${now.getMonth() + 1}`.padStart(2, '0');
-    const year     = now.getFullYear();
-
-    return `${day}/${month}/${year}`;
+    return normalizePmsDateDDMMYYYY(new Date());
   }
 
   private toInputDate(date: string): string {
-    const [day, month, year] = date.split('/');
-
-    if (!day || !month || !year) {
-      return '';
-    }
-
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    return toPmsDateInputValue(date);
   }
 
   private fromInputDate(date: string): string {
@@ -2907,13 +2877,7 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   private formatInputDateForApi(date: string): string {
-    const [year, month, day] = date.split('-');
-
-    if (!year || !month || !day) {
-      return '';
-    }
-
-    return `${day}/${month}/${year}`;
+    return normalizePmsDateDDMMYYYY(date);
   }
 
   private escapeHtml(value: string | number | null | undefined): string {
@@ -2940,13 +2904,7 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   private parseDisplayDate(date: string): Date | null {
-    const [day, month, year] = date.split('/').map(Number);
-
-    if (!day || !month || !year) {
-      return null;
-    }
-
-    return new Date(year, month - 1, day);
+    return parsePmsDate(date);
   }
 
   private roundCurrency(amount: number): number {

@@ -6,6 +6,7 @@ import { Router, RouterModule } from '@angular/router';
 import { of } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
 
+import { normalizePmsDateDDMMYYYY, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 import {
   InHouseGuest,
   InHouseKpi,
@@ -286,31 +287,7 @@ export class InHouseGuestsComponent implements OnInit {
   }
 
   formatDisplayDate(value: string): string {
-    const normalized = value.trim();
-
-    if (!normalized) {
-      return '-';
-    }
-
-    const ddmmyyyy = normalized.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-    if (ddmmyyyy) {
-      return `${ddmmyyyy[1]}/${ddmmyyyy[2]}/${ddmmyyyy[3]}`;
-    }
-
-    const yyyymmdd = normalized.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (yyyymmdd) {
-      return `${yyyymmdd[3]}/${yyyymmdd[2]}/${yyyymmdd[1]}`;
-    }
-
-    const date = new Date(normalized);
-    if (!Number.isNaN(date.getTime())) {
-      const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const year = date.getFullYear();
-      return `${day}/${month}/${year}`;
-    }
-
-    return normalized;
+    return normalizePmsDateDDMMYYYY(value) || '-';
   }
 
   cambiarHabitacion(item: InHouseGuest): void {
@@ -449,6 +426,10 @@ export class InHouseGuestsComponent implements OnInit {
       return 'Hospedado';
     }
 
+    if (column === 'fechaIng' || column === 'fechaSal') {
+      return toPmsDateInputValue(guest[column]);
+    }
+
     const value = guest[column];
     return value == null ? '' : String(value);
   }
@@ -493,8 +474,8 @@ export class InHouseGuestsComponent implements OnInit {
     return {
       numHabita: this.toStringValue(guest.numHabita),
       paxIn: this.toStringValue(guest.paxIn),
-      fechaIng: this.toStringValue(guest.fechaIng),
-      fechaSal: this.toStringValue(guest.fechaSal),
+      fechaIng: normalizePmsDateDDMMYYYY(guest.fechaIng),
+      fechaSal: normalizePmsDateDDMMYYYY(guest.fechaSal),
       noches: Number(guest.noches) || 0,
       desayuno: this.toStringValue(guest.desayuno),
       media: this.toStringValue(guest.media),
@@ -545,19 +526,10 @@ export class InHouseGuestsComponent implements OnInit {
   }
 
   private formatDateInput(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return toPmsDateInputValue(date);
   }
 
   private formatDateApi(value: string): string {
-    const [year, month, day] = value.split('-');
-
-    if (!year || !month || !day) {
-      return value;
-    }
-
-    return `${day}/${month}/${year}`;
+    return normalizePmsDateDDMMYYYY(value);
   }
 }

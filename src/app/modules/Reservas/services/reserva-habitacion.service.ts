@@ -4,6 +4,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs';
 
+import { normalizePmsDateDDMMYYYY } from 'src/app/core/utils/pms-date.util';
 import { environment } from 'src/environments/environment';
 import { ReservaHabitacionDetalle, ReservaHabitacionRequest, ReservaHabitacionResponse } from '../interfaces/reserva-habitacion.interface';
 import {
@@ -56,22 +57,28 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
   private readonly categoryAvailabilityUrl = `${this.baseApiUrl}/reservas/disponibilidad-categoria`;
 
   createReserva(request: ReservaHabitacionRequest): Observable<ReservaHabitacionResponse> {
-    const requestSnapshot = JSON.parse(JSON.stringify(request)) as ReservaHabitacionRequest;
+    const normalizedRequest = this.normalizeReservationRequest(request);
+    const requestSnapshot = JSON.parse(JSON.stringify(normalizedRequest)) as ReservaHabitacionRequest;
     console.groupCollapsed('[Reservas] POST confirmar reserva');
     console.log('method', 'POST');
     console.log('url', this.apiUrl);
     console.log('body', requestSnapshot);
     console.groupEnd();
 
-    return this.http.post<ReservaHabitacionResponse>(this.apiUrl, request);
+    return this.http
+      .post<ReservaHabitacionResponse>(this.apiUrl, normalizedRequest)
+      .pipe(map((response) => this.normalizeReservationResponse(response)));
   }
 
   getReservaDetalle(codReserva: string): Observable<ReservaHabitacionDetalle> {
-    return this.http.get<ReservaHabitacionDetalle>(`${this.apiUrl}/${encodeURIComponent(codReserva.trim())}`);
+    return this.http
+      .get<ReservaHabitacionDetalle>(`${this.apiUrl}/${encodeURIComponent(codReserva.trim())}`)
+      .pipe(map((detalle) => this.normalizeReservationDetail(detalle)));
   }
 
   updateReserva(codReserva: string, request: ReservaHabitacionRequest): Observable<ReservaHabitacionResponse> {
-    const requestSnapshot = JSON.parse(JSON.stringify(request)) as ReservaHabitacionRequest;
+    const normalizedRequest = this.normalizeReservationRequest(request);
+    const requestSnapshot = JSON.parse(JSON.stringify(normalizedRequest)) as ReservaHabitacionRequest;
     const url = `${this.apiUrl}/${encodeURIComponent(codReserva.trim())}`;
     console.groupCollapsed('[Reservas] PUT actualizar reserva');
     console.log('method', 'PUT');
@@ -79,19 +86,32 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
     console.log('body', requestSnapshot);
     console.groupEnd();
 
-    return this.http.put<ReservaHabitacionResponse>(url, request);
+    return this.http
+      .put<ReservaHabitacionResponse>(url, normalizedRequest)
+      .pipe(map((response) => this.normalizeReservationResponse(response)));
   }
 
   consultarDisponibilidadCategoria(
     request: ReservaDisponibilidadCategoriaRequest
   ): Observable<ReservaDisponibilidadCategoriaResponse> {
-    return this.http.post<ReservaDisponibilidadCategoriaResponse>(this.categoryAvailabilityUrl, request);
+    return this.http
+      .post<ReservaDisponibilidadCategoriaResponse>(this.categoryAvailabilityUrl, {
+        ...request,
+        fechaIni: normalizePmsDateDDMMYYYY(request.fechaIni),
+        fechaSal: normalizePmsDateDDMMYYYY(request.fechaSal)
+      })
+      .pipe(
+        map((response) => ({
+          ...response,
+          data: (response.data ?? []).map((item) => ({ ...item, fecha: normalizePmsDateDDMMYYYY(item.fecha) }))
+        }))
+      );
   }
 
   anularReserva(codReserva: string, fecAnulada: string, operador: string, observaciones: string, procesa = 1): Observable<ReservaHabitacionResponse> {
     const url = `${this.apiUrl}/${encodeURIComponent(codReserva.trim())}`;
     const params = new HttpParams()
-      .set('fecAnulada', fecAnulada.trim())
+      .set('fecAnulada', normalizePmsDateDDMMYYYY(fecAnulada))
       .set('operador', operador.trim())
       .set('observaciones', observaciones.trim())
       .set('procesa', String(procesa));
@@ -99,10 +119,12 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
     console.groupCollapsed('[Reservas] DELETE anular reserva');
     console.log('method', 'DELETE');
     console.log('url', url);
-    console.log('query', { fecAnulada, operador, observaciones, procesa });
+    console.log('query', { fecAnulada: normalizePmsDateDDMMYYYY(fecAnulada), operador, observaciones, procesa });
     console.groupEnd();
 
-    return this.http.delete<ReservaHabitacionResponse>(url, { params });
+    return this.http
+      .delete<ReservaHabitacionResponse>(url, { params })
+      .pipe(map((response) => this.normalizeReservationResponse(response)));
   }
 
   cambiarEstadoReserva(codReserva: string, estado: string, operador: string): Observable<ReservaHabitacionResponse> {
@@ -137,8 +159,8 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
   consultarReservas(params: ReservaConsultaParams): Observable<ReservaConsultaPage> {
     let query = new HttpParams()
       .set('Proceso', '90')
-      .set('FecIngreso', params.fecIngreso)
-      .set('FecSalida', params.fecSalida)
+      .set('FecIngreso', normalizePmsDateDDMMYYYY(params.fecIngreso))
+      .set('FecSalida', normalizePmsDateDDMMYYYY(params.fecSalida))
       .set('Pagina', String(params.pagina))
       .set('TamanoPagina', String(params.tamanoPagina));
 
@@ -210,8 +232,8 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
         item.Observacion ??
         ''
       ).trim(),
-      ingreso: item.fecIngresa ?? '',
-      salida: item.fecSalida ?? '',
+      ingreso: normalizePmsDateDDMMYYYY(item.fecIngresa ?? ''),
+      salida: normalizePmsDateDDMMYYYY(item.fecSalida ?? ''),
       noches: Number(item.totNoches ?? 0),
       habitaciones: Number(item.nHab ?? 0),
       pax: Number(item.nPax ?? 0),
@@ -222,6 +244,39 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
       moneda: (item.moneda ?? '').trim(),
       tCambio: Number(item.tCambio ?? 0),
       operador: (item.operador ?? '').trim()
+    };
+  }
+
+  private normalizeReservationRequest(request: ReservaHabitacionRequest): ReservaHabitacionRequest {
+    return {
+      ...request,
+      fecIngreso: normalizePmsDateDDMMYYYY(request.fecIngreso),
+      fecSalida: normalizePmsDateDDMMYYYY(request.fecSalida),
+      fecCreacion: normalizePmsDateDDMMYYYY(request.fecCreacion),
+      fecConfirma: normalizePmsDateDDMMYYYY(request.fecConfirma),
+      fecPrepago: normalizePmsDateDDMMYYYY(request.fecPrepago),
+      fecAnulada: normalizePmsDateDDMMYYYY(request.fecAnulada)
+    };
+  }
+
+  private normalizeReservationDetail(detalle: ReservaHabitacionDetalle): ReservaHabitacionDetalle {
+    const fecIngreso = normalizePmsDateDDMMYYYY(detalle.fecIngreso || detalle.fecIngresa);
+    return {
+      ...detalle,
+      fecIngresa: fecIngreso,
+      fecIngreso,
+      fecSalida: normalizePmsDateDDMMYYYY(detalle.fecSalida),
+      fecCreacion: normalizePmsDateDDMMYYYY(detalle.fecCreacion),
+      fecConfirma: normalizePmsDateDDMMYYYY(detalle.fecConfirma),
+      fecPrepago: normalizePmsDateDDMMYYYY(detalle.fecPrepago),
+      fecAnulada: normalizePmsDateDDMMYYYY(detalle.fecAnulada)
+    };
+  }
+
+  private normalizeReservationResponse(response: ReservaHabitacionResponse): ReservaHabitacionResponse {
+    return {
+      ...response,
+      datos: response.datos ? this.normalizeReservationRequest(response.datos) : response.datos
     };
   }
 }

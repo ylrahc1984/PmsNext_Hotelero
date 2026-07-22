@@ -7,6 +7,7 @@ import Swal from 'sweetalert2';
 
 import { AuthService } from 'src/app/core/services/auth.service';
 import { CanDeactivateReservaCreate } from 'src/app/core/guards/can-deactivate-reserva-create.guard';
+import { normalizePmsDateDDMMYYYY } from 'src/app/core/utils/pms-date.util';
 import { RoomStatus, RoomType } from '../../interfaces/room-status.interface';
 import { CalendarGridComponent } from '../components/calendar-grid/calendar-grid.component';
 import { CalendarHeaderComponent } from '../components/calendar-header/calendar-header.component';
@@ -676,9 +677,8 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
     };
   }
 
-  private formatDisplayDate(isoDate: string): string {
-    const [year, month, day] = isoDate.split('-');
-    return year && month && day ? `${day}/${month}/${year}` : isoDate;
+  formatDisplayDate(isoDate: string): string {
+    return normalizePmsDateDDMMYYYY(isoDate) || isoDate;
   }
 
   private reloadCalendar(resetScroll = false): void {

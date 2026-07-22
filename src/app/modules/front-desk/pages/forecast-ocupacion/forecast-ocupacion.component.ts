@@ -8,6 +8,7 @@ import { catchError, finalize } from 'rxjs/operators';
 import { Empresa } from 'src/app/core/models/empresa.model';
 import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
 import { EmpresaService } from 'src/app/core/services/empresa.service';
+import { normalizePmsDateDDMMYYYY, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { RoomCategory } from '../../settings/room-categories/models/room-category.model';
 import { RoomCategoriesService } from '../../settings/room-categories/services/room-categories.service';
@@ -69,8 +70,8 @@ export class ForecastOcupacionComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
 
   hotel = '';
-  fechaInicial = new Date().toISOString().split('T')[0];
-  fechaFinal = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 15 dias despues
+  fechaInicial = toPmsDateInputValue(new Date());
+  fechaFinal = toPmsDateInputValue(new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)); // 15 dias despues
   tipoVista: 'ocupacion' | 'disponibilidad' = 'ocupacion';
   busqueda = '';
   pageSize = 10;
@@ -459,22 +460,11 @@ export class ForecastOcupacionComponent implements OnInit {
   }
 
   private formatDateApi(value: string): string {
-    const [year, month, day] = value.split('-');
-    return year && month && day ? `${day}/${month}/${year}` : value;
+    return normalizePmsDateDDMMYYYY(value);
   }
 
   private formatDisplayDate(value: string): string {
-    const date = new Date(value.replace(/\s+/g, ' '));
-
-    if (Number.isNaN(date.getTime())) {
-      return value;
-    }
-
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-
-    return `${day}/${month}/${year}`;
+    return normalizePmsDateDDMMYYYY(value) || value;
   }
 
   private formatChartDate(value: string): string {

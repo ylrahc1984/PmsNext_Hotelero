@@ -1,9 +1,10 @@
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
+import { normalizePmsDateDDMMYYYY } from 'src/app/core/utils/pms-date.util';
 import {
   ReservaHabitacionDetalle,
   ReservaHabitacionDetalleItem,
@@ -15,7 +16,7 @@ import { ReservaHabitacionService } from '../services/reserva-habitacion.service
 @Component({
   selector: 'app-reserva-hospedaje-detalle',
   standalone: true,
-  imports: [CommonModule, RouterModule, SharedModule, DatePipe],
+  imports: [CommonModule, RouterModule, SharedModule],
   templateUrl: './reserva-hospedaje-detalle.component.html',
   styleUrls: ['./reserva-hospedaje-detalle.component.scss']
 })
@@ -63,6 +64,10 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
 
   volver(): void {
     void this.router.navigate(['/reservas/consulta-reservas']);
+  }
+
+  formatDate(value: string | null | undefined): string {
+    return normalizePmsDateDDMMYYYY(value) || 'N/D';
   }
 
   editarReserva(): void {

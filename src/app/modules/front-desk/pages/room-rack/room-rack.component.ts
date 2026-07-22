@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
 import { OperationalAction } from 'src/app/core/models/operational-context.model';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { OperationalPolicyService } from 'src/app/core/services/operational-policy.service';
+import { normalizePmsDateDDMMYYYY, parsePmsDate, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { RoomRackNavigationState, RoomRackRoom } from './models/room-rack-room.model';
@@ -276,13 +277,7 @@ export class RoomRackComponent implements OnInit {
   }
 
   toIsoDate(value: string): string {
-    const date = this.parseDisplayDate(value);
-
-    if (!date) {
-      return '';
-    }
-
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    return toPmsDateInputValue(value);
   }
 
   actualizarVentana(): void {
@@ -477,38 +472,11 @@ export class RoomRackComponent implements OnInit {
   }
 
   private parseDisplayDate(value: string): Date | null {
-    const [dayRaw, monthRaw, yearRaw] = value.split('/');
-    const day = Number(dayRaw);
-    const month = Number(monthRaw);
-    const year = Number(yearRaw);
-    const date = new Date(year, month - 1, day);
-
-    if (
-      !Number.isInteger(day) ||
-      !Number.isInteger(month) ||
-      !Number.isInteger(year) ||
-      date.getFullYear() !== year ||
-      date.getMonth() !== month - 1 ||
-      date.getDate() !== day
-    ) {
-      return null;
-    }
-
-    return date;
+    return parsePmsDate(value);
   }
 
   private isoToDisplayDate(value: string): string {
-    if (!value) {
-      return '';
-    }
-
-    const [year, month, day] = value.split('-');
-
-    if (!year || !month || !day) {
-      return '';
-    }
-
-    return `${day}/${month}/${year}`;
+    return normalizePmsDateDDMMYYYY(value);
   }
 
   private cargarTipoCambio(): void {
@@ -620,10 +588,7 @@ export class RoomRackComponent implements OnInit {
   }
 
   private getTodayDisplayDate(): string {
-    const now = new Date();
-    const day = String(now.getDate()).padStart(2, '0');
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    return `${day}/${month}/${now.getFullYear()}`;
+    return normalizePmsDateDDMMYYYY(new Date());
   }
 
   private normalizeText(value: unknown): string {

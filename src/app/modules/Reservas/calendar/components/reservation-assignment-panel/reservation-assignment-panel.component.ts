@@ -5,6 +5,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { of } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
 
+import { normalizePmsDateDDMMYYYY } from 'src/app/core/utils/pms-date.util';
 import { CalendarAssignableReservation } from '../../interfaces/calendar.interface';
 import { CalendarService } from '../../services/calendar.service';
 
@@ -119,9 +120,7 @@ export class ReservationAssignmentPanelComponent implements OnChanges {
   }
 
   formatDate(value: string): string {
-    const isoDate = (value || '').trim().split('T')[0];
-    const [year, month, day] = isoDate.split('-');
-    return year && month && day ? `${day}/${month}/${year}` : value;
+    return normalizePmsDateDDMMYYYY(value) || 'N/D';
   }
 
   loadReservations(): void {

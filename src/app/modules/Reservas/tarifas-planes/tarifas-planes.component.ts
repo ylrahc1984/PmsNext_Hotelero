@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
 
 import { AuthService } from 'src/app/core/services/auth.service';
 import { ToastService } from 'src/app/core/services/toast.service';
+import { normalizePmsDateDDMMYYYY, parsePmsDate, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { TarifaReservaRequest, TarifaReservaResponse } from './models/tarifa-reserva.model';
 import { TarifaReservaService } from './services/tarifa-reserva.service';
@@ -258,20 +259,7 @@ export class TarifasPlanesComponent implements OnInit {
   }
 
   formatDate(value: string | null | undefined): string {
-    if (!value) {
-      return 'N/D';
-    }
-
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return 'N/D';
-    }
-
-    return new Intl.DateTimeFormat('es-CR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    }).format(date);
+    return normalizePmsDateDDMMYYYY(value) || 'N/D';
   }
 
   trackByCode(_: number, item: TarifaReservaResponse): string {
@@ -382,19 +370,7 @@ export class TarifasPlanesComponent implements OnInit {
   }
 
   private toDateInputValue(value: string | null | undefined): string {
-    if (!value) {
-      return '';
-    }
-
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return '';
-    }
-
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return toPmsDateInputValue(value);
   }
 
   private dateRangeValidator(control: AbstractControl): ValidationErrors | null {
@@ -405,7 +381,9 @@ export class TarifasPlanesComponent implements OnInit {
       return null;
     }
 
-    return new Date(fechaFin).getTime() < new Date(fechaInicial).getTime() ? { dateRange: true } : null;
+    const initialDate = parsePmsDate(fechaInicial);
+    const finalDate = parsePmsDate(fechaFin);
+    return initialDate && finalDate && finalDate.getTime() < initialDate.getTime() ? { dateRange: true } : null;
   }
 
   private handleError(message: string, error: unknown): void {

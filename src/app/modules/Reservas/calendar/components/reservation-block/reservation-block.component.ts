@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
+import { normalizePmsDateDDMMYYYY } from 'src/app/core/utils/pms-date.util';
 import { CalendarReservationBlockSelect, CalendarReservationBlockView } from '../../interfaces/calendar.interface';
 
 @Component({
@@ -16,6 +17,10 @@ export class ReservationBlockComponent {
   @Input() isGhost = false;
   @Output() select = new EventEmitter<CalendarReservationBlockSelect>();
   @Output() dragStart = new EventEmitter<{ block: CalendarReservationBlockView; event: PointerEvent }>();
+
+  formatDate(value: string): string {
+    return normalizePmsDateDDMMYYYY(value) || 'N/D';
+  }
 
   onSelect(event: MouseEvent): void {
     if (this.block.reservation.isOperationalBlock) {

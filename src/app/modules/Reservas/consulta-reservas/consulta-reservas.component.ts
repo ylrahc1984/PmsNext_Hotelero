@@ -1,4 +1,4 @@
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
@@ -7,6 +7,7 @@ import { EMPTY, catchError, debounceTime, distinctUntilChanged, finalize, firstV
 import Swal from 'sweetalert2';
 
 import { AuthService } from 'src/app/core/services/auth.service';
+import { normalizePmsDateDDMMYYYY, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { WalkInAgenciaOption } from 'src/app/modules/front-desk/walk-in/models/walk-in.model';
 import { WalkInService } from 'src/app/modules/front-desk/walk-in/services/walk-in.service';
@@ -32,7 +33,7 @@ type EstadoCambioReserva = 'WLT' | 'CCR';
 @Component({
   selector: 'app-consulta-reservas',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, SharedModule, DatePipe, ReservationPrepaymentsComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, SharedModule, ReservationPrepaymentsComponent],
   templateUrl: './consulta-reservas.component.html',
   styleUrls: ['./consulta-reservas.component.scss']
 })
@@ -170,7 +171,7 @@ export class ConsultaReservasComponent implements OnInit {
 
     const observaciones = String(result.value ?? '').trim();
     const operador = this.auth.getCurrentUser()?.usuario?.trim() || reserva.operador?.trim() || 'admin';
-    const fecAnulada = this.formatDateForApi(new Date());
+    const fecAnulada = normalizePmsDateDDMMYYYY(new Date());
     this.cancellingReserva.set(codReserva);
 
     void Swal.fire({
@@ -472,6 +473,10 @@ export class ConsultaReservasComponent implements OnInit {
     return item.codigo ?? '';
   }
 
+  formatDate(value: string | null | undefined): string {
+    return normalizePmsDateDDMMYYYY(value) || 'N/D';
+  }
+
   private loadReservas(): void {
     const filtro = this.filtro();
     const fechaInicio = this.normalizeDateForApi(filtro.fechaInicio);
@@ -524,38 +529,13 @@ export class ConsultaReservasComponent implements OnInit {
     salida.setDate(today.getDate() + 2);
 
     return {
-      inicio: this.formatDateForInput(today),
-      salida: this.formatDateForInput(salida)
+      inicio: toPmsDateInputValue(today),
+      salida: toPmsDateInputValue(salida)
     };
   }
 
   private normalizeDateForApi(value: string): string {
-    const text = value.trim();
-    if (!text) {
-      return '';
-    }
-
-    const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
-    if (isoMatch) {
-      return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
-    }
-
-    const apiMatch = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text);
-    return apiMatch ? text : '';
-  }
-
-  private formatDateForInput(date: Date): string {
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${year}-${month}-${day}`;
-  }
-
-  private formatDateForApi(date: Date): string {
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
+    return normalizePmsDateDDMMYYYY(value);
   }
 
   private normalizeEstadoCode(estado: string | null | undefined): string {

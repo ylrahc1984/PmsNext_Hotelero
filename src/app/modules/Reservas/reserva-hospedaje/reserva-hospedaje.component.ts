@@ -20,6 +20,7 @@ import Swal from 'sweetalert2';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { OperationalDateService } from 'src/app/core/services/operational-date.service';
 import { ToastService } from 'src/app/core/services/toast.service';
+import { normalizePmsDateDDMMYYYY, parsePmsDate, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 import { WalkInAgenciaOption, WalkInAgenciaPage, WalkInOption, WalkInTarifaOption } from 'src/app/modules/front-desk/walk-in/models/walk-in.model';
 import { WalkInService } from 'src/app/modules/front-desk/walk-in/services/walk-in.service';
 import { MealPlan } from 'src/app/modules/front-desk/settings/meal-plans/models/meal-plan.model';
@@ -451,13 +452,11 @@ export class ReservaHospedajeComponent implements OnInit {
   }
 
   private formatAvailabilityDate(value: string): string {
-    const isoDate = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
-    if (isoDate) {
-      return `${isoDate[3]}/${isoDate[2]}/${isoDate[1]}`;
-    }
+    return normalizePmsDateDDMMYYYY(value) || value;
+  }
 
-    const date = this.parseDateValue(value);
-    return date ? this.formatDate(date) : value;
+  displayDate(value: string | null | undefined): string {
+    return normalizePmsDateDDMMYYYY(value) || 'N/D';
   }
 
   editarHabitacion(index: number): void {
@@ -1085,8 +1084,8 @@ export class ReservaHospedajeComponent implements OnInit {
 
   private buildConfirmReservationHtml(): string {
     const agencia = this.escapeHtml(this.agenciaSearchControl.value || this.reservaForm.controls.codAgencia.value || 'Sin agencia');
-    const ingreso = this.escapeHtml(this.reservaForm.controls.fecIngreso.value || '');
-    const salida = this.escapeHtml(this.reservaForm.controls.fecSalida.value || '');
+    const ingreso = this.escapeHtml(this.displayDate(this.reservaForm.controls.fecIngreso.value));
+    const salida = this.escapeHtml(this.displayDate(this.reservaForm.controls.fecSalida.value));
     const moneda = this.escapeHtml(this.reservaForm.controls.moneda.value || 'USD');
 
     return `
@@ -1915,38 +1914,18 @@ export class ReservaHospedajeComponent implements OnInit {
   }
 
   private toInputDate(value: string): string {
-    const date = this.parseDateValue(value);
-    return date ? this.formatDateForInput(date) : '';
+    return toPmsDateInputValue(value);
   }
 
   private formatDateForInput(date: Date): string {
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${date.getFullYear()}-${month}-${day}`;
+    return toPmsDateInputValue(date);
   }
 
   private formatDate(date: Date): string {
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    return `${day}/${month}/${date.getFullYear()}`;
+    return normalizePmsDateDDMMYYYY(date);
   }
 
   private parseDateValue(value: string): Date | null {
-    const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-    if (isoMatch) {
-      return new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]));
-    }
-
-    const parts = value.split('/');
-    if (parts.length !== 3) {
-      return null;
-    }
-
-    const [day, month, year] = parts.map(Number);
-    if (!day || !month || !year) {
-      return null;
-    }
-
-    return new Date(year, month - 1, day);
+    return parsePmsDate(value);
   }
 }

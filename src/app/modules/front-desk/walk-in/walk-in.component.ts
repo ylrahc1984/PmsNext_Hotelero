@@ -12,6 +12,7 @@ import { AuthService } from 'src/app/core/services/auth.service';
 import { OperationalDateService } from 'src/app/core/services/operational-date.service';
 import { OperationalPolicyService } from 'src/app/core/services/operational-policy.service';
 import { ToastService } from 'src/app/core/services/toast.service';
+import { normalizePmsDateDDMMYYYY, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { PaxType } from '../settings/pax-types/models/pax-type.model';
 import { Nationality } from '../settings/nationalities/models/nationality.model';
@@ -673,14 +674,7 @@ export class WalkInComponent implements OnInit {
   }
 
   private normalizeOperationalDate(value: string): string {
-    const text = this.safeString(value);
-    const slashMatch = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-    if (slashMatch) {
-      return `${slashMatch[3]}-${slashMatch[2].padStart(2, '0')}-${slashMatch[1].padStart(2, '0')}`;
-    }
-
-    const inputMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    return inputMatch ? `${inputMatch[1]}-${inputMatch[2]}-${inputMatch[3]}` : '';
+    return toPmsDateInputValue(value);
   }
 
   private bindStayCalculations(): void {
@@ -1026,26 +1020,11 @@ export class WalkInComponent implements OnInit {
   }
 
   private formatDateForApi(value: unknown): string {
-    const text = this.safeString(value);
-    if (!text) return '';
+    return normalizePmsDateDDMMYYYY(value);
+  }
 
-    const isoMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(text);
-    if (isoMatch) {
-      return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
-    }
-
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(text)) {
-      return text;
-    }
-
-    const date = value instanceof Date ? value : new Date(text);
-    if (Number.isNaN(date.getTime())) {
-      return text;
-    }
-
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    return `${day}/${month}/${date.getFullYear()}`;
+  displayDate(value: string | null | undefined): string {
+    return normalizePmsDateDDMMYYYY(value) || 'N/D';
   }
 
   private buildAgenciaLabel(agencia: WalkInAgenciaOption): string {
@@ -1120,7 +1099,7 @@ export class WalkInComponent implements OnInit {
   }
 
   private todayAsInputDate(): string {
-    return new Date().toISOString().substring(0, 10);
+    return toPmsDateInputValue(new Date());
   }
 
   private addDaysToInputDate(inputDate: string, days: number): string {

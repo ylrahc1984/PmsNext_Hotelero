@@ -124,8 +124,8 @@
                 {{ reserva.descripcion || 'Sin descripción' }}
               </td>
               <td>{{ reserva.agencia }}</td>
-              <td>{{ reserva.ingreso | date: 'dd/MM/yyyy' }}</td>
-              <td>{{ reserva.salida | date: 'dd/MM/yyyy' }}</td>
+              <td>{{ formatDate(reserva.ingreso) }}</td>
+              <td>{{ formatDate(reserva.salida) }}</td>
               <td class="text-center">{{ reserva.noches }}</td>
               <td class="text-center">{{ reserva.habitaciones }}</td>
               <td><span class="badge border" [ngClass]="statusClass(reserva.estado)">{{ estadoLabel(reserva.estado) }}</span></td>

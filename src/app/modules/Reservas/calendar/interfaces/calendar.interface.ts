@@ -49,6 +49,8 @@ export interface CalendarRoomAssignmentRequest {
   newHabita: string;
   categoria: string;
   operador: string;
+  fechaIngreso?: string;
+  fechaSalida?: string;
 }
 
 export interface CalendarRoomAssignmentResponse {

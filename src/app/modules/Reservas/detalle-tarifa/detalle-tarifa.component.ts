@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
 
 import { AuthService } from 'src/app/core/services/auth.service';
 import { ToastService } from 'src/app/core/services/toast.service';
+import { normalizePmsDateDDMMYYYY } from 'src/app/core/utils/pms-date.util';
 import { CentroCostoService } from 'src/app/demo/administracion/centro-costo/centro-costo.service';
 import { CentroCostoUI } from 'src/app/demo/administracion/centro-costo/centro-costo.models';
 import { RoomCategory } from 'src/app/modules/front-desk/settings/room-categories/models/room-category.model';
@@ -276,16 +277,7 @@ export class DetalleTarifaComponent implements OnInit {
   }
 
   formatDate(value: string | null | undefined): string {
-    if (!value) {
-      return 'N/D';
-    }
-
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return 'N/D';
-    }
-
-    return new Intl.DateTimeFormat('es-CR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
+    return normalizePmsDateDDMMYYYY(value) || 'N/D';
   }
 
   trackByDetalle(_: number, item: DetalleTarifaResponse): string {

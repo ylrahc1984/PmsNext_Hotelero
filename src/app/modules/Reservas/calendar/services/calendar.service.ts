@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
+import { normalizePmsDateDDMMYYYY, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 import { environment } from 'src/environments/environment';
 import { ROOMS_MOCK } from '../../mock-data/rooms.mock';
 import { RoomHousekeepingStatus, RoomOperationalStatus, RoomStatus, RoomType } from '../../interfaces/room-status.interface';
@@ -113,7 +114,11 @@ export class CalendarService {
   }
 
   assignReservationRoom(request: CalendarRoomAssignmentRequest): Observable<CalendarRoomAssignmentResponse> {
-    return this.http.put<CalendarRoomAssignmentResponse>(`${this.precheckingUrl}/asignar-habitacion`, request);
+    return this.http.put<CalendarRoomAssignmentResponse>(`${this.precheckingUrl}/asignar-habitacion`, {
+      ...request,
+      ...(request.fechaIngreso ? { fechaIngreso: normalizePmsDateDDMMYYYY(request.fechaIngreso) } : {}),
+      ...(request.fechaSalida ? { fechaSalida: normalizePmsDateDDMMYYYY(request.fechaSalida) } : {})
+    });
   }
 
   getPendingPrecheckingReservations(startDate: string, endDate: string): Observable<CalendarAssignableReservation[]> {
@@ -333,7 +338,7 @@ export class CalendarService {
       continuesAfter: reservation.endDate > visibleEndDate,
       colorIndex: this.getReservationColorIndex(reservation.id),
       label: reservation.guestName,
-      tooltip: `${reservation.guestName} | ${reservation.status} | ${reservation.startDate} -> ${reservation.endDate} | ${reservation.source}`
+      tooltip: `${reservation.guestName} | ${reservation.status} | ${normalizePmsDateDDMMYYYY(reservation.startDate)} -> ${normalizePmsDateDDMMYYYY(reservation.endDate)} | ${reservation.source}`
     };
   }
 
@@ -402,7 +407,8 @@ export class CalendarService {
   }
 
   private parseDate(value: string): Date {
-    return new Date(`${value}T00:00:00`);
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, month - 1, day);
   }
 
   private toIsoDate(date: Date): string {
@@ -413,26 +419,11 @@ export class CalendarService {
   }
 
   private toDisplayDate(isoDate: string): string {
-    const [year, month, day] = isoDate.split('-');
-    return day && month && year ? `${day}/${month}/${year}` : isoDate;
+    return normalizePmsDateDDMMYYYY(isoDate);
   }
 
   private toIsoDateValue(value: string): string {
-    if (!value) {
-      return '';
-    }
-
-    if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
-      return value.slice(0, 10);
-    }
-
-    const displayDateMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-    if (displayDateMatch) {
-      const [, day, month, year] = displayDateMatch;
-      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-    }
-
-    return this.toIsoDate(new Date(value));
+    return toPmsDateInputValue(value);
   }
 
   private shiftIsoDate(baseIsoDate: string, offset: number): string {

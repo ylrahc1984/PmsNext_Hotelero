@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, map, throwError } from 'rxjs';
 
+import { normalizePmsDateDDMMYYYY } from 'src/app/core/utils/pms-date.util';
 import { environment } from 'src/environments/environment';
 
 export interface BlockedRoomApi {
@@ -54,8 +55,8 @@ export class BlockedRoomsService {
       numeroHabitacion: request.roomNumber,
       categoriaHabitacion: request.categoryCode,
       descripcionHabitacion: request.roomDescription,
-      fechaInicial: request.startDate,
-      fechaFin: request.endDate,
+      fechaInicial: normalizePmsDateDDMMYYYY(request.startDate),
+      fechaFin: normalizePmsDateDDMMYYYY(request.endDate),
       descripcion: request.description,
       observaciones: request.observations,
       operador: request.operator,
@@ -71,8 +72,8 @@ export class BlockedRoomsService {
       numeroHabitacion: roomNumber,
       categoriaHabitacion: room.categoryCode,
       descripcionHabitacion: room.roomDescription,
-      fechaInicial: room.startDate,
-      fechaFin: newEndDate,
+      fechaInicial: normalizePmsDateDDMMYYYY(room.startDate),
+      fechaFin: normalizePmsDateDDMMYYYY(newEndDate),
       descripcion: room.description,
       observaciones: observations,
       operador: operator,
@@ -100,8 +101,8 @@ export class BlockedRoomsService {
       roomNumber: item.CR08_Room,
       categoryCode: item.CR08_CateHab,
       roomDescription: item.CR08_DescHabita,
-      startDate: item.CR08_FechaIni,
-      endDate: item.CR08_FechaFin,
+      startDate: normalizePmsDateDDMMYYYY(item.CR08_FechaIni),
+      endDate: normalizePmsDateDDMMYYYY(item.CR08_FechaFin),
       description: item.CR08_Descripcion,
       observations: item.CR08_Observaciones,
       operator: item.CR08_Operador

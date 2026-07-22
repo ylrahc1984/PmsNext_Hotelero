@@ -209,7 +209,7 @@
               <td>{{ guest.nombre }}</td>
               <td>{{ guest.apellidos }}</td>
               <td>{{ getNationalityLabel(guest.nacionalidad) }}</td>
-              <td>{{ guest.fechaNacimiento }}</td>
+              <td>{{ displayDate(guest.fechaNacimiento) }}</td>
               <td><span class="badge bg-light text-dark border">{{ getPaxTypeLabel(guest.tipoPax) }}</span></td>
               <td class="text-center">
                 <div class="btn-group btn-group-sm">
@@ -408,8 +408,8 @@
                 </td>
                 <td>{{ tarifa.moneda || 'N/D' }}</td>
                 <td>
-                  <span>{{ tarifa.fechaInicial ? (tarifa.fechaInicial | date:'yyyy-MM-dd') : 'N/D' }}</span>
-                  <span *ngIf="tarifa.fechaFinal"> / {{ tarifa.fechaFinal | date:'yyyy-MM-dd' }}</span>
+                  <span>{{ displayDate(tarifa.fechaInicial) }}</span>
+                  <span *ngIf="tarifa.fechaFinal"> / {{ displayDate(tarifa.fechaFinal) }}</span>
                 </td>
                 <td>{{ tarifa.operador || 'N/D' }}</td>
                 <td class="text-center">

@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map, throwError } from 'rxjs';
 
+import { normalizePmsDateDDMMYYYY } from 'src/app/core/utils/pms-date.util';
 import { environment } from 'src/environments/environment';
 import { ReservationPrepayment, ReservationPrepaymentHistoryItem, ReservationPrepaymentResponse } from '../models/reservation-prepayment.model';
 
@@ -80,8 +81,8 @@ export class ReservationPrepaymentsService {
   private buildRequest(payload: ReservationPrepayment): ReservationPrepayment {
     return {
       ...payload,
-      fechaDepo: this.toApiDate(payload.fechaDepo),
-      fechaReg: this.toApiDate(payload.fechaReg),
+      fechaDepo: normalizePmsDateDDMMYYYY(payload.fechaDepo),
+      fechaReg: normalizePmsDateDDMMYYYY(payload.fechaReg),
       cCosto: 'PREPA',
       codBanco: '',
       ctaBanco: ''
@@ -90,14 +91,27 @@ export class ReservationPrepaymentsService {
 
   private normalizeResponse(response: ReservationPrepaymentResponse | ReservationPrepayment[] | ReservationPrepayment | null): ReservationPrepaymentResponse {
     if (Array.isArray(response)) {
-      return { ok: true, datos: response };
+      return { ok: true, datos: response.map((item) => this.normalizeItem(item)) };
     }
 
     if (response && this.isPrepayment(response)) {
-      return { ok: true, datos: response };
+      return { ok: true, datos: this.normalizeItem(response) };
     }
 
-    return (response as ReservationPrepaymentResponse | null) ?? { ok: true, datos: [] };
+    if (!response) {
+      return { ok: true, datos: [] };
+    }
+
+    const normalizedResponse = response as ReservationPrepaymentResponse;
+    return {
+      ...normalizedResponse,
+      datos: Array.isArray(normalizedResponse.datos)
+        ? normalizedResponse.datos.map((item) => this.normalizeItem(item))
+        : normalizedResponse.datos
+          ? this.normalizeItem(normalizedResponse.datos)
+          : normalizedResponse.datos,
+      prepagos: normalizedResponse.prepagos?.map((item) => this.normalizeItem(item))
+    };
   }
 
   private extractItems(response: ReservationPrepaymentResponse): ReservationPrepayment[] {
@@ -123,7 +137,8 @@ export class ReservationPrepaymentsService {
       ...source,
       codRsv: source.codRsv || source.codReserva || '',
       codAge: source.codAge || source.codAgen || '',
-      fechaDepo: source.fechaDepo || source.fecDepo || '',
+      fechaDepo: normalizePmsDateDDMMYYYY(source.fechaDepo || source.fecDepo || ''),
+      fechaReg: normalizePmsDateDDMMYYYY(source.fechaReg || ''),
       proceso: Number(source.proceso ?? 90) || 90,
       cCosto: source.cCosto || 'PREPA',
       totalRsv: Number(source.totalRsv ?? 0) || 0,
@@ -141,18 +156,4 @@ export class ReservationPrepaymentsService {
     return !!value && typeof value === 'object' && ('codRsv' in value || 'numInterno' in value);
   }
 
-  private toApiDate(value: string): string {
-    const text = (value ?? '').trim();
-    if (!text) {
-      return '';
-    }
-
-    const isoMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(text);
-    if (isoMatch) {
-      return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
-    }
-
-    const apiMatch = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text);
-    return apiMatch ? text : text;
-  }
 }

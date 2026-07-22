@@ -8,6 +8,7 @@ import { catchError, finalize } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
 import { AuthService } from 'src/app/core/services/auth.service';
+import { normalizePmsDateDDMMYYYY, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 
 import {
   CheckInArrival,
@@ -265,32 +266,7 @@ export class CheckInArrivalsComponent implements OnInit {
   }
 
   formatDisplayDate(value: string): string {
-    const normalized = value.trim();
-
-    if (!normalized) {
-      return '-';
-    }
-
-    const ddmmyyyy = normalized.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-    if (ddmmyyyy) {
-      return `${ddmmyyyy[1]}/${ddmmyyyy[2]}/${ddmmyyyy[3]}`;
-    }
-
-    const yyyymmdd = normalized.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (yyyymmdd) {
-      return `${yyyymmdd[3]}/${yyyymmdd[2]}/${yyyymmdd[1]}`;
-    }
-
-    const date = new Date(normalized);
-    if (!Number.isNaN(date.getTime())) {
-      const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const year = date.getFullYear();
-
-      return `${day}/${month}/${year}`;
-    }
-
-    return normalized;
+    return normalizePmsDateDDMMYYYY(value) || '-';
   }
 
   getProcesadoBadgeClass(arrival: CheckInArrival): string {
@@ -590,6 +566,9 @@ export class CheckInArrivalsComponent implements OnInit {
   }
 
   private getSortValue(arrival: CheckInArrival, column: CheckInArrivalSortColumn): string {
+    if (column === 'fechaIng' || column === 'fechaSal') {
+      return toPmsDateInputValue(arrival[column]);
+    }
     const value = arrival[column];
     return value == null ? '' : String(value);
   }
@@ -627,8 +606,8 @@ export class CheckInArrivalsComponent implements OnInit {
       codTarifa: this.toStringValue(arrival.codTarifa),
       codPlan: this.toStringValue(arrival.codPlan),
       descripcion: this.toStringValue(arrival.descripcion),
-      fechaIng: this.toStringValue(arrival.fechaIng),
-      fechaSal: this.toStringValue(arrival.fechaSal),
+      fechaIng: normalizePmsDateDDMMYYYY(arrival.fechaIng),
+      fechaSal: normalizePmsDateDDMMYYYY(arrival.fechaSal),
       procesado: Number(arrival.procesado) || 0,
       numPax: Number(arrival.numPax) || 0,
       numChild: Number(arrival.numChild) || 0,
@@ -656,34 +635,15 @@ export class CheckInArrivalsComponent implements OnInit {
   }
 
   private formatDateInput(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-
-    return `${year}-${month}-${day}`;
+    return toPmsDateInputValue(date);
   }
 
   private formatDateApi(value: string): string {
-    const [year, month, day] = value.split('-');
-
-    if (!year || !month || !day) {
-      return value;
-    }
-
-    return `${day}/${month}/${year}`;
+    return normalizePmsDateDDMMYYYY(value);
   }
 
   private formatCheckInDate(value: string): string {
-    const normalized = (value || '').trim();
-    const displayMatch = normalized.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-    if (displayMatch) {
-      return `${displayMatch[1].padStart(2, '0')}/${displayMatch[2].padStart(2, '0')}/${displayMatch[3]}`;
-    }
-    const isoMatch = normalized.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-    if (isoMatch) {
-      return `${isoMatch[3].padStart(2, '0')}/${isoMatch[2].padStart(2, '0')}/${isoMatch[1]}`;
-    }
-    return '';
+    return normalizePmsDateDDMMYYYY(value);
   }
 
   private escapeHtml(value: string): string {

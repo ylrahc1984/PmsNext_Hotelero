@@ -5,6 +5,7 @@ import {
   ReservaInclusionItem,
   ReservaServicioItem
 } from '../interfaces/reserva-habitacion.interface';
+import { normalizePmsDateDDMMYYYY, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 
 export interface ReservaHabitacionFormValue {
   codReserva: string;
@@ -113,12 +114,12 @@ export class ReservaHabitacionMapper {
       codAgencia: value.codAgencia.trim(),
       codTarifa: value.codTarifa.trim(),
       codPlan: value.codPlan.trim(),
-      fecIngreso: this.toApiDate(value.fecIngreso),
-      fecSalida: this.toApiDate(value.fecSalida),
-      fecCreacion: this.toApiDate(value.fecCreacion),
-      fecConfirma: this.toApiDate(value.fecConfirma),
-      fecPrepago: this.toApiDate(value.fecPrepago),
-      fecAnulada: this.toApiDate(value.fecAnulada),
+      fecIngreso: normalizePmsDateDDMMYYYY(value.fecIngreso),
+      fecSalida: normalizePmsDateDDMMYYYY(value.fecSalida),
+      fecCreacion: normalizePmsDateDDMMYYYY(value.fecCreacion),
+      fecConfirma: normalizePmsDateDDMMYYYY(value.fecConfirma),
+      fecPrepago: normalizePmsDateDDMMYYYY(value.fecPrepago),
+      fecAnulada: normalizePmsDateDDMMYYYY(value.fecAnulada),
       totNoches: Number(value.totNoches) || 0,
       totDias: Number(value.totDias) || 0,
       descripcion: value.descripcion.trim(),
@@ -214,36 +215,11 @@ export class ReservaHabitacionMapper {
     return codPlan.trim().toUpperCase() === 'SPL';
   }
 
-  private static toApiDate(value: string): string {
-    const text = value.trim();
-    if (!text) {
-      return '';
-    }
-
-    const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
-    if (isoMatch) {
-      return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
-    }
-
-    return text;
-  }
-
   private static toInputDate(value: string): string {
     const text = String(value ?? '').trim();
-    if (!text || text.startsWith('1900-01-01')) {
+    if (!text || text.startsWith('1900-01-01') || text.startsWith('01/01/1900')) {
       return '';
     }
-
-    const isoDate = /^(\d{4})-(\d{2})-(\d{2})/.exec(text);
-    if (isoDate) {
-      return `${isoDate[1]}-${isoDate[2]}-${isoDate[3]}`;
-    }
-
-    const apiDate = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text);
-    if (apiDate) {
-      return `${apiDate[3]}-${apiDate[2]}-${apiDate[1]}`;
-    }
-
-    return text;
+    return toPmsDateInputValue(text);
   }
 }

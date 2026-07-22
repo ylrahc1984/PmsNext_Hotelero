@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, catchError, map, of } from 'rxjs';
 
+import { normalizePmsDateDDMMYYYY } from 'src/app/core/utils/pms-date.util';
 import { ClienteService, SelectOption } from 'src/app/demo/catalogos/agencias-comisionistas/cliente.service';
 import { environment } from 'src/environments/environment';
 import { MealPlan } from '../../settings/meal-plans/models/meal-plan.model';
@@ -75,12 +76,13 @@ export class WalkInService {
   ];
 
   createWalkIn(payload: WalkInSavePayload): Observable<unknown> {
+    const normalizedPayload = this.normalizeWalkInPayload(payload);
     console.groupCollapsed('[WalkInService] POST /walkin');
     console.log('URL:', this.walkInUrl);
-    console.log('Payload:', JSON.parse(JSON.stringify(payload)));
+    console.log('Payload:', JSON.parse(JSON.stringify(normalizedPayload)));
     console.groupEnd();
 
-    return this.http.post<unknown>(this.walkInUrl, payload);
+    return this.http.post<unknown>(this.walkInUrl, normalizedPayload);
   }
 
   getTiposDocumento(): Observable<WalkInOption[]> {
@@ -217,8 +219,8 @@ export class WalkInService {
       descripcion     ,
       moneda          : String(item.MR03_Moneda ?? '').trim(),
       tarifaNoche     : 0,
-      fechaInicial    : String(item.MR03_FecInicial ?? '').trim(),
-      fechaFinal      : String(item.MR03_FecFin ?? '').trim(),
+      fechaInicial    : normalizePmsDateDDMMYYYY(item.MR03_FecInicial),
+      fechaFinal      : normalizePmsDateDDMMYYYY(item.MR03_FecFin),
       activo          : item.MR03_Activo === true || Number(item.MR03_Activo ?? 0) === 1,
       operador        : String(item.MR03_Operador ?? '').trim()
     };
@@ -253,5 +255,18 @@ export class WalkInService {
     return items.filter((item) =>
       [item.codigo, item.descripcion, item.moneda, item.operador].join(' ').toLowerCase().includes(normalizedTerm)
     );
+  }
+
+  private normalizeWalkInPayload(payload: WalkInSavePayload): WalkInSavePayload {
+    return {
+      ...payload,
+      fecIngreso: normalizePmsDateDDMMYYYY(payload.fecIngreso),
+      fecSalida: normalizePmsDateDDMMYYYY(payload.fecSalida),
+      fecCreacion: normalizePmsDateDDMMYYYY(payload.fecCreacion),
+      fecConfirma: normalizePmsDateDDMMYYYY(payload.fecConfirma),
+      fecPrepago: normalizePmsDateDDMMYYYY(payload.fecPrepago),
+      fecAnulada: normalizePmsDateDDMMYYYY(payload.fecAnulada),
+      detRoom: payload.detRoom.map((guest) => ({ ...guest, fecNaci: normalizePmsDateDDMMYYYY(guest.fecNaci) }))
+    };
   }
 }

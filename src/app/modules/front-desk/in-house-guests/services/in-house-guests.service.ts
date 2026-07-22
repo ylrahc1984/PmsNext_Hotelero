@@ -2,8 +2,9 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, map, throwError } from 'rxjs';
 
+import { normalizePmsDateDDMMYYYY } from 'src/app/core/utils/pms-date.util';
 import { environment } from 'src/environments/environment';
-import { InHouseResponse } from '../models/in-house-guest.model';
+import { InHouseGuest, InHouseResponse } from '../models/in-house-guest.model';
 
 @Injectable({ providedIn: 'root' })
 export class InHouseGuestsService {
@@ -12,8 +13,8 @@ export class InHouseGuestsService {
 
   getInHouseGuests(fechaIni: string, fechaFin: string, operador: string): Observable<InHouseResponse> {
     const params = new HttpParams()
-      .set('fechaIni', fechaIni)
-      .set('fechaFin', fechaFin)
+      .set('fechaIni', normalizePmsDateDDMMYYYY(fechaIni))
+      .set('fechaFin', normalizePmsDateDDMMYYYY(fechaFin))
       .set('operador', operador);
 
     return this.http
@@ -30,10 +31,21 @@ export class InHouseGuestsService {
     }
 
     if ('datos' in response) {
-      return response.datos ?? this.emptyResponse();
+      return this.normalizeResponseDates(response.datos ?? this.emptyResponse());
     }
 
-    return response as InHouseResponse;
+    return this.normalizeResponseDates(response as InHouseResponse);
+  }
+
+  private normalizeResponseDates(response: InHouseResponse): InHouseResponse {
+    return {
+      ...response,
+      pax: (response.pax ?? []).map((guest: InHouseGuest) => ({
+        ...guest,
+        fechaIng: normalizePmsDateDDMMYYYY(guest.fechaIng),
+        fechaSal: normalizePmsDateDDMMYYYY(guest.fechaSal)
+      }))
+    };
   }
 
   private emptyResponse(): InHouseResponse {
