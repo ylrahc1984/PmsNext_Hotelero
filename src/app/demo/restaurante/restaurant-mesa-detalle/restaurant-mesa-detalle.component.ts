@@ -24,6 +24,7 @@ import {
   RestaurantRoomChargeDialogResult
 } from '../dialogs/restaurant-room-charge-dialog/restaurant-room-charge-dialog.component';
 import { SelectedRestaurantTableContext } from '../models/restaurant-operacion.models';
+import { RestaurantDashboardService } from '../restaurant-dashboard/restaurant-dashboard.service';
 import { RestaurantOperationContextService } from '../services/restaurant-operation-context.service';
 import {
   NotaPedidoRestauranteProceso91Response,
@@ -103,6 +104,7 @@ export class RestaurantMesaDetalleComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly notaPedidoService = inject(NotaPedidoRestauranteService);
+  private readonly dashboardService = inject(RestaurantDashboardService);
   private readonly operationContext = inject(RestaurantOperationContextService);
   private readonly authService = inject(AuthService);
   private readonly tipoCambioService = inject(TipoCambioService);
@@ -163,6 +165,10 @@ export class RestaurantMesaDetalleComponent implements OnInit {
   isPropinaSaving               = false;
   propinaError                  = '';
   isReturningToMain            = false;
+  notaPedidoLoading            = false;
+  notaPedidoError              = '';
+
+  private detalleRequestId = 0;
 
   readonly acciones: AccionOperativa[] = [
     { id: 'imprimir-cuenta', titulo: 'Imprimir Cuenta', icono: 'icon-printer' },
@@ -453,6 +459,21 @@ export class RestaurantMesaDetalleComponent implements OnInit {
       this.notaPedidoInfo.fecha,
       cuenta
     );
+  }
+
+  recargarNotaPedido(): void {
+    if (this.notaPedidoInfo) {
+      this.consultarDetallePedido(
+        this.notaPedidoInfo.tipNp,
+        this.notaPedidoInfo.serieNp,
+        this.notaPedidoInfo.numNp,
+        this.notaPedidoInfo.fecha,
+        this.cuentaFiltroActual
+      );
+      return;
+    }
+
+    this.cargarNotaPedidoActual();
   }
 
   async eliminarItem(item: ConsumoMesa): Promise<void> {
@@ -777,52 +798,27 @@ export class RestaurantMesaDetalleComponent implements OnInit {
 
   private cargarNotaPedidoActual(): void {
     this.notaPedidoDetalleValido = false;
-    const tipNp = this.route.snapshot.queryParamMap.get('tipNp');
-    const serieNp = this.route.snapshot.queryParamMap.get('serieNp');
-    const numNp = this.route.snapshot.queryParamMap.get('numNp');
+    this.notaPedidoError = '';
+    const tipNp = this.cleanValue(this.route.snapshot.queryParamMap.get('tipNp'));
+    const serieNp = this.cleanValue(this.route.snapshot.queryParamMap.get('serieNp'));
+    const numNp = this.cleanValue(this.route.snapshot.queryParamMap.get('numNp'));
     const fecha = this.normalizeDateDDMMYYYY(this.route.snapshot.queryParamMap.get('fecha'));
-    const hora = this.route.snapshot.queryParamMap.get('hora');
-    
+    const hora = this.cleanValue(this.route.snapshot.queryParamMap.get('hora'));
 
     if (tipNp && serieNp && numNp && fecha) {
-      this.notaPedidoInfo = { tipNp, serieNp, numNp, fecha, hora: hora || '', respuesta: 'Pendiente' };
+      this.notaPedidoInfo = { tipNp, serieNp, numNp, fecha, hora, respuesta: 'Pendiente' };
       this.consultarDetallePedido(tipNp, serieNp, numNp, fecha, this.cuentaFiltroActual);
       return;
     }
 
-    const state = this.readNotaPedidoMesaState();
-    if (state && this.isNotaPedidoDeMesaActual(state)) {
-      this.notaPedidoInfo = {
-        tipNp: state.tipNp,
-        serieNp: state.serieNp,
-        numNp: state.numNp,
-        fecha: this.normalizeDateDDMMYYYY(state.fecha),
-        hora: hora || '',
-
-        respuesta: state.detalleResponse?.respuesta || 'OK'
-      };
-      if (state.detalleResponse && Number(state.cuentaFiltro || 0) === this.cuentaFiltroActual) {
-        this.aplicarDetallePedido(state.detalleResponse);
-        return;
-      }
-      this.consultarDetallePedido(
-        state.tipNp,
-        state.serieNp,
-        state.numNp,
-        this.normalizeDateDDMMYYYY(state.fecha),
-        this.cuentaFiltroActual
-      );
-      return;
-    }
-
     const contextNotaPedido = this.selectedTableContext?.mesa.notaPedido;
-    if (contextNotaPedido?.tipNp && contextNotaPedido.serieNp && contextNotaPedido.numNp && contextNotaPedido.fecha && contextNotaPedido.hora) {
+    if (contextNotaPedido?.tipNp && contextNotaPedido.serieNp && contextNotaPedido.numNp && contextNotaPedido.fecha) {
       this.notaPedidoInfo = {
         tipNp: contextNotaPedido.tipNp,
         serieNp: contextNotaPedido.serieNp,
         numNp: contextNotaPedido.numNp,
         fecha: this.normalizeDateDDMMYYYY(contextNotaPedido.fecha),
-        hora: contextNotaPedido.hora || '',
+        hora: contextNotaPedido.hora || hora,
         respuesta: 'Pendiente'
       };
       this.consultarDetallePedido(
@@ -835,7 +831,109 @@ export class RestaurantMesaDetalleComponent implements OnInit {
       return;
     }
 
+    const state = this.readNotaPedidoMesaState();
+    if (state && this.isNotaPedidoDeMesaActual(state)) {
+      this.notaPedidoInfo = {
+        tipNp: state.tipNp,
+        serieNp: state.serieNp,
+        numNp: state.numNp,
+        fecha: this.normalizeDateDDMMYYYY(state.fecha),
+        hora: state.hora || hora,
+        respuesta: state.detalleResponse?.respuesta || 'Pendiente'
+      };
+      this.consultarDetallePedido(
+        state.tipNp,
+        state.serieNp,
+        state.numNp,
+        this.normalizeDateDDMMYYYY(state.fecha),
+        this.cuentaFiltroActual
+      );
+      return;
+    }
+
+    if (this.selectedTableContext?.mesa.estado === 'OCUPADA' || tipNp || serieNp || numNp || fecha) {
+      this.recuperarNotaPedidoDesdeMesa();
+      return;
+    }
+
     this.limpiarNotaPedidoEnPantalla();
+  }
+
+  private recuperarNotaPedidoDesdeMesa(): void {
+    if (!this.codPuntoVenta || !this.codAreaOperativa) {
+      this.establecerErrorNotaPedido('No se pudo identificar el punto de venta y el salon de la mesa ocupada.');
+      return;
+    }
+
+    const requestId = ++this.detalleRequestId;
+    this.notaPedidoLoading = true;
+    this.notaPedidoError = '';
+    this.cdr.markForCheck();
+
+    this.dashboardService
+      .obtenerMesasPorUbicacion(this.codPuntoVenta, this.codAreaOperativa)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (mesas) => {
+          if (requestId !== this.detalleRequestId) {
+            return;
+          }
+
+          const mesa = mesas.find((item) => Number(item.cpV05_NumMesa || 0) === this.mesaId);
+          const tipNp = this.cleanValue(mesa?.ppV07_TipNDP);
+          const serieNp = this.cleanValue(mesa?.ppV07_SerieNDP);
+          const numNp = this.cleanValue(mesa?.ppV07_NumNDP);
+          const fecha = this.normalizeDateDDMMYYYY(mesa?.ppV07_FecDocu);
+          const hora = this.cleanValue(mesa?.ppV07_HorDocu);
+
+          if (!mesa || !tipNp || !serieNp || !numNp || !fecha) {
+            this.establecerErrorNotaPedido(
+              mesa?.ocupada
+                ? 'La mesa figura ocupada, pero el servidor no devolvio la referencia completa de su nota de pedido.'
+                : 'No se encontro una nota de pedido activa para esta mesa.'
+            );
+            return;
+          }
+
+          this.notaPedidoInfo = { tipNp, serieNp, numNp, fecha, hora, respuesta: 'Pendiente' };
+          this.actualizarReferenciaNotaEnUrl(this.notaPedidoInfo);
+          this.consultarDetallePedido(tipNp, serieNp, numNp, fecha, this.cuentaFiltroActual);
+        },
+        error: (error) => {
+          if (requestId !== this.detalleRequestId) {
+            return;
+          }
+          console.error('No se pudo recuperar la nota asociada a la mesa.', error);
+          this.establecerErrorNotaPedido('No se pudo consultar la nota asociada a la mesa. Revise la conexion con el servidor.');
+        }
+      });
+  }
+
+  private actualizarReferenciaNotaEnUrl(nota: NotaPedidoMesaInfo): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        tipNp: nota.tipNp,
+        serieNp: nota.serieNp,
+        numNp: nota.numNp,
+        fecha: nota.fecha,
+        hora: nota.hora || null
+      },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
+  }
+
+  private establecerErrorNotaPedido(message: string): void {
+    this.notaPedidoLoading = false;
+    this.notaPedidoDetalleValido = false;
+    this.notaPedidoError = message;
+    this.consumoActual = [];
+    this.subtotal = 0;
+    this.impuestos = 0;
+    this.propina = 0;
+    this.total = 0;
+    this.cdr.markForCheck();
   }
 
   private iniciarRelojMesa(): void {
@@ -901,9 +999,13 @@ export class RestaurantMesaDetalleComponent implements OnInit {
   }
 
   private consultarDetallePedido(tipNp: string, serieNp: string, numNp: string, fecha: string, cuentaFiltro = this.cuentaFiltroActual): void {
+    const requestId = ++this.detalleRequestId;
     this.notaPedidoDetalleValido = false;
+    this.notaPedidoLoading = true;
+    this.notaPedidoError = '';
     const normalizedFecha = this.normalizeDateDDMMYYYY(fecha);
     this.cuentaFiltroActual = Number(cuentaFiltro || 0);
+    this.cdr.markForCheck();
     this.notaPedidoService
       .obtenerDetallePedido({
         tipNp,
@@ -913,8 +1015,13 @@ export class RestaurantMesaDetalleComponent implements OnInit {
         fecha: normalizedFecha,
         exonerado: this.cuentaFiltroActual
       })
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (response) => {
+          if (requestId !== this.detalleRequestId) {
+            return;
+          }
+          this.notaPedidoLoading = false;
           this.notaPedidoInfo = {
             tipNp,
             serieNp,
@@ -925,12 +1032,15 @@ export class RestaurantMesaDetalleComponent implements OnInit {
           };
           this.aplicarDetallePedido(response);
         },
-        error: () => {
-          this.notaPedidoDetalleValido = false;
+        error: (error) => {
+          if (requestId !== this.detalleRequestId) {
+            return;
+          }
+          console.error('No se pudo cargar el detalle de la nota de pedido.', error);
           this.eliminandoItems.clear();
           this.cambiandoCuentaItems.clear();
           this.dividiendoItems.clear();
-          this.cdr.markForCheck();
+          this.establecerErrorNotaPedido('No se pudo cargar el consumo de la nota. Revise la conexion con el servidor e intente nuevamente.');
         }
       });
   }
@@ -1045,8 +1155,11 @@ export class RestaurantMesaDetalleComponent implements OnInit {
   }
 
   private limpiarNotaPedidoEnPantalla(marcarMesaLibre = false): void {
+    this.detalleRequestId += 1;
     this.notaPedidoInfo = null;
     this.notaPedidoDetalleValido = false;
+    this.notaPedidoLoading = false;
+    this.notaPedidoError = '';
     this.consumoActual = [];
     this.subtotal = 0;
     this.descuento = 0;

@@ -346,6 +346,36 @@ $next-ink: #10263b;
   background: rgba($next-blue, 0.05);
 }
 
+.consumo-table .consumo-table__status:hover {
+  background: transparent;
+}
+
+.consumo-table__status td {
+  padding: 18px 12px;
+  color: #64748b;
+  font-weight: 750;
+  text-align: center;
+}
+
+.consumo-table__status i {
+  margin-right: 6px;
+}
+
+.consumo-table__status--error td {
+  color: #b42318;
+  background: #fff4f2;
+}
+
+.consumo-table__status--error span {
+  display: block;
+  margin-bottom: 10px;
+}
+
+.consumo-table__status--error .next-btn {
+  min-height: 32px;
+  padding: 6px 12px;
+}
+
 .consumo-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -115,6 +115,20 @@
             </tr>
           </thead>
           <tbody>
+            <tr class="consumo-table__status" *ngIf="notaPedidoLoading">
+              <td colspan="6">
+                <i class="feather icon-loader"></i>
+                Consultando el detalle de la nota de pedido...
+              </td>
+            </tr>
+            <tr class="consumo-table__status consumo-table__status--error" *ngIf="!notaPedidoLoading && notaPedidoError">
+              <td colspan="6">
+                <span>{{ notaPedidoError }}</span>
+                <button type="button" class="next-btn next-btn--primary" (click)="recargarNotaPedido()">
+                  <i class="feather icon-refresh-cw"></i> Reintentar
+                </button>
+              </td>
+            </tr>
             <tr *ngFor="let item of consumoActual">
               <td>{{ item.producto }}</td>
               <td class="text-end">{{ item.cantidad }}</td>
@@ -159,7 +173,7 @@
                 </details>
               </td>
             </tr>
-            <tr *ngIf="!consumoActual.length">
+            <tr *ngIf="!notaPedidoLoading && !notaPedidoError && !consumoActual.length">
               <td colspan="6">No hay productos cargados para esta mesa.</td>
             </tr>
           </tbody>
