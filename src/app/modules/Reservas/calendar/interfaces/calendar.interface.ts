@@ -6,6 +6,7 @@ export type CalendarFilterStatus = CalendarReservationStatus | 'DISPONIBLE' | nu
 export interface CalendarReservation {
   id: string;
   reservationCode?: string;
+  isOperationalBlock?: boolean;
   roomNumber: string;
   sourceRoom?: string;
   categoryCode?: string;

@@ -22,14 +22,14 @@ import { WalkInOption } from '../walk-in/models/walk-in.model';
 import { WalkInService } from '../walk-in/services/walk-in.service';
 
 interface CheckInArrivalFilterForm {
-  fechaIngreso: string;
-  soloPendientes: boolean;
-  busqueda: string;
+  fechaIngreso      : string;
+  soloPendientes    : boolean;
+  busqueda          : string;
 }
 
 interface PaginationOption {
-  label: string;
-  value: number;
+  label     : string;
+  value     : number;
 }
 
 @Component({
@@ -72,27 +72,29 @@ export class CheckInArrivalsComponent implements OnInit {
   ];
 
   readonly filtersForm = this.fb.nonNullable.group<CheckInArrivalFilterForm>({
-    fechaIngreso: this.formatDateInput(new Date()),
-    soloPendientes: true,
-    busqueda: ''
+    fechaIngreso      : this.formatDateInput(new Date()),
+    soloPendientes    : true,
+    busqueda          : ''
   });
 
   readonly roomingGuestForm = this.fb.nonNullable.group({
-    codNacion: ['', Validators.required],
-    tipDocu: ['', Validators.required],
-    numDocu: ['', Validators.required],
-    nombre: ['', Validators.required],
-    apellido: ['', Validators.required],
-    fecNac: [this.formatDateInput(new Date()), Validators.required],
-    sexo: [''],
-    estCivil: [''],
-    tiPax: ['PAX', Validators.required],
-    direccion: [''],
-    email: ['', Validators.email],
-    motivo: [''],
-    procede: [''],
-    mdoArribo: ['']
+    codNacion       : ['', Validators.required],
+    tipDocu         : ['', Validators.required],
+    numDocu         : ['', Validators.required],
+    nombre          : ['', Validators.required],
+    apellido        : ['', Validators.required],
+    fecNac          : [this.formatDateInput(new Date()), Validators.required],
+    sexo            : [''],
+    estCivil        : [''],
+    tiPax           : ['PAX', Validators.required],
+    direccion       : [''],
+    email           : ['', Validators.email],
+    motivo          : [''],
+    procede         : [''],
+    mdoArribo       : ['']
   });
+
+  readonly nationalitySearchControl = this.fb.nonNullable.control('');
 
   arrivals: CheckInArrival[] = [];
   filteredArrivals: CheckInArrival[] = [];
@@ -118,6 +120,7 @@ export class CheckInArrivalsComponent implements OnInit {
   checkingInKey: string | null = null;
   documentTypes: WalkInOption[] = [];
   nationalities: Nationality[] = [];
+  nationalitySearchOpen = false;
 
   ngOnInit(): void {
     this.loadRoomingCatalogs();
@@ -378,6 +381,7 @@ export class CheckInArrivalsComponent implements OnInit {
     if (this.roomingSaving) return;
     this.roomingArrival = null;
     this.showRoomingForm = false;
+    this.nationalitySearchOpen = false;
   }
 
   openRoomingGuestForm(): void {
@@ -386,7 +390,49 @@ export class CheckInArrivalsComponent implements OnInit {
       fecNac: this.formatDateInput(new Date()), sexo: '', estCivil: '', tiPax: 'PAX',
       direccion: '', email: '', motivo: '', procede: '', mdoArribo: ''
     });
+    this.nationalitySearchControl.setValue('', { emitEvent: false });
+    this.nationalitySearchOpen = false;
     this.showRoomingForm = true;
+  }
+
+  openNationalitySearch(): void {
+    this.nationalitySearchOpen = true;
+  }
+
+  onNationalitySearchChange(value: string): void {
+    this.nationalitySearchControl.setValue(value, { emitEvent: false });
+    this.roomingGuestForm.controls.codNacion.setValue('');
+    this.nationalitySearchOpen = true;
+  }
+
+  closeNationalitySearch(): void {
+    setTimeout(() => {
+      this.nationalitySearchOpen = false;
+      this.cdr.markForCheck();
+    }, 120);
+  }
+
+  selectNationality(nationality: Nationality): void {
+    this.roomingGuestForm.controls.codNacion.setValue(nationality.CR06_Codigo);
+    this.roomingGuestForm.controls.codNacion.markAsDirty();
+    this.roomingGuestForm.controls.codNacion.markAsTouched();
+    this.nationalitySearchControl.setValue(nationality.CR06_Descripcion, { emitEvent: false });
+    this.nationalitySearchOpen = false;
+  }
+
+  filteredNationalities(): Nationality[] {
+    const term = this.normalizeText(this.nationalitySearchControl.value);
+
+    if (!term) {
+      return this.nationalities.slice(0, 25);
+    }
+
+    return this.nationalities
+      .filter((nationality) =>
+        [nationality.CR06_Codigo, nationality.CR06_Descripcion]
+          .some((field) => this.normalizeText(field).includes(term))
+      )
+      .slice(0, 25);
   }
 
   saveRoomingGuest(): void {

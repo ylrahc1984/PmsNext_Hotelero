@@ -204,13 +204,15 @@ export class CalendarService {
     const byReservation = new Map<string, CalendarReservation>();
 
     calendar
-      .filter((item) => !!this.cleanText(item.codReserva))
+      .filter((item) => !!this.cleanText(item.codReserva) || this.isOperationalBlock(item))
       .forEach((item) => {
         const roomNumber = this.cleanText(item.numHab);
         const reservationCode = this.cleanText(item.codReserva);
+        const isOperationalBlock = !reservationCode && this.isOperationalBlock(item);
         const startDate = this.toIsoDateValue(item.fechaIngEvento || item.fecha);
         const endDate = this.toIsoDateValue(item.fechaSalEvento || this.shiftIsoDate(startDate, 1));
-        const key = `${reservationCode}|${roomNumber}|${startDate}|${endDate}`;
+        const eventCode = reservationCode || 'BLOQUEO-OPERATIVO';
+        const key = `${eventCode}|${roomNumber}|${startDate}|${endDate}`;
 
         if (byReservation.has(key)) {
           return;
@@ -221,7 +223,8 @@ export class CalendarService {
 
         byReservation.set(key, {
           id: key,
-          reservationCode,
+          reservationCode: reservationCode || undefined,
+          isOperationalBlock,
           roomNumber,
           sourceRoom: this.cleanText(item.habOrigen),
           categoryCode: this.cleanText(item.categoria || item.codGrp),
@@ -229,8 +232,8 @@ export class CalendarService {
           endDate,
           status: this.mapReservationStatus(item.estado, item.estadoReserva),
           reservationState: this.cleanText(item.estadoReserva),
-          guestName: description || agency || reservationCode,
-          source: agency || this.cleanText(item.codigoPlan) || reservationCode
+          guestName: description || agency || (isOperationalBlock ? 'Bloqueo operativo' : reservationCode),
+          source: isOperationalBlock ? 'Grupo operativo' : agency || this.cleanText(item.codigoPlan) || reservationCode
         });
       });
 
@@ -487,6 +490,10 @@ export class CalendarService {
     }
 
     return 'RESERVADA';
+  }
+
+  private isOperationalBlock(item: CalendarApiDay): boolean {
+    return !this.cleanText(item.codReserva) && this.cleanText(item.estado).toUpperCase().includes('BLOQUE');
   }
 
   private getRoomFloor(roomNumber: string): number {

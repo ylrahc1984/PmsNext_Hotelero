@@ -271,7 +271,10 @@
           <span>Reserva {{ roomingArrival.codReserva }}</span>
           <h2 id="roomingTitle">Rooming list · Hab. {{ roomingArrival.numHabita }}</h2>
         </div>
-        <button type="button" class="rooming-close" aria-label="Cerrar" (click)="closeRoomingList()"><span class="material-icons">close</span></button>
+        <button type="button" class="rooming-close" aria-label="Volver" (click)="closeRoomingList()">
+          <span class="material-icons">arrow_back</span>
+          <span>Volver</span>
+        </button>
       </header>
 
       @if (roomingError) { <div class="rooming-error" role="alert">{{ roomingError }}</div> }
@@ -291,19 +294,41 @@
             </select>
           </label>
           <label><span>Número documento *</span><input class="form-control" formControlName="numDocu" /></label>
-          <label>
-            <span>Nacionalidad *</span>
-            <select class="form-select" formControlName="codNacion">
-              <option value="">Seleccione...</option>
-              @for (item of nationalities; track item.CR06_Codigo) { <option [value]="item.CR06_Codigo">{{ item.CR06_Descripcion }}</option> }
-            </select>
-          </label>
           <label><span>Nombre *</span><input class="form-control" formControlName="nombre" /></label>
           <label><span>Apellidos *</span><input class="form-control" formControlName="apellido" /></label>
-          <label><span>Fecha nacimiento *</span><input type="date" class="form-control" formControlName="fecNac" /></label>
           <label><span>Tipo Pax *</span><select class="form-select" formControlName="tiPax"><option value="PAX">PAX</option><option value="CHD">CHD</option></select></label>
+          <div class="rooming-field rooming-nationality">
+            <span>Nacionalidad *</span>
+            <div class="rooming-nationality__control">
+              <input
+                type="search"
+                class="form-control"
+                placeholder="Escriba para buscar..."
+                autocomplete="off"
+                [value]="nationalitySearchControl.value"
+                [class.is-invalid]="roomingGuestForm.controls.codNacion.invalid && roomingGuestForm.controls.codNacion.touched"
+                (focus)="openNationalitySearch()"
+                (blur)="closeNationalitySearch()"
+                (input)="onNationalitySearchChange($any($event.target).value)"
+              />
+              <span class="material-icons" aria-hidden="true">search</span>
+            </div>
+            @if (nationalitySearchOpen) {
+              <div class="rooming-nationality__menu">
+                @for (item of filteredNationalities(); track item.CR06_Codigo) {
+                  <button type="button" (mousedown)="selectNationality(item)">
+                    <strong>{{ item.CR06_Descripcion }}</strong>
+                    <small>{{ item.CR06_Codigo }}</small>
+                  </button>
+                } @empty {
+                  <div class="rooming-nationality__empty">No se encontraron nacionalidades.</div>
+                }
+              </div>
+            }
+          </div>
+          <label><span>Fecha nacimiento *</span><input type="date" class="form-control" formControlName="fecNac" /></label>
           <label><span>Dirección</span><input class="form-control" formControlName="direccion" /></label>
-          <label><span>Email</span><input type="email" class="form-control" formControlName="email" /></label>
+          <label class="rooming-form__wide"><span>Email</span><input type="email" class="form-control" formControlName="email" /></label>
           <footer class="rooming-form__actions">
             <button type="button" class="btn btn-light btn-sm" (click)="openRoomingGuestForm()">Limpiar</button>
             <button type="submit" class="btn btn-primary btn-sm" [disabled]="roomingSaving">

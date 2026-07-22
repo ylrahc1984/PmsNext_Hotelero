@@ -4,7 +4,13 @@
       <div class="operations-hero__content">
         <span class="section-eyebrow">Centro de operaciones hoteleras</span>
         <h1>Operacion hotelera de hoy</h1>
-        <p>Resumen ejecutivo en tiempo real de huespedes, habitaciones, restaurante y finanzas.</p>
+        <p>
+          Resumen ejecutivo de huespedes, habitaciones, restaurante y finanzas.
+          <strong>Fecha operativa: {{ operationalDateDisplay || 'consultando...' }}</strong>
+        </p>
+        @if (dashboardError) {
+          <p class="operations-hero__error"><i class="feather icon-alert-circle"></i>{{ dashboardError }}</p>
+        }
       </div>
 
       <div class="executive-metrics" aria-label="Indicadores principales">
@@ -325,7 +331,7 @@
         } @else if (occupancyForecastDays.length) {
           <div class="forecast-strip">
             @for (day of occupancyForecastDays; track trackByForecastDay($index, day)) {
-              <div class="forecast-day" [class.forecast-day--today]="day.fecha === todayIso">
+              <div class="forecast-day" [class.forecast-day--today]="day.fecha === operationalDateIso">
                 <span [style.height.%]="day.ocupacion || 8"></span>
                 <strong>{{ day.ocupacion | number:'1.0-0' }}%</strong>
                 <em>{{ day.label }}</em>

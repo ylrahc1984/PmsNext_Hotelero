@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { forkJoin, of } from 'rxjs';
-import { catchError, map, switchMap } from 'rxjs/operators';
+import { catchError, distinctUntilChanged, filter, map, switchMap } from 'rxjs/operators';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { AuthService } from 'src/app/core/services/auth.service';
@@ -27,6 +27,7 @@ import {
 } from 'src/app/modules/front-desk/pages/occupancy-forecast/occupancy-forecast.service';
 import { RoomCategory } from 'src/app/modules/front-desk/settings/room-categories/models/room-category.model';
 import { RoomCategoriesService } from 'src/app/modules/front-desk/settings/room-categories/services/room-categories.service';
+import { OperationalContextService } from 'src/app/core/services/operational-context.service';
 
 interface DashboardAlert {
   icon: string;
@@ -63,8 +64,8 @@ export class DashboardComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
   readonly defaultCity = 'San Jose';
   readonly userName = this.resolveUserName();
-  readonly todayIso = this.getTodayIsoDate();
-  readonly todayDisplay = this.getTodayDisplayDate();
+  operationalDateIso = '';
+  operationalDateDisplay = '';
 
   reservasDia           = 0;
   reservasPendientes    = 0;
@@ -162,17 +163,59 @@ export class DashboardComponent implements OnInit {
   private restaurantDashboardService = inject(RestaurantDashboardService);
   private occupancyForecastService = inject(OccupancyForecastService);
   private roomCategoriesService = inject(RoomCategoriesService);
+  private operationalContextService = inject(OperationalContextService);
+  private readonly operationalDate$ = toObservable(this.operationalContextService.operationalDate);
 
   ngOnInit() {
-    this.calculateMetrics();
+    this.bindOperationalDate();
+    this.loadActiveOrders();
     this.loadRestaurantMetrics();
-    this.loadOccupancyForecast();
     this.bindWeatherState();
-    this.loadTipoCambio();
     this.dashboardService.loadWeather(this.defaultCity);
   }
 
+  private bindOperationalDate(): void {
+    this.dashboardLoading = true;
+
+    this.operationalDate$
+      .pipe(
+        filter((date): date is string => !!date),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((date) => {
+        this.operationalDateDisplay = date;
+        this.operationalDateIso = this.toDateKey(date);
+        this.calculateMetrics();
+        this.loadTipoCambio();
+        this.loadOccupancyForecast();
+        this.cdr.markForCheck();
+      });
+
+    this.operationalContextService
+      .ensureLoaded()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        error: () => {
+          this.resetOperationalMetrics();
+          this.dashboardLoading = false;
+          this.dashboardError = 'No se pudo obtener la fecha operativa para cargar el dashboard.';
+          this.occupancyForecastLoading = false;
+          this.occupancyForecastError = 'Fecha operativa no disponible.';
+          this.tipoCambioLoading = false;
+          this.tipoCambioError = 'Fecha operativa no disponible.';
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
   calculateMetrics() {
+    if (!this.operationalDateIso || !this.operationalDateDisplay) {
+      return;
+    }
+
+    const requestedDate = this.operationalDateDisplay;
+    const requestedDateIso = this.operationalDateIso;
     this.dashboardLoading = true;
     this.dashboardError = null;
 
@@ -181,15 +224,19 @@ export class DashboardComponent implements OnInit {
         map((response) => response.data ?? []),
         catchError(() => of([] as Reserva[]))
       ),
-      habitaciones: this.roomRackService.getAllRoomsStatus(this.todayDisplay).pipe(catchError(() => of([] as RoomRackRoom[]))),
-      llegadas: this.checkInArrivalsService.getPendientes(this.todayIso, false).pipe(catchError(() => of([] as CheckInArrival[]))),
-      llegadasPendientes: this.checkInArrivalsService.getPendientes(this.todayIso, true).pipe(
+      habitaciones: this.roomRackService.getAllRoomsStatus(requestedDate).pipe(catchError(() => of([] as RoomRackRoom[]))),
+      llegadas: this.checkInArrivalsService.getPendientes(requestedDateIso, false).pipe(catchError(() => of([] as CheckInArrival[]))),
+      llegadasPendientes: this.checkInArrivalsService.getPendientes(requestedDateIso, true).pipe(
         catchError(() => of([] as CheckInArrival[]))
       )
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
       next: ({ reservas, habitaciones, llegadas, llegadasPendientes }) => {
+        if (requestedDate !== this.operationalDateDisplay) {
+          return;
+        }
+
         this.applyReservationMetrics(reservas, llegadas, llegadasPendientes);
         this.applyRoomMetrics(habitaciones);
         this.rebuildAlerts();
@@ -197,6 +244,10 @@ export class DashboardComponent implements OnInit {
         this.cdr.markForCheck();
       },
       error: () => {
+        if (requestedDate !== this.operationalDateDisplay) {
+          return;
+        }
+
         this.resetOperationalMetrics();
         this.dashboardLoading = false;
         this.dashboardError = 'No se pudo actualizar la operacion del dia.';
@@ -204,6 +255,9 @@ export class DashboardComponent implements OnInit {
       }
     });
 
+  }
+
+  private loadActiveOrders(): void {
     const ordenes = this.ordenesService.getOrdenes();
     this.ordenesActivas = ordenes.filter(o => o.estado !== 'COM' && o.estado !== 'CAN').length;
     this.sales[2].amount = this.ordenesActivas.toString();
@@ -247,19 +301,32 @@ export class DashboardComponent implements OnInit {
   }
 
   private loadTipoCambio(): void {
+    if (!this.operationalDateDisplay) {
+      return;
+    }
+
+    const requestedDate = this.operationalDateDisplay;
     this.tipoCambioLoading = true;
     this.tipoCambioError = null;
 
     this.tipoCambioService
-      .fetchTipoCambio(this.todayDisplay, 'usd')
+      .fetchTipoCambio(requestedDate, 'usd')
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (items) => {
+          if (requestedDate !== this.operationalDateDisplay) {
+            return;
+          }
+
           this.tipoCambio = items[0] ?? this.tipoCambioService.getActual() ?? null;
           this.tipoCambioLoading = false;
           this.cdr.markForCheck();
         },
         error: () => {
+          if (requestedDate !== this.operationalDateDisplay) {
+            return;
+          }
+
           this.tipoCambio = this.tipoCambioService.getActual() ?? null;
           this.tipoCambioLoading = false;
           this.tipoCambioError = 'No se pudo actualizar';
@@ -314,6 +381,11 @@ export class DashboardComponent implements OnInit {
   }
 
   private loadOccupancyForecast(): void {
+    if (!this.operationalDateDisplay) {
+      return;
+    }
+
+    const requestedDate = this.operationalDateDisplay;
     this.occupancyForecastLoading = true;
     this.occupancyForecastError = null;
 
@@ -329,8 +401,8 @@ export class DashboardComponent implements OnInit {
           return this.occupancyForecastService
             .getForecast({
               proceso: 1,
-              fechaInicio: this.todayDisplay,
-              fechaFinal: this.getDisplayDateDaysFromToday(6),
+              fechaInicio: requestedDate,
+              fechaFinal: this.getDisplayDateDaysFrom(requestedDate, 6),
               categorias
             })
             .pipe(catchError(() => of([] as OccupancyForecastResponseRow[])));
@@ -342,6 +414,10 @@ export class DashboardComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((rows) => {
+        if (requestedDate !== this.operationalDateDisplay) {
+          return;
+        }
+
         this.applyOccupancyForecast(rows);
         this.occupancyForecastLoading = false;
         this.rebuildAlerts();
@@ -351,9 +427,9 @@ export class DashboardComponent implements OnInit {
 
   private applyReservationMetrics(reservas: Reserva[], llegadas: CheckInArrival[], llegadasPendientes: CheckInArrival[]): void {
     const reservasActivas = reservas.filter((reserva) => !this.isCancelledStatus(reserva.PRV01_Estado));
-    const reservasCreadasHoy = reservasActivas.filter((reserva) => this.toDateKey(reserva.PRV01_FecCreacion) === this.todayIso);
-    const reservasIngresoHoy = reservasActivas.filter((reserva) => this.toDateKey(reserva.PRV01_FecIngresa) === this.todayIso);
-    const reservasSalidaHoy = reservasActivas.filter((reserva) => this.toDateKey(reserva.PRV01_FecSalida) === this.todayIso);
+    const reservasCreadasHoy = reservasActivas.filter((reserva) => this.toDateKey(reserva.PRV01_FecCreacion) === this.operationalDateIso);
+    const reservasIngresoHoy = reservasActivas.filter((reserva) => this.toDateKey(reserva.PRV01_FecIngresa) === this.operationalDateIso);
+    const reservasSalidaHoy = reservasActivas.filter((reserva) => this.toDateKey(reserva.PRV01_FecSalida) === this.operationalDateIso);
 
     this.reservasDia = reservasCreadasHoy.length;
     this.reservasPendientes = reservasActivas.filter((reserva) => this.isPendingReservationStatus(reserva.PRV01_Estado)).length;
@@ -420,7 +496,7 @@ export class DashboardComponent implements OnInit {
       .slice(0, 7);
 
     this.occupancyForecastDays = forecastDays;
-    this.occupancyForecastToday = forecastDays.find((row) => row.fecha === this.todayIso) ?? forecastDays[0] ?? null;
+    this.occupancyForecastToday = forecastDays.find((row) => row.fecha === this.operationalDateIso) ?? forecastDays[0] ?? null;
     this.occupancyForecastAverage = forecastDays.length
       ? Math.round((forecastDays.reduce((sum, row) => sum + row.ocupacion, 0) / forecastDays.length) * 10) / 10
       : 0;
@@ -614,26 +690,18 @@ export class DashboardComponent implements OnInit {
     return `${date.getFullYear()}-${month}-${day}`;
   }
 
-  private getTodayIsoDate(): string {
-    const now = new Date();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `${now.getFullYear()}-${month}-${day}`;
-  }
+  private getDisplayDateDaysFrom(baseDate: string, days: number): string {
+    const isoDate = this.toDateKey(baseDate);
+    const [baseYear, baseMonth, baseDay] = isoDate.split('-').map(Number);
+    if (!baseYear || !baseMonth || !baseDay) {
+      return baseDate;
+    }
 
-  private getTodayDisplayDate(): string {
-    const now = new Date();
-    const day = String(now.getDate()).padStart(2, '0');
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    return `${day}/${month}/${now.getFullYear()}`;
-  }
-
-  private getDisplayDateDaysFromToday(days: number): string {
-    const date = new Date();
+    const date = new Date(baseYear, baseMonth - 1, baseDay);
     date.setDate(date.getDate() + days);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    return `${day}/${month}/${date.getFullYear()}`;
+    const resultDay = String(date.getDate()).padStart(2, '0');
+    const resultMonth = String(date.getMonth() + 1).padStart(2, '0');
+    return `${resultDay}/${resultMonth}/${date.getFullYear()}`;
   }
 
   private formatForecastLabel(fecha: string): string {

@@ -131,6 +131,10 @@ export class CalendarGridComponent {
   }
 
   onReservationDragStart(payload: { block: CalendarReservationBlockView; event: PointerEvent }): void {
+    if (payload.block.reservation.isOperationalBlock) {
+      return;
+    }
+
     if (payload.block.reservation.reservationState?.trim().toUpperCase() === 'CHK') {
       this.reservationMoveBlocked.emit(payload.block.reservation);
       return;
@@ -210,6 +214,10 @@ export class CalendarGridComponent {
   }
 
   onReservationSelect(payload: CalendarReservationBlockSelect): void {
+    if (payload.block.reservation.isOperationalBlock) {
+      return;
+    }
+
     if (this.wasDragCommitted) {
       this.wasDragCommitted = false;
       return;

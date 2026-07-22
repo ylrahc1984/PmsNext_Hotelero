@@ -18,11 +18,15 @@ export class ReservationBlockComponent {
   @Output() dragStart = new EventEmitter<{ block: CalendarReservationBlockView; event: PointerEvent }>();
 
   onSelect(event: MouseEvent): void {
+    if (this.block.reservation.isOperationalBlock) {
+      return;
+    }
+
     this.select.emit({ block: this.block, event });
   }
 
   onDragStart(event: PointerEvent): void {
-    if (event.button !== 0) {
+    if (event.button !== 0 || this.block.reservation.isOperationalBlock) {
       return;
     }
 

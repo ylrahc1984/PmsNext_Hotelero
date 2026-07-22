@@ -490,7 +490,9 @@ $line: rgba(15, 33, 51, 0.1);
 
 .rooming-dialog__header span { font-size: 0.66rem; opacity: 0.78; }
 .rooming-dialog__header h2 { margin: 2px 0 0; color: #fff; font-size: 1.05rem; }
-.rooming-close { display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 9px; color: #fff; background: rgba(255,255,255,.14); }
+.rooming-close { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; padding: 0 11px; border: 0; border-radius: 9px; color: #fff; background: rgba(255,255,255,.14); font-size: .72rem; font-weight: 800; }
+.rooming-close .material-icons { font-size: 1rem; }
+.rooming-close:hover { background: rgba(255,255,255,.22); }
 
 .rooming-toolbar { padding: 10px 14px; border-bottom: 1px solid rgba($bg,.08); font-size: .75rem; color: $muted; }
 .rooming-toolbar .btn { display: inline-flex; align-items: center; gap: 4px; }
@@ -514,9 +516,19 @@ $line: rgba(15, 33, 51, 0.1);
 .rooming-guest button { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid #ffd0d0; border-radius: 9px; color: #c92a36; background: #fff3f3; }
 
 .rooming-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; padding: 12px 14px 14px; }
-.rooming-form label { display: grid; gap: 3px; min-width: 0; }
-.rooming-form label > span { color: $muted; font-size: .62rem; font-weight: 800; }
+.rooming-form label, .rooming-field { display: grid; gap: 3px; min-width: 0; }
+.rooming-form label > span, .rooming-field > span { color: $muted; font-size: .62rem; font-weight: 800; }
 .rooming-form .form-control, .rooming-form .form-select { min-height: 34px; height: 34px; padding-top: 4px; padding-bottom: 4px; font-size: .72rem; border-radius: 9px; }
+.rooming-nationality { position: relative; }
+.rooming-nationality__control { position: relative; }
+.rooming-nationality__control .form-control { padding-right: 34px; }
+.rooming-nationality__control > .material-icons { position: absolute; top: 50%; right: 10px; color: $muted; font-size: 1rem; pointer-events: none; transform: translateY(-50%); }
+.rooming-nationality__menu { position: absolute; top: calc(100% + 4px); right: 0; left: 0; z-index: 8; max-height: 210px; overflow-y: auto; border: 1px solid rgba($bg,.14); border-radius: 10px; background: #fff; box-shadow: 0 14px 30px rgba(11,23,36,.16); }
+.rooming-nationality__menu button { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-bottom: 1px solid rgba($bg,.06); color: $ink; background: #fff; text-align: left; }
+.rooming-nationality__menu button:hover { background: #edf5ff; }
+.rooming-nationality__menu strong { overflow: hidden; font-size: .72rem; text-overflow: ellipsis; white-space: nowrap; }
+.rooming-nationality__menu small { color: $muted; font-size: .62rem; }
+.rooming-nationality__empty { padding: 12px 10px; color: $muted; font-size: .68rem; text-align: center; }
 .rooming-form__wide { grid-column: 1 / -1; }
 .rooming-form__actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 7px; padding-top: 4px; }
 .rooming-error { margin: 8px 14px 0; padding: 7px 9px; border-radius: 9px; color: #b4232f; background: #fff0f1; font-size: .7rem; font-weight: 750; }

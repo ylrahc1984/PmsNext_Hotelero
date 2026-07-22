@@ -190,3 +190,9 @@
   --reservation-background: linear-gradient(90deg, #d7b2ca, #e3c5d8);
   color: #59384e;
 }
+
+.reservation-block--operational {
+  --reservation-background: linear-gradient(90deg, #cfd3da, #dfe2e7);
+  color: #3f4754;
+  cursor: default;
+}

@@ -152,6 +152,10 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
   }
 
   openReservationActionMenu(payload: CalendarReservationBlockSelect): void {
+    if (payload.block.reservation.isOperationalBlock) {
+      return;
+    }
+
     payload.event.preventDefault();
     payload.event.stopPropagation();
     if (this.isCheckedInReservation(payload.block.reservation)) {
