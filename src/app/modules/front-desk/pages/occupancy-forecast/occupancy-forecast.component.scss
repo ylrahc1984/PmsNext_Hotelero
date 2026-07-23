@@ -239,6 +239,14 @@ $line: rgba(15, 33, 51, 0.1);
   box-shadow: 0 16px 32px rgba($blue, 0.24);
 }
 
+.filter-error {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #b42318;
+  font-size: 0.74rem;
+  font-weight: 760;
+}
+
 .table-card {
   min-width: 0;
   padding: 14px;

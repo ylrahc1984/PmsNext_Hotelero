@@ -7,7 +7,12 @@ import Swal from 'sweetalert2';
 
 import { AuthService } from 'src/app/core/services/auth.service';
 import { CanDeactivateReservaCreate } from 'src/app/core/guards/can-deactivate-reserva-create.guard';
-import { normalizePmsDateDDMMYYYY } from 'src/app/core/utils/pms-date.util';
+import {
+  addPmsCalendarDays,
+  differenceInPmsCalendarDays,
+  normalizePmsDateDDMMYYYY,
+  toPmsDateInputValue
+} from 'src/app/core/utils/pms-date.util';
 import { RoomStatus, RoomType } from '../../interfaces/room-status.interface';
 import { CalendarGridComponent } from '../components/calendar-grid/calendar-grid.component';
 import { CalendarHeaderComponent } from '../components/calendar-header/calendar-header.component';
@@ -58,7 +63,7 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
     { label: 'Bloqueado', value: 'BLOQUEADA' }
   ];
 
-  startDate                           = this.toIsoDate(new Date());
+  startDate                           = toPmsDateInputValue(new Date());
   endDate                             = this.shiftDate(this.startDate, 29);
   search                              = '';
   type                                : RoomType | null = null;
@@ -127,7 +132,7 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
       return;
     }
     const range = this.rangeLength;
-    this.startDate = this.toIsoDate(new Date());
+    this.startDate = toPmsDateInputValue(new Date());
     this.endDate = this.shiftDate(this.startDate, range - 1);
     this.loadCalendar(true);
   }
@@ -1199,27 +1204,14 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
   }
 
   private get rangeLength(): number {
-    const start = new Date(`${this.startDate}T00:00:00`).getTime();
-    const end = new Date(`${this.endDate}T00:00:00`).getTime();
-    return Math.max(1, Math.floor((end - start) / 86400000) + 1);
+    return Math.max(1, (differenceInPmsCalendarDays(this.startDate, this.endDate) ?? 0) + 1);
   }
 
   private shiftDate(baseIsoDate: string, offset: number): string {
-    const date = new Date(`${baseIsoDate}T00:00:00`);
-    date.setDate(date.getDate() + offset);
-    return this.toIsoDate(date);
-  }
-
-  private toIsoDate(date: Date): string {
-    const year = date.getFullYear();
-    const month = `${date.getMonth() + 1}`.padStart(2, '0');
-    const day = `${date.getDate()}`.padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return toPmsDateInputValue(addPmsCalendarDays(baseIsoDate, offset));
   }
 
   private diffDays(startDate: string, endDate: string): number {
-    const start = new Date(`${startDate}T00:00:00`).getTime();
-    const end = new Date(`${endDate}T00:00:00`).getTime();
-    return Math.max(1, Math.floor((end - start) / 86400000));
+    return Math.max(1, differenceInPmsCalendarDays(startDate, endDate) ?? 1);
   }
 }

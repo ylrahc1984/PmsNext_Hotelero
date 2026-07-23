@@ -8,7 +8,7 @@ import { catchError, finalize } from 'rxjs/operators';
 import { Empresa } from 'src/app/core/models/empresa.model';
 import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
 import { EmpresaService } from 'src/app/core/services/empresa.service';
-import { normalizePmsDateDDMMYYYY, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
+import { addPmsCalendarDays, normalizePmsDateDDMMYYYY, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { RoomCategory } from '../../settings/room-categories/models/room-category.model';
 import { RoomCategoriesService } from '../../settings/room-categories/services/room-categories.service';
@@ -71,7 +71,7 @@ export class ForecastOcupacionComponent implements OnInit {
 
   hotel = '';
   fechaInicial = toPmsDateInputValue(new Date());
-  fechaFinal = toPmsDateInputValue(new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)); // 15 dias despues
+  fechaFinal = toPmsDateInputValue(addPmsCalendarDays(new Date(), 15)); // 15 dias calendario despues
   tipoVista: 'ocupacion' | 'disponibilidad' = 'ocupacion';
   busqueda = '';
   pageSize = 10;
@@ -394,10 +394,11 @@ export class ForecastOcupacionComponent implements OnInit {
       ],
       chart: {
         type: 'line',
-        height: 332,
+        height: 360,
         toolbar: { show: false },
         zoom: { enabled: false },
-        fontFamily: 'inherit'
+        fontFamily: 'inherit',
+        parentHeightOffset: 0
       },
       colors: ['#2563eb'],
       stroke: {
@@ -414,8 +415,31 @@ export class ForecastOcupacionComponent implements OnInit {
         strokeDashArray: 4
       },
       xaxis: {
+        type: 'category',
         categories: rows.map((row) => this.formatChartDate(row.fecha)),
-        labels: { style: { colors: '#64748b' } }
+        tickPlacement: 'on',
+        axisBorder: {
+          show: true,
+          color: '#d7dee9'
+        },
+        axisTicks: {
+          show: true,
+          color: '#d7dee9'
+        },
+        labels: {
+          show: true,
+          rotate: -45,
+          rotateAlways: rows.length > 10,
+          hideOverlappingLabels: false,
+          trim: false,
+          minHeight: 54,
+          maxHeight: 72,
+          style: {
+            colors: '#64748b',
+            fontSize: '11px',
+            fontWeight: 600
+          }
+        }
       },
       yaxis: {
         min: 0,

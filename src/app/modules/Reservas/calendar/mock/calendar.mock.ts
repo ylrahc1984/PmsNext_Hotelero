@@ -1,4 +1,5 @@
 import { ROOMS_MOCK } from '../../mock-data/rooms.mock';
+import { addPmsCalendarDays, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 import { CalendarReservation, CalendarReservationStatus } from '../interfaces/calendar.interface';
 
 const GUESTS = [
@@ -20,10 +21,7 @@ const SOURCES = ['Directa', 'Booking Plus', 'TravelHub', 'Skyline DMC', 'OrbitNe
 const STATUS_SEQUENCE: CalendarReservationStatus[] = ['OCUPADA', 'RESERVADA', 'BLOQUEADA', 'RESERVADA', 'OCUPADA'];
 
 function toIsoDate(offsetDays: number): string {
-  const date = new Date();
-  date.setHours(0, 0, 0, 0);
-  date.setDate(date.getDate() + offsetDays);
-  return date.toISOString().slice(0, 10);
+  return toPmsDateInputValue(addPmsCalendarDays(new Date(), offsetDays));
 }
 
 export const CALENDAR_RESERVATIONS_MOCK: CalendarReservation[] = ROOMS_MOCK.flatMap((room, index) => {

@@ -285,7 +285,13 @@ $red: #dc2626;
 }
 
 .chart-card {
-  overflow: hidden;
+  overflow: visible;
+}
+
+.chart-card apx-chart {
+  display: block;
+  width: 100%;
+  min-height: 360px;
 }
 
 .category-list {

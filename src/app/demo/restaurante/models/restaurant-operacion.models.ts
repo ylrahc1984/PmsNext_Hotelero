@@ -76,6 +76,11 @@ export interface MesaVisual {
   numero        : number;
   nombre        : string;
   estado        : MesaEstado;
+  posX          : number;
+  posY          : number;
+  ancho         : number;
+  alto          : number;
+  forma         : string;
   personas      ?: number;
   consumo       ?: number;
   horaReserva   ?: string;

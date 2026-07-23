@@ -19,12 +19,12 @@
   <section class="filters-card" aria-label="Filtros de pronostico">
     <div class="field-group">
       <label for="fechaInicial">Fecha Inicial</label>
-      <input id="fechaInicial" type="date" [(ngModel)]="fechaInicial" />
+      <input id="fechaInicial" type="date" [(ngModel)]="fechaInicial" [max]="fechaFinal || null" />
     </div>
 
     <div class="field-group">
       <label for="fechaFinal">Fecha Final</label>
-      <input id="fechaFinal" type="date" [(ngModel)]="fechaFinal" />
+      <input id="fechaFinal" type="date" [(ngModel)]="fechaFinal" [min]="fechaInicial || null" />
     </div>
 
     <fieldset class="category-filter">
@@ -38,11 +38,11 @@
     <fieldset class="view-filter">
       <legend>Tipo de Vista</legend>
       <label>
-        <input type="radio" name="tipoVista" value="ocupacion" [(ngModel)]="tipoVista" />
+        <input type="radio" name="tipoVista" value="ocupacion" [(ngModel)]="tipoVista" (ngModelChange)="onViewChange()" />
         <span>Ver Ocupación</span>
       </label>
       <label>
-        <input type="radio" name="tipoVista" value="disponibilidad" [(ngModel)]="tipoVista" />
+        <input type="radio" name="tipoVista" value="disponibilidad" [(ngModel)]="tipoVista" (ngModelChange)="onViewChange()" />
         <span>Ver Disponibilidad</span>
       </label>
     </fieldset>
@@ -51,6 +51,8 @@
       <span class="material-icons" aria-hidden="true">search</span>
       <span>Procesar</span>
     </button>
+
+    <p class="filter-error" *ngIf="dateRangeError">{{ dateRangeError }}</p>
   </section>
 
   <section class="table-card" aria-label="Detalle por fecha">
@@ -87,11 +89,11 @@
             <th>Fecha</th>
             <th>Total Hab.</th>
             <th>Bloq.</th>
-            <th>Total Ocupada</th>
+            <th>{{ viewQuantityLabel }}</th>
             <th># Pax</th>
             <th>Total CHL</th>
             <th *ngFor="let categoria of selectedCategories; trackBy: trackByCategoria">{{ categoria.descripcion }}</th>
-            <th>% Ocupación</th>
+            <th>{{ viewPercentageLabel }}</th>
           </tr>
         </thead>
         <tbody>
@@ -99,15 +101,15 @@
             <td class="date-cell">{{ row.fecha }}</td>
             <td>{{ row.totalHabitaciones }}</td>
             <td>{{ row.bloqueadas }}</td>
-            <td>{{ row.totalOcupadas }}</td>
+            <td>{{ getViewQuantity(row) }}</td>
             <td>{{ row.pax }}</td>
             <td>{{ row.totalChl }}</td>
             <td class="category-cell" *ngFor="let categoria of selectedCategories; trackBy: trackByCategoria">
               {{ getCategoryDisplay(row, categoria.codigo) }}
             </td>
             <td>
-              <span class="occupancy-badge" [ngClass]="getOccupancyClass(row.porcentajeOcupacion)">
-                {{ row.porcentajeOcupacion | number:'1.0-1' }}%
+              <span class="occupancy-badge" [ngClass]="getViewPercentageClass(getViewPercentage(row))">
+                {{ getViewPercentage(row) | number:'1.0-1' }}%
               </span>
             </td>
           </tr>

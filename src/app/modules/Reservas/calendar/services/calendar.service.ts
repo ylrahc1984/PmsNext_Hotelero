@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
-import { normalizePmsDateDDMMYYYY, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
+import { differenceInPmsCalendarDays, normalizePmsDateDDMMYYYY, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 import { environment } from 'src/environments/environment';
 import { ROOMS_MOCK } from '../../mock-data/rooms.mock';
 import { RoomHousekeepingStatus, RoomOperationalStatus, RoomStatus, RoomType } from '../../interfaces/room-status.interface';
@@ -391,9 +391,7 @@ export class CalendarService {
   }
 
   private diffDays(startDate: string, endDate: string): number {
-    const start = this.parseDate(startDate).getTime();
-    const end = this.parseDate(endDate).getTime();
-    return Math.floor((end - start) / 86400000);
+    return differenceInPmsCalendarDays(startDate, endDate) ?? 0;
   }
 
   private getReservationColorIndex(reservationId: string): number {

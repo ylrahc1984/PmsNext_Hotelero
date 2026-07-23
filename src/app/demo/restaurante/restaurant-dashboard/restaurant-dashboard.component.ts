@@ -38,6 +38,8 @@ interface RestaurantKpi {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RestaurantDashboardComponent implements OnInit {
+  private readonly floorPlanWidth = 1400;
+  private readonly floorPlanHeight = 800;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly service = inject(RestaurantDashboardService);
@@ -240,6 +242,30 @@ export class RestaurantDashboardComponent implements OnInit {
     return `table-card--${mesa.estado.toLowerCase()}`;
   }
 
+  getMesaFormaClass(mesa: MesaVisual): string {
+    switch (mesa.forma) {
+      case 'ROUND':
+      case 'CIRCLE':
+      case 'OVAL':
+        return 'table-card--shape-round';
+      case 'DIAMOND':
+        return 'table-card--shape-diamond';
+      case 'SQUARE':
+        return 'table-card--shape-square';
+      default:
+        return 'table-card--shape-rectangle';
+    }
+  }
+
+  getMesaStyle(mesa: MesaVisual): Record<string, string> {
+    return {
+      left: `${(mesa.posX / this.floorPlanWidth) * 100}%`,
+      top: `${(mesa.posY / this.floorPlanHeight) * 100}%`,
+      width: `${(mesa.ancho / this.floorPlanWidth) * 100}%`,
+      height: `${(mesa.alto / this.floorPlanHeight) * 100}%`
+    };
+  }
+
   get compraTipoCambio(): number | null {
     return this.tipoCambio?.compra ?? null;
   }
@@ -389,6 +415,11 @@ export class RestaurantDashboardComponent implements OnInit {
       numero: Number(item.cpV05_NumMesa || 0),
       nombre: this.normalizeText(item.cpV05_Descripcion) || `Mesa ${item.cpV05_NumMesa}`,
       estado,
+      posX: this.normalizeLayoutNumber(item.cpV05_PosX, 0),
+      posY: this.normalizeLayoutNumber(item.cpV05_PosY, 0),
+      ancho: this.normalizeLayoutNumber(item.cpV05_Ancho, 85, true),
+      alto: this.normalizeLayoutNumber(item.cpV05_Alto, 85, true),
+      forma: this.normalizeText(item.cpV05_Forma).toUpperCase() || 'SQUARE',
       consumo: item.ppV07_TotalDocu == null ? undefined : Number(item.ppV07_TotalDocu),
       notaPedido:
         tipNp && serieNp && numNp && fecha
@@ -451,6 +482,14 @@ export class RestaurantDashboardComponent implements OnInit {
 
   private normalizeText(value: unknown): string {
     return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '';
+  }
+
+  private normalizeLayoutNumber(value: unknown, fallback: number, mustBePositive = false): number {
+    const normalized = Number(value);
+    if (!Number.isFinite(normalized) || (mustBePositive && normalized <= 0)) {
+      return fallback;
+    }
+    return normalized;
   }
 
   private normalizeDateDDMMYYYY(value: unknown): string {

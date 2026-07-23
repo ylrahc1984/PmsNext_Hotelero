@@ -109,12 +109,17 @@
           </ng-template>
         </div>
 
-        <div class="tables-grid" *ngIf="!isRoomService(salonSeleccionado) && !isLoadingMesas && mesas.length > 0">
+        <div class="tables-canvas" *ngIf="!isRoomService(salonSeleccionado) && !isLoadingMesas && mesas.length > 0">
           <button
             type="button"
             class="table-card"
             *ngFor="let mesa of mesas; trackBy: trackByMesa"
-            [ngClass]="[getMesaClass(mesa), mesaSeleccionada?.numero === mesa.numero ? 'table-card--selected' : '']"
+            [ngClass]="[
+              getMesaClass(mesa),
+              getMesaFormaClass(mesa),
+              mesaSeleccionada?.numero === mesa.numero ? 'table-card--selected' : ''
+            ]"
+            [ngStyle]="getMesaStyle(mesa)"
             (click)="abrirMesa(mesa)"
             [attr.aria-label]="mesa.nombre + ' ' + mesa.estado"
           >

@@ -1,13 +1,14 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { Router, NavigationExtras } from '@angular/router';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { of } from 'rxjs';
-import { catchError, finalize } from 'rxjs/operators';
+import { catchError, distinctUntilChanged, filter, finalize } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
 import { OperationalAction } from 'src/app/core/models/operational-context.model';
 import { AuthService } from 'src/app/core/services/auth.service';
+import { OperationalDateService } from 'src/app/core/services/operational-date.service';
 import { OperationalPolicyService } from 'src/app/core/services/operational-policy.service';
 import { normalizePmsDateDDMMYYYY, parsePmsDate, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
@@ -64,13 +65,15 @@ export class RoomRackComponent implements OnInit {
   private readonly roomRackService      = inject(RoomRackService);
   private readonly tipoCambioService    = inject(TipoCambioService);
   private readonly authService          = inject(AuthService);
+  private readonly operationalDateService = inject(OperationalDateService);
   private readonly operationalPolicy    = inject(OperationalPolicyService);
   private readonly destroyRef           = inject(DestroyRef);
   private readonly cdr                  = inject(ChangeDetectorRef);
+  private readonly operationalDate$     = toObservable(this.operationalDateService.operationalDate);
 
   readonly hotelActual                  = 'Hotel PMSNext Central';
   readonly ultimaActualizacion          = new Date();
-  readonly fechaOperacion               = this.getTodayDisplayDate();
+  fechaOperacion                        = '';
 
   readonly estados: EstadoHabitacion[]  = [
     'Disponible',
@@ -114,10 +117,7 @@ export class RoomRackComponent implements OnInit {
         : 'Check Out completado. Inventario actualizado.';
     }
 
-    // La consulta se ejecuta nuevamente al volver de un Check Out para mostrar
-    // inmediatamente el estado actualizado de la habitación.
-    this.cargarHabitaciones();
-    this.cargarTipoCambio();
+    this.bindOperationalDate();
   }
 
   async seleccionarHabitacion(habitacion: HabitacionRack): Promise<void> {
@@ -281,8 +281,21 @@ export class RoomRackComponent implements OnInit {
   }
 
   actualizarVentana(): void {
-    this.cargarHabitaciones();
-    this.cargarTipoCambio();
+    const previousOperationalDate = this.fechaOperacion;
+
+    this.operationalDateService
+      .refresh()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (operationalDate) => {
+          const normalizedDate = normalizePmsDateDDMMYYYY(operationalDate);
+          if (normalizedDate && normalizedDate === previousOperationalDate) {
+            this.cargarHabitaciones();
+            this.cargarTipoCambio();
+          }
+        },
+        error: () => this.handleOperationalDateError()
+      });
   }
 
   ejecutarAccion(accion: AccionOperativa): void {
@@ -352,6 +365,11 @@ export class RoomRackComponent implements OnInit {
   }
 
   private cargarHabitaciones(): void {
+    if (!this.fechaOperacion) {
+      this.handleOperationalDateError();
+      return;
+    }
+
     this.isLoading = true;
     this.errorMessage = '';
 
@@ -414,11 +432,11 @@ export class RoomRackComponent implements OnInit {
   }
 
   private createDefaultBloqueoForm(): BloqueoHabitacionForm {
-    const today = this.getTodayDisplayDate();
+    const operationalDate = this.fechaOperacion;
 
     return {
-      fechaInicial: today,
-      fechaFin: today,
+      fechaInicial: operationalDate,
+      fechaFin: operationalDate,
       descripcion: 'Bloqueo operativo',
       observaciones: ''
     };
@@ -480,6 +498,13 @@ export class RoomRackComponent implements OnInit {
   }
 
   private cargarTipoCambio(): void {
+    if (!this.fechaOperacion) {
+      this.tipoCambio = null;
+      this.tipoCambioLoading = false;
+      this.tipoCambioError = 'Fecha operativa no disponible';
+      return;
+    }
+
     this.tipoCambioLoading = true;
     this.tipoCambioError = '';
 
@@ -587,8 +612,42 @@ export class RoomRackComponent implements OnInit {
       .replace(/\s+/g, '-');
   }
 
-  private getTodayDisplayDate(): string {
-    return normalizePmsDateDDMMYYYY(new Date());
+  private bindOperationalDate(): void {
+    this.isLoading = true;
+
+    this.operationalDate$
+      .pipe(
+        filter((date): date is string => !!normalizePmsDateDDMMYYYY(date)),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((operationalDate) => {
+        this.fechaOperacion = normalizePmsDateDDMMYYYY(operationalDate);
+        this.bloqueoForm = this.createDefaultBloqueoForm();
+        this.cargarHabitaciones();
+        this.cargarTipoCambio();
+        this.cdr.markForCheck();
+      });
+
+    this.operationalDateService
+      .ensureLoaded()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        error: () => this.handleOperationalDateError()
+      });
+  }
+
+  private handleOperationalDateError(): void {
+    this.fechaOperacion = '';
+    this.habitaciones = [];
+    this.kpis = this.generarKpis();
+    this.resumen = this.generarResumen();
+    this.isLoading = false;
+    this.errorMessage = 'No se pudo obtener la fecha operativa para cargar el estado de habitaciones.';
+    this.tipoCambio = null;
+    this.tipoCambioLoading = false;
+    this.tipoCambioError = 'Fecha operativa no disponible';
+    this.cdr.markForCheck();
   }
 
   private normalizeText(value: unknown): string {

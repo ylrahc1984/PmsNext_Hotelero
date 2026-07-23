@@ -14,6 +14,15 @@ export function normalizePmsDateDDMMYYYY(value: unknown): string {
     return formatValidDate(Number(isoDate[3]), Number(isoDate[2]), Number(isoDate[1]));
   }
 
+  const namedMonthDate = normalized.match(/^([a-z]{3})\s+(\d{1,2})\s+(\d{4})$/i);
+  if (namedMonthDate) {
+    const month = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].indexOf(
+      namedMonthDate[1].toLowerCase()
+    );
+
+    return month >= 0 ? formatValidDate(Number(namedMonthDate[2]), month + 1, Number(namedMonthDate[3])) : '';
+  }
+
   const slashDate = normalized.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
   if (!slashDate) {
     return '';
@@ -35,14 +44,39 @@ export function toPmsDateInputValue(value: unknown): string {
   return match ? `${match[3]}-${match[2]}-${match[1]}` : '';
 }
 
-export function parsePmsDate(value: unknown): Date | null {
-  const normalized = normalizePmsDateDDMMYYYY(value);
-  const match = normalized.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (!match) {
+/** Suma días calendario en hora local, sin depender de milisegundos ni cambios de zona horaria. */
+export function addPmsCalendarDays(value: unknown, days: number): Date | null {
+  const date = value instanceof Date ? new Date(value) : parsePmsDate(value);
+
+  if (!date || Number.isNaN(date.getTime()) || !Number.isFinite(days)) {
     return null;
   }
 
-  return new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]));
+  date.setDate(date.getDate() + Math.trunc(days));
+  return date;
+}
+
+/** Diferencia entre fechas civiles, independiente de zona horaria y horario de verano. */
+export function differenceInPmsCalendarDays(startValue: unknown, endValue: unknown): number | null {
+  const startParts = getNormalizedDateParts(startValue);
+  const endParts = getNormalizedDateParts(endValue);
+
+  if (!startParts || !endParts) {
+    return null;
+  }
+
+  const startOrdinal = Date.UTC(startParts.year, startParts.month - 1, startParts.day);
+  const endOrdinal = Date.UTC(endParts.year, endParts.month - 1, endParts.day);
+  return Math.round((endOrdinal - startOrdinal) / 86400000);
+}
+
+export function parsePmsDate(value: unknown): Date | null {
+  const parts = getNormalizedDateParts(value);
+  if (!parts) {
+    return null;
+  }
+
+  return new Date(parts.year, parts.month - 1, parts.day);
 }
 
 function formatLocalDate(date: Date): string {
@@ -60,4 +94,17 @@ function formatValidDate(day: number, month: number, year: number): string {
   }
 
   return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+}
+
+function getNormalizedDateParts(value: unknown): { day: number; month: number; year: number } | null {
+  const normalized = normalizePmsDateDDMMYYYY(value);
+  const match = normalized.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+
+  return match
+    ? {
+        day: Number(match[1]),
+        month: Number(match[2]),
+        year: Number(match[3])
+      }
+    : null;
 }

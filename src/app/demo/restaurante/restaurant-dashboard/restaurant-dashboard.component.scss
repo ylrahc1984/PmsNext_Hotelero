@@ -240,27 +240,27 @@ $line: #dbe5ef;
   overflow: hidden;
 }
 
-.tables-grid {
+.tables-canvas {
   position: relative;
   z-index: 2;
-  display: grid;
-  grid-template-columns: repeat(9, minmax(112px, 136px));
-  justify-content: center;
-  align-content: start;
-  gap: 10px 12px;
-  min-height: 700px;
-  padding: 42px clamp(46px, 6vw, 96px) 24px;
+  width: 100%;
+  height: 700px;
 }
 
 .table-card {
+  position: absolute;
   display: grid;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   align-content: center;
+  justify-items: start;
   gap: 2px;
-  min-height: 66px;
-  padding: 8px 7px;
+  padding: clamp(3px, 0.55vw, 8px);
   border: 1px solid rgba($paper, 0.16);
   border-left-width: 5px;
   border-radius: 12px;
+  box-sizing: border-box;
   color: rgba($paper, 0.96);
   background: rgba($bg, 0.78);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
@@ -277,14 +277,44 @@ $line: #dbe5ef;
 }
 
 .table-card strong {
+  width: 100%;
+  overflow: hidden;
   font-size: 0.78rem;
   font-weight: 880;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .table-card span {
+  width: 100%;
+  overflow: hidden;
   color: rgba($paper, 0.82);
   font-size: 0.66rem;
   font-weight: 720;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table-card--shape-round {
+  border-radius: 50%;
+  justify-items: center;
+  text-align: center;
+}
+
+.table-card--shape-square {
+  border-radius: 8px;
+}
+
+.table-card--shape-diamond {
+  padding-inline: 18%;
+  border-left-width: 1px;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  justify-items: center;
+  text-align: center;
+}
+
+.table-card--shape-rectangle {
+  border-radius: 12px;
 }
 
 .table-card--libre { border-left-color: $green; }
@@ -641,11 +671,8 @@ $line: #dbe5ef;
     padding-bottom: 4px;
   }
 
-  .tables-grid {
-    grid-template-columns: repeat(4, minmax(108px, 132px));
-    justify-content: center;
-    min-height: 520px;
-    padding: 34px clamp(26px, 5vw, 54px) 22px;
+  .tables-canvas {
+    height: 520px;
   }
 
   .restaurant-floor,
@@ -694,15 +721,8 @@ $line: #dbe5ef;
     display: none;
   }
 
-  .tables-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    min-height: 430px;
-    padding: 24px 18px 16px;
-  }
-
-  .table-card {
-    min-height: 76px;
+  .tables-canvas {
+    height: 430px;
   }
 
   .restaurant-floor,

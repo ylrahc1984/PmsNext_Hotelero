@@ -4,7 +4,12 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { of } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
 
-import { normalizePmsDateDDMMYYYY, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
+import {
+  addPmsCalendarDays,
+  differenceInPmsCalendarDays,
+  normalizePmsDateDDMMYYYY,
+  toPmsDateInputValue
+} from 'src/app/core/utils/pms-date.util';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { RoomCategory } from '../../settings/room-categories/models/room-category.model';
 import { RoomCategoriesService } from '../../settings/room-categories/services/room-categories.service';
@@ -58,9 +63,10 @@ export class OccupancyForecastComponent implements OnInit {
   private readonly roomCategoriesService = inject(RoomCategoriesService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly initialDate = new Date();
 
-  fechaInicial = toPmsDateInputValue(new Date());
-  fechaFinal = toPmsDateInputValue(new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)); // 15 dias despues
+  fechaInicial = toPmsDateInputValue(this.initialDate);
+  fechaFinal = toPmsDateInputValue(addPmsCalendarDays(this.initialDate, 15)); // 15 dias calendario despues
   tipoVista: 'ocupacion' | 'disponibilidad' = 'ocupacion';
   busqueda = '';
   pageSize = 10;
@@ -114,6 +120,27 @@ export class OccupancyForecastComponent implements OnInit {
     return `${start}-${end} de ${this.filteredRows.length}`;
   }
 
+  get dateRangeError(): string {
+    const startDate = this.formatDateApi(this.fechaInicial);
+    const endDate = this.formatDateApi(this.fechaFinal);
+
+    if (!startDate || !endDate) {
+      return 'Seleccione una fecha inicial y una fecha final válidas.';
+    }
+
+    return (differenceInPmsCalendarDays(startDate, endDate) ?? -1) < 0
+      ? 'La fecha final debe ser igual o posterior a la fecha inicial.'
+      : '';
+  }
+
+  get viewQuantityLabel(): string {
+    return this.tipoVista === 'ocupacion' ? 'Total Ocupada' : 'Total Disponible';
+  }
+
+  get viewPercentageLabel(): string {
+    return this.tipoVista === 'ocupacion' ? '% Ocupación' : '% Disponibilidad';
+  }
+
   procesar(): void {
     this.currentPage = 1;
     this.loadForecast();
@@ -133,6 +160,10 @@ export class OccupancyForecastComponent implements OnInit {
 
   onPageSizeChange(): void {
     this.currentPage = 1;
+  }
+
+  onViewChange(): void {
+    this.kpis = this.buildKpis(this.rows);
   }
 
   previousPage(): void {
@@ -155,6 +186,22 @@ export class OccupancyForecastComponent implements OnInit {
     return 'occupancy-low';
   }
 
+  getViewPercentageClass(value: number): string {
+    if (this.tipoVista === 'ocupacion') {
+      return this.getOccupancyClass(value);
+    }
+
+    if (value >= 80) {
+      return 'occupancy-low';
+    }
+
+    if (value >= 50) {
+      return 'occupancy-medium';
+    }
+
+    return 'occupancy-high';
+  }
+
   trackByFecha(_: number, row: OccupancyForecastRow): string {
     return row.fecha;
   }
@@ -172,12 +219,34 @@ export class OccupancyForecastComponent implements OnInit {
   }
 
   getCategoryResult(row: OccupancyForecastRow, codigo: string): OccupancyForecastCategoryResult {
-    return row.categorias[codigo] ?? { codigo, cantidad: 0, total: 0 };
+    const directResult = row.categorias[codigo];
+    if (directResult) {
+      return directResult;
+    }
+
+    const key = Object.keys(row.categorias).find((categoryKey) => categoryKey.toUpperCase() === codigo.toUpperCase());
+    return key ? row.categorias[key] : { codigo, cantidad: 0, total: 0 };
   }
 
   getCategoryDisplay(row: OccupancyForecastRow, codigo: string): string {
     const result = this.getCategoryResult(row, codigo);
-    return `${result.cantidad}/${result.total}`;
+    const quantity = this.tipoVista === 'ocupacion' ? result.cantidad : Math.max(0, result.total - result.cantidad);
+    return `${quantity}/${result.total}`;
+  }
+
+  getViewQuantity(row: OccupancyForecastRow): number {
+    return this.tipoVista === 'ocupacion'
+      ? row.totalOcupadas
+      : Math.max(0, row.totalHabitaciones - row.bloqueadas - row.totalOcupadas);
+  }
+
+  getViewPercentage(row: OccupancyForecastRow): number {
+    if (this.tipoVista === 'ocupacion') {
+      return row.porcentajeOcupacion;
+    }
+
+    const sellableRooms = Math.max(0, row.totalHabitaciones - row.bloqueadas);
+    return sellableRooms > 0 ? (this.getViewQuantity(row) / sellableRooms) * 100 : 0;
   }
 
   private loadInitialData(): void {
@@ -206,6 +275,14 @@ export class OccupancyForecastComponent implements OnInit {
   }
 
   private loadForecast(): void {
+    const dateRangeError = this.dateRangeError;
+    if (dateRangeError) {
+      this.isLoading = false;
+      this.errorMessage = dateRangeError;
+      this.cdr.markForCheck();
+      return;
+    }
+
     const selectedCategories = this.selectedCategories;
 
     if (!selectedCategories.length) {
@@ -279,22 +356,39 @@ export class OccupancyForecastComponent implements OnInit {
   }
 
   private buildKpis(rows: OccupancyForecastRow[]): ForecastKpi[] {
-    const occupancyAverage = rows.length ? rows.reduce((total, row) => total + row.porcentajeOcupacion, 0) / rows.length : 0;
+    const viewPercentages = rows.map((row) => this.getViewPercentage(row));
+    const viewAverage = viewPercentages.length ? viewPercentages.reduce((total, percentage) => total + percentage, 0) / viewPercentages.length : 0;
     const peak = rows.reduce<OccupancyForecastRow | null>(
-      (current, row) => (!current || row.porcentajeOcupacion > current.porcentajeOcupacion ? row : current),
+      (current, row) => (!current || this.getViewPercentage(row) > this.getViewPercentage(current) ? row : current),
       null
     );
     const adults = rows.reduce((total, row) => total + row.pax, 0);
     const children = rows.reduce((total, row) => total + row.totalChl, 0);
     const availableRoomNights = rows.reduce((total, row) => total + Math.max(0, row.totalHabitaciones - row.bloqueadas - row.totalOcupadas), 0);
     const occupiedRoomNights = rows.reduce((total, row) => total + row.totalOcupadas, 0);
+    const isOccupancyView = this.tipoVista === 'ocupacion';
 
     return [
-      { title: 'Ocupacion Promedio', value: `${occupancyAverage.toFixed(1)}%`, helper: 'En el periodo seleccionado', icon: 'analytics' },
-      { title: 'Pico de Ocupacion', value: `${(peak?.porcentajeOcupacion ?? 0).toFixed(1)}%`, helper: peak?.fecha ?? 'Sin datos', icon: 'trending_up' },
+      {
+        title: isOccupancyView ? 'Ocupación Promedio' : 'Disponibilidad Promedio',
+        value: `${viewAverage.toFixed(1)}%`,
+        helper: 'En el período seleccionado',
+        icon: 'analytics'
+      },
+      {
+        title: isOccupancyView ? 'Pico de Ocupación' : 'Pico de Disponibilidad',
+        value: `${(peak ? this.getViewPercentage(peak) : 0).toFixed(1)}%`,
+        helper: peak?.fecha ?? 'Sin datos',
+        icon: 'trending_up'
+      },
       { title: 'Pax Totales', value: String(adults + children), helper: `${adults} adultos / ${children} ninos`, icon: 'groups' },
       { title: 'Habitaciones Disponibles', value: String(availableRoomNights), helper: 'Habitacion noche disponible', icon: 'hotel' },
-      { title: 'Noches Proyectadas', value: String(occupiedRoomNights), helper: 'Habitacion noche ocupada', icon: 'bedtime' }
+      {
+        title: isOccupancyView ? 'Noches Proyectadas' : 'Noches Disponibles',
+        value: String(isOccupancyView ? occupiedRoomNights : availableRoomNights),
+        helper: isOccupancyView ? 'Habitación noche ocupada' : 'Habitación noche disponible',
+        icon: 'bedtime'
+      }
     ];
   }
 
