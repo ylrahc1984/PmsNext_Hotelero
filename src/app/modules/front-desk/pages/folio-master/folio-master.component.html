@@ -1,0 +1,118 @@
+<section class="folio-page" aria-label="Folios Master pendientes">
+  <header class="folio-hero">
+    <div class="folio-hero__content">
+      <span class="folio-hero__eyebrow">Front Desk · Operación hotelera</span>
+      <h1>Folios Master</h1>
+      <p>Consulta, revisión y facturación de cargos de hospedaje generados desde reservas.</p>
+    </div>
+    <div class="folio-hero__meta">
+      <span><i class="feather icon-calendar"></i>{{ formatDate(fechaIngreso) }} — {{ formatDate(fechaSalida) }}</span>
+      <strong>{{ folios.length }} folios</strong>
+    </div>
+  </header>
+
+  <section class="folio-kpis" aria-label="Resumen de folios">
+    <article class="folio-kpi" *ngFor="let kpi of kpis; trackBy: trackByKpi" [ngClass]="'folio-kpi--' + kpi.accent">
+      <span class="folio-kpi__icon"><i class="feather" [ngClass]="'icon-' + kpi.icon"></i></span>
+      <div><small>{{ kpi.label }}</small><strong>{{ kpi.value }}</strong><p>{{ kpi.helper }}</p></div>
+    </article>
+  </section>
+
+  <section class="folio-filters" aria-label="Filtros de consulta">
+    <div class="folio-filter-field folio-filter-field--date">
+      <label for="folioFechaIngreso">Fecha de ingreso</label>
+      <div class="folio-input-wrap"><i class="feather icon-calendar"></i><input id="folioFechaIngreso" type="date" [(ngModel)]="fechaIngreso" [disabled]="isLoading"></div>
+    </div>
+    <div class="folio-filter-field folio-filter-field--date">
+      <label for="folioFechaSalida">Fecha de salida</label>
+      <div class="folio-input-wrap"><i class="feather icon-calendar"></i><input id="folioFechaSalida" type="date" [(ngModel)]="fechaSalida" [disabled]="isLoading"></div>
+    </div>
+    <div class="folio-filter-field folio-filter-field--search">
+      <label for="folioSearch">Búsqueda múltiple</label>
+      <div class="folio-input-wrap">
+        <i class="feather icon-search"></i>
+        <input id="folioSearch" type="search" [(ngModel)]="searchTerm" (ngModelChange)="onSearchChange()" placeholder="Folio, reserva, agencia, descripción, tarifa...">
+        <button *ngIf="searchTerm" type="button" class="folio-clear" (click)="searchTerm = ''; onSearchChange()" aria-label="Limpiar búsqueda"><i class="feather icon-x"></i></button>
+      </div>
+    </div>
+    <button type="button" class="folio-consult-button" (click)="loadFolios()" [disabled]="isLoading">
+      <span *ngIf="isLoading" class="spinner-border spinner-border-sm" aria-hidden="true"></span><i *ngIf="!isLoading" class="feather icon-search"></i>{{ isLoading ? 'Consultando...' : 'Consultar' }}
+    </button>
+    <div class="folio-filter-error" *ngIf="dateRangeError"><i class="feather icon-alert-circle"></i>{{ dateRangeError }}</div>
+  </section>
+
+  <section class="folio-table-card" aria-label="Listado de Folios Master">
+    <div class="folio-table-head">
+      <div><span>Resultado operativo</span><h2>Cargos de hospedaje pendientes</h2></div>
+      <div class="folio-table-head__summary" *ngIf="!isLoading"><strong>{{ filteredFolios.length }}</strong><span>{{ searchTerm ? 'coincidencias' : 'registros' }}</span></div>
+    </div>
+
+    <div class="folio-message folio-message--loading" *ngIf="isLoading"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span><div><strong>Consultando Folios Master</strong><small>Obteniendo cargos del período seleccionado...</small></div></div>
+    <div class="folio-message folio-message--error" *ngIf="!isLoading && errorMessage"><i class="feather icon-alert-triangle"></i><div><strong>No fue posible completar la consulta</strong><small>{{ errorMessage }}</small></div><button type="button" (click)="loadFolios()">Reintentar</button></div>
+    <div class="folio-message folio-message--empty" *ngIf="!isLoading && !errorMessage && folios.length === 0"><i class="feather icon-inbox"></i><div><strong>No hay folios pendientes</strong><small>No se encontraron cargos de hospedaje para este rango de fechas.</small></div></div>
+    <div class="folio-message folio-message--empty" *ngIf="!isLoading && !errorMessage && folios.length > 0 && filteredFolios.length === 0"><i class="feather icon-search"></i><div><strong>Sin coincidencias</strong><small>Prueba con otro folio, reserva, agencia o descripción.</small></div></div>
+
+    <div class="folio-table-scroll" *ngIf="!isLoading && !errorMessage && filteredFolios.length > 0">
+      <table class="folio-table">
+        <thead><tr><th>Folio</th><th>Reserva</th><th>Cód. agencia</th><th>Agencia</th><th>Descripción de la reserva</th><th>Check-in</th><th>Check-out</th><th>Estado</th><th class="text-center">Acciones</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let folio of pagedFolios; trackBy: trackByFolio">
+            <td><button type="button" class="folio-link" (click)="openDetail(folio)">{{ folio.PRV09_NumFolio || 'N/D' }}</button></td>
+            <td><strong class="folio-reservation">{{ folio.PRV09_CodReserva || folio.PRV01_CodReserva || 'N/D' }}</strong></td>
+            <td><span class="folio-code">{{ folio.PRV09_CodAgen || folio.PRV01_CodAgencia || 'N/D' }}</span></td>
+            <td><span class="folio-agency" [title]="folio.PRV09_DesAgen">{{ folio.PRV09_DesAgen || 'N/D' }}</span></td>
+            <td><span class="folio-description" [title]="folio.PRV01_Descripcion">{{ folio.PRV01_Descripcion || 'Sin descripción' }}</span></td>
+            <td><span class="folio-date"><i class="feather icon-log-in"></i>{{ formatDate(folio.PRV09_FechaIng) }}</span></td>
+            <td><span class="folio-date"><i class="feather icon-log-out"></i>{{ formatDate(folio.PRV09_FechaSal) }}</span></td>
+            <td><span class="folio-status" [ngClass]="getStatusClass(folio.PRV09_Estado)"><i></i>{{ getStatus(folio.PRV09_Estado).label }}</span></td>
+            <td class="text-center"><div class="folio-actions">
+              <button type="button" class="folio-action folio-action--detail" (click)="openDetail(folio)" title="Ver cargos del folio"><i class="feather icon-eye"></i><span>Detalle</span></button>
+              <button type="button" class="folio-action folio-action--invoice" (click)="invoiceFolio(folio)" [disabled]="!!invoiceLoadingFolioNumber" title="Facturar cargos"><i class="feather" [ngClass]="invoiceLoadingFolioNumber === (folio.PRV09_NumFolio || folio.PRV01_Folio) ? 'icon-loader' : 'icon-file-text'"></i><span>{{ invoiceLoadingFolioNumber === (folio.PRV09_NumFolio || folio.PRV01_Folio) ? 'Cargando' : 'Facturar' }}</span></button>
+              <button type="button" class="folio-action folio-action--checkout" (click)="checkoutFolio(folio)" [disabled]="!!checkoutLoadingFolioNumber" title="Procesar Check Out"><i class="feather icon-log-out"></i><span>{{ checkoutLoadingFolioNumber === (folio.PRV09_NumFolio || folio.PRV01_Folio) ? 'Procesando' : 'Check Out' }}</span></button>
+            </div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <footer class="folio-pagination" *ngIf="!isLoading && !errorMessage && filteredFolios.length > 0">
+      <label><span>Mostrar</span><select [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()"><option *ngFor="let size of pageSizeOptions" [ngValue]="size">{{ size }}</option></select></label>
+      <span class="folio-pagination__summary">{{ paginationLabel }}</span>
+      <div class="folio-pagination__controls">
+        <button type="button" (click)="goToPage(1)" [disabled]="currentPage === 1" aria-label="Primera página"><i class="feather icon-chevrons-left"></i></button>
+        <button type="button" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1" aria-label="Página anterior"><i class="feather icon-chevron-left"></i></button>
+        <strong>{{ currentPage }} / {{ totalPages }}</strong>
+        <button type="button" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages" aria-label="Página siguiente"><i class="feather icon-chevron-right"></i></button>
+        <button type="button" (click)="goToPage(totalPages)" [disabled]="currentPage === totalPages" aria-label="Última página"><i class="feather icon-chevrons-right"></i></button>
+      </div>
+    </footer>
+  </section>
+</section>
+
+<app-folio-master-charges-modal
+  *ngIf="selectedFolio as folio"
+  [folio]="folio"
+  [charges]="folioCharges"
+  [loading]="isDetailLoading"
+  [errorMessage]="detailErrorMessage"
+  [checkoutLoading]="checkoutLoadingFolioNumber === (folio.PRV09_NumFolio || folio.PRV01_Folio)"
+  (closeModal)="closeDetail()"
+  (retry)="openDetail(folio)"
+  (viewCharge)="openChargeDetail($event)"
+  (invoice)="invoiceFolio($event)"
+  (checkout)="checkoutFolio($event)"
+/>
+
+<app-folio-charge-detail-modal
+  *ngIf="selectedCharge as charge"
+  [charge]="charge"
+  (closeModal)="closeChargeDetail()"
+/>
+
+<app-folio-master-invoice-modal
+  *ngIf="selectedInvoiceFolio as invoiceFolio"
+  [folio]="invoiceFolio"
+  [charges]="invoiceCharges"
+  (closeModal)="closeInvoice()"
+  (invoiced)="onInvoiceCompleted()"
+/>

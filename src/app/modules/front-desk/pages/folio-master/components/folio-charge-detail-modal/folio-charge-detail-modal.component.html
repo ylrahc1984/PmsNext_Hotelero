@@ -1,0 +1,61 @@
+<div class="detail-overlay" (click)="requestClose()">
+  <section class="detail-dialog" role="dialog" aria-modal="true" aria-labelledby="chargeDetailTitle" (click)="$event.stopPropagation()">
+    <header class="detail-header">
+      <div class="detail-heading">
+        <span class="detail-heading__icon"><i class="feather icon-file-text"></i></span>
+        <div><small>Detalle operativo del cargo</small><h2 id="chargeDetailTitle">Documento {{ charge.numCrgHab }}</h2><p>{{ charge.tipCrgHab }} · Reserva {{ charge.codReserva }} · Folio {{ charge.folio || charge.numHab }}</p></div>
+      </div>
+      <div class="detail-header__actions">
+        <span class="draft-badge" *ngIf="pendingChanges"><i class="feather icon-edit-3"></i>Cambios locales</span>
+        <button type="button" class="icon-button" (click)="loadDetail()" [disabled]="loading" aria-label="Actualizar detalle"><i class="feather icon-refresh-cw"></i></button>
+        <button type="button" class="icon-button" (click)="requestClose()" aria-label="Cerrar"><i class="feather icon-x"></i></button>
+      </div>
+    </header>
+
+    <main class="detail-body">
+      <div class="state-view" *ngIf="loading"><span class="spinner-border spinner-border-sm"></span><div><strong>Consultando detalle...</strong><small>Obteniendo encabezado y partidas del cargo.</small></div></div>
+      <div class="state-view state-view--error" *ngIf="!loading && errorMessage"><i class="feather icon-alert-triangle"></i><div><strong>No fue posible cargar el detalle</strong><small>{{ errorMessage }}</small></div><button type="button" (click)="loadDetail()">Reintentar</button></div>
+
+      <ng-container *ngIf="!loading && !errorMessage && detail">
+        <section class="detail-summary">
+          <article><span>Folio</span><strong>{{ header.folio || header.numHab }}</strong></article>
+          <article><span>Concepto</span><strong>{{ header.nombrePax || 'Cargo de habitación' }}</strong></article>
+          <article><span>Punto de venta</span><strong>{{ header.pntVenta || 'N/D' }}</strong></article>
+          <article><span>Fecha y hora</span><strong>{{ header.fecha || 'N/D' }} · {{ formatTime(header.hora) }}</strong></article>
+          <article><span>Operador</span><strong>{{ header.operador || 'N/D' }}</strong></article>
+          <article class="detail-summary__total"><span>Total calculado</span><strong>{{ header.moneda || charge.moneda }} {{ total | number:'1.2-2' }}</strong></article>
+        </section>
+
+        <aside class="draft-warning" *ngIf="pendingChanges"><i class="feather icon-info"></i><div><strong>Borrador operativo</strong><span>Los cambios todavía no se han enviado al backend porque falta el contrato de actualización y eliminación de partidas.</span></div></aside>
+
+        <section class="lines-card">
+          <div class="lines-card__title"><div><small>Partidas del documento</small><h3>{{ detail.detalles.length }} consumo(s)</h3></div><strong>{{ header.moneda || charge.moneda }}</strong></div>
+          <div class="lines-table-wrap" *ngIf="detail.detalles.length; else emptyLines">
+            <table class="lines-table">
+              <thead><tr><th>#</th><th>Consumo</th><th class="text-center">Cant.</th><th class="text-end">Precio</th><th class="text-end">Descuento</th><th class="text-end">Impuestos</th><th class="text-end">Total</th><th>Estado</th><th class="text-center">Acciones</th></tr></thead>
+              <tbody>
+                <tr *ngFor="let line of detail.detalles; trackBy: trackByLine" [class.is-locked]="!canMutate(line)">
+                  <td><span class="order">{{ line.orden }}</span></td>
+                  <td><div class="line-name"><strong>{{ line.nomConsumo || 'Consumo sin nombre' }}</strong><span>{{ line.codConsumo || 'S/C' }} · {{ line.grupo || 'Sin grupo' }} / {{ line.categoria || 'Sin categoría' }}</span><small *ngIf="line.comentario">{{ line.comentario }}</small></div></td>
+                  <td class="text-center">{{ line.cantidad | number:'1.0-2' }}</td>
+                  <td class="text-end">{{ line.precio | number:'1.2-2' }}</td>
+                  <td class="text-end">{{ line.descuento | number:'1.2-2' }}</td>
+                  <td class="text-end">{{ line.impuestos | number:'1.2-2' }}</td>
+                  <td class="text-end"><strong>{{ line.total | number:'1.2-2' }}</strong></td>
+                  <td><span class="line-state" [class.line-state--muted]="stateLabel(line.estado) !== 'Activo'">{{ stateLabel(line.estado) }}</span></td>
+                  <td><div class="line-actions"><button type="button" title="Editar partida en el borrador" [disabled]="!canMutate(line)" (click)="editLine(line)"><i class="feather icon-edit-2"></i></button><button type="button" class="danger" title="Quitar partida del borrador" [disabled]="!canMutate(line)" (click)="removeLine(line)"><i class="feather icon-trash-2"></i></button></div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <ng-template #emptyLines><div class="empty-lines"><i class="feather icon-file-minus"></i><strong>El borrador no contiene partidas.</strong></div></ng-template>
+        </section>
+      </ng-container>
+    </main>
+
+    <footer class="detail-footer">
+      <span><i class="feather icon-shield"></i>Las acciones se habilitan únicamente para cargos abiertos y partidas activas.</span>
+      <div><button type="button" class="button-secondary" (click)="requestClose()">Cerrar</button><button type="button" class="button-secondary" [disabled]="!pendingChanges" (click)="discardChanges()"><i class="feather icon-rotate-ccw"></i>Descartar</button><button type="button" class="button-primary" [disabled]="!pendingChanges" (click)="explainPendingPersistence()"><i class="feather icon-save"></i>Guardar cambios</button></div>
+    </footer>
+  </section>
+</div>

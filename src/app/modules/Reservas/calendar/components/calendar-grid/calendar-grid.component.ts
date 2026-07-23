@@ -1,4 +1,18 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, Output, ViewChild, inject } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  ElementRef,
+  EventEmitter,
+  Input,
+  OnChanges,
+  OnDestroy,
+  Output,
+  SimpleChanges,
+  ViewChild,
+  inject
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 import {
@@ -39,7 +53,7 @@ interface CalendarGridDragState {
   styleUrls: ['./calendar-grid.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class CalendarGridComponent {
+export class CalendarGridComponent implements AfterViewInit, OnChanges, OnDestroy {
   private readonly cdr = inject(ChangeDetectorRef);
 
   @Input({ required: true }) dates: CalendarDate[] = [];
@@ -53,6 +67,8 @@ export class CalendarGridComponent {
 
   @Output() scrollTopChange = new EventEmitter<number>();
   @Output() scrollLeftChange = new EventEmitter<number>();
+  @Output() viewportHeightChange = new EventEmitter<number>();
+  @Output() scrollContentHeightChange = new EventEmitter<number>();
   @Output() reservationSelect = new EventEmitter<CalendarReservationBlockSelect>();
   @Output() reservationDrop = new EventEmitter<CalendarReservationDropRequest>();
   @Output() reservationMoveBlocked = new EventEmitter<CalendarReservation>();
@@ -62,6 +78,7 @@ export class CalendarGridComponent {
   @Output() trayReservationSelect = new EventEmitter<string>();
 
   @ViewChild('scrollContainer') private scrollContainer?: ElementRef<HTMLDivElement>;
+  @ViewChild('scrollContent') private scrollContent?: ElementRef<HTMLDivElement>;
 
   readonly cellWidth = 42;
   readonly rowHeight = 48;
@@ -92,20 +109,64 @@ export class CalendarGridComponent {
     overExchangeTray: boolean;
   } | null = null;
 
-  private suppressScrollEvent = false;
+  private viewportResizeObserver?: ResizeObserver;
+  private viewportMeasureFrame: number | null = null;
+  private lastViewportHeight = -1;
+  private lastScrollContentHeight = -1;
   private isDragging = false;
   private hasDragMoved = false;
   private dragStartClientX = 0;
   private dragStartClientY = 0;
   private wasDragCommitted = false;
 
-  setScrollTop(value: number): void {
-    if (!this.scrollContainer) {
+  ngAfterViewInit(): void {
+    const element = this.scrollContainer?.nativeElement;
+    if (!element) {
       return;
     }
 
-    this.suppressScrollEvent = true;
-    this.scrollContainer.nativeElement.scrollTop = value;
+    if (typeof ResizeObserver !== 'undefined') {
+      this.viewportResizeObserver = new ResizeObserver(() => this.scheduleViewportMeasurement());
+      this.viewportResizeObserver.observe(element);
+      if (this.scrollContent?.nativeElement) {
+        this.viewportResizeObserver.observe(this.scrollContent.nativeElement);
+      }
+    }
+
+    this.scheduleViewportMeasurement();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['dates'] || changes['rows'] || changes['exchangeMode'] || changes['exchangeTrayHeight']) {
+      this.scheduleViewportMeasurement();
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.viewportResizeObserver?.disconnect();
+    if (this.viewportMeasureFrame !== null && typeof cancelAnimationFrame !== 'undefined') {
+      cancelAnimationFrame(this.viewportMeasureFrame);
+    }
+    window.removeEventListener('pointermove', this.handlePointerMove);
+    window.removeEventListener('pointerup', this.handlePointerUp);
+  }
+
+  setScrollTop(value: number): void {
+    const element = this.scrollContainer?.nativeElement;
+    if (!element) {
+      return;
+    }
+
+    const nextScrollTop = this.clamp(Number(value) || 0, 0, Math.max(0, element.scrollHeight - element.clientHeight));
+    if (Math.abs(element.scrollTop - nextScrollTop) < 0.5) {
+      return;
+    }
+
+    element.scrollTop = nextScrollTop;
+  }
+
+  getScrollTop(): number {
+    return this.scrollContainer?.nativeElement.scrollTop ?? 0;
   }
 
   resetScroll(): void {
@@ -113,7 +174,6 @@ export class CalendarGridComponent {
       return;
     }
 
-    this.suppressScrollEvent = true;
     this.scrollContainer.nativeElement.scrollTop = 0;
     this.scrollContainer.nativeElement.scrollLeft = 0;
   }
@@ -121,11 +181,6 @@ export class CalendarGridComponent {
   onScroll(event: Event): void {
     const element = event.target as HTMLDivElement;
     this.scrollLeftChange.emit(element.scrollLeft);
-
-    if (this.suppressScrollEvent) {
-      this.suppressScrollEvent = false;
-      return;
-    }
 
     this.scrollTopChange.emit(element.scrollTop);
   }
@@ -446,6 +501,31 @@ export class CalendarGridComponent {
     window.removeEventListener('pointermove', this.handlePointerMove);
     window.removeEventListener('pointerup', this.handlePointerUp);
     this.cdr.detectChanges();
+  }
+
+  private scheduleViewportMeasurement(): void {
+    if (!this.scrollContainer || typeof requestAnimationFrame === 'undefined') {
+      return;
+    }
+
+    if (this.viewportMeasureFrame !== null) {
+      cancelAnimationFrame(this.viewportMeasureFrame);
+    }
+
+    this.viewportMeasureFrame = requestAnimationFrame(() => {
+      this.viewportMeasureFrame = null;
+      const height = this.scrollContainer?.nativeElement.clientHeight ?? 0;
+      if (height > 0 && Math.abs(height - this.lastViewportHeight) >= 0.5) {
+        this.lastViewportHeight = height;
+        this.viewportHeightChange.emit(height);
+      }
+
+      const contentHeight = this.scrollContainer?.nativeElement.scrollHeight ?? 0;
+      if (contentHeight > 0 && Math.abs(contentHeight - this.lastScrollContentHeight) >= 0.5) {
+        this.lastScrollContentHeight = contentHeight;
+        this.scrollContentHeightChange.emit(contentHeight);
+      }
+    });
   }
 
   private clamp(value: number, min: number, max: number): number {

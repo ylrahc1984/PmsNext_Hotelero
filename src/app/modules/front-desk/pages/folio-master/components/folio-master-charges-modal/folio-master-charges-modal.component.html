@@ -1,0 +1,80 @@
+<div class="charges-overlay" (click)="closeModal.emit()">
+  <section class="charges-dialog" role="dialog" aria-modal="true" aria-labelledby="folioChargesTitle" (click)="$event.stopPropagation()">
+    <header class="charges-header">
+      <div class="charges-heading">
+        <span class="charges-heading__icon"><i class="feather icon-layers"></i></span>
+        <div>
+          <small>Cargos del Folio Master</small>
+          <h2 id="folioChargesTitle">Folio {{ folio.PRV09_NumFolio || folio.PRV01_Folio }}</h2>
+          <p>Reserva {{ folio.PRV09_CodReserva || folio.PRV01_CodReserva }} · Agencia {{ folio.PRV09_CodAgen || folio.PRV01_CodAgencia }}</p>
+        </div>
+      </div>
+      <div class="charges-header__actions">
+        <span class="folio-state" [ngClass]="getStatusClass(folio.PRV09_Estado)"><i></i>{{ getStatus(folio.PRV09_Estado).label }}</span>
+        <button type="button" class="icon-button" (click)="retry.emit()" [disabled]="loading" aria-label="Actualizar cargos"><i class="feather icon-refresh-cw"></i></button>
+        <button type="button" class="icon-button" (click)="closeModal.emit()" aria-label="Cerrar"><i class="feather icon-x"></i></button>
+      </div>
+    </header>
+
+    <main class="charges-body">
+      <section class="folio-summary">
+        <article><span>Agencia</span><strong>{{ folio.PRV09_DesAgen || 'N/D' }}</strong></article>
+        <article><span>Tarifa / Plan</span><strong>{{ folio.PRV09_CodTarifa || 'N/D' }} / {{ folio.PRV09_CodPlan || 'N/D' }}</strong></article>
+        <article><span>Check-in</span><strong>{{ formatDate(folio.PRV09_FechaIng) }}</strong></article>
+        <article><span>Check-out</span><strong>{{ formatDate(folio.PRV09_FechaSal) }}</strong></article>
+        <article><span>Noches</span><strong>{{ folio.PRV09_Noches }}</strong></article>
+        <article><span>Total cargos</span><strong>{{ folio.PRV09_MonedaTar || folio.PRV01_Moneda }} {{ total | number:'1.2-2' }}</strong></article>
+      </section>
+
+      <section class="charges-card">
+        <div class="charges-card__title">
+          <div><small>Documentos asociados</small><h3>Cargos de habitación</h3></div>
+          <span>{{ charges.length }} registro(s)</span>
+        </div>
+
+        <div class="state-view" *ngIf="loading">
+          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+          <div><strong>Consultando cargos...</strong><small>Buscando encabezados por reserva y número de folio.</small></div>
+        </div>
+
+        <div class="state-view state-view--error" *ngIf="!loading && errorMessage">
+          <i class="feather icon-alert-triangle"></i>
+          <div><strong>No fue posible consultar los cargos</strong><small>{{ errorMessage }}</small></div>
+          <button type="button" (click)="retry.emit()">Reintentar</button>
+        </div>
+
+        <div class="state-view" *ngIf="!loading && !errorMessage && charges.length === 0">
+          <i class="feather icon-inbox"></i>
+          <div><strong>Este folio no tiene cargos registrados.</strong><small>El endpoint respondió correctamente sin encabezados asociados.</small></div>
+        </div>
+
+        <div class="charges-table-wrap" *ngIf="!loading && !errorMessage && charges.length > 0">
+          <table class="charges-table">
+            <thead><tr><th>Documento</th><th>Concepto</th><th>Fecha / hora</th><th>Punto venta</th><th>Estado</th><th class="text-end">Importe</th><th class="text-center">Acción</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let charge of charges; trackBy: trackByCharge">
+                <td><strong class="document-number">{{ charge.numCrgHab }}</strong><small>{{ charge.tipCrgHab }}</small></td>
+                <td><strong>{{ charge.nombrePax || 'Cargo de habitación' }}</strong><small>Reserva {{ charge.codReserva }}</small></td>
+                <td><span>{{ formatDate(charge.fecha) }}</span><small>{{ formatTime(charge.hora) }}</small></td>
+                <td><span class="point-sale">{{ charge.pntVenta || 'N/D' }}</span></td>
+                <td><span class="charge-state" [class.charge-state--muted]="getChargeState(charge.estado) !== 'Activo'">{{ getChargeState(charge.estado) }}</span></td>
+                <td class="text-end"><strong class="amount">{{ charge.moneda || folio.PRV09_MonedaTar }} {{ charge.mtoTot | number:'1.2-2' }}</strong></td>
+                <td class="text-center"><button type="button" class="detail-button" (click)="viewCharge.emit(charge)"><i class="feather icon-eye"></i>Ver detalle</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="folio-notes">
+        <div><span>Descripción de la reserva</span><p>{{ folio.PRV01_Descripcion || 'Sin descripción registrada.' }}</p></div>
+        <div><span>Observaciones</span><p>{{ folio.PRV01_Observacion || 'Sin observaciones registradas.' }}</p></div>
+      </section>
+    </main>
+
+    <footer class="charges-footer">
+      <span><i class="feather icon-info"></i>Seleccione un documento para revisar y preparar cambios en sus partidas.</span>
+      <div><button type="button" class="button-secondary" (click)="closeModal.emit()">Cerrar</button><button type="button" class="button-checkout" [disabled]="checkoutLoading" (click)="checkout.emit(folio)"><i class="feather icon-log-out"></i>{{ checkoutLoading ? 'Procesando...' : 'Check Out' }}</button><button type="button" class="button-primary" [disabled]="checkoutLoading" (click)="invoice.emit(folio)"><i class="feather icon-file-text"></i>Facturar cargos</button></div>
+    </footer>
+  </section>
+</div>

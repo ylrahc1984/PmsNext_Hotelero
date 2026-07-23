@@ -70,11 +70,9 @@
               <th>Nombre Agencia</th>
               <th>Contacto</th>
               <th class="column-tablet">Ciudad</th>
-              <th class="column-tablet">País</th>
               <th>Mercado</th>
               <th class="column-tablet">Teléfono</th>
               <th class="column-desktop">Correo</th>
-              <th class="text-end column-desktop">Descuento %</th>
               <th class="text-center">Activo</th>
               <th class="text-center action-column">Acciones</th>
             </tr>
@@ -90,7 +88,6 @@
               </td>
               <td>{{ agency.MR01_Contacto || 'N/D' }}</td>
               <td class="column-tablet">{{ agency.MR01_Ciudad || 'N/D' }}</td>
-              <td class="column-tablet">{{ agency.MR01_Pais || 'N/D' }}</td>
               <td>
                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
                   {{ agency.MR01_Mercado || 'N/D' }}
@@ -98,7 +95,6 @@
               </td>
               <td class="column-tablet">{{ agency.MR01_Telefono1 || 'N/D' }}</td>
               <td class="column-desktop">{{ agency.MR01_Email || 'N/D' }}</td>
-              <td class="text-end column-desktop">{{ agency.MR01_PorDescu || 0 }}</td>
               <td class="text-center">
                 <span class="badge" [ngClass]="isActive(agency) ? 'bg-success' : 'bg-danger'">
                   {{ isActive(agency) ? 'Activo' : 'Inactivo' }}
@@ -110,11 +106,12 @@
                     type="button"
                     class="btn btn-outline-primary agency-action-btn"
                     (click)="openEditModal(agency)"
-                    [disabled]="isLoading || isSaving"
+                    [disabled]="isLoading || isSaving || !!loadingAgencyCode"
                     aria-label="Editar agencia"
                     title="Editar"
                   >
-                    <i class="feather icon-edit-2"></i>
+                    <span *ngIf="loadingAgencyCode === agency.MR01_CodAgencia" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                    <i *ngIf="loadingAgencyCode !== agency.MR01_CodAgencia" class="feather icon-edit-2"></i>
                   </button>
                   <button
                     type="button"
@@ -155,9 +152,10 @@
             <strong>{{ agency.MR01_Telefono1 || 'N/D' }}</strong>
           </div>
           <div class="agency-mobile-card__actions">
-            <button type="button" class="btn btn-outline-primary btn-sm" (click)="openEditModal(agency)" [disabled]="isLoading || isSaving">
-              <i class="feather icon-edit-2 me-1"></i>
-              Editar
+            <button type="button" class="btn btn-outline-primary btn-sm" (click)="openEditModal(agency)" [disabled]="isLoading || isSaving || !!loadingAgencyCode">
+              <span *ngIf="loadingAgencyCode === agency.MR01_CodAgencia" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+              <i *ngIf="loadingAgencyCode !== agency.MR01_CodAgencia" class="feather icon-edit-2 me-1"></i>
+              {{ loadingAgencyCode === agency.MR01_CodAgencia ? 'Cargando...' : 'Editar' }}
             </button>
             <button type="button" class="btn btn-outline-danger btn-sm" (click)="deleteAgency(agency)" [disabled]="isLoading || isDeleting">
               <i class="feather icon-trash-2 me-1"></i>
@@ -208,65 +206,89 @@
 
 <div class="modal-backdrop fade show" *ngIf="showModal"></div>
 <div class="modal d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="agencyModalTitle" *ngIf="showModal" (click)="closeModal()">
-  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document" (click)="$event.stopPropagation()">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="agencyModalTitle">
-          <i class="feather icon-share-2 me-2"></i>
-          {{ modalTitle }}
-        </h5>
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable agency-modal-dialog" role="document" (click)="$event.stopPropagation()">
+    <div class="modal-content agency-modal">
+      <div class="modal-header agency-modal__header">
+        <div class="agency-modal__heading">
+          <span class="agency-modal__icon" aria-hidden="true">
+            <i class="feather" [ngClass]="isEditing ? 'icon-edit-2' : 'icon-briefcase'"></i>
+          </span>
+          <div>
+            <span class="agency-modal__eyebrow">Catálogo de reservas</span>
+            <h5 class="modal-title" id="agencyModalTitle">{{ modalTitle }}</h5>
+            <p>{{ isEditing ? 'Actualiza la información comercial y de contacto.' : 'Registra los datos principales de la nueva agencia.' }}</p>
+          </div>
+        </div>
         <button type="button" class="btn-close" aria-label="Cerrar" (click)="closeModal()" [disabled]="isSaving"></button>
       </div>
 
       <form [formGroup]="agencyForm" (ngSubmit)="saveAgency()">
-        <div class="modal-body">
-          <div class="agency-form-card mb-3">
-            <div class="agency-form-card__title">
-              <i class="feather icon-briefcase"></i>
-              Información General
+        <div class="modal-body agency-modal__body">
+          <div class="agency-form-grid">
+          <div class="agency-form-card">
+            <div class="agency-form-card__header">
+              <span class="agency-form-card__icon"><i class="feather icon-file-text"></i></span>
+              <div>
+                <h6>Datos de la agencia</h6>
+                <p>Identificación y clasificación comercial.</p>
+              </div>
             </div>
 
             <div class="row g-3">
-              <div class="col-lg-3 col-md-4">
-                <label for="codigo" class="form-label">Código <span class="text-danger">*</span></label>
-                <input id="codigo" type="text" class="form-control text-uppercase" formControlName="codigo" maxlength="20" [class.is-invalid]="isFieldInvalid('codigo')">
-                <div class="invalid-feedback">{{ getFieldError('codigo') }}</div>
-              </div>
-
-              <div class="col-lg-3 col-md-4">
-                <label for="ruc" class="form-label">RUC</label>
-                <input id="ruc" type="text" class="form-control" formControlName="ruc" maxlength="30" [class.is-invalid]="isFieldInvalid('ruc')">
+              <div class="col-md-4">
+                <label for="ruc" class="form-label">Cédula</label>
+                <input id="ruc" type="text" class="form-control" formControlName="ruc" maxlength="30" placeholder="Identificación fiscal" [class.is-invalid]="isFieldInvalid('ruc')">
                 <div class="invalid-feedback">{{ getFieldError('ruc') }}</div>
               </div>
 
-              <div class="col-lg-6 col-md-4">
-                <label for="nombreAgencia" class="form-label">Nombre <span class="text-danger">*</span></label>
-                <input id="nombreAgencia" type="text" class="form-control" formControlName="nombreAgencia" maxlength="150" [class.is-invalid]="isFieldInvalid('nombreAgencia')">
+              <div class="col-md-8">
+                <label for="nombreAgencia" class="form-label">Nombre de la agencia <span class="text-danger">*</span></label>
+                <input id="nombreAgencia" type="text" class="form-control" formControlName="nombreAgencia" maxlength="150" placeholder="Ej. Viajes del Caribe" [class.is-invalid]="isFieldInvalid('nombreAgencia')">
                 <div class="invalid-feedback">{{ getFieldError('nombreAgencia') }}</div>
               </div>
 
-              <div class="col-lg-4 col-md-6">
-                <label for="contacto" class="form-label">Contacto <span class="text-danger">*</span></label>
-                <input id="contacto" type="text" class="form-control" formControlName="contacto" maxlength="120" [class.is-invalid]="isFieldInvalid('contacto')">
+              <div class="col-md-6">
+                <label for="contacto" class="form-label">Persona de contacto <span class="text-danger">*</span></label>
+                <input id="contacto" type="text" class="form-control" formControlName="contacto" maxlength="120" placeholder="Nombre del contacto principal" [class.is-invalid]="isFieldInvalid('contacto')">
                 <div class="invalid-feedback">{{ getFieldError('contacto') }}</div>
               </div>
 
-              <div class="col-lg-4 col-md-6">
+              <div class="col-md-6">
                 <label for="mercado" class="form-label">Mercado</label>
-                <input id="mercado" type="text" class="form-control" formControlName="mercado" maxlength="60" [class.is-invalid]="isFieldInvalid('mercado')">
+                <select
+                  id="mercado"
+                  class="form-select"
+                  formControlName="mercado"
+                  [class.is-invalid]="isFieldInvalid('mercado')"
+                >
+                  <option value="">{{ isMercadosLoading ? 'Cargando mercados...' : 'Seleccione un mercado' }}</option>
+                  <option
+                    *ngIf="agencyForm.controls.mercado.value && !hasMercadoOption(agencyForm.controls.mercado.value)"
+                    [value]="agencyForm.controls.mercado.value"
+                  >
+                    {{ agencyForm.controls.mercado.value }}
+                  </option>
+                  <option *ngFor="let mercado of mercados" [value]="mercado.MR02_Codigo">
+                    {{ mercado.MR02_Mercado }} · {{ mercado.MR02_Codigo }}
+                  </option>
+                </select>
                 <div class="invalid-feedback">{{ getFieldError('mercado') }}</div>
+                <div class="agency-catalog-error" *ngIf="mercadoError">
+                  <span>{{ mercadoError }}</span>
+                  <button type="button" (click)="loadMercados()" [disabled]="isMercadosLoading">Reintentar</button>
+                </div>
               </div>
 
-              <div class="col-lg-2 col-md-6">
-                <label for="primario" class="form-label">Primario</label>
+              <div class="col-md-6">
+                <label for="primario" class="form-label">Clasificación</label>
                 <select id="primario" class="form-select" formControlName="primario">
-                  <option [ngValue]="1">Sí</option>
-                  <option [ngValue]="0">No</option>
+                  <option [ngValue]="1">Agencia primaria</option>
+                  <option [ngValue]="0">Agencia secundaria</option>
                 </select>
               </div>
 
-              <div class="col-lg-2 col-md-6">
-                <label for="activo" class="form-label">Activo</label>
+              <div class="col-md-6">
+                <label for="activo" class="form-label">Estado</label>
                 <select id="activo" class="form-select" formControlName="activo">
                   <option [ngValue]="1">Activo</option>
                   <option [ngValue]="0">Inactivo</option>
@@ -276,100 +298,66 @@
           </div>
 
           <div class="agency-form-card">
-            <div class="agency-form-card__title">
-              <i class="feather icon-credit-card"></i>
-              Información Comercial
+            <div class="agency-form-card__header">
+              <span class="agency-form-card__icon agency-form-card__icon--cyan"><i class="feather icon-map-pin"></i></span>
+              <div>
+                <h6>Contacto y ubicación</h6>
+                <p>Canales para localizar y atender a la agencia.</p>
+              </div>
             </div>
 
             <div class="row g-3">
-              <div class="col-lg-8">
+              <div class="col-12">
                 <label for="direccion" class="form-label">Dirección</label>
-                <input id="direccion" type="text" class="form-control" formControlName="direccion" maxlength="250" [class.is-invalid]="isFieldInvalid('direccion')">
+                <input id="direccion" type="text" class="form-control" formControlName="direccion" maxlength="250" placeholder="Dirección comercial" [class.is-invalid]="isFieldInvalid('direccion')">
                 <div class="invalid-feedback">{{ getFieldError('direccion') }}</div>
               </div>
 
-              <div class="col-lg-2 col-md-6">
+              <div class="col-md-6">
                 <label for="ciudad" class="form-label">Ciudad</label>
-                <input id="ciudad" type="text" class="form-control" formControlName="ciudad" maxlength="80" [class.is-invalid]="isFieldInvalid('ciudad')">
+                <input id="ciudad" type="text" class="form-control" formControlName="ciudad" maxlength="80" placeholder="Ciudad" [class.is-invalid]="isFieldInvalid('ciudad')">
                 <div class="invalid-feedback">{{ getFieldError('ciudad') }}</div>
               </div>
 
-              <div class="col-lg-2 col-md-6">
+              <div class="col-md-6">
                 <label for="pais" class="form-label">País</label>
-                <input id="pais" type="text" class="form-control" formControlName="pais" maxlength="80" [class.is-invalid]="isFieldInvalid('pais')">
+                <input id="pais" type="text" class="form-control" formControlName="pais" maxlength="80" placeholder="País" [class.is-invalid]="isFieldInvalid('pais')">
                 <div class="invalid-feedback">{{ getFieldError('pais') }}</div>
               </div>
 
-              <div class="col-lg-3 col-md-6">
-                <label for="telefono1" class="form-label">Teléfono 1</label>
-                <input id="telefono1" type="text" class="form-control" formControlName="telefono1" maxlength="40" [class.is-invalid]="isFieldInvalid('telefono1')">
+              <div class="col-md-6">
+                <label for="telefono1" class="form-label">Teléfono principal</label>
+                <input id="telefono1" type="text" class="form-control" formControlName="telefono1" maxlength="40" placeholder="Número de contacto" [class.is-invalid]="isFieldInvalid('telefono1')">
                 <div class="invalid-feedback">{{ getFieldError('telefono1') }}</div>
               </div>
 
-              <div class="col-lg-3 col-md-6">
-                <label for="telefono2" class="form-label">Teléfono 2</label>
-                <input id="telefono2" type="text" class="form-control" formControlName="telefono2" maxlength="40" [class.is-invalid]="isFieldInvalid('telefono2')">
+              <div class="col-md-6">
+                <label for="telefono2" class="form-label">Teléfono alternativo</label>
+                <input id="telefono2" type="text" class="form-control" formControlName="telefono2" maxlength="40" placeholder="Opcional" [class.is-invalid]="isFieldInvalid('telefono2')">
                 <div class="invalid-feedback">{{ getFieldError('telefono2') }}</div>
               </div>
 
-              <div class="col-lg-2 col-md-6">
-                <label for="fax" class="form-label">Fax</label>
-                <input id="fax" type="text" class="form-control" formControlName="fax" maxlength="40" [class.is-invalid]="isFieldInvalid('fax')">
-                <div class="invalid-feedback">{{ getFieldError('fax') }}</div>
-              </div>
-
-              <div class="col-lg-4 col-md-6">
-                <label for="email" class="form-label">Correo</label>
-                <input id="email" type="email" class="form-control" formControlName="email" maxlength="150" [class.is-invalid]="isFieldInvalid('email')">
+              <div class="col-12">
+                <label for="email" class="form-label">Correo electrónico</label>
+                <input id="email" type="email" class="form-control" formControlName="email" maxlength="150" placeholder="contacto@agencia.com" [class.is-invalid]="isFieldInvalid('email')">
                 <div class="invalid-feedback">{{ getFieldError('email') }}</div>
               </div>
 
-              <div class="col-lg-2 col-md-4">
-                <label for="porDescu" class="form-label">Descuento</label>
-                <input id="porDescu" type="number" class="form-control" formControlName="porDescu" min="0" max="100" [class.is-invalid]="isFieldInvalid('porDescu')">
-                <div class="invalid-feedback">{{ getFieldError('porDescu') }}</div>
-              </div>
-
-              <div class="col-lg-2 col-md-4">
-                <label for="codHabita" class="form-label">Código Habitación</label>
-                <input id="codHabita" type="text" class="form-control text-uppercase" formControlName="codHabita" maxlength="20" [class.is-invalid]="isFieldInvalid('codHabita')">
-                <div class="invalid-feedback">{{ getFieldError('codHabita') }}</div>
-              </div>
-
-              <div class="col-lg-2 col-md-4">
-                <label for="numHabita" class="form-label">Número Habitación</label>
-                <input id="numHabita" type="number" class="form-control" formControlName="numHabita" min="0" [class.is-invalid]="isFieldInvalid('numHabita')">
-                <div class="invalid-feedback">{{ getFieldError('numHabita') }}</div>
-              </div>
-
-              <div class="col-lg-2 col-md-4">
-                <label for="codReserva" class="form-label">Código Reserva</label>
-                <input id="codReserva" type="text" class="form-control text-uppercase" formControlName="codReserva" maxlength="20" [class.is-invalid]="isFieldInvalid('codReserva')">
-                <div class="invalid-feedback">{{ getFieldError('codReserva') }}</div>
-              </div>
-
-              <div class="col-lg-2 col-md-4">
-                <label for="numReserva" class="form-label">Número Reserva</label>
-                <input id="numReserva" type="number" class="form-control" formControlName="numReserva" min="0" [class.is-invalid]="isFieldInvalid('numReserva')">
-                <div class="invalid-feedback">{{ getFieldError('numReserva') }}</div>
-              </div>
-
-              <div class="col-lg-2 col-md-4">
-                <label for="operador" class="form-label">Operador</label>
-                <input id="operador" type="text" class="form-control" formControlName="operador" maxlength="50" [class.is-invalid]="isFieldInvalid('operador')">
-                <div class="invalid-feedback">{{ getFieldError('operador') }}</div>
-              </div>
             </div>
+          </div>
           </div>
         </div>
 
-        <div class="modal-footer">
-          <button type="button" class="btn btn-light" (click)="closeModal()" [disabled]="isSaving">Cancelar</button>
-          <button type="submit" class="btn btn-primary" [disabled]="isSaving">
-            <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
-            <i class="feather icon-save me-1" *ngIf="!isSaving"></i>
-            Guardar
-          </button>
+        <div class="modal-footer agency-modal__footer">
+          <span class="agency-modal__required"><span class="text-danger">*</span> Campos obligatorios</span>
+          <div class="agency-modal__actions">
+            <button type="button" class="btn btn-light" (click)="closeModal()" [disabled]="isSaving">Cancelar</button>
+            <button type="submit" class="btn btn-primary agency-modal__save" [disabled]="isSaving || isConfirmingSave">
+              <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+              <i class="feather icon-save me-1" *ngIf="!isSaving"></i>
+              {{ isSaving ? 'Guardando...' : 'Guardar agencia' }}
+            </button>
+          </div>
         </div>
       </form>
     </div>

@@ -16,7 +16,7 @@ export interface AgencyRequest {
   codHabita: string;
   numHabita: number;
   codReserva: string;
-  numReserva: number;
+  numReserva: string;
   porDescu: number;
   activo: number;
   operador: string;

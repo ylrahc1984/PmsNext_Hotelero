@@ -13,7 +13,9 @@ import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { AgencyPagination } from './models/agency-pagination.model';
 import { AgencyRequest } from './models/agency-request.model';
 import { Agency } from './models/agency.model';
+import { Mercado } from './models/mercado.model';
 import { AgencyManagementService } from './services/agency-management.service';
+import { MercadoService } from './services/mercado.service';
 
 interface AgencyForm {
   codigo: FormControl<string>;
@@ -48,6 +50,7 @@ interface AgencyForm {
 export class AgencyManagementComponent implements OnInit {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly agencyService = inject(AgencyManagementService);
+  private readonly mercadoService = inject(MercadoService);
   private readonly authService = inject(AuthService);
   private readonly toastService = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
@@ -57,7 +60,7 @@ export class AgencyManagementComponent implements OnInit {
   readonly pageSizeOptions = [10, 20, 50, 100];
 
   readonly agencyForm: FormGroup<AgencyForm> = this.fb.group({
-    codigo: this.fb.control('', { validators: [Validators.required, Validators.maxLength(20)] }),
+    codigo: this.fb.control(''),
     ruc: this.fb.control('', { validators: [Validators.maxLength(30)] }),
     nombreAgencia: this.fb.control('', { validators: [Validators.required, Validators.maxLength(150)] }),
     direccion: this.fb.control('', { validators: [Validators.maxLength(250)] }),
@@ -68,32 +71,76 @@ export class AgencyManagementComponent implements OnInit {
     contacto: this.fb.control('', { validators: [Validators.required, Validators.maxLength(120)] }),
     telefono1: this.fb.control('', { validators: [Validators.maxLength(40)] }),
     telefono2: this.fb.control('', { validators: [Validators.maxLength(40)] }),
-    fax: this.fb.control('', { validators: [Validators.maxLength(40)] }),
+    fax: this.fb.control(''),
     email: this.fb.control('', { validators: [Validators.email, Validators.maxLength(150)] }),
-    codHabita: this.fb.control('', { validators: [Validators.maxLength(20)] }),
-    numHabita: this.fb.control(0, { validators: [Validators.min(0)] }),
-    codReserva: this.fb.control('', { validators: [Validators.maxLength(20)] }),
-    numReserva: this.fb.control(0, { validators: [Validators.min(0)] }),
-    porDescu: this.fb.control(0, { validators: [Validators.min(0), Validators.max(100)] }),
+    codHabita: this.fb.control(''),
+    numHabita: this.fb.control(0),
+    codReserva: this.fb.control(''),
+    numReserva: this.fb.control(0),
+    porDescu: this.fb.control(0),
     activo: this.fb.control(1),
-    operador: this.fb.control('', { validators: [Validators.maxLength(50)] })
+    operador: this.fb.control('')
   });
 
   agencies: Agency[] = [];
+  mercados: Mercado[] = [];
   currentPage = 1;
   totalPages = 1;
   totalRecords = 0;
   isLoading = false;
   isSaving = false;
+  isConfirmingSave = false;
   isDeleting = false;
+  loadingAgencyCode = '';
+  isMercadosLoading = false;
   showModal = false;
   isEditing = false;
   errorMessage = '';
+  mercadoError = '';
 
   ngOnInit(): void {
     this.bindSearch();
     this.bindPageSize();
+    this.loadMercados();
     this.loadAgencies();
+  }
+
+  loadMercados(): void {
+    this.isMercadosLoading = true;
+    this.mercadoError = '';
+
+    this.mercadoService
+      .getMercados()
+      .pipe(
+        catchError(() => {
+          this.mercados = [];
+          this.mercadoError = 'No se pudo cargar el catálogo de mercados.';
+          return EMPTY;
+        }),
+        finalize(() => {
+          this.isMercadosLoading = false;
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((mercados) => {
+        this.mercados = mercados;
+
+        if (mercados.length === 0) {
+          this.mercadoError = 'No hay mercados configurados.';
+          return;
+        }
+
+        const control = this.agencyForm.controls.mercado;
+        const resolvedCode = this.resolveMercadoCode(control.value);
+        if (resolvedCode !== control.value) {
+          control.setValue(resolvedCode, { emitEvent: false });
+        }
+      });
+  }
+
+  hasMercadoOption(value: string): boolean {
+    const normalizedValue = this.normalizeCatalogValue(value);
+    return this.mercados.some((mercado) => this.normalizeCatalogValue(mercado.MR02_Codigo) === normalizedValue);
   }
 
   loadAgencies(pageNumber = this.currentPage): void {
@@ -119,6 +166,37 @@ export class AgencyManagementComponent implements OnInit {
   }
 
   openEditModal(agency: Agency): void {
+    const codigo = agency.MR01_CodAgencia?.trim();
+    if (!codigo || this.loadingAgencyCode) {
+      return;
+    }
+
+    this.loadingAgencyCode = codigo;
+    this.errorMessage = '';
+
+    this.agencyService
+      .getAgencyByCode(codigo)
+      .pipe(
+        catchError((error) => {
+          this.handleError('No se pudo cargar el detalle de la agencia.', error);
+          return EMPTY;
+        }),
+        finalize(() => {
+          this.loadingAgencyCode = '';
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((agencyDetail) => {
+        if (!agencyDetail) {
+          this.handleError('No se encontró la agencia seleccionada.', { codigo });
+          return;
+        }
+
+        this.populateEditModal(agencyDetail);
+      });
+  }
+
+  private populateEditModal(agency: Agency): void {
     this.isEditing = true;
     this.errorMessage = '';
     this.agencyForm.reset(
@@ -130,7 +208,7 @@ export class AgencyManagementComponent implements OnInit {
         ciudad: agency.MR01_Ciudad,
         pais: agency.MR01_Pais,
         primario: this.toNumber(agency.MR01_Primario),
-        mercado: agency.MR01_Mercado,
+        mercado: this.resolveMercadoCode(agency.MR01_Mercado),
         contacto: agency.MR01_Contacto,
         telefono1: agency.MR01_Telefono1,
         telefono2: agency.MR01_Telefono2,
@@ -142,7 +220,7 @@ export class AgencyManagementComponent implements OnInit {
         numReserva: this.toNumber(agency.MR01_Correlativo),
         porDescu: this.toNumber(agency.MR01_PorDescu),
         activo: this.toNumber(agency.MR01_Activo),
-        operador: agency.MR01_Operador || this.getOperador()
+        operador: this.getOperador()
       },
       { emitEvent: false }
     );
@@ -150,8 +228,8 @@ export class AgencyManagementComponent implements OnInit {
     this.showModal = true;
   }
 
-  closeModal(): void {
-    if (this.isSaving) {
+  closeModal(force = false): void {
+    if (this.isSaving && !force) {
       return;
     }
 
@@ -165,6 +243,37 @@ export class AgencyManagementComponent implements OnInit {
       return;
     }
 
+    if (this.isSaving || this.isConfirmingSave) {
+      return;
+    }
+
+    const agencyName = this.agencyForm.controls.nombreAgencia.value.trim() || 'esta agencia';
+    this.isConfirmingSave = true;
+
+    Swal.fire({
+      title: this.isEditing ? 'Confirmar actualización' : 'Confirmar registro',
+      text: this.isEditing
+        ? `¿Está seguro de guardar los cambios de ${agencyName}?`
+        : `¿Está seguro de guardar la agencia ${agencyName}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, guardar',
+      cancelButtonText: 'Cancelar',
+      focusCancel: true,
+      reverseButtons: true,
+      customClass: {
+        container: 'next-confirm-container'
+      }
+    }).then((result) => {
+      this.isConfirmingSave = false;
+
+      if (result.isConfirmed) {
+        this.persistAgency();
+      }
+    });
+  }
+
+  private persistAgency(): void {
     this.isSaving = true;
     const payload = this.buildPayload();
     const action = this.isEditing ? this.agencyService.updateAgency(payload.codigo, payload) : this.agencyService.createAgency(payload);
@@ -183,7 +292,7 @@ export class AgencyManagementComponent implements OnInit {
       .subscribe((response) => {
         this.toastService.addToast({
           title: 'Exito',
-          message: response.respuesta || (this.isEditing ? 'Agencia actualizada correctamente.' : 'Agencia creada correctamente.'),
+          message: response.mensaje || response.respuesta || (this.isEditing ? 'Agencia actualizada correctamente.' : 'Agencia creada correctamente.'),
           type: 'success'
         });
 
@@ -193,7 +302,7 @@ export class AgencyManagementComponent implements OnInit {
           this.loadAgencies(this.currentPage);
         }
 
-        this.closeModal();
+        this.closeModal(true);
       });
   }
 
@@ -212,7 +321,7 @@ export class AgencyManagementComponent implements OnInit {
 
       this.isDeleting = true;
       this.agencyService
-        .deleteAgency(agency.MR01_CodAgencia)
+        .deleteAgency(agency.MR01_CodAgencia, this.getOperador())
         .pipe(
           catchError((error) => {
             this.handleError('No se pudo eliminar la agencia.', error);
@@ -226,7 +335,7 @@ export class AgencyManagementComponent implements OnInit {
         .subscribe((response) => {
           this.toastService.addToast({
             title: 'Exito',
-            message: response.respuesta || 'Agencia eliminada correctamente.',
+            message: response.mensaje || response.respuesta || 'Agencia eliminada correctamente.',
             type: 'success'
           });
 
@@ -376,7 +485,7 @@ export class AgencyManagementComponent implements OnInit {
       codHabita: this.sanitize(raw.codHabita).toUpperCase(),
       numHabita: this.toNumber(raw.numHabita),
       codReserva: this.sanitize(raw.codReserva).toUpperCase(),
-      numReserva: this.toNumber(raw.numReserva),
+      numReserva: String(this.toNumber(raw.numReserva)),
       porDescu: this.toNumber(raw.porDescu),
       activo: this.toNumber(raw.activo),
       operador: this.sanitize(raw.operador) || this.getOperador(),
@@ -404,7 +513,7 @@ export class AgencyManagementComponent implements OnInit {
       MR01_CodHabita: payload.codHabita,
       MR01_Numhabita: payload.numHabita,
       MR01_CodReserva: payload.codReserva,
-      MR01_Correlativo: payload.numReserva,
+      MR01_Correlativo: this.toNumber(payload.numReserva),
       MR01_PorDescu: payload.porDescu,
       MR01_Activo: payload.activo,
       MR01_Operador: payload.operador,
@@ -441,6 +550,25 @@ export class AgencyManagementComponent implements OnInit {
 
   private getOperador(): string {
     return this.authService.getCurrentUser()?.usuario ?? '';
+  }
+
+  private resolveMercadoCode(value: string): string {
+    const normalizedValue = this.normalizeCatalogValue(value);
+    if (!normalizedValue) {
+      return '';
+    }
+
+    const mercado = this.mercados.find(
+      (item) =>
+        this.normalizeCatalogValue(item.MR02_Codigo) === normalizedValue ||
+        this.normalizeCatalogValue(item.MR02_Mercado) === normalizedValue
+    );
+
+    return mercado?.MR02_Codigo.trim() || value.trim();
+  }
+
+  private normalizeCatalogValue(value: string | null | undefined): string {
+    return (value ?? '').trim().toLocaleUpperCase('es');
   }
 
   private sanitize(value: string): string {

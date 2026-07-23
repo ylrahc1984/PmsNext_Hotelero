@@ -103,6 +103,8 @@
         [exchangeMode]="exchangeMode"
         [exchangeTrayCount]="exchangeTrayReservations.length"
         [exchangeTrayHeight]="exchangeTrayHeight"
+        [viewportHeight]="sidebarViewportHeight"
+        [scrollContentHeight]="sidebarScrollContentHeight"
         (scrollTopChange)="onSidebarScrollTop($event)"
       ></app-room-sidebar>
 
@@ -119,6 +121,8 @@
           [exchangeTrayHeight]="exchangeTrayHeight"
           (scrollLeftChange)="onGridScrollLeft($event)"
           (scrollTopChange)="onGridScrollTop($event)"
+          (viewportHeightChange)="onGridViewportHeightChange($event)"
+          (scrollContentHeightChange)="onGridScrollContentHeightChange($event)"
           (reservationSelect)="openReservationActionMenu($event)"
           (reservationDrop)="onReservationDrop($event)"
           (reservationMoveBlocked)="onCheckedInReservationMoveBlocked($event)"

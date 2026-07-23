@@ -1,0 +1,560 @@
+:host {
+  display: block;
+}
+
+$ink: #142538;
+$muted: #6b7c93;
+$line: #e3eaf2;
+$surface: #ffffff;
+$primary: #2563eb;
+$shadow: 0 14px 34px rgba(15, 35, 60, 0.07);
+
+.folio-page {
+  display: grid;
+  gap: 0.9rem;
+  padding-bottom: 1.5rem;
+}
+
+.folio-hero {
+  align-items: center;
+  background:
+    radial-gradient(circle at 88% 16%, rgba(34, 211, 238, 0.24), transparent 32%),
+    linear-gradient(135deg, #123b73 0%, #0f2861 52%, #0b1f43 100%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 16px;
+  box-shadow: $shadow;
+  color: #fff;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  min-height: 118px;
+  overflow: hidden;
+  padding: 1.15rem 1.35rem;
+}
+
+.folio-hero__eyebrow {
+  color: #8be9f5;
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+}
+
+.folio-hero h1 {
+  color: #fff;
+  font-size: 1.55rem;
+  font-weight: 850;
+  margin: 0;
+}
+
+.folio-hero p {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.82rem;
+  margin: 0.3rem 0 0;
+}
+
+.folio-hero__meta {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.folio-hero__meta span {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.72rem;
+  gap: 0.4rem;
+  padding: 0.35rem 0.65rem;
+}
+
+.folio-hero__meta strong {
+  font-size: 0.82rem;
+}
+
+.folio-kpis {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.folio-kpi {
+  align-items: center;
+  background: $surface;
+  border: 1px solid $line;
+  border-radius: 12px;
+  box-shadow: $shadow;
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: auto 1fr;
+  min-height: 82px;
+  padding: 0.75rem 0.85rem;
+}
+
+.folio-kpi__icon {
+  align-items: center;
+  border-radius: 10px;
+  display: inline-flex;
+  font-size: 1rem;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.folio-kpi small,
+.folio-kpi p {
+  color: $muted;
+  display: block;
+  font-size: 0.68rem;
+  margin: 0;
+}
+
+.folio-kpi small {
+  font-weight: 750;
+}
+
+.folio-kpi strong {
+  color: $ink;
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 850;
+  line-height: 1.1;
+  margin: 0.12rem 0;
+}
+
+.folio-kpi--primary .folio-kpi__icon { background: #eef4ff; color: #2563eb; }
+.folio-kpi--neutral .folio-kpi__icon { background: #f1f5f9; color: #475569; }
+.folio-kpi--success .folio-kpi__icon { background: #ecfdf3; color: #15803d; }
+.folio-kpi--warning .folio-kpi__icon { background: #fff8e7; color: #b45309; }
+
+.folio-filters {
+  align-items: end;
+  background: $surface;
+  border: 1px solid $line;
+  border-radius: 12px;
+  box-shadow: $shadow;
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: 180px 180px minmax(260px, 1fr) auto;
+  padding: 0.85rem 1rem;
+  position: relative;
+}
+
+.folio-filter-field {
+  display: grid;
+  gap: 0.32rem;
+}
+
+.folio-filter-field label {
+  color: #52657d;
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+.folio-input-wrap {
+  align-items: center;
+  display: flex;
+  position: relative;
+}
+
+.folio-input-wrap > i {
+  color: #8290a3;
+  font-size: 0.86rem;
+  left: 0.7rem;
+  pointer-events: none;
+  position: absolute;
+}
+
+.folio-input-wrap input {
+  background: #fbfcfe;
+  border: 1px solid #dce4ee;
+  border-radius: 7px;
+  color: $ink;
+  font-size: 0.8rem;
+  min-height: 38px;
+  padding: 0.42rem 2rem;
+  width: 100%;
+}
+
+.folio-input-wrap input:focus {
+  border-color: #87aff8;
+  box-shadow: 0 0 0 0.16rem rgba(37, 99, 235, 0.1);
+  outline: none;
+}
+
+.folio-clear {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: #8290a3;
+  display: inline-flex;
+  height: 30px;
+  justify-content: center;
+  position: absolute;
+  right: 0.25rem;
+  width: 30px;
+}
+
+.folio-consult-button {
+  align-items: center;
+  background: linear-gradient(135deg, #1f6bff, #2256cf);
+  border: 0;
+  border-radius: 7px;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.2);
+  color: #fff;
+  display: inline-flex;
+  font-size: 0.78rem;
+  font-weight: 750;
+  gap: 0.4rem;
+  justify-content: center;
+  min-height: 38px;
+  min-width: 112px;
+  padding: 0.45rem 0.8rem;
+}
+
+.folio-filter-error {
+  align-items: center;
+  bottom: -1.3rem;
+  color: #c2414f;
+  display: flex;
+  font-size: 0.68rem;
+  gap: 0.3rem;
+  left: 1rem;
+  position: absolute;
+}
+
+.folio-table-card {
+  background: $surface;
+  border: 1px solid $line;
+  border-radius: 12px;
+  box-shadow: $shadow;
+  overflow: hidden;
+}
+
+.folio-table-head {
+  align-items: center;
+  border-bottom: 1px solid $line;
+  display: flex;
+  justify-content: space-between;
+  padding: 0.8rem 1rem;
+}
+
+.folio-table-head span {
+  color: #718096;
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.folio-table-head h2 {
+  color: $ink;
+  font-size: 0.95rem;
+  font-weight: 800;
+  margin: 0.12rem 0 0;
+}
+
+.folio-table-head__summary { text-align: right; }
+.folio-table-head__summary strong { color: $ink; display: block; font-size: 1rem; }
+
+.folio-table-scroll { overflow-x: auto; }
+
+.folio-table {
+  border-collapse: collapse;
+  color: $ink;
+  font-size: 0.76rem;
+  min-width: 1320px;
+  width: 100%;
+}
+
+.folio-table th {
+  background: #f7f9fc;
+  border-bottom: 1px solid $line;
+  color: #53677f;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.025em;
+  padding: 0.55rem 0.65rem;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.folio-table td {
+  border-bottom: 1px solid #edf1f6;
+  padding: 0.48rem 0.65rem;
+  vertical-align: middle;
+}
+
+.folio-table tbody tr:hover { background: #fbfdff; }
+.folio-link {
+  background: #eef4ff;
+  border: 1px solid #d8e6ff;
+  border-radius: 6px;
+  color: #2459a6;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.26rem 0.45rem;
+}
+
+.folio-reservation { color: #243f61; font-size: 0.74rem; }
+.folio-code { color: #52677f; font-family: monospace; font-weight: 750; }
+
+.folio-agency,
+.folio-description {
+  display: block;
+  max-width: 185px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folio-description { color: #66768a; max-width: 220px; }
+
+.folio-date {
+  align-items: center;
+  color: #415a77;
+  display: inline-flex;
+  gap: 0.32rem;
+  white-space: nowrap;
+}
+
+.folio-date i { color: #8290a3; }
+
+.folio-status {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.66rem;
+  font-weight: 800;
+  gap: 0.35rem;
+  padding: 0.28rem 0.5rem;
+  white-space: nowrap;
+}
+
+.folio-status i { border-radius: 50%; height: 6px; width: 6px; }
+.status-created { background: #f1f5f9; border-color: #e2e8f0; color: #475569; }
+.status-created i { background: #64748b; }
+.status-in-house { background: #ecfdf3; border-color: #d1fadf; color: #15803d; }
+.status-in-house i { background: #22c55e; }
+.status-checkout { background: #fff8e7; border-color: #fde9b4; color: #a85d08; }
+.status-checkout i { background: #f59e0b; }
+.status-unknown { background: #fff1f2; border-color: #fecdd3; color: #be123c; }
+.status-unknown i { background: #e11d48; }
+
+.folio-actions { display: inline-flex; gap: 0.35rem; }
+
+.folio-action {
+  align-items: center;
+  background: #fff;
+  border: 1px solid;
+  border-radius: 6px;
+  display: inline-flex;
+  font-size: 0.68rem;
+  font-weight: 750;
+  gap: 0.28rem;
+  min-height: 30px;
+  padding: 0.3rem 0.5rem;
+}
+
+.folio-action--detail { border-color: #d9e3ee; color: #49647f; }
+.folio-action--invoice { border-color: #cfe0ff; color: #2459a6; }
+.folio-action--checkout { border-color: #fed7aa; color: #c2410c; }
+.folio-action:disabled { cursor: not-allowed; opacity: .5; }
+.folio-message {
+  align-items: center;
+  color: $muted;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  min-height: 150px;
+  padding: 1.25rem;
+  text-align: left;
+}
+
+.folio-message > i { color: #9aa8b8; font-size: 1.8rem; }
+.folio-message strong, .folio-message small { display: block; }
+.folio-message strong { color: $ink; font-size: 0.82rem; }
+.folio-message small { font-size: 0.72rem; margin-top: 0.18rem; }
+.folio-message button { background: transparent; border: 0; color: $primary; font-size: 0.72rem; font-weight: 750; }
+.folio-message--error > i { color: #d14352; }
+
+.folio-pagination {
+  align-items: center;
+  background: #fbfcfe;
+  border-top: 1px solid $line;
+  display: flex;
+  justify-content: space-between;
+  padding: 0.65rem 1rem;
+}
+
+.folio-pagination label { align-items: center; color: $muted; display: flex; font-size: 0.7rem; gap: 0.4rem; }
+.folio-pagination select { border: 1px solid #dce4ee; border-radius: 6px; font-size: 0.72rem; padding: 0.25rem 1.5rem 0.25rem 0.45rem; }
+.folio-pagination__summary { color: $muted; font-size: 0.72rem; }
+.folio-pagination__controls { align-items: center; display: flex; gap: 0.25rem; }
+.folio-pagination__controls button { align-items: center; background: #fff; border: 1px solid #dce4ee; border-radius: 6px; color: #52677f; display: inline-flex; height: 30px; justify-content: center; width: 30px; }
+.folio-pagination__controls button:disabled { cursor: not-allowed; opacity: 0.45; }
+.folio-pagination__controls strong { color: $ink; font-size: 0.7rem; margin: 0 0.4rem; }
+
+/* Legacy modal rules retained temporarily for history. The active modal styles
+   now live with the two dedicated standalone modal components. 
+.folio-detail-overlay {
+  align-items: center;
+  background: rgba(7, 20, 39, 0.58);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 1rem;
+  position: fixed;
+  z-index: 1080;
+}
+
+.folio-detail-dialog {
+  background: #f7f9fc;
+  border-radius: 14px;
+  box-shadow: 0 28px 80px rgba(5, 18, 35, 0.3);
+  max-height: 90vh;
+  overflow: hidden;
+  width: min(1120px, 100%);
+}
+
+.folio-detail-header {
+  align-items: flex-start;
+  background: #fff;
+  border-bottom: 1px solid $line;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 0.95rem 1.1rem;
+}
+
+.folio-detail-header__identity { align-items: center; display: flex; gap: 0.7rem; }
+.folio-detail-header__icon { align-items: center; background: #eef4ff; border-radius: 10px; color: $primary; display: inline-flex; font-size: 1rem; height: 40px; justify-content: center; width: 40px; }
+.folio-detail-header small { color: #718096; display: block; font-size: 0.65rem; font-weight: 750; text-transform: uppercase; }
+.folio-detail-header h2 { color: $ink; font-size: 1.05rem; font-weight: 850; margin: 0.1rem 0; }
+.folio-detail-header p { color: $muted; font-size: 0.72rem; margin: 0; }
+.folio-detail-header__actions { align-items: center; display: flex; gap: 0.55rem; }
+.folio-detail-close { align-items: center; background: #fff; border: 1px solid $line; border-radius: 8px; color: #63758a; display: inline-flex; height: 34px; justify-content: center; width: 34px; }
+
+.folio-detail-body { display: grid; gap: 0.75rem; max-height: calc(90vh - 142px); overflow-y: auto; padding: 0.85rem 1rem; }
+.folio-detail-panel { background: #fff; border: 1px solid $line; border-radius: 10px; padding: 0.85rem; }
+.folio-detail-panel__title { align-items: center; border-bottom: 1px solid #edf1f6; color: $primary; display: flex; gap: 0.45rem; margin-bottom: 0.75rem; padding-bottom: 0.55rem; }
+.folio-detail-panel__title h3 { color: $ink; font-size: 0.82rem; font-weight: 800; margin: 0; }
+.folio-detail-grid { display: grid; gap: 0.7rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.folio-detail-grid div { min-width: 0; }
+.folio-detail-grid span, .folio-detail-notes span { color: $muted; display: block; font-size: 0.64rem; font-weight: 700; margin-bottom: 0.18rem; text-transform: uppercase; }
+.folio-detail-grid strong { color: #344b65; display: block; font-size: 0.75rem; overflow-wrap: anywhere; }
+
+.folio-detail-state {
+  align-items: center;
+  background: #fff;
+  border: 1px solid $line;
+  border-radius: 10px;
+  color: #52677f;
+  display: flex;
+  gap: 0.7rem;
+  justify-content: center;
+  min-height: 105px;
+  padding: 1rem;
+}
+
+.folio-detail-state strong, .folio-detail-state small { display: block; }
+.folio-detail-state strong { color: $ink; font-size: 0.78rem; }
+.folio-detail-state small { font-size: 0.68rem; margin-top: 0.15rem; }
+.folio-detail-state--error i { color: #d14352; font-size: 1.25rem; }
+.folio-detail-state button, .folio-charge-detail__error button { background: #fff; border: 1px solid #d5dfeb; border-radius: 6px; color: $primary; font-size: 0.68rem; font-weight: 750; padding: 0.32rem 0.55rem; }
+
+.folio-detail-panel__title--charges { align-items: center; justify-content: space-between; }
+.folio-detail-panel__title--charges > div { align-items: center; display: flex; gap: 0.45rem; }
+.folio-detail-panel__title--charges > strong { color: #415a77; font-size: 0.7rem; }
+
+.folio-charge-workspace { display: grid; gap: 0.75rem; grid-template-columns: 265px minmax(0, 1fr); min-height: 320px; }
+.folio-charge-list { background: #f7f9fc; border: 1px solid #e4eaf1; border-radius: 9px; display: flex; flex-direction: column; gap: 0.35rem; max-height: 430px; overflow-y: auto; padding: 0.4rem; }
+.folio-charge-list > button { align-items: center; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; color: #50657d; display: grid; gap: 0.45rem; grid-template-columns: 30px minmax(0, 1fr); padding: 0.55rem; text-align: left; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+.folio-charge-list > button:hover { border-color: #bcd0ed; }
+.folio-charge-list > button.is-active { border-color: #7ba6e6; box-shadow: 0 0 0 2px rgba(37, 99, 183, 0.09); }
+.folio-charge-list__icon { align-items: center; background: #eef4ff; border-radius: 7px; color: $primary; display: inline-flex; height: 30px; justify-content: center; width: 30px; }
+.folio-charge-list__content { min-width: 0; }
+.folio-charge-list__content strong, .folio-charge-list__content small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folio-charge-list__content strong { color: #2e4969; font-size: 0.72rem; }
+.folio-charge-list__content small { color: $muted; font-size: 0.62rem; margin-top: 0.08rem; }
+.folio-charge-list__amount { color: #224f91; font-size: 0.66rem; font-weight: 800; grid-column: 2; }
+
+.folio-charge-detail { border: 1px solid #e4eaf1; border-radius: 9px; min-width: 0; overflow: hidden; }
+.folio-charge-detail__loading, .folio-charge-detail__error { align-items: center; color: #60738a; display: flex; gap: 0.65rem; justify-content: center; min-height: 220px; padding: 1rem; }
+.folio-charge-detail__loading strong, .folio-charge-detail__error strong, .folio-charge-detail__error small { display: block; font-size: 0.7rem; }
+.folio-charge-detail__error i { color: #d14352; font-size: 1.2rem; }
+.folio-charge-detail__error small { color: $muted; margin-top: 0.12rem; }
+.folio-charge-detail__head { align-items: center; background: #f7f9fc; border-bottom: 1px solid #e4eaf1; display: flex; justify-content: space-between; padding: 0.55rem 0.7rem; }
+.folio-charge-detail__head small { color: $muted; display: block; font-size: 0.6rem; font-weight: 750; text-transform: uppercase; }
+.folio-charge-detail__head h3 { color: $ink; font-size: 0.82rem; margin: 0.08rem 0 0; }
+.folio-charge-detail__head button { align-items: center; background: #fff; border: 1px solid #dce4ee; border-radius: 6px; color: #52677f; display: inline-flex; height: 30px; justify-content: center; width: 30px; }
+
+.folio-charge-summary { display: grid; gap: 0.5rem; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 0.65rem 0.7rem; }
+.folio-charge-summary > div { background: #f9fbfd; border: 1px solid #edf1f6; border-radius: 7px; min-width: 0; padding: 0.45rem 0.5rem; }
+.folio-charge-summary span { color: $muted; display: block; font-size: 0.58rem; font-weight: 700; text-transform: uppercase; }
+.folio-charge-summary strong { color: #344b65; display: block; font-size: 0.68rem; margin-top: 0.12rem; overflow-wrap: anywhere; }
+.folio-charge-summary__total { background: #eef5ff !important; border-color: #d7e5fa !important; }
+.folio-charge-summary__total strong { color: #174f9c; }
+
+.folio-charge-empty { align-items: center; color: $muted; display: flex; gap: 0.65rem; justify-content: center; min-height: 150px; padding: 1rem; text-align: left; }
+.folio-charge-empty i { color: #9aa8b8; font-size: 1.35rem; }
+.folio-charge-empty strong, .folio-charge-empty small { display: block; }
+.folio-charge-empty strong { color: $ink; font-size: 0.74rem; }
+.folio-charge-empty small { font-size: 0.65rem; margin-top: 0.12rem; }
+.folio-charge-empty--compact { min-height: 110px; }
+.folio-charge-state { background: #ecfdf3; border: 1px solid #d1fadf; border-radius: 999px; color: #15803d; display: inline-flex; font-size: 0.6rem; font-weight: 750; padding: 0.2rem 0.4rem; }
+.folio-charge-state--muted { background: #f1f5f9; border-color: #e2e8f0; color: #64748b; }
+
+.folio-charge-table-wrap { overflow-x: auto; }
+.folio-charge-table { border-collapse: collapse; font-size: 0.72rem; min-width: 620px; width: 100%; }
+.folio-charge-table th { background: #f7f9fc; color: #60738a; font-size: 0.64rem; padding: 0.45rem 0.55rem; text-transform: uppercase; }
+.folio-charge-table td { border-bottom: 1px solid #edf1f6; color: #425a74; padding: 0.55rem; }
+.folio-charge-table td small { color: $muted; display: block; font-size: 0.64rem; margin-top: 0.12rem; }
+.folio-charge-total { align-items: center; display: flex; justify-content: flex-end; gap: 1rem; padding: 0.65rem 0.55rem 0 0; }
+.folio-charge-total span { color: $muted; font-size: 0.7rem; }
+.folio-charge-total strong { color: $ink; font-size: 0.9rem; }
+
+.folio-detail-notes { display: grid; gap: 0.7rem; grid-template-columns: 1fr 1fr; }
+.folio-detail-notes > div { background: #fff; border: 1px solid $line; border-radius: 10px; padding: 0.75rem 0.85rem; }
+.folio-detail-notes p { color: #50657d; font-size: 0.72rem; line-height: 1.45; margin: 0; }
+
+.folio-detail-footer {
+  align-items: center;
+  background: #fff;
+  border-top: 1px solid $line;
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+}
+
+.folio-detail-footer > span { align-items: center; color: $muted; display: flex; font-size: 0.68rem; gap: 0.35rem; }
+.folio-detail-footer > div { display: flex; gap: 0.45rem; }
+.folio-detail-footer .btn { border-radius: 7px; font-size: 0.75rem; font-weight: 700; }
+*/
+
+@media (max-width: 1199.98px) {
+  .folio-filters { grid-template-columns: 170px 170px 1fr; }
+  .folio-consult-button { grid-column: 3; justify-self: end; min-width: 130px; }
+}
+
+@media (max-width: 991.98px) {
+  .folio-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .folio-filters { grid-template-columns: 1fr 1fr; }
+  .folio-filter-field--search { grid-column: 1 / -1; }
+  .folio-consult-button { grid-column: 1 / -1; justify-self: stretch; }
+}
+
+@media (max-width: 575.98px) {
+  .folio-hero { align-items: flex-start; flex-direction: column; padding: 1rem; }
+  .folio-hero__meta { align-items: flex-start; }
+  .folio-kpis, .folio-filters { grid-template-columns: 1fr; }
+  .folio-filter-field--search, .folio-consult-button { grid-column: auto; }
+  .folio-pagination { align-items: stretch; flex-direction: column; gap: 0.65rem; }
+  .folio-pagination__controls { justify-content: space-between; }
+}

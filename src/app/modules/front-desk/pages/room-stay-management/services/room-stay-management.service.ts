@@ -127,6 +127,14 @@ export interface PointOfSalePaymentMethodApi {
   CA05_NDias          : number;
 }
 
+export interface PointOfSaleDocumentApi {
+  MPV31_CodPntVenta    : string;
+  MPV31_CodDocu        : string;
+  MPV31_Descripcion    : string;
+  MPV31_Principal      : number;
+  MPV31_Operador       : string;
+}
+
 export interface RoomChargePointOfSaleApi {
   MPV07_CodPntVenta      : string;
   MPV07_NomPntVenta      : string;
@@ -391,6 +399,7 @@ export class RoomStayManagementService {
   private readonly departureDateChangeUrl          = `${this.baseApiUrl}/cambio-fecha-salida`;
   private readonly roomCheckoutUrl                  = `${this.baseApiUrl}/checkout/habitacion`;
   private readonly pointOfSalePaymentMethodsUrl    = `${this.baseApiUrl}/forma-pago-punto-venta`;
+  private readonly pointOfSaleDocumentsUrl         = `${this.baseApiUrl}/documento-puntoventa`;
   private readonly roomChargeUrl                   = `${this.baseApiUrl}/cargo-habitacion`;
   private readonly roomChargeLookupUrl             = `${this.baseApiUrl}/consultar-cargos-habitacion/numero`;
   private readonly roomInvoiceUrl                  = `${this.baseApiUrl}/facturacion-fdesk`;
@@ -447,6 +456,13 @@ export class RoomStayManagementService {
         { params }
       )
       .pipe(map((response) => (Array.isArray(response) ? response : response.data ?? [])));
+  }
+
+  getPointOfSaleDocuments(puntoVenta = 'PF'): Observable<PointOfSaleDocumentApi[]> {
+    const codigo = encodeURIComponent(this.cleanParam(puntoVenta) || 'PF');
+    return this.http.get<PointOfSaleDocumentApi[]>(`${this.pointOfSaleDocumentsUrl}/${codigo}`).pipe(
+      map((response) => (Array.isArray(response) ? response : []))
+    );
   }
 
   getRoomChargePointOfSales(pointOfSale = 'PF'): Observable<RoomChargePointOfSaleApi[]> {

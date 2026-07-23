@@ -16,19 +16,27 @@ export class RoomSidebarComponent {
   @Input() exchangeMode = false;
   @Input() exchangeTrayCount = 0;
   @Input() exchangeTrayHeight = 64;
+  @Input() viewportHeight: number | null = null;
+  @Input() scrollContentHeight: number | null = null;
   @Output() scrollTopChange = new EventEmitter<number>();
 
   @ViewChild('scrollContainer') private scrollContainer?: ElementRef<HTMLDivElement>;
 
-  private suppressScrollEvent = false;
-
   setScrollTop(value: number): void {
-    if (!this.scrollContainer) {
+    const element = this.scrollContainer?.nativeElement;
+    if (!element) {
       return;
     }
 
-    this.suppressScrollEvent = true;
-    this.scrollContainer.nativeElement.scrollTop = value;
+    const nextScrollTop = Math.min(
+      Math.max(Number(value) || 0, 0),
+      Math.max(0, element.scrollHeight - element.clientHeight)
+    );
+    if (Math.abs(element.scrollTop - nextScrollTop) < 0.5) {
+      return;
+    }
+
+    element.scrollTop = nextScrollTop;
   }
 
   resetScroll(): void {
@@ -37,11 +45,6 @@ export class RoomSidebarComponent {
 
   onScroll(event: Event): void {
     const element = event.target as HTMLDivElement;
-    if (this.suppressScrollEvent) {
-      this.suppressScrollEvent = false;
-      return;
-    }
-
     this.scrollTopChange.emit(element.scrollTop);
   }
 }

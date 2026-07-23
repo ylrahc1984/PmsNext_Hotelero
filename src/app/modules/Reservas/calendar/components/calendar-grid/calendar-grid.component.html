@@ -1,5 +1,5 @@
 <div class="calendar-grid__scroll" #scrollContainer (scroll)="onScroll($event)">
-  <div class="calendar-grid__content" [style.width.px]="dates.length * cellWidth + timelineOffset">
+  <div class="calendar-grid__content" #scrollContent [style.width.px]="dates.length * cellWidth + timelineOffset">
     <section
       class="exchange-tray"
       *ngIf="exchangeMode"

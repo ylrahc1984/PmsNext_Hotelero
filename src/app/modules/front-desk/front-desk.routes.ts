@@ -43,6 +43,11 @@ export const FRONT_DESK_ROUTES: Routes = [
         loadComponent: () => import('./pages/blocked-rooms/blocked-rooms.component').then((c) => c.BlockedRoomsComponent)
       },
       {
+        path: 'folios-master',
+        data: frontDeskData('Folios Master'),
+        loadComponent: () => import('./pages/folio-master/folio-master.component').then((c) => c.FolioMasterComponent)
+      },
+      {
         path: 'walk-in',
         data: frontDeskData('Nuevo Walk In', 'Habitaciones'),
         loadComponent: () => import('./walk-in/walk-in.component').then((c) => c.WalkInComponent)

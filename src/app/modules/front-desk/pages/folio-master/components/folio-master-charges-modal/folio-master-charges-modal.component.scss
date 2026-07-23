@@ -1,0 +1,63 @@
+$ink: #142b47;
+$muted: #6d7f94;
+$line: #dde5ee;
+$primary: #2563b7;
+
+.charges-overlay { align-items: center; background: rgba(7, 20, 39, 0.62); display: flex; inset: 0; justify-content: center; padding: 1rem; position: fixed; z-index: 1080; }
+.charges-dialog { background: #f6f8fb; border-radius: 14px; box-shadow: 0 28px 80px rgba(5, 18, 35, 0.32); display: flex; flex-direction: column; max-height: 88vh; overflow: hidden; width: min(1060px, 100%); }
+.charges-header { align-items: center; background: #fff; border-bottom: 2px solid #dce6f2; display: flex; flex: 0 0 auto; justify-content: space-between; min-height: 82px; padding: 1.05rem 1.15rem; }
+.charges-heading { align-items: center; display: flex; gap: 0.7rem; }
+.charges-heading__icon { align-items: center; background: #eaf2ff; border-radius: 11px; color: $primary; display: inline-flex; font-size: 1.05rem; height: 46px; justify-content: center; width: 46px; }
+.charges-heading small { color: $muted; display: block; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+.charges-heading h2 { color: $ink; font-size: 1.12rem; font-weight: 850; margin: 0.12rem 0; }
+.charges-heading p { color: $muted; font-size: 0.73rem; margin: 0; }
+.charges-header__actions { align-items: center; display: flex; gap: 0.45rem; }
+.icon-button { align-items: center; background: #fff; border: 1px solid $line; border-radius: 8px; color: #5f7185; display: inline-flex; height: 34px; justify-content: center; width: 34px; }
+.icon-button:disabled { opacity: 0.5; }
+.folio-state, .charge-state { align-items: center; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 999px; color: #475569; display: inline-flex; font-size: 0.64rem; font-weight: 800; gap: 0.3rem; padding: 0.25rem 0.48rem; }
+.folio-state i { background: currentColor; border-radius: 50%; height: 6px; width: 6px; }
+.folio-state.is-in-house { background: #ecfdf3; border-color: #d1fadf; color: #15803d; }
+.folio-state.is-checkout { background: #fff8e7; border-color: #fde9b4; color: #a85d08; }
+.folio-state.is-unknown { background: #fff1f2; border-color: #fecdd3; color: #be123c; }
+.charges-body { align-content: start; display: grid; flex: 0 1 auto; gap: 1rem; min-height: 0; overflow-y: auto; padding: 1rem 1.1rem; }
+.folio-summary { display: grid; gap: 0.55rem; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.folio-summary article { background: #fff; border: 1px solid $line; border-radius: 9px; min-height: 64px; min-width: 0; padding: 0.7rem 0.72rem; }
+.folio-summary span, .folio-notes span { color: $muted; display: block; font-size: 0.59rem; font-weight: 750; margin-bottom: 0.15rem; text-transform: uppercase; }
+.folio-summary strong { color: #344b65; display: block; font-size: 0.7rem; overflow-wrap: anywhere; }
+.charges-card { background: #fff; border: 1px solid $line; border-radius: 10px; overflow: hidden; }
+.charges-card__title { align-items: center; background: #fbfcfe; border-bottom: 2px solid #e3eaf2; display: flex; justify-content: space-between; min-height: 62px; padding: 0.78rem 0.9rem; }
+.charges-card__title small { color: $muted; display: block; font-size: 0.58rem; font-weight: 750; text-transform: uppercase; }
+.charges-card__title h3 { color: $ink; font-size: 0.88rem; margin: 0.1rem 0 0; }
+.charges-card__title > span { color: #52677f; font-size: 0.66rem; font-weight: 750; }
+.state-view { align-items: center; color: $muted; display: flex; gap: 0.65rem; justify-content: center; min-height: 190px; padding: 1rem; }
+.state-view > i { color: #9aa8b8; font-size: 1.5rem; }
+.state-view strong, .state-view small { display: block; }
+.state-view strong { color: $ink; font-size: 0.74rem; }
+.state-view small { font-size: 0.65rem; margin-top: 0.12rem; }
+.state-view--error > i { color: #d14352; }
+.state-view button { background: #fff; border: 1px solid #d5dfeb; border-radius: 6px; color: $primary; font-size: 0.66rem; font-weight: 750; padding: 0.32rem 0.55rem; }
+.charges-table-wrap { max-height: 430px; overflow: auto; }
+.charges-table { border-collapse: collapse; color: #425a74; font-size: 0.69rem; min-width: 890px; width: 100%; }
+.charges-table th { background: #f2f6fa; color: #52677f; font-size: 0.62rem; padding: 0.65rem 0.62rem; position: sticky; text-transform: uppercase; top: 0; z-index: 1; }
+.charges-table td { border-bottom: 1px solid #e8eef4; padding: 0.72rem 0.62rem; vertical-align: middle; }
+.charges-table td small { color: $muted; display: block; font-size: 0.6rem; margin-top: 0.1rem; }
+.document-number { color: #244d82; font-family: monospace; font-size: 0.72rem; }
+.point-sale { background: #f1f5f9; border-radius: 5px; display: inline-flex; font-weight: 750; padding: 0.2rem 0.38rem; }
+.charge-state { background: #ecfdf3; border-color: #d1fadf; color: #15803d; padding: 0.2rem 0.4rem; }
+.charge-state--muted { background: #f1f5f9; border-color: #e2e8f0; color: #64748b; }
+.amount { color: $ink; white-space: nowrap; }
+.detail-button { align-items: center; background: #eef4ff; border: 1px solid #d5e3f8; border-radius: 6px; color: $primary; display: inline-flex; font-size: 0.64rem; font-weight: 750; gap: 0.28rem; padding: 0.3rem 0.48rem; white-space: nowrap; }
+.folio-notes { display: grid; gap: 0.65rem; grid-template-columns: 1fr 1fr; }
+.folio-notes > div { background: #fff; border: 1px solid $line; border-radius: 9px; padding: 0.65rem 0.75rem; }
+.folio-notes p { color: #50657d; font-size: 0.68rem; line-height: 1.4; margin: 0; }
+.charges-footer { align-items: center; background: #fff; border-top: 2px solid #dce6f2; display: flex; flex: 0 0 auto; justify-content: space-between; min-height: 66px; padding: 0.85rem 1.05rem; }
+.charges-footer > span { align-items: center; color: $muted; display: flex; font-size: 0.64rem; gap: 0.3rem; }
+.charges-footer > div { display: flex; gap: 0.4rem; }
+.button-secondary, .button-primary, .button-checkout { align-items: center; border-radius: 7px; display: inline-flex; font-size: 0.7rem; font-weight: 750; gap: 0.3rem; padding: 0.42rem 0.7rem; }
+.button-secondary { background: #fff; border: 1px solid $line; color: #52677f; }
+.button-primary { background: $primary; border: 1px solid $primary; color: #fff; }
+.button-checkout { background: #fff7ed; border: 1px solid #fed7aa; color: #c2410c; }
+.button-primary:disabled, .button-checkout:disabled { cursor: not-allowed; opacity: .55; }
+
+@media (max-width: 900px) { .folio-summary { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 575px) { .charges-overlay { padding: 0.4rem; } .charges-dialog { max-height: 96vh; } .charges-header { align-items: flex-start; min-height: 88px; } .charges-heading__icon, .folio-state { display: none; } .charges-heading p { max-width: 230px; } .folio-summary, .folio-notes { grid-template-columns: 1fr 1fr; } .charges-footer { align-items: stretch; flex-direction: column; gap: 0.5rem; } .charges-footer > div { display: grid; grid-template-columns: 1fr; } .button-secondary, .button-primary, .button-checkout { justify-content: center; } }

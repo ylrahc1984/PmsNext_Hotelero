@@ -44,6 +44,11 @@
   max-height: 620px;
   overflow-y: auto;
   overflow-x: hidden;
+  scrollbar-gutter: stable;
+}
+
+.room-sidebar__scroll-content {
+  min-width: 0;
 }
 
 .room-sidebar__exchange {
@@ -127,6 +132,6 @@
   }
 
   .room-sidebar__scroll {
-    max-height: 180px;
+    max-height: 480px;
   }
 }

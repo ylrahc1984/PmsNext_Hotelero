@@ -64,6 +64,8 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
   type                                : RoomType | null = null;
   status                              : CalendarFilterStatus = null;
   headerScrollLeft                    = 0;
+  sidebarViewportHeight               : number | null = null;
+  sidebarScrollContentHeight          : number | null = null;
   isLoading                           = false;
   errorMessage                        = '';
   assignmentPanelCollapsed            = false;
@@ -146,6 +148,29 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
 
   onGridScrollTop(scrollTop: number): void {
     this.roomSidebar?.setScrollTop(scrollTop);
+  }
+
+  onGridViewportHeightChange(height: number): void {
+    const normalizedHeight = Math.max(0, Math.round(Number(height) || 0));
+    if (!normalizedHeight || this.sidebarViewportHeight === normalizedHeight) {
+      return;
+    }
+
+    this.sidebarViewportHeight = normalizedHeight;
+    this.cdr.markForCheck();
+    if (typeof requestAnimationFrame !== 'undefined') {
+      requestAnimationFrame(() => this.roomSidebar?.setScrollTop(this.calendarGrid?.getScrollTop() ?? 0));
+    }
+  }
+
+  onGridScrollContentHeightChange(height: number): void {
+    const normalizedHeight = Math.max(0, Math.round(Number(height) || 0));
+    if (!normalizedHeight || this.sidebarScrollContentHeight === normalizedHeight) {
+      return;
+    }
+
+    this.sidebarScrollContentHeight = normalizedHeight;
+    this.cdr.markForCheck();
   }
 
   onSidebarScrollTop(scrollTop: number): void {

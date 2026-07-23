@@ -4,20 +4,22 @@
     <span>{{ rows.length }}</span>
   </div>
 
-  <div class="room-sidebar__scroll" #scrollContainer (scroll)="onScroll($event)">
-    <section class="room-sidebar__exchange" *ngIf="exchangeMode" [style.height.px]="exchangeTrayHeight">
-      <div class="room-sidebar__exchange-icon"><i class="feather icon-repeat"></i></div>
-      <div>
-        <strong>Bandeja de intercambio</strong>
-        <p>{{ exchangeTrayCount }} {{ exchangeTrayCount === 1 ? 'reserva temporal' : 'reservas temporales' }}</p>
-      </div>
-    </section>
-    <article class="room-sidebar__row" *ngFor="let row of rows">
-      <div class="room-sidebar__icon"><i class="feather icon-home"></i></div>
-      <div>
-        <strong>{{ row.room.roomNumber }}</strong>
-        <p>{{ row.room.type }}</p>
-      </div>
-    </article>
+  <div class="room-sidebar__scroll" #scrollContainer [style.height.px]="viewportHeight" (scroll)="onScroll($event)">
+    <div class="room-sidebar__scroll-content" [style.min-height.px]="scrollContentHeight">
+      <section class="room-sidebar__exchange" *ngIf="exchangeMode" [style.height.px]="exchangeTrayHeight">
+        <div class="room-sidebar__exchange-icon"><i class="feather icon-repeat"></i></div>
+        <div>
+          <strong>Bandeja de intercambio</strong>
+          <p>{{ exchangeTrayCount }} {{ exchangeTrayCount === 1 ? 'reserva temporal' : 'reservas temporales' }}</p>
+        </div>
+      </section>
+      <article class="room-sidebar__row" *ngFor="let row of rows">
+        <div class="room-sidebar__icon"><i class="feather icon-home"></i></div>
+        <div>
+          <strong>{{ row.room.roomNumber }}</strong>
+          <p>{{ row.room.type }}</p>
+        </div>
+      </article>
+    </div>
   </div>
 </aside>

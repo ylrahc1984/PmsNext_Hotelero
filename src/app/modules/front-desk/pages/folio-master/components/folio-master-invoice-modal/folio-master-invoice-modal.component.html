@@ -1,0 +1,176 @@
+<div class="action-modal-backdrop" (click)="closeModal.emit()">
+  <section class="action-modal action-modal--invoice" role="dialog" aria-modal="true" aria-label="Facturación de Folio Master" (click)="$event.stopPropagation()">
+    <header class="room-invoice-header">
+      <div>
+        <span class="room-invoice-eyebrow">PMSNEXT HOTELERO</span>
+        <h2>Facturación de Folio Master</h2>
+        <p>Folio {{ folioNumber }} · Reserva {{ reservationNumber }} · {{ folio.PRV09_NumPax || 0 }} Pax</p>
+      </div>
+      <div class="room-invoice-header-actions">
+        <label class="room-invoice-exchange-rate">
+          <span>Tipo cambio</span>
+          <input type="number" [ngModel]="paymentDraft.tCambio" disabled>
+        </label>
+        <button type="button" class="room-invoice-close" aria-label="Cerrar" (click)="closeModal.emit()">
+          <span class="material-icons" aria-hidden="true">close</span>
+        </button>
+      </div>
+    </header>
+
+    <nav class="room-invoice-stepper" aria-label="Proceso de facturación de Folio Master">
+      <div class="room-invoice-step room-invoice-step--active"><span>1</span><strong>Cliente</strong></div>
+      <div class="room-invoice-step room-invoice-step--active"><span>2</span><strong>Formas de Pago</strong></div>
+      <div class="room-invoice-step" [class.room-invoice-step--active]="invoiceCanConfirm"><span>3</span><strong>Confirmación</strong></div>
+    </nav>
+
+    <main class="room-invoice-body">
+      <section class="room-invoice-card room-invoice-card--client">
+        <h3>Cliente</h3>
+        <label class="room-invoice-label" for="folio-invoice-client-search">Buscar por nombre, código o identificación...</label>
+        <div class="room-invoice-search">
+          <span class="material-icons" aria-hidden="true">search</span>
+          <input id="folio-invoice-client-search" type="search" [ngModel]="clientSearch" (ngModelChange)="onClientSearchChange($event)" placeholder="Escribe al menos 2 caracteres..." autocomplete="off">
+          <span class="spinner-border spinner-border-sm" *ngIf="isClientSearchLoading" aria-label="Buscando clientes"></span>
+        </div>
+
+        <div class="room-invoice-results" *ngIf="clientSearchResults.length">
+          <button type="button" class="room-invoice-result" *ngFor="let client of clientSearchResults; trackBy: trackClient" (click)="selectClient(client)">
+            <strong>{{ client.name }}</strong>
+            <span>{{ client.code }} · {{ client.document || 'Sin documento' }}</span>
+          </button>
+        </div>
+        <div class="room-invoice-inline-error" *ngIf="clientSearchError">{{ clientSearchError }}</div>
+        <div class="room-invoice-client-empty" *ngIf="!isClientSearchLoading && !clientSearchError && clientSearch.length >= 2 && !clientSearchResults.length && !selectedClient">
+          No se encontraron clientes para “{{ clientSearch }}”.
+        </div>
+
+        <article class="room-invoice-selected-client">
+          <div class="room-invoice-selected-head">
+            <span>{{ selectedClient ? 'Cliente seleccionado' : 'Consumidor final' }}</span>
+            <button *ngIf="selectedClient" type="button" (click)="clearClient()">Cambiar</button>
+          </div>
+          <strong>{{ invoiceClient.name }}</strong>
+          <dl>
+            <div><dt>Código</dt><dd>{{ invoiceClient.code }}</dd></div>
+            <div><dt>Identificación / RUC</dt><dd>{{ invoiceClient.document || '0000000000' }}</dd></div>
+            <div *ngIf="invoiceClient.email"><dt>Correo</dt><dd>{{ invoiceClient.email }}</dd></div>
+            <div><dt>Dirección</dt><dd>{{ invoiceClient.address || 'S/D' }}</dd></div>
+          </dl>
+          <div class="room-invoice-document-loading" *ngIf="isDocumentsLoading">
+            <span class="spinner-border spinner-border-sm"></span> Identificando tipo de documento...
+          </div>
+          <div
+            class="room-invoice-document-type"
+            *ngIf="selectedDocument && !isDocumentsLoading"
+            [class.room-invoice-document-type--invoice]="selectedDocumentIsInvoice"
+            [class.room-invoice-document-type--ticket]="!selectedDocumentIsInvoice"
+          >
+            <span class="material-icons" aria-hidden="true">{{ selectedDocumentIsInvoice ? 'description' : 'receipt_long' }}</span>
+            <div>
+              <small>Documento fiscal seleccionado</small>
+              <strong>{{ selectedDocumentLabel }}</strong>
+              <em>{{ selectedDocument.MPV31_CodDocu }} · {{ selectedDocument.MPV31_Descripcion }}</em>
+            </div>
+          </div>
+          <p class="room-invoice-document-message" *ngIf="documentSelectionMessage && !isDocumentsLoading">{{ documentSelectionMessage }}</p>
+          <div class="room-invoice-inline-error" *ngIf="documentSelectionError">{{ documentSelectionError }}</div>
+        </article>
+      </section>
+
+      <section class="room-invoice-card room-invoice-card--payments">
+        <div class="room-invoice-title-row">
+          <h3>Formas de Pago</h3>
+          <span>{{ folio.PRV09_CodPlan || folio.PRV01_CodPlan }}</span>
+        </div>
+
+        <div class="room-invoice-payment-form">
+          <label>
+            <span>Forma de pago</span>
+            <select [ngModel]="paymentDraft.methodCode" (ngModelChange)="updatePaymentDraft({ methodCode: $event })" [disabled]="isCatalogLoading">
+              <option value="" *ngIf="isCatalogLoading">Cargando formas de pago...</option>
+              <option *ngFor="let method of paymentMethods" [value]="method.code">{{ method.description }}</option>
+            </select>
+          </label>
+          <label>
+            <span>Moneda</span>
+            <select [ngModel]="paymentDraft.moneda" (ngModelChange)="updatePaymentDraft({ moneda: $event })">
+              <option *ngFor="let currency of currencyOptions" [value]="currency.codMoneda">{{ currency.codMoneda }} - {{ currency.moneda }}</option>
+            </select>
+          </label>
+          <label>
+            <span>Monto</span>
+            <input type="number" min="0" step="0.01" [ngModel]="paymentDraft.amount" (ngModelChange)="updatePaymentDraft({ amount: +$event })" [disabled]="isExchangeRateLoading">
+          </label>
+          <label>
+            <span>No. tarjeta</span>
+            <input type="text" [ngModel]="paymentDraft.numTarjeta" (ngModelChange)="updatePaymentDraft({ numTarjeta: $event })" placeholder="Opcional">
+          </label>
+          <label>
+            <span>Vencimiento</span>
+            <input type="text" [ngModel]="paymentDraft.vencimiento" (ngModelChange)="updatePaymentDraft({ vencimiento: $event })" placeholder="MM/AA">
+          </label>
+          <button type="button" class="room-invoice-add-payment" aria-label="Agregar forma de pago" (click)="addPayment()" [disabled]="isExchangeRateLoading">
+            <span class="material-icons" aria-hidden="true">add</span>
+          </button>
+        </div>
+
+        <div class="room-invoice-conversion-hint">Total aplicado: <strong>{{ convertedDraftAmount | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+        <div class="room-invoice-inline-error" *ngIf="validationMessage">{{ validationMessage }}</div>
+
+        <div class="room-invoice-payments-table" *ngIf="appliedPayments.length; else noPayments">
+          <table>
+            <thead><tr><th>Forma de Pago</th><th>Moneda</th><th>Tarjeta</th><th class="text-end">Monto</th><th class="text-end">Total USD</th><th class="text-center">Acciones</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let payment of appliedPayments; trackBy: trackPayment">
+                <td><strong>{{ payment.description }}</strong><span>{{ payment.frmPago }} · {{ payment.tipo }}</span></td>
+                <td><strong>{{ payment.moneda }}</strong><span>TC {{ payment.tCambio | number:'1.2-2' }}</span></td>
+                <td>{{ payment.numTarjeta || '-' }}</td>
+                <td class="text-end">{{ payment.monto | number:'1.2-2' }}</td>
+                <td class="text-end">{{ payment.mtoTotal | currency:'USD':'symbol':'1.2-2' }}</td>
+                <td class="text-center"><button type="button" class="room-invoice-row-action" aria-label="Eliminar pago" (click)="removePayment(payment.orden)"><span class="material-icons">delete</span></button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <ng-template #noPayments>
+          <div class="room-invoice-empty-state"><span class="material-icons">credit_card</span><strong>Aún no has agregado formas de pago.</strong><span>Agrega una forma de pago para continuar.</span></div>
+        </ng-template>
+      </section>
+
+      <aside class="room-invoice-card room-invoice-card--summary">
+        <h3>Resumen de la cuenta</h3>
+        <div class="room-invoice-summary-list">
+          <div><span>Subtotal</span><strong>{{ invoiceSubtotal | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+          <div><span>Impuestos</span><strong>{{ invoiceTaxes | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+          <div><span>Propina</span><strong>{{ invoiceTip | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+          <div class="room-invoice-summary-total"><span>Total cuenta</span><strong>{{ invoiceTotal | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+          <div class="room-invoice-summary-paid"><span>Total pagado</span><strong>{{ invoicePaid | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+          <div class="room-invoice-summary-pending"><span>Pendiente</span><strong>{{ invoicePending | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+          <div class="room-invoice-summary-change"><span>Cambio</span><strong>{{ invoiceChange | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+        </div>
+        <button type="button" class="room-invoice-detail-button" (click)="showChargeSelection = !showChargeSelection">
+          <span class="material-icons">list</span>Ver detalle de consumos
+        </button>
+      </aside>
+    </main>
+
+    <section class="folio-invoice-charge-panel" *ngIf="showChargeSelection">
+      <div class="folio-invoice-charge-panel__head">
+        <div><span>Cargos recuperados del folio</span><strong>{{ selectedCharges.length }} de {{ selectableCharges.length }} seleccionados</strong></div>
+        <button type="button" (click)="showChargeSelection = false" aria-label="Cerrar detalle"><span class="material-icons">close</span></button>
+      </div>
+      <div class="folio-invoice-charge-list">
+        <label *ngFor="let charge of selectableCharges; trackBy: trackCharge">
+          <input type="checkbox" [ngModel]="charge.invoiceSelected" (ngModelChange)="toggleCharge(charge, $event)">
+          <span><strong>{{ charge.nombrePax || 'Cargo de habitación' }}</strong><small>{{ charge.tipCrgHab }} · {{ charge.numCrgHab }} · {{ charge.fecha }}</small></span>
+          <b>{{ charge.mtoTot | currency:'USD':'symbol':'1.2-2' }}</b>
+        </label>
+      </div>
+    </section>
+
+    <footer class="room-invoice-footer">
+      <button type="button" class="room-invoice-secondary-btn" (click)="closeModal.emit()">Cancelar</button>
+      <button type="button" class="room-invoice-primary-btn" [disabled]="isSubmitting" (click)="submitInvoice()">{{ isSubmitting ? 'Facturando...' : 'Confirmar Facturación' }}</button>
+    </footer>
+  </section>
+</div>
