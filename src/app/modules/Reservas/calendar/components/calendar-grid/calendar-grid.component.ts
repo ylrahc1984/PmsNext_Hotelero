@@ -14,6 +14,7 @@ import {
   inject
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RoomOperationalVisualState } from 'src/app/shared/models/room-operational-visual-state';
 
 import {
   CalendarAssignableReservation,
@@ -37,6 +38,7 @@ interface CalendarGridDragState {
   span: number;
   label: string;
   status: CalendarReservationStatus;
+  visualState: RoomOperationalVisualState;
   pointerOffsetX: number;
   categoryCode: string;
   preserveDates: boolean;
@@ -202,6 +204,7 @@ export class CalendarGridComponent implements AfterViewInit, OnChanges, OnDestro
         span: payload.block.span,
         label: payload.block.label,
         status: payload.block.reservation.status,
+        visualState: payload.block.visualState,
         pointerOffsetX: payload.event.offsetX,
         categoryCode: payload.block.reservation.categoryCode || '',
         preserveDates: this.exchangeMode,
@@ -219,6 +222,7 @@ export class CalendarGridComponent implements AfterViewInit, OnChanges, OnDestro
         span: Math.max(payload.reservation.nights, 1),
         label: this.abbreviateName(payload.reservation.guestName),
         status: 'RESERVADA',
+        visualState: 'future-reservation',
         pointerOffsetX: 16,
         categoryCode: payload.reservation.categoryCode,
         preserveDates: false,
@@ -245,6 +249,7 @@ export class CalendarGridComponent implements AfterViewInit, OnChanges, OnDestro
         span: item.block.span,
         label: item.block.label,
         status: item.reservation.status,
+        visualState: item.block.visualState,
         pointerOffsetX: event.offsetX,
         categoryCode: item.reservation.categoryCode || '',
         preserveDates: true,
@@ -416,7 +421,7 @@ export class CalendarGridComponent implements AfterViewInit, OnChanges, OnDestro
         label: this.dragState.label,
         roomNumber: 'Bandeja de intercambio',
         targetDate: this.dragState.block?.reservation.startDate || '',
-        statusClass: this.dragState.status.toLowerCase(),
+        statusClass: this.dragState.visualState,
         valid,
         warning: false,
         overExchangeTray: true
@@ -464,7 +469,7 @@ export class CalendarGridComponent implements AfterViewInit, OnChanges, OnDestro
       label: this.dragState.label,
       roomNumber: targetRow.room.roomNumber,
       targetDate,
-      statusClass: this.dragState.status.toLowerCase(),
+      statusClass: this.dragState.visualState,
       valid,
       warning,
       overExchangeTray: false

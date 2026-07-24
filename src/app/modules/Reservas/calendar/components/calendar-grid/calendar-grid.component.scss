@@ -1,5 +1,8 @@
+@use '../../../../../shared/styles/room-operational-palette' as room-palette;
+
 :host {
   display: block;
+  @include room-palette.room-operational-palette;
 }
 
 .calendar-grid__scroll {
@@ -122,6 +125,8 @@
 }
 
 .exchange-tray__reservation {
+  @include room-palette.room-operational-state-variables;
+
   position: absolute;
   height: 34px;
   min-width: 36px;
@@ -133,8 +138,8 @@
   align-items: center;
   column-gap: 0.25rem;
   overflow: hidden;
-  color: var(--tray-color, #174c47);
-  background: var(--tray-background, linear-gradient(90deg, #91d9ca, #a6e3d7));
+  color: var(--room-state-ink, var(--room-arrival-today-ink));
+  background: linear-gradient(90deg, var(--room-state-start, var(--room-arrival-today-start)), var(--room-state-end, var(--room-arrival-today-end)));
   box-shadow: 0 3px 7px rgba(15, 23, 42, 0.13);
   cursor: grab;
   text-align: left;
@@ -170,14 +175,6 @@
   font-size: 0.52rem;
   opacity: 0.8;
 }
-
-.exchange-tray__reservation--color-1 { --tray-background: linear-gradient(90deg, #9cbaf2, #b0c8f7); --tray-color: #1c3d70; }
-.exchange-tray__reservation--color-2 { --tray-background: linear-gradient(90deg, #f3aaa8, #f7bebc); --tray-color: #71302f; }
-.exchange-tray__reservation--color-3 { --tray-background: linear-gradient(90deg, #c5afea, #d5c4f0); --tray-color: #49336b; }
-.exchange-tray__reservation--color-4 { --tray-background: linear-gradient(90deg, #f1cf82, #f6dda4); --tray-color: #654b12; }
-.exchange-tray__reservation--color-5 { --tray-background: linear-gradient(90deg, #86cedd, #a1dce7); --tray-color: #174b57; }
-.exchange-tray__reservation--color-6 { --tray-background: linear-gradient(90deg, #b2d88f, #c5e4aa); --tray-color: #365421; }
-.exchange-tray__reservation--color-7 { --tray-background: linear-gradient(90deg, #d7b2ca, #e3c5d8); --tray-color: #59384e; }
 
 .calendar-grid__overlay {
   position: absolute;
@@ -318,19 +315,20 @@
   letter-spacing: 0.02em;
 }
 
-.calendar-grid__drag-preview--ocupada {
-  background: linear-gradient(135deg, rgba(42, 91, 139, 0.98), rgba(66, 123, 174, 0.98));
-  color: #ffffff;
+.calendar-grid__drag-preview {
+  @include room-palette.room-operational-state-variables;
 }
 
-.calendar-grid__drag-preview--reservada {
-  background: linear-gradient(135deg, rgba(221, 171, 47, 0.98), rgba(245, 210, 107, 0.98));
-  color: #5b430e;
-}
-
-.calendar-grid__drag-preview--bloqueada {
-  background: linear-gradient(135deg, rgba(121, 132, 151, 0.98), rgba(171, 181, 195, 0.98));
-  color: #f7fbff;
+.calendar-grid__drag-preview.state-available,
+.calendar-grid__drag-preview.state-arrival-today,
+.calendar-grid__drag-preview.state-occupied,
+.calendar-grid__drag-preview.state-checkout-tomorrow,
+.calendar-grid__drag-preview.state-checkout-today,
+.calendar-grid__drag-preview.state-blocked,
+.calendar-grid__drag-preview.state-future-reservation,
+.calendar-grid__drag-preview.state-attention {
+  color: var(--room-state-ink);
+  background: linear-gradient(135deg, var(--room-state-start), var(--room-state-end));
 }
 
 .calendar-grid__drag-preview--invalid {

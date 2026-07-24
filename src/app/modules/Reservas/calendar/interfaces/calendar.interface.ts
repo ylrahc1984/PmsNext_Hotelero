@@ -1,7 +1,8 @@
 import { RoomStatus, RoomType } from '../../interfaces/room-status.interface';
+import { RoomOperationalVisualState } from 'src/app/shared/models/room-operational-visual-state';
 
 export type CalendarReservationStatus = 'OCUPADA' | 'RESERVADA' | 'BLOQUEADA';
-export type CalendarFilterStatus = CalendarReservationStatus | 'DISPONIBLE' | null;
+export type CalendarFilterStatus = RoomOperationalVisualState | null;
 
 export interface CalendarReservation {
   id: string;
@@ -85,7 +86,7 @@ export interface CalendarReservationBlockView {
   width: number;
   continuesBefore: boolean;
   continuesAfter: boolean;
-  colorIndex: number;
+  visualState: RoomOperationalVisualState;
   label: string;
   tooltip: string;
 }

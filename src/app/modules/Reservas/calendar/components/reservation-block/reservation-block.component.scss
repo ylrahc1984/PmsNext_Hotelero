@@ -1,8 +1,13 @@
+@use '../../../../../shared/styles/room-operational-palette' as room-palette;
+
 :host {
   display: block;
 }
 
 .reservation-block {
+  @include room-palette.room-operational-palette;
+  @include room-palette.room-operational-state-variables;
+
   position: absolute;
   top: 9px;
   height: 30px;
@@ -136,63 +141,20 @@
   letter-spacing: 0.05em;
 }
 
-.reservation-block--ocupada {
-  --reservation-background: linear-gradient(90deg, #93b4f2, #a8c3f7);
-  color: #18345f;
-}
-
-.reservation-block--reservada {
-  --reservation-background: linear-gradient(90deg, #8bd8c8, #9be0d2);
-  color: #164d48;
-}
-
-.reservation-block--bloqueada {
-  --reservation-background: linear-gradient(90deg, #cfd3da, #dfe2e7);
-  color: #3f4754;
-}
-
-.reservation-block--color-0 {
-  --reservation-background: linear-gradient(90deg, #91d9ca, #a6e3d7);
-  color: #174c47;
-}
-
-.reservation-block--color-1 {
-  --reservation-background: linear-gradient(90deg, #9cbaf2, #b0c8f7);
-  color: #1c3d70;
-}
-
-.reservation-block--color-2 {
-  --reservation-background: linear-gradient(90deg, #f3aaa8, #f7bebc);
-  color: #71302f;
-}
-
-.reservation-block--color-3 {
-  --reservation-background: linear-gradient(90deg, #c5afea, #d5c4f0);
-  color: #49336b;
-}
-
-.reservation-block--color-4 {
-  --reservation-background: linear-gradient(90deg, #f1cf82, #f6dda4);
-  color: #654b12;
-}
-
-.reservation-block--color-5 {
-  --reservation-background: linear-gradient(90deg, #86cedd, #a1dce7);
-  color: #174b57;
-}
-
-.reservation-block--color-6 {
-  --reservation-background: linear-gradient(90deg, #b2d88f, #c5e4aa);
-  color: #365421;
-}
-
-.reservation-block--color-7 {
-  --reservation-background: linear-gradient(90deg, #d7b2ca, #e3c5d8);
-  color: #59384e;
+.reservation-block.state-available,
+.reservation-block.state-arrival-today,
+.reservation-block.state-occupied,
+.reservation-block.state-checkout-tomorrow,
+.reservation-block.state-checkout-today,
+.reservation-block.state-blocked,
+.reservation-block.state-future-reservation,
+.reservation-block.state-attention {
+  --reservation-background: linear-gradient(90deg, var(--room-state-start), var(--room-state-end));
+  color: var(--room-state-ink);
 }
 
 .reservation-block--operational {
-  --reservation-background: linear-gradient(90deg, #cfd3da, #dfe2e7);
-  color: #3f4754;
+  --reservation-background: linear-gradient(90deg, var(--room-blocked-start), var(--room-blocked-end));
+  color: var(--room-blocked-ink);
   cursor: default;
 }

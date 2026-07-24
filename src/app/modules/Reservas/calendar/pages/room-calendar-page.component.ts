@@ -1,11 +1,12 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, HostListener, OnInit, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { firstValueFrom, of } from 'rxjs';
-import { catchError, finalize } from 'rxjs/operators';
+import { catchError, distinctUntilChanged, filter, finalize, map } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
 import { AuthService } from 'src/app/core/services/auth.service';
+import { OperationalDateService } from 'src/app/core/services/operational-date.service';
 import { CanDeactivateReservaCreate } from 'src/app/core/guards/can-deactivate-reserva-create.guard';
 import {
   addPmsCalendarDays,
@@ -49,6 +50,8 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly auth = inject(AuthService);
+  private readonly operationalDateService = inject(OperationalDateService);
+  private readonly operationalDate$ = toObservable(this.operationalDateService.operationalDate);
 
   @ViewChild(RoomSidebarComponent) roomSidebar?: RoomSidebarComponent;
   @ViewChild(CalendarGridComponent) calendarGrid?: CalendarGridComponent;
@@ -57,13 +60,18 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
   typeOptions: RoomType[] = [];
   readonly statusOptions: Array<{ label: string; value: CalendarFilterStatus }> = [
     { label: 'Todos', value: null },
-    { label: 'Disponible', value: 'DISPONIBLE' },
-    { label: 'Ocupado', value: 'OCUPADA' },
-    { label: 'Reservado', value: 'RESERVADA' },
-    { label: 'Bloqueado', value: 'BLOQUEADA' }
+    { label: 'Disponible', value: 'available' },
+    { label: 'Entrada hoy', value: 'arrival-today' },
+    { label: 'Ocupada', value: 'occupied' },
+    { label: 'Salida mañana', value: 'checkout-tomorrow' },
+    { label: 'Salida hoy', value: 'checkout-today' },
+    { label: 'Reserva futura', value: 'future-reservation' },
+    { label: 'Bloqueada', value: 'blocked' },
+    { label: 'Requiere atención', value: 'attention' }
   ];
 
-  startDate                           = toPmsDateInputValue(new Date());
+  operationalDate                    = toPmsDateInputValue(this.operationalDateService.operationalDate()) || toPmsDateInputValue(new Date());
+  startDate                           = this.operationalDate;
   endDate                             = this.shiftDate(this.startDate, 29);
   search                              = '';
   type                                : RoomType | null = null;
@@ -84,10 +92,22 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
   readonly processingReservationIds   = new Set<string>();
   private rooms                       : RoomStatus[] = [];
   private workingReservations         : CalendarReservation[] = [];
-  calendarData                        : CalendarData = this.calendarService.getCalendarData(this.buildQuery(), this.rooms, this.workingReservations);
+  calendarData                        : CalendarData = this.calendarService.getCalendarData(
+    this.buildQuery(),
+    this.rooms,
+    this.workingReservations,
+    this.operationalDate
+  );
 
   ngOnInit(): void {
-    this.loadCalendar(true);
+    this.bindOperationalDate();
+    this.operationalDateService.ensureLoaded().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      error: (error) => {
+        console.error('No se pudo obtener la fecha operativa para cargar el calendario.', error);
+        this.errorMessage = 'No se pudo obtener la fecha operativa para cargar el calendario.';
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   async onStartDateChange(value: string): Promise<void> {
@@ -132,7 +152,7 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
       return;
     }
     const range = this.rangeLength;
-    this.startDate = toPmsDateInputValue(new Date());
+    this.startDate = this.operationalDate;
     this.endDate = this.shiftDate(this.startDate, range - 1);
     this.loadCalendar(true);
   }
@@ -573,7 +593,12 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
         currentRoomNumber: null,
         status: 'in-tray',
         lane,
-        block: this.calendarService.getReservationBlockView(change.reservation, this.startDate, this.calendarData.dates.length)
+        block: this.calendarService.getReservationBlockView(
+          change.reservation,
+          this.startDate,
+          this.calendarData.dates.length,
+          this.operationalDate
+        )
       };
     });
     this.cdr.markForCheck();
@@ -689,21 +714,21 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
 
   private toAssignableReservation(reservation: CalendarReservation, sourceRoom: string): CalendarAssignableReservation {
     return {
-      id: reservation.id,
-      reservationCode: reservation.reservationCode || this.extractReservationCode(reservation.id),
-      categoryCode: reservation.categoryCode || this.rooms.find((room) => room.roomNumber === reservation.roomNumber)?.type || '',
-      sourceRoom,
-      roomNumber: reservation.roomNumber,
-      startDate: reservation.startDate,
-      endDate: reservation.endDate,
-      nights: this.diffDays(reservation.startDate, reservation.endDate),
-      rooms: 1,
-      guestName: reservation.guestName,
-      agency: reservation.source,
-      status: reservation.status,
-      operator: '',
-      pax: 0,
-      children: 0
+      id                  : reservation.id,
+      reservationCode     : reservation.reservationCode || this.extractReservationCode(reservation.id),
+      categoryCode        : reservation.categoryCode || this.rooms.find((room) => room.roomNumber === reservation.roomNumber)?.type || '',
+      sourceRoom          ,
+      roomNumber          : reservation.roomNumber,
+      startDate           : reservation.startDate,
+      endDate             : reservation.endDate,
+      nights              : this.diffDays(reservation.startDate, reservation.endDate),
+      rooms               : 1,
+      guestName           : reservation.guestName,
+      agency              : reservation.source,
+      status              : reservation.status,
+      operator            : '',
+      pax                 : 0,
+      children            : 0
     };
   }
 
@@ -712,7 +737,12 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
   }
 
   private reloadCalendar(resetScroll = false): void {
-    this.calendarData = this.calendarService.getCalendarData(this.buildQuery(), this.rooms, this.workingReservations);
+    this.calendarData = this.calendarService.getCalendarData(
+      this.buildQuery(),
+      this.rooms,
+      this.workingReservations,
+      this.operationalDate
+    );
     if (resetScroll) {
       this.headerScrollLeft = 0;
       this.calendarGrid?.resetScroll();
@@ -724,15 +754,15 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
     const nights = Math.max(reservation.nights, 1);
     const endDate = this.shiftDate(targetDate, nights);
     const calendarReservation: CalendarReservation = {
-      id: `pending-${reservation.id}-${roomNumber}-${targetDate}`,
-      reservationCode: reservation.reservationCode,
-      roomNumber,
-      categoryCode: reservation.categoryCode,
-      startDate: targetDate,
-      endDate,
-      status: 'RESERVADA',
-      guestName: reservation.guestName,
-      source: reservation.agency || reservation.reservationCode
+      id                : `pending-${reservation.id}-${roomNumber}-${targetDate}`,
+      reservationCode   : reservation.reservationCode,
+      roomNumber        ,
+      categoryCode      : reservation.categoryCode,
+      startDate         : targetDate,
+      endDate           ,
+      status            : 'RESERVADA',
+      guestName         : reservation.guestName,
+      source            : reservation.agency || reservation.reservationCode
     };
 
     this.workingReservations = this.workingReservations.filter((item) => item.id !== calendarReservation.id);
@@ -878,21 +908,21 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
 
     const sourceRoom = this.rooms.find((room) => room.roomNumber === sourceReservation.roomNumber);
     const reservation: CalendarAssignableReservation = {
-      id: sourceReservation.id,
-      reservationCode: sourceReservation.reservationCode || this.extractReservationCode(sourceReservation.id),
-      categoryCode: sourceReservation.categoryCode || sourceRoom?.type || '',
-      sourceRoom: sourceReservation.roomNumber,
-      roomNumber: sourceReservation.roomNumber,
-      startDate: sourceReservation.startDate,
-      endDate: sourceReservation.endDate,
-      nights: this.diffDays(sourceReservation.startDate, sourceReservation.endDate),
-      rooms: 1,
-      guestName: sourceReservation.guestName,
-      agency: sourceReservation.source,
-      status: sourceReservation.status,
-      operator: '',
-      pax: 0,
-      children: 0
+      id                  : sourceReservation.id,
+      reservationCode     : sourceReservation.reservationCode || this.extractReservationCode(sourceReservation.id),
+      categoryCode        : sourceReservation.categoryCode || sourceRoom?.type || '',
+      sourceRoom          : sourceReservation.roomNumber,
+      roomNumber          : sourceReservation.roomNumber,
+      startDate           : sourceReservation.startDate,
+      endDate             : sourceReservation.endDate,
+      nights              : this.diffDays(sourceReservation.startDate, sourceReservation.endDate),
+      rooms               : 1,
+      guestName           : sourceReservation.guestName,
+      agency              : sourceReservation.source,
+      status              : sourceReservation.status,
+      operator            : '',
+      pax                 : 0,
+      children            : 0
     };
 
     await this.confirmAndAssignReservation(
@@ -1167,7 +1197,7 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
     this.errorMessage = '';
 
     this.calendarService
-      .getCalendarApiData(this.startDate, this.endDate)
+      .getCalendarApiData(this.startDate, this.endDate, this.operationalDate)
       .pipe(
         catchError((error) => {
           console.error('No se pudo cargar el calendario de habitaciones.', error);
@@ -1190,6 +1220,23 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
         }
 
         this.reloadCalendar(resetScroll);
+      });
+  }
+
+  private bindOperationalDate(): void {
+    this.operationalDate$
+      .pipe(
+        map((date) => toPmsDateInputValue(date)),
+        filter((date): date is string => !!date),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((operationalDate) => {
+        const range = this.rangeLength;
+        this.operationalDate = operationalDate;
+        this.startDate = operationalDate;
+        this.endDate = this.shiftDate(operationalDate, range - 1);
+        this.loadCalendar(true);
       });
   }
 

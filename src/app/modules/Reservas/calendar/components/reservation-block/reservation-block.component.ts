@@ -2,6 +2,10 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from 
 import { CommonModule } from '@angular/common';
 
 import { normalizePmsDateDDMMYYYY } from 'src/app/core/utils/pms-date.util';
+import {
+  getRoomOperationalStateLabel,
+  RoomOperationalVisualState
+} from 'src/app/shared/models/room-operational-visual-state';
 import { CalendarReservationBlockSelect, CalendarReservationBlockView } from '../../interfaces/calendar.interface';
 
 @Component({
@@ -15,11 +19,15 @@ import { CalendarReservationBlockSelect, CalendarReservationBlockView } from '..
 export class ReservationBlockComponent {
   @Input({ required: true }) block!: CalendarReservationBlockView;
   @Input() isGhost = false;
-  @Output() select = new EventEmitter<CalendarReservationBlockSelect>();
+  @Output() reservationSelect = new EventEmitter<CalendarReservationBlockSelect>();
   @Output() dragStart = new EventEmitter<{ block: CalendarReservationBlockView; event: PointerEvent }>();
 
   formatDate(value: string): string {
     return normalizePmsDateDDMMYYYY(value) || 'N/D';
+  }
+
+  getVisualStateLabel(state: RoomOperationalVisualState): string {
+    return getRoomOperationalStateLabel(state);
   }
 
   onSelect(event: MouseEvent): void {
@@ -27,7 +35,7 @@ export class ReservationBlockComponent {
       return;
     }
 
-    this.select.emit({ block: this.block, event });
+    this.reservationSelect.emit({ block: this.block, event });
   }
 
   onDragStart(event: PointerEvent): void {
@@ -37,7 +45,9 @@ export class ReservationBlockComponent {
 
     event.preventDefault();
     event.stopPropagation();
-    event.currentTarget instanceof HTMLElement && event.currentTarget.setPointerCapture(event.pointerId);
+    if (event.currentTarget instanceof HTMLElement) {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
     this.dragStart.emit({ block: this.block, event });
   }
 }

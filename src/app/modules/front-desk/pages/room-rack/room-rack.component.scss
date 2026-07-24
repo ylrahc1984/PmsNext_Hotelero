@@ -1,5 +1,8 @@
+@use '../../../../shared/styles/room-operational-palette' as room-palette;
+
 :host {
   display: block;
+  @include room-palette.room-operational-palette;
   --room-available: #16a34a;
   --room-occupied: #2563eb;
   --room-checkout: #dc2626;
@@ -9,6 +12,34 @@
   --room-dirty: #c2185b;
   --room-clean: #06b6d4;
   --room-all: #17324d;
+}
+
+.room-card,
+.status-kpi,
+.room-card__status,
+.legend-dot {
+  @include room-palette.room-operational-state-variables;
+
+  &.state-all {
+    --room-state-start: #1f334b;
+    --room-state-end: #305574;
+    --room-state-ink: #f7fbff;
+    --room-state-accent: #305574;
+  }
+
+  &.state-dirty {
+    --room-state-start: var(--room-housekeeping-dirty);
+    --room-state-end: #e3c5d8;
+    --room-state-ink: var(--room-housekeeping-dirty-ink);
+    --room-state-accent: var(--room-housekeeping-dirty);
+  }
+
+  &.state-clean {
+    --room-state-start: var(--room-housekeeping-clean);
+    --room-state-end: #c5e4aa;
+    --room-state-ink: var(--room-housekeeping-clean-ink);
+    --room-state-accent: var(--room-housekeeping-clean);
+  }
 }
 
 $cyan: #17d4e0;
@@ -310,55 +341,6 @@ $line: rgba(15, 33, 51, 0.1);
   font-size: 0.58rem;
   font-weight: 850;
   line-height: 1;
-}
-
-.room-card__status.estado-disponible {
-  border-left: 1px solid rgba(#1aa56a, 0.16) !important;
-  border-color: rgba(#1aa56a, 0.18) !important;
-  color: #137a51 !important;
-  background: #edf9f3 !important;
-}
-
-.room-card__status.estado-ocupada {
-  border-left: 1px solid rgba($blue, 0.16) !important;
-  border-color: rgba($blue, 0.18) !important;
-  color: #1554c8 !important;
-  background: #edf5ff !important;
-}
-
-.room-card__status.estado-salida-hoy {
-  border-left: 1px solid rgba(#e56f61, 0.16) !important;
-  border-color: rgba(#e56f61, 0.2) !important;
-  color: #b83f34 !important;
-  background: #fff0ed !important;
-}
-
-.room-card__status.estado-salida-manana {
-  border-left: 1px solid rgba(#15b8c6, 0.16) !important;
-  border-color: rgba(#15b8c6, 0.2) !important;
-  color: #087e89 !important;
-  background: #ecfbfd !important;
-}
-
-.room-card__status.estado-bloqueada {
-  border-left: 1px solid rgba(#64748b, 0.18) !important;
-  border-color: rgba(#64748b, 0.2) !important;
-  color: #475569 !important;
-  background: #f1f5f9 !important;
-}
-
-.room-card__status.estado-sucia {
-  border-left: 1px solid rgba($burgundy, 0.16) !important;
-  border-color: rgba($burgundy, 0.18) !important;
-  color: #8a0f4d !important;
-  background: #fff1f7 !important;
-}
-
-.room-card__status.estado-limpia {
-  border-left: 1px solid rgba($cyan, 0.18) !important;
-  border-color: rgba($cyan, 0.22) !important;
-  color: #0e8791 !important;
-  background: #edfafd !important;
 }
 
 .room-card__quick-actions {
@@ -775,39 +757,6 @@ $line: rgba(15, 33, 51, 0.1);
   box-shadow: inset 0 0 0 1px rgba($paper, 0.42), 0 4px 10px rgba(15, 33, 51, 0.08);
 }
 
-.legend-dot.estado-disponible {
-  background: #1aa56a;
-}
-
-.legend-dot.estado-ocupada {
-  background: $blue;
-}
-
-.legend-dot.estado-salida-hoy {
-  background: #e56f61;
-}
-
-.legend-dot.estado-salida-manana {
-  background: #15b8c6;
-}
-
-.legend-dot.estado-reservada {
-  background: #d99a18;
-}
-
-.legend-dot.estado-bloqueada {
-  background: #64748b;
-}
-
-.legend-dot.estado-sucia {
-  background: $burgundy;
-}
-
-.legend-dot.estado-limpia {
-  background: $paper;
-  border-color: #cbd5e1;
-}
-
 .summary-item {
   padding: 5px 0;
   border-bottom: 1px solid rgba($bg, 0.07);
@@ -980,114 +929,7 @@ $line: rgba(15, 33, 51, 0.1);
   line-height: 1;
 }
 
-.estado-todas {
-  border-left-color: $blue;
-}
-
-.estado-disponible {
-  border-left-color: #1aa56a;
-  background: linear-gradient(180deg, #f0fbf5, #ffffff);
-}
-
-.estado-ocupada {
-  border-left-color: $blue;
-  background: linear-gradient(180deg, #edf5ff, #ffffff);
-}
-
-.room-card.estado-salida-hoy,
-.status-kpi.estado-salida-hoy {
-  border-left-color: #dc4f43;
-  background: linear-gradient(145deg, #ffe1dc 0%, #fff7f5 72%, #ffffff 100%);
-}
-
-.room-card.estado-salida-manana,
-.status-kpi.estado-salida-manana {
-  border-left-color: #0891b2;
-  background: linear-gradient(145deg, #cffafe 0%, #ecfeff 72%, #ffffff 100%);
-}
-
-.room-card.estado-salida-hoy:hover,
-.room-card.estado-salida-hoy:focus {
-  border-left-color: #dc4f43;
-  background: linear-gradient(145deg, #ffd6cf 0%, #fff3f0 72%, #ffffff 100%);
-}
-
-.room-card.estado-salida-manana:hover,
-.room-card.estado-salida-manana:focus {
-  border-left-color: #0891b2;
-  background: linear-gradient(145deg, #bae6fd 0%, #e6fbff 72%, #ffffff 100%);
-}
-
-.status-kpi.estado-salida-hoy strong {
-  color: #b42318;
-  background: #ffd9d3;
-}
-
-.status-kpi.estado-salida-manana strong {
-  color: #0e7490;
-  background: #bae6fd;
-}
-
-.estado-reservada {
-  border-left-color: #d99a18;
-  background: linear-gradient(180deg, #fff8df, #ffffff);
-}
-
-.estado-bloqueada {
-  border-left-color: #64748b;
-  background: linear-gradient(180deg, #e2e8f0, #ffffff);
-}
-
-.estado-sucia {
-  border-left-color: $burgundy;
-  background: linear-gradient(180deg, #fff0f6, #ffffff);
-}
-
-.estado-limpia {
-  border-left-color: #cbd5e1;
-  background: linear-gradient(180deg, #ffffff, #f8fafc);
-}
-
-// High-contrast operational state system. Layout and component behavior remain unchanged.
-.estado-todas {
-  --room-state-color: var(--room-all);
-}
-
-.estado-disponible {
-  --room-state-color: var(--room-available);
-}
-
-.estado-ocupada {
-  --room-state-color: var(--room-occupied);
-}
-
-.estado-salida-hoy {
-  --room-state-color: var(--room-checkout);
-}
-
-.estado-salida-manana {
-  --room-state-color: var(--room-checkout-tomorrow);
-}
-
-.estado-reservada {
-  --room-state-color: var(--room-reserved);
-}
-
-.estado-bloqueada {
-  --room-state-color: var(--room-blocked);
-}
-
-.estado-sucia {
-  --room-state-color: var(--room-dirty);
-}
-
-.estado-limpia {
-  --room-state-color: var(--room-clean);
-}
-
-.room-card,
-.room-card.estado-salida-hoy,
-.room-card.estado-salida-manana {
+.room-card {
   overflow: hidden;
   gap: 7px;
   padding: 14px 9px 9px;
@@ -1110,11 +952,7 @@ $line: rgba(15, 33, 51, 0.1);
 }
 
 .room-card:hover,
-.room-card:focus,
-.room-card.estado-salida-hoy:hover,
-.room-card.estado-salida-hoy:focus,
-.room-card.estado-salida-manana:hover,
-.room-card.estado-salida-manana:focus {
+.room-card:focus {
   border-left-color: var(--room-state-color, var(--room-all));
   background: #ffffff;
   box-shadow: 0 15px 30px rgba(15, 33, 51, 0.16);
@@ -1141,15 +979,7 @@ $line: rgba(15, 33, 51, 0.1);
   padding-right: 15px;
 }
 
-.room-card__status,
-.room-card__status.estado-disponible,
-.room-card__status.estado-ocupada,
-.room-card__status.estado-salida-hoy,
-.room-card__status.estado-salida-manana,
-.room-card__status.estado-reservada,
-.room-card__status.estado-bloqueada,
-.room-card__status.estado-sucia,
-.room-card__status.estado-limpia {
+.room-card__status {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -1211,9 +1041,7 @@ $line: rgba(15, 33, 51, 0.1);
   font-size: 0.9rem;
 }
 
-.status-kpi,
-.status-kpi.estado-salida-hoy,
-.status-kpi.estado-salida-manana {
+.status-kpi {
   position: relative;
   padding-left: 27px;
   border: 1px solid var(--room-state-color, var(--room-all));
@@ -1237,9 +1065,7 @@ $line: rgba(15, 33, 51, 0.1);
   font-weight: 780;
 }
 
-.status-kpi strong,
-.status-kpi.estado-salida-hoy strong,
-.status-kpi.estado-salida-manana strong {
+.status-kpi strong {
   min-width: 26px;
   width: 26px;
   height: 26px;
@@ -1268,9 +1094,9 @@ $line: rgba(15, 33, 51, 0.1);
 }
 
 .legend-dot {
-  border: 0;
-  background: var(--room-state-color, var(--room-all)) !important;
-  box-shadow: 0 3px 8px color-mix(in srgb, var(--room-state-color, var(--room-all)) 30%, transparent);
+  border: 1px solid color-mix(in srgb, var(--room-state-accent) 72%, #ffffff);
+  background: linear-gradient(135deg, var(--room-state-start), var(--room-state-end)) !important;
+  box-shadow: 0 3px 8px color-mix(in srgb, var(--room-state-accent) 30%, transparent);
 }
 
 .legend-item strong {
@@ -1388,4 +1214,41 @@ $line: rgba(15, 33, 51, 0.1);
     width: 32px;
     height: 32px;
   }
+}
+
+// Shared operational palette: the same state has the same visual meaning in Room Rack and Calendar.
+.room-card[class*='state-'] {
+  border-left-color: var(--room-state-accent);
+}
+
+.room-card[class*='state-']::before {
+  background: linear-gradient(90deg, var(--room-state-start), var(--room-state-end));
+}
+
+.room-card__status[class*='state-'] {
+  color: var(--room-state-ink) !important;
+  background: linear-gradient(90deg, var(--room-state-start), var(--room-state-end)) !important;
+}
+
+.room-card__status[class*='state-']::before {
+  background: var(--room-state-ink);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.32);
+}
+
+.status-kpi[class*='state-'] {
+  border-color: var(--room-state-accent);
+}
+
+.status-kpi[class*='state-']::before {
+  background: var(--room-state-accent);
+}
+
+.status-kpi[class*='state-'] strong {
+  color: var(--room-state-ink);
+  background: linear-gradient(135deg, var(--room-state-start), var(--room-state-end));
+}
+
+.status-kpi[class*='state-']:hover {
+  border-color: var(--room-state-accent);
+  background: color-mix(in srgb, var(--room-state-start) 12%, #ffffff);
 }

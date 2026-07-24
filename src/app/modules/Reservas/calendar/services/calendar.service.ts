@@ -4,6 +4,10 @@ import { Observable, map } from 'rxjs';
 
 import { differenceInPmsCalendarDays, normalizePmsDateDDMMYYYY, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 import { environment } from 'src/environments/environment';
+import {
+  getRoomOperationalStateLabel,
+  resolveReservationOperationalState
+} from 'src/app/shared/models/room-operational-visual-state';
 import { ROOMS_MOCK } from '../../mock-data/rooms.mock';
 import { RoomHousekeepingStatus, RoomOperationalStatus, RoomStatus, RoomType } from '../../interfaces/room-status.interface';
 import {
@@ -102,7 +106,7 @@ export class CalendarService {
   private readonly apiUrl = `${(environment.apiUrl || 'http://localhost:5000/api').toString().replace(/\/+$/, '')}/calendario-habitaciones`;
   private readonly precheckingUrl = `${(environment.apiUrl || 'http://localhost:5000/api').toString().replace(/\/+$/, '')}/prechecking`;
 
-  getCalendarApiData(startDate: string, endDate: string): Observable<CalendarApiDataSource> {
+  getCalendarApiData(startDate: string, endDate: string, operationalDate = startDate): Observable<CalendarApiDataSource> {
     const params = new HttpParams()
       .set('fechaInicio', this.toDisplayDate(startDate))
       .set('fechaFin', this.toDisplayDate(endDate))
@@ -110,7 +114,7 @@ export class CalendarService {
 
     return this.http
       .get<CalendarApiResponse>(this.apiUrl, { params })
-      .pipe(map((response) => this.mapApiResponse(response)));
+      .pipe(map((response) => this.mapApiResponse(response, operationalDate)));
   }
 
   assignReservationRoom(request: CalendarRoomAssignmentRequest): Observable<CalendarRoomAssignmentResponse> {
@@ -149,8 +153,13 @@ export class CalendarService {
     });
   }
 
-  getCalendarData(query: CalendarQuery, roomsSource?: RoomStatus[], reservationsSource?: CalendarReservation[]): CalendarData {
-    const dates = this.buildDateRange(query.startDate, query.endDate);
+  getCalendarData(
+    query: CalendarQuery,
+    roomsSource?: RoomStatus[],
+    reservationsSource?: CalendarReservation[],
+    operationalDate = query.startDate
+  ): CalendarData {
+    const dates = this.buildDateRange(query.startDate, query.endDate, operationalDate);
     const rooms = this.filterRooms(roomsSource ?? this.getRooms(), query);
     const reservations = (reservationsSource ?? this.getReservations()).slice().sort((left, right) => {
       if (left.roomNumber !== right.roomNumber) {
@@ -161,7 +170,7 @@ export class CalendarService {
     });
 
     const rows = rooms
-      .map((room) => this.buildRoomRow(room, dates, reservations))
+      .map((room) => this.buildRoomRow(room, dates, reservations, operationalDate))
       .filter((row) => this.matchesStatusFilter(row, query.status));
 
     return {
@@ -173,15 +182,22 @@ export class CalendarService {
     };
   }
 
-  getReservationBlockView(reservation: CalendarReservation, visibleStartDate: string, totalDays: number): CalendarReservationBlockView {
-    return this.toBlockView(reservation, visibleStartDate, totalDays);
+  getReservationBlockView(
+    reservation: CalendarReservation,
+    visibleStartDate: string,
+    totalDays: number,
+    operationalDate = visibleStartDate
+  ): CalendarReservationBlockView {
+    return this.toBlockView(reservation, visibleStartDate, totalDays, operationalDate);
   }
 
-  private mapApiResponse(response: CalendarApiResponse | null | undefined): CalendarApiDataSource {
+  private mapApiResponse(response: CalendarApiResponse | null | undefined, operationalDate: string): CalendarApiDataSource {
     const inventory = Array.isArray(response?.inventario) ? response.inventario : [];
     const calendar = Array.isArray(response?.calendario) ? response.calendario : [];
-    const rooms = inventory.map((room) => this.mapApiRoom(room, calendar)).sort((left, right) => this.compareRoomNumbers(left.roomNumber, right.roomNumber));
-    const reservations = this.mapApiReservations(calendar);
+    const rooms = inventory
+      .map((room) => this.mapApiRoom(room, calendar, operationalDate))
+      .sort((left, right) => this.compareRoomNumbers(left.roomNumber, right.roomNumber));
+    const reservations = this.mapApiReservations(calendar, operationalDate);
 
     return {
       rooms,
@@ -190,10 +206,12 @@ export class CalendarService {
     };
   }
 
-  private mapApiRoom(room: CalendarApiInventoryRoom, calendar: CalendarApiDay[]): RoomStatus {
+  private mapApiRoom(room: CalendarApiInventoryRoom, calendar: CalendarApiDay[], operationalDate: string): RoomStatus {
     const roomNumber = this.cleanText(room.numHab);
-    const todayIso = this.toIsoDate(new Date());
-    const todayEvent = calendar.find((item) => this.cleanText(item.numHab) === roomNumber && this.toIsoDateValue(item.fecha) === todayIso);
+    const operationalIso = this.toIsoDateValue(operationalDate);
+    const todayEvent = calendar.find(
+      (item) => this.cleanText(item.numHab) === roomNumber && this.toIsoDateValue(item.fecha) === operationalIso
+    );
 
     return {
       roomNumber,
@@ -205,7 +223,7 @@ export class CalendarService {
     };
   }
 
-  private mapApiReservations(calendar: CalendarApiDay[]): CalendarReservation[] {
+  private mapApiReservations(calendar: CalendarApiDay[], operationalDate: string): CalendarReservation[] {
     const byReservation = new Map<string, CalendarReservation>();
 
     calendar
@@ -219,7 +237,9 @@ export class CalendarService {
         const eventCode = reservationCode || 'BLOQUEO-OPERATIVO';
         const key = `${eventCode}|${roomNumber}|${startDate}|${endDate}`;
 
-        if (byReservation.has(key)) {
+        const existingReservation = byReservation.get(key);
+        const isOperationalDay = this.toIsoDateValue(item.fecha) === this.toIsoDateValue(operationalDate);
+        if (existingReservation && !isOperationalDay) {
           return;
         }
 
@@ -296,17 +316,25 @@ export class CalendarService {
     });
   }
 
-  private buildRoomRow(room: RoomStatus, dates: CalendarDate[], reservations: CalendarReservation[]): CalendarRoomRowView {
+  private buildRoomRow(
+    room: RoomStatus,
+    dates: CalendarDate[],
+    reservations: CalendarReservation[],
+    operationalDate: string
+  ): CalendarRoomRowView {
     const visibleReservations = reservations
       .filter((reservation) => reservation.roomNumber === room.roomNumber)
       .filter((reservation) => this.overlapsRange(reservation, dates[0]?.isoDate, dates[dates.length - 1]?.isoDate))
-      .map((reservation) => this.toBlockView(reservation, dates[0].isoDate, dates.length))
+      .map((reservation) => this.toBlockView(reservation, dates[0].isoDate, dates.length, operationalDate))
       .sort((left, right) => left.startIndex - right.startIndex);
+    const isAvailable = !visibleReservations.some(
+      (block) => block.reservation.startDate <= operationalDate && block.reservation.endDate > operationalDate
+    );
 
     return {
       room,
       blocks: visibleReservations,
-      isAvailable: visibleReservations.length === 0
+      isAvailable
     };
   }
 
@@ -315,18 +343,32 @@ export class CalendarService {
       return true;
     }
 
-    if (status === 'DISPONIBLE') {
+    if (status === 'available') {
       return row.isAvailable;
     }
 
-    return row.blocks.some((block) => block.reservation.status === status);
+    return row.blocks.some((block) => block.visualState === status);
   }
 
-  private toBlockView(reservation: CalendarReservation, startDate: string, totalDays: number): CalendarReservationBlockView {
+  private toBlockView(
+    reservation: CalendarReservation,
+    startDate: string,
+    totalDays: number,
+    operationalDate: string
+  ): CalendarReservationBlockView {
     const visibleEndDate = this.shiftIsoDate(startDate, totalDays);
     const startIndex = Math.max(0, this.diffDays(startDate, reservation.startDate));
     const endIndex = Math.min(totalDays, this.diffDays(startDate, reservation.endDate));
     const span = Math.max(1, endIndex - startIndex);
+
+    const visualState = resolveReservationOperationalState({
+      startDate: reservation.startDate,
+      endDate: reservation.endDate,
+      operationalDate,
+      reservationStatus: reservation.status,
+      reservationState: reservation.reservationState,
+      isOperationalBlock: reservation.isOperationalBlock
+    });
 
     return {
       reservation,
@@ -336,17 +378,17 @@ export class CalendarService {
       width: Math.max(36, span * CELL_WIDTH - 4),
       continuesBefore: reservation.startDate < startDate,
       continuesAfter: reservation.endDate > visibleEndDate,
-      colorIndex: this.getReservationColorIndex(reservation.id),
+      visualState,
       label: reservation.guestName,
-      tooltip: `${reservation.guestName} | ${reservation.status} | ${normalizePmsDateDDMMYYYY(reservation.startDate)} -> ${normalizePmsDateDDMMYYYY(reservation.endDate)} | ${reservation.source}`
+      tooltip: `${reservation.guestName} | ${getRoomOperationalStateLabel(visualState)} | ${normalizePmsDateDDMMYYYY(reservation.startDate)} -> ${normalizePmsDateDDMMYYYY(reservation.endDate)} | ${reservation.source}`
     };
   }
 
-  private buildDateRange(startDate: string, endDate: string): CalendarDate[] {
+  private buildDateRange(startDate: string, endDate: string, operationalDate: string): CalendarDate[] {
     const dates: CalendarDate[] = [];
     const cursor = this.parseDate(startDate);
     const finalDate = this.parseDate(endDate);
-    const todayIso = this.toIsoDate(new Date());
+    const todayIso = this.toIsoDateValue(operationalDate);
 
     while (cursor <= finalDate) {
       const isoDate = this.toIsoDate(cursor);
@@ -392,16 +434,6 @@ export class CalendarService {
 
   private diffDays(startDate: string, endDate: string): number {
     return differenceInPmsCalendarDays(startDate, endDate) ?? 0;
-  }
-
-  private getReservationColorIndex(reservationId: string): number {
-    let hash = 0;
-
-    for (let index = 0; index < reservationId.length; index += 1) {
-      hash = (hash * 31 + reservationId.charCodeAt(index)) | 0;
-    }
-
-    return Math.abs(hash) % 8;
   }
 
   private parseDate(value: string): Date {
@@ -470,11 +502,11 @@ export class CalendarService {
     const normalizedStatus = this.cleanText(status).toUpperCase();
     const normalizedReservationStatus = this.cleanText(reservationStatus).toUpperCase();
 
-    if (normalizedStatus.includes('BLOQUE') || normalizedReservationStatus === 'BLQ') {
+    if (normalizedStatus === 'B' || normalizedStatus.includes('BLOQUE') || normalizedReservationStatus === 'BLQ') {
       return 'BLOQUEADA';
     }
 
-    if (normalizedStatus.includes('OCUP') || normalizedReservationStatus === 'CHK') {
+    if (['O', 'H', 'M'].includes(normalizedStatus) || normalizedStatus.includes('OCUP') || normalizedReservationStatus === 'CHK') {
       return 'OCUPADA';
     }
 
@@ -482,7 +514,8 @@ export class CalendarService {
   }
 
   private isOperationalBlock(item: CalendarApiDay): boolean {
-    return !this.cleanText(item.codReserva) && this.cleanText(item.estado).toUpperCase().includes('BLOQUE');
+    const status = this.cleanText(item.estado).toUpperCase();
+    return !this.cleanText(item.codReserva) && (status === 'B' || status.includes('BLOQUE'));
   }
 
   private getRoomFloor(roomNumber: string): number {

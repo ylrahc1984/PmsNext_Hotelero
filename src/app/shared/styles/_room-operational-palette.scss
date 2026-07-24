@@ -1,0 +1,97 @@
+@mixin room-operational-palette {
+  --room-available-start: #ffffff;
+  --room-available-end: #f8fbff;
+  --room-available-ink: #49647f;
+  --room-available-accent: #b2d88f;
+
+  --room-arrival-today-start: #ffd84d;
+  --room-arrival-today-end: #fff0a3;
+  --room-arrival-today-ink: #5d4606;
+
+  --room-occupied-start: #9cbaf2;
+  --room-occupied-end: #b0c8f7;
+  --room-occupied-ink: #1c3d70;
+
+  --room-checkout-tomorrow-start: #86cedd;
+  --room-checkout-tomorrow-end: #a1dce7;
+  --room-checkout-tomorrow-ink: #174b57;
+
+  --room-checkout-today-start: #f3aaa8;
+  --room-checkout-today-end: #f7bebc;
+  --room-checkout-today-ink: #71302f;
+
+  --room-blocked-start: #cfd3da;
+  --room-blocked-end: #dfe2e7;
+  --room-blocked-ink: #3f4754;
+
+  --room-future-reservation-start: #c5afea;
+  --room-future-reservation-end: #d5c4f0;
+  --room-future-reservation-ink: #49336b;
+
+  --room-attention-start: #f1cf82;
+  --room-attention-end: #f6dda4;
+  --room-attention-ink: #654b12;
+
+  --room-housekeeping-dirty: #d7b2ca;
+  --room-housekeeping-dirty-ink: #59384e;
+  --room-housekeeping-clean: #b2d88f;
+  --room-housekeeping-clean-ink: #365421;
+}
+
+@mixin room-operational-state-variables {
+  &.state-available {
+    --room-state-start: var(--room-available-start);
+    --room-state-end: var(--room-available-end);
+    --room-state-ink: var(--room-available-ink);
+    --room-state-accent: var(--room-available-accent);
+  }
+
+  &.state-arrival-today {
+    --room-state-start: var(--room-arrival-today-start);
+    --room-state-end: var(--room-arrival-today-end);
+    --room-state-ink: var(--room-arrival-today-ink);
+    --room-state-accent: var(--room-arrival-today-start);
+  }
+
+  &.state-occupied {
+    --room-state-start: var(--room-occupied-start);
+    --room-state-end: var(--room-occupied-end);
+    --room-state-ink: var(--room-occupied-ink);
+    --room-state-accent: var(--room-occupied-start);
+  }
+
+  &.state-checkout-tomorrow {
+    --room-state-start: var(--room-checkout-tomorrow-start);
+    --room-state-end: var(--room-checkout-tomorrow-end);
+    --room-state-ink: var(--room-checkout-tomorrow-ink);
+    --room-state-accent: var(--room-checkout-tomorrow-start);
+  }
+
+  &.state-checkout-today {
+    --room-state-start: var(--room-checkout-today-start);
+    --room-state-end: var(--room-checkout-today-end);
+    --room-state-ink: var(--room-checkout-today-ink);
+    --room-state-accent: var(--room-checkout-today-start);
+  }
+
+  &.state-blocked {
+    --room-state-start: var(--room-blocked-start);
+    --room-state-end: var(--room-blocked-end);
+    --room-state-ink: var(--room-blocked-ink);
+    --room-state-accent: var(--room-blocked-start);
+  }
+
+  &.state-future-reservation {
+    --room-state-start: var(--room-future-reservation-start);
+    --room-state-end: var(--room-future-reservation-end);
+    --room-state-ink: var(--room-future-reservation-ink);
+    --room-state-accent: var(--room-future-reservation-start);
+  }
+
+  &.state-attention {
+    --room-state-start: var(--room-attention-start);
+    --room-state-end: var(--room-attention-end);
+    --room-state-ink: var(--room-attention-ink);
+    --room-state-accent: var(--room-attention-start);
+  }
+}

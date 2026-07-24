@@ -24,7 +24,7 @@
           type="button"
           class="exchange-tray__reservation"
           *ngFor="let item of exchangeTrayReservations; trackBy: trackByTrayReservation"
-          [ngClass]="'exchange-tray__reservation--color-' + item.block.colorIndex"
+          [ngClass]="'state-' + item.block.visualState"
           [style.left.px]="item.block.left"
           [style.top.px]="item.lane * 42 + 8"
           [style.width.px]="item.block.width"
@@ -62,7 +62,7 @@
           [block]="block"
           [isGhost]="isDraggedReservation(block)"
           (dragStart)="onReservationDragStart($event)"
-          (select)="onReservationSelect($event)"
+          (reservationSelect)="onReservationSelect($event)"
         ></app-reservation-block>
       </div>
     </div>
@@ -79,11 +79,9 @@
 
       <div
         class="calendar-grid__drag-preview"
+        [ngClass]="'state-' + preview.statusClass"
         [class.calendar-grid__drag-preview--invalid]="!preview.valid"
         [class.calendar-grid__drag-preview--warning]="preview.warning"
-        [class.calendar-grid__drag-preview--ocupada]="preview.statusClass === 'ocupada'"
-        [class.calendar-grid__drag-preview--reservada]="preview.statusClass === 'reservada'"
-        [class.calendar-grid__drag-preview--bloqueada]="preview.statusClass === 'bloqueada'"
         [style.left.px]="preview.floatingLeft"
         [style.top.px]="preview.floatingTop"
         [style.width.px]="preview.width"

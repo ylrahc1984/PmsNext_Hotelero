@@ -13,18 +13,24 @@ import { OperationalPolicyService } from 'src/app/core/services/operational-poli
 import { normalizePmsDateDDMMYYYY, parsePmsDate, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
+import {
+  getRoomOperationalStateLabel,
+  resolveRackOperationalState,
+  RoomOperationalVisualState
+} from 'src/app/shared/models/room-operational-visual-state';
 import { RoomRackNavigationState, RoomRackRoom } from './models/room-rack-room.model';
 import { RoomBlockRequest, RoomRackService } from './services/room-rack.service';
 
 type EstadoHabitacion =
   | 'Disponible'
   | 'Ocupada'
+  | 'Entrada hoy'
   | 'Salida Hoy'
   | 'Salida Mañana'
   | 'Bloqueada'
   | 'Sucia'
-  | 'Reservada'
-  | 'Limpia';
+  | 'Limpia'
+  | 'Requiere atención';
 
 interface HabitacionRack {
   numero       : string;
@@ -62,6 +68,7 @@ interface BloqueoHabitacionForm {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RoomRackComponent implements OnInit {
+  private readonly router               = inject(Router);
   private readonly roomRackService      = inject(RoomRackService);
   private readonly tipoCambioService    = inject(TipoCambioService);
   private readonly authService          = inject(AuthService);
@@ -77,12 +84,14 @@ export class RoomRackComponent implements OnInit {
 
   readonly estados: EstadoHabitacion[]  = [
     'Disponible',
+    'Entrada hoy',
     'Ocupada',
     'Salida Hoy',
     'Salida Mañana',
     'Bloqueada',
     'Sucia',
-    'Limpia'
+    'Limpia',
+    'Requiere atención'
   ];
 
   habitaciones          : HabitacionRack[] = [];
@@ -107,8 +116,6 @@ export class RoomRackComponent implements OnInit {
     { label: 'Imprimir Hoja Registro', icon: 'print' } 
   ];
 
-  constructor(private readonly router: Router) {}
-
   ngOnInit(): void {
     const navigationState = history.state as { checkoutCompleted?: boolean; checkedOutRoom?: string };
     if (navigationState.checkoutCompleted) {
@@ -121,7 +128,7 @@ export class RoomRackComponent implements OnInit {
   }
 
   async seleccionarHabitacion(habitacion: HabitacionRack): Promise<void> {
-    if (habitacion.estado === 'Reservada') {
+    if (habitacion.estado === 'Entrada hoy') {
       const result = await Swal.fire({
         title: 'Habitación reservada',
         html: `La habitación <strong>${this.escapeHtml(habitacion.numero)}</strong> está pendiente de ingreso o de realizar el Check In.`,
@@ -332,7 +339,20 @@ export class RoomRackComponent implements OnInit {
   }
 
   getEstadoClass(estado: EstadoHabitacion | 'Todas'): string {
-    return `estado-${this.slugEstado(estado)}`;
+    const stateByLabel: Record<EstadoHabitacion | 'Todas', string> = {
+      Todas: 'all',
+      Disponible: 'available',
+      'Entrada hoy': 'arrival-today',
+      Ocupada: 'occupied',
+      'Salida Hoy': 'checkout-today',
+      'Salida Mañana': 'checkout-tomorrow',
+      Bloqueada: 'blocked',
+      Sucia: 'dirty',
+      Limpia: 'clean',
+      'Requiere atención': 'attention'
+    };
+
+    return `state-${stateByLabel[estado]}`;
   }
 
   getCleanLabel(habitacion: HabitacionRack): string {
@@ -554,12 +574,6 @@ export class RoomRackComponent implements OnInit {
 
     return [
       todos,
-      {
-        label: 'Entradas hoy',
-        estado: 'Reservada',
-        cantidad: this.contarPorEstado('Reservada'),
-        className: this.getEstadoClass('Reservada')
-      },
       ...this.estados.map((estado) => ({
         label: estado,
         estado,
@@ -582,13 +596,6 @@ export class RoomRackComponent implements OnInit {
   }
 
   private contarPorEstado(estado: EstadoHabitacion): number {
-    if (estado === 'Ocupada') {
-      const estadosOcupados = new Set(['O', 'H', 'M']);
-      return this.habitaciones.filter((habitacion) =>
-        estadosOcupados.has(this.normalizeText(habitacion.data.CR05_EstHab).toUpperCase())
-      ).length;
-    }
-
     if (estado === 'Sucia') {
       return this.habitaciones.filter((habitacion) => this.normalizeText(habitacion.data.CR05_Clean).toUpperCase() === 'S').length;
     }
@@ -601,24 +608,20 @@ export class RoomRackComponent implements OnInit {
   }
 
   private mapEstadoHabitacion(room: RoomRackRoom): EstadoHabitacion {
-    const estados: Record<string, EstadoHabitacion> = {
-      B: 'Bloqueada',
-      D: 'Disponible',
-      H: 'Salida Hoy',
-      M: 'Salida Mañana',
-      O: 'Ocupada',
-      R: 'Reservada'
+    const visualState: RoomOperationalVisualState = resolveRackOperationalState(room.CR05_EstHab);
+    const label = getRoomOperationalStateLabel(visualState);
+    const rackLabels: Record<RoomOperationalVisualState, EstadoHabitacion> = {
+      available: 'Disponible',
+      'arrival-today': 'Entrada hoy',
+      occupied: 'Ocupada',
+      'checkout-tomorrow': 'Salida Mañana',
+      'checkout-today': 'Salida Hoy',
+      blocked: 'Bloqueada',
+      'future-reservation': 'Requiere atención',
+      attention: 'Requiere atención'
     };
 
-    return estados[this.normalizeText(room.CR05_EstHab).toUpperCase()] ?? 'Disponible';
-  }
-
-  private slugEstado(estado: EstadoHabitacion | 'Todas'): string {
-    return estado
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .replace(/\s+/g, '-');
+    return rackLabels[visualState] ?? (label as EstadoHabitacion);
   }
 
   private bindOperationalDate(): void {
