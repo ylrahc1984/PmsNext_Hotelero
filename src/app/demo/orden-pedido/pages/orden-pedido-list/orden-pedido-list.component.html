@@ -3,20 +3,22 @@
     <app-card [customHeader]="true">
       <div class="app-card-header">
         <div>
-          <h5 class="mb-1">Ordenes de Pedido</h5>
-          <p class="mb-0 text-muted">Consulta ordenes de pedido y proformas emitidas desde el área comercial.</p>
+          <h5 class="mb-1">{{ pageTitle }}</h5>
+          <p class="mb-0 text-muted">{{ pageDescription }}</p>
         </div>
         <div class="card-header-right d-flex flex-wrap align-items-center gap-2">
           <button class="btn btn-primary op-btn-primary" type="button" (click)="nuevaOrden()" [disabled]="isLoading">
             <i class="feather icon-plus me-1"></i>
-            Nueva Orden
+            {{ isFrontDeskContext ? 'Nuevo Recibo' : 'Nueva Orden' }}
           </button>
         </div>
       </div>
 
       <div class="orden-list orden-list--bg">
         <div class="op-hero">
-          <div class="op-hero__title">Listado Comercial de Ordenes y Proformas</div>
+          <div class="op-hero__title">
+            {{ isFrontDeskContext ? 'Listado de Recibos Comerciales' : 'Listado Comercial de Órdenes y Proformas' }}
+          </div>
           <div class="op-hero__meta">
             <span class="op-chip">{{ totalRecords }} registros</span>
             <span class="op-chip" *ngIf="isLoading">
@@ -91,7 +93,9 @@
                 </thead>
                 <tbody>
                   <tr *ngIf="isLoading">
-                    <td colspan="13" class="text-center text-muted py-4">Cargando ordenes de pedido...</td>
+                    <td colspan="13" class="text-center text-muted py-4">
+                      {{ isFrontDeskContext ? 'Cargando recibos comerciales...' : 'Cargando órdenes de pedido...' }}
+                    </td>
                   </tr>
 
                   <ng-container *ngIf="!isLoading">
@@ -135,7 +139,7 @@
 
                     <tr *ngIf="ordenes.length === 0">
                       <td colspan="13" class="text-center py-5 text-muted">
-                        No se encontraron ordenes con los filtros aplicados.
+                        No se encontraron {{ isFrontDeskContext ? 'recibos comerciales' : 'órdenes' }} con los filtros aplicados.
                       </td>
                     </tr>
                   </ng-container>

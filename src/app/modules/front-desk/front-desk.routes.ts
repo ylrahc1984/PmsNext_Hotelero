@@ -10,6 +10,7 @@ const frontDeskSectionUrls: Record<string, string> = {
   'Cierre de Caja': '/front-desk/cierre-caja',
   'Consulta de Documentos': '/front-desk/consulta-documentos',
   'Notas de Crédito': '/front-desk/notas-credito',
+  'Recibos Comerciales': '/front-desk/recibos-comerciales',
   Configuraciones: '/front-desk/configuraciones'
 };
 
@@ -179,6 +180,30 @@ export const FRONT_DESK_ROUTES: Routes = [
         loadComponent: () =>
           import('src/app/finanzas/nota-credito/nota-credito-detalle/nota-credito-detalle.component').then(
             (c) => c.NotaCreditoDetalleComponent
+          )
+      },
+      {
+        path: 'recibos-comerciales',
+        data: frontDeskData('Recibos Comerciales'),
+        loadComponent: () =>
+          import('src/app/demo/orden-pedido/pages/orden-pedido-list/orden-pedido-list.component').then(
+            (c) => c.OrdenPedidoListComponent
+          )
+      },
+      {
+        path: 'recibos-comerciales/nuevo',
+        data: frontDeskData('Nuevo Recibo Comercial', 'Recibos Comerciales'),
+        loadComponent: () =>
+          import('src/app/demo/orden-pedido/pages/orden-pedido-form/orden-pedido-form.component').then(
+            (c) => c.OrdenPedidoFormComponent
+          )
+      },
+      {
+        path: 'recibos-comerciales/detalle/:tipOrden/:serie/:numero',
+        data: frontDeskData('Detalle del Recibo Comercial', 'Recibos Comerciales'),
+        loadComponent: () =>
+          import('src/app/demo/orden-pedido/pages/orden-pedido-detalle/orden-pedido-detalle.component').then(
+            (c) => c.OrdenPedidoDetalleComponent
           )
       },
       {

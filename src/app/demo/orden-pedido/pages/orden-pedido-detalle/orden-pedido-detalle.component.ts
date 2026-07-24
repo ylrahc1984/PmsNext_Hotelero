@@ -97,7 +97,7 @@ export class OrdenPedidoDetalleComponent implements OnInit {
       const numero = (params.get('numero') ?? '').toString().trim();
 
       if (!tip || !numero) {
-        void this.router.navigate(['/demo/ordenes-pedido']);
+        void this.router.navigate([this.listRoute]);
         return;
       }
 
@@ -113,6 +113,10 @@ export class OrdenPedidoDetalleComponent implements OnInit {
     const serie = this.encabezado?.serieNDP || this.serie;
     const numero = this.encabezado?.numNDP || this.numero;
     return [tip, serie, numero].filter((item) => !!item).join(' / ');
+  }
+
+  get isFrontDeskContext(): boolean {
+    return this.router.url.startsWith('/front-desk/recibos-comerciales');
   }
 
   get estadoDocumentoLabel(): string {
@@ -181,7 +185,7 @@ export class OrdenPedidoDetalleComponent implements OnInit {
   }
 
   backToList(): void {
-    void this.router.navigate(['/demo/ordenes-pedido']);
+    void this.router.navigate([this.listRoute]);
   }
 
   abrirCambioFormaPago(): void {
@@ -349,6 +353,12 @@ export class OrdenPedidoDetalleComponent implements OnInit {
           this.formasPagoCatalogo = [];
         }
       });
+  }
+
+  private get listRoute(): string {
+    return this.isFrontDeskContext
+      ? '/front-desk/recibos-comerciales'
+      : '/demo/ordenes-pedido';
   }
 
   private rebuildCambioFormaPagoForm(): void {

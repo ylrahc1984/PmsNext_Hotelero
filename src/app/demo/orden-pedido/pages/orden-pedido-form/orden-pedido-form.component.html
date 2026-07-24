@@ -498,13 +498,19 @@
               <p class="op-section-subtitle mb-0">Revise la información y confirme la acción a ejecutar.</p>
             </div>
             <div class="op-form-actions__buttons">
-              <button *ngIf="ordenPedidoOrigen !== 'folio-master'" class="btn btn-outline-secondary op-action-btn" type="button" (click)="irOperacionDiaria()" [disabled]="isSubmitting">
+              <button *ngIf="ordenPedidoOrigen !== 'folio-master' && ordenPedidoOrigen !== 'front-desk-recibos'" class="btn btn-outline-secondary op-action-btn" type="button" (click)="irOperacionDiaria()" [disabled]="isSubmitting">
                 <i class="feather icon-arrow-left me-2"></i>
                 No facturar y volver a Operacion Diaria
               </button>
               <button class="btn btn-outline-secondary op-action-btn" type="button" (click)="volverListado()" [disabled]="isSubmitting">
                 <i class="feather icon-x me-2"></i>
-                {{ ordenPedidoOrigen === 'folio-master' ? 'Cancelar y volver a Folios Master' : 'Cancelar y volver al listado' }}
+                {{
+                  ordenPedidoOrigen === 'folio-master'
+                    ? 'Cancelar y volver a Folios Master'
+                    : ordenPedidoOrigen === 'front-desk-recibos'
+                      ? 'Cancelar y volver a Recibos Comerciales'
+                      : 'Cancelar y volver al listado'
+                }}
               </button>
               <button class="btn btn-primary op-btn-primary op-action-btn" type="button" (click)="guardar()" [disabled]="isSubmitting">
                 <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>

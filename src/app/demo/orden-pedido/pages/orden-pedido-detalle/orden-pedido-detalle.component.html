@@ -21,7 +21,7 @@
       <div class="detalle-wrap">
         <div *ngIf="loading" class="alert alert-info mb-3">
           <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-          Cargando detalle de la orden...
+          Cargando detalle del {{ isFrontDeskContext ? 'Recibo Comercial' : 'documento comercial' }}...
         </div>
 
         <div *ngIf="errorMsg" class="alert alert-danger mb-3">{{ errorMsg }}</div>
@@ -35,7 +35,7 @@
           <section class="op-hero">
             <div class="op-hero__main">
               <div class="op-hero__eyebrow">Documento comercial</div>
-              <h2 class="op-hero__title">{{ documentoCodigo || 'Orden de Pedido' }}</h2>
+              <h2 class="op-hero__title">{{ documentoCodigo || (isFrontDeskContext ? 'Recibo Comercial' : 'Orden de Pedido') }}</h2>
               <div class="op-hero__meta-row">
                 <span class="status-badge" [ngClass]="estadoBadgeClass">{{ estadoDocumentoLabel }}</span>
                 <span class="op-chip">

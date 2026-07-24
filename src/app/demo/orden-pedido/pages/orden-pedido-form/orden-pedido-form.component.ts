@@ -43,7 +43,7 @@ import {
 } from '../../interfaces/orden-pedido.interface';
 import { OrdenPedidoService } from '../../services/orden-pedido.service';
 
-type OrdenPedidoOrigen = 'orden-pedido-list' | 'reserva-detalle' | 'folio-master';
+type OrdenPedidoOrigen = 'orden-pedido-list' | 'reserva-detalle' | 'folio-master' | 'front-desk-recibos';
 type ReservaOrdenSelection = {
   codReserva: string;
   codAgencia: string;
@@ -1438,6 +1438,9 @@ export class OrdenPedidoFormComponent implements OnInit {
 
   private parseOrdenPedidoOrigen(value: string | null): OrdenPedidoOrigen {
     const normalized = (value ?? '').toString().trim().toLowerCase();
+    if (normalized === 'front-desk-recibos' || normalized === 'frontdeskrecibos') {
+      return 'front-desk-recibos';
+    }
     if (normalized === 'folio-master' || normalized === 'foliomaster') {
       return 'folio-master';
     }
@@ -1459,6 +1462,11 @@ export class OrdenPedidoFormComponent implements OnInit {
   }
 
   private navigateAfterSuccess(): void {
+    if (this.ordenPedidoOrigen === 'front-desk-recibos') {
+      void this.router.navigate(['/front-desk/recibos-comerciales']);
+      return;
+    }
+
     if (this.ordenPedidoOrigen === 'folio-master') {
       void this.router.navigate(['/front-desk/folios-master']);
       return;
@@ -1473,6 +1481,10 @@ export class OrdenPedidoFormComponent implements OnInit {
   }
 
   private getReturnRoute(): string {
+    if (this.ordenPedidoOrigen === 'front-desk-recibos') {
+      return '/front-desk/recibos-comerciales';
+    }
+
     return this.ordenPedidoOrigen === 'folio-master'
       ? '/front-desk/folios-master'
       : '/demo/ordenes-pedido';

@@ -19,6 +19,16 @@ interface SettingsShortcut {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FrontDeskSettingsComponent {
+  readonly commercialShortcuts: SettingsShortcut[] = [
+    {
+      title: 'Recibos Comerciales',
+      description: 'Consulta, detalle y administración de los recibos comerciales emitidos.',
+      icon: 'receipt_long',
+      route: '/front-desk/recibos-comerciales',
+      tone: 'green'
+    }
+  ];
+
   readonly shortcuts: SettingsShortcut[] = [
     {
       title: 'Grupos de Habitaciones',

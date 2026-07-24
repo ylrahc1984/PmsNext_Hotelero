@@ -22,7 +22,7 @@ export class OrdenPedidoListComponent implements OnInit {
   private readonly ordenPedidoService = inject(OrdenPedidoService);
 
   readonly tiposOrden = [
-    { value: 'NDP', label: 'Orden de Pedido' },
+    { value: 'NDP', label: 'Recibo Comercial' },
     { value: 'COT', label: 'Proforma' },
     { value: '', label: 'Todos' }
   ];
@@ -54,6 +54,20 @@ export class OrdenPedidoListComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadOrdenes();
+  }
+
+  get isFrontDeskContext(): boolean {
+    return this.router.url.startsWith('/front-desk/recibos-comerciales');
+  }
+
+  get pageTitle(): string {
+    return this.isFrontDeskContext ? 'Recibos Comerciales' : 'Órdenes de Pedido';
+  }
+
+  get pageDescription(): string {
+    return this.isFrontDeskContext
+      ? 'Consulta y administración de los recibos comerciales emitidos desde Front Desk.'
+      : 'Consulta órdenes de pedido y proformas emitidas desde el área comercial.';
   }
 
   applyFilters(): void {
@@ -92,9 +106,9 @@ export class OrdenPedidoListComponent implements OnInit {
   }
 
   nuevaOrden(): void {
-    void this.router.navigate(['/demo/ordenes-pedido/nuevo'], {
+    void this.router.navigate([this.isFrontDeskContext ? '/front-desk/recibos-comerciales/nuevo' : '/demo/ordenes-pedido/nuevo'], {
       queryParams: {
-        origen: 'orden-pedido-list'
+        origen: this.isFrontDeskContext ? 'front-desk-recibos' : 'orden-pedido-list'
       }
     });
   }
@@ -108,7 +122,10 @@ export class OrdenPedidoListComponent implements OnInit {
       return;
     }
 
-    void this.router.navigate(['/demo/ordenes-pedido/detalle', tipOrden, serie, numero]);
+    const route = this.isFrontDeskContext
+      ? '/front-desk/recibos-comerciales/detalle'
+      : '/demo/ordenes-pedido/detalle';
+    void this.router.navigate([route, tipOrden, serie, numero]);
   }
 
   async anularOrden(item: OrdenPedidoListadoItem): Promise<void> {
@@ -122,8 +139,8 @@ export class OrdenPedidoListComponent implements OnInit {
     }
 
     const result = await Swal.fire({
-      title: 'Anular orden de pedido',
-      html: `Esta acción anulará la orden <strong>${tipOrden} ${serie}-${numero}</strong>.<br>No continúe si no está seguro.`,
+      title: this.isFrontDeskContext ? 'Anular Recibo Comercial' : 'Anular orden de pedido',
+      html: `Esta acción anulará ${this.isFrontDeskContext ? 'el recibo' : 'la orden'} <strong>${tipOrden} ${serie}-${numero}</strong>.<br>No continúe si no está seguro.`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Sí, anular',
@@ -149,8 +166,12 @@ export class OrdenPedidoListComponent implements OnInit {
       .subscribe({
         next: (response) => {
           void Swal.fire({
-            title: 'Orden anulada',
-            text: response?.respuesta || 'La orden de pedido fue anulada correctamente.',
+            title: this.isFrontDeskContext ? 'Recibo anulado' : 'Orden anulada',
+            text: response?.respuesta || (
+              this.isFrontDeskContext
+                ? 'El Recibo Comercial fue anulado correctamente.'
+                : 'La orden de pedido fue anulada correctamente.'
+            ),
             icon: 'success',
             timer: 1800,
             showConfirmButton: false
