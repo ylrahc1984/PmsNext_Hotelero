@@ -57,7 +57,7 @@
         <thead><tr><th>Folio</th><th>Reserva</th><th>Cód. agencia</th><th>Agencia</th><th>Descripción de la reserva</th><th>Check-in</th><th>Check-out</th><th>Estado</th><th class="text-center">Acciones</th></tr></thead>
         <tbody>
           <tr *ngFor="let folio of pagedFolios; trackBy: trackByFolio">
-            <td><button type="button" class="folio-link" (click)="openDetail(folio)">{{ folio.PRV09_NumFolio || 'N/D' }}</button></td>
+            <td><button type="button" class="folio-link" (click)="openCommercialReceipt(folio)" title="Crear Recibo Comercial">{{ folio.PRV09_NumFolio || folio.PRV01_Folio || 'N/D' }}</button></td>
             <td><strong class="folio-reservation">{{ folio.PRV09_CodReserva || folio.PRV01_CodReserva || 'N/D' }}</strong></td>
             <td><span class="folio-code">{{ folio.PRV09_CodAgen || folio.PRV01_CodAgencia || 'N/D' }}</span></td>
             <td><span class="folio-agency" [title]="folio.PRV09_DesAgen">{{ folio.PRV09_DesAgen || 'N/D' }}</span></td>

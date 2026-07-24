@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { firstValueFrom, of } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
 import Swal from 'sweetalert2';
@@ -39,6 +40,7 @@ export class FolioMasterComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
 
   readonly pageSizeOptions = [10, 20, 50, 100];
   readonly statuses: FolioMasterStatus[] = [
@@ -198,6 +200,39 @@ export class FolioMasterComponent implements OnInit {
         this.folioCharges = charges;
         this.cdr.markForCheck();
       });
+  }
+
+  openCommercialReceipt(folio: FolioMaster): void {
+    const codReserva = (folio.PRV09_CodReserva || folio.PRV01_CodReserva || '').trim();
+    const numFolio = (folio.PRV09_NumFolio || folio.PRV01_Folio || '').trim();
+    const codAgencia = (folio.PRV09_CodAgen || folio.PRV01_CodAgencia || '').trim();
+    const nomCliente = (folio.PRV09_DesAgen || '').trim();
+    const moneda = (folio.PRV09_MonedaTar || folio.PRV01_Moneda || '').trim();
+    const listaPrecio = (folio.PRV09_CodTarifa || folio.PRV01_CodTarifa || '').trim();
+    const planTarifario = (folio.PRV09_CodPlan || folio.PRV01_CodPlan || '').trim();
+
+    if (!codReserva || !numFolio) {
+      void Swal.fire({
+        title: 'Información incompleta',
+        text: 'El registro no contiene una reserva y un folio válidos para preparar el Recibo Comercial.',
+        icon: 'warning',
+        customClass: { container: 'next-confirm-container' }
+      });
+      return;
+    }
+
+    void this.router.navigate(['/demo/ordenes-pedido/nuevo'], {
+      queryParams: {
+        codReserva,
+        numFolio,
+        ...(codAgencia ? { codAgencia } : {}),
+        ...(nomCliente ? { nomCliente } : {}),
+        ...(moneda ? { moneda } : {}),
+        ...(listaPrecio ? { listaPrecio } : {}),
+        ...(planTarifario ? { planTarifario } : {}),
+        origen: 'folio-master'
+      }
+    });
   }
 
   closeDetail(): void {

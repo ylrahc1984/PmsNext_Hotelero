@@ -3,7 +3,7 @@
     <app-card [customHeader]="true">
       <div class="app-card-header op-page-toolbar">
         <div>
-          <h5 class="mb-1">{{ form.controls.tipNDP.value === 'COT' ? 'Nueva Proforma' : 'Nueva Orden de Pedido' }}</h5>
+          <h5 class="mb-1">{{ form.controls.tipNDP.value === 'COT' ? 'Nueva Proforma' : 'Nuevo Recibo Comercial' }}</h5>
           <p class="mb-0 text-muted">Registro comercial del documento con detalle, pagos y resumen.</p>
         </div>
       </div>
@@ -57,6 +57,9 @@
                 <select class="form-control" formControlName="pntVenta" [disabled]="isSubmitting || puntosVentaLoading">
                   <option value="" *ngIf="puntosVentaCatalogo.length === 0">
                     {{ puntosVentaLoading ? 'Cargando puntos de venta...' : 'Sin puntos de venta' }}
+                  </option>
+                  <option *ngIf="puntoVentaCargo && !puntoVentaCargoEnCatalogo" [value]="puntoVentaCargo">
+                    {{ puntoVentaCargo }} - Punto de venta del cargo
                   </option>
                   <option *ngFor="let puntoVenta of puntosVentaCatalogo" [value]="puntoVenta.codigo">
                     {{ puntoVenta.codigo }} - {{ puntoVenta.descripcion }}
@@ -180,23 +183,26 @@
             </div>
             <div class="d-flex align-items-center flex-wrap gap-2 op-reserva-actions">
               <span class="badge op-reserva-badge" *ngIf="modoReserva">
-                Documento desde Reserva: {{ reservaActual || '-' }}
+                <ng-container *ngIf="folioActual; else reservaOrigen">
+                  Cargos del Folio: {{ folioActual }} · Reserva: {{ reservaActual || '-' }}
+                </ng-container>
+                <ng-template #reservaOrigen>Documento desde Reserva: {{ reservaActual || '-' }}</ng-template>
               </span>
               <button
                 class="btn btn-sm btn-outline-danger op-outline-btn"
                 type="button"
-                *ngIf="modoReserva"
+                *ngIf="modoReserva && ordenPedidoOrigen !== 'folio-master'"
                 (click)="quitarReserva()"
                 [disabled]="reservaLoading || isSubmitting"
               >
                 <span *ngIf="reservaLoading" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
                 <i class="feather icon-x" *ngIf="!reservaLoading"></i>
-                Quitar Reserva
+                {{ folioActual ? 'Quitar cargos del Folio' : 'Quitar Reserva' }}
               </button>
               <button
                 class="btn btn-sm btn-outline-primary op-outline-btn"
                 type="button"
-                *ngIf="!modoReserva"
+                *ngIf="!modoReserva && ordenPedidoOrigen !== 'folio-master'"
                 (click)="abrirModalReserva()"
                 [disabled]="isSubmitting || reservaLoading"
               >
@@ -207,7 +213,7 @@
               <button
                 class="btn btn-sm btn-outline-primary op-outline-btn"
                 type="button"
-                *ngIf="!modoReserva"
+                *ngIf="!modoReserva && ordenPedidoOrigen !== 'folio-master'"
                 (click)="abrirModalServicios()"
                 [disabled]="isSubmitting"
               >
@@ -236,6 +242,11 @@
                 Revertir descuento
               </button>
             </div>
+          </div>
+
+          <div class="alert alert-info py-2 mb-3" *ngIf="ordenPedidoOrigen === 'folio-master' && reservaLoading">
+            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+            Consultando encabezados y partidas de los cargos del Folio Master...
           </div>
 
           <div class="alert alert-warning py-2 mb-3" *ngIf="reservaErrorMessage">
@@ -487,13 +498,13 @@
               <p class="op-section-subtitle mb-0">Revise la información y confirme la acción a ejecutar.</p>
             </div>
             <div class="op-form-actions__buttons">
-              <button class="btn btn-outline-secondary op-action-btn" type="button" (click)="irOperacionDiaria()" [disabled]="isSubmitting">
+              <button *ngIf="ordenPedidoOrigen !== 'folio-master'" class="btn btn-outline-secondary op-action-btn" type="button" (click)="irOperacionDiaria()" [disabled]="isSubmitting">
                 <i class="feather icon-arrow-left me-2"></i>
                 No facturar y volver a Operacion Diaria
               </button>
               <button class="btn btn-outline-secondary op-action-btn" type="button" (click)="volverListado()" [disabled]="isSubmitting">
                 <i class="feather icon-x me-2"></i>
-                Cancelar y volver al listado
+                {{ ordenPedidoOrigen === 'folio-master' ? 'Cancelar y volver a Folios Master' : 'Cancelar y volver al listado' }}
               </button>
               <button class="btn btn-primary op-btn-primary op-action-btn" type="button" (click)="guardar()" [disabled]="isSubmitting">
                 <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
