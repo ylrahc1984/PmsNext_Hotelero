@@ -300,14 +300,14 @@ export class RestaurantDashboardComponent implements OnInit {
         next: (items) => {
           this.mozos = items;
           this.isLoadingMozos = false;
-          this.mozosErrorMessage = items.length === 0 ? 'No hay mozos configurados para este punto de venta.' : '';
+          this.mozosErrorMessage = items.length === 0 ? 'No hay saloneros configurados para este punto de venta.' : '';
           this.cdr.markForCheck();
         },
         error: (error) => {
           console.error('Error al cargar mozos del punto de venta:', error);
           this.mozos = [];
           this.isLoadingMozos = false;
-          this.mozosErrorMessage = 'No se pudieron cargar los mozos del punto de venta.';
+          this.mozosErrorMessage = 'No se pudieron cargar los saloneros del punto de venta.';
           this.cdr.markForCheck();
         }
       });

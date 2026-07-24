@@ -224,7 +224,14 @@
           <section class="action-section">
             <h3>{{ group.title === 'Documentos' ? 'Documentos e Impresion' : group.title }}</h3>
             @for (action of group.actions; track action.label) {
-              <button type="button" class="action-button" [class.danger]="action.tone === 'danger'" [class.primary]="action.tone === 'primary'" (click)="openActionModal(action)">
+              <button
+                type="button"
+                class="action-button"
+                [class.danger]="action.tone === 'danger'"
+                [class.primary]="action.tone === 'primary'"
+                [disabled]="action.id === 'register-prepayment'"
+                (click)="openActionModal(action)"
+              >
                 <span class="material-icons" aria-hidden="true">{{ action.icon }}</span>
                 <span>{{ action.label }}</span>
               </button>
@@ -249,7 +256,14 @@
         <section class="action-section">
           <h3>{{ group.title }}</h3>
           @for (action of group.actions; track action.label) {
-            <button type="button" class="action-button" [class.danger]="action.tone === 'danger'" [class.primary]="action.tone === 'primary'" (click)="openActionModal(action)">
+            <button
+              type="button"
+              class="action-button"
+              [class.danger]="action.tone === 'danger'"
+              [class.primary]="action.tone === 'primary'"
+              [disabled]="action.id === 'register-prepayment'"
+              (click)="openActionModal(action)"
+            >
               <span class="material-icons" aria-hidden="true">{{ action.icon }}</span>
               <span>{{ action.label }}</span>
             </button>
@@ -324,7 +338,15 @@
                 />
               </div>
 
-              @if (filteredInvoiceClients().length) {
+              @if (isInvoiceClientSearchLoading()) {
+                <div class="room-invoice-label">Buscando clientes...</div>
+              } @else if (invoiceClientSearchError()) {
+                <div class="room-invoice-inline-error">{{ invoiceClientSearchError() }}</div>
+              } @else if (invoiceClientSearch().trim().length >= 2 && !filteredInvoiceClients().length) {
+                <div class="room-invoice-label">No se encontraron clientes.</div>
+              }
+
+              @if (!selectedInvoiceClient() && filteredInvoiceClients().length) {
                 <div class="room-invoice-results">
                   @for (client of filteredInvoiceClients(); track client.code) {
                     <button type="button" class="room-invoice-result" (click)="selectInvoiceClient(client)">
@@ -345,12 +367,32 @@
                 <strong>{{ invoiceClient().name }}</strong>
                 <dl>
                   <div><dt>Codigo</dt><dd>{{ invoiceClient().code }}</dd></div>
-                  <div><dt>Identificacion / RUC</dt><dd>{{ invoiceClient().document || '0000000000' }}</dd></div>
+                  <div><dt>Identificacion / Cedula</dt><dd>{{ invoiceClient().document || '0000000000' }}</dd></div>
                   @if (invoiceClient().email) {
                     <div><dt>Correo</dt><dd>{{ invoiceClient().email }}</dd></div>
                   }
                   <div><dt>Direccion</dt><dd>{{ invoiceClient().address || 'S/D' }}</dd></div>
                 </dl>
+                @if (isInvoiceDocumentsLoading()) {
+                  <div class="room-invoice-label">Identificando tipo de documento...</div>
+                } @else if (selectedInvoiceDocument()) {
+                  <div
+                    class="room-invoice-document-chip"
+                    [class.room-invoice-document-chip--invoice]="selectedInvoiceDocumentIsInvoice()"
+                    [class.room-invoice-document-chip--ticket]="!selectedInvoiceDocumentIsInvoice()"
+                  >
+                    <span class="material-icons room-invoice-document-chip__icon" aria-hidden="true">
+                      {{ selectedInvoiceDocumentIsInvoice() ? 'description' : 'receipt_long' }}
+                    </span>
+                    <span class="room-invoice-document-chip__text">
+                      Se emitira: <strong>{{ selectedInvoiceDocumentLabel() }}</strong>
+                      ({{ selectedInvoiceDocument()?.MPV31_CodDocu }})
+                    </span>
+                  </div>
+                }
+                @if (invoiceDocumentSelectionError()) {
+                  <div class="room-invoice-inline-error">{{ invoiceDocumentSelectionError() }}</div>
+                }
               </article>
             </section>
 
@@ -853,7 +895,7 @@
   }
 
   @if (isChargeDetailOpen()) {
-    <div class="charge-detail-backdrop" (click)="closeChargeDetailModal()">
+    <div class="charge-detail-backdrop" (click)="requestCloseChargeDetailModal()">
       <section class="charge-detail-modal" role="dialog" aria-modal="true" aria-label="Detalle del cargo" (click)="$event.stopPropagation()">
         <header class="charge-detail-header">
           <div class="charge-detail-heading">
@@ -869,10 +911,27 @@
             </div>
           </div>
           <div class="charge-detail-header-actions">
-            <button type="button" class="charge-detail-icon-button" aria-label="Actualizar detalle" [disabled]="isChargeDetailLoading()" (click)="refreshSelectedChargeDetail()">
+            <button
+              type="button"
+              class="charge-detail-icon-button"
+              aria-label="Actualizar detalle"
+              ngbTooltip="Volver a consultar el detalle del cargo"
+              container="body"
+              placement="bottom"
+              [disabled]="isChargeDetailLoading() || isChargeDetailSubmitting()"
+              (click)="refreshSelectedChargeDetail()"
+            >
               <span class="material-icons" aria-hidden="true">refresh</span>
             </button>
-            <button type="button" class="charge-detail-icon-button" aria-label="Cerrar" (click)="closeChargeDetailModal()">
+            <button
+              type="button"
+              class="charge-detail-icon-button"
+              aria-label="Cerrar"
+              ngbTooltip="Cerrar el detalle del cargo"
+              container="body"
+              placement="bottom"
+              (click)="requestCloseChargeDetailModal()"
+            >
               <span class="material-icons" aria-hidden="true">close</span>
             </button>
           </div>
@@ -966,13 +1025,38 @@
                           </td>
                           <td>
                             <div class="charge-detail-row-actions">
-                              <button type="button" aria-label="Editar item" [disabled]="!canMutateChargeDetail(detail)" (click)="editChargeDetailLine(detail)">
+                              <button
+                                type="button"
+                                aria-label="Editar item"
+                                ngbTooltip="Editar descripcion, cantidad, precio y comentario"
+                                container="body"
+                                placement="top"
+                                [disabled]="!canMutateChargeDetail(detail)"
+                                (click)="editChargeDetailLine(detail)"
+                              >
                                 <span class="material-icons" aria-hidden="true">edit</span>
                               </button>
-                              <button type="button" aria-label="Trasladar item" [disabled]="!canMutateChargeDetail(detail)" (click)="transferChargeDetailLine(detail)">
+                              <button
+                                type="button"
+                                aria-label="Trasladar item"
+                                ngbTooltip="Cambiar la habitacion asignada al item"
+                                container="body"
+                                placement="top"
+                                [disabled]="!canMutateChargeDetail(detail)"
+                                (click)="transferChargeDetailLine(detail)"
+                              >
                                 <span class="material-icons" aria-hidden="true">sync_alt</span>
                               </button>
-                              <button type="button" class="charge-detail-row-action--danger" aria-label="Anular item" [disabled]="!canMutateChargeDetail(detail)" (click)="annulChargeDetailLine(detail)">
+                              <button
+                                type="button"
+                                class="charge-detail-row-action--danger"
+                                aria-label="Anular item"
+                                ngbTooltip="Retirar este item del cargo"
+                                container="body"
+                                placement="top"
+                                [disabled]="!canMutateChargeDetail(detail)"
+                                (click)="annulChargeDetailLine(detail)"
+                              >
                                 <span class="material-icons" aria-hidden="true">block</span>
                               </button>
                             </div>
@@ -992,14 +1076,43 @@
           </main>
 
           <footer class="charge-detail-footer">
-            <button type="button" class="charge-detail-secondary" (click)="closeChargeDetailModal()">
-              <span class="material-icons" aria-hidden="true">close</span>
-              <span>Cerrar</span>
-            </button>
-            <button type="button" class="charge-detail-primary" [disabled]="!selectedChargeDetailSource()" (click)="annulCharge(selectedChargeDetailSource()!.bucket, selectedChargeDetailSource()!.charge)">
+            <button
+              type="button"
+              class="charge-detail-danger"
+              ngbTooltip="Anular todo el cargo de habitacion"
+              container="body"
+              placement="top"
+              [disabled]="!selectedChargeDetailSource() || isChargeDetailSubmitting()"
+              (click)="annulCharge(selectedChargeDetailSource()!.bucket, selectedChargeDetailSource()!.charge)"
+            >
               <span class="material-icons" aria-hidden="true">block</span>
               <span>Anular cargo completo</span>
             </button>
+            <div class="charge-detail-footer-actions">
+              <button
+                type="button"
+                class="charge-detail-secondary"
+                ngbTooltip="Cerrar el detalle"
+                container="body"
+                placement="top"
+                (click)="requestCloseChargeDetailModal()"
+              >
+                <span class="material-icons" aria-hidden="true">close</span>
+                <span>Cerrar</span>
+              </button>
+              <button
+                type="button"
+                class="charge-detail-primary"
+                ngbTooltip="Guardar los cambios realizados en el cargo"
+                container="body"
+                placement="top"
+                [disabled]="!hasChargeDetailChanges() || isChargeDetailSubmitting()"
+                (click)="saveChargeDetailChanges()"
+              >
+                <span class="material-icons" aria-hidden="true">save</span>
+                <span>{{ isChargeDetailSubmitting() ? 'Guardando...' : 'Guardar cambios' }}</span>
+              </button>
+            </div>
           </footer>
         }
         }

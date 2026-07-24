@@ -486,17 +486,18 @@ export class RoomStayManagementService {
   }
 
   createRoomCharge(payload: RoomChargePayload): Observable<unknown> {
-    const normalizedPayload: RoomChargePayload = {
-      ...payload,
-      fecha: normalizePmsDateDDMMYYYY(payload.fecha),
-      detalle: payload.detalle.map((item) => ({
-        ...item,
-        fecha: normalizePmsDateDDMMYYYY(item.fecha)
-      }))
-    };
+    const normalizedPayload = this.normalizeRoomChargePayload(payload);
 
     return this.http
       .post(this.roomChargeUrl, normalizedPayload, { responseType: 'text' })
+      .pipe(map((response) => this.parseTextResponse(response)));
+  }
+
+  updateRoomCharge(payload: RoomChargePayload): Observable<unknown> {
+    const normalizedPayload = this.normalizeRoomChargePayload(payload);
+
+    return this.http
+      .put(this.roomChargeUrl, normalizedPayload, { responseType: 'text' })
       .pipe(map((response) => this.parseTextResponse(response)));
   }
 
@@ -522,6 +523,17 @@ export class RoomStayManagementService {
             : []
         }))
       );
+  }
+
+  private normalizeRoomChargePayload(payload: RoomChargePayload): RoomChargePayload {
+    return {
+      ...payload,
+      fecha: normalizePmsDateDDMMYYYY(payload.fecha),
+      detalle: payload.detalle.map((item) => ({
+        ...item,
+        fecha: normalizePmsDateDDMMYYYY(item.fecha)
+      }))
+    };
   }
 
   createRoomingListGuest(payload: RoomingListUpdatePayload): Observable<unknown> {

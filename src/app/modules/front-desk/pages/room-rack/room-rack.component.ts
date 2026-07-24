@@ -122,13 +122,22 @@ export class RoomRackComponent implements OnInit {
 
   async seleccionarHabitacion(habitacion: HabitacionRack): Promise<void> {
     if (habitacion.estado === 'Reservada') {
-      void Swal.fire({
+      const result = await Swal.fire({
         title: 'Habitación reservada',
         html: `La habitación <strong>${this.escapeHtml(habitacion.numero)}</strong> está pendiente de ingreso o de realizar el Check In.`,
         icon: 'info',
-        confirmButtonText: 'Aceptar',
-        confirmButtonColor: '#0d6efd'
+        showCancelButton: true,
+        confirmButtonText: 'Ir a Ingresar Arribos',
+        cancelButtonText: 'Cerrar',
+        confirmButtonColor: '#0d6efd',
+        cancelButtonColor: '#64748b',
+        reverseButtons: true,
+        focusCancel: true
       });
+
+      if (result.isConfirmed) {
+        await this.router.navigate(['/front-desk/arribos-dia']);
+      }
       return;
     }
 

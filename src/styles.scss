@@ -1018,6 +1018,62 @@ gmpx-place-autocomplete.places-autocomplete-themed {
   z-index: 2000 !important;
 }
 
+.stay-page .room-invoice-document-chip {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: start;
+  justify-content: start;
+  gap: 8px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px 10px 8px 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.stay-page .room-invoice-document-chip__icon {
+  align-self: center;
+  font-size: 1rem;
+}
+
+.stay-page .room-invoice-document-chip__text {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.stay-page .room-invoice-document-chip__text strong {
+  color: inherit;
+}
+
+.stay-page .room-invoice-document-chip--invoice {
+  border-color: rgba(31, 107, 255, 0.3);
+  color: #1f4fa0;
+  background: rgba(31, 107, 255, 0.1);
+}
+
+.stay-page .room-invoice-document-chip--ticket {
+  border-color: rgba(22, 129, 90, 0.34);
+  color: #1d7a43;
+  background: rgba(22, 129, 90, 0.12);
+}
+
+.stay-page .action-button:disabled {
+  border-color: #dbe3ea;
+  color: #8a97a8;
+  background: #f4f7fa;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.stay-page .action-button:disabled .material-icons {
+  color: #8a97a8;
+}
+
 .charge-detail-backdrop {
   position: fixed;
   inset: 0;
@@ -1356,13 +1412,14 @@ gmpx-place-autocomplete.places-autocomplete-themed {
 }
 
 .stay-page .charge-detail-footer {
-  justify-content: flex-end;
+  justify-content: space-between;
   border-top: 1px solid #e4ebf3;
   background: linear-gradient(180deg, #ffffff, #fbfdff);
 }
 
 .stay-page .charge-detail-secondary,
-.stay-page .charge-detail-primary {
+.stay-page .charge-detail-primary,
+.stay-page .charge-detail-danger {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1381,7 +1438,8 @@ gmpx-place-autocomplete.places-autocomplete-themed {
 }
 
 .stay-page .charge-detail-secondary .material-icons,
-.stay-page .charge-detail-primary .material-icons {
+.stay-page .charge-detail-primary .material-icons,
+.stay-page .charge-detail-danger .material-icons {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1397,13 +1455,27 @@ gmpx-place-autocomplete.places-autocomplete-themed {
 }
 
 .stay-page .charge-detail-primary {
+  border: 1px solid rgba(23, 152, 169, 0.3);
+  color: #ffffff;
+  background: linear-gradient(135deg, #0e7a8e, #1aa4b7);
+  box-shadow: 0 12px 24px rgba(14, 122, 142, 0.2);
+}
+
+.stay-page .charge-detail-danger {
   border: 1px solid rgba(255, 77, 79, 0.24);
   color: #ffffff;
   background: linear-gradient(135deg, #d73c44, #ff6961);
   box-shadow: 0 12px 24px rgba(255, 77, 79, 0.18);
 }
 
-.stay-page .charge-detail-primary:disabled {
+.stay-page .charge-detail-footer-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stay-page .charge-detail-primary:disabled,
+.stay-page .charge-detail-danger:disabled {
   opacity: 0.55;
   box-shadow: none;
   cursor: not-allowed;
@@ -1442,8 +1514,15 @@ gmpx-place-autocomplete.places-autocomplete-themed {
   }
 
   .charge-detail-secondary,
-  .charge-detail-primary {
+  .charge-detail-primary,
+  .charge-detail-danger,
+  .charge-detail-footer-actions {
     width: 100%;
+  }
+
+  .charge-detail-footer-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
   }
 }
 // Estado visual común para acciones restringidas por la jornada operativa.

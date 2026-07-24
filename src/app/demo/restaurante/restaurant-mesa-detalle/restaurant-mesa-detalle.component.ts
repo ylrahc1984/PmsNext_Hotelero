@@ -1223,11 +1223,11 @@ export class RestaurantMesaDetalleComponent implements OnInit {
 
     const firstCurrency = this.consumoActual[0]?.moneda;
     this.monedaActual = firstCurrency || this.monedaActual;
-    this.subtotal = Number(response.totales?.subtotal || 0);
+    this.subtotal = Number(response.totales?.subtotalneto || 0);
     this.descuento = 0;
     this.impuestos = Number(response.totales?.impuestos || 0);
     this.propina = Number(response.totalPropina || 0);
-    this.total = Number(response.totales?.granTotal ?? response.totales?.total ?? 0);
+    this.total = Number(response.totales?.total ?? response.totales?.total ?? 0);
     if (this.notaPedidoInfo) {
       this.notaPedidoInfo = {
         ...this.notaPedidoInfo,

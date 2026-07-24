@@ -150,22 +150,38 @@
     </div>
   </section>
 
-  <section class="mozo-modal" *ngIf="mesaPendienteMozo" role="dialog" aria-modal="true" aria-label="Seleccionar mozo">
-    <article class="mozo-dialog">
+  <section
+    class="mozo-modal"
+    *ngIf="mesaPendienteMozo"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="selectorSaloneroTitle"
+    aria-describedby="selectorSaloneroContext"
+    (click)="cerrarSelectorMozo()"
+  >
+    <article class="mozo-dialog" (click)="$event.stopPropagation()">
       <header class="mozo-dialog__header">
         <div>
           <span class="context-eyebrow">Mesa disponible</span>
-          <h2>Asignar mozo a {{ mesaPendienteMozo.nombre }}</h2>
-          <p>{{ salonSeleccionado?.MPV09_Descripcion }} · {{ codPuntoVenta }}</p>
+          <h2 id="selectorSaloneroTitle">Seleccionar salonero</h2>
+          <p id="selectorSaloneroContext">
+            {{ mesaPendienteMozo.nombre }} · {{ salonSeleccionado?.MPV09_Descripcion }} · {{ codPuntoVenta }}
+          </p>
         </div>
-        <button type="button" class="mozo-dialog__close" (click)="cerrarSelectorMozo()" aria-label="Cerrar">
+        <button
+          type="button"
+          class="mozo-dialog__close"
+          (click)="cerrarSelectorMozo()"
+          aria-label="Cerrar selector de salonero"
+          title="Cerrar"
+        >
           <i class="feather icon-x" aria-hidden="true"></i>
         </button>
       </header>
 
       <div class="mozo-dialog__empty" *ngIf="isLoadingMozos">
         <i class="feather icon-loader" aria-hidden="true"></i>
-        <p>Cargando mozos...</p>
+        <p>Cargando saloneros...</p>
       </div>
 
       <div class="mozo-dialog__empty" *ngIf="!isLoadingMozos && mozosErrorMessage">
@@ -175,7 +191,13 @@
       </div>
 
       <div class="mozo-list" *ngIf="!isLoadingMozos && !mozosErrorMessage">
-        <button type="button" class="mozo-card" *ngFor="let mozo of mozos; trackBy: trackByMozo" (click)="seleccionarMozo(mozo)">
+        <button
+          type="button"
+          class="mozo-card"
+          *ngFor="let mozo of mozos; trackBy: trackByMozo"
+          (click)="seleccionarMozo(mozo)"
+        >
+          <i class="feather icon-user mozo-card__icon" aria-hidden="true"></i>
           <span>
             <strong>{{ mozo.MPV11_NomMozo }}</strong>
             <small>{{ mozo.MPV11_CodUsuario }}</small>

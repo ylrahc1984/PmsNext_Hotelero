@@ -563,63 +563,144 @@ $line: #dbe5ef;
   position: fixed;
   inset: 0;
   z-index: 1100;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
   padding: 18px;
-  background: rgba($bg, 0.58);
+  background: rgba($bg, 0.64);
+  backdrop-filter: blur(4px);
+  animation: mozo-backdrop-in 160ms ease-out;
 }
 
 .mozo-dialog {
   position: relative;
   display: grid;
-  gap: 10px;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 14px;
   width: min(760px, 100%);
-  margin: auto;
-  max-height: calc(100vh - 40px);
+  max-height: calc(100vh - 36px);
+  max-height: calc(100dvh - 36px);
   overflow: hidden;
-  padding: 14px;
-  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid rgba($paper, 0.72);
+  border-radius: 20px;
   background: $paper;
-  box-shadow: 0 22px 54px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 28px 70px rgba($bg, 0.32);
+  animation: mozo-dialog-in 180ms ease-out;
 }
 
 .mozo-dialog__header {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid $line;
 }
 
 .mozo-dialog__header h2 {
-  margin: 4px 0 0;
-  font-size: 1rem;
+  margin: 5px 0 3px;
+  color: $ink;
+  font-size: 1.15rem;
   font-weight: 880;
+}
+
+.mozo-dialog__header p {
+  margin: 0;
+  color: $muted;
+  font-size: 0.78rem;
+  font-weight: 680;
+}
+
+.mozo-dialog__close {
+  flex: 0 0 38px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid $line;
+  border-radius: 10px;
+  color: $muted;
+  background: #f8fafc;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.mozo-dialog__close:hover {
+  border-color: rgba($burgundy, 0.22);
+  color: $burgundy;
+  background: rgba($burgundy, 0.07);
+}
+
+.mozo-dialog__close:focus-visible {
+  outline: none;
+  border-color: rgba($blue, 0.5);
+  box-shadow: 0 0 0 3px rgba($blue, 0.14);
 }
 
 .mozo-dialog__empty {
   display: grid;
   place-items: center;
   gap: 8px;
-  padding: 22px;
+  min-height: 150px;
+  padding: 28px;
   border: 1px dashed $line;
+  border-radius: 12px;
+  color: $muted;
+  background: #f8fafc;
   text-align: center;
+}
+
+.mozo-dialog__empty p {
+  margin: 0;
 }
 
 .mozo-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  max-height: 520px;
   overflow: auto;
+  padding: 2px;
 }
 
 .mozo-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 16px;
+  grid-template-columns: 38px minmax(0, 1fr) 18px;
   align-items: center;
-  gap: 8px;
-  min-height: 54px;
-  padding: 8px;
+  gap: 10px;
+  min-height: 64px;
+  padding: 10px 12px;
   border: 1px solid $line;
-  border-radius: 10px;
+  border-radius: 12px;
+  color: $ink;
+  background: linear-gradient(135deg, rgba($blue, 0.035), $paper);
   text-align: left;
   cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.mozo-card:hover,
+.mozo-card:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba($blue, 0.4);
+  outline: none;
+  box-shadow: 0 10px 22px rgba($ink, 0.08);
+}
+
+.mozo-card > .icon-arrow-right {
+  color: $blue;
+}
+
+.mozo-card__icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  color: $blue;
+  background: rgba($blue, 0.1);
 }
 
 .mozo-card strong,
@@ -740,6 +821,18 @@ $line: #dbe5ef;
   .mozo-list {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  .mozo-modal {
+    padding: 12px;
+  }
+
+  .mozo-dialog {
+    width: 100%;
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
+    padding: 16px;
+    border-radius: 16px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -757,5 +850,25 @@ $line: #dbe5ef;
 @keyframes exchange-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes mozo-backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes mozo-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.985);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mozo-modal,
+  .mozo-dialog {
+    animation: none;
   }
 }
