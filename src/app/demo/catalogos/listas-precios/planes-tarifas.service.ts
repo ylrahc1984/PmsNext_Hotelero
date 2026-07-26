@@ -5,35 +5,35 @@ import { map } from 'rxjs/operators';
 import { environment } from 'src/environments/environment';
 
 export interface PlanTarifaDTO {
-  PlanID: number;
-  NombrePlan: string;
-  TipoTarifa: string;
-  TipoTarifaDescripcion: string;
-  Activo: boolean;
-  EstadoDescripcion: string;
-  PaginaActual?: number;
-  TotalPaginas?: number;
-  TotalRegistros?: number;
+  PlanID                  : number;
+  NombrePlan              : string;
+  TipoTarifa              : string;
+  TipoTarifaDescripcion   : string;
+  Activo                  : boolean;
+  EstadoDescripcion       : string;
+  PaginaActual            ?: number;
+  TotalPaginas            ?: number;
+  TotalRegistros          ?: number;
 }
 
 export interface PlanTarifaUI {
-  planId: number;
-  nombrePlan: string;
-  tipoTarifa: string;
-  tipoTarifaDescripcion: string;
-  activo: boolean;
-  estadoDescripcion: string;
+  planId                   : number;
+  nombrePlan               : string;
+  tipoTarifa               : string;
+  tipoTarifaDescripcion    : string;
+  activo                   : boolean;
+  estadoDescripcion        : string;
 }
 
 export interface PlanesTarifasResponse {
   datos: PlanTarifaDTO[];
   paginacion?: {
-    paginaActual: number;
-    registrosPorPagina: number;
-    totalRegistros: number;
-    totalPaginas: number;
-    tienePaginaSiguiente: boolean;
-    tienePaginaAnterior: boolean;
+    paginaActual              : number;
+    registrosPorPagina        : number;
+    totalRegistros            : number;
+    totalPaginas              : number;
+    tienePaginaSiguiente      : boolean;
+    tienePaginaAnterior       : boolean;
   };
 }
 
@@ -76,12 +76,12 @@ export class PlanesTarifasService {
    */
   private mapFromApi(dto: PlanTarifaDTO): PlanTarifaUI {
     return {
-      planId: dto.PlanID,
-      nombrePlan: dto.NombrePlan,
-      tipoTarifa: dto.TipoTarifa,
-      tipoTarifaDescripcion: dto.TipoTarifaDescripcion,
-      activo: dto.Activo,
-      estadoDescripcion: dto.EstadoDescripcion
+      planId                    : dto.PlanID,
+      nombrePlan                : dto.NombrePlan,
+      tipoTarifa                : dto.TipoTarifa,
+      tipoTarifaDescripcion     : dto.TipoTarifaDescripcion,
+      activo                    : dto.Activo,
+      estadoDescripcion         : dto.EstadoDescripcion
     };
   }
 }

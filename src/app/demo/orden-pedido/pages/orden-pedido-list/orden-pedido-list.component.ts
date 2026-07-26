@@ -51,6 +51,7 @@ export class OrdenPedidoListComponent implements OnInit {
   totalImpuestoVisible = 0;
   totalGeneralVisible = 0;
   anulatingKeys = new Set<string>();
+  printingKeys = new Set<string>();
 
   ngOnInit(): void {
     this.loadOrdenes();
@@ -192,6 +193,47 @@ export class OrdenPedidoListComponent implements OnInit {
     return this.anulatingKeys.has(this.getRowKey(item));
   }
 
+  imprimirReciboComercial(item: OrdenPedidoListadoItem): void {
+    const tipOrden = (item.tipOrden ?? '').toString().trim();
+    const serie = (item.serie ?? '').toString().trim() || '000';
+    const numero = (item.numero ?? '').toString().trim();
+    const key = this.getRowKey(item);
+
+    if (!this.canPrintCommercialReceipt(item) || this.printingKeys.has(key)) {
+      return;
+    }
+
+    this.printingKeys.add(key);
+    this.ordenPedidoService
+      .getReciboComercialPdf(tipOrden, serie, numero)
+      .pipe(finalize(() => this.printingKeys.delete(key)))
+      .subscribe({
+        next: (blob) => this.openPdfBlob(blob, `Recibo_Comercial_${this.getDocumentNumber(item)}.pdf`),
+        error: (error: Error) => {
+          console.error('No se pudo obtener el Recibo Comercial PDF.', error);
+          void Swal.fire({
+            title: 'No se pudo imprimir',
+            text: error.message || 'No se pudo obtener el Recibo Comercial en PDF.',
+            icon: 'error'
+          });
+        }
+      });
+  }
+
+  canPrintCommercialReceipt(item: OrdenPedidoListadoItem): boolean {
+    return (item.tipOrden || '').trim().toUpperCase() === 'NDP' && Boolean((item.numero || '').trim());
+  }
+
+  isPrinting(item: OrdenPedidoListadoItem): boolean {
+    return this.printingKeys.has(this.getRowKey(item));
+  }
+
+  getDocumentNumber(item: OrdenPedidoListadoItem): string {
+    const serie = (item.serie ?? '').toString().trim() || '000';
+    const numero = (item.numero ?? '').toString().trim();
+    return numero.includes('-') ? numero : `${serie}-${numero}`;
+  }
+
   isOrdenAnulada(item: OrdenPedidoListadoItem): boolean {
     const estado = (item.estado || '').toUpperCase();
     return estado.includes('ANU') || estado.includes('CANCEL');
@@ -284,6 +326,26 @@ export class OrdenPedidoListComponent implements OnInit {
 
   private getRowKey(item: OrdenPedidoListadoItem): string {
     return [item.tipOrden, item.serie, item.numero, item.fecha].join('|');
+  }
+
+  private openPdfBlob(blob: Blob, filename: string): void {
+    const pdfBlob = blob.type === 'application/pdf'
+      ? blob
+      : new Blob([blob], { type: 'application/pdf' });
+    const objectUrl = URL.createObjectURL(pdfBlob);
+    const pdfWindow = window.open(objectUrl, '_blank', 'noopener,noreferrer');
+
+    if (!pdfWindow) {
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = filename;
+      link.rel = 'noopener';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
   }
 
   private getTodayIsoDate(): string {

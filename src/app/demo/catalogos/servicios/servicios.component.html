@@ -197,6 +197,22 @@
                     </button>
 
                     <div class="action-dropdown__divider"></div>
+                    <div class="action-dropdown__section-title">Listas de precios</div>
+                    <button
+                      type="button"
+                      ngbDropdownItem
+                      class="dropdown-item action-item"
+                      (click)="openPriceListModal(servicio)"
+                    >
+                      <span class="action-item__icon action-item__icon--price">
+                        <i class="feather icon-tag" aria-hidden="true"></i>
+                      </span>
+                      <span class="action-item__content">
+                        <span class="action-item__label">Agregar a lista de precios</span>
+                      </span>
+                    </button>
+
+                    <div class="action-dropdown__divider"></div>
                     <div class="action-dropdown__section-title">Visibilidad</div>
                     <button
                       type="button"
@@ -269,6 +285,201 @@
       </div>
     </app-card>
   </div>
+</div>
+
+<div class="price-list-modal-overlay" *ngIf="isPriceListModalOpen" (click)="closePriceListModal()">
+  <section
+    class="price-list-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="priceListModalTitle"
+    (click)="$event.stopPropagation()"
+  >
+    <header class="price-list-modal__header">
+      <div class="price-list-modal__heading">
+        <span class="price-list-modal__icon"><i class="feather icon-tag" aria-hidden="true"></i></span>
+        <div>
+          <span class="price-list-modal__eyebrow">Administración comercial</span>
+          <h2 id="priceListModalTitle">Agregar producto a lista de precios</h2>
+          <p>Seleccione una lista, valide disponibilidad y confirme el precio final.</p>
+        </div>
+      </div>
+      <button
+        type="button"
+        class="price-list-modal__close"
+        aria-label="Cerrar"
+        [disabled]="isAddingToPriceList"
+        (click)="closePriceListModal()"
+      >
+        <i class="feather icon-x" aria-hidden="true"></i>
+      </button>
+    </header>
+
+    <div class="price-list-modal__body" *ngIf="priceListModalService as servicio">
+      <section class="price-list-catalog">
+        <article class="price-list-product-summary">
+          <span class="price-list-product-summary__avatar"><i class="feather icon-box" aria-hidden="true"></i></span>
+          <div>
+            <span>Producto seleccionado</span>
+            <strong>{{ servicio.nomReceta }}</strong>
+            <small>{{ servicio.codReceta }} · {{ servicio.codGrupo || 'Sin grupo' }} · {{ servicio.uMedida || 'Sin unidad' }}</small>
+          </div>
+          <div class="price-list-product-summary__price">
+            <span>Precio sugerido</span>
+            <strong>₡{{ servicio.ctoTotal | number:'1.2-2' }}</strong>
+          </div>
+        </article>
+
+        <label class="price-list-search">
+          <i class="feather icon-search" aria-hidden="true"></i>
+          <input
+            type="search"
+            [(ngModel)]="priceListSearchTerm"
+            placeholder="Buscar lista por nombre, código o moneda..."
+            aria-label="Buscar lista de precios"
+          >
+        </label>
+
+        <div class="price-list-catalog__status" *ngIf="isLoadingPriceLists">
+          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+          <span>Cargando listas de precios...</span>
+        </div>
+
+        <div class="price-list-catalog__status price-list-catalog__status--error" *ngIf="priceListLoadError && !isLoadingPriceLists">
+          <i class="feather icon-alert-circle" aria-hidden="true"></i>
+          <span>{{ priceListLoadError }}</span>
+        </div>
+
+        <div class="price-list-options" *ngIf="!isLoadingPriceLists && !priceListLoadError">
+          <button
+            type="button"
+            class="price-list-option"
+            *ngFor="let lista of filteredPriceLists; trackBy: trackByPriceList"
+            [class.price-list-option--selected]="selectedPriceList?.codigo === lista.codigo"
+            [class.price-list-option--disabled]="lista.vigente !== 'S' || !lista.moneda"
+            [disabled]="lista.vigente !== 'S' || !lista.moneda || isAddingToPriceList"
+            (click)="selectPriceList(lista)"
+          >
+            <span class="price-list-option__check">
+              <i
+                class="feather"
+                [ngClass]="selectedPriceList?.codigo === lista.codigo ? 'icon-check' : 'icon-list'"
+                aria-hidden="true"
+              ></i>
+            </span>
+            <span class="price-list-option__content">
+              <strong>{{ lista.descripcion || lista.codigo }}</strong>
+              <small>{{ lista.codigo }} <ng-container *ngIf="lista.planRate">· {{ lista.planRate }}</ng-container></small>
+            </span>
+            <span class="price-list-option__meta">
+              <strong>{{ lista.moneda || 'Sin moneda' }}</strong>
+              <small [class.price-list-option__inactive]="lista.vigente !== 'S'">
+                {{ lista.vigente === 'S' ? 'Vigente' : 'No vigente' }}
+              </small>
+            </span>
+          </button>
+
+          <div class="price-list-empty" *ngIf="!filteredPriceLists.length">
+            <i class="feather icon-search" aria-hidden="true"></i>
+            <strong>No se encontraron listas</strong>
+            <span>Revise el texto utilizado en la búsqueda.</span>
+          </div>
+        </div>
+      </section>
+
+      <aside class="price-list-selection">
+        <div class="price-list-selection__empty" *ngIf="!selectedPriceList">
+          <span><i class="feather icon-mouse-pointer" aria-hidden="true"></i></span>
+          <h3>Seleccione una lista</h3>
+          <p>Verificaremos que el producto no exista antes de habilitar el guardado.</p>
+        </div>
+
+        <ng-container *ngIf="selectedPriceList as lista">
+          <div class="price-list-selection__title">
+            <div>
+              <span>Lista seleccionada</span>
+              <h3>{{ lista.descripcion || lista.codigo }}</h3>
+              <p>{{ lista.codigo }}</p>
+            </div>
+            <span class="price-list-currency">{{ lista.moneda }}</span>
+          </div>
+
+          <div class="price-list-verification price-list-verification--loading" *ngIf="isCheckingPriceList">
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+            <div>
+              <strong>Verificando disponibilidad</strong>
+              <span>Consultando los productos actuales de la lista.</span>
+            </div>
+          </div>
+
+          <div
+            class="price-list-verification"
+            *ngIf="!isCheckingPriceList && priceListValidationMessage"
+            [class.price-list-verification--success]="priceListCheckSucceeded && !selectedPriceListHasProduct"
+            [class.price-list-verification--duplicate]="selectedPriceListHasProduct"
+            [class.price-list-verification--error]="!priceListCheckSucceeded"
+          >
+            <i
+              class="feather"
+              [ngClass]="selectedPriceListHasProduct ? 'icon-alert-triangle' : (priceListCheckSucceeded ? 'icon-check-circle' : 'icon-alert-circle')"
+              aria-hidden="true"
+            ></i>
+            <div>
+              <strong>
+                {{ selectedPriceListHasProduct ? 'Producto ya incluido' : (priceListCheckSucceeded ? 'Producto disponible' : 'Validación pendiente') }}
+              </strong>
+              <span>{{ priceListValidationMessage }}</span>
+            </div>
+          </div>
+
+          <div class="price-list-price-form">
+            <label>
+              <span>Precio total</span>
+              <div class="price-list-price-input">
+                <span>{{ lista.moneda }}</span>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  [(ngModel)]="priceListPrice"
+                  [disabled]="isCheckingPriceList || selectedPriceListHasProduct || !priceListCheckSucceeded || isAddingToPriceList"
+                  placeholder="0.00"
+                >
+              </div>
+              <small>Digite el monto en {{ lista.moneda }}; debe incluir los impuestos correspondientes.</small>
+            </label>
+
+            <dl class="price-list-save-summary">
+              <div><dt>Producto</dt><dd>{{ servicio.codReceta }}</dd></div>
+              <div><dt>Lista</dt><dd>{{ lista.codigo }}</dd></div>
+              <div><dt>Moneda</dt><dd>{{ lista.moneda }}</dd></div>
+              <div><dt>Próximo orden</dt><dd>{{ selectedPriceListNextOrder }}</dd></div>
+            </dl>
+          </div>
+        </ng-container>
+      </aside>
+    </div>
+
+    <footer class="price-list-modal__footer">
+      <div class="price-list-modal__security">
+        <i class="feather icon-shield" aria-hidden="true"></i>
+        <span>Se verificará nuevamente la lista antes de guardar.</span>
+      </div>
+      <button type="button" class="price-list-modal__secondary" [disabled]="isAddingToPriceList" (click)="closePriceListModal()">
+        Cancelar
+      </button>
+      <button
+        type="button"
+        class="price-list-modal__primary"
+        [disabled]="!canAddServiceToPriceList"
+        (click)="confirmAddServiceToPriceList()"
+      >
+        <span class="spinner-border spinner-border-sm" *ngIf="isAddingToPriceList" aria-hidden="true"></span>
+        <i class="feather icon-plus" *ngIf="!isAddingToPriceList" aria-hidden="true"></i>
+        <span>{{ isAddingToPriceList ? 'Validando y guardando...' : 'Agregar a la lista' }}</span>
+      </button>
+    </footer>
+  </section>
 </div>
 
 <div class="lookup-modal-overlay" *ngIf="lookupModal" (click)="closeLookupModal()">

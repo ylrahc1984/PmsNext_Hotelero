@@ -284,10 +284,6 @@ h1 {
 
 .card {
   min-width: 0;
-}
-
-.card {
-  min-width: 0;
   overflow: hidden;
   border: 1px solid $line;
   border-radius: 14px;
@@ -742,8 +738,11 @@ label {
 }
 
 .action-modal--invoice {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   width: min(90vw, 1400px);
-  max-height: 86vh;
+  height: min(820px, 86dvh);
+  max-height: 86dvh;
   padding: 0;
   overflow: hidden;
   border-radius: 22px;
@@ -1232,6 +1231,7 @@ label {
   display: grid;
   grid-template-columns: minmax(230px, 0.72fr) minmax(620px, 1.55fr) minmax(220px, 0.58fr);
   gap: 12px;
+  min-height: 0;
   padding: 12px 18px 14px;
   overflow: auto;
 }
@@ -1725,7 +1725,8 @@ label {
 
   .action-modal--invoice {
     width: 96vw;
-    max-height: 96vh;
+    height: 96dvh;
+    max-height: 96dvh;
   }
 
   .action-modal.action-modal--room-charge {

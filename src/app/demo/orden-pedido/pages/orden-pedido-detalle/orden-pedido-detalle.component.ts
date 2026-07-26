@@ -20,27 +20,27 @@ import { FormaPagoService } from 'src/app/demo/administracion/forma-pago/forma-p
 import { AuthService } from 'src/app/core/services/auth.service';
 
 type TotalesResumen = {
-  subtotal: number;
-  descuento: number;
-  impuesto: number;
-  total: number;
+  subtotal      : number;
+  descuento     : number;
+  impuesto      : number;
+  total         : number;
 };
 
 type CambioPagoPedidoForm = {
-  orden: FormControl<number>;
-  frmPago: FormControl<string>;
-  tipo: FormControl<string>;
-  moneda: FormControl<string>;
-  monto: FormControl<number>;
-  tCambio: FormControl<number>;
-  referencia: FormControl<string>;
-  numTarjeta: FormControl<string>;
-  vencimiento: FormControl<string>;
+  orden           : FormControl<number>;
+  frmPago         : FormControl<string>;
+  tipo            : FormControl<string>;
+  moneda          : FormControl<string>;
+  monto           : FormControl<number>;
+  tCambio         : FormControl<number>;
+  referencia      : FormControl<string>;
+  numTarjeta      : FormControl<string>;
+  vencimiento     : FormControl<string>;
 };
 
 type CambioFormaPagoPedidoForm = {
-  motivo: FormControl<string>;
-  pagos: FormArray<FormGroup<CambioPagoPedidoForm>>;
+  motivo            : FormControl<string>;
+  pagos             : FormArray<FormGroup<CambioPagoPedidoForm>>;
 };
 
 @Component({
@@ -52,35 +52,35 @@ type CambioFormaPagoPedidoForm = {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class OrdenPedidoDetalleComponent implements OnInit {
-  private readonly fb = inject(NonNullableFormBuilder);
-  tipOrden = '';
-  serie = '';
-  numero = '';
+  private readonly fb   = inject(NonNullableFormBuilder);
+  tipOrden              = '';
+  serie                 = '';
+  numero                = '';
 
-  encabezado: OrdenPedidoCompletaEncabezado | null = null;
-  cliente: OrdenPedidoCompletaCliente | null = null;
-  detalle: OrdenPedidoCompletaDetalleItem[] = [];
-  formasPago: OrdenPedidoCompletaFormaPago[] = [];
+  encabezado            : OrdenPedidoCompletaEncabezado | null = null;
+  cliente               : OrdenPedidoCompletaCliente | null = null;
+  detalle               : OrdenPedidoCompletaDetalleItem[] = [];
+  formasPago            : OrdenPedidoCompletaFormaPago[] = [];
 
-  resumen: TotalesResumen = { subtotal: 0, descuento: 0, impuesto: 0, total: 0 };
-  totalFormasPago = 0;
+  resumen               : TotalesResumen = { subtotal: 0, descuento: 0, impuesto: 0, total: 0 };
+  totalFormasPago       = 0;
 
-  loading = false;
-  errorMsg: string | null = null;
-  showCambioFormaPagoModal = false;
-  formasPagoCatalogo: FormaPago[] = [];
-  formasPagoLoading = false;
-  cambioFormaPagoSaving = false;
-  cambioFormaPagoError: string | null = null;
-  cambioFormaPagoSuccess: string | null = null;
+  loading                      = false;
+  errorMsg                     : string | null = null;
+  showCambioFormaPagoModal     = false;
+  formasPagoCatalogo           : FormaPago[] = [];
+  formasPagoLoading            = false;
+  cambioFormaPagoSaving        = false;
+  cambioFormaPagoError         : string | null = null;
+  cambioFormaPagoSuccess       : string | null = null;
 
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
-  private readonly service = inject(OrdenPedidoService);
-  private readonly formaPagoService = inject(FormaPagoService);
-  private readonly authService = inject(AuthService);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly route              = inject(ActivatedRoute);
+  private readonly router             = inject(Router);
+  private readonly service            = inject(OrdenPedidoService);
+  private readonly formaPagoService   = inject(FormaPagoService);
+  private readonly authService        = inject(AuthService);
+  private readonly destroyRef         = inject(DestroyRef);
+  private readonly cdr                = inject(ChangeDetectorRef);
 
   readonly cambioFormaPagoForm: FormGroup<CambioFormaPagoPedidoForm> = this.fb.group({
     motivo: this.fb.control('', { validators: [Validators.required, Validators.minLength(5), Validators.maxLength(250)] }),

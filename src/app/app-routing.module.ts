@@ -406,14 +406,17 @@ const routes: Routes = [
         loadComponent: () => import('./demo/catalogos/listas-precios/lista-precio-form.component').then((c) => c.ListaPrecioFormComponent)
       },
       {
-        path: 'configuracion/listas-precios/:id/detalle',
+        path: 'configuracion/listas-precios/:codListaPrecio/detalle',
         data: { breadcrumbTrail: [
           { title: 'Restaurante', url: '/restaurant/puntos-venta' },
           { title: 'Configuración Restaurante', url: '/restaurante/configuracion' },
           { title: 'Listas de Precios', url: '/restaurante/configuracion/listas-precios' },
           { title: 'Detalle' }
         ] },
-        loadComponent: () => import('./demo/catalogos/listas-precios/lista-precio-detalle.component').then((c) => c.ListaPrecioDetalleComponent)
+        loadComponent: () =>
+          import('./demo/catalogos/listas-precios/lista-precio-detalle-hotel.component').then(
+            (c) => c.ListaPrecioDetalleHotelComponent
+          )
       },
       {
         path: 'configuracion/saloneros',
@@ -877,8 +880,11 @@ const routes: Routes = [
         loadComponent: () => import('./demo/catalogos/listas-precios/lista-precio-form.component').then((c) => c.ListaPrecioFormComponent)
       },
       {
-        path: 'listas-precios/:id/detalle',
-        loadComponent: () => import('./demo/catalogos/listas-precios/lista-precio-detalle.component').then((c) => c.ListaPrecioDetalleComponent)
+        path: 'listas-precios/:codListaPrecio/detalle',
+        loadComponent: () =>
+          import('./demo/catalogos/listas-precios/lista-precio-detalle-hotel.component').then(
+            (c) => c.ListaPrecioDetalleHotelComponent
+          )
       },
       {
         path: 'detalle-lista-precio-v2/:codLstPrecio',

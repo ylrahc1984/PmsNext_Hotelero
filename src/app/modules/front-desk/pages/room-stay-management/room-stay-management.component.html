@@ -373,26 +373,6 @@
                   }
                   <div><dt>Direccion</dt><dd>{{ invoiceClient().address || 'S/D' }}</dd></div>
                 </dl>
-                @if (isInvoiceDocumentsLoading()) {
-                  <div class="room-invoice-label">Identificando tipo de documento...</div>
-                } @else if (selectedInvoiceDocument()) {
-                  <div
-                    class="room-invoice-document-chip"
-                    [class.room-invoice-document-chip--invoice]="selectedInvoiceDocumentIsInvoice()"
-                    [class.room-invoice-document-chip--ticket]="!selectedInvoiceDocumentIsInvoice()"
-                  >
-                    <span class="material-icons room-invoice-document-chip__icon" aria-hidden="true">
-                      {{ selectedInvoiceDocumentIsInvoice() ? 'description' : 'receipt_long' }}
-                    </span>
-                    <span class="room-invoice-document-chip__text">
-                      Se emitira: <strong>{{ selectedInvoiceDocumentLabel() }}</strong>
-                      ({{ selectedInvoiceDocument()?.MPV31_CodDocu }})
-                    </span>
-                  </div>
-                }
-                @if (invoiceDocumentSelectionError()) {
-                  <div class="room-invoice-inline-error">{{ invoiceDocumentSelectionError() }}</div>
-                }
               </article>
             </section>
 
@@ -507,6 +487,28 @@
           </main>
 
           <footer class="room-invoice-footer">
+            <div class="room-invoice-footer-document" aria-live="polite">
+              @if (isInvoiceDocumentsLoading()) {
+                <div class="room-invoice-label">Identificando tipo de documento...</div>
+              } @else if (selectedInvoiceDocument()) {
+                <div
+                  class="room-invoice-document-chip"
+                  [class.room-invoice-document-chip--invoice]="selectedInvoiceDocumentIsInvoice()"
+                  [class.room-invoice-document-chip--ticket]="!selectedInvoiceDocumentIsInvoice()"
+                >
+                  <span class="material-icons room-invoice-document-chip__icon" aria-hidden="true">
+                    {{ selectedInvoiceDocumentIsInvoice() ? 'description' : 'receipt_long' }}
+                  </span>
+                  <span class="room-invoice-document-chip__text">
+                    Se emitira: <strong>{{ selectedInvoiceDocumentLabel() }}</strong>
+                    ({{ selectedInvoiceDocument()?.MPV31_CodDocu }})
+                  </span>
+                </div>
+              }
+              @if (invoiceDocumentSelectionError()) {
+                <div class="room-invoice-inline-error">{{ invoiceDocumentSelectionError() }}</div>
+              }
+            </div>
             <button type="button" class="room-invoice-secondary-btn" (click)="closeActionModal()">Cancelar</button>
             <button type="button" class="room-invoice-primary-btn" [disabled]="isInvoiceSubmitting()" (click)="executeActiveAction()">
               {{ isInvoiceSubmitting() ? 'Facturando...' : 'Confirmar Facturacion' }}

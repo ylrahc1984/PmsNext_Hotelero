@@ -117,21 +117,75 @@
                           </span>
                         </td>
                         <td>{{ item.operador || 'N/D' }}</td>
-                        <td class="text-center">
-                          <div class="btn-group btn-group-sm" role="group" aria-label="Acciones de orden">
-                            <button class="btn btn-outline-primary" type="button" (click)="verDetalle(item)" title="Ver detalle">
-                              <i class="feather icon-eye"></i>
-                            </button>
+                        <td class="text-center op-actions-cell">
+                          <div ngbDropdown container="body" placement="bottom-end" class="op-action-menu">
                             <button
-                              class="btn btn-outline-danger"
                               type="button"
-                              (click)="anularOrden(item)"
-                              [disabled]="isAnulando(item) || isOrdenAnulada(item)"
-                              title="Anular orden"
+                              ngbDropdownToggle
+                              class="op-action-toggle"
+                              aria-label="Abrir acciones del documento"
                             >
-                              <span *ngIf="isAnulando(item)" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                              <i *ngIf="!isAnulando(item)" class="feather icon-x-circle"></i>
+                              <span class="op-action-toggle__icon">
+                                <i class="feather icon-more-horizontal" aria-hidden="true"></i>
+                              </span>
+                              <span>Acciones</span>
+                              <i class="feather icon-chevron-down op-action-toggle__caret" aria-hidden="true"></i>
                             </button>
+
+                            <div ngbDropdownMenu class="dropdown-menu op-action-dropdown">
+                              <div class="op-action-dropdown__title">Documento</div>
+                              <button
+                                type="button"
+                                ngbDropdownItem
+                                class="dropdown-item op-action-item"
+                                (click)="verDetalle(item)"
+                              >
+                                <span class="op-action-item__icon op-action-item__icon--view">
+                                  <i class="feather icon-eye" aria-hidden="true"></i>
+                                </span>
+                                <span class="op-action-item__content">
+                                  <strong>Ver detalle</strong>
+                                  <small>Consultar información completa</small>
+                                </span>
+                              </button>
+
+                              <button
+                                type="button"
+                                ngbDropdownItem
+                                class="dropdown-item op-action-item"
+                                *ngIf="canPrintCommercialReceipt(item)"
+                                (click)="imprimirReciboComercial(item)"
+                                [disabled]="isPrinting(item)"
+                              >
+                                <span class="op-action-item__icon op-action-item__icon--print">
+                                  <span *ngIf="isPrinting(item)" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                  <i *ngIf="!isPrinting(item)" class="feather icon-printer" aria-hidden="true"></i>
+                                </span>
+                                <span class="op-action-item__content">
+                                  <strong>{{ isPrinting(item) ? 'Generando PDF...' : 'Imprimir recibo comercial' }}</strong>
+                                  <small>{{ getDocumentNumber(item) }}</small>
+                                </span>
+                              </button>
+
+                              <div class="op-action-dropdown__divider"></div>
+                              <div class="op-action-dropdown__title">Administración</div>
+                              <button
+                                type="button"
+                                ngbDropdownItem
+                                class="dropdown-item op-action-item op-action-item--danger"
+                                (click)="anularOrden(item)"
+                                [disabled]="isAnulando(item) || isOrdenAnulada(item)"
+                              >
+                                <span class="op-action-item__icon op-action-item__icon--danger">
+                                  <span *ngIf="isAnulando(item)" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                  <i *ngIf="!isAnulando(item)" class="feather icon-x-circle" aria-hidden="true"></i>
+                                </span>
+                                <span class="op-action-item__content">
+                                  <strong>{{ isAnulando(item) ? 'Anulando...' : (isOrdenAnulada(item) ? 'Documento anulado' : 'Anular documento') }}</strong>
+                                  <small>{{ isOrdenAnulada(item) ? 'Esta acción no está disponible' : 'Marcar el documento como anulado' }}</small>
+                                </span>
+                              </button>
+                            </div>
                           </div>
                         </td>
                       </tr>

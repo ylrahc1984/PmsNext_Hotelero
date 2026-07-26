@@ -7,7 +7,7 @@
       <a routerLink="/restaurante/configuracion">Configuracion Restaurante</a>
     </li>
     <li class="breadcrumb-item">
-      <a routerLink="/catalogos/listas-precios">Listas de Precios</a>
+      <a [routerLink]="listasRoute">Listas de Precios</a>
     </li>
     <li class="breadcrumb-item active">Detalle</li>
   </ul>
@@ -19,8 +19,8 @@
 <section class="price-detail">
   <header class="detail-hero">
     <div class="detail-hero__content">
-      <h1>Detalle Lista de Precios Hotel</h1>
-      <p>Administración de productos, categorías y precios asociados</p>
+      <h1>{{ nombreListaPrecio || 'Detalle Lista de Precios Hotel' }}</h1>
+      <p>Lista {{ codListaPrecio }} · Administración de productos, categorías y precios asociados</p>
     </div>
 
     <div class="detail-hero__meta">
@@ -81,7 +81,7 @@
         >
       </label>
 
-      <button type="button" class="add-product-btn" (click)="agregarProducto()">
+      <button type="button" class="add-product-btn" (click)="agregarProducto()" [disabled]="!monedaLista">
         <i class="feather icon-plus" aria-hidden="true"></i>
         <span>Agregar Producto</span>
       </button>
@@ -360,15 +360,12 @@
           </label>
 
           <label class="price-input">
-            <span>Moneda</span>
-            <select [(ngModel)]="selectedMoneda" [disabled]="isSavingProducto">
-              <option value="USD">USD</option>
-              <option value="CRC">CRC</option>
-              <option value="COL">COL</option>
-            </select>
+            <span>Moneda de la lista</span>
+            <input type="text" [value]="monedaLista || 'No disponible'" disabled>
+            <small>La moneda está definida en la configuración de la lista de precios.</small>
           </label>
 
-          <button type="button" class="save-product-btn" (click)="guardarProductoSeleccionado()" [disabled]="isSavingProducto">
+          <button type="button" class="save-product-btn" (click)="guardarProductoSeleccionado()" [disabled]="isSavingProducto || !monedaLista">
             <i class="feather icon-save" aria-hidden="true"></i>
             <span>{{ isSavingProducto ? 'Guardando...' : 'Guardar Producto' }}</span>
           </button>

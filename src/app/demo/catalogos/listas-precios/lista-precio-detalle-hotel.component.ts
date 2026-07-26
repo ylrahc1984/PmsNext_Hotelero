@@ -8,6 +8,7 @@ import Swal from 'sweetalert2';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { AgregarDetalleListaPrecioPayload, DetalleListaPrecioHotelModel, RecetaNoEnListaHotelModel } from './models/detalle-lista-precio-hotel.model';
 import { DetalleListaPrecioHotelService } from './services/detalle-lista-precio-hotel.service';
+import { ListaPrecioService } from './lista-precio.service';
 
 @Component({
   selector: 'app-lista-precio-detalle-hotel',
@@ -22,42 +23,50 @@ export class ListaPrecioDetalleHotelComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly detalleService = inject(DetalleListaPrecioHotelService);
+  private readonly listaPrecioService = inject(ListaPrecioService);
 
-  codListaPrecio = '';
-  data: DetalleListaPrecioHotelModel[] = [];
-  filteredData: DetalleListaPrecioHotelModel[] = [];
-  pagedData: DetalleListaPrecioHotelModel[] = [];
+  codListaPrecio      = '';
+  nombreListaPrecio   = '';
+  monedaListaPrecio   = '';
+  data                : DetalleListaPrecioHotelModel[] = [];
+  filteredData        : DetalleListaPrecioHotelModel[] = [];
+  pagedData           : DetalleListaPrecioHotelModel[] = [];
 
-  searchTerm = '';
-  isLoading = false;
-  isDeleting = false;
-  errorMessage = '';
+  searchTerm           = '';
+  isLoading            = false;
+  isDeleting           = false;
+  errorMessage         = '';
 
-  currentPage = 1;
-  pageSize = 10;
-  totalRecords = 0;
-  pageSizeOptions = [10, 25, 50, 100];
+  currentPage            = 1;
+  pageSize               = 10;
+  totalRecords           = 0;
+  pageSizeOptions        = [10, 25, 50, 100];
 
-  isProductModalOpen = false;
-  isLoadingRecetas = false;
-  isSavingProducto = false;
-  recetaSearchTerm = '';
-  recetaErrorMessage = '';
-  recetasNoEnLista: RecetaNoEnListaHotelModel[] = [];
-  selectedReceta: RecetaNoEnListaHotelModel | null = null;
-  selectedPrecioTotal: number | null = null;
-  selectedMoneda = 'USD';
-  recetaCurrentPage = 1;
-  recetaPageSize = 20;
-  recetaTotalRecords = 0;
-  recetaTotalPages = 1;
-  recetaPageSizeOptions = [10, 20, 50];
+  isProductModalOpen        = false;
+  isLoadingRecetas          = false;
+  isSavingProducto          = false;
+  recetaSearchTerm          = '';
+  recetaErrorMessage        = '';
+  recetasNoEnLista          : RecetaNoEnListaHotelModel[] = [];
+  selectedReceta            : RecetaNoEnListaHotelModel | null = null;
+  selectedPrecioTotal       : number | null = null;
+  recetaCurrentPage         = 1;
+  recetaPageSize            = 20;
+  recetaTotalRecords        = 0;
+  recetaTotalPages          = 1;
+  recetaPageSizeOptions     = [10, 20, 50];
 
   ngOnInit(): void {
     this.codListaPrecio = (this.route.snapshot.paramMap.get('codListaPrecio') || '').trim();
     if (!this.codListaPrecio) {
       this.volver();
       return;
+    }
+    const listaNavegacion = this.getListaDesdeNavegacion();
+    this.nombreListaPrecio = listaNavegacion.nombre;
+    this.monedaListaPrecio = listaNavegacion.moneda;
+    if (!this.nombreListaPrecio || !this.monedaListaPrecio) {
+      this.loadListaPrecio();
     }
     this.loadDetalle();
   }
@@ -80,6 +89,11 @@ export class ListaPrecioDetalleHotelComponent implements OnInit {
 
   get totalMonedas(): number {
     return this.countDistinct(this.data.map((item) => item.MPV05_Moneda));
+  }
+
+  get monedaLista(): string {
+    const monedaDetalle = this.data.find((item) => item.MPV05_Moneda)?.MPV05_Moneda;
+    return (this.monedaListaPrecio || monedaDetalle || '').trim().toUpperCase();
   }
 
   loadDetalle(): void {
@@ -133,12 +147,11 @@ export class ListaPrecioDetalleHotelComponent implements OnInit {
   }
 
   agregarProducto(): void {
-    this.isProductModalOpen = true;
-    this.recetaSearchTerm = '';
-    this.selectedReceta = null;
-    this.selectedPrecioTotal = null;
-    this.selectedMoneda = this.defaultMoneda;
-    this.recetaCurrentPage = 1;
+    this.isProductModalOpen     = true;
+    this.recetaSearchTerm       = '';
+    this.selectedReceta         = null;
+    this.selectedPrecioTotal    = null;
+    this.recetaCurrentPage      = 1;
     this.loadRecetasNoEnLista();
   }
 
@@ -178,11 +191,20 @@ export class ListaPrecioDetalleHotelComponent implements OnInit {
   seleccionarReceta(receta: RecetaNoEnListaHotelModel): void {
     this.selectedReceta = receta;
     this.selectedPrecioTotal = null;
-    this.selectedMoneda = this.defaultMoneda;
   }
 
   guardarProductoSeleccionado(): void {
     if (!this.selectedReceta || this.isSavingProducto) {
+      return;
+    }
+
+    const moneda = this.monedaLista;
+    if (!moneda) {
+      Swal.fire({
+        title: 'Moneda no disponible',
+        text: 'No se pudo identificar la moneda configurada para esta lista de precios.',
+        icon: 'warning'
+      });
       return;
     }
 
@@ -198,7 +220,7 @@ export class ListaPrecioDetalleHotelComponent implements OnInit {
 
     this.isSavingProducto = true;
     this.detalleService
-      .agregarProducto(this.buildAgregarPayload(this.selectedReceta, precioTotal))
+      .agregarProducto(this.buildAgregarPayload(this.selectedReceta, precioTotal, moneda))
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
@@ -290,8 +312,45 @@ export class ListaPrecioDetalleHotelComponent implements OnInit {
     return item.MPV01_CodReceta;
   }
 
+  get listasRoute(): string {
+    return this.router.url.startsWith('/restaurante/configuracion/listas-precios')
+      ? '/restaurante/configuracion/listas-precios'
+      : '/catalogos/listas-precios';
+  }
+
   volver(): void {
-    this.router.navigate(['/catalogos/listas-precios']);
+    this.router.navigate([this.listasRoute]);
+  }
+
+  private getListaDesdeNavegacion(): { nombre: string; moneda: string } {
+    const navigationState = this.router.getCurrentNavigation()?.extras.state as
+      | { nombreListaPrecio?: string; monedaListaPrecio?: string }
+      | undefined;
+    const historyState = (history.state ?? {}) as {
+      nombreListaPrecio?: string;
+      monedaListaPrecio?: string;
+    };
+    return {
+      nombre: `${navigationState?.nombreListaPrecio ?? historyState.nombreListaPrecio ?? ''}`.trim(),
+      moneda: `${navigationState?.monedaListaPrecio ?? historyState.monedaListaPrecio ?? ''}`.trim().toUpperCase()
+    };
+  }
+
+  private loadListaPrecio(): void {
+    this.listaPrecioService
+      .getListaByCodigo(this.codListaPrecio)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (lista) => {
+          this.nombreListaPrecio = (lista?.descripcion || this.nombreListaPrecio).trim();
+          this.monedaListaPrecio = (lista?.moneda || this.monedaListaPrecio).trim().toUpperCase();
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          console.error('Error al cargar informacion de lista de precios:', error);
+          this.cdr.markForCheck();
+        }
+      });
   }
 
   private applyFilter(): void {
@@ -310,47 +369,46 @@ export class ListaPrecioDetalleHotelComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (result) => {
-          this.recetasNoEnLista = result.data;
-          this.recetaTotalRecords = result.totalRegistros;
-          this.recetaCurrentPage = result.paginaActual;
-          this.recetaPageSize = result.pageSize;
-          this.recetaTotalPages = result.totalPages;
-          this.isLoadingRecetas = false;
+          this.recetasNoEnLista     = result.data;
+          this.recetaTotalRecords   = result.totalRegistros;
+          this.recetaCurrentPage    = result.paginaActual;
+          this.recetaPageSize       = result.pageSize;
+          this.recetaTotalPages     = result.totalPages;
+          this.isLoadingRecetas     = false;
           this.cdr.markForCheck();
         },
         error: (error) => {
           console.error('Error al cargar recetas no incluidas en lista:', error);
-          this.recetasNoEnLista = [];
-          this.recetaTotalRecords = 0;
-          this.recetaTotalPages = 1;
-          this.isLoadingRecetas = false;
-          this.recetaErrorMessage = 'No se pudieron cargar los productos disponibles.';
+          this.recetasNoEnLista     = [];
+          this.recetaTotalRecords   = 0;
+          this.recetaTotalPages     = 1;
+          this.isLoadingRecetas     = false;
+          this.recetaErrorMessage   = 'No se pudieron cargar los productos disponibles.';
           this.cdr.markForCheck();
         }
       });
   }
 
-  private get defaultMoneda(): string {
-    const moneda = this.data.find((item) => item.MPV05_Moneda)?.MPV05_Moneda;
-    return moneda || 'USD';
-  }
-
-  private buildAgregarPayload(receta: RecetaNoEnListaHotelModel, precioTotal: number): AgregarDetalleListaPrecioPayload {
+  private buildAgregarPayload(
+    receta: RecetaNoEnListaHotelModel,
+    precioTotal: number,
+    moneda: string
+  ): AgregarDetalleListaPrecioPayload {
     return {
-      proceso: 0,
-      codLstPrecio: this.codListaPrecio,
-      codProducto: receta.MPV01_CodReceta,
-      desProducto: receta.MPV01_NomReceta,
-      nomCorto: receta.MPV01_NomCorto,
-      precioTotal,
-      cstoProdu: receta.MPV01_CtoTotal || receta.MPV01_CtoReceta,
-      impuesto: 1,
-      moneda: this.selectedMoneda || this.defaultMoneda,
-      orden: this.getNextOrden(),
-      operador: '',
-      pageNumber: 0,
-      pageSize: 0,
-      respuesta: ''
+      proceso         : 0,
+      codLstPrecio    : this.codListaPrecio,
+      codProducto     : receta.MPV01_CodReceta,
+      desProducto     : receta.MPV01_NomReceta,
+      nomCorto        : receta.MPV01_NomCorto,
+      precioTotal     ,
+      cstoProdu       : receta.MPV01_CtoTotal || receta.MPV01_CtoReceta,
+      impuesto        : 0,
+      moneda          ,
+      orden           : this.getNextOrden(),
+      operador        : '',
+      pageNumber      : 0,
+      pageSize        : 0,
+      respuesta       : ''
     };
   }
 

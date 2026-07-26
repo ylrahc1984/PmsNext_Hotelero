@@ -1062,6 +1062,22 @@ gmpx-place-autocomplete.places-autocomplete-themed {
   background: rgba(22, 129, 90, 0.12);
 }
 
+.stay-page .room-invoice-footer-document {
+  flex: 1 1 280px;
+  min-width: 0;
+  margin-right: auto;
+}
+
+.stay-page .room-invoice-footer-document .room-invoice-document-chip {
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 0;
+}
+
+.stay-page .room-invoice-footer-document .room-invoice-inline-error {
+  margin-top: 0;
+}
+
 .stay-page .action-button:disabled {
   border-color: #dbe3ea;
   color: #8a97a8;

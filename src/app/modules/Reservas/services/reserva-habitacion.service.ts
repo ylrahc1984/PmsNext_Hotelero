@@ -141,7 +141,7 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
   }
 
   getConfirmacionPdf(codReserva: string): Observable<Blob> {
-    const url = `${this.apiUrl}/${encodeURIComponent(codReserva.trim())}/confirmacion-pdf`;
+    const url = `${this.baseApiUrl}/reservas-pdf/${encodeURIComponent(codReserva.trim())}`;
     return this.http.get(url, {
       responseType: 'blob',
       headers: { Accept: 'application/pdf' }

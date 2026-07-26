@@ -8,86 +8,86 @@ import { environment } from 'src/environments/environment';
 
 // Datos y modelos para listas de precios y reglas tarifarias (mock)
 export interface ListaPrecio {
-  id: number;
-  nombre: string;
-  descripcion?: string;
-  moneda: 'CRC' | 'USD' | 'EUR';
-  vigenciaDesde: Date;
-  vigenciaHasta: Date;
-  activa: boolean;
-  updatedAt: Date;
-  observaciones?: string;
-  planRate?: string;
+  id              : number;
+  nombre          : string;
+  descripcion     ?: string;
+  moneda          : 'CRC' | 'USD' | 'EUR';
+  vigenciaDesde   : Date;
+  vigenciaHasta   : Date;
+  activa          : boolean;
+  updatedAt       : Date;
+  observaciones   ?: string;
+  planRate        ?: string;
 }
 
 export interface Servicio {
-  id: string;
-  nombre: string;
-  descripcion?: string;
-  categoria: string;
-  activa: boolean;
+  id            : string;
+  nombre        : string;
+  descripcion   ?: string;
+  categoria     : string;
+  activa        : boolean;
 }
 
 export interface ReglaTarifa {
-  id: number;
-  listaPrecioId: number;
-  codLstPrecio: string;
-  servicioId: string;
-  codServicio: string;
-  servicioNombre: string;
-  tarifa: 'A' | 'B' | 'C' | 'D';
-  horaInicio: string;
-  horaFin: string;
-  precioBase: number;
-  adultosIncluidos: number;
-  precioAdultoExtra: number;
-  precioNino: number;
-  cantMinPax: number;
-  cantMaxPax: number;
-  moneda: string;
-  observaciones?: string;
-  activa: boolean;
-  operador?: string;
-  fechaRegistro?: string;
+  id                  : number;
+  listaPrecioId       : number;
+  codLstPrecio        : string;
+  servicioId          : string;
+  codServicio         : string;
+  servicioNombre      : string;
+  tarifa              : 'A' | 'B' | 'C' | 'D';
+  horaInicio          : string;
+  horaFin             : string;
+  precioBase          : number;
+  adultosIncluidos    : number;
+  precioAdultoExtra   : number;
+  precioNino          : number;
+  cantMinPax          : number;
+  cantMaxPax          : number;
+  moneda              : string;
+  observaciones       ?: string;
+  activa              : boolean;
+  operador            ?: string;
+  fechaRegistro       ?: string;
 }
 
 export interface DetalleLstPrecioDto {
-  MPV05_ID: number;
-  MPV05_CodLstPrecio: string;
-  MPV05_CodServicio: string;
-  MPV05_TipoTarifa: number;
-  MPV05_CantMinPax: number;
-  MPV05_CantMaxPax: number;
-  MPV05_PrecioAdulto: number;
-  MPV05_PrecioNino: number;
-  MPV05_PrecioPaxExtra: number;
-  MPV05_HoraDesde: string;
-  MPV05_HoraHasta: string;
-  MPV05_Moneda: string;
-  MPV05_Observaciones: string;
-  MPV05_Activo: boolean | number | string;
-  MPV05_Operador: string;
-  MPV05_FechaRegistro: string;
+  MPV05_ID                : number;
+  MPV05_CodLstPrecio      : string;
+  MPV05_CodServicio       : string;
+  MPV05_TipoTarifa        : number;
+  MPV05_CantMinPax        : number;
+  MPV05_CantMaxPax        : number;
+  MPV05_PrecioAdulto      : number;
+  MPV05_PrecioNino        : number;
+  MPV05_PrecioPaxExtra    : number;
+  MPV05_HoraDesde         : string;
+  MPV05_HoraHasta         : string;
+  MPV05_Moneda            : string;
+  MPV05_Observaciones     : string;
+  MPV05_Activo            : boolean | number | string;
+  MPV05_Operador          : string;
+  MPV05_FechaRegistro     : string;
 }
 
 export interface DetalleLstPrecioPost {
-  tipo: number;
-  id: number;
-  codLstPrecio: string;
-  codServicio: string;
-  tipoTarifa: number;
-  cantMinPax: number;
-  cantMaxPax: number;
-  precioAdulto: number;
-  precioNino: number;
-  precioPaxExtra: number;
-  horaDesde: string;
-  horaHasta: string;
-  moneda: string;
-  observaciones: string;
-  activo: boolean;
-  operador: string;
-  respuesta: string;
+  tipo              : number;
+  id                : number;
+  codLstPrecio      : string;
+  codServicio       : string;
+  tipoTarifa        : number;
+  cantMinPax        : number;
+  cantMaxPax        : number;
+  precioAdulto      : number;
+  precioNino        : number;
+  precioPaxExtra    : number;
+  horaDesde         : string;
+  horaHasta         : string;
+  moneda            : string;
+  observaciones     : string;
+  activo            : boolean;
+  operador          : string;
+  respuesta         : string;
 }
 
 // Servicio para gestionar listas de precios (mock)
@@ -232,26 +232,26 @@ export class ReglasTarifariasService {
     const cantMaxPax = Number(apiData.MPV05_CantMaxPax) || 0;
     const servicioId = String(apiData.MPV05_CodServicio) || '';
     return {
-      id: Number(apiData.MPV05_ID) || 0,
-      listaPrecioId: Number(apiData.MPV05_CodLstPrecio) || 0,
-      codLstPrecio: (apiData.MPV05_CodLstPrecio || '').trim(),
-      servicioId,
-      codServicio: (apiData.MPV05_CodServicio || '').trim(),
-      servicioNombre: '',
-      tarifa: this.mapTipoTarifaToCodigo(tipoTarifa),
-      horaInicio: (apiData.MPV05_HoraDesde || '').trim(),
-      horaFin: (apiData.MPV05_HoraHasta || '').trim(),
-      precioBase: Number(apiData.MPV05_PrecioAdulto) || 0,
-      adultosIncluidos: cantMinPax,
-      precioAdultoExtra: Number(apiData.MPV05_PrecioPaxExtra) || 0,
-      precioNino: Number(apiData.MPV05_PrecioNino) || 0,
-      cantMinPax,
-      cantMaxPax,
-      moneda: (apiData.MPV05_Moneda || '').trim(),
-      observaciones: apiData.MPV05_Observaciones || '',
-      activa: this.normalizeActivo(apiData.MPV05_Activo),
-      operador: apiData.MPV05_Operador,
-      fechaRegistro: apiData.MPV05_FechaRegistro
+      id                  : Number(apiData.MPV05_ID) || 0,
+      listaPrecioId       : Number(apiData.MPV05_CodLstPrecio) || 0,
+      codLstPrecio        : (apiData.MPV05_CodLstPrecio || '').trim(),
+      servicioId          ,
+      codServicio         : (apiData.MPV05_CodServicio || '').trim(),
+      servicioNombre      : '',
+      tarifa              : this.mapTipoTarifaToCodigo(tipoTarifa),
+      horaInicio          : (apiData.MPV05_HoraDesde || '').trim(),
+      horaFin             : (apiData.MPV05_HoraHasta || '').trim(),
+      precioBase          : Number(apiData.MPV05_PrecioAdulto) || 0,
+      adultosIncluidos    : cantMinPax,
+      precioAdultoExtra   : Number(apiData.MPV05_PrecioPaxExtra) || 0,
+      precioNino          : Number(apiData.MPV05_PrecioNino) || 0,
+      cantMinPax          ,
+      cantMaxPax          ,
+      moneda              : (apiData.MPV05_Moneda || '').trim(),
+      observaciones       : apiData.MPV05_Observaciones || '',
+      activa              : this.normalizeActivo(apiData.MPV05_Activo),
+      operador            : apiData.MPV05_Operador,
+      fechaRegistro       : apiData.MPV05_FechaRegistro
     };
   }
 
@@ -341,26 +341,26 @@ export class ReglasTarifariasService {
     const codServicio = String(apiData['codServicio'] ?? '').trim();
 
     return {
-      id: Number(apiData['id'] ?? 0) || 0,
-      listaPrecioId: Number(codLstPrecio) || 0,
-      codLstPrecio,
-      servicioId: codServicio,
-      codServicio,
-      servicioNombre: '',
-      tarifa: this.mapTipoTarifaToCodigo(tipoTarifa),
-      horaInicio: String(apiData['horaDesde'] ?? '').trim(),
-      horaFin: String(apiData['horaHasta'] ?? '').trim(),
-      precioBase: Number(apiData['precioAdulto'] ?? 0) || 0,
-      adultosIncluidos: cantMinPax,
-      precioAdultoExtra: Number(apiData['precioPaxExtra'] ?? 0) || 0,
-      precioNino: Number(apiData['precioNino'] ?? 0) || 0,
-      cantMinPax,
-      cantMaxPax,
-      moneda: String(apiData['moneda'] ?? '').trim(),
-      observaciones: String(apiData['observaciones'] ?? ''),
-      activa: this.normalizeActivo(apiData['activo']),
-      operador: String(apiData['operador'] ?? ''),
-      fechaRegistro: String(apiData['fechaRegistro'] ?? '')
+      id                  : Number(apiData['id'] ?? 0) || 0,
+      listaPrecioId       : Number(codLstPrecio) || 0,
+      codLstPrecio        ,
+      servicioId          : codServicio,
+      codServicio         ,
+      servicioNombre      : '',
+      tarifa              : this.mapTipoTarifaToCodigo(tipoTarifa),
+      horaInicio          : String(apiData['horaDesde'] ?? '').trim(),
+      horaFin             : String(apiData['horaHasta'] ?? '').trim(),
+      precioBase          : Number(apiData['precioAdulto'] ?? 0) || 0,
+      adultosIncluidos    : cantMinPax,
+      precioAdultoExtra   : Number(apiData['precioPaxExtra'] ?? 0) || 0,
+      precioNino          : Number(apiData['precioNino'] ?? 0) || 0,
+      cantMinPax          ,
+      cantMaxPax          ,
+      moneda              : String(apiData['moneda'] ?? '').trim(),
+      observaciones       : String(apiData['observaciones'] ?? ''),
+      activa              : this.normalizeActivo(apiData['activo']),
+      operador            : String(apiData['operador'] ?? ''),
+      fechaRegistro       : String(apiData['fechaRegistro'] ?? '')
     };
   }
 

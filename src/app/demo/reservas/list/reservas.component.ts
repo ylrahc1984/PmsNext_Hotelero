@@ -291,11 +291,14 @@ export class ReservasComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const baseApiUrl = (environment.apiUrl ?? '').toString().replace(/\/+$/, '');
-    const url = `${baseApiUrl}/reservas/${encodeURIComponent(cod)}/confirmacion-pdf`;
+    const baseApiUrl = (environment.apiUrl || 'http://localhost:5000/api').toString().replace(/\/+$/, '');
+    const url = `${baseApiUrl}/reservas-pdf/${encodeURIComponent(cod)}`;
 
     this.subscription.add(
-      this.http.get(url, { responseType: 'blob' as const }).subscribe({
+      this.http.get(url, {
+        responseType: 'blob' as const,
+        headers: { Accept: 'application/pdf' }
+      }).subscribe({
         next: (data) => {
           try {
             const pdfBlob = new Blob([data], { type: 'application/pdf' });

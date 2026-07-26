@@ -24,8 +24,9 @@ type ApiRecord = Record<string, unknown>;
 @Injectable({ providedIn: 'root' })
 export class OrdenPedidoService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = `${environment.apiUrl}/nota-pedido`;
-  private readonly cambioFormaPagoPedidoUrl = `${environment.apiUrl}/cambio-forma-pago-pedido`;
+  private readonly baseApiUrl = (environment.apiUrl || 'http://localhost:5000/api').toString().replace(/\/+$/, '');
+  private readonly apiUrl = `${this.baseApiUrl}/nota-pedido`;
+  private readonly cambioFormaPagoPedidoUrl = `${this.baseApiUrl}/cambio-forma-pago-pedido`;
 
   getOrdenes(filters: OrdenPedidoFiltro): Observable<OrdenPedidoListadoResponse> {
     let params = new HttpParams()
@@ -106,6 +107,27 @@ export class OrdenPedidoService {
           const message = error.error?.mensaje || error.error?.respuesta || error.message || 'No se pudo anular la orden.';
           return throwError(() => new Error(message));
         })
+      );
+  }
+
+  getReciboComercialPdf(tipOrden: string, serie: string, numero: string): Observable<Blob> {
+    const tip = this.clean(tipOrden).toLowerCase();
+    const normalizedSerie = this.clean(serie) || '000';
+    const normalizedNumero = this.clean(numero);
+    const documento = normalizedNumero.includes('-')
+      ? normalizedNumero
+      : `${normalizedSerie}-${normalizedNumero}`;
+    const url = `${this.baseApiUrl}/nota-pedido/pdf/${encodeURIComponent(tip)}/000/${encodeURIComponent(documento)}`;
+
+    return this.http
+      .get(url, {
+        responseType: 'blob',
+        headers: { Accept: 'application/pdf' }
+      })
+      .pipe(
+        catchError((error: HttpErrorResponse) =>
+          throwError(() => new Error(error.message || 'No se pudo obtener el Recibo Comercial en PDF.'))
+        )
       );
   }
 

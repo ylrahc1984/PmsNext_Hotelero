@@ -69,84 +69,84 @@ interface ReservaHeaderForm {
 }
 
 interface HabitacionForm {
-  categoria: FormControl<string>;
-  tipo: FormControl<string>;
-  cantidad: FormControl<number>;
-  pax: FormControl<number>;
-  precio: FormControl<number>;
-  cantidadNinos: FormControl<number>;
-  precioNino: FormControl<number>;
-  total: FormControl<number>;
+  categoria           : FormControl<string>;
+  tipo                : FormControl<string>;
+  cantidad            : FormControl<number>;
+  pax                 : FormControl<number>;
+  precio              : FormControl<number>;
+  cantidadNinos       : FormControl<number>;
+  precioNino          : FormControl<number>;
+  total               : FormControl<number>;
 }
 
 interface InclusionForm {
-  codServ: FormControl<string>;
-  desServ: FormControl<string>;
-  tipPax: FormControl<string>;
-  precio: FormControl<number>;
-  cantidad: FormControl<number>;
-  totServ: FormControl<number>;
-  cCosto: FormControl<string>;
+  codServ     : FormControl<string>;
+  desServ     : FormControl<string>;
+  tipPax      : FormControl<string>;
+  precio      : FormControl<number>;
+  cantidad    : FormControl<number>;
+  totServ     : FormControl<number>;
+  cCosto      : FormControl<string>;
 }
 
 interface ServicioForm {
-  codSrv: FormControl<string>;
-  descripcion: FormControl<string>;
-  cantidad: FormControl<number>;
-  precio: FormControl<number>;
-  impuesto: FormControl<number>;
-  tipPax: FormControl<string>;
-  total: FormControl<number>;
+  codSrv          : FormControl<string>;
+  descripcion     : FormControl<string>;
+  cantidad        : FormControl<number>;
+  precio          : FormControl<number>;
+  impuesto        : FormControl<number>;
+  tipPax          : FormControl<string>;
+  total           : FormControl<number>;
 }
 
 interface CategoriaHabitacionApiDto {
-  CR01_CodCate?: string;
-  CR01_Categoria?: string;
-  CR01_NumHabita?: number;
-  CR01_Orden?: number;
-  CR01_Operador?: string;
-  CR01_ESTADO?: number | boolean;
+  CR01_CodCate      ?: string;
+  CR01_Categoria    ?: string;
+  CR01_NumHabita    ?: number;
+  CR01_Orden        ?: number;
+  CR01_Operador     ?: string;
+  CR01_ESTADO       ?: number | boolean;
 }
 
 interface CategoriaHabitacionOption {
-  codigo: string;
-  descripcion: string;
-  habitaciones: number;
-  orden: number;
-  operador: string;
-  activo: boolean;
+  codigo            : string;
+  descripcion       : string;
+  habitaciones      : number;
+  orden             : number;
+  operador          : string;
+  activo            : boolean;
 }
 
 interface TipoHabitacionApiDto {
-  CR02_TipHabita?: string;
-  CR02_CatHabita?: string;
-  CR02_NomHabita?: string;
-  CR02_NumHabita?: number;
-  CR02_NumPax?: number;
-  CR02_Activo?: number | boolean;
-  CR02_Orden?: number;
-  CR02_Operador?: string;
+  CR02_TipHabita      ?: string;
+  CR02_CatHabita      ?: string;
+  CR02_NomHabita      ?: string;
+  CR02_NumHabita      ?: number;
+  CR02_NumPax         ?: number;
+  CR02_Activo         ?: number | boolean;
+  CR02_Orden          ?: number;
+  CR02_Operador       ?: string;
 }
 
 interface TipoHabitacionOption {
-  codigo: string;
-  categoria: string;
-  descripcion: string;
-  habitaciones: number;
-  pax: number;
-  orden: number;
-  operador: string;
-  activo: boolean;
+  codigo            : string;
+  categoria         : string;
+  descripcion       : string;
+  habitaciones      : number;
+  pax               : number;
+  orden             : number;
+  operador          : string;
+  activo            : boolean;
 }
 
 interface ReservaHospedajeDraft {
-  savedAt: string;
-  reserva: Partial<ReturnType<FormGroup<ReservaHeaderForm>['getRawValue']>>;
-  habitacion: Partial<ReturnType<FormGroup<HabitacionForm>['getRawValue']>>;
-  inclusion: Partial<ReturnType<FormGroup<InclusionForm>['getRawValue']>>;
-  servicio: Partial<ReturnType<FormGroup<ServicioForm>['getRawValue']>>;
-  agenciaSearch: string;
-  tarifaSearch: string;
+  savedAt           : string;
+  reserva           : Partial<ReturnType<FormGroup<ReservaHeaderForm>['getRawValue']>>;
+  habitacion        : Partial<ReturnType<FormGroup<HabitacionForm>['getRawValue']>>;
+  inclusion         : Partial<ReturnType<FormGroup<InclusionForm>['getRawValue']>>;
+  servicio          : Partial<ReturnType<FormGroup<ServicioForm>['getRawValue']>>;
+  agenciaSearch     : string;
+  tarifaSearch      : string;
 }
 
 @Component({
@@ -157,114 +157,114 @@ interface ReservaHospedajeDraft {
   styleUrls: ['./reserva-hospedaje.component.scss']
 })
 export class ReservaHospedajeComponent implements OnInit {
-  private readonly fb = inject(NonNullableFormBuilder);
-  private readonly http = inject(HttpClient);
-  private readonly service = inject(ReservaHabitacionService);
-  private readonly catalogService = inject(WalkInService);
-  private readonly mealPlansService = inject(MealPlansService);
-  private readonly toast = inject(ToastService);
-  private readonly auth = inject(AuthService);
-  private readonly operationalDateService = inject(OperationalDateService);
-  private readonly router = inject(Router);
-  private readonly route = inject(ActivatedRoute);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly apiBaseUrl = (environment.apiUrl || 'http://localhost:5000/api').toString().replace(/\/+$/, '');
-  private readonly categoriaHabitacionUrl = `${this.apiBaseUrl}/categoriahabitacion`;
-  private readonly draftStorageKey = 'pmsnext.reserva-hospedaje.draft.v1';
+  private readonly fb                          = inject(NonNullableFormBuilder);
+  private readonly http                        = inject(HttpClient);
+  private readonly service                     = inject(ReservaHabitacionService);
+  private readonly catalogService              = inject(WalkInService);
+  private readonly mealPlansService            = inject(MealPlansService);
+  private readonly toast                       = inject(ToastService);
+  private readonly auth                        = inject(AuthService);
+  private readonly operationalDateService      = inject(OperationalDateService);
+  private readonly router                      = inject(Router);
+  private readonly route                       = inject(ActivatedRoute);
+  private readonly destroyRef                  = inject(DestroyRef);
+  private readonly apiBaseUrl                  = (environment.apiUrl || 'http://localhost:5000/api').toString().replace(/\/+$/, '');
+  private readonly categoriaHabitacionUrl      = `${this.apiBaseUrl}/categoriahabitacion`;
+  private readonly draftStorageKey             = 'pmsnext.reserva-hospedaje.draft.v1';
 
   readonly estados = ['ABI', 'WLI', 'CCR', 'CHK', 'WLT', 'ANU'];
 
-  readonly saving = signal(false);
-  readonly showPlanModal = signal(false);
-  readonly showServiceModal = signal(false);
-  readonly planExpanded = signal(false);
-  readonly servicesExpanded = signal(false);
-  readonly editingRoomIndex = signal<number | null>(null);
-  readonly editingPlanIndex = signal<number | null>(null);
-  readonly editingServiceIndex = signal<number | null>(null);
-  readonly isEditMode = signal(false);
-  readonly loadingDetalle = signal(false);
-  readonly detailError = signal('');
-  readonly checkingRoomAvailability = signal(false);
-  readonly operationalDate = this.operationalDateService.operationalDate;
-  readonly agenciaSearchControl = this.fb.control('0000000010 - Agencia CRS');
-  readonly tarifaSearchControl = this.fb.control('');
-  readonly agencyModalSearchControl = this.fb.control('');
-  readonly tarifaModalSearchControl = this.fb.control('');
+  readonly saving                             = signal(false);
+  readonly showPlanModal                      = signal(false);
+  readonly showServiceModal                   = signal(false);
+  readonly planExpanded                       = signal(false);
+  readonly servicesExpanded                   = signal(false);
+  readonly editingRoomIndex                   = signal<number | null>(null);
+  readonly editingPlanIndex                   = signal<number | null>(null);
+  readonly editingServiceIndex                = signal<number | null>(null);
+  readonly isEditMode                         = signal(false);
+  readonly loadingDetalle                     = signal(false);
+  readonly detailError                        = signal('');
+  readonly checkingRoomAvailability           = signal(false);
+  readonly operationalDate                    = this.operationalDateService.operationalDate;
+  readonly agenciaSearchControl               = this.fb.control('02051 - DIRECTOS');
+  readonly tarifaSearchControl                = this.fb.control('');
+  readonly agencyModalSearchControl           = this.fb.control('');
+  readonly tarifaModalSearchControl           = this.fb.control('');
 
   readonly reservaForm: FormGroup<ReservaHeaderForm> = this.fb.group({
-    codReserva: this.fb.control('AUTO'),
-    codAgencia: this.fb.control('0000000010', { validators: [Validators.required] }),
-    codTarifa: this.fb.control(''),
-    codPlan: this.fb.control(''),
-    fecIngreso: this.fb.control(this.todayAsInputDate(), { validators: [Validators.required] }),
-    fecSalida: this.fb.control(this.addDaysAsInputDate(1), { validators: [Validators.required] }),
-    fecCreacion: this.fb.control(this.todayAsInputDate()),
-    fecConfirma: this.fb.control(''),
-    fecPrepago: this.fb.control(''),
-    fecAnulada: this.fb.control(''),
-    totNoches: this.fb.control(1),
-    totDias: this.fb.control(2),
-    descripcion: this.fb.control(''),
-    tCambio: this.fb.control(535.25, { validators: [Validators.min(0)] }),
-    folio: this.fb.control(''),
-    estado: this.fb.control('ABI'),
-    moneda: this.fb.control(''),
-    totalRsv: this.fb.control(0),
-    observaciones: this.fb.control(''),
-    procesa: this.fb.control('WEB'),
-    directo: this.fb.control(false),
-    operador: this.fb.control(this.auth.getCurrentUser()?.usuario ?? 'admin'),
-    habitaciones: this.fb.array<FormGroup<HabitacionForm>>([]),
-    inclusiones: this.fb.array<FormGroup<InclusionForm>>([]),
-    servicios: this.fb.array<FormGroup<ServicioForm>>([])
+    codReserva            : this.fb.control('AUTO'),
+    codAgencia            : this.fb.control('02051', { validators: [Validators.required] }),
+    codTarifa             : this.fb.control(''),
+    codPlan               : this.fb.control(''),
+    fecIngreso            : this.fb.control(this.todayAsInputDate(), { validators: [Validators.required] }),
+    fecSalida             : this.fb.control(this.addDaysAsInputDate(1), { validators: [Validators.required] }),
+    fecCreacion           : this.fb.control(this.todayAsInputDate()),
+    fecConfirma           : this.fb.control(''),
+    fecPrepago            : this.fb.control(''),
+    fecAnulada            : this.fb.control(''),
+    totNoches             : this.fb.control(1),
+    totDias               : this.fb.control(2),
+    descripcion           : this.fb.control(''),
+    tCambio               : this.fb.control(455.25, { validators: [Validators.min(0)] }),
+    folio                 : this.fb.control(''),
+    estado                : this.fb.control('ABI'),
+    moneda                : this.fb.control(''),
+    totalRsv              : this.fb.control(0),
+    observaciones         : this.fb.control(''),
+    procesa               : this.fb.control('WEB'),
+    directo               : this.fb.control(false),
+    operador              : this.fb.control(this.auth.getCurrentUser()?.usuario ?? 'admin'),
+    habitaciones          : this.fb.array<FormGroup<HabitacionForm>>([]),
+    inclusiones           : this.fb.array<FormGroup<InclusionForm>>([]),
+    servicios             : this.fb.array<FormGroup<ServicioForm>>([])
   }, { validators: [this.reservationDatesValidator()] });
 
   readonly habitacionForm: FormGroup<HabitacionForm> = this.createHabitacionGroup();
   readonly inclusionForm: FormGroup<InclusionForm> = this.createInclusionGroup({
-    codServ: 'DES',
-    desServ: 'Desayuno incluido',
-    tipPax: 'Adultos',
-    precio: 0,
-    cantidad: 2,
-    totServ: 0,
-    cCosto: ''
+    codServ     : 'DYN',
+    desServ     : 'DESAYUNO INCLUIDO',
+    tipPax      : 'PAX',
+    precio      : 0,
+    cantidad    : 2,
+    totServ     : 0,
+    cCosto      : ''
   });
   readonly servicioForm: FormGroup<ServicioForm> = this.createServicioGroup();
 
-  planes: WalkInOption[] = [];
-  roomCategories: CategoriaHabitacionOption[] = [];
-  roomTypes: TipoHabitacionOption[] = [];
-  agenciaSuggestions: WalkInAgenciaOption[] = [];
-  tarifaSuggestions: WalkInTarifaOption[] = [];
-  agencyModalAgencies: WalkInAgenciaOption[] = [];
-  tarifaModalTarifas: WalkInTarifaOption[] = [];
-  private allTarifas: WalkInTarifaOption[] = [];
+  planes                  : WalkInOption[] = [];
+  roomCategories          : CategoriaHabitacionOption[] = [];
+  roomTypes               : TipoHabitacionOption[] = [];
+  agenciaSuggestions      : WalkInAgenciaOption[] = [];
+  tarifaSuggestions       : WalkInTarifaOption[] = [];
+  agencyModalAgencies     : WalkInAgenciaOption[] = [];
+  tarifaModalTarifas      : WalkInTarifaOption[] = [];
+  private allTarifas      : WalkInTarifaOption[] = [];
 
-  isCatalogLoading = false;
-  isRoomTypesLoading = false;
-  agenciaSearchOpen = false;
-  tarifaSearchOpen = false;
-  showAgencyModal = false;
-  showTarifaModal = false;
-  isMealPlanLoading = false;
-  mealPlanError = '';
-  agencyModalLoading = false;
-  agencyModalError = '';
-  agencyModalPage = 1;
-  agencyModalPageSize = 10;
-  agencyModalTotalRecords = 0;
-  agencyModalTotalPages = 0;
-  tarifaModalLoading = false;
-  tarifaModalError = '';
-  tarifaModalPage = 1;
-  tarifaModalPageSize = 10;
-  tarifaModalTotalRecords = 0;
-  tarifaModalTotalPages = 0;
-  private mealPlanDetails: ReservaTarifaAlimento[] = [];
-  private mealPlanRequestKey = '';
+  isCatalogLoading           = false;
+  isRoomTypesLoading         = false;
+  agenciaSearchOpen          = false;
+  tarifaSearchOpen           = false;
+  showAgencyModal            = false;
+  showTarifaModal            = false;
+  isMealPlanLoading          = false;
+  mealPlanError              = '';
+  agencyModalLoading         = false;
+  agencyModalError           = '';
+  agencyModalPage            = 1;
+  agencyModalPageSize        = 10;
+  agencyModalTotalRecords    = 0;
+  agencyModalTotalPages      = 0;
+  tarifaModalLoading         = false;
+  tarifaModalError           = '';
+  tarifaModalPage            = 1;
+  tarifaModalPageSize        = 10;
+  tarifaModalTotalRecords    = 0;
+  tarifaModalTotalPages      = 0;
+  private mealPlanDetails     : ReservaTarifaAlimento[] = [];
+  private mealPlanRequestKey  = '';
   private draftRestorePending = true;
-  private editCodReserva = '';
+  private editCodReserva      = '';
 
   ngOnInit(): void {
     const codReserva = this.route.snapshot.paramMap.get('codReserva')?.trim() ?? '';
@@ -336,11 +336,11 @@ export class ReservaHospedajeComponent implements OnInit {
     try {
       const availability = await firstValueFrom(
         this.service.consultarDisponibilidadCategoria({
-          proceso: 1,
-          fechaIni: this.formatDate(this.parseDateValue(this.reservaForm.controls.fecIngreso.value)!),
-          fechaSal: this.formatDate(this.parseDateValue(this.reservaForm.controls.fecSalida.value)!),
-          categoria: roomDraft.categoria.trim(),
-          cantHab: requestedRooms
+          proceso       : 1,
+          fechaIni      : this.formatDate(this.parseDateValue(this.reservaForm.controls.fecIngreso.value)!),
+          fechaSal      : this.formatDate(this.parseDateValue(this.reservaForm.controls.fecSalida.value)!),
+          categoria     : roomDraft.categoria.trim(),
+          cantHab       : requestedRooms
         })
       );
 
@@ -770,24 +770,24 @@ export class ReservaHospedajeComponent implements OnInit {
     this.inclusiones.clear();
     this.servicios.clear();
     this.reservaForm.reset({
-      codReserva: 'AUTO',
-      codAgencia: '0000000010',
-      codTarifa: '',
-      codPlan: '',
+      codReserva        : 'AUTO',
+      codAgencia        : '0000000010',
+      codTarifa         : '',
+      codPlan           : '',
       ...this.defaultReservationDates(),
-      descripcion: '',
-      tCambio: 535.25,
-      folio: '',
-      estado: 'ABI',
-      moneda: '',
-      totalRsv: 0,
-      observaciones: '',
-      procesa: 'WEB',
-      directo: false,
-      operador: this.auth.getCurrentUser()?.usuario ?? 'admin',
-      habitaciones: [],
-      inclusiones: [],
-      servicios: []
+      descripcion       : '',
+      tCambio           : 455.25,
+      folio             : '',
+      estado            : 'ABI',
+      moneda            : '',
+      totalRsv          : 0,
+      observaciones     : '',
+      procesa           : 'WEB',
+      directo           : false,
+      operador          : this.auth.getCurrentUser()?.usuario ?? 'admin',
+      habitaciones      : [],
+      inclusiones       : [],
+      servicios         : []
     });
     this.habitacionForm.reset(this.defaultHabitacion());
     this.agenciaSearchControl.setValue('0000000010 - Agencia CRS', { emitEvent: false });
@@ -1165,13 +1165,13 @@ export class ReservaHospedajeComponent implements OnInit {
     }
 
     const draft: ReservaHospedajeDraft = {
-      savedAt: new Date().toISOString(),
-      reserva: this.reservaForm.getRawValue(),
-      habitacion: this.habitacionForm.getRawValue(),
-      inclusion: this.inclusionForm.getRawValue(),
-      servicio: this.servicioForm.getRawValue(),
-      agenciaSearch: this.agenciaSearchControl.value,
-      tarifaSearch: this.tarifaSearchControl.value
+      savedAt           : new Date().toISOString(),
+      reserva           : this.reservaForm.getRawValue(),
+      habitacion        : this.habitacionForm.getRawValue(),
+      inclusion         : this.inclusionForm.getRawValue(),
+      servicio          : this.servicioForm.getRawValue(),
+      agenciaSearch     : this.agenciaSearchControl.value,
+      tarifaSearch      : this.tarifaSearchControl.value
     };
 
     localStorage.setItem(this.draftStorageKey, JSON.stringify(draft));
@@ -1872,14 +1872,14 @@ export class ReservaHospedajeComponent implements OnInit {
     const entryDate = this.operationalDateForInput() || this.todayAsInputDate();
 
     return {
-      fecIngreso: entryDate,
-      fecSalida: this.addDaysToInputDate(entryDate, 1),
-      fecCreacion: this.todayAsInputDate(),
-      fecConfirma: '',
-      fecPrepago: '',
-      fecAnulada: '',
-      totNoches: 1,
-      totDias: 2
+      fecIngreso      : entryDate,
+      fecSalida       : this.addDaysToInputDate(entryDate, 1),
+      fecCreacion     : this.todayAsInputDate(),
+      fecConfirma     : '',
+      fecPrepago      : '',
+      fecAnulada      : '',
+      totNoches       : 1,
+      totDias         : 2
     };
   }
 

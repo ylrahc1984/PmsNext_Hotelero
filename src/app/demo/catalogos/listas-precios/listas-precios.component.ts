@@ -167,11 +167,15 @@ export class ListasPreciosComponent implements OnInit {
     if (!codigo) {
       return;
     }
-    if (this.baseRoute.startsWith('/restaurante/')) {
-      this.router.navigate([this.baseRoute, codigo, 'detalle']);
-      return;
-    }
-    this.router.navigate(['/hotel/listas-precios', codigo]);
+    this.router.navigate(
+      ['/restaurante/configuracion/listas-precios', codigo, 'detalle'],
+      {
+        state: {
+          nombreListaPrecio: (lista.descripcion || '').trim(),
+          monedaListaPrecio: (lista.moneda || '').trim()
+        }
+      }
+    );
   }
 
   eliminar(codigo: string) {
