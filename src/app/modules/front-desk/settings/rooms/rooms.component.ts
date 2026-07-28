@@ -88,10 +88,10 @@ export class RoomsComponent implements OnInit {
   });
 
   readonly estadoOptions: CatalogOption[] = [
-    { value: 'L', label: 'Libre', badgeClass: 'bg-success' },
+    { value: 'D', label: 'Libre', badgeClass: 'bg-success' },
     { value: 'O', label: 'Ocupada', badgeClass: 'bg-danger' },
     { value: 'B', label: 'Bloqueada', badgeClass: 'bg-warning text-dark' },
-    { value: 'F', label: 'Fuera de Servicio', badgeClass: 'bg-secondary' }
+    { value: 'B', label: 'Fuera de Servicio', badgeClass: 'bg-secondary' }
   ];
 
   readonly cleaningOptions: CatalogOption[] = [

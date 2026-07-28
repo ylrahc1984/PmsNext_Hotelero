@@ -171,6 +171,15 @@ export class ForecastOcupacionComponent implements OnInit {
     return this.getCategoryResult(row, codigo).cantidad;
   }
 
+  isCategoryUnavailable(row: ForecastOcupacionRow, codigo: string): boolean {
+    if (this.tipoVista !== 'disponibilidad') {
+      return false;
+    }
+
+    const result = this.getCategoryResult(row, codigo);
+    return result.total > 0 && result.cantidad >= result.total;
+  }
+
   trackByFecha(_: number, row: ForecastOcupacionRow): string {
     return row.fecha;
   }

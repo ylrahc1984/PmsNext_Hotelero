@@ -1,6 +1,5 @@
 <section class="forecast-page" aria-label="Forecast de Ocupación">
   <header class="forecast-hero">
-    <span class="brand-badge">PMSNEXT HOTELERO</span>
     <h1>Forecast de Ocupación</h1>
     <p>Análisis proyectado de ocupación hotelera para la toma de decisiones comerciales y operativas.</p>
   </header>
@@ -159,7 +158,11 @@
             </td>
             <td>{{ row.pax }}</td>
             <td>{{ row.totalCLL }}</td>
-            <td *ngFor="let categoria of selectedCategories; trackBy: trackByCategoriaFiltro">
+            <td
+              class="category-cell"
+              *ngFor="let categoria of selectedCategories; trackBy: trackByCategoriaFiltro"
+              [class.category-cell--unavailable]="isCategoryUnavailable(row, categoria.codigo)"
+            >
               {{ getCategoryValue(row, categoria.codigo) }}
             </td>
             <td>{{ row.porOcupacion | number:'1.0-1' }}%</td>

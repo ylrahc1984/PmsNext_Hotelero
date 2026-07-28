@@ -21,7 +21,7 @@ $red: #dc2626;
 }
 
 .forecast-hero {
-  padding: 18px 22px;
+  padding: 14px 22px;
   border: 1px solid rgba($paper, 0.12);
   border-radius: 22px;
   color: $paper;
@@ -47,7 +47,7 @@ $red: #dc2626;
 }
 
 .forecast-hero h1 {
-  margin: 9px 0 4px;
+  margin: 0 0 4px;
   color: $paper;
   font-size: 1.65rem;
   font-weight: 880;
@@ -414,6 +414,21 @@ tbody tr:hover {
   font-weight: 850;
 }
 
+.category-cell {
+  color: rgba($ink, 0.82);
+  font-weight: 850;
+}
+
+.category-cell--unavailable {
+  color: #9f1d22;
+  background: #ffe1e2;
+  box-shadow: inset 0 0 0 1px rgba(#9f1d22, 0.12);
+}
+
+tbody tr:hover .category-cell--unavailable {
+  background: #ffd7d9;
+}
+
 .occupancy-badge {
   display: inline-flex;
   justify-content: center;
@@ -603,7 +618,7 @@ tbody tr:hover {
 
 @media (max-width: 767.98px) {
   .forecast-hero {
-    padding: 18px;
+    padding: 14px 18px;
   }
 
   .forecast-kpis,

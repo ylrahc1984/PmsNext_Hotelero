@@ -234,6 +234,15 @@ export class OccupancyForecastComponent implements OnInit {
     return `${quantity}/${result.total}`;
   }
 
+  isCategoryUnavailable(row: OccupancyForecastRow, codigo: string): boolean {
+    if (this.tipoVista !== 'disponibilidad') {
+      return false;
+    }
+
+    const result = this.getCategoryResult(row, codigo);
+    return result.total > 0 && result.cantidad >= result.total;
+  }
+
   getViewQuantity(row: OccupancyForecastRow): number {
     return this.tipoVista === 'ocupacion'
       ? row.totalOcupadas

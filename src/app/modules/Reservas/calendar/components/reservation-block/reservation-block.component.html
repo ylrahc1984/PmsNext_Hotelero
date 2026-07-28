@@ -8,18 +8,152 @@
   [class.reservation-block--operational]="block.reservation.isOperationalBlock"
   [style.left.px]="block.left"
   [style.width.px]="block.width"
-  [attr.title]="block.tooltip"
+  [attr.aria-label]="block.tooltip"
   [attr.aria-disabled]="block.reservation.isOperationalBlock || null"
+  [ngbPopover]="operationalDetailPopover"
+  popoverClass="calendar-operational-popover"
+  placement="auto"
+  triggers="hover focus"
+  container="body"
+  [openDelay]="220"
+  [closeDelay]="80"
+  (mouseenter)="onPopoverMouseEnter()"
+  (mouseleave)="onPopoverMouseLeave()"
+  (focus)="onPopoverFocus()"
+  (blur)="onPopoverBlur()"
   (pointerdown)="onDragStart($event)"
   (click)="onSelect($event)"
 >
   <span class="reservation-block__guest" aria-hidden="true">{{ block.label }}</span>
-
-  <span class="reservation-block__popover" role="tooltip">
-    <strong class="reservation-block__popover-name">{{ block.reservation.guestName }}</strong>
-    <span class="reservation-block__popover-line">{{ getVisualStateLabel(block.visualState) }} | {{ block.reservation.source }}</span>
-    <span class="reservation-block__popover-line">{{ formatDate(block.reservation.startDate) }} -> {{ formatDate(block.reservation.endDate) }}</span>
-    <span class="reservation-block__popover-hint" *ngIf="!block.reservation.isOperationalBlock">Click para abrir detalle operativo</span>
-    <span class="reservation-block__popover-hint" *ngIf="block.reservation.isOperationalBlock">Bloqueo operativo no asociado a una reserva</span>
-  </span>
 </button>
+
+<ng-template #operationalDetailPopover>
+  <article class="operational-detail" aria-label="Detalle operativo de la reserva">
+    <header class="operational-detail__header">
+      <span class="operational-detail__icon" aria-hidden="true">
+        <i class="feather" [ngClass]="block.reservation.isOperationalBlock ? 'icon-slash' : 'icon-briefcase'"></i>
+      </span>
+      <div class="operational-detail__identity">
+        <span class="operational-detail__eyebrow">Detalle operativo</span>
+        <strong>{{ block.reservation.guestName }}</strong>
+        <span>{{ block.reservation.reservationCode || 'Bloqueo operativo' }}</span>
+      </div>
+      <span class="operational-detail__state" [ngClass]="'state-' + block.visualState">
+        {{ getVisualStateLabel(block.visualState) }}
+      </span>
+    </header>
+
+    <section class="operational-detail__stay">
+      <div>
+        <span>Entrada</span>
+        <strong>{{ formatDate(block.reservation.startDate) }}</strong>
+      </div>
+      <span class="operational-detail__stay-arrow" aria-hidden="true"><i class="feather icon-arrow-right"></i></span>
+      <div>
+        <span>Salida</span>
+        <strong>{{ formatDate(block.reservation.endDate) }}</strong>
+      </div>
+      <div class="operational-detail__nights">
+        <span>Noches</span>
+        <strong>{{ stayNights }}</strong>
+      </div>
+    </section>
+
+    <section class="operational-detail__facts">
+      <div class="operational-detail__fact">
+        <span>Habitación</span>
+        <strong>{{ block.reservation.roomNumber || 'Sin asignar' }}</strong>
+      </div>
+      <div class="operational-detail__fact">
+        <span>Categoría</span>
+        <strong>{{ block.reservation.categoryCode || 'N/D' }}</strong>
+      </div>
+      <div class="operational-detail__fact">
+        <span>Agencia / fuente</span>
+        <strong>{{ operationalDetail?.nomAgencia || operationalDetail?.codAgencia || block.reservation.source || 'Directo' }}</strong>
+      </div>
+      <div class="operational-detail__fact">
+        <span>Estado reserva</span>
+        <strong>{{ operationalDetail?.estado || block.reservation.reservationState || block.reservation.status }}</strong>
+      </div>
+    </section>
+
+    <ng-container *ngIf="!block.reservation.isOperationalBlock">
+      <div class="operational-detail__loading" *ngIf="detailLoading">
+        <span class="operational-detail__spinner" aria-hidden="true"></span>
+        <div>
+          <strong>Consultando información ampliada</strong>
+          <span>Preparando tarifa, ocupación y datos comerciales…</span>
+        </div>
+      </div>
+
+      <section class="operational-detail__expanded" *ngIf="operationalDetail as detail">
+        <div class="operational-detail__metrics">
+          <div>
+            <span>Habitaciones</span>
+            <strong>{{ totalRooms }}</strong>
+          </div>
+          <div>
+            <span>Adultos</span>
+            <strong>{{ totalAdults }}</strong>
+          </div>
+          <div>
+            <span>Niños</span>
+            <strong>{{ totalChildren }}</strong>
+          </div>
+          <div>
+            <span>Total</span>
+            <strong>{{ detail.totalRsv | number:'1.2-2' }} {{ detail.moneda || '' }}</strong>
+          </div>
+        </div>
+
+        <div class="operational-detail__rows">
+          <div>
+            <span>Tarifa</span>
+            <strong>{{ detail.nomTarifa || detail.codTarifa || 'N/D' }}</strong>
+          </div>
+          <div>
+            <span>Plan</span>
+            <strong>{{ detail.planAlimenticio || detail.codPlan || 'N/D' }}</strong>
+          </div>
+          <div *ngIf="detail.folio">
+            <span>Folio</span>
+            <strong>{{ detail.folio }}</strong>
+          </div>
+          <div *ngIf="detail.operador">
+            <span>Operador</span>
+            <strong>{{ detail.operador }}</strong>
+          </div>
+          <div *ngIf="detail.inclusiones?.length">
+            <span>Inclusiones</span>
+            <strong>{{ detail.inclusiones?.length }}</strong>
+          </div>
+          <div *ngIf="detail.servicios?.length">
+            <span>Servicios</span>
+            <strong>{{ detail.servicios?.length }}</strong>
+          </div>
+        </div>
+
+        <div class="operational-detail__observation" *ngIf="reservationObservation">
+          <span><i class="feather icon-message-square"></i> Observaciones</span>
+          <p>{{ reservationObservation }}</p>
+        </div>
+      </section>
+
+      <div class="operational-detail__notice operational-detail__notice--warning" *ngIf="detailUnavailable">
+        <i class="feather icon-alert-circle" aria-hidden="true"></i>
+        <span>No fue posible cargar la información ampliada. El resumen operativo continúa disponible.</span>
+      </div>
+    </ng-container>
+
+    <div class="operational-detail__notice" *ngIf="block.reservation.isOperationalBlock">
+      <i class="feather icon-info" aria-hidden="true"></i>
+      <span>Este evento corresponde a un bloqueo y no está asociado a una reserva.</span>
+    </div>
+
+    <footer class="operational-detail__footer" *ngIf="!block.reservation.isOperationalBlock">
+      <i class="feather icon-more-horizontal" aria-hidden="true"></i>
+      <span>Seleccione la reserva para ver sus acciones operativas</span>
+    </footer>
+  </article>
+</ng-template>
