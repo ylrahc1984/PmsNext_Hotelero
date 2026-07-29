@@ -1,9 +1,7 @@
 import { computed, Injectable, signal } from '@angular/core';
 import { RestaurantePedidoItem } from '../interfaces/restaurante-pedido-item.interface';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable()
 export class RestaurantCartStore {
   private readonly _items = signal<RestaurantePedidoItem[]>([]);
   private secuencia = 1;

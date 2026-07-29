@@ -26,36 +26,43 @@ export interface DocumentoPosPrintData {
   providedIn: 'root'
 })
 export class PosDocumentPrintBuilder {
-  private readonly width = 42;
+  private readonly width = 40;
   private readonly separator = '-'.repeat(this.width);
   private readonly fiscalFooter =
     'AUTORIZADO MEDIANTE RESOLUCION MH-DGT-RES-0027-2024 DEL 13-11-2024 Factura Electrónica Versión 4.4';
 
   build(data: DocumentoPosPrintData): string[] {
     const h = data.encabezado;
-    const documento = this.buildDocumentoCodigo(h);
     const moneda = this.clean(h.moneda || '');
+    const empresaNombre = this.clean(data.empresaNombre || 'EMPRESA');
+    const tituloDocumento = this.resolveTituloDocumento(h);
+    const codigoDocumento = this.buildDocumentoCodigo(h);
 
     const commands: string[] = [
       '\x1B\x40',
       '\x1B\x61\x01',
       '\x1B\x45\x01',
       '\x1D\x21\x01',
-      `${this.center(data.empresaNombre || 'EMPRESA')}\n`,
+      ...this.wrap(empresaNombre),
       '\x1D\x21\x00',
       '\x1B\x45\x00'
     ];
 
     if (data.empresaRuc) {
-      commands.push(`${this.center(`CEDULA: ${data.empresaRuc}`)}\n`);
+      commands.push(...this.wrap(`CEDULA: ${data.empresaRuc}`));
     }
 
     commands.push(
       '\n',
+      `${'='.repeat(this.width)}\n`,
       '\x1B\x45\x01',
-      `${this.center(this.resolveTituloDocumento(h))}\n`,
+      '\x1D\x21\x01',
+      ...this.wrap(tituloDocumento),
+      '\x1D\x21\x00',
       '\x1B\x45\x00',
-      `${this.separator}\n`,
+      ...(codigoDocumento ? this.wrap(codigoDocumento) : []),
+      `${'='.repeat(this.width)}\n`,
+      '\x1B\x61\x00',
       ...this.wrap(`Consecutivo: ${h.numeroConsecutivo || '-'}`),
       ...this.wrap(`Clave: ${h.clave || '-'}`),
       this.leftRight('Fecha', h.fechaDocu || '-'),
@@ -68,11 +75,13 @@ export class PosDocumentPrintBuilder {
       `${this.separator}\n`,
       '\x1B\x45\x01',
       'DETALLE\n',
-      '\x1B\x45\x00'
+      this.leftRight('Descripcion', 'Precio'),
+      '\x1B\x45\x00',
+      `${this.separator}\n`
     );
 
     data.detalle.forEach((item) => {
-      commands.push(...this.buildLineaDetalle(item));
+      commands.push(...this.buildLineaDetalle(item, moneda));
     });
 
     commands.push(
@@ -112,37 +121,38 @@ export class PosDocumentPrintBuilder {
     return commands;
   }
 
-  private buildLineaDetalle(item: DocumentoDetalleItem): string[] {
+  private buildLineaDetalle(item: DocumentoDetalleItem, moneda: string): string[] {
     const cantidad = this.number(item.cantidad);
     const descripcion = this.clean(item.descripcion || item.codProdu || 'Linea');
     const precio = this.number(item.pUndLst);
     const descuento = this.number(item.descuento);
     const impuesto = this.number(item.impuesto);
     const total = this.resolveLineaTotal(item, cantidad, precio, descuento, impuesto);
-    const lines = this.wrap(`${cantidad.toFixed(2)} ${descripcion}`);
+    const quantityLabel = Number.isInteger(cantidad)
+      ? cantidad.toFixed(0)
+      : cantidad.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
 
-    return [
-      ...lines,
-      this.leftRight('Precio', this.money(precio)),
-      this.leftRight('Desc', this.money(descuento)),
-      this.leftRight('Imp', this.money(impuesto)),
-      this.leftRight('Linea', this.money(total)),
-      '\n'
-    ];
+    return this.wrappedColumns(
+      `${quantityLabel} x ${descripcion}`,
+      this.money(total, moneda)
+    );
   }
 
   private resolveTituloDocumento(encabezado: DocumentoEncabezado): string {
     const tipo = this.clean(encabezado.tipDocu || '').toUpperCase();
     if (tipo.includes('NC')) return 'NOTA DE CREDITO ELECTRONICA';
     if (tipo.includes('ND')) return 'NOTA DE DEBITO ELECTRONICA';
-    if (tipo.includes('TFD')) return 'TIQUETE ELECTRONICO';
+    if (tipo.startsWith('T')) return 'TIQUETE ELECTRONICO';
     return 'FACTURA ELECTRONICA';
   }
 
   private buildDocumentoCodigo(encabezado: DocumentoEncabezado): string {
+    const tipo = this.clean(encabezado.tipDocu || '');
     const serie = this.clean(encabezado.serie || '');
     const numero = this.clean(encabezado.numero || '');
-    return serie ? `${serie}-${numero}` : numero;
+    const consecutivo = [serie, numero].filter(Boolean).join('-');
+
+    return [tipo, consecutivo].filter(Boolean).join(' ');
   }
 
   private resolveLineaTotal(
@@ -175,22 +185,39 @@ export class PosDocumentPrintBuilder {
     return `${' '.repeat(spaces)}${text}`;
   }
 
-  private wrap(value: string): string[] {
+  private wrappedColumns(left: string, right: string): string[] {
+    const cleanRight = this.clean(right).slice(-(this.width - 1));
+    const leftWidth = Math.max(1, this.width - cleanRight.length - 1);
+    const leftLines = this.wrap(left, leftWidth);
+
+    return leftLines.map((line, index) => {
+      const cleanLine = line.replace(/\n$/, '');
+      if (index === 0 && cleanRight) {
+        const spaces = Math.max(1, this.width - cleanLine.length - cleanRight.length);
+        return `${cleanLine}${' '.repeat(spaces)}${cleanRight}\n`;
+      }
+
+      return `${cleanLine}\n`;
+    });
+  }
+
+  private wrap(value: string, maxWidth = this.width): string[] {
+    const safeWidth = Math.max(1, Math.min(this.width, Math.floor(maxWidth)));
     const words = this.clean(value).split(/\s+/).filter(Boolean);
     const lines: string[] = [];
     let current = '';
 
     words.forEach((word) => {
       if (!current) {
-        current = word.slice(0, this.width);
+        current = word.slice(0, safeWidth);
         return;
       }
 
-      if (`${current} ${word}`.length <= this.width) {
+      if (`${current} ${word}`.length <= safeWidth) {
         current = `${current} ${word}`;
       } else {
         lines.push(`${current}\n`);
-        current = word.slice(0, this.width);
+        current = word.slice(0, safeWidth);
       }
     });
 

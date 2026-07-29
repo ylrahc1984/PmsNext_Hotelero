@@ -2,10 +2,11 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, EventEmitter, Input, OnInit, Output, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Subject, of } from 'rxjs';
+import { firstValueFrom, Subject, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, finalize, switchMap } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
+import { PosDocumentPrintService } from 'src/app/core/printing/pos-document-print.service';
 import { ToastService } from 'src/app/core/services/toast.service';
 import { MonedaService, MonedaUI } from 'src/app/demo/administracion/monedas/moneda.service';
 import { ClienteUI } from 'src/app/demo/catalogos/agencias-comisionistas/cliente.models';
@@ -16,7 +17,9 @@ import {
 } from '../../services/restaurant-payment-method.service';
 import {
   DocumentoPuntoVenta,
+  FacturacionDocumentoGenerado,
   FacturacionPuntoVentaRequest,
+  FacturacionPuntoVentaResponse,
   RestaurantInvoiceService
 } from '../../services/restaurant-invoice.service';
 
@@ -57,7 +60,7 @@ export interface FormaPagoAplicada {
 
 export interface RestaurantInvoiceDialogResult {
   facturado   : boolean;
-  respuesta   ?: unknown;
+  respuesta   ?: FacturacionPuntoVentaResponse;
 }
 
 interface ConsumidorFinal {
@@ -79,6 +82,7 @@ interface ConsumidorFinal {
 export class RestaurantInvoiceDialogComponent implements OnInit {
   private readonly paymentMethodService = inject(RestaurantPaymentMethodService);
   private readonly invoiceService = inject(RestaurantInvoiceService);
+  private readonly posDocumentPrintService = inject(PosDocumentPrintService);
   private readonly clienteService = inject(ClienteService);
   private readonly monedaService = inject(MonedaService);
   private readonly toast = inject(ToastService);
@@ -329,26 +333,61 @@ export class RestaurantInvoiceDialogComponent implements OnInit {
     const request = this.buildFacturacionRequest();
     console.log('[RestaurantInvoiceDialog] POST /facturacion/venta-pntvta-web payload', request);
 
-    this.invoiceService
-      .facturarPuntoVenta(request)
-      .pipe(
-        finalize(() => {
-          this.loadingFacturacion = false;
-          this.cdr.markForCheck();
-        }),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe({
-        next: (respuesta) => {
-          this.toast.success('Factura generada correctamente.');
-          this.closed.emit({ facturado: true, respuesta });
-        },
-        error: (error) => {
-          console.error('Error al facturar mesa:', error);
-          this.validationMessage = 'No se pudo completar la facturacion.';
-          this.toast.error('No se pudo completar la facturacion.');
+    try {
+      const respuesta = await firstValueFrom(this.invoiceService.facturarPuntoVenta(request));
+      console.log(
+        '[RestaurantInvoiceDialog] POST /facturacion/venta-pntvta-web response',
+        respuesta
+      );
+
+      if ((respuesta?.respuesta || '').trim().toUpperCase() !== 'OK') {
+        this.validationMessage = respuesta?.respuesta || 'El servidor no confirmó la facturación.';
+        this.toast.error(this.validationMessage);
+        return;
+      }
+
+      this.toast.success('Factura generada correctamente.');
+      const documento = this.getDocumentoGenerado(respuesta);
+
+      if (!documento) {
+        this.toast.warning(
+          'La factura fue generada, pero la respuesta no incluyó la referencia necesaria para imprimirla.',
+          6000,
+          'Impresión pendiente'
+        );
+      } else {
+        try {
+          await this.posDocumentPrintService.printByReference(
+            {
+              tipoDocu: documento.TipDocu,
+              serieDocu: documento.Serie,
+              numDocu: documento.NumDocu
+            },
+            this.data.operador,
+            'TIQUETE'
+          );
+          this.toast.success(
+            `Documento ${documento.TipDocu} ${documento.Serie}-${documento.NumDocu} enviado a TIQUETE.`
+          );
+        } catch (printError: unknown) {
+          console.error('La factura fue generada, pero no se pudo imprimir:', printError);
+          this.toast.warning(
+            `La factura fue generada, pero no se pudo imprimir en TIQUETE. ${this.getErrorMessage(printError)}`,
+            7000,
+            'Impresión pendiente'
+          );
         }
-      });
+      }
+
+      this.closed.emit({ facturado: true, respuesta });
+    } catch (error: unknown) {
+      console.error('Error al facturar mesa:', error);
+      this.validationMessage = 'No se pudo completar la facturacion.';
+      this.toast.error('No se pudo completar la facturacion.');
+    } finally {
+      this.loadingFacturacion = false;
+      this.cdr.markForCheck();
+    }
   }
 
   cerrar(): void {
@@ -530,6 +569,29 @@ export class RestaurantInvoiceDialogComponent implements OnInit {
         this.buscandoClientes = false;
         this.cdr.markForCheck();
       });
+  }
+
+  private getDocumentoGenerado(
+    response: FacturacionPuntoVentaResponse
+  ): FacturacionDocumentoGenerado | null {
+    const documento = response.tablas?.[1]?.[0];
+    const tipDocu = (documento?.TipDocu || '').trim();
+    const serie = (documento?.Serie || '').trim();
+    const numDocu = (documento?.NumDocu || '').trim();
+
+    return tipDocu && numDocu
+      ? { TipDocu: tipDocu, Serie: serie || '000', NumDocu: numDocu }
+      : null;
+  }
+
+  private getErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    return typeof error === 'string' && error.trim()
+      ? error.trim()
+      : 'Verifique QZ Tray y la impresora configurada.';
   }
 
   private actualizarMontoConSaldo(): void {

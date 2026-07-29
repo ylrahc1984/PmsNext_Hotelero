@@ -76,6 +76,17 @@
                   <button type="button" ngbDropdownToggle class="doc-action-toggle" aria-label="Abrir acciones del cargo"><i class="feather icon-more-horizontal" aria-hidden="true"></i></button>
                   <div ngbDropdownMenu class="dropdown-menu doc-action-dropdown">
                     <button type="button" ngbDropdownItem class="dropdown-item" (click)="verDetalle(cargo)"><i class="feather icon-eye" aria-hidden="true"></i><span>Ver detalle</span></button>
+                    <button
+                      type="button"
+                      ngbDropdownItem
+                      class="dropdown-item"
+                      (click)="reimprimirCargo(cargo)"
+                      [disabled]="isReprinting(cargo)"
+                    >
+                      <span *ngIf="isReprinting(cargo)" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                      <i *ngIf="!isReprinting(cargo)" class="feather icon-printer" aria-hidden="true"></i>
+                      <span>{{ isReprinting(cargo) ? 'Reimprimiendo...' : 'Reimprimir cargo' }}</span>
+                    </button>
                   </div>
                 </div>
               </td>

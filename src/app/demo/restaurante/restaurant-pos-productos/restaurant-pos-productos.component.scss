@@ -12,8 +12,10 @@ $line: #dbe5ef;
 
 .restaurant-pos {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 10px;
-  min-height: calc(100vh - 96px);
+  height: calc(100dvh - 175px);
+  min-height: 620px;
   color: $ink;
 }
 
@@ -90,15 +92,30 @@ $line: #dbe5ef;
 
 .pos-layout {
   display: grid;
-  grid-template-columns: 420px minmax(0, 1fr) 350px;
+  grid-template-columns:
+    clamp(280px, 18vw, 340px)
+    minmax(0, 1fr)
+    clamp(310px, 20vw, 360px);
   gap: 10px;
-  min-height: calc(100vh - 190px);
+  min-height: 0;
+  height: 100%;
 }
 
 .pos-panel {
   min-height: 0;
-  padding: 12px;
-  overflow: auto;
+  padding: 10px;
+  overflow: hidden;
+}
+
+.pos-categorias,
+.pos-productos {
+  display: flex;
+  flex-direction: column;
+}
+
+.pos-pedido {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
 }
 
 .pos-categorias h2,
@@ -111,15 +128,23 @@ $line: #dbe5ef;
 
 .pedido-list {
   display: grid;
+  align-content: start;
   gap: 8px;
   margin-top: 10px;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
 }
 
 .categoria-list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: start;
   gap: 8px;
   margin-top: 10px;
+  min-height: 0;
+  overflow: auto;
+  padding: 2px;
 }
 
 .categoria-card,
@@ -199,7 +224,11 @@ $line: #dbe5ef;
 .products-skeleton {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-content: start;
   gap: 10px;
+  min-height: 0;
+  overflow: auto;
+  padding: 2px;
 }
 
 .producto-card {
@@ -286,13 +315,19 @@ $line: #dbe5ef;
   background: #fee2e2;
 }
 
-.products-skeleton span {
-  animation: pulse 0.9s ease-in-out infinite alternate;
+.pos-productos > .pos-state {
+  min-height: 0;
+  flex: 1;
 }
 
-.pedido-list {
-  max-height: calc(100vh - 430px);
-  overflow: auto;
+.pending-message {
+  min-height: 0;
+  margin-top: 8px;
+  padding: 8px;
+}
+
+.products-skeleton span {
+  animation: pulse 0.9s ease-in-out infinite alternate;
 }
 
 .pedido-item {
@@ -347,8 +382,13 @@ $line: #dbe5ef;
 
 .pedido-footer {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 7px;
   margin-top: 10px;
+}
+
+.pedido-footer .primary {
+  grid-column: 1 / -1;
 }
 
 .pedido-footer .ghost {
@@ -363,7 +403,7 @@ $line: #dbe5ef;
 
 @media (max-width: 1280px) {
   .pos-layout {
-    grid-template-columns: 360px minmax(0, 1fr) 310px;
+    grid-template-columns: 280px minmax(0, 1fr) 310px;
   }
 
   .categoria-list {
@@ -382,6 +422,12 @@ $line: #dbe5ef;
 }
 
 @media (max-width: 1024px) {
+  .restaurant-pos {
+    grid-template-rows: auto auto minmax(0, 1fr);
+    height: calc(100dvh - 150px);
+    min-height: 560px;
+  }
+
   .pos-tabs {
     display: flex;
   }
@@ -389,6 +435,10 @@ $line: #dbe5ef;
   .pos-layout,
   .pos-header {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pos-layout {
+    min-height: 0;
   }
 
   .categoria-list {

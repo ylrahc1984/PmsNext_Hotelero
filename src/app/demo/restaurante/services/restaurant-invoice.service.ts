@@ -66,6 +66,25 @@ export interface DocumentoPuntoVenta {
   MPV31_Operador: string;
 }
 
+export interface FacturacionConsecutivoGenerado {
+  SERIE: string;
+  NUMERODOC: string;
+}
+
+export interface FacturacionDocumentoGenerado {
+  TipDocu: string;
+  Serie: string;
+  NumDocu: string;
+}
+
+export interface FacturacionPuntoVentaResponse {
+  tablas?: [
+    FacturacionConsecutivoGenerado[],
+    FacturacionDocumentoGenerado[]
+  ];
+  respuesta?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -73,8 +92,8 @@ export class RestaurantInvoiceService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = environment.apiUrl || 'http://localhost:5000/api';
 
-  facturarPuntoVenta(request: FacturacionPuntoVentaRequest): Observable<unknown> {
-    return this.http.post<unknown>(`${this.baseUrl}/facturacion/venta-pntvta-web`, request);
+  facturarPuntoVenta(request: FacturacionPuntoVentaRequest): Observable<FacturacionPuntoVentaResponse> {
+    return this.http.post<FacturacionPuntoVentaResponse>(`${this.baseUrl}/facturacion/venta-pntvta-web`, request);
   }
 
   obtenerDocumentosPorPuntoVenta(codPuntoVenta: string): Observable<DocumentoPuntoVenta[]> {

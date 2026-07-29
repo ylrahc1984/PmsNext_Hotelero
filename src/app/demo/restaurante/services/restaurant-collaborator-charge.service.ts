@@ -87,12 +87,14 @@ export interface CargoColaboradorDetalleResponse {
   mensaje: string;
 }
 
-export interface AnularConsumoColaboradorResponse {
+export interface ConsumoColaboradorOperacionResponse {
   mensaje?: string;
   tipoOperacion?: string;
   numeroOperacion?: string;
   respuesta?: string;
 }
+
+export type AnularConsumoColaboradorResponse = ConsumoColaboradorOperacionResponse;
 
 @Injectable({ providedIn: 'root' })
 export class RestaurantCollaboratorChargeService {
@@ -103,8 +105,8 @@ export class RestaurantCollaboratorChargeService {
     return this.http.get<ColaboradorConsumo[]>(`${this.baseUrl}/colaboradores/listar`);
   }
 
-  guardarConsumo(payload: ConsumoColaboradorRequest): Observable<unknown> {
-    return this.http.post<unknown>(`${this.baseUrl}/Consumo-colaborador/guardar`, payload);
+  guardarConsumo(payload: ConsumoColaboradorRequest): Observable<ConsumoColaboradorOperacionResponse> {
+    return this.http.post<ConsumoColaboradorOperacionResponse>(`${this.baseUrl}/Consumo-colaborador/guardar`, payload);
   }
 
   consultarPorFechas(fechaIni: string, fechaFin: string): Observable<CargoColaborador[]> {

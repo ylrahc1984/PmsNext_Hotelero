@@ -1,8 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { catchError, finalize, map, of, switchMap, throwError } from 'rxjs';
+import { catchError, finalize, forkJoin, from, map, of, switchMap, throwError } from 'rxjs';
 import Swal from 'sweetalert2';
 import { OperationalAction } from 'src/app/core/models/operational-context.model';
 import { AuthService } from 'src/app/core/services/auth.service';
@@ -12,6 +12,10 @@ import { CategoriaVisible } from '../interfaces/categoria-visible.interface';
 import { ProductoMenu } from '../interfaces/producto-menu.interface';
 import { RestaurantePedidoItem } from '../interfaces/restaurante-pedido-item.interface';
 import { SelectedRestaurantTableContext } from '../models/restaurant-operacion.models';
+import {
+  RestaurantCommandDispatchResult,
+  RestaurantCommandPrintService
+} from '../printing/restaurant-command-print.service';
 import { CategoriasMenuService } from '../services/categorias-menu.service';
 import {
   NotaPedidoRestauranteDocumento,
@@ -46,15 +50,22 @@ interface NotaPedidoActiva {
   fecha     : string;
 }
 
+interface PedidoConfirmationNotification {
+  title : string;
+  text  : string;
+  icon  : 'success' | 'warning';
+}
+
 @Component({
   selector: 'app-restaurant-pos-productos',
   standalone: true,
   imports: [CommonModule, FormsModule, RestaurantProductConfigDialogComponent],
+  providers: [RestaurantCartStore],
   templateUrl: './restaurant-pos-productos.component.html',
   styleUrls: ['./restaurant-pos-productos.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class RestaurantPosProductosComponent implements OnInit {
+export class RestaurantPosProductosComponent implements OnInit, OnDestroy {
   private readonly route                   = inject(ActivatedRoute);
   private readonly router                  = inject(Router);
   private readonly categoriasService       = inject(CategoriasMenuService);
@@ -64,6 +75,7 @@ export class RestaurantPosProductosComponent implements OnInit {
   private readonly operationalPolicy       = inject(OperationalPolicyService);
   private readonly authService             = inject(AuthService);
   private readonly cdr                     = inject(ChangeDetectorRef);
+  private readonly commandPrintService     = inject(RestaurantCommandPrintService);
   readonly restaurantCartStore             = inject(RestaurantCartStore);
 
   readonly mesaId                   = Number(this.route.snapshot.paramMap.get('id') ?? '0');
@@ -78,8 +90,6 @@ export class RestaurantPosProductosComponent implements OnInit {
   readonly codComanda              = this.puntoVentaDetalle?.MPV07_CodComanda || '';
   readonly listaPrecio             = this.puntoVentaDetalle?.MPV10_CodLstPrecio || '';
   readonly monedaPuntoVenta        = this.puntoVentaDetalle?.MPV04_Moneda || '';
-  readonly impresoraA              = this.puntoVentaDetalle?.MPV07_ImpresoraA ?? null;
-  readonly impresoraB              = this.puntoVentaDetalle?.MPV07_ImpresoraB ?? null;
   readonly notaPedidoActiva        = this.readNotaPedidoActiva();
   readonly operador                = this.getOperador();
 
@@ -105,7 +115,12 @@ export class RestaurantPosProductosComponent implements OnInit {
   };
 
   ngOnInit(): void {
+    this.restaurantCartStore.limpiar();
     this.cargarCategorias();
+  }
+
+  ngOnDestroy(): void {
+    this.restaurantCartStore.limpiar();
   }
 
   seleccionarCategoria(categoria: CategoriaVisible): void {
@@ -236,19 +251,40 @@ export class RestaurantPosProductosComponent implements OnInit {
             return throwError(() => new Error('La respuesta del pedido no contiene documento valido.'));
           }
 
-          return this.notaPedidoService
-            .obtenerDetallePedido({
-              tipNp: documento.TIPO,
-              serieNp: documento.SERIE,
-              numNp: documento.NUMERODOC,
-              pntVta: this.codPuntoVenta,
-              fecha: payload.fecha,
-              exonerado: 0
-            })
-            .pipe(
-              map((detalleResponse) => ({ response, documento, detalleResponse })),
-              catchError(() => of({ response, documento, detalleResponse: null }))
-            );
+          return forkJoin({
+            detalleResponse: this.notaPedidoService
+              .obtenerDetallePedido({
+                tipNp: documento.TIPO,
+                serieNp: documento.SERIE,
+                numNp: documento.NUMERODOC,
+                pntVta: this.codPuntoVenta,
+                fecha: payload.fecha,
+                exonerado: 0
+              })
+              .pipe(catchError(() => of(null))),
+            commandResult: from(
+              this.commandPrintService.dispatchPending({
+                documento,
+                pntVta: this.codPuntoVenta,
+                codArea: this.codAreaOperativa,
+                numMesa: String(this.mesaId || this.mesaInfo.mesa || ''),
+                fecha: payload.fecha,
+                hora: payload.hora,
+                exonerado: payload.exonerado,
+                salon: this.mesaInfo.salon,
+                mesero: this.mesaInfo.mesero || this.codMozo,
+                personas: this.mesaInfo.personas,
+                nuevosItems: items
+              })
+            )
+          }).pipe(
+            map(({ detalleResponse, commandResult }) => ({
+              response,
+              documento,
+              detalleResponse,
+              commandResult
+            }))
+          );
         }),
         finalize(() => {
           this.guardandoPedido = false;
@@ -256,14 +292,15 @@ export class RestaurantPosProductosComponent implements OnInit {
         })
       )
       .subscribe({
-        next: ({ response, documento, detalleResponse }) => {
+        next: ({ response, documento, detalleResponse, commandResult }) => {
           this.persistirNotaPedidoMesa(documento, response, detalleResponse, payload.fecha);
-          this.mensaje = 'Pedido enviado correctamente.';
+          const notification = this.commandNotification(documento, commandResult);
+          this.mensaje = notification.text;
           this.restaurantCartStore.limpiar();
           void Swal.fire({
-            title: 'Pedido confirmado',
-            text: `Nota ${documento.TIPO}-${documento.SERIE}-${documento.NUMERODOC} generada correctamente.`,
-            icon: 'success',
+            title: notification.title,
+            text: notification.text,
+            icon: notification.icon,
             confirmButtonText: 'Aceptar',
             customClass: {
               popup: 'next-confirm-modal'
@@ -544,5 +581,51 @@ export class RestaurantPosProductosComponent implements OnInit {
 
   private normalizeDateDDMMYYYY(value: unknown): string {
     return normalizeRestaurantDateDDMMYYYY(value);
+  }
+
+  private commandNotification(
+    documento: NotaPedidoRestauranteDocumento,
+    result: RestaurantCommandDispatchResult
+  ): PedidoConfirmationNotification {
+    const documentNumber = `${documento.TIPO}-${documento.SERIE}-${documento.NUMERODOC}`;
+
+    if (result.impresorasFaltantes.length) {
+      const missing = result.impresorasFaltantes
+        .map((failure) => `${failure.destino} (${failure.impresora})`)
+        .join(', ');
+      return {
+        title: 'Pedido guardado, comanda pendiente',
+        text: `Nota ${documentNumber} guardada. No se consultó la comanda porque faltan: ${missing}.`,
+        icon: 'warning'
+      };
+    }
+
+    if (result.errorConsulta) {
+      return {
+        title: 'Pedido guardado, comanda pendiente',
+        text: `Nota ${documentNumber} guardada. ${result.errorConsulta}`,
+        icon: 'warning'
+      };
+    }
+
+    if (result.erroresImpresion.length) {
+      const failed = result.erroresImpresion
+        .map((failure) => `${failure.destino} (${failure.impresora})`)
+        .join(', ');
+      return {
+        title: 'Pedido guardado con incidencia',
+        text: `La comanda fue procesada, pero falló la impresión en ${failed}. Utilice Reimprimir comanda.`,
+        icon: 'warning'
+      };
+    }
+
+    const printed = result.impresos.length
+      ? ` Comandas enviadas: ${result.impresos.join(' y ')}.`
+      : '';
+    return {
+      title: 'Pedido confirmado',
+      text: `Nota ${documentNumber} generada correctamente.${printed}`,
+      icon: 'success'
+    };
   }
 }

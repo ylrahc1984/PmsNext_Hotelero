@@ -48,6 +48,25 @@ export class QzPrintService {
     }
   }
 
+  async getAvailablePrinters(): Promise<string[]> {
+    try {
+      await this.connect();
+      const foundPrinters = await qz.printers.find();
+      const printers = Array.isArray(foundPrinters) ? foundPrinters : [foundPrinters];
+      return Array.from(
+        new Set(
+          printers
+            .map((printer) => printer?.trim())
+            .filter((printer): printer is string => Boolean(printer))
+        )
+      );
+    } catch (error) {
+      throw new Error(
+        this.resolvePrintError(error, 'No se pudieron consultar las impresoras disponibles.')
+      );
+    }
+  }
+
   async printRaw(commands: string[], printerName = this.defaultPrinterName): Promise<void> {
     const normalizedPrinter = (printerName ?? '').toString().trim() || this.defaultPrinterName;
 
@@ -57,22 +76,41 @@ export class QzPrintService {
 
     try {
       await this.connect();
-      await this.ensurePrinterAvailable(normalizedPrinter);
-      const config = qz.configs.create(normalizedPrinter);
+      const availablePrinter = await this.ensurePrinterAvailable(normalizedPrinter);
+      const config = qz.configs.create(availablePrinter);
       await qz.print(config, commands);
+    } catch (error) {
+      throw new Error(
+        this.resolvePrintError(error, 'No se pudo imprimir el voucher POS.', normalizedPrinter)
+      );
+    }
+  }
+
+  private async ensurePrinterAvailable(printerName: string): Promise<string> {
+    try {
+      // La búsqueda directa por nombre puede aceptar una impresora predeterminada
+      // de Windows aunque su cola ya haya sido eliminada o haya quedado huérfana.
+      const printers = await this.getAvailablePrinters();
+      const availablePrinter = printers.find(
+        (printer) => printer?.trim().toLocaleLowerCase() === printerName.toLocaleLowerCase()
+      );
+
+      if (!availablePrinter) {
+        throw new Error(
+          `No se encontró una cola de impresión activa llamada "${printerName}". ` +
+            'Verifique que la impresora esté instalada en Windows con ese nombre exacto.'
+        );
+      }
+
+      return availablePrinter.trim();
     } catch (error) {
       if (error instanceof Error) {
         throw error;
       }
-      throw new Error(this.resolvePrintError(error, 'No se pudo imprimir el voucher POS.'));
-    }
-  }
 
-  private async ensurePrinterAvailable(printerName: string): Promise<void> {
-    try {
-      await qz.printers.find(printerName);
-    } catch {
-      throw new Error(`No se encontró la impresora POS "${printerName}". Verifique que esté instalada y visible para QZ Tray.`);
+      throw new Error(
+        `No se pudo comprobar la impresora POS "${printerName}". Verifique que esté visible para QZ Tray.`
+      );
     }
   }
 
@@ -156,8 +194,17 @@ export class QzPrintService {
     return this.resolvePrintError(error, 'QZ Tray no está disponible en este equipo.');
   }
 
-  private resolvePrintError(error: unknown, fallback: string): string {
+  private resolvePrintError(error: unknown, fallback: string, printerName?: string): string {
     const message = this.extractErrorMessage(error);
+
+    if (/PrintService is no longer available/i.test(message)) {
+      const target = printerName ? ` "${printerName}"` : '';
+      return (
+        `La cola de impresión${target} ya no está disponible para Windows. ` +
+        'Repare o reinstale esa impresora, establézcala como predeterminada y reinicie QZ Tray.'
+      );
+    }
+
     return message || fallback;
   }
 

@@ -6,6 +6,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { timer } from 'rxjs';
 import Swal from 'sweetalert2';
 
+import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
+import { QzPrintService } from 'src/app/core/services/qz-print.service';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
 import {
@@ -24,6 +26,11 @@ import {
   RestaurantRoomChargeDialogResult
 } from '../dialogs/restaurant-room-charge-dialog/restaurant-room-charge-dialog.component';
 import { SelectedRestaurantTableContext } from '../models/restaurant-operacion.models';
+import {
+  RestaurantCommandDispatchResult,
+  RestaurantCommandPrintService
+} from '../printing/restaurant-command-print.service';
+import { RestaurantPrecheckPrintBuilder } from '../printing/restaurant-precheck-print.builder';
 import { RestaurantDashboardService } from '../restaurant-dashboard/restaurant-dashboard.service';
 import { RestaurantOperationContextService } from '../services/restaurant-operation-context.service';
 import { normalizeRestaurantDateDDMMYYYY } from '../services/restaurant-date.util';
@@ -85,6 +92,7 @@ interface AccionOperativa {
   titulo    : string;
   icono     : string;
   tipo      ?: 'primary' | 'danger';
+  sinPermiso?: boolean;
 }
 
 @Component({
@@ -108,6 +116,10 @@ export class RestaurantMesaDetalleComponent implements OnInit {
   private readonly dashboardService = inject(RestaurantDashboardService);
   private readonly operationContext = inject(RestaurantOperationContextService);
   private readonly authService = inject(AuthService);
+  private readonly empresaContext = inject(EmpresaContextService);
+  private readonly qzPrintService = inject(QzPrintService);
+  private readonly precheckPrintBuilder = inject(RestaurantPrecheckPrintBuilder);
+  private readonly commandPrintService = inject(RestaurantCommandPrintService);
   private readonly tipoCambioService = inject(TipoCambioService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -166,18 +178,21 @@ export class RestaurantMesaDetalleComponent implements OnInit {
   isPropinaSaving               = false;
   propinaError                  = '';
   isReturningToMain            = false;
+  isPrintingAccount            = false;
+  isReprintingCommand          = false;
   notaPedidoLoading            = false;
   notaPedidoError              = '';
 
   private detalleRequestId = 0;
+  private currentOrderDetail: NotaPedidoRestauranteProceso91Response | null = null;
 
   readonly acciones: AccionOperativa[] = [
     { id: 'imprimir-cuenta', titulo: 'Imprimir Cuenta', icono: 'icon-printer' },
     { id: 'reimprimir-comanda', titulo: 'Re Imprimir Comanda', icono: 'icon-file-text' },
-    { id: 'transferir-cuenta', titulo: 'Transferir Cuenta', icono: 'icon-repeat' },
+    { id: 'transferir-cuenta', titulo: 'Transferir Cuenta', icono: 'icon-repeat', sinPermiso: true },
     { id: 'facturar-mesa', titulo: 'Facturar Mesa', icono: 'icon-credit-card', tipo: 'primary' },
     { id: 'cargo-colaborador', titulo: 'Cargo Colaborador', icono: 'icon-user' },
-    { id: 'cargo-incluido', titulo: 'Cargo Incluido', icono: 'icon-package' },
+    { id: 'cargo-incluido', titulo: 'Cargo Incluido', icono: 'icon-package', sinPermiso: true },
     { id: 'cargo-habitacion', titulo: 'Cargo Habitacion', icono: 'icon-home' },
     { id: 'regresar-principal', titulo: 'Regresar a Principal', icono: 'icon-corner-up-left' }
   ];
@@ -287,6 +302,17 @@ export class RestaurantMesaDetalleComponent implements OnInit {
   }
 
   onAccionClick(accion: AccionOperativa): void {
+    if (accion.sinPermiso) {
+      return;
+    }
+    if (accion.id === 'imprimir-cuenta') {
+      void this.imprimirCuenta();
+      return;
+    }
+    if (accion.id === 'reimprimir-comanda') {
+      void this.reimprimirComanda();
+      return;
+    }
     if (accion.id === 'facturar-mesa') {
       this.abrirModalFacturacion();
       return;
@@ -302,6 +328,259 @@ export class RestaurantMesaDetalleComponent implements OnInit {
     if (accion.id === 'regresar-principal') {
       this.regresarAPrincipal();
     }
+  }
+
+  isAccionDisabled(accion: AccionOperativa): boolean {
+    if (accion.sinPermiso) {
+      return true;
+    }
+    if (accion.id === 'imprimir-cuenta') {
+      return this.isPrintingAccount || this.notaPedidoLoading || !this.notaPedidoDetalleValido;
+    }
+    if (accion.id === 'reimprimir-comanda') {
+      return this.isReprintingCommand || this.notaPedidoLoading || !this.notaPedidoDetalleValido;
+    }
+    return accion.id === 'regresar-principal' && this.isReturningToMain;
+  }
+
+  async imprimirCuenta(): Promise<void> {
+    if (this.isPrintingAccount) {
+      return;
+    }
+
+    const nota = this.notaPedidoInfo;
+    const orderDetail = this.currentOrderDetail;
+    if (!nota || !this.notaPedidoDetalleValido || !orderDetail?.detalles?.length) {
+      await Swal.fire({
+        title: 'Sin consumo para imprimir',
+        text: 'Debe existir una nota de pedido con consumos cargados antes de imprimir la pre-cuenta.',
+        icon: 'warning',
+        confirmButtonText: 'Aceptar',
+        customClass: {
+          popup: 'next-confirm-modal'
+        }
+      });
+      return;
+    }
+
+    this.isPrintingAccount = true;
+    this.cdr.markForCheck();
+
+    try {
+      const empresa = this.empresaContext.getSnapshot();
+      const commands = this.precheckPrintBuilder.build({
+        empresa: {
+          nombre: (empresa?.MA04_Nombre || empresa?.MA04_RazonSocial || 'RESTAURANTE').trim(),
+          ruc: empresa?.MA04_Ruc,
+          direccion: empresa?.MA04_Direccion,
+          telefono: empresa?.MA04_Telefono1
+        },
+        puntoVenta: this.selectedTableContext?.puntoVenta.descripcion || this.codPuntoVenta,
+        salon: this.mesaDetalle.salon,
+        mesa: this.mesaDetalle.numeroMesa,
+        mesero: this.mesaDetalle.mesero,
+        cliente: this.mesaDetalle.cliente,
+        habitacion: this.mesaDetalle.habitacion,
+        personas: this.selectedTableContext?.mesa.personas,
+        nota: {
+          tipo: nota.tipNp,
+          serie: nota.serieNp,
+          numero: nota.numNp,
+          fecha: nota.fecha,
+          hora: nota.hora
+        },
+        cuenta: this.cuentaFiltroActual,
+        moneda: this.monedaActual,
+        detalles: orderDetail.detalles,
+        totales: orderDetail.totales,
+        totalPropina: orderDetail.totalPropina,
+        impresoPor: this.getOperador(),
+        fechaImpresion: new Date()
+      });
+
+      await this.qzPrintService.printRaw(commands);
+      await Swal.fire({
+        title: 'Pre-cuenta impresa',
+        text: this.cuentaFiltroActual > 0
+          ? `La cuenta ${this.cuentaFiltroActual} fue enviada a la impresora TIQUETE.`
+          : 'La pre-cuenta fue enviada a la impresora TIQUETE.',
+        icon: 'success',
+        timer: 1800,
+        showConfirmButton: false,
+        customClass: {
+          popup: 'next-confirm-modal'
+        }
+      });
+    } catch (error) {
+      console.error('No se pudo imprimir la pre-cuenta del restaurante.', error);
+      await Swal.fire({
+        title: 'No se pudo imprimir',
+        text: error instanceof Error && error.message
+          ? error.message
+          : 'Verifique que QZ Tray esté abierto y que la impresora TIQUETE esté instalada.',
+        icon: 'error',
+        confirmButtonText: 'Aceptar',
+        customClass: {
+          popup: 'next-confirm-modal'
+        }
+      });
+    } finally {
+      this.isPrintingAccount = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  async reimprimirComanda(): Promise<void> {
+    if (this.isReprintingCommand) {
+      return;
+    }
+
+    const nota = this.notaPedidoInfo;
+    const orderDetail = this.currentOrderDetail;
+    if (!nota || !this.notaPedidoDetalleValido || !orderDetail?.detalles?.length) {
+      await Swal.fire({
+        title: 'Sin comanda para reimprimir',
+        text: 'Debe existir una nota de pedido con consumos cargados.',
+        icon: 'warning',
+        confirmButtonText: 'Aceptar',
+        customClass: {
+          popup: 'next-confirm-modal'
+        }
+      });
+      return;
+    }
+
+    const confirmation = await Swal.fire({
+      title: 'Reimprimir comanda',
+      text: 'Se generará una copia de la comanda para cocina y/o bar. ¿Desea continuar?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Reimprimir',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true,
+      customClass: {
+        popup: 'next-confirm-modal'
+      }
+    });
+
+    if (!confirmation.isConfirmed) {
+      return;
+    }
+
+    this.isReprintingCommand = true;
+    this.cdr.markForCheck();
+
+    try {
+      const result = await this.commandPrintService.reprint({
+        documento: {
+          TIPO: nota.tipNp,
+          SERIE: nota.serieNp,
+          NUMERODOC: nota.numNp
+        },
+        pntVta: this.codPuntoVenta,
+        codArea: this.codAreaOperativa,
+        numMesa: this.mesaDetalle.numeroMesa,
+        fecha: this.normalizeDateDDMMYYYY(nota.fecha),
+        hora: nota.hora,
+        exonerado: 0,
+        salon: this.mesaDetalle.salon,
+        mesero: this.mesaDetalle.mesero || this.codMozo,
+        personas: this.selectedTableContext?.mesa.personas || this.mesaDetalle.personas,
+        gruposActuales: orderDetail.detalles.map((detalle) => detalle.ppV08_Grupo || '')
+      });
+
+      await this.showCommandReprintResult(result);
+    } catch (error) {
+      console.error('No se pudo reimprimir la comanda del restaurante.', error);
+      await Swal.fire({
+        title: 'No se pudo reimprimir',
+        text: error instanceof Error && error.message
+          ? error.message
+          : 'Verifique la conexión, QZ Tray y las impresoras COCINA y BAR.',
+        icon: 'error',
+        confirmButtonText: 'Aceptar',
+        customClass: {
+          popup: 'next-confirm-modal'
+        }
+      });
+    } finally {
+      this.isReprintingCommand = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  private async showCommandReprintResult(result: RestaurantCommandDispatchResult): Promise<void> {
+    if (result.impresorasFaltantes.length) {
+      const missing = result.impresorasFaltantes
+        .map((failure) => `${failure.destino} (${failure.impresora})`)
+        .join(', ');
+      await Swal.fire({
+        title: 'No se consultó la reimpresión',
+        text: `Faltan las siguientes impresoras: ${missing}.`,
+        icon: 'warning',
+        confirmButtonText: 'Aceptar',
+        customClass: {
+          popup: 'next-confirm-modal'
+        }
+      });
+      return;
+    }
+
+    if (result.errorConsulta) {
+      await Swal.fire({
+        title: 'No se pudo obtener la comanda',
+        text: result.errorConsulta,
+        icon: 'error',
+        confirmButtonText: 'Aceptar',
+        customClass: {
+          popup: 'next-confirm-modal'
+        }
+      });
+      return;
+    }
+
+    if (result.erroresImpresion.length) {
+      const failed = result.erroresImpresion
+        .map((failure) => `${failure.destino} (${failure.impresora})`)
+        .join(', ');
+      const printed = result.impresos.length
+        ? ` Se imprimió correctamente en ${result.impresos.join(' y ')}.`
+        : '';
+      await Swal.fire({
+        title: 'Reimpresión incompleta',
+        text: `Falló la impresión en ${failed}.${printed}`,
+        icon: 'warning',
+        confirmButtonText: 'Aceptar',
+        customClass: {
+          popup: 'next-confirm-modal'
+        }
+      });
+      return;
+    }
+
+    if (!result.impresos.length) {
+      await Swal.fire({
+        title: 'Sin detalle para reimprimir',
+        text: 'El proceso 111 no devolvió productos de cocina ni de bar.',
+        icon: 'warning',
+        confirmButtonText: 'Aceptar',
+        customClass: {
+          popup: 'next-confirm-modal'
+        }
+      });
+      return;
+    }
+
+    await Swal.fire({
+      title: 'Comanda reimpresa',
+      text: `Copias enviadas a ${result.impresos.join(' y ')}.`,
+      icon: 'success',
+      timer: 1800,
+      showConfirmButton: false,
+      customClass: {
+        popup: 'next-confirm-modal'
+      }
+    });
   }
 
   regresarAPrincipal(): void {
@@ -415,6 +694,12 @@ export class RestaurantMesaDetalleComponent implements OnInit {
   }
 
   onRoomChargeDialogClosed(result: RestaurantRoomChargeDialogResult | null): void {
+    console.log('[RestaurantMesaDetalle] Cargo habitación - resultado del modal', result);
+    console.log(
+      '[RestaurantMesaDetalle] POST /cargo-habitacion-restaurante response',
+      result?.respuesta ?? null
+    );
+
     this.showRoomChargeDialog = false;
     this.roomChargeDialogData = null;
     if (result?.guardado) {
@@ -928,6 +1213,7 @@ export class RestaurantMesaDetalleComponent implements OnInit {
   private establecerErrorNotaPedido(message: string): void {
     this.notaPedidoLoading = false;
     this.notaPedidoDetalleValido = false;
+    this.currentOrderDetail = null;
     this.notaPedidoError = message;
     this.consumoActual = [];
     this.subtotal = 0;
@@ -1159,6 +1445,7 @@ export class RestaurantMesaDetalleComponent implements OnInit {
     this.detalleRequestId += 1;
     this.notaPedidoInfo = null;
     this.notaPedidoDetalleValido = false;
+    this.currentOrderDetail = null;
     this.notaPedidoLoading = false;
     this.notaPedidoError = '';
     this.consumoActual = [];
@@ -1202,19 +1489,20 @@ export class RestaurantMesaDetalleComponent implements OnInit {
 
   private aplicarDetallePedido(response: NotaPedidoRestauranteProceso91Response): void {
     this.notaPedidoDetalleValido = true;
+    this.currentOrderDetail = response;
     this.eliminandoItems.clear();
     this.cambiandoCuentaItems.clear();
     this.dividiendoItems.clear();
     this.consumoActual = (response.detalles || []).map((detalle) => {
       const cantidad = Number(detalle.ppV08_Cantidad || 0);
-      const precio = Number(detalle.ppV08_Precio || 0);
+      const precio = Number(detalle.ppV08_UniConImp || 0);
       return {
         id          : detalle.ppV08_ID,
         codigo      : detalle.ppV08_CodProducto,
         producto    : (detalle.ppV08_NomProducto || '').trim(),
         cantidad    ,
         precio      ,
-        subtotal    : detalle.ppV08_Precio,
+        subtotal    : Number(detalle.ppV08_Precio || 0),
         moneda      : detalle.ppV08_Moneda || 'USD',
         orden       : detalle.ppV08_Orden,
         cuenta      : detalle.ppV08_NCuenta || ''
@@ -1224,10 +1512,14 @@ export class RestaurantMesaDetalleComponent implements OnInit {
     const firstCurrency = this.consumoActual[0]?.moneda;
     this.monedaActual = firstCurrency || this.monedaActual;
     this.subtotal = Number(response.totales?.subtotalneto || 0);
-    this.descuento = 0;
+    this.descuento = (response.detalles || []).reduce(
+      (total, detalle) => total + Number(detalle.ppV08_Descuento || 0),
+      0
+    );
     this.impuestos = Number(response.totales?.impuestos || 0);
     this.propina = Number(response.totalPropina || 0);
-    this.total = Number(response.totales?.total ?? response.totales?.total ?? 0);
+    const totalConsumo = Number(response.totales?.total || 0);
+    this.total = totalConsumo + this.propina;
     if (this.notaPedidoInfo) {
       this.notaPedidoInfo = {
         ...this.notaPedidoInfo,

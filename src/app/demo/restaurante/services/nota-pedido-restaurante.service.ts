@@ -124,6 +124,37 @@ export interface NotaPedidoRestauranteProceso91Params {
   exonerado: number | string;
 }
 
+export interface NotaPedidoRestauranteComandaDetalle {
+  ppV08_NomProducto: string;
+  ppV08_Grupo: string;
+  ppV08_Cantidad: number;
+  ppV08_Tiempo: string | number;
+  ppV08_Comentario: string | null;
+  ppV07_CodVendedor: string;
+  ppV08_Precio: number;
+  ppV07_Comentario: string | null;
+}
+
+export interface NotaPedidoRestauranteProceso110Response {
+  alimentos: NotaPedidoRestauranteComandaDetalle[];
+  bebidas: NotaPedidoRestauranteComandaDetalle[];
+  respuesta: string;
+}
+
+export interface NotaPedidoRestauranteProceso110Params {
+  tipNp: string;
+  serieNp: string;
+  numNp: string;
+  pntVta: string;
+  codArea: string;
+  numMesa: string;
+  fecha: string;
+  exonerado: number | string;
+}
+
+export type NotaPedidoRestauranteProceso111Params = NotaPedidoRestauranteProceso110Params;
+export type NotaPedidoRestauranteProceso111Response = NotaPedidoRestauranteProceso110Response;
+
 export interface NotaPedidoRestauranteEliminarItemParams {
   tipNp: string;
   serieNp: string;
@@ -213,6 +244,17 @@ export interface RestaurantRoomChargePayload {
   operador: string;
 }
 
+export interface RestaurantRoomChargeResponse {
+  success?: boolean;
+  message?: string;
+  tipCrgHab?: string;
+  numCrgHab?: string;
+  mensaje?: string;
+  tipoOperacion?: string;
+  numeroOperacion?: string;
+  respuesta?: string;
+}
+
 export interface RestaurantCreditRoom {
   numHabita: string;
   codReserva: string;
@@ -290,8 +332,8 @@ export class NotaPedidoRestauranteService {
     );
   }
 
-  registrarCargoHabitacion(payload: RestaurantRoomChargePayload): Observable<unknown> {
-    return this.http.post(`${this.baseUrl}/cargo-habitacion-restaurante`, payload);
+  registrarCargoHabitacion(payload: RestaurantRoomChargePayload): Observable<RestaurantRoomChargeResponse> {
+    return this.http.post<RestaurantRoomChargeResponse>(`${this.baseUrl}/cargo-habitacion-restaurante`, payload);
   }
 
   obtenerHabitacionesConCredito(): Observable<RestaurantCreditRoom[]> {
@@ -313,6 +355,44 @@ export class NotaPedidoRestauranteService {
 
     return this.http.get<NotaPedidoRestauranteProceso91Response>(
       `${this.baseUrl}/nota-pedido-restaurante/proceso-91`,
+      { params: httpParams }
+    );
+  }
+
+  obtenerComandaPendiente(
+    params: NotaPedidoRestauranteProceso110Params
+  ): Observable<NotaPedidoRestauranteProceso110Response> {
+    const httpParams = new HttpParams()
+      .set('tipNp', params.tipNp)
+      .set('serieNp', params.serieNp)
+      .set('numNp', params.numNp)
+      .set('pntVta', params.pntVta)
+      .set('codArea', params.codArea)
+      .set('numMesa', params.numMesa)
+      .set('fecha', this.normalizeProceso91Fecha(params.fecha))
+      .set('exonerado', String(params.exonerado));
+
+    return this.http.get<NotaPedidoRestauranteProceso110Response>(
+      `${this.baseUrl}/nota-pedido-restaurante/proceso-110`,
+      { params: httpParams }
+    );
+  }
+
+  obtenerComandaReimpresion(
+    params: NotaPedidoRestauranteProceso111Params
+  ): Observable<NotaPedidoRestauranteProceso111Response> {
+    const httpParams = new HttpParams()
+      .set('tipNp', params.tipNp)
+      .set('serieNp', params.serieNp)
+      .set('numNp', params.numNp)
+      .set('pntVta', params.pntVta)
+      .set('codArea', params.codArea)
+      .set('numMesa', params.numMesa)
+      .set('fecha', this.normalizeProceso91Fecha(params.fecha))
+      .set('exonerado', String(params.exonerado));
+
+    return this.http.get<NotaPedidoRestauranteProceso111Response>(
+      `${this.baseUrl}/nota-pedido-restaurante/proceso-111`,
       { params: httpParams }
     );
   }

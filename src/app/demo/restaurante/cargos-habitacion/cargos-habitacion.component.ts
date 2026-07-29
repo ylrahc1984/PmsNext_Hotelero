@@ -5,8 +5,10 @@ import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import Swal from 'sweetalert2';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
+import { RestaurantRoomChargePrintService } from '../printing/restaurant-room-charge-print.service';
 import { CargoHabitacion, CargoHabitacionConsultaService } from './cargo-habitacion-consulta.service';
 
 type CargosHabitacionForm = {
@@ -26,6 +28,7 @@ type CargosHabitacionForm = {
 export class CargosHabitacionComponent implements OnInit {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly service = inject(CargoHabitacionConsultaService);
+  private readonly printService = inject(RestaurantRoomChargePrintService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -41,6 +44,7 @@ export class CargosHabitacionComponent implements OnInit {
   hasSearched = false;
   error: string | null = null;
   dateRangeError = '';
+  reprinting = new Set<string>();
   private activeRequest?: Subscription;
 
   constructor() {
@@ -156,6 +160,69 @@ export class CargosHabitacionComponent implements OnInit {
     ]);
   }
 
+  async reimprimirCargo(cargo: CargoHabitacion): Promise<void> {
+    const key = this.cargoKey(cargo);
+    if (this.reprinting.has(key)) return;
+
+    const tipoOperacion = (cargo.PFD01_TipCrgHab || '').trim();
+    const numeroOperacion = (cargo.PFD01_NumCrgHab || '').trim();
+    if (!tipoOperacion || !numeroOperacion) {
+      await this.showPrintResult(
+        'No se puede reimprimir',
+        'El cargo no contiene el tipo y número de operación requeridos.',
+        'warning'
+      );
+      return;
+    }
+
+    const confirmation = await Swal.fire({
+      title: 'Reimprimir cargo a habitación',
+      text: `Se enviará una copia del cargo ${tipoOperacion} ${numeroOperacion} a la impresora TIQUETE.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, reimprimir',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true,
+      customClass: {
+        container: 'next-confirm-container',
+        popup: 'next-confirm-modal'
+      }
+    });
+
+    if (!confirmation.isConfirmed) return;
+
+    this.reprinting.add(key);
+    this.cdr.markForCheck();
+
+    try {
+      await this.printService.printByOperation(
+        tipoOperacion,
+        numeroOperacion,
+        'TIQUETE',
+        'REIMPRESION'
+      );
+      await this.showPrintResult(
+        'Cargo reimpreso',
+        `La copia del cargo ${tipoOperacion} ${numeroOperacion} fue enviada a TIQUETE.`,
+        'success'
+      );
+    } catch (error: unknown) {
+      console.error('No se pudo reimprimir el cargo a habitación:', error);
+      await this.showPrintResult(
+        'No se pudo reimprimir',
+        this.getErrorMessage(error),
+        'error'
+      );
+    } finally {
+      this.reprinting.delete(key);
+      this.cdr.markForCheck();
+    }
+  }
+
+  isReprinting(cargo: CargoHabitacion): boolean {
+    return this.reprinting.has(this.cargoKey(cargo));
+  }
+
   estadoTexto(estado: number): string {
     return Number(estado) === 1 ? 'Anulado' : 'Activo';
   }
@@ -170,6 +237,37 @@ export class CargosHabitacionComponent implements OnInit {
 
   trackByCargo(_index: number, cargo: CargoHabitacion): string {
     return `${cargo.PFD01_TipCrgHab}-${cargo.PFD01_NumCrgHab}`;
+  }
+
+  private cargoKey(cargo: CargoHabitacion): string {
+    return `${cargo.PFD01_TipCrgHab}-${cargo.PFD01_NumCrgHab}`;
+  }
+
+  private async showPrintResult(
+    title: string,
+    text: string,
+    icon: 'success' | 'warning' | 'error'
+  ): Promise<void> {
+    await Swal.fire({
+      title,
+      text,
+      icon,
+      confirmButtonText: 'Aceptar',
+      customClass: {
+        container: 'next-confirm-container',
+        popup: 'next-confirm-modal'
+      }
+    });
+  }
+
+  private getErrorMessage(error: unknown): string {
+    if (error instanceof Error && error.message.trim()) {
+      return error.message.trim();
+    }
+    if (typeof error === 'string' && error.trim()) {
+      return error.trim();
+    }
+    return 'Verifique QZ Tray y la impresora TIQUETE.';
   }
 
   private aplicarFiltro(value: string): void {

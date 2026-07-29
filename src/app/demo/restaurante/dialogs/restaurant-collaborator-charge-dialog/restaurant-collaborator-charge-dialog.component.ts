@@ -2,12 +2,15 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, EventEmitter, Input, OnInit, Output, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { firstValueFrom } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
+import { RestaurantCollaboratorChargePrintService } from '../../printing/restaurant-collaborator-charge-print.service';
 import {
   ColaboradorConsumo,
   ConsumoColaboradorRequest,
+  ConsumoColaboradorOperacionResponse,
   RestaurantCollaboratorChargeService
 } from '../../services/restaurant-collaborator-charge.service';
 
@@ -29,7 +32,7 @@ export interface RestaurantCollaboratorChargeDialogResult {
   guardado: boolean;
   colaborador: ColaboradorConsumo;
   observaciones: string;
-  respuesta?: unknown;
+  respuesta?: ConsumoColaboradorOperacionResponse;
 }
 
 @Component({
@@ -42,6 +45,7 @@ export interface RestaurantCollaboratorChargeDialogResult {
 })
 export class RestaurantCollaboratorChargeDialogComponent implements OnInit {
   private readonly service = inject(RestaurantCollaboratorChargeService);
+  private readonly printService = inject(RestaurantCollaboratorChargePrintService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -108,50 +112,59 @@ export class RestaurantCollaboratorChargeDialogComponent implements OnInit {
     this.errorMessage = '';
     this.cdr.markForCheck();
 
-    this.service
-      .guardarConsumo(payload)
-      .pipe(
-        finalize(() => {
-          this.saving = false;
-          this.cdr.markForCheck();
-        }),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe({
-        next: (respuesta) => {
-          void Swal.fire({
-            title: 'Cargo registrado',
-            text: 'El consumo del colaborador se guardó correctamente.',
-            icon: 'success',
-            confirmButtonText: 'Aceptar',
-            customClass: {
-              container: 'next-confirm-container',
-              popup: 'next-confirm-modal'
-            }
-          }).then(() => {
-            this.closed.emit({
-              guardado: true,
-              colaborador,
-              observaciones: this.observaciones.trim(),
-              respuesta
-            });
-          });
-        },
-        error: (error) => {
-          console.error('Error al guardar consumo de colaborador:', error);
-          this.errorMessage = 'No se pudo registrar el cargo al colaborador.';
-          void Swal.fire({
-            title: 'No se pudo registrar',
-            text: this.errorMessage,
-            icon: 'error',
-            confirmButtonText: 'Aceptar',
-            customClass: {
-              container: 'next-confirm-container',
-              popup: 'next-confirm-modal'
-            }
-          });
+    try {
+      const respuesta = await firstValueFrom(this.service.guardarConsumo(payload));
+      console.log('[RestaurantCollaboratorChargeDialog] guardar response', respuesta);
+
+      if ((respuesta?.respuesta || '').trim().toUpperCase() !== 'OK') {
+        this.errorMessage = respuesta?.mensaje || respuesta?.respuesta || 'El servidor no confirmó el registro del cargo.';
+        await this.showResultDialog('No se pudo registrar', this.errorMessage, 'error');
+        return;
+      }
+
+      const tipoOperacion = (respuesta.tipoOperacion || '').trim();
+      const numeroOperacion = (respuesta.numeroOperacion || '').trim();
+      let printError = '';
+
+      if (!tipoOperacion || !numeroOperacion) {
+        printError = 'La respuesta no incluyó el tipo y número de operación necesarios para imprimir.';
+      } else {
+        try {
+          await this.printService.printByOperation(tipoOperacion, numeroOperacion, 'TIQUETE');
+        } catch (error: unknown) {
+          console.error('El cargo fue guardado, pero no se pudo imprimir:', error);
+          printError = this.getErrorMessage(error);
         }
+      }
+
+      if (printError) {
+        await this.showResultDialog(
+          'Cargo registrado; impresión pendiente',
+          `El consumo fue guardado correctamente, pero no se pudo imprimir en TIQUETE. ${printError}`,
+          'warning'
+        );
+      } else {
+        await this.showResultDialog(
+          'Cargo registrado e impreso',
+          `${respuesta.mensaje || 'El consumo del colaborador se guardó correctamente.'} Operación ${tipoOperacion} ${numeroOperacion}.`,
+          'success'
+        );
+      }
+
+      this.closed.emit({
+        guardado: true,
+        colaborador,
+        observaciones: this.observaciones.trim(),
+        respuesta
       });
+    } catch (error: unknown) {
+      console.error('Error al guardar consumo de colaborador:', error);
+      this.errorMessage = 'No se pudo registrar el cargo al colaborador.';
+      await this.showResultDialog('No se pudo registrar', this.errorMessage, 'error');
+    } finally {
+      this.saving = false;
+      this.cdr.markForCheck();
+    }
   }
 
   cerrar(): void {
@@ -232,6 +245,33 @@ export class RestaurantCollaboratorChargeDialogComponent implements OnInit {
       numCuenta: Number(this.data.numCuenta || 0),
       operador: this.clean(this.data.operador)
     };
+  }
+
+  private async showResultDialog(
+    title: string,
+    text: string,
+    icon: 'success' | 'warning' | 'error'
+  ): Promise<void> {
+    await Swal.fire({
+      title,
+      text,
+      icon,
+      confirmButtonText: 'Aceptar',
+      customClass: {
+        container: 'next-confirm-container',
+        popup: 'next-confirm-modal'
+      }
+    });
+  }
+
+  private getErrorMessage(error: unknown): string {
+    if (error instanceof Error && error.message.trim()) {
+      return error.message.trim();
+    }
+    if (typeof error === 'string' && error.trim()) {
+      return error.trim();
+    }
+    return 'Verifique QZ Tray y la impresora configurada.';
   }
 
   private formatDate(date: Date): string {

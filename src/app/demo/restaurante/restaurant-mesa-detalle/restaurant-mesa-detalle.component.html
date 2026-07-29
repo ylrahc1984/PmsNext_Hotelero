@@ -226,16 +226,22 @@
         class="action-btn"
         [ngClass]="{
           'action-btn--primary': accion.tipo === 'primary',
-          'action-btn--danger': accion.tipo === 'danger'
+          'action-btn--danger': accion.tipo === 'danger',
+          'action-btn--no-permission': accion.sinPermiso
         }"
+        [attr.title]="accion.sinPermiso ? 'No tiene permisos para ejecutar esta acción' : null"
+        [attr.aria-label]="accion.sinPermiso ? accion.titulo + '. Sin permiso' : accion.titulo"
         [style.background]="accion.id === 'regresar-principal' ? 'linear-gradient(135deg, #f59e0b, #f97316)' : null"
         [style.color]="accion.id === 'regresar-principal' ? '#ffffff' : null"
-        [disabled]="accion.id === 'regresar-principal' && isReturningToMain"
+        [disabled]="isAccionDisabled(accion)"
         (click)="onAccionClick(accion)"
         *ngFor="let accion of acciones"
       >
         <i class="feather fs-5" [ngClass]="accion.icono" [style.color]="accion.id === 'regresar-principal' ? '#ffffff' : null"></i>
         <span>{{ accion.titulo }}</span>
+        <small *ngIf="accion.sinPermiso" class="action-permission-label">
+          <i class="feather icon-lock"></i> Sin permiso
+        </small>
       </button>
     </div>
 
@@ -247,6 +253,7 @@
           'action-btn--primary': acciones[0].tipo === 'primary',
           'action-btn--danger': acciones[0].tipo === 'danger'
         }"
+        [disabled]="isAccionDisabled(acciones[0])"
         (click)="onAccionClick(acciones[0])"
       >
         <i class="feather fs-5" [ngClass]="acciones[0].icono"></i>
@@ -261,14 +268,22 @@
               *ngIf="accion.id !== acciones[0].id"
               type="button"
               class="acciones-dropdown__item"
-              [ngClass]="{ 'acciones-dropdown__item--danger': accion.tipo === 'danger' }"
+              [ngClass]="{
+                'acciones-dropdown__item--danger': accion.tipo === 'danger',
+                'acciones-dropdown__item--no-permission': accion.sinPermiso
+              }"
+              [attr.title]="accion.sinPermiso ? 'No tiene permisos para ejecutar esta acción' : null"
+              [attr.aria-label]="accion.sinPermiso ? accion.titulo + '. Sin permiso' : accion.titulo"
               [style.background]="accion.id === 'regresar-principal' ? 'rgba(249, 115, 22, 0.14)' : null"
               [style.color]="accion.id === 'regresar-principal' ? '#b45309' : null"
-              [disabled]="accion.id === 'regresar-principal' && isReturningToMain"
+              [disabled]="isAccionDisabled(accion)"
               (click)="onAccionClick(accion)"
             >
               <i class="feather fs-5" [ngClass]="accion.icono" [style.color]="accion.id === 'regresar-principal' ? '#b45309' : null"></i>
               <span>{{ accion.titulo }}</span>
+              <small *ngIf="accion.sinPermiso" class="action-permission-label">
+                <i class="feather icon-lock"></i> Sin permiso
+              </small>
             </button>
           </ng-container>
         </div>
@@ -283,14 +298,22 @@
             *ngFor="let accion of acciones"
             type="button"
             class="acciones-dropdown__item"
-            [ngClass]="{ 'acciones-dropdown__item--danger': accion.tipo === 'danger' }"
+            [ngClass]="{
+              'acciones-dropdown__item--danger': accion.tipo === 'danger',
+              'acciones-dropdown__item--no-permission': accion.sinPermiso
+            }"
+            [attr.title]="accion.sinPermiso ? 'No tiene permisos para ejecutar esta acción' : null"
+            [attr.aria-label]="accion.sinPermiso ? accion.titulo + '. Sin permiso' : accion.titulo"
             [style.background]="accion.id === 'regresar-principal' ? 'rgba(249, 115, 22, 0.14)' : null"
             [style.color]="accion.id === 'regresar-principal' ? '#b45309' : null"
-            [disabled]="accion.id === 'regresar-principal' && isReturningToMain"
+            [disabled]="isAccionDisabled(accion)"
             (click)="onAccionClick(accion)"
           >
             <i class="feather fs-5" [ngClass]="accion.icono" [style.color]="accion.id === 'regresar-principal' ? '#b45309' : null"></i>
             <span>{{ accion.titulo }}</span>
+            <small *ngIf="accion.sinPermiso" class="action-permission-label">
+              <i class="feather icon-lock"></i> Sin permiso
+            </small>
           </button>
         </div>
       </details>

@@ -2,13 +2,16 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, EventEmitter, Input, OnInit, Output, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
+import { RestaurantRoomChargePrintService } from '../../printing/restaurant-room-charge-print.service';
 import {
   NotaPedidoRestauranteService,
   RestaurantCreditRoom,
-  RestaurantRoomChargePayload
+  RestaurantRoomChargePayload,
+  RestaurantRoomChargeResponse
 } from '../../services/nota-pedido-restaurante.service';
 
 export interface RestaurantRoomChargeDialogData {
@@ -26,7 +29,7 @@ export interface RestaurantRoomChargeDialogResult {
   guardado: boolean;
   habitacion: RestaurantCreditRoom;
   numeroCargoHabitacion: string;
-  respuesta?: unknown;
+  respuesta?: RestaurantRoomChargeResponse;
 }
 
 @Component({
@@ -39,6 +42,7 @@ export interface RestaurantRoomChargeDialogResult {
 })
 export class RestaurantRoomChargeDialogComponent implements OnInit {
   private readonly service = inject(NotaPedidoRestauranteService);
+  private readonly printService = inject(RestaurantRoomChargePrintService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -102,41 +106,65 @@ export class RestaurantRoomChargeDialogComponent implements OnInit {
     this.errorMessage = '';
     this.cdr.markForCheck();
 
-    this.service.registrarCargoHabitacion(payload)
-      .pipe(
-        finalize(() => {
-          this.saving = false;
-          this.cdr.markForCheck();
-        }),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe({
-        next: (respuesta) => {
-          void Swal.fire({
-            title: 'Cargo registrado',
-            text: `El cargo a la habitación ${habitacion.numHabita} se guardó correctamente.`,
-            icon: 'success',
-            confirmButtonText: 'Aceptar',
-            customClass: { container: 'next-confirm-container', popup: 'next-confirm-modal' }
-          }).then(() => this.closed.emit({
-            guardado: true,
-            habitacion,
-            numeroCargoHabitacion: payload.numHab,
-            respuesta
-          }));
-        },
-        error: (error) => {
-          console.error('Error al registrar cargo a habitación:', error);
-          this.errorMessage = 'No se pudo registrar el cargo a la habitación.';
-          void Swal.fire({
-            title: 'No se pudo registrar',
-            text: this.errorMessage,
-            icon: 'error',
-            confirmButtonText: 'Aceptar',
-            customClass: { container: 'next-confirm-container', popup: 'next-confirm-modal' }
-          });
+    try {
+      const respuesta = await firstValueFrom(this.service.registrarCargoHabitacion(payload));
+      console.log('[RestaurantRoomChargeDialog] guardar response', respuesta);
+
+      const guardado = respuesta?.success === true
+        || (respuesta?.respuesta || '').trim().toUpperCase() === 'OK';
+
+      if (!guardado) {
+        this.errorMessage = respuesta?.message
+          || respuesta?.mensaje
+          || respuesta?.respuesta
+          || 'El servidor no confirmó el registro del cargo.';
+        await this.showResultDialog('No se pudo registrar', this.errorMessage, 'error');
+        return;
+      }
+
+      const tipoOperacion = (respuesta.tipCrgHab || respuesta.tipoOperacion || '').trim();
+      const numeroOperacion = (respuesta.numCrgHab || respuesta.numeroOperacion || '').trim();
+      let printError = '';
+
+      if (!tipoOperacion || !numeroOperacion) {
+        printError = 'La respuesta no incluyó el tipo y número de operación necesarios para imprimir.';
+      } else {
+        try {
+          await this.printService.printByOperation(tipoOperacion, numeroOperacion, 'TIQUETE');
+        } catch (error: unknown) {
+          console.error('El cargo fue guardado, pero no se pudo imprimir:', error);
+          printError = this.getErrorMessage(error);
         }
+      }
+
+      if (printError) {
+        await this.showResultDialog(
+          'Cargo registrado; impresión pendiente',
+          `El cargo a la habitación ${habitacion.numHabita} fue guardado, pero no se pudo imprimir en TIQUETE. ${printError}`,
+          'warning'
+        );
+      } else {
+        await this.showResultDialog(
+          'Cargo registrado e impreso',
+          `El cargo a la habitación ${habitacion.numHabita} se guardó e imprimió correctamente. Operación ${tipoOperacion} ${numeroOperacion}.`,
+          'success'
+        );
+      }
+
+      this.closed.emit({
+        guardado: true,
+        habitacion,
+        numeroCargoHabitacion: numeroOperacion,
+        respuesta
       });
+    } catch (error: unknown) {
+      console.error('Error al registrar cargo a habitación:', error);
+      this.errorMessage = 'No se pudo registrar el cargo a la habitación.';
+      await this.showResultDialog('No se pudo registrar', this.errorMessage, 'error');
+    } finally {
+      this.saving = false;
+      this.cdr.markForCheck();
+    }
   }
 
   cerrar(): void {
@@ -206,6 +234,33 @@ export class RestaurantRoomChargeDialogComponent implements OnInit {
       numCuenta: Number(this.data.numCuenta || 0),
       operador: this.clean(this.data.operador)
     };
+  }
+
+  private async showResultDialog(
+    title: string,
+    text: string,
+    icon: 'success' | 'warning' | 'error'
+  ): Promise<void> {
+    await Swal.fire({
+      title,
+      text,
+      icon,
+      confirmButtonText: 'Aceptar',
+      customClass: {
+        container: 'next-confirm-container',
+        popup: 'next-confirm-modal'
+      }
+    });
+  }
+
+  private getErrorMessage(error: unknown): string {
+    if (error instanceof Error && error.message.trim()) {
+      return error.message.trim();
+    }
+    if (typeof error === 'string' && error.trim()) {
+      return error.trim();
+    }
+    return 'Verifique QZ Tray y la impresora configurada.';
   }
 
   private cleanRoom(item: RestaurantCreditRoom): RestaurantCreditRoom {
