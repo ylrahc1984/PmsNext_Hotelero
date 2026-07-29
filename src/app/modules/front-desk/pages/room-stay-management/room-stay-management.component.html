@@ -162,12 +162,56 @@
                   <span data-label="Referencia">{{ charge.reference }}</span>
                   <span data-label="Cargos">{{ charge.charge | number:'1.2-2' }}</span>
                   <span data-label="Acciones" class="ledger-actions">
-                    <button type="button" class="ledger-action ledger-action--detail" aria-label="Ver detalle del cargo" (click)="viewChargeDetail('lodging', charge)">
-                      <span class="material-icons" aria-hidden="true">visibility</span>
-                    </button>
-                    <button type="button" class="ledger-action ledger-action--danger" aria-label="Anular cargo" (click)="annulCharge('lodging', charge)">
-                      <span class="material-icons" aria-hidden="true">block</span>
-                    </button>
+                    <div ngbDropdown container="body" placement="bottom-end" class="room-charge-action-menu">
+                      <button type="button" ngbDropdownToggle class="room-charge-action-toggle" aria-label="Abrir acciones del cargo">
+                        <span class="material-icons" aria-hidden="true">more_horiz</span>
+                      </button>
+                      <div ngbDropdownMenu class="dropdown-menu room-charge-action-dropdown">
+                        <button type="button" ngbDropdownItem class="dropdown-item" (click)="viewChargeDetail('lodging', charge)">
+                          <span class="material-icons" aria-hidden="true">visibility</span>
+                          <span>Ver detalle</span>
+                        </button>
+                        <button
+                          type="button"
+                          ngbDropdownItem
+                          class="dropdown-item"
+                          [disabled]="isRoomChargeDocumentBusy(charge)"
+                          (click)="printRoomChargePdf(charge)"
+                        >
+                          @if (isRoomChargeDocumentBusy(charge, 'pdf')) {
+                            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                          } @else {
+                            <span class="material-icons" aria-hidden="true">picture_as_pdf</span>
+                          }
+                          <span>Imprimir / guardar PDF</span>
+                        </button>
+                        <button
+                          type="button"
+                          ngbDropdownItem
+                          class="dropdown-item"
+                          [disabled]="isRoomChargeDocumentBusy(charge)"
+                          (click)="printRoomChargePos(charge)"
+                        >
+                          @if (isRoomChargeDocumentBusy(charge, 'pos')) {
+                            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                          } @else {
+                            <span class="material-icons" aria-hidden="true">receipt_long</span>
+                          }
+                          <span>Imprimir en POS</span>
+                        </button>
+                        <div class="dropdown-divider"></div>
+                        <button
+                          type="button"
+                          ngbDropdownItem
+                          class="dropdown-item room-charge-action-danger"
+                          [disabled]="isRoomChargeDocumentBusy(charge)"
+                          (click)="annulCharge('lodging', charge)"
+                        >
+                          <span class="material-icons" aria-hidden="true">block</span>
+                          <span>Anular cargo</span>
+                        </button>
+                      </div>
+                    </div>
                   </span>
                 </div>
               }
@@ -203,12 +247,56 @@
                   <span data-label="Referencia">{{ charge.reference }}</span>
                   <span data-label="Cargos">{{ charge.charge | number:'1.2-2' }}</span>
                   <span data-label="Acciones" class="ledger-actions">
-                    <button type="button" class="ledger-action ledger-action--detail" aria-label="Ver detalle del cargo" (click)="viewChargeDetail('extras', charge)">
-                      <span class="material-icons" aria-hidden="true">visibility</span>
-                    </button>
-                    <button type="button" class="ledger-action ledger-action--danger" aria-label="Anular cargo" (click)="annulCharge('extras', charge)">
-                      <span class="material-icons" aria-hidden="true">block</span>
-                    </button>
+                    <div ngbDropdown container="body" placement="bottom-end" class="room-charge-action-menu">
+                      <button type="button" ngbDropdownToggle class="room-charge-action-toggle" aria-label="Abrir acciones del cargo">
+                        <span class="material-icons" aria-hidden="true">more_horiz</span>
+                      </button>
+                      <div ngbDropdownMenu class="dropdown-menu room-charge-action-dropdown">
+                        <button type="button" ngbDropdownItem class="dropdown-item" (click)="viewChargeDetail('extras', charge)">
+                          <span class="material-icons" aria-hidden="true">visibility</span>
+                          <span>Ver detalle</span>
+                        </button>
+                        <button
+                          type="button"
+                          ngbDropdownItem
+                          class="dropdown-item"
+                          [disabled]="isRoomChargeDocumentBusy(charge)"
+                          (click)="printRoomChargePdf(charge)"
+                        >
+                          @if (isRoomChargeDocumentBusy(charge, 'pdf')) {
+                            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                          } @else {
+                            <span class="material-icons" aria-hidden="true">picture_as_pdf</span>
+                          }
+                          <span>Imprimir / guardar PDF</span>
+                        </button>
+                        <button
+                          type="button"
+                          ngbDropdownItem
+                          class="dropdown-item"
+                          [disabled]="isRoomChargeDocumentBusy(charge)"
+                          (click)="printRoomChargePos(charge)"
+                        >
+                          @if (isRoomChargeDocumentBusy(charge, 'pos')) {
+                            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                          } @else {
+                            <span class="material-icons" aria-hidden="true">receipt_long</span>
+                          }
+                          <span>Imprimir en POS</span>
+                        </button>
+                        <div class="dropdown-divider"></div>
+                        <button
+                          type="button"
+                          ngbDropdownItem
+                          class="dropdown-item room-charge-action-danger"
+                          [disabled]="isRoomChargeDocumentBusy(charge)"
+                          (click)="annulCharge('extras', charge)"
+                        >
+                          <span class="material-icons" aria-hidden="true">block</span>
+                          <span>Anular cargo</span>
+                        </button>
+                      </div>
+                    </div>
                   </span>
                 </div>
               }

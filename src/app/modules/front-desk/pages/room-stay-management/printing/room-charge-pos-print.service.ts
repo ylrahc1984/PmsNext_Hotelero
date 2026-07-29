@@ -4,18 +4,18 @@ import { retry } from 'rxjs/operators';
 
 import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
 import { QzPrintService } from 'src/app/core/services/qz-print.service';
-import { RoomStayManagementService } from 'src/app/modules/front-desk/pages/room-stay-management/services/room-stay-management.service';
+import { RoomStayManagementService } from '../services/room-stay-management.service';
 import {
-  RestaurantRoomChargeDocumentType,
-  RestaurantRoomChargePrintBuilder
-} from './restaurant-room-charge-print.builder';
+  RoomChargePosDocumentType,
+  RoomChargePosPrintBuilder
+} from './room-charge-pos-print.builder';
 
 @Injectable({
   providedIn: 'root'
 })
-export class RestaurantRoomChargePrintService {
+export class RoomChargePosPrintService {
   private readonly roomStayService = inject(RoomStayManagementService);
-  private readonly printBuilder = inject(RestaurantRoomChargePrintBuilder);
+  private readonly printBuilder = inject(RoomChargePosPrintBuilder);
   private readonly qzPrintService = inject(QzPrintService);
   private readonly empresaContext = inject(EmpresaContextService);
 
@@ -23,13 +23,13 @@ export class RestaurantRoomChargePrintService {
     tipoOperacion: string,
     numeroOperacion: string,
     printerName = 'TIQUETE',
-    documentType: RestaurantRoomChargeDocumentType = 'ORIGINAL'
+    documentType: RoomChargePosDocumentType = 'ORIGINAL'
   ): Promise<void> {
     const tipCrgHab = (tipoOperacion || '').trim();
     const numCrgHab = (numeroOperacion || '').trim();
 
     if (!tipCrgHab || !numCrgHab) {
-      throw new Error('La respuesta no contiene la referencia del cargo necesaria para imprimir.');
+      throw new Error('El cargo no contiene el tipo y numero de operacion necesarios para imprimir.');
     }
 
     const response = await firstValueFrom(
@@ -50,22 +50,22 @@ export class RestaurantRoomChargePrintService {
     );
 
     if (!encabezado?.numCrgHab) {
-      throw new Error('El cargo fue guardado, pero su encabezado no está disponible para imprimir.');
+      throw new Error('El encabezado del cargo no esta disponible para imprimir.');
     }
     if (
       encabezado.tipCrgHab
       && encabezado.tipCrgHab.trim().toUpperCase() !== tipCrgHab.toUpperCase()
     ) {
-      throw new Error('El detalle consultado no corresponde al tipo de cargo generado.');
+      throw new Error('El detalle consultado no corresponde al tipo de cargo seleccionado.');
     }
     if (!detalles.length) {
-      throw new Error('El cargo fue guardado, pero no contiene líneas válidas para imprimir.');
+      throw new Error('El cargo no contiene lineas validas para imprimir.');
     }
 
     const empresa = this.empresaContext.empresa();
     const commands = this.printBuilder.build({
       empresa: {
-        nombre: (empresa?.MA04_Nombre || empresa?.MA04_RazonSocial || 'RESTAURANTE').trim(),
+        nombre: (empresa?.MA04_Nombre || empresa?.MA04_RazonSocial || 'HOTEL').trim(),
         ruc: empresa?.MA04_Ruc,
         direccion: empresa?.MA04_Direccion,
         telefono: empresa?.MA04_Telefono1

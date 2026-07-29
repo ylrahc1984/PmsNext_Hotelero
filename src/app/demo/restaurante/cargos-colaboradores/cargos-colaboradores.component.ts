@@ -274,9 +274,10 @@ export class CargosColaboradoresComponent implements OnInit {
 
   private getDefaultDateRange(): { fechaDesde: string; fechaHasta: string } {
     const today = new Date();
+    const currentDate = this.formatDateToInput(today);
     return {
-      fechaDesde: `${today.getFullYear()}-01-01`,
-      fechaHasta: this.formatDateToInput(today)
+      fechaDesde: currentDate,
+      fechaHasta: currentDate
     };
   }
 

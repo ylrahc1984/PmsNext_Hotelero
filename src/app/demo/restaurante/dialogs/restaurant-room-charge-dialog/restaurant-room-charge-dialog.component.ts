@@ -6,7 +6,7 @@ import { firstValueFrom } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
-import { RestaurantRoomChargePrintService } from '../../printing/restaurant-room-charge-print.service';
+import { RoomChargePosPrintService } from 'src/app/modules/front-desk/pages/room-stay-management/printing/room-charge-pos-print.service';
 import {
   NotaPedidoRestauranteService,
   RestaurantCreditRoom,
@@ -42,7 +42,7 @@ export interface RestaurantRoomChargeDialogResult {
 })
 export class RestaurantRoomChargeDialogComponent implements OnInit {
   private readonly service = inject(NotaPedidoRestauranteService);
-  private readonly printService = inject(RestaurantRoomChargePrintService);
+  private readonly printService = inject(RoomChargePosPrintService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
 

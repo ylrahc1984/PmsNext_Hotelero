@@ -21,6 +21,8 @@ import { NationalitiesService } from '../../settings/nationalities/services/nati
 import { PaxType } from '../../settings/pax-types/models/pax-type.model';
 import { PaxTypesService } from '../../settings/pax-types/services/pax-types.service';
 import { RoomRackNavigationState } from '../room-rack/models/room-rack-room.model';
+import { RoomChargePdfService } from './printing/room-charge-pdf.service';
+import { RoomChargePosPrintService } from './printing/room-charge-pos-print.service';
 import {
   DepartureDateChangePayload,
   PointOfSaleDocumentApi,
@@ -52,7 +54,6 @@ type StayActionId   =
   | 'register-prepayment'
   | 'new-charge'
   | 'transfer-charges'
-  | 'print-room-charge'
   | 'print-statement'
   | 'invoice-room'
   | 'check-out';
@@ -287,6 +288,8 @@ export class RoomStayManagementComponent implements OnInit {
   private readonly destroyRef                     = inject(DestroyRef);
   private readonly authService                    = inject(AuthService);
   private readonly roomStayManagementService      = inject(RoomStayManagementService);
+  private readonly roomChargePdfService            = inject(RoomChargePdfService);
+  private readonly roomChargePosPrintService       = inject(RoomChargePosPrintService);
   private readonly clienteService                 = inject(ClienteService);
   private readonly nationalitiesService           = inject(NationalitiesService);
   private readonly paxTypesService                = inject(PaxTypesService);
@@ -320,6 +323,7 @@ export class RoomStayManagementComponent implements OnInit {
   readonly isRoomChargeCatalogLoading            = signal(false);
   readonly isRoomChargeItemsLoading              = signal(false);
   readonly isRoomChargeSubmitting                = signal(false);
+  readonly roomChargeDocumentJobs                = signal<Record<string, 'pdf' | 'pos'>>({});
   readonly isChargeDetailOpen                    = signal(false);
   readonly isChargeDetailLoading                 = signal(false);
   readonly chargeDetailErrorMessage              = signal('');
@@ -485,14 +489,6 @@ export class RoomStayManagementComponent implements OnInit {
     {
       title: 'Documentos',
       actions: [
-        {
-          id            : 'print-room-charge',
-          label         : 'Imprimir Cargo Habitacion',
-          icon          : 'print',
-          kind          : 'document',
-          description   : 'Genera una salida documental del cargo de habitacion con datos de la estancia.',
-          confirmText   : 'Generar documento'
-        },
         {
           id            : 'print-statement',
           label         : 'Imprimir Estado Cuenta',
@@ -842,9 +838,6 @@ export class RoomStayManagementComponent implements OnInit {
       case 'transfer-charges':
         this.applyChargeTransfer();
         break;
-      case 'print-room-charge':
-        this.applyDocumentAction('Cargo de habitacion preparado');
-        break;
       case 'print-statement':
         this.applyDocumentAction('Estado de cuenta preparado');
         break;
@@ -1033,6 +1026,70 @@ export class RoomStayManagementComponent implements OnInit {
           this.chargeDetailErrorMessage.set('No se pudo consultar el detalle del cargo. Revise la conexion con el API.');
         }
       });
+  }
+
+  async printRoomChargePdf(charge: Charge): Promise<void> {
+    const numCrgHab = this.cleanText(charge.numCrgHab || charge.reference);
+    if (!numCrgHab) {
+      this.toastService.warning('El cargo no tiene un numero de documento para generar el PDF.', 4000, 'Cargos');
+      return;
+    }
+    if (this.isRoomChargeDocumentBusy(charge)) {
+      return;
+    }
+
+    this.setRoomChargeDocumentJob(charge, 'pdf');
+
+    try {
+      const result = await this.roomChargePdfService.openByOperation(numCrgHab);
+      this.toastService.success(
+        result === 'opened'
+          ? 'El comprobante PDF se abrio en una nueva pestana.'
+          : 'El navegador bloqueo la vista previa; el PDF fue descargado.',
+        4500,
+        'Cargo a habitacion'
+      );
+    } catch (error: unknown) {
+      console.error('No se pudo generar el PDF del cargo de habitacion.', error);
+      this.toastService.warning(this.documentErrorMessage(error, 'No se pudo generar el PDF del cargo.'), 5000, 'Cargo a habitacion');
+    } finally {
+      this.setRoomChargeDocumentJob(charge, null);
+    }
+  }
+
+  async printRoomChargePos(charge: Charge): Promise<void> {
+    const tipCrgHab = this.cleanText(charge.tipCrgHab) || 'CHB';
+    const numCrgHab = this.cleanText(charge.numCrgHab || charge.reference);
+
+    if (!numCrgHab) {
+      this.toastService.warning('El cargo no tiene un numero de documento para imprimir.', 4000, 'Cargos');
+      return;
+    }
+    if (this.isRoomChargeDocumentBusy(charge)) {
+      return;
+    }
+
+    this.setRoomChargeDocumentJob(charge, 'pos');
+
+    try {
+      await this.roomChargePosPrintService.printByOperation(
+        tipCrgHab,
+        numCrgHab,
+        'TIQUETE',
+        'REIMPRESION'
+      );
+      this.toastService.success('Cargo enviado a la impresora TIQUETE.', 4000, 'Cargo a habitacion');
+    } catch (error: unknown) {
+      console.error('No se pudo imprimir el cargo de habitacion en TIQUETE.', error);
+      this.toastService.warning(this.documentErrorMessage(error, 'No se pudo imprimir el cargo en TIQUETE.'), 5000, 'Cargo a habitacion');
+    } finally {
+      this.setRoomChargeDocumentJob(charge, null);
+    }
+  }
+
+  isRoomChargeDocumentBusy(charge: Charge, job?: 'pdf' | 'pos'): boolean {
+    const activeJob = this.roomChargeDocumentJobs()[this.roomChargeDocumentKey(charge)];
+    return job ? activeJob === job : Boolean(activeJob);
   }
 
   closeChargeDetailModal(): void {
@@ -2298,7 +2355,7 @@ export class RoomStayManagementComponent implements OnInit {
 
       return {
         id                : this.buildChargeId(reference, date, time, index),
-        tipCrgHab         : this.cleanText(apiCharge.tipCrgHab) || this.cleanText(apiCharge.tipoCrgHab) || this.cleanText(apiCharge.tipCargo) || 'CH',
+        tipCrgHab         : this.cleanText(apiCharge.tipCrgHab) || this.cleanText(apiCharge.tipoCrgHab) || this.cleanText(apiCharge.tipCargo) || 'CHB',
         numCrgHab         : this.cleanText(charge.numCrgHab) || reference,
         codRsv            : this.cleanText(charge.codReserva) || this.cleanText(this.room().reservationNumber),
         numHab            : this.cleanText(charge.numHab) || this.cleanText(this.room().roomNumber),
@@ -2330,6 +2387,33 @@ export class RoomStayManagementComponent implements OnInit {
 
   private cleanText(value: string | number | null | undefined): string {
     return (value ?? '').toString().trim();
+  }
+
+  private roomChargeDocumentKey(charge: Charge): string {
+    return this.cleanText(charge.numCrgHab || charge.reference || charge.id);
+  }
+
+  private setRoomChargeDocumentJob(charge: Charge, job: 'pdf' | 'pos' | null): void {
+    const key = this.roomChargeDocumentKey(charge);
+    this.roomChargeDocumentJobs.update((jobs) => {
+      const next = { ...jobs };
+      if (job) {
+        next[key] = job;
+      } else {
+        delete next[key];
+      }
+      return next;
+    });
+  }
+
+  private documentErrorMessage(error: unknown, fallback: string): string {
+    if (error instanceof Error && error.message.trim()) {
+      return error.message.trim();
+    }
+    if (typeof error === 'string' && error.trim()) {
+      return error.trim();
+    }
+    return fallback;
   }
 
   private normalizeSearchTerm(value: string | number | null | undefined): string {

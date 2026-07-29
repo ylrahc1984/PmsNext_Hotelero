@@ -4,9 +4,9 @@ import { EscPosReceiptComposer } from 'src/app/core/printing/esc-pos-receipt.com
 import {
   RoomChargeLookupDetail,
   RoomChargeLookupHeader
-} from 'src/app/modules/front-desk/pages/room-stay-management/services/room-stay-management.service';
+} from '../services/room-stay-management.service';
 
-export interface RestaurantRoomChargePrintData {
+export interface RoomChargePosPrintData {
   empresa: {
     nombre: string;
     ruc?: string;
@@ -15,19 +15,19 @@ export interface RestaurantRoomChargePrintData {
   };
   encabezado: RoomChargeLookupHeader;
   detalles: RoomChargeLookupDetail[];
-  tipoDocumento: RestaurantRoomChargeDocumentType;
+  tipoDocumento: RoomChargePosDocumentType;
   fechaImpresion: Date;
 }
 
-export type RestaurantRoomChargeDocumentType = 'ORIGINAL' | 'REIMPRESION';
+export type RoomChargePosDocumentType = 'ORIGINAL' | 'REIMPRESION';
 
 @Injectable({
   providedIn: 'root'
 })
-export class RestaurantRoomChargePrintBuilder {
+export class RoomChargePosPrintBuilder {
   private readonly paperWidth = 40;
 
-  build(data: RestaurantRoomChargePrintData): string[] {
+  build(data: RoomChargePosPrintData): string[] {
     const receipt = new EscPosReceiptComposer({ width: this.paperWidth });
     const header = data.encabezado;
     const currency = header.moneda || data.detalles[0]?.moneda || '';
@@ -46,7 +46,7 @@ export class RestaurantRoomChargePrintBuilder {
       .align('center')
       .bold(true)
       .size(1, 2)
-      .wrapped(data.empresa.nombre || 'RESTAURANTE')
+      .wrapped(data.empresa.nombre || 'HOTEL')
       .size(1)
       .bold(false);
 

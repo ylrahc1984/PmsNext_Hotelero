@@ -446,10 +446,10 @@ export class ConsultaDocumentosComponent implements OnInit {
 
   private getDefaultDateRange(): { fechaDesde: string; fechaHasta: string } {
     const today = new Date();
-    const firstDayOfYear = new Date(today.getFullYear(), 0, 1);
+    const currentDate = this.formatDateToInput(today);
     return {
-      fechaDesde: this.formatDateToInput(firstDayOfYear),
-      fechaHasta: this.formatDateToInput(today)
+      fechaDesde: currentDate,
+      fechaHasta: currentDate
     };
   }
 

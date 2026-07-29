@@ -8,7 +8,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import Swal from 'sweetalert2';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
-import { RestaurantRoomChargePrintService } from '../printing/restaurant-room-charge-print.service';
+import { RoomChargePosPrintService } from 'src/app/modules/front-desk/pages/room-stay-management/printing/room-charge-pos-print.service';
 import { CargoHabitacion, CargoHabitacionConsultaService } from './cargo-habitacion-consulta.service';
 
 type CargosHabitacionForm = {
@@ -28,7 +28,7 @@ type CargosHabitacionForm = {
 export class CargosHabitacionComponent implements OnInit {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly service = inject(CargoHabitacionConsultaService);
-  private readonly printService = inject(RestaurantRoomChargePrintService);
+  private readonly printService = inject(RoomChargePosPrintService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -289,9 +289,10 @@ export class CargosHabitacionComponent implements OnInit {
 
   private getDefaultDateRange(): { fechaDesde: string; fechaHasta: string } {
     const today = new Date();
+    const currentDate = this.formatDateToInput(today);
     return {
-      fechaDesde: `${today.getFullYear()}-01-01`,
-      fechaHasta: this.formatDateToInput(today)
+      fechaDesde: currentDate,
+      fechaHasta: currentDate
     };
   }
 
