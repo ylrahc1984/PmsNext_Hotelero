@@ -291,34 +291,11 @@ export const NavigationItems: NavigationItem[] = [
           {
             id: 'configuracion-general',
             title: 'Configuración General',
-            type: 'collapse',
+            type: 'item',
+            url: '/administracion/configuracion',
+            activeUrls: ['/administracion/configuracion', '/administracion/configuracion/migraciones/reservas'],
             icon: 'feather icon-sliders',
-            children: [
-              {
-                id: 'configuracion-panel',
-                title: 'Panel de Configuración',
-                type: 'item',
-                url: '/administracion/configuracion',
-                icon: 'feather icon-grid',
-                classes: 'nav-item'
-              },
-              {
-                id: 'migraciones',
-                title: 'Migraciones',
-                type: 'collapse',
-                icon: 'feather icon-repeat',
-                children: [
-                  {
-                    id: 'migracion-reservas',
-                    title: 'Migración de Reservas',
-                    type: 'item',
-                    url: '/administracion/configuracion/migraciones/reservas',
-                    icon: 'feather icon-calendar',
-                    classes: 'nav-item'
-                  }
-                ]
-              }
-            ]
+            classes: 'nav-item'
           }
         ]
       }

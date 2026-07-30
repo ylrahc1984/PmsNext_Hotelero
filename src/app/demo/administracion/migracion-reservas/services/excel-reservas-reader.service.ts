@@ -1,9 +1,27 @@
 import { Injectable } from '@angular/core';
 import * as XLSX from 'xlsx';
 
-import { HabitacionImportacion, ReservaImportacion, ResultadoLecturaExcel } from '../models/reserva-importacion.model';
+import { LineaReservaOrigen, ResultadoLecturaExcel } from '../models/reserva-importacion.model';
+import { ReservasAltAgrupador } from './reservas-alt-agrupador.service';
 
-type ExcelRow = Record<string, unknown>;
+type ExcelMatrix = unknown[][];
+
+const REQUIRED_HEADERS = [
+  'id rese',
+  'nro reserva',
+  'fecha ent',
+  'fecha sal',
+  'nombre',
+  'cant habi',
+  'pax',
+  'total',
+  'prepagado',
+  'cod mone',
+  'id thab',
+  'tipo hab',
+  'desc t hab',
+  'max adultos'
+] as const;
 
 @Injectable({ providedIn: 'root' })
 export class ExcelReservasReaderService {
@@ -11,166 +29,155 @@ export class ExcelReservasReaderService {
     if (!file.name.toLowerCase().endsWith('.xlsx')) {
       throw new Error('Seleccione un archivo con extensión .xlsx.');
     }
-
     const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
     const nombreHoja = workbook.SheetNames[0];
-    if (!nombreHoja) {
-      throw new Error('El archivo no contiene hojas disponibles.');
-    }
-
-    const sheet = workbook.Sheets[nombreHoja];
-    const matrix = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+    if (!nombreHoja) throw new Error('El archivo no contiene hojas disponibles.');
+    const matrix = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[nombreHoja], {
       header: 1,
       defval: null,
       raw: true
     });
-    const headerRow = this.findHeaderRow(matrix);
-    if (headerRow < 0) {
-      throw new Error('No se encontró una fila de encabezados con Número, Entrada y Salida.');
-    }
-
-    const rows = XLSX.utils.sheet_to_json<ExcelRow>(sheet, {
-      defval: null,
-      raw: true,
-      range: headerRow
-    });
-
-    const reservas: ReservaImportacion[] = [];
-    let filasIgnoradas = 0;
-
-    rows.forEach((rawRow, index) => {
-      const row = this.normalizeKeys(rawRow);
-      const numero = this.text(this.value(row, ['NUMERO', 'NO', 'RESERVA']));
-      const entrada = this.date(this.value(row, ['ENTRADA', 'FECHA ENTRADA']));
-      const salida = this.date(this.value(row, ['SALIDA', 'FECHA SALIDA']));
-
-      if (!numero || !entrada || !salida || this.isSummaryRow(numero)) {
-        filasIgnoradas++;
-        return;
-      }
-
-      const total = this.money(this.value(row, ['TOTAL']));
-      const nochesCalculadas = this.daysBetween(entrada, salida);
-      const noches = this.integer(this.value(row, ['NOCHES']), nochesCalculadas);
-      const habitaciones = this.integer(this.value(row, ['HAB', 'HABITACIONES']), 0);
-      const pax = this.integer(this.value(row, ['PAX']), 0);
-
-      reservas.push({
-        id: `excel-${index + 2}-${numero}`,
-        filaExcel: index + 2,
-        numeroExterno: numero,
-        estadoOrigen: this.text(this.value(row, ['EST', 'ESTADO'])),
-        tarifaOrigen: this.text(this.value(row, ['TARIFA', 'CANAL'])),
-        cplOrigen: this.text(this.value(row, ['CPL'])),
-        nombre: this.text(this.value(row, ['NOMBRE', 'HUESPED'])),
-        nacionalidad: this.text(this.value(row, ['NAC', 'NACIONALIDAD'])),
-        telefono: this.phone(this.value(row, ['TELEFONOS', 'TELEFONO'])),
-        fechaEntrada: entrada,
-        fechaSalida: salida,
-        fechaCreacion: this.date(this.value(row, ['F CREACION', 'FECHA CREACION'])),
-        fechaAnulada: this.date(this.value(row, ['F ANULADA', 'FECHA ANULADA'])),
-        noches,
-        habitaciones,
-        pax,
-        total,
-        impuesto: this.money(this.value(row, ['13', '0 13', '013', 'IMPUESTO', 'IVA'])),
-        neto: this.money(this.value(row, ['NETO'])),
-        depositado: this.money(this.value(row, ['DEPOSITADO', 'DEPOSITO'])),
-        pendiente: this.money(this.value(row, ['PENDIENTE'])),
-        codAgencia: '',
-        codTarifa: '',
-        codPlan: '',
-        estadoPms: '',
-        directo: 'N',
-        moneda: 'USD',
-        detalleHabitaciones: [this.initialRoomLine(habitaciones, pax, total, noches)],
-        estadoValidacion: 'PENDIENTE',
-        errores: [],
-        advertencias: [],
-        seleccionado: true,
-        estadoImportacion: 'PENDIENTE'
-      });
-    });
-
-    if (!reservas.length) {
-      throw new Error('No se detectaron reservas. Verifique que existan Número, Entrada y Salida.');
-    }
-
-    return { reservas, filasIgnoradas, nombreHoja };
+    return { ...this.parseReservasAltMatrix(matrix), nombreHoja };
   }
 
-  private initialRoomLine(habitaciones: number, pax: number, total: number, noches: number): HabitacionImportacion {
-    const divisor = habitaciones * noches;
+  parseReservasAltMatrix(matrix: ExcelMatrix): Omit<ResultadoLecturaExcel, 'nombreHoja'> {
+    const headerRow = this.findHeaderRow(matrix);
+    if (headerRow < 0) {
+      throw new Error('El archivo seleccionado no corresponde al formato esperado de migración de reservas.');
+    }
+    const columns = this.columnMap(matrix[headerRow] ?? []);
+    const missing = REQUIRED_HEADERS.filter((header) => !columns.has(header));
+    if (missing.length) {
+      throw new Error(
+        `El archivo seleccionado no corresponde al formato esperado de migración de reservas. Columnas faltantes: ${missing.join(', ')}.`
+      );
+    }
+
+    const lines: LineaReservaOrigen[] = [];
+    let ignoredRows = 0;
+    for (let index = headerRow + 1; index < matrix.length; index++) {
+      const row = matrix[index] ?? [];
+      const idReservation = this.text(this.cell(row, columns, 'id rese'));
+      if (!idReservation) {
+        ignoredRows++;
+        continue;
+      }
+      lines.push(this.toOriginLine(row, columns, index + 1));
+    }
+
+    const reservations = ReservasAltAgrupador.group(lines);
+    if (!reservations.length) {
+      throw new Error('El archivo no contiene reservas con un valor válido en "id rese".');
+    }
+
     return {
-      catHabita: '',
-      tipHabita: '',
-      cantHab: habitaciones,
-      precio: divisor > 0 ? this.round(total / divisor) : 0,
-      moneda: 'USD',
-      total,
-      cpl: 0,
-      impuesto: 0,
-      numPax: pax,
-      numChild: 0,
-      totChild: 0,
-      cCosto: 'HOSPED',
-      orden: 1
+      formato: 'RESERVAS_ALT',
+      reservas: reservations,
+      lineasHabitacion: lines.length,
+      filasIgnoradas: ignoredRows,
+      categoriasOrigen: this.unique(
+        lines.map((line) => this.categoryKey(line.codigoCategoriaOrigen, line.descripcionCategoriaOrigen))
+      ),
+      tarifasOrigen: this.unique(reservations.map((item) => item.tarifaOrigen)),
+      estadosOrigen: this.unique(lines.map((line) => line.estadoOrigen)),
+      monedasOrigen: this.unique(lines.map((line) => line.codigoMonedaOrigen))
     };
   }
 
-  private normalizeKeys(row: ExcelRow): ExcelRow {
-    return Object.entries(row).reduce<ExcelRow>((result, [key, value]) => {
-      result[this.normalizeKey(key)] = value;
-      return result;
-    }, {});
+  private toOriginLine(row: unknown[], columns: ReadonlyMap<string, number>, filaExcel: number): LineaReservaOrigen {
+    const value = (header: string): unknown => this.cell(row, columns, header);
+    return {
+      filaExcel,
+      idReservaOrigen: this.text(value('id rese')),
+      numeroReservaOrigen: this.text(value('nro reserva')),
+      nombre: this.text(value('nombre')),
+      nombreReservante: this.text(value('nombre reserv')),
+      telefono: this.text(value('telef reserv')),
+      email: this.text(value('email')),
+      observaciones: this.text(value('observaciones')),
+      referencia: this.text(value('referencia')),
+      otaId: this.text(value('id online')),
+      idNacionalidadOrigen: this.text(value('id naci')),
+      nacionalidadOrigen: this.text(value('desc nac')),
+      vip: this.text(value('vip')),
+      idEstadoOrigen: this.text(value('id estado')),
+      estadoOrigen: this.text(value('estado')),
+      idContratoOrigen: this.text(value('id cont')),
+      contratoOrigen: this.text(value('contrato')),
+      idOrigen: this.text(value('id origen')),
+      origen: this.text(value('origen')),
+      fechaEntrada: this.date(value('fecha ent')),
+      fechaSalida: this.date(value('fecha sal')),
+      fechaReserva: this.date(value('fecha reserv'), true),
+      fechaAnulada: this.date(value('fecha anulada'), true),
+      nochesCabecera: this.integer(value('noches')),
+      cantidadHabitacionesCabecera: this.integer(value('cant habi')),
+      paxTotalCabecera: this.integer(value('pax')),
+      totalReservaCabecera: this.money(value('total')),
+      prepagadoCabecera: this.money(value('prepagado')),
+      idMonedaOrigen: this.text(value('id mone')),
+      codigoMonedaOrigen: this.text(value('cod mone')).toUpperCase(),
+      descripcionMonedaOrigen: this.text(value('desc mone')),
+      idCategoriaOrigen: this.text(value('id thab')),
+      codigoCategoriaOrigen: this.text(value('tipo hab')),
+      descripcionCategoriaOrigen: this.text(value('desc t hab')),
+      idHabitacionOrigen: this.text(value('id habi')),
+      habitacionOrigen: this.text(value('habitacion')),
+      maxAdultos: this.integer(value('max adultos')),
+      maxNinos: this.integer(value('max ninos')),
+      cplOrigen: this.money(value('cpl'))
+    };
   }
 
-  private findHeaderRow(rows: unknown[][]): number {
-    return rows.findIndex((row) => {
-      const keys = new Set((row ?? []).map((cell) => this.normalizeKey(String(cell ?? ''))));
-      return (
-        (keys.has('NUMERO') || keys.has('RESERVA')) &&
-        (keys.has('ENTRADA') || keys.has('FECHA ENTRADA')) &&
-        (keys.has('SALIDA') || keys.has('FECHA SALIDA'))
-      );
+  private findHeaderRow(matrix: ExcelMatrix): number {
+    let bestIndex = -1;
+    let bestScore = 0;
+    matrix.slice(0, 100).forEach((row, index) => {
+      const headers = new Set((row ?? []).map((cell) => this.normalizeHeader(this.text(cell))));
+      const score = REQUIRED_HEADERS.filter((header) => headers.has(header)).length;
+      if (score > bestScore) {
+        bestScore = score;
+        bestIndex = index;
+      }
     });
+    return bestScore >= 5 ? bestIndex : -1;
   }
 
-  private normalizeKey(value: string): string {
-    return String(value)
+  private columnMap(header: unknown[]): Map<string, number> {
+    const result = new Map<string, number>();
+    header.forEach((cell, index) => {
+      const key = this.normalizeHeader(this.text(cell));
+      if (key && !result.has(key)) result.set(key, index);
+    });
+    return result;
+  }
+
+  private cell(row: unknown[], columns: ReadonlyMap<string, number>, header: string): unknown {
+    const index = columns.get(this.normalizeHeader(header));
+    return index === undefined ? null : row[index];
+  }
+
+  private normalizeHeader(value: string): string {
+    return value
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^A-Z0-9]+/gi, ' ')
       .trim()
-      .toUpperCase()
+      .toLowerCase()
       .replace(/\s+/g, ' ');
-  }
-
-  private value(row: ExcelRow, aliases: string[]): unknown {
-    for (const alias of aliases) {
-      const value = row[this.normalizeKey(alias)];
-      if (value !== null && value !== undefined && String(value).trim() !== '') return value;
-    }
-    return null;
   }
 
   private text(value: unknown): string {
     return String(value ?? '').replace(/\s+/g, ' ').trim();
   }
 
-  private phone(value: unknown): string {
-    if (typeof value === 'number') return String(Math.trunc(value));
-    return this.text(value);
-  }
-
-  private integer(value: unknown, fallback: number): number {
-    const parsed = this.number(value);
-    return Number.isFinite(parsed) ? Math.max(0, Math.trunc(parsed)) : fallback;
+  private integer(value: unknown): number {
+    const number = this.number(value);
+    return Number.isFinite(number) ? Math.max(0, Math.trunc(number)) : 0;
   }
 
   private money(value: unknown): number {
-    const parsed = this.number(value);
-    return Number.isFinite(parsed) ? this.round(parsed) : 0;
+    const number = this.number(value);
+    return Number.isFinite(number) ? this.round(number) : 0;
   }
 
   private number(value: unknown): number {
@@ -179,45 +186,105 @@ export class ExcelReservasReaderService {
     if (!text) return Number.NaN;
     const comma = text.lastIndexOf(',');
     const dot = text.lastIndexOf('.');
-    if (comma > dot) {
-      text = text.replace(/\./g, '').replace(',', '.');
-    } else {
-      text = text.replace(/,/g, '');
-    }
+    if (comma > dot) text = text.replace(/\./g, '').replace(',', '.');
+    else text = text.replace(/,/g, '');
     return Number(text);
   }
 
-  private date(value: unknown): string {
+  private date(value: unknown, preserveTime = false): string {
     if (value instanceof Date && !Number.isNaN(value.getTime())) {
-      return this.iso(value.getUTCFullYear(), value.getUTCMonth() + 1, value.getUTCDate());
+      return this.dateTime(
+        value.getFullYear(),
+        value.getMonth() + 1,
+        value.getDate(),
+        preserveTime ? value.getHours() : 0,
+        preserveTime ? value.getMinutes() : 0,
+        preserveTime ? value.getSeconds() : 0,
+        preserveTime
+      );
     }
     if (typeof value === 'number') {
       const parsed = XLSX.SSF.parse_date_code(value);
-      return parsed ? this.iso(parsed.y, parsed.m, parsed.d) : '';
+      return parsed
+        ? this.dateTime(
+            parsed.y,
+            parsed.m,
+            parsed.d,
+            preserveTime ? parsed.H : 0,
+            preserveTime ? parsed.M : 0,
+            preserveTime ? Math.trunc(parsed.S) : 0,
+            preserveTime
+          )
+        : '';
     }
-
     const text = this.text(value);
     if (!text) return '';
-    let match = text.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
-    if (match) return this.iso(Number(match[3]), Number(match[2]), Number(match[1]));
-    match = text.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})/);
-    if (match) return this.iso(Number(match[1]), Number(match[2]), Number(match[3]));
-    return '';
+    let match = text.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+    if (match) {
+      return this.dateTime(
+        Number(match[3]),
+        Number(match[2]),
+        Number(match[1]),
+        Number(match[4] ?? 0),
+        Number(match[5] ?? 0),
+        Number(match[6] ?? 0),
+        preserveTime && !!match[4]
+      );
+    }
+    match = text.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+    return match
+      ? this.dateTime(
+          Number(match[1]),
+          Number(match[2]),
+          Number(match[3]),
+          Number(match[4] ?? 0),
+          Number(match[5] ?? 0),
+          Number(match[6] ?? 0),
+          preserveTime && !!match[4]
+        )
+      : '';
   }
 
-  private iso(year: number, month: number, day: number): string {
-    const date = new Date(Date.UTC(year, month - 1, day));
-    if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return '';
-    return `${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+  private dateTime(
+    year: number,
+    month: number,
+    day: number,
+    hours: number,
+    minutes: number,
+    seconds: number,
+    includeTime: boolean
+  ): string {
+    const date = new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds));
+    if (
+      date.getUTCFullYear() !== year ||
+      date.getUTCMonth() !== month - 1 ||
+      date.getUTCDate() !== day ||
+      (includeTime &&
+        (date.getUTCHours() !== hours || date.getUTCMinutes() !== minutes || date.getUTCSeconds() !== seconds))
+    ) {
+      return '';
+    }
+    const datePart = `${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}-${day
+      .toString()
+      .padStart(2, '0')}`;
+    if (!includeTime) return datePart;
+    return `${datePart}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds
+      .toString()
+      .padStart(2, '0')}`;
   }
 
-  private daysBetween(start: string, end: string): number {
-    if (!start || !end) return 0;
-    return Math.max(0, Math.round((Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / 86400000));
+  private categoryKey(code: string, description: string): string {
+    return [code, description].filter(Boolean).join(' · ');
   }
 
-  private isSummaryRow(numero: string): boolean {
-    return /^(TOTAL|SUBTOTAL|RESUMEN|SUMA)/i.test(numero);
+  private unique(values: string[]): string[] {
+    const seen = new Set<string>();
+    return values.filter((value) => {
+      const key = this.normalizeHeader(value);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }
 
   private round(value: number): number {

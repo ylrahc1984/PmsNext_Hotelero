@@ -37,10 +37,11 @@ describe('ReservaImportacionMapper', () => {
       }]
     } as ReservaImportacion;
 
-    const request = ReservaImportacionMapper.toRequest(reserva, 'ADMIN');
+    const request = ReservaImportacionMapper.toRequest(reserva);
 
     expect(request.codReserva).toBe('');
     expect(request.directo).toBe('S');
+    expect(request.operador).toBe('CHANNEL');
     expect(request.habitaciones[0].precio).toBe(50);
     expect(request.inclusiones).toEqual([]);
     expect(request.servicios).toEqual([]);

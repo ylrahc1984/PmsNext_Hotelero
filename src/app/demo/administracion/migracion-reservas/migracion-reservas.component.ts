@@ -7,9 +7,11 @@ import Swal from 'sweetalert2';
 
 import { CanDeactivateReservaCreate } from 'src/app/core/guards/can-deactivate-reserva-create.guard';
 import { OperationalAction } from 'src/app/core/models/operational-context.model';
-import { AuthService } from 'src/app/core/services/auth.service';
 import { OperationalPolicyService } from 'src/app/core/services/operational-policy.service';
+import { OperationalDateService } from 'src/app/core/services/operational-date.service';
 import { ToastService } from 'src/app/core/services/toast.service';
+import { toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
+import { TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
 import { RoomCategory } from 'src/app/modules/front-desk/settings/room-categories/models/room-category.model';
 import { RoomCategoriesService } from 'src/app/modules/front-desk/settings/room-categories/services/room-categories.service';
 import { RoomType } from 'src/app/modules/front-desk/settings/room-types/models/room-type.model';
@@ -24,12 +26,14 @@ import {
   ESTADOS_RESERVA_PMS,
   FiltrosMigracion,
   HabitacionImportacion,
+  HomologacionCategoria,
   HomologacionEstado,
   HomologacionTarifa,
   ReservaImportacion,
   ResumenImportacion
 } from './models/reserva-importacion.model';
 import { ExcelReservasReaderService } from './services/excel-reservas-reader.service';
+import { calculateHeaderNightlyPrice } from './utils/reserva-price.util';
 import { CatalogosValidacion, ReservaImportacionValidator } from './validators/reserva-importacion.validator';
 
 @Component({
@@ -45,17 +49,19 @@ export class MigracionReservasComponent implements OnInit, CanDeactivateReservaC
   private readonly categoryService = inject(RoomCategoriesService);
   private readonly typeService = inject(RoomTypesService);
   private readonly reservasService = inject(ReservaHabitacionService);
-  private readonly authService = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly operationalPolicy = inject(OperationalPolicyService);
+  private readonly operationalDateService = inject(OperationalDateService);
+  private readonly exchangeRateService = inject(TipoCambioService);
 
-  readonly steps = ['Archivo', 'Homologación', 'Habitaciones', 'Validación', 'Importación'];
+  readonly steps = ['Archivo', 'Homologación', 'Revisión', 'Validación', 'Importación'];
   readonly estadosPms = ESTADOS_RESERVA_PMS;
   readonly pageSize = 20;
 
   step = 0;
   file: File | null = null;
   sheetName = '';
+  detectedRoomLines = 0;
   ignoredRows = 0;
   dragActive = false;
   private dragDepth = 0;
@@ -71,6 +77,7 @@ export class MigracionReservasComponent implements OnInit, CanDeactivateReservaC
 
   reservas: ReservaImportacion[] = [];
   tarifaMappings: HomologacionTarifa[] = [];
+  categoryMappings: HomologacionCategoria[] = [];
   stateMappings: HomologacionEstado[] = [];
   agencias: WalkInAgenciaOption[] = [];
   tarifas: WalkInTarifaOption[] = [];
@@ -84,40 +91,66 @@ export class MigracionReservasComponent implements OnInit, CanDeactivateReservaC
     tarifaOrigen: '',
     agencia: '',
     categoria: '',
+    plan: '',
     fechaEntrada: ''
   };
-
-  bulk = { catHabita: '', tipHabita: '', cantHab: 1, numPax: 1 };
 
   ngOnInit(): void {
     void this.loadMasters();
   }
 
   get summary(): ResumenImportacion {
+    const departureDates = this.reservas.map((item) => item.fechaSalida).filter(Boolean).sort();
     return {
       reservas: this.reservas.length,
+      lineasHabitacion: this.detectedRoomLines,
       habitaciones: this.reservas.reduce((sum, item) => sum + item.habitaciones, 0),
       noches: this.reservas.reduce((sum, item) => sum + item.noches, 0),
       pax: this.reservas.reduce((sum, item) => sum + item.pax, 0),
       total: this.reservas.reduce((sum, item) => sum + item.total, 0),
       depositado: this.reservas.reduce((sum, item) => sum + item.depositado, 0),
-      pendientesHomologacion: this.reservas.filter((item) => !item.codAgencia || !item.codTarifa || !item.codPlan || !item.estadoPms).length,
+      pendientesHomologacion: this.reservas.filter(
+        (item) =>
+          !item.codAgencia ||
+          !item.codTarifa ||
+          !item.codPlan ||
+          !item.estadoPms ||
+          item.detalleHabitaciones.some((room) => !room.catHabita)
+      ).length,
+      categoriasHomologadas: this.categoryMappings.filter((item) => !!item.catHabita).length,
       advertencias: this.reservas.filter((item) => item.estadoValidacion === 'ADVERTENCIA').length,
-      errores: this.reservas.filter((item) => item.estadoValidacion === 'ERROR').length
+      errores: this.reservas.filter((item) => item.estadoValidacion === 'ERROR').length,
+      listas: this.reservas.filter((item) => item.estadoValidacion === 'VALIDA' || item.estadoValidacion === 'ADVERTENCIA').length,
+      fechaMinima: this.reservas.map((item) => item.fechaEntrada).filter(Boolean).sort()[0] ?? '',
+      fechaMaxima: departureDates[departureDates.length - 1] ?? ''
     };
+  }
+
+  get pendingMappingRules(): number {
+    const commercial = this.tarifaMappings.filter(
+      (mapping) => !mapping.codAgencia || !mapping.codTarifa || !mapping.codPlan
+    ).length;
+    const states = this.stateMappings.filter((mapping) => !mapping.estadoPms).length;
+    const categories = this.categoryMappings.filter((mapping) => !mapping.catHabita).length;
+    return commercial + states + categories;
   }
 
   get filteredReservations(): ReservaImportacion[] {
     const query = this.filtros.busqueda.trim().toLowerCase();
     return this.reservas.filter((item) => {
-      const matchesSearch = !query || `${item.numeroExterno} ${item.nombre}`.toLowerCase().includes(query);
-      const matchesValidation = this.filtros.validacion === 'TODAS' || item.estadoValidacion === this.filtros.validacion;
+      const matchesSearch = !query || `${item.numeroExterno} ${item.nombre} ${item.otaId}`.toLowerCase().includes(query);
+      const matchesValidation =
+        this.filtros.validacion === 'TODAS' ||
+        (this.filtros.validacion === 'REVISION'
+          ? item.estadoValidacion !== 'VALIDA' || this.hasPendingMapping(item)
+          : item.estadoValidacion === this.filtros.validacion);
       const matchesOrigin = !this.filtros.tarifaOrigen || item.tarifaOrigen === this.filtros.tarifaOrigen;
       const matchesAgency = !this.filtros.agencia || item.codAgencia === this.filtros.agencia;
       const matchesCategory =
         !this.filtros.categoria || item.detalleHabitaciones.some((room) => room.catHabita === this.filtros.categoria);
       const matchesDate = !this.filtros.fechaEntrada || item.fechaEntrada === this.filtros.fechaEntrada;
-      return matchesSearch && matchesValidation && matchesOrigin && matchesAgency && matchesCategory && matchesDate;
+      const matchesPlan = !this.filtros.plan || item.codPlan === this.filtros.plan;
+      return matchesSearch && matchesValidation && matchesOrigin && matchesAgency && matchesCategory && matchesPlan && matchesDate;
     });
   }
 
@@ -140,6 +173,20 @@ export class MigracionReservasComponent implements OnInit, CanDeactivateReservaC
 
   get importErrorCount(): number {
     return this.reservas.filter((item) => item.estadoImportacion === 'ERROR').length;
+  }
+
+  get omittedCount(): number {
+    return this.reservas.filter((item) => item.estadoImportacion === 'OMITIDA').length;
+  }
+
+  get importedTotal(): number {
+    return this.reservas
+      .filter((item) => item.estadoImportacion === 'IMPORTADA')
+      .reduce((sum, item) => sum + item.total, 0);
+  }
+
+  get prepaidReservationCount(): number {
+    return this.reservas.filter((item) => item.depositado > 0).length;
   }
 
   get progress(): number {
@@ -211,14 +258,22 @@ export class MigracionReservasComponent implements OnInit, CanDeactivateReservaC
       const result = await this.excelReader.read(file);
       this.file = file;
       this.sheetName = result.nombreHoja;
+      this.detectedRoomLines = result.lineasHabitacion;
       this.ignoredRows = result.filasIgnoradas;
       this.reservas = result.reservas;
+      const operationalDate = toPmsDateInputValue(await firstValueFrom(this.operationalDateService.ensureLoaded()));
+      this.reservas.forEach((item) => {
+        if (!item.fechaCreacion) item.fechaCreacion = operationalDate;
+      });
       this.buildMappings();
+      this.applyAutomaticCategoryMappings();
       this.applyValidation();
       this.step = 0;
       this.importFinished = false;
       this.page = 1;
-      this.toast.success(`${result.reservas.length} reservas detectadas en el archivo.`);
+      this.toast.success(
+        `${result.reservas.length} reservas reconstruidas a partir de ${result.lineasHabitacion} líneas de habitación.`
+      );
     } catch (error) {
       this.toast.blockingError(this.messageFromError(error));
     } finally {
@@ -234,9 +289,11 @@ export class MigracionReservasComponent implements OnInit, CanDeactivateReservaC
   reset(): void {
     this.file = null;
     this.sheetName = '';
+    this.detectedRoomLines = 0;
     this.ignoredRows = 0;
     this.reservas = [];
     this.tarifaMappings = [];
+    this.categoryMappings = [];
     this.stateMappings = [];
     this.step = 0;
     this.importFinished = false;
@@ -246,8 +303,8 @@ export class MigracionReservasComponent implements OnInit, CanDeactivateReservaC
 
   canAdvance(): boolean {
     if (this.step === 0) return this.reservas.length > 0 && !this.reading;
-    if (this.step === 1) return this.summary.pendientesHomologacion === 0;
-    if (this.step === 2) return this.reservas.every((item) => this.hasCompleteRoomStructure(item));
+    if (this.step === 1) return this.pendingMappingRules === 0;
+    if (this.step === 2) return true;
     if (this.step === 3) return this.selectedCount > 0 && this.reservas.every((item) => !item.seleccionado || item.estadoValidacion !== 'ERROR');
     return false;
   }
@@ -269,15 +326,42 @@ export class MigracionReservasComponent implements OnInit, CanDeactivateReservaC
   }
 
   updateTariffMapping(mapping: HomologacionTarifa): void {
-    this.reservas
-      .filter((item) => item.tarifaOrigen === mapping.origen)
+    const affectedReservations = this.reservas.filter((item) => item.tarifaOrigen === mapping.origen);
+    affectedReservations
       .forEach((item) => {
         item.codAgencia = mapping.codAgencia;
         item.codTarifa = mapping.codTarifa;
         item.codPlan = mapping.codPlan;
         item.directo = mapping.directo;
+        const tariff = this.tarifas.find((rate) => rate.codigo === mapping.codTarifa);
+        item.moneda = tariff?.moneda?.trim().toUpperCase() ?? '';
+        item.detalleHabitaciones.forEach((room) => (room.moneda = item.moneda));
       });
+    this.resolveRoomPrices(affectedReservations);
+    void this.resolveExchangeRateForMapping(mapping);
     this.applyValidation();
+  }
+
+  updateCategoryMapping(mapping: HomologacionCategoria, manual = true): void {
+    if (manual) mapping.coincidencia = mapping.catHabita ? 'MANUAL' : 'PENDIENTE';
+    this.reservas.forEach((reservation) => {
+      reservation.detalleHabitaciones
+        .filter((room) => this.normalized(room.categoriaOrigen ?? '') === this.normalized(mapping.origen))
+        .forEach((room) => {
+          room.catHabita = mapping.catHabita;
+          room.homologacionCategoria = mapping.coincidencia;
+          this.determineRoomType(room);
+        });
+    });
+    this.recalculateDerivedReservations();
+    this.applyValidation();
+    void this.resolveRoomPrices(
+      this.reservas.filter((reservation) =>
+        reservation.detalleHabitaciones.some(
+          (room) => this.normalized(room.categoriaOrigen ?? '') === this.normalized(mapping.origen)
+        )
+      )
+    );
   }
 
   updateStateMapping(mapping: HomologacionEstado): void {
@@ -291,47 +375,32 @@ export class MigracionReservasComponent implements OnInit, CanDeactivateReservaC
     return this.tiposPorCategoria.get(category) ?? [];
   }
 
-  onRoomCategoryChange(room: HabitacionImportacion): void {
-    room.tipHabita = '';
+  onRoomCategoryChange(reserva: ReservaImportacion, room: HabitacionImportacion): void {
+    room.homologacionCategoria = room.catHabita ? 'MANUAL' : 'PENDIENTE';
+    this.determineRoomType(room);
     this.applyValidation();
+    void this.resolveRoomPrices([reserva]);
   }
 
-  onBulkCategoryChange(): void {
-    this.bulk.tipHabita = '';
+  onRoomPaxChange(reserva: ReservaImportacion, room: HabitacionImportacion): void {
+    this.determineRoomType(room);
+    this.recalculateReservation(reserva);
+    this.applyValidation();
+    void this.resolveRoomPrices([reserva]);
   }
 
-  addRoom(reserva: ReservaImportacion): void {
-    reserva.detalleHabitaciones.push({
-      catHabita: '',
-      tipHabita: '',
-      cantHab: 1,
-      precio: 0,
-      moneda: reserva.moneda,
-      total: 0,
-      cpl: 0,
-      impuesto: 0,
-      numPax: 0,
-      numChild: 0,
-      totChild: 0,
-      cCosto: 'HOSPED',
-      orden: reserva.detalleHabitaciones.length + 1
-    });
-    this.recalculateRooms(reserva);
-  }
-
-  removeRoom(reserva: ReservaImportacion, index: number): void {
-    reserva.detalleHabitaciones.splice(index, 1);
-    this.recalculateRooms(reserva);
+  onRoomTypeChange(reserva: ReservaImportacion): void {
+    void this.resolveRoomPrices([reserva]);
+    this.applyValidation();
   }
 
   recalculateRooms(reserva: ReservaImportacion): void {
     reserva.detalleHabitaciones.forEach((room, index) => {
       room.orden = index + 1;
       room.moneda = reserva.moneda;
-      const baseTotal = Number(room.total || 0) - Number(room.totChild || 0);
-      const divisor = Number(room.cantHab || 0) * Number(reserva.noches || 0);
-      room.precio = divisor > 0 ? this.round(baseTotal / divisor) : 0;
+      room.total = this.round(Number(room.cantHab || 0) * Number(room.precio || 0) * Number(reserva.noches || 0));
     });
+    this.recalculateReservation(reserva);
     this.applyValidation();
   }
 
@@ -367,48 +436,6 @@ export class MigracionReservasComponent implements OnInit, CanDeactivateReservaC
     if (reserva.estadoValidacion === 'ERROR' || reserva.estadoImportacion === 'IMPORTADA') reserva.seleccionado = false;
   }
 
-  async applyBulkRoom(): Promise<void> {
-    const selected = this.reservas.filter((item) => item.seleccionado && item.estadoImportacion !== 'IMPORTADA');
-    if (!selected.length || !this.bulk.catHabita || !this.bulk.tipHabita) {
-      this.toast.warning('Seleccione reservas, categoría y tipo de habitación.');
-      return;
-    }
-    const complex = selected.filter((item) => item.detalleHabitaciones.length > 1).length;
-    if (complex) {
-      const result = await Swal.fire({
-        icon: 'warning',
-        title: 'Sobrescribir configuraciones',
-        text: `${complex} reservas tienen una distribución de varias líneas. Se reemplazará su configuración.`,
-        showCancelButton: true,
-        confirmButtonText: 'Aplicar',
-        cancelButtonText: 'Cancelar'
-      });
-      if (!result.isConfirmed) return;
-    }
-
-    selected.forEach((item) => {
-      const cantHab = item.habitaciones === 1 ? 1 : Number(this.bulk.cantHab || item.habitaciones);
-      const numPax = item.pax === 1 ? 1 : Number(this.bulk.numPax || item.pax);
-      item.detalleHabitaciones = [{
-        catHabita: this.bulk.catHabita,
-        tipHabita: this.bulk.tipHabita,
-        cantHab,
-        numPax,
-        precio: cantHab * item.noches > 0 ? this.round(item.total / (cantHab * item.noches)) : 0,
-        moneda: item.moneda,
-        total: item.total,
-        cpl: 0,
-        impuesto: 0,
-        numChild: 0,
-        totChild: 0,
-        cCosto: 'HOSPED',
-        orden: 1
-      }];
-    });
-    this.applyValidation();
-    this.toast.success(`Configuración aplicada a ${selected.length} reservas.`);
-  }
-
   applyValidation(): void {
     const catalogs = this.validationCatalogs();
     this.reservas.forEach((item) => {
@@ -437,7 +464,15 @@ export class MigracionReservasComponent implements OnInit, CanDeactivateReservaC
   }
 
   resetFilters(): void {
-    this.filtros = { busqueda: '', validacion: 'TODAS', tarifaOrigen: '', agencia: '', categoria: '', fechaEntrada: '' };
+    this.filtros = {
+      busqueda: '',
+      validacion: 'TODAS',
+      tarifaOrigen: '',
+      agencia: '',
+      categoria: '',
+      plan: '',
+      fechaEntrada: ''
+    };
     this.page = 1;
   }
 
@@ -464,7 +499,7 @@ export class MigracionReservasComponent implements OnInit, CanDeactivateReservaC
     const confirmation = await Swal.fire({
       icon: 'question',
       title: `Crear ${queue.length} reservas`,
-      html: 'Las reservas se procesarán individualmente mediante el proceso normal.<br><strong>Los depósitos no serán migrados.</strong>',
+      html: 'Las reservas se procesarán individualmente mediante el proceso normal.<br><strong>Los prepagos del archivo no serán migrados.</strong>',
       showCancelButton: true,
       confirmButtonText: 'Sí, importar',
       cancelButtonText: 'Cancelar'
@@ -475,12 +510,6 @@ export class MigracionReservasComponent implements OnInit, CanDeactivateReservaC
     this.importFinished = false;
     this.currentImport = 0;
     this.importTotal = queue.length;
-    const operador = String(this.authService.getCurrentUser()?.usuario ?? '').trim();
-    if (!operador) {
-      this.importing = false;
-      this.toast.blockingError('No fue posible identificar al usuario operador de la sesión.');
-      return;
-    }
     let connectivityFailure = false;
 
     for (const reserva of queue) {
@@ -500,7 +529,7 @@ export class MigracionReservasComponent implements OnInit, CanDeactivateReservaC
           continue;
         }
         const response = await firstValueFrom(
-          this.reservasService.createReserva(ReservaImportacionMapper.toRequest(reserva, operador))
+          this.reservasService.createReserva(ReservaImportacionMapper.toRequest(reserva))
         );
         this.applyApiResult(reserva, response);
       } catch (error) {
@@ -563,6 +592,11 @@ export class MigracionReservasComponent implements OnInit, CanDeactivateReservaC
           (types[index] ?? []).filter((item) => Number(item.CR02_Activo ?? 0) === 1)
         );
       });
+      this.applyAutomaticCategoryMappings();
+      this.reservas.forEach((reservation) =>
+        reservation.detalleHabitaciones.forEach((room) => this.determineRoomType(room))
+      );
+      void this.resolveRoomPrices(this.reservas);
       this.applyValidation();
     } catch (error) {
       this.toast.blockingError(`No fue posible cargar los maestros PMS: ${this.messageFromError(error)}`);
@@ -573,18 +607,41 @@ export class MigracionReservasComponent implements OnInit, CanDeactivateReservaC
 
   private buildMappings(): void {
     const tariffCount = new Map<string, number>();
+    const tariffReservations = new Map<string, Set<string>>();
+    const categoryCount = new Map<string, { lines: number; code: string; description: string }>();
     const stateCount = new Map<string, number>();
     this.reservas.forEach((item) => {
-      tariffCount.set(item.tarifaOrigen, (tariffCount.get(item.tarifaOrigen) ?? 0) + 1);
+      const roomQuantity = item.detalleHabitaciones.reduce((sum, room) => sum + room.cantHab, 0);
+      tariffCount.set(item.tarifaOrigen, (tariffCount.get(item.tarifaOrigen) ?? 0) + roomQuantity);
+      if (!tariffReservations.has(item.tarifaOrigen)) tariffReservations.set(item.tarifaOrigen, new Set());
+      tariffReservations.get(item.tarifaOrigen)?.add(item.numeroExterno);
+      item.detalleHabitaciones.forEach((room) => {
+        const origin = room.categoriaOrigen ?? '';
+        const current = categoryCount.get(origin);
+        categoryCount.set(origin, {
+          lines: (current?.lines ?? 0) + room.cantHab,
+          code: room.codigoCategoriaOrigen ?? '',
+          description: room.descripcionCategoriaOrigen ?? ''
+        });
+      });
       stateCount.set(item.estadoOrigen, (stateCount.get(item.estadoOrigen) ?? 0) + 1);
     });
-    this.tarifaMappings = [...tariffCount.entries()].map(([origen, cantidad]) => ({
+    this.tarifaMappings = [...tariffCount.entries()].map(([origen, lineas]) => ({
       origen,
-      cantidad,
+      lineas,
+      reservas: tariffReservations.get(origen)?.size ?? 0,
       codAgencia: '',
       codTarifa: '',
       codPlan: '',
       directo: 'N'
+    }));
+    this.categoryMappings = [...categoryCount.entries()].map(([origen, data]) => ({
+      origen,
+      codigoOrigen: data.code,
+      descripcionOrigen: data.description,
+      lineas: data.lines,
+      catHabita: '',
+      coincidencia: 'PENDIENTE'
     }));
     this.stateMappings = [...stateCount.entries()].map(([origen, cantidad]) => ({ origen, cantidad, estadoPms: '' }));
   }
@@ -600,18 +657,129 @@ export class MigracionReservasComponent implements OnInit, CanDeactivateReservaC
           category,
           new Set(types.map((item) => item.CR02_TipHabita))
         ])
+      ),
+      tiposPorCategoriaYPax: new Map(
+        [...this.tiposPorCategoria.entries()].map(([category, types]) => {
+          const byPax = new Map<number, Set<string>>();
+          types.forEach((type) => {
+            const pax = Number(type.CR02_NumPax);
+            if (!byPax.has(pax)) byPax.set(pax, new Set());
+            byPax.get(pax)?.add(type.CR02_TipHabita);
+          });
+          return [category, byPax];
+        })
       )
     };
   }
 
-  private hasCompleteRoomStructure(reserva: ReservaImportacion): boolean {
+  private hasPendingMapping(reserva: ReservaImportacion): boolean {
     return (
-      reserva.detalleHabitaciones.length > 0 &&
-      reserva.detalleHabitaciones.every((item) => !!item.catHabita && !!item.tipHabita) &&
-      this.distributedRooms(reserva) === reserva.habitaciones &&
-      this.distributedPax(reserva) === reserva.pax &&
-      Math.abs(this.distributedTotal(reserva) - reserva.total) <= 0.01
+      !reserva.codAgencia ||
+      !reserva.codTarifa ||
+      !reserva.codPlan ||
+      reserva.detalleHabitaciones.some((room) => !room.catHabita || !room.tipHabita)
     );
+  }
+
+  private applyAutomaticCategoryMappings(): void {
+    if (!this.categoryMappings.length || !this.categorias.length) return;
+    this.categoryMappings.forEach((mapping) => {
+      if (mapping.catHabita) return;
+      const matches = this.categorias.filter(
+        (category) =>
+          this.normalized(category.CR01_CodCate) === this.normalized(mapping.codigoOrigen ?? '') ||
+          this.normalized(category.CR01_Categoria) === this.normalized(mapping.descripcionOrigen ?? '')
+      );
+      if (matches.length === 1) {
+        mapping.catHabita = matches[0].CR01_CodCate;
+        mapping.coincidencia = 'AUTOMATICA';
+        this.updateCategoryMapping(mapping, false);
+      }
+    });
+  }
+
+  private determineRoomType(room: HabitacionImportacion): void {
+    const matches = this.typesFor(room.catHabita).filter((type) => Number(type.CR02_NumPax) === Number(room.numPax));
+    if (matches.length === 1) {
+      room.tipHabita = matches[0].CR02_TipHabita;
+    } else if (!matches.some((type) => type.CR02_TipHabita === room.tipHabita)) {
+      room.tipHabita = '';
+    }
+  }
+
+  private recalculateDerivedReservations(): void {
+    this.reservas.forEach((reservation) => this.recalculateReservation(reservation));
+  }
+
+  private recalculateReservation(reserva: ReservaImportacion): void {
+    this.applyHeaderTotalPriceDistribution(reserva);
+    reserva.detalleHabitaciones.forEach((room, index) => {
+      room.orden = index + 1;
+      room.moneda = reserva.moneda;
+      room.total = this.round(Number(room.cantHab || 0) * Number(room.precio || 0) * Number(reserva.noches || 0));
+    });
+    const lastRoom = reserva.detalleHabitaciones[reserva.detalleHabitaciones.length - 1];
+    if (lastRoom) {
+      const detailTotal = reserva.detalleHabitaciones.reduce((sum, room) => sum + Number(room.total || 0), 0);
+      lastRoom.total = this.round(Number(lastRoom.total || 0) + this.round(Number(reserva.total) - detailTotal));
+    }
+    reserva.lineasHabitacion = reserva.detalleHabitaciones.length;
+  }
+
+  private async resolveExchangeRateForMapping(mapping: HomologacionTarifa): Promise<void> {
+    const tariff = this.tarifas.find((item) => item.codigo === mapping.codTarifa);
+    const currency = tariff?.moneda?.trim().toUpperCase() ?? '';
+    if (!currency) {
+      this.applyValidation();
+      return;
+    }
+    try {
+      let rate = 1;
+      if (currency !== 'COL') {
+        const operationalDate = await firstValueFrom(this.operationalDateService.ensureLoaded());
+        const values = await firstValueFrom(this.exchangeRateService.fetchTipoCambio(operationalDate, currency.toLowerCase()));
+        rate = Number(values[0]?.venta || values[0]?.compra || 0);
+      }
+      if (!Number.isFinite(rate) || rate <= 0) throw new Error(`No existe tipo de cambio para ${currency}.`);
+      this.reservas
+        .filter((item) => item.tarifaOrigen === mapping.origen && item.codTarifa === mapping.codTarifa)
+        .forEach((item) => (item.tipoCambio = rate));
+    } catch (error) {
+      this.toast.warning(this.messageFromError(error));
+    } finally {
+      this.applyValidation();
+    }
+  }
+
+  private resolveRoomPrices(reservations: ReservaImportacion[]): void {
+    reservations.forEach((reservation) => {
+      this.recalculateReservation(reservation);
+    });
+    this.applyValidation();
+  }
+
+  private applyHeaderTotalPriceDistribution(reservation: ReservaImportacion): void {
+    reservation.parserAdvertencias = reservation.parserAdvertencias.filter(
+      (warning) =>
+        !warning.startsWith('No se encontró precio tarifario en todas las líneas;') &&
+        !warning.startsWith('No se encontró precio tarifario;')
+    );
+
+    const nightlyPrice = calculateHeaderNightlyPrice(
+      Number(reservation.total),
+      reservation.detalleHabitaciones.length,
+      Number(reservation.noches)
+    );
+    if (nightlyPrice === null) return;
+    reservation.detalleHabitaciones.forEach((room) => (room.precio = nightlyPrice));
+  }
+
+  private normalized(value: string): string {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toUpperCase();
   }
 
   private applyApiResult(reserva: ReservaImportacion, response: ReservaHabitacionResponse): void {

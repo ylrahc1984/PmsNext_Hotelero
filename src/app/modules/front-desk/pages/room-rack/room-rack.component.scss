@@ -1026,19 +1026,20 @@ $line: rgba(15, 33, 51, 0.1);
 }
 
 .room-card__quick-actions {
-  grid-template-columns: repeat(3, 30px);
-  gap: 5px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
   padding-top: 7px;
 }
 
 .quick-action {
-  width: 30px;
-  height: 30px;
+  width: 100%;
+  min-width: 32px;
+  height: 34px;
   box-shadow: 0 3px 8px rgba(15, 33, 51, 0.06);
 }
 
 .quick-action i {
-  font-size: 0.9rem;
+  font-size: 0.96rem;
 }
 
 .status-kpi {
@@ -1109,15 +1110,55 @@ $line: rgba(15, 33, 51, 0.1);
   }
 }
 
-@media (min-width: 1200px) and (max-width: 1599.98px) {
+@media (min-width: 1400px) and (max-width: 1599.98px) {
   .rooms-grid {
-    grid-template-columns: repeat(10, minmax(0, 1fr));
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+
+  .room-card {
+    min-height: 118px;
+  }
+
+  .room-card__number {
+    font-size: 1.82rem;
+  }
+}
+
+@media (min-width: 1200px) and (max-width: 1399.98px) {
+  .room-rack-workspace {
+    grid-template-columns: minmax(0, 1fr) 280px;
+  }
+
+  .rooms-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+
+  .room-card {
+    min-height: 114px;
+    padding: 12px 8px 8px;
+  }
+
+  .room-card__number {
+    font-size: 1.66rem;
+  }
+
+  .quick-action {
+    height: 32px;
   }
 }
 
 @media (min-width: 992px) and (max-width: 1199.98px) {
   .rooms-grid {
-    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
+  }
+
+  .room-card {
+    min-height: 112px;
+    padding: 11px 8px 8px;
+  }
+
+  .room-card__number {
+    font-size: 1.54rem;
   }
 }
 
@@ -1143,7 +1184,15 @@ $line: rgba(15, 33, 51, 0.1);
 
 @media (min-width: 768px) and (max-width: 991.98px) {
   .rooms-grid {
-    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(146px, 1fr));
+  }
+
+  .room-card {
+    min-height: 114px;
+  }
+
+  .room-card__number {
+    font-size: 1.58rem;
   }
 
   .side-panel {
@@ -1153,7 +1202,19 @@ $line: rgba(15, 33, 51, 0.1);
 
 @media (min-width: 576px) and (max-width: 767.98px) {
   .rooms-grid {
-    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  }
+
+  .room-card {
+    min-height: 116px;
+  }
+
+  .quick-action {
+    height: 34px;
+  }
+
+  .quick-action i {
+    font-size: 0.96rem;
   }
 }
 
@@ -1207,12 +1268,30 @@ $line: rgba(15, 33, 51, 0.1);
   }
 
   .room-card__quick-actions {
-    grid-template-columns: repeat(3, 32px);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .quick-action {
-    width: 32px;
-    height: 32px;
+    height: 34px;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .room-card:hover,
+  .room-card:focus,
+  .status-kpi:hover,
+  .quick-action:hover,
+  .operation-button:hover {
+    transform: none;
+  }
+
+  .quick-action {
+    min-width: 34px;
+    height: 36px;
+  }
+
+  .quick-action i {
+    font-size: 1rem;
   }
 }
 

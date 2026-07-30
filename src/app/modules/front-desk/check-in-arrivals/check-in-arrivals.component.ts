@@ -115,6 +115,7 @@ export class CheckInArrivalsComponent implements OnInit {
   sortColumn: CheckInArrivalSortColumn = 'fechaIng';
   sortDirection: CheckInArrivalSortDirection = 'asc';
   activeObservationKey: string | null = null;
+  activeActionsMenuKey: string | null = null;
   roomingArrival: CheckInArrival | null = null;
   roomingGuests: RoomingListGuest[] = [];
   roomingLoading = false;
@@ -186,6 +187,7 @@ export class CheckInArrivalsComponent implements OnInit {
 
   seleccionarArrival(arrival: CheckInArrival): void {
     this.selectedArrival = arrival;
+    this.closeActionsMenu();
   }
 
   toggleObservacion(arrival: CheckInArrival): void {
@@ -195,6 +197,19 @@ export class CheckInArrivalsComponent implements OnInit {
 
     const key = this.getArrivalKey(arrival);
     this.activeObservationKey = this.activeObservationKey === key ? null : key;
+  }
+
+  toggleActionsMenu(arrival: CheckInArrival): void {
+    const key = this.getArrivalKey(arrival);
+    this.activeActionsMenuKey = this.activeActionsMenuKey === key ? null : key;
+  }
+
+  isActionsMenuOpen(arrival: CheckInArrival): boolean {
+    return this.activeActionsMenuKey === this.getArrivalKey(arrival);
+  }
+
+  closeActionsMenu(): void {
+    this.activeActionsMenuKey = null;
   }
 
   ordenar(column: CheckInArrivalSortColumn): void {
@@ -296,6 +311,7 @@ export class CheckInArrivalsComponent implements OnInit {
   }
 
   async realizarCheckIn(reserva: CheckInArrival): Promise<void> {
+    this.closeActionsMenu();
     if (this.isCheckInDisabled(reserva)) return;
     if (!this.hasHabitacion(reserva)) {
       await Swal.fire({ title: 'Habitación requerida', text: 'Asigne una habitación antes de realizar el Check-In.', icon: 'warning' });
@@ -356,6 +372,7 @@ export class CheckInArrivalsComponent implements OnInit {
   }
 
   roomingList(reserva: CheckInArrival): void {
+    this.closeActionsMenu();
     this.roomingArrival = reserva;
     this.roomingGuests = [];
     this.roomingError = '';
@@ -490,6 +507,7 @@ export class CheckInArrivalsComponent implements OnInit {
   }
 
   generarHojaRegistro(reserva: CheckInArrival): void {
+    this.closeActionsMenu();
     console.log('Generar Hoja de Registro', reserva);
   }
 
@@ -518,6 +536,7 @@ export class CheckInArrivalsComponent implements OnInit {
   }
 
   private refreshView(): void {
+    this.closeActionsMenu();
     this.filteredArrivals = this.sortArrivals(this.filterArrivals(this.arrivals));
     this.kpis = this.buildKpis(this.filteredArrivals);
     this.totalPages = Math.max(1, Math.ceil(this.filteredArrivals.length / this.pageSize));

@@ -65,7 +65,7 @@
   </form>
 
   <section class="checkin-workspace">
-    <main class="arrivals-card" aria-label="Tabla de arribos">
+    <main class="arrivals-card" aria-label="Tabla de arribos" (click)="closeActionsMenu()">
       <div class="table-toolbar">
         <div>
           <span class="section-eyebrow">Arribos</span>
@@ -106,7 +106,7 @@
             <thead>
               <tr>
                 @for (column of columns; track trackByColumn($index, column)) {
-                  <th scope="col">
+                  <th scope="col" [ngClass]="'col-' + column.key">
                     <button type="button" class="sort-button" (click)="ordenar(column.key)">
                       <span>{{ column.label }}</span>
                       <span class="material-icons" aria-hidden="true">{{ getSortIcon(column.key) }}</span>
@@ -119,74 +119,92 @@
             <tbody>
               @for (arrival of pagedArrivals; track trackByReserva($index, arrival)) {
                 <tr [class.table-active]="isSelected(arrival)" (click)="seleccionarArrival(arrival)">
-                  <td>
+                  <td class="col-numHabita">
                     <strong class="room-value">{{ getHabitacionLabel(arrival) }}</strong>
                     <span class="badge d-block mt-1" [ngClass]="getHabitacionBadgeClass(arrival)">{{ getHabitacionBadgeLabel(arrival) }}</span>
                   </td>
-                  <td>{{ arrival.catHabita || '-' }}</td>
-                  <td>{{ arrival.tipHabita || '-' }}</td>
-                  <td><strong>{{ arrival.codReserva || '-' }}</strong></td>
-                  <td>{{ arrival.nomAgencia || arrival.codAgencia || '-' }}</td>
-                  <td class="description-cell">{{ arrival.descripcion || '-' }}</td>
-                  <td class="date-cell">{{ formatDisplayDate(arrival.fechaIng) }}</td>
-                  <td class="date-cell">{{ formatDisplayDate(arrival.fechaSal) }}</td>
-                  <td>{{ arrival.totNoches }}</td>
-                  <td>{{ arrival.numPax }}</td>
-                  <td>{{ arrival.numChild }}</td>
-                  <td>{{ arrival.codPlan || '-' }}</td>
-                  <td>
+                  <td class="col-catHabita">{{ arrival.catHabita || '-' }}</td>
+                  <td class="col-tipHabita">{{ arrival.tipHabita || '-' }}</td>
+                  <td class="col-codReserva"><strong>{{ arrival.codReserva || '-' }}</strong></td>
+                  <td class="col-nomAgencia">{{ arrival.nomAgencia || arrival.codAgencia || '-' }}</td>
+                  <td class="description-cell col-descripcion">{{ arrival.descripcion || '-' }}</td>
+                  <td class="date-cell col-fechaIng">{{ formatDisplayDate(arrival.fechaIng) }}</td>
+                  <td class="date-cell col-fechaSal">{{ formatDisplayDate(arrival.fechaSal) }}</td>
+                  <td class="col-totNoches">{{ arrival.totNoches }}</td>
+                  <td class="col-numPax">{{ arrival.numPax }}</td>
+                  <td class="col-numChild">{{ arrival.numChild }}</td>
+                  <td class="col-codPlan">{{ arrival.codPlan || '-' }}</td>
+                  <td class="col-estado">
                     <span class="badge" [ngClass]="getProcesadoBadgeClass(arrival)">{{ getProcesadoBadgeLabel(arrival) }}</span>
                   </td>
-                  <td class="actions-cell text-end">
+                  <td class="actions-cell text-end" [class.actions-cell--menu-open]="isActionsMenuOpen(arrival)">
                     <div class="row-actions" (click)="$event.stopPropagation()">
                       <button
                         type="button"
-                        class="action-icon action-icon--rooming"
-                        title="Rooming list"
-                        aria-label="Abrir rooming list"
-                        (click)="roomingList(arrival)"
-                      >
-                        <span class="material-icons" aria-hidden="true">group_add</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        class="action-icon"
-                        title="Imprimir hoja de registro"
-                        aria-label="Imprimir hoja de registro"
-                        (click)="generarHojaRegistro(arrival)"
-                      >
-                        <span class="material-icons" aria-hidden="true">print</span>
-                      </button>
-
-                      <div class="observation-action">
-                        <button
-                          type="button"
-                          class="action-icon action-icon--note"
-                          [class.action-icon--active]="hasObservacion(arrival)"
-                          [disabled]="!hasObservacion(arrival)"
-                          [attr.title]="hasObservacion(arrival) ? 'Ver observaciones' : 'Sin observaciones'"
-                          [attr.aria-label]="hasObservacion(arrival) ? 'Ver observaciones' : 'Sin observaciones'"
-                          (click)="toggleObservacion(arrival)"
-                        >
-                          <span class="material-icons" aria-hidden="true">speaker_notes</span>
-                          @if (hasObservacion(arrival)) {
-                            <span class="note-dot" aria-hidden="true"></span>
-                          }
-                        </button>
-                      </div>
-
-                      <button
-                        type="button"
-                        class="action-checkin"
+                        class="action-checkin row-actions__primary"
                         [disabled]="isCheckInDisabled(arrival)"
                         [attr.title]="isCheckInDisabled(arrival) ? 'Check-In realizado' : 'Confirmar ingreso del huésped'"
+                        [attr.aria-label]="isCheckInDisabled(arrival) ? 'Check-In ya realizado para reserva ' + arrival.codReserva : 'Realizar Check-In de reserva ' + arrival.codReserva"
                         (click)="realizarCheckIn(arrival)"
                       >
                         @if (isCheckingIn(arrival)) { <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> }
                         @else { <span class="material-icons" aria-hidden="true">how_to_reg</span> }
                         <span>{{ isCheckingIn(arrival) ? 'Procesando' : (arrival.procesado === 1 ? 'Realizado' : 'Check-In') }}</span>
                       </button>
+
+                      <div class="actions-menu" [class.actions-menu--open]="isActionsMenuOpen(arrival)" (keydown.escape)="closeActionsMenu()">
+                        <button
+                          type="button"
+                          class="action-icon action-icon--menu"
+                          title="Más acciones"
+                          aria-label="Más acciones de la reserva"
+                          aria-haspopup="menu"
+                          [attr.aria-expanded]="isActionsMenuOpen(arrival)"
+                          (click)="toggleActionsMenu(arrival)"
+                        >
+                          <span class="material-icons" aria-hidden="true">more_horiz</span>
+                          @if (hasObservacion(arrival)) {
+                            <span class="note-dot action-menu-dot" aria-hidden="true"></span>
+                          }
+                        </button>
+
+                        @if (isActionsMenuOpen(arrival)) {
+                          <div class="actions-popover" role="menu" aria-label="Acciones secundarias" (click)="$event.stopPropagation()">
+                            <button
+                              type="button"
+                              class="actions-popover__item"
+                              role="menuitem"
+                              (click)="roomingList(arrival); closeActionsMenu()"
+                            >
+                              <span class="material-icons" aria-hidden="true">group_add</span>
+                              <span>Rooming list</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              class="actions-popover__item"
+                              role="menuitem"
+                              (click)="generarHojaRegistro(arrival); closeActionsMenu()"
+                            >
+                              <span class="material-icons" aria-hidden="true">print</span>
+                              <span>Imprimir hoja</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              class="actions-popover__item"
+                              role="menuitem"
+                              [class.actions-popover__item--active]="hasObservacion(arrival)"
+                              [disabled]="!hasObservacion(arrival)"
+                              [attr.aria-label]="hasObservacion(arrival) ? 'Ver observaciones' : 'Sin observaciones'"
+                              (click)="toggleObservacion(arrival); closeActionsMenu()"
+                            >
+                              <span class="material-icons" aria-hidden="true">speaker_notes</span>
+                              <span>{{ hasObservacion(arrival) ? 'Ver observaciones' : 'Sin observaciones' }}</span>
+                            </button>
+                          </div>
+                        }
+                      </div>
                     </div>
                   </td>
                 </tr>

@@ -50,7 +50,7 @@
         @if (reading) {
           <strong>Analizando archivo…</strong><small>Normalizando fechas, importes y reservas.</small>
         } @else if (file) {
-          <strong>{{ file.name }}</strong><small>{{ sheetName }} · {{ reservas.length }} reservas · {{ ignoredRows }} filas ignoradas</small>
+          <strong>{{ file.name }}</strong><small>{{ sheetName }} · {{ reservas.length }} reservas · {{ detectedRoomLines }} líneas de habitación</small>
           <button type="button" class="btn btn-outline-primary btn-sm mt-3" (click)="excelFileInput.click()">Reemplazar archivo</button>
         } @else {
           <strong>Arrastre aquí un archivo .xlsx</strong><small>o haga clic para seleccionarlo desde su equipo.</small>
@@ -61,21 +61,22 @@
 
       @if (reservas.length) {
         <div class="stats-grid mt-4">
-          <div><span>Reservas</span><strong>{{ summary.reservas }}</strong></div>
+          <div><span>Reservas únicas</span><strong>{{ summary.reservas }}</strong></div>
+          <div><span>Líneas detectadas</span><strong>{{ summary.lineasHabitacion }}</strong></div>
           <div><span>Habitaciones</span><strong>{{ summary.habitaciones }}</strong></div>
-          <div><span>Noches</span><strong>{{ summary.noches }}</strong></div>
           <div><span>Pax</span><strong>{{ summary.pax }}</strong></div>
-          <div><span>Total</span><strong>{{ summary.total | currency:'USD':'symbol':'1.2-2' }}</strong></div>
-          <div><span>Depósitos</span><strong>{{ summary.depositado | currency:'USD':'symbol':'1.2-2' }}</strong></div>
-          <div><span>Por homologar</span><strong>{{ summary.pendientesHomologacion }}</strong></div>
-          <div><span>Filas ignoradas</span><strong>{{ ignoredRows }}</strong></div>
+          <div><span>Categorías</span><strong>{{ categoryMappings.length }}</strong></div>
+          <div><span>Canales</span><strong>{{ tarifaMappings.length }}</strong></div>
+          <div><span>Estados</span><strong>{{ stateMappings.length }}</strong></div>
+          <div><span>Reservas por homologar</span><strong>{{ summary.pendientesHomologacion }}</strong></div>
+          <div><span>Rango de fechas</span><strong>{{ summary.fechaMinima }} → {{ summary.fechaMaxima }}</strong></div>
         </div>
         <div class="table-responsive preview-table mt-4">
           <table class="table table-hover">
-            <thead><tr><th>Fila</th><th>Externa</th><th>Huésped</th><th>Tarifa origen</th><th>Entrada</th><th>Salida</th><th>Hab.</th><th>Pax</th><th class="text-right">Total</th></tr></thead>
+            <thead><tr><th>Filas</th><th>ID / Reserva</th><th>Huésped</th><th>Contrato / estado</th><th>Entrada</th><th>Salida</th><th>Hab.</th><th>Pax</th><th class="text-right">Total / prepagado</th></tr></thead>
             <tbody>
               @for (item of reservas; track item.id) {
-                <tr><td>{{ item.filaExcel }}</td><td><strong>{{ item.numeroExterno }}</strong></td><td>{{ item.nombre || 'Sin nombre' }}</td><td>{{ item.tarifaOrigen || 'Sin valor' }}</td><td>{{ item.fechaEntrada }}</td><td>{{ item.fechaSalida }}</td><td>{{ item.habitaciones }}</td><td>{{ item.pax }}</td><td class="text-right">{{ item.total | number:'1.2-2' }}</td></tr>
+                <tr><td>{{ item.filasExcel.join(', ') }}</td><td><strong>{{ item.idReservaOrigen }} / {{ item.numeroExterno }}</strong></td><td>{{ item.nombre || 'Sin nombre' }}</td><td>{{ item.contratoOrigen || item.origen || 'Sin valor' }} / {{ item.estadoOrigen || 'Sin estado' }}</td><td>{{ item.fechaEntrada }}</td><td>{{ item.fechaSalida }}</td><td>{{ item.habitaciones }}</td><td>{{ item.pax }}</td><td class="text-right">{{ item.total | number:'1.2-2' }} / {{ item.depositado | number:'1.2-2' }}</td></tr>
               }
             </tbody>
           </table>
@@ -88,46 +89,59 @@
     <section class="step-card">
       <div class="section-title">
         <div><span class="step-kicker">Paso 2</span><h4>Homologación temporal</h4><p>Asocie cada valor externo con los maestros actuales del PMS.</p></div>
-        <span class="status-pill" [class.status-pill--ok]="summary.pendientesHomologacion === 0">{{ summary.pendientesHomologacion }} reservas pendientes</span>
+        <span
+          class="status-pill"
+          [class.status-pill--ok]="pendingMappingRules === 0"
+          title="Reglas únicas de comercial, estado o categoría que todavía requieren asignación"
+        >{{ pendingMappingRules }} reglas pendientes · {{ summary.pendientesHomologacion }} reservas afectadas</span>
       </div>
 
-      <h5 class="subheading"><i class="feather icon-tag"></i> Tarifas y canales de origen</h5>
+      <h5 class="subheading"><i class="feather icon-tag"></i> A. Comercial</h5>
       <div class="mapping-list">
         @for (mapping of tarifaMappings; track mapping.origen) {
           <article class="mapping-card">
-            <header><div><strong>{{ mapping.origen || 'Sin valor de tarifa' }}</strong><small>{{ mapping.cantidad }} reservas</small></div><span class="origin-badge">ORIGEN</span></header>
+            <header><div><strong>{{ mapping.origen || 'Sin valor de tarifa' }}</strong><small>{{ mapping.lineas }} líneas / {{ mapping.reservas }} reservas</small></div><span class="origin-badge">ORIGEN</span></header>
             <div class="mapping-fields">
               <label>Agencia PMS<select class="form-control" [(ngModel)]="mapping.codAgencia" (ngModelChange)="updateTariffMapping(mapping)"><option value="">Seleccione…</option>@for (agency of agencias; track agency.codigo) {<option [value]="agency.codigo">{{ agency.codigo }} · {{ agency.descripcion }}</option>}</select></label>
               <label>Tarifa PMS<select class="form-control" [(ngModel)]="mapping.codTarifa" (ngModelChange)="updateTariffMapping(mapping)"><option value="">Seleccione…</option>@for (rate of tarifas; track rate.codigo) {<option [value]="rate.codigo">{{ rate.codigo }} · {{ rate.descripcion }}</option>}</select></label>
-              <label>Plan alimenticio<select class="form-control" [(ngModel)]="mapping.codPlan" (ngModelChange)="updateTariffMapping(mapping)"><option value="">Seleccione…</option>@for (plan of planes; track plan.codigo) {<option [value]="plan.codigo">{{ plan.codigo }} · {{ plan.descripcion }}</option>}</select></label>
+              <label>Plan PMS<select class="form-control" [(ngModel)]="mapping.codPlan" (ngModelChange)="updateTariffMapping(mapping)"><option value="">Seleccione…</option>@for (plan of planes; track plan.codigo) {<option [value]="plan.codigo">{{ plan.codigo }} · {{ plan.descripcion }}</option>}</select></label>
               <label>Directo<select class="form-control" [(ngModel)]="mapping.directo" (ngModelChange)="updateTariffMapping(mapping)"><option value="N">No</option><option value="S">Sí</option></select></label>
             </div>
           </article>
         }
       </div>
 
-      <h5 class="subheading mt-4"><i class="feather icon-git-merge"></i> Estados externos</h5>
+      <h5 class="subheading mt-4"><i class="feather icon-git-merge"></i> B. Estados</h5>
       <div class="state-grid">
         @for (mapping of stateMappings; track mapping.origen) {
           <label class="state-card"><span><strong>{{ mapping.origen || 'Sin estado' }}</strong><small>{{ mapping.cantidad }} reservas</small></span><i class="feather icon-arrow-right"></i><select class="form-control" [(ngModel)]="mapping.estadoPms" (ngModelChange)="updateStateMapping(mapping)"><option value="">Estado PMS…</option>@for (state of estadosPms; track state.codigo) {<option [value]="state.codigo">{{ state.codigo }} · {{ state.descripcion }}</option>}</select></label>
         }
       </div>
+
+      <h5 class="subheading mt-4"><i class="feather icon-home"></i> C. Categorías</h5>
+      <div class="state-grid">
+        @for (mapping of categoryMappings; track mapping.origen) {
+          <label class="state-card"><span><strong>{{ mapping.origen || 'Sin categoría' }}</strong><small>{{ mapping.lineas }} líneas · {{ mapping.coincidencia }}</small></span><i class="feather icon-arrow-right"></i><select class="form-control" [(ngModel)]="mapping.catHabita" (ngModelChange)="updateCategoryMapping(mapping)"><option value="">Categoría PMS…</option>@for (category of categorias; track category.CR01_CodCate) {<option [value]="category.CR01_CodCate">{{ category.CR01_CodCate }} · {{ category.CR01_Categoria }}</option>}</select></label>
+        }
+      </div>
+
     </section>
   }
 
   @if (step === 2 || step === 3) {
     <section class="step-card">
       <div class="section-title">
-        <div><span class="step-kicker">Paso {{ step + 1 }}</span><h4>{{ step === 2 ? 'Distribución de habitaciones' : 'Validación y selección' }}</h4><p>{{ step === 2 ? 'Configure categorías, tipos, cantidades, Pax y distribución monetaria.' : 'Revise errores y advertencias antes de crear reservas.' }}</p></div>
+        <div><span class="step-kicker">Paso {{ step + 1 }}</span><h4>{{ step === 2 ? 'Revisión de reservas reconstruidas' : 'Validación y selección' }}</h4><p>{{ step === 2 ? 'Las habitaciones ya fueron generadas. Abra únicamente las excepciones que necesite corregir.' : 'Revise errores y advertencias antes de crear reservas.' }}</p></div>
         <div class="selection-counter">{{ selectedCount }} seleccionadas</div>
       </div>
 
       <div class="filters">
-        <label class="search-field"><i class="feather icon-search"></i><input class="form-control" placeholder="Buscar número o huésped" [(ngModel)]="filtros.busqueda" (ngModelChange)="page = 1"></label>
-        <select class="form-control" [(ngModel)]="filtros.validacion" (ngModelChange)="page = 1"><option value="TODAS">Todos los estados</option><option value="PENDIENTE">Pendientes</option><option value="VALIDA">Válidas</option><option value="ADVERTENCIA">Advertencias</option><option value="ERROR">Errores</option></select>
+        <label class="search-field"><i class="feather icon-search"></i><input class="form-control" placeholder="Buscar número, huésped u OTA ID" [(ngModel)]="filtros.busqueda" (ngModelChange)="page = 1"></label>
+        <select class="form-control" [(ngModel)]="filtros.validacion" (ngModelChange)="page = 1"><option value="TODAS">Todos los estados</option><option value="REVISION">Solo requieren revisión</option><option value="PENDIENTE">Pendientes</option><option value="VALIDA">Listas</option><option value="ADVERTENCIA">Advertencias</option><option value="ERROR">Errores</option></select>
         <select class="form-control" [(ngModel)]="filtros.tarifaOrigen" (ngModelChange)="page = 1"><option value="">Todos los canales</option>@for (mapping of tarifaMappings; track mapping.origen) {<option [value]="mapping.origen">{{ mapping.origen || 'Sin valor' }}</option>}</select>
         <select class="form-control" [(ngModel)]="filtros.agencia" (ngModelChange)="page = 1"><option value="">Todas las agencias</option>@for (agency of agencias; track agency.codigo) {<option [value]="agency.codigo">{{ agency.descripcion }}</option>}</select>
         <select class="form-control" [(ngModel)]="filtros.categoria" (ngModelChange)="page = 1"><option value="">Todas las categorías</option>@for (category of categorias; track category.CR01_CodCate) {<option [value]="category.CR01_CodCate">{{ category.CR01_Categoria }}</option>}</select>
+        <select class="form-control" [(ngModel)]="filtros.plan" (ngModelChange)="page = 1"><option value="">Todos los planes</option>@for (plan of planes; track plan.codigo) {<option [value]="plan.codigo">{{ plan.descripcion }}</option>}</select>
         <input type="date" class="form-control" [(ngModel)]="filtros.fechaEntrada" (ngModelChange)="page = 1">
         <button type="button" class="btn btn-light" (click)="resetFilters()"><i class="feather icon-x"></i></button>
       </div>
@@ -137,63 +151,58 @@
         <span>{{ filteredReservations.length }} resultados</span>
       </div>
 
-      @if (step === 2) {
-        <div class="bulk-panel">
-          <div><strong>Aplicar habitación a seleccionadas</strong><small>Reemplaza la distribución simple; las configuraciones complejas requieren confirmación.</small></div>
-          <select class="form-control" [(ngModel)]="bulk.catHabita" (ngModelChange)="onBulkCategoryChange()"><option value="">Categoría…</option>@for (category of categorias; track category.CR01_CodCate) {<option [value]="category.CR01_CodCate">{{ category.CR01_CodCate }} · {{ category.CR01_Categoria }}</option>}</select>
-          <select class="form-control" [(ngModel)]="bulk.tipHabita"><option value="">Tipo…</option>@for (type of typesFor(bulk.catHabita); track type.CR02_TipHabita) {<option [value]="type.CR02_TipHabita">{{ type.CR02_TipHabita }} · {{ type.CR02_NomHabita }}</option>}</select>
-          <label>Cant.<input type="number" min="1" class="form-control" [(ngModel)]="bulk.cantHab"></label>
-          <label>Pax<input type="number" min="0" class="form-control" [(ngModel)]="bulk.numPax"></label>
-          <button class="btn btn-primary" type="button" (click)="applyBulkRoom()">Aplicar</button>
-        </div>
-      }
-
       <div class="reservation-list">
         @for (item of pagedReservations; track trackByReservation($index, item)) {
           <article class="reservation-row" [class.reservation-row--error]="item.estadoValidacion === 'ERROR'" [class.reservation-row--warning]="item.estadoValidacion === 'ADVERTENCIA'">
             <div class="reservation-main">
               <input type="checkbox" [(ngModel)]="item.seleccionado" (change)="toggleSelection(item)" [disabled]="item.estadoValidacion === 'ERROR' || item.estadoImportacion === 'IMPORTADA'">
               <button type="button" class="expand-button" (click)="toggleExpanded(item)"><i class="feather" [ngClass]="expandedId === item.id ? 'icon-chevron-up' : 'icon-chevron-down'"></i></button>
-              <div class="reservation-id"><strong>{{ item.numeroExterno }}</strong><small>Fila {{ item.filaExcel }}</small></div>
-              <div class="guest-cell"><strong>{{ item.nombre || 'Sin nombre' }}</strong><small>{{ item.tarifaOrigen }} · {{ item.fechaEntrada }} → {{ item.fechaSalida }}</small></div>
-              <div class="metric"><small>Hab.</small><strong>{{ distributedRooms(item) }}/{{ item.habitaciones }}</strong></div>
-              <div class="metric"><small>Pax</small><strong>{{ distributedPax(item) }}/{{ item.pax }}</strong></div>
-              <div class="metric metric--money"><small>Distribuido</small><strong>{{ distributedTotal(item) | number:'1.2-2' }}/{{ item.total | number:'1.2-2' }}</strong></div>
+              <div class="reservation-id"><strong>{{ item.numeroExterno }}</strong><small>{{ item.lineasHabitacion }} líneas</small></div>
+              <div class="guest-cell"><strong>{{ item.nombre || 'Sin nombre' }}</strong><small>{{ item.contratoOrigen || item.origen }} · {{ item.estadoOrigen }} · {{ item.fechaEntrada }} → {{ item.fechaSalida }}</small></div>
+              <div class="metric"><small>Hab.</small><strong>{{ item.habitaciones }}</strong></div>
+              <div class="metric"><small>Pax</small><strong>{{ item.pax }}</strong></div>
+              <div class="metric metric--money"><small>Total / prepago</small><strong>{{ item.total | number:'1.2-2' }} / {{ item.depositado | number:'1.2-2' }}</strong></div>
               <span class="validation-badge" [attr.data-state]="item.estadoValidacion">{{ item.estadoValidacion }}</span>
             </div>
 
             @if (expandedId === item.id) {
               <div class="reservation-editor">
                 <div class="reservation-context">
-                  <span><small>Nacionalidad</small><strong>{{ item.nacionalidad || 'No indicada' }}</strong></span>
                   <span><small>Teléfono</small><strong>{{ item.telefono || 'No indicado' }}</strong></span>
-                  <span><small>Noches</small><strong>{{ item.noches }}</strong></span>
-                  <span><small>Depósito</small><strong>{{ item.depositado | currency:'USD':'symbol':'1.2-2' }}</strong></span>
+                  <span><small>Email</small><strong>{{ item.email || 'No indicado' }}</strong></span>
+                  <span><small>Nacionalidad</small><strong>{{ item.nacionalidad || 'No indicada' }}</strong></span>
+                  <span><small>OTA ID</small><strong>{{ item.otaId || 'No indicado' }}</strong></span>
                 </div>
-                <div class="editor-title"><strong>Distribución de habitaciones</strong><button type="button" class="btn btn-outline-primary btn-sm" (click)="addRoom(item)"><i class="feather icon-plus"></i> Agregar línea</button></div>
+                @if (item.comentarios) {
+                  <div class="validation-messages mb-3"><p><i class="feather icon-message-square"></i>{{ item.comentarios }}</p></div>
+                }
+                <div class="editor-title"><strong>Habitaciones reconstruidas automáticamente</strong></div>
                 <div class="table-responsive">
                   <table class="table room-table">
-                    <thead><tr><th>Categoría</th><th>Tipo</th><th>Cant.</th><th>Pax</th><th>Niños</th><th>Precio/noche</th><th>Total línea</th><th></th></tr></thead>
+                    <thead><tr><th>Hab. origen</th><th>Categoría origen</th><th>Capacidad origen</th><th>Categoría PMS</th><th>Tipo PMS</th><th>Cant.</th><th>Pax línea</th><th>Precio/noche</th><th>Total línea</th><th>Estado</th></tr></thead>
                     <tbody>
-                      @for (room of item.detalleHabitaciones; track $index; let roomIndex = $index) {
+                      @for (room of item.detalleHabitaciones; track $index) {
                         <tr>
-                          <td><select class="form-control" [(ngModel)]="room.catHabita" (ngModelChange)="onRoomCategoryChange(room)"><option value="">Seleccione…</option>@for (category of categorias; track category.CR01_CodCate) {<option [value]="category.CR01_CodCate">{{ category.CR01_CodCate }} · {{ category.CR01_Categoria }}</option>}</select></td>
-                          <td><select class="form-control" [(ngModel)]="room.tipHabita" (ngModelChange)="applyValidation()"><option value="">Seleccione…</option>@for (type of typesFor(room.catHabita); track type.CR02_TipHabita) {<option [value]="type.CR02_TipHabita">{{ type.CR02_TipHabita }} · {{ type.CR02_NomHabita }}</option>}</select></td>
-                          <td><input type="number" min="1" class="form-control numeric" [(ngModel)]="room.cantHab" (ngModelChange)="recalculateRooms(item)"></td>
-                          <td><input type="number" min="0" class="form-control numeric" [(ngModel)]="room.numPax" (ngModelChange)="applyValidation()"></td>
-                          <td><input type="number" min="0" class="form-control numeric" [(ngModel)]="room.numChild" (ngModelChange)="recalculateRooms(item)"></td>
-                          <td><input type="number" min="0" step=".01" class="form-control money" [(ngModel)]="room.precio" readonly></td>
-                          <td><input type="number" min="0" step=".01" class="form-control money" [(ngModel)]="room.total" (ngModelChange)="recalculateRooms(item)"></td>
-                          <td><button type="button" class="btn btn-icon btn-outline-danger" (click)="removeRoom(item, roomIndex)" title="Eliminar línea"><i class="feather icon-trash-2"></i></button></td>
+                          <td><strong>{{ room.habitacionOrigen || '—' }}</strong><small class="d-block">Fila {{ room.filaExcel }}</small></td>
+                          <td>{{ room.categoriaOrigen || '—' }}</td>
+                          <td>{{ room.maxAdultos }} adultos / {{ room.maxNinos }} niños máx.</td>
+                          <td><select class="form-control" [(ngModel)]="room.catHabita" (ngModelChange)="onRoomCategoryChange(item, room)"><option value="">Seleccione…</option>@for (category of categorias; track category.CR01_CodCate) {<option [value]="category.CR01_CodCate">{{ category.CR01_CodCate }} · {{ category.CR01_Categoria }}</option>}</select></td>
+                          <td><select class="form-control" [(ngModel)]="room.tipHabita" (ngModelChange)="onRoomTypeChange(item)"><option value="">Seleccione…</option>@for (type of typesFor(room.catHabita); track type.CR02_TipHabita) {<option [value]="type.CR02_TipHabita">{{ type.CR02_TipHabita }} · {{ type.CR02_NomHabita }}</option>}</select></td>
+                          <td><input type="number" min="1" class="form-control numeric" [ngModel]="room.cantHab" readonly title="Cada línea del Excel representa una habitación"></td>
+                          <td><input type="number" min="1" class="form-control numeric" [(ngModel)]="room.numPax" (ngModelChange)="onRoomPaxChange(item, room)"></td>
+                          <td><input type="number" min="0" step=".000001" class="form-control money" [ngModel]="room.precio" readonly title="Calculado desde el Total de cabecera, líneas de detalle y noches"></td>
+                          <td>{{ room.total | number:'1.2-2' }}</td>
+                          <td><span class="validation-badge" [attr.data-state]="room.errores.length ? 'ERROR' : room.advertencias.length ? 'ADVERTENCIA' : 'VALIDA'">{{ room.errores.length ? 'ERROR' : room.advertencias.length ? 'ADVERTENCIA' : 'OK' }}</span></td>
                         </tr>
                       }
                     </tbody>
                   </table>
                 </div>
                 <div class="distribution-summary">
-                  <span>Total reserva <strong>{{ item.total | currency:'USD':'symbol':'1.2-2' }}</strong></span>
-                  <span>Total distribuido <strong>{{ distributedTotal(item) | currency:'USD':'symbol':'1.2-2' }}</strong></span>
-                  <span [class.text-danger]="(distributedTotal(item) - item.total) !== 0">Diferencia <strong>{{ distributedTotal(item) - item.total | currency:'USD':'symbol':'1.2-2' }}</strong></span>
+                  <span>Habitaciones <strong>{{ item.habitaciones }}</strong></span>
+                  <span>Pax <strong>{{ item.pax }}</strong></span>
+                  <span>Total cabecera <strong>{{ item.total | number:'1.2-2' }} {{ item.moneda }}</strong></span>
+                  <span>Total detalles PMS <strong>{{ distributedTotal(item) | number:'1.2-2' }} {{ item.moneda }}</strong></span>
                 </div>
                 @if (item.errores.length || item.advertencias.length) {
                   <div class="validation-messages">
@@ -222,13 +231,16 @@
       <div class="stats-grid">
         <div><span>Seleccionadas</span><strong>{{ selectedCount }}</strong></div>
         <div><span>Habitaciones</span><strong>{{ selectedRooms }}</strong></div>
-        <div><span>Total seleccionado</span><strong>{{ selectedTotal | currency:'USD':'symbol':'1.2-2' }}</strong></div>
-        <div><span>Depósitos no migrados</span><strong>{{ summary.depositado | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+        <div><span>Total seleccionado (origen)</span><strong>{{ selectedTotal | number:'1.2-2' }}</strong></div>
+        <div><span>Prepagos no migrados (origen)</span><strong>{{ summary.depositado | number:'1.2-2' }}</strong></div>
         <div class="success-stat"><span>Importadas</span><strong>{{ importedCount }}</strong></div>
         <div class="danger-stat"><span>Errores de API</span><strong>{{ importErrorCount }}</strong></div>
+        <div><span>Omitidas</span><strong>{{ omittedCount }}</strong></div>
+        <div><span>Total importado</span><strong>{{ importedTotal | number:'1.2-2' }}</strong></div>
+        <div><span>Con prepago pendiente</span><strong>{{ prepaidReservationCount }}</strong></div>
       </div>
 
-      <div class="deposit-warning"><i class="feather icon-alert-triangle"></i><div><strong>Los depósitos no se registrarán</strong><span>Se conservaron para revisión, pero esta etapa crea únicamente la reserva y sus habitaciones.</span></div></div>
+      <div class="deposit-warning"><i class="feather icon-alert-triangle"></i><div><strong>Los prepagos no se registrarán</strong><span>Se conservaron como dato de control, pero esta etapa crea únicamente la reserva y sus habitaciones.</span></div></div>
 
       @if (importing || currentImport > 0) {
         <div class="progress-panel">

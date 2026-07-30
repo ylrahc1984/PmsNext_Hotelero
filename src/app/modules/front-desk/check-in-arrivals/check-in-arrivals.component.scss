@@ -324,6 +324,29 @@ $line: rgba(15, 33, 51, 0.1);
   margin: 0;
 }
 
+.arrivals-table th,
+.arrivals-table td {
+  white-space: nowrap;
+}
+
+.arrivals-table .col-numHabita { min-width: 130px; }
+.arrivals-table .col-catHabita { min-width: 110px; }
+.arrivals-table .col-tipHabita { min-width: 100px; }
+.arrivals-table .col-codReserva { min-width: 116px; }
+.arrivals-table .col-nomAgencia { min-width: 180px; }
+.arrivals-table .col-descripcion { min-width: 220px; }
+.arrivals-table .col-fechaIng,
+.arrivals-table .col-fechaSal { min-width: 108px; }
+.arrivals-table .col-totNoches,
+.arrivals-table .col-numPax,
+.arrivals-table .col-numChild {
+  min-width: 70px;
+  text-align: center;
+}
+
+.arrivals-table .col-codPlan { min-width: 92px; }
+.arrivals-table .col-estado { min-width: 110px; }
+
 .arrivals-table thead th {
   position: sticky;
   top: 0;
@@ -391,6 +414,12 @@ $line: rgba(15, 33, 51, 0.1);
   white-space: nowrap;
 }
 
+.col-nomAgencia {
+  max-width: 230px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .date-cell {
   color: rgba($ink, 0.82);
   font-variant-numeric: tabular-nums;
@@ -401,7 +430,7 @@ $line: rgba(15, 33, 51, 0.1);
 .actions-cell {
   position: sticky;
   right: 0;
-  min-width: 188px;
+  min-width: 146px;
   background: inherit;
   box-shadow: -10px 0 18px rgba(15, 33, 51, 0.05);
 }
@@ -413,6 +442,11 @@ $line: rgba(15, 33, 51, 0.1);
 .actions-cell {
   z-index: 2;
   background: $paper;
+  overflow: visible;
+}
+
+.actions-cell--menu-open {
+  z-index: 6;
 }
 
 .arrivals-table tbody tr:hover .actions-cell,
@@ -422,10 +456,15 @@ $line: rgba(15, 33, 51, 0.1);
 
 .row-actions {
   position: relative;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
+  min-width: 0;
+}
+
+.row-actions__primary {
+  min-width: 102px;
 }
 
 .action-checkin,
@@ -448,6 +487,76 @@ $line: rgba(15, 33, 51, 0.1);
   color: #1554c8;
   border-color: rgba($blue, 0.2);
   background: #edf5ff;
+}
+
+.action-icon--menu {
+  width: 34px;
+  height: 34px;
+  color: rgba($ink, 0.72);
+  border-color: rgba($bg, 0.14);
+  background: #ffffff;
+}
+
+.actions-menu {
+  position: relative;
+  z-index: 12;
+}
+
+.actions-popover {
+  position: absolute;
+  z-index: 24;
+  top: calc(100% + 7px);
+  right: 0;
+  display: grid;
+  gap: 2px;
+  width: 186px;
+  padding: 6px;
+  border: 1px solid rgba($bg, 0.1);
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 14px 30px rgba(15, 33, 51, 0.16);
+}
+
+.actions-popover__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 9px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: rgba($ink, 0.76);
+  background: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 780;
+  text-align: left;
+  transition: border-color 150ms ease, background 150ms ease, color 150ms ease;
+}
+
+.actions-popover__item .material-icons {
+  font-size: 0.98rem;
+}
+
+.actions-popover__item:hover:not(:disabled) {
+  color: $blue;
+  border-color: rgba($blue, 0.18);
+  background: rgba($blue, 0.05);
+}
+
+.actions-popover__item--active {
+  color: $burgundy;
+  border-color: rgba($burgundy, 0.14);
+  background: rgba($burgundy, 0.05);
+}
+
+.actions-popover__item:disabled {
+  color: rgba($muted, 0.48);
+  cursor: not-allowed;
+}
+
+.action-menu-dot {
+  top: 6px;
+  right: 6px;
 }
 
 .rooming-modal {
@@ -548,8 +657,7 @@ $line: rgba(15, 33, 51, 0.1);
 
 .action-checkin {
   gap: 5px;
-  min-height: 32px;
-  margin-left: 3px;
+  min-height: 34px;
   padding: 0 10px;
   border-color: rgba(#198754, 0.38);
   color: $paper;
@@ -632,6 +740,13 @@ $line: rgba(15, 33, 51, 0.1);
 
 .observation-action {
   position: relative;
+}
+
+.action-checkin:focus-visible,
+.action-icon:focus-visible,
+.actions-popover__item:focus-visible {
+  outline: 3px solid rgba($blue, 0.22);
+  outline-offset: 2px;
 }
 
 .observation-detail-row td {
@@ -868,6 +983,34 @@ $line: rgba(15, 33, 51, 0.1);
   .kpi-strip {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
+  .arrivals-table {
+    min-width: 1140px;
+  }
+
+  .arrivals-table-shell {
+    min-height: 420px;
+  }
+
+  .actions-header,
+  .actions-cell {
+    min-width: 138px;
+  }
+
+  .arrivals-table .col-nomAgencia {
+    min-width: 160px;
+    max-width: 190px;
+    white-space: normal;
+    line-height: 1.3;
+  }
+
+  .description-cell {
+    min-width: 190px;
+    max-width: 210px;
+    white-space: normal;
+    line-height: 1.3;
+    word-break: break-word;
+  }
 }
 
 @media (max-width: 991.98px) {
@@ -886,6 +1029,58 @@ $line: rgba(15, 33, 51, 0.1);
 
   .filter-actions .btn {
     flex: 1 1 0;
+  }
+
+  .arrivals-card {
+    padding: 12px;
+  }
+
+  .arrivals-table {
+    min-width: 1040px;
+  }
+
+  .arrivals-table td {
+    padding: 10px 9px;
+    font-size: 0.76rem;
+  }
+
+  .sort-button {
+    min-height: 38px;
+    padding: 7px 9px;
+    font-size: 0.68rem;
+  }
+
+  .actions-header,
+  .actions-cell {
+    min-width: 132px;
+  }
+
+  .action-checkin {
+    min-height: 30px;
+    padding: 0 8px;
+    font-size: 0.72rem;
+  }
+
+  .row-actions {
+    gap: 5px;
+  }
+
+  .row-actions__primary {
+    min-width: 94px;
+  }
+
+  .action-icon--menu {
+    width: 30px;
+    height: 30px;
+  }
+
+  .actions-popover {
+    width: 172px;
+  }
+
+  .actions-popover__item {
+    min-height: 32px;
+    font-size: 0.7rem;
   }
 }
 
