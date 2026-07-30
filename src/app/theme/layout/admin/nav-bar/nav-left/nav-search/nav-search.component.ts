@@ -1,7 +1,8 @@
 // angular import
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 
 // project import
+import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 
 @Component({
@@ -11,38 +12,17 @@ import { SharedModule } from 'src/app/theme/shared/shared.module';
   styleUrls: ['./nav-search.component.scss']
 })
 export class NavSearchComponent {
-  // public props
-  searchInterval;
-  searchWidth: number;
-  searchWidthString: string;
+  private readonly empresaContext = inject(EmpresaContextService);
 
-  // constructor
-  constructor() {
-    this.searchWidth = 0;
+  readonly empresa = this.empresaContext.empresa;
+
+  get hotelNombre(): string {
+    const empresa = this.empresa();
+    return (empresa?.MA04_Nombre || empresa?.MA04_RazonSocial || 'PMSNext Hospitality').trim();
   }
 
-  // public method
-  searchOn() {
-    document.querySelector('#main-search').classList.add('open');
-    this.searchInterval = setInterval(() => {
-      if (this.searchWidth >= 170) {
-        clearInterval(this.searchInterval);
-        // return false;
-      }
-      this.searchWidth = this.searchWidth + 30;
-      this.searchWidthString = this.searchWidth + 'px';
-    }, 35);
-  }
-
-  searchOff() {
-    this.searchInterval = setInterval(() => {
-      if (this.searchWidth <= 0) {
-        document.querySelector('#main-search').classList.remove('open');
-        clearInterval(this.searchInterval);
-        // return false;
-      }
-      this.searchWidth = this.searchWidth - 30;
-      this.searchWidthString = this.searchWidth + 'px';
-    }, 35);
+  get hotelUnidad(): string {
+    const empresa = this.empresa();
+    return (empresa?.MA04_Unidad || '').trim();
   }
 }

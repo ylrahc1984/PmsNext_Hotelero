@@ -1,16 +1,8 @@
-<div id="main-search" class="main-search">
-  <div class="search-control">
-    <i class="feather icon-search search-control__icon" aria-hidden="true"></i>
-    <input
-      type="text"
-      id="m-search"
-      class="form-control"
-      placeholder="Buscar reservas, huéspedes, habitaciones..."
-      [style.width]="searchWidthString"
-      (focus)="searchOn()"
-    />
-    <a href="javascript:" class="search-close" aria-label="Cerrar busqueda" (click)="searchOff()">
-      <i class="feather icon-x"></i>
-    </a>
+<div class="hotel-identity" role="status" aria-label="Hotel activo">
+  <span class="hotel-identity__logo" aria-hidden="true">
+    <img src="assets/images/logo_lamia_head.png" alt="" loading="eager" decoding="async" />
+  </span>
+  <div class="hotel-identity__content">
+    <strong class="hotel-identity__name">{{ hotelNombre }}</strong>
   </div>
 </div>
