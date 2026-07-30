@@ -317,7 +317,8 @@
                 class="action-button"
                 [class.danger]="action.tone === 'danger'"
                 [class.primary]="action.tone === 'primary'"
-                [disabled]="action.id === 'register-prepayment'"
+                [disabled]="action.id === 'register-prepayment' || action.id === 'transfer-charges'"
+                [attr.title]="action.id === 'transfer-charges' ? 'No disponible: requiere soporte del backend' : null"
                 (click)="openActionModal(action)"
               >
                 <span class="material-icons" aria-hidden="true">{{ action.icon }}</span>
@@ -349,7 +350,8 @@
               class="action-button"
               [class.danger]="action.tone === 'danger'"
               [class.primary]="action.tone === 'primary'"
-              [disabled]="action.id === 'register-prepayment'"
+              [disabled]="action.id === 'register-prepayment' || action.id === 'transfer-charges'"
+              [attr.title]="action.id === 'transfer-charges' ? 'No disponible: requiere soporte del backend' : null"
               (click)="openActionModal(action)"
             >
               <span class="material-icons" aria-hidden="true">{{ action.icon }}</span>
@@ -392,12 +394,31 @@
             <div>
               <span class="room-invoice-eyebrow">PMSNEXT HOTELERO</span>
               <h2>Facturacion de Habitacion</h2>
-              <p>Habitacion {{ room().roomNumber }} · {{ room().roomType }} · {{ room().guestsCount }} Pax</p>
+              <p>
+                Habitacion {{ room().roomNumber }} · {{ room().roomType }} · {{ room().guestsCount }} Pax ·
+                Fecha operativa {{ todayDisplayDate() }}
+              </p>
             </div>
             <div class="room-invoice-header-actions">
               <label class="room-invoice-exchange-rate">
-                <span>Tipo cambio</span>
-                <input type="number" [ngModel]="invoicePaymentDraft().tCambio" disabled />
+                <span>Moneda documento</span>
+                <input type="text" value="USD" disabled />
+              </label>
+              <label class="room-invoice-exchange-rate">
+                <span>Compra USD · COL</span>
+                <input
+                  type="text"
+                  [value]="invoiceUsdExchangeRate() ? (invoiceUsdExchangeRate()!.compra | number:'1.2-4') : 'No disponible'"
+                  disabled
+                />
+              </label>
+              <label class="room-invoice-exchange-rate">
+                <span>Venta USD · COL</span>
+                <input
+                  type="text"
+                  [value]="invoiceUsdExchangeRate() ? (invoiceUsdExchangeRate()!.venta | number:'1.2-4') : 'No disponible'"
+                  disabled
+                />
               </label>
               <button type="button" class="room-invoice-close" aria-label="Cerrar" (click)="closeActionModal()">
                 <span class="material-icons" aria-hidden="true">close</span>
@@ -485,7 +506,11 @@
                 </label>
                 <label>
                   <span>Moneda</span>
-                  <select [ngModel]="invoicePaymentDraft().moneda" (ngModelChange)="updateInvoicePaymentDraft({ moneda: $event })">
+                  <select
+                    [ngModel]="invoicePaymentDraft().moneda"
+                    (ngModelChange)="updateInvoicePaymentDraft({ moneda: $event })"
+                    [disabled]="isInvoiceExchangeRateLoading()"
+                  >
                     @for (currency of invoiceCurrencyOptions(); track currency.codMoneda) {
                       <option [value]="currency.codMoneda">{{ currency.codMoneda }} - {{ currency.moneda }}</option>
                     }
@@ -493,7 +518,17 @@
                 </label>
                 <label>
                   <span>Monto</span>
-                  <input type="number" min="0" step="0.01" [ngModel]="invoicePaymentDraft().amount" (ngModelChange)="updateInvoicePaymentDraft({ amount: +$event })" />
+                  <input
+                    type="text"
+                    inputmode="decimal"
+                    autocomplete="off"
+                    class="text-end"
+                    [ngModel]="invoicePaymentAmountDisplay()"
+                    (focus)="onInvoicePaymentAmountFocus()"
+                    (ngModelChange)="onInvoicePaymentAmountChange($event)"
+                    (blur)="onInvoicePaymentAmountBlur()"
+                    [disabled]="isInvoiceExchangeRateLoading()"
+                  />
                 </label>
                 <label>
                   <span>No. tarjeta</span>
@@ -503,12 +538,19 @@
                   <span>Vencimiento</span>
                   <input type="text" [ngModel]="invoicePaymentDraft().vencimiento" (ngModelChange)="updateInvoicePaymentDraft({ vencimiento: $event })" placeholder="MM/AA" />
                 </label>
-                <button type="button" class="room-invoice-add-payment" aria-label="Agregar forma de pago" (click)="addInvoicePayment()">
+                <button
+                  type="button"
+                  class="room-invoice-add-payment"
+                  aria-label="Agregar forma de pago"
+                  (click)="addInvoicePayment()"
+                  [disabled]="isInvoiceExchangeRateLoading()"
+                >
                   <span class="material-icons" aria-hidden="true">add</span>
                 </button>
               </div>
 
               <div class="room-invoice-conversion-hint">
+                <span>{{ isInvoiceExchangeRateLoading() ? 'Consultando tipo de cambio...' : invoiceDraftExchangeRateLabel() }}</span>
                 Total aplicado: <strong>{{ invoiceDraftConvertedAmount() | currency:'USD':'symbol':'1.2-2' }}</strong>
               </div>
 
@@ -533,7 +575,10 @@
                       @for (payment of invoiceAppliedPayments(); track payment.orden) {
                         <tr>
                           <td><strong>{{ payment.description }}</strong><span>{{ payment.frmPago }} · {{ payment.tipo }}</span></td>
-                          <td><strong>{{ payment.moneda }}</strong><span>TC {{ payment.tCambio | number:'1.2-2' }}</span></td>
+                          <td>
+                            <strong>{{ payment.moneda }}</strong>
+                            <span>1 USD = {{ payment.tCambio | number:'1.2-6' }} {{ payment.moneda }} · {{ payment.rateDate }}</span>
+                          </td>
                           <td>{{ payment.numTarjeta || '-' }}</td>
                           <td class="text-end">{{ payment.monto | number:'1.2-2' }}</td>
                           <td class="text-end">{{ payment.mtoTotal | currency:'USD':'symbol':'1.2-2' }}</td>
@@ -598,8 +643,8 @@
               }
             </div>
             <button type="button" class="room-invoice-secondary-btn" (click)="closeActionModal()">Cancelar</button>
-            <button type="button" class="room-invoice-primary-btn" [disabled]="isInvoiceSubmitting()" (click)="executeActiveAction()">
-              {{ isInvoiceSubmitting() ? 'Facturando...' : 'Confirmar Facturacion' }}
+            <button type="button" class="room-invoice-primary-btn" [disabled]="isInvoiceSubmitting() || isInvoiceExchangeRateLoading()" (click)="executeActiveAction()">
+              {{ isInvoiceSubmitting() ? 'Facturando...' : isInvoiceExchangeRateLoading() ? 'Validando cambio...' : 'Confirmar Facturacion' }}
             </button>
           </footer>
         } @else if (isActionSelected('new-charge')) {
@@ -876,7 +921,20 @@
             <div class="action-modal__grid action-modal__grid--single">
               <label class="action-field">
                 <span>Nueva fecha de salida</span>
-                <input type="date" [ngModel]="actionDraft().newCheckOut" (ngModelChange)="updateActionDraft({ newCheckOut: $event })" />
+                <input
+                  type="date"
+                  [min]="departureDateMinInput()"
+                  [ngModel]="actionDraft().newCheckOut"
+                  (ngModelChange)="updateActionDraft({ newCheckOut: $event })"
+                  [attr.aria-invalid]="departureDateValidationMessage() ? 'true' : null"
+                  [class.is-invalid]="departureDateValidationMessage()"
+                />
+                <small class="text-muted">
+                  Fecha operativa vigente: <strong>{{ todayDisplayDate() || 'No disponible' }}</strong>
+                </small>
+                @if (departureDateValidationMessage(); as validationMessage) {
+                  <small class="text-danger fw-semibold">{{ validationMessage }}</small>
+                }
               </label>
             </div>
           }
@@ -976,7 +1034,13 @@
         <footer class="action-modal__footer">
           <button type="button" class="action-modal__secondary" (click)="closeActionModal()">Cancelar</button>
           <button type="button" class="action-modal__primary" [class.action-modal__primary--danger]="action.tone === 'danger'" [disabled]="!canExecuteActiveAction()" (click)="executeActiveAction()">
-            {{ isActionSelected('check-out') && isCheckoutSubmitting() ? 'Procesando...' : action.confirmText }}
+            {{
+              isActionSelected('print-statement') && isStatementGenerating()
+                ? 'Generando...'
+                : isActionSelected('check-out') && isCheckoutSubmitting()
+                  ? 'Procesando...'
+                  : action.confirmText
+            }}
           </button>
         </footer>
         }

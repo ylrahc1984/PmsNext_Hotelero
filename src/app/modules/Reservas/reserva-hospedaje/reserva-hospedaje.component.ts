@@ -21,6 +21,7 @@ import { AuthService } from 'src/app/core/services/auth.service';
 import { OperationalDateService } from 'src/app/core/services/operational-date.service';
 import { ToastService } from 'src/app/core/services/toast.service';
 import { normalizePmsDateDDMMYYYY, parsePmsDate, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
+import { TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
 import { WalkInAgenciaOption, WalkInAgenciaPage, WalkInOption, WalkInTarifaOption } from 'src/app/modules/front-desk/walk-in/models/walk-in.model';
 import { WalkInService } from 'src/app/modules/front-desk/walk-in/services/walk-in.service';
 import { MealPlan } from 'src/app/modules/front-desk/settings/meal-plans/models/meal-plan.model';
@@ -149,6 +150,19 @@ interface ReservaHospedajeDraft {
   tarifaSearch      : string;
 }
 
+interface ReservationInventorySnapshot {
+  fecIngreso        : string;
+  fecSalida         : string;
+  categoryRooms     : Record<string, number>;
+}
+
+interface AvailabilityValidationSegment {
+  categoria         : string;
+  fechaIni          : string;
+  fechaSal          : string;
+  cantHab           : number;
+}
+
 @Component({
   selector: 'app-reserva-hospedaje',
   standalone: true,
@@ -165,6 +179,7 @@ export class ReservaHospedajeComponent implements OnInit {
   private readonly toast                       = inject(ToastService);
   private readonly auth                        = inject(AuthService);
   private readonly operationalDateService      = inject(OperationalDateService);
+  private readonly tipoCambioService           = inject(TipoCambioService);
   private readonly router                      = inject(Router);
   private readonly route                       = inject(ActivatedRoute);
   private readonly destroyRef                  = inject(DestroyRef);
@@ -186,6 +201,9 @@ export class ReservaHospedajeComponent implements OnInit {
   readonly loadingDetalle                     = signal(false);
   readonly detailError                        = signal('');
   readonly checkingRoomAvailability           = signal(false);
+  readonly exchangeRateLoading                = signal(false);
+  readonly exchangeRateError                  = signal('');
+  readonly reservationLocked                  = signal(false);
   readonly operationalDate                    = this.operationalDateService.operationalDate;
   readonly agenciaSearchControl               = this.fb.control('02051 - DIRECTOS');
   readonly tarifaSearchControl                = this.fb.control('');
@@ -195,8 +213,8 @@ export class ReservaHospedajeComponent implements OnInit {
   readonly reservaForm: FormGroup<ReservaHeaderForm> = this.fb.group({
     codReserva            : this.fb.control('AUTO'),
     codAgencia            : this.fb.control('02051', { validators: [Validators.required] }),
-    codTarifa             : this.fb.control(''),
-    codPlan               : this.fb.control(''),
+    codTarifa             : this.fb.control('', { validators: [Validators.required] }),
+    codPlan               : this.fb.control('', { validators: [Validators.required] }),
     fecIngreso            : this.fb.control(this.todayAsInputDate(), { validators: [Validators.required] }),
     fecSalida             : this.fb.control(this.addDaysAsInputDate(1), { validators: [Validators.required] }),
     fecCreacion           : this.fb.control(this.todayAsInputDate()),
@@ -206,10 +224,10 @@ export class ReservaHospedajeComponent implements OnInit {
     totNoches             : this.fb.control(1),
     totDias               : this.fb.control(2),
     descripcion           : this.fb.control(''),
-    tCambio               : this.fb.control(455.25, { validators: [Validators.min(0)] }),
+    tCambio               : this.fb.control(0, { validators: [Validators.required, Validators.min(0.01)] }),
     folio                 : this.fb.control(''),
     estado                : this.fb.control('ABI'),
-    moneda                : this.fb.control(''),
+    moneda                : this.fb.control('', { validators: [Validators.required] }),
     totalRsv              : this.fb.control(0),
     observaciones         : this.fb.control(''),
     procesa               : this.fb.control('WEB'),
@@ -265,6 +283,11 @@ export class ReservaHospedajeComponent implements OnInit {
   private mealPlanRequestKey  = '';
   private draftRestorePending = true;
   private editCodReserva      = '';
+  private originalInventorySnapshot: ReservationInventorySnapshot | null = null;
+  private originalServerFingerprint = '';
+  private originalTarifa = '';
+  private originalMoneda = '';
+  private exchangeRateRequestId = 0;
 
   ngOnInit(): void {
     const codReserva = this.route.snapshot.paramMap.get('codReserva')?.trim() ?? '';
@@ -351,6 +374,7 @@ export class ReservaHospedajeComponent implements OnInit {
 
       if (availability.totalFechasInsuficientes > 0 || availability.data.length > 0) {
         await this.showInsufficientAvailabilityAlert(roomDraft.categoria, requestedRooms, availability.data);
+        return;
       }
     } catch (error) {
       console.error('No se pudo validar la disponibilidad de la categoría.', error);
@@ -432,10 +456,10 @@ export class ReservaHospedajeComponent implements OnInit {
             <span style="font-size:13px;">La disponibilidad es menor que la cantidad solicitada.</span>
           </div>
           <ul style="list-style:none;padding:0;margin:0;">${dates}</ul>
-          <p style="font-size:13px;margin:16px 0 0;color:#6b7280;">Este aviso es informativo. El detalle se agregará a la reserva y podrá revisarlo antes de confirmarla.</p>
+          <p style="font-size:13px;margin:16px 0 0;color:#6b7280;">La habitación no se agregó. Ajuste la cantidad, categoría o fechas para continuar.</p>
         </div>`,
       icon: 'warning',
-      confirmButtonText: 'Entendido, continuar',
+      confirmButtonText: 'Entendido',
       confirmButtonColor: '#b7791f',
       width: 620
     });
@@ -588,6 +612,7 @@ export class ReservaHospedajeComponent implements OnInit {
     this.tarifaSuggestions = [];
     this.tarifaSearchOpen = false;
     this.showTarifaModal = false;
+    void this.loadExchangeRate(tarifa.moneda);
     this.refreshMealPlanForCurrentSelection(true);
   }
 
@@ -776,7 +801,7 @@ export class ReservaHospedajeComponent implements OnInit {
       codPlan           : '',
       ...this.defaultReservationDates(),
       descripcion       : '',
-      tCambio           : 455.25,
+      tCambio           : 0,
       folio             : '',
       estado            : 'ABI',
       moneda            : '',
@@ -795,6 +820,9 @@ export class ReservaHospedajeComponent implements OnInit {
     this.mealPlanDetails = [];
     this.mealPlanRequestKey = '';
     this.mealPlanError = '';
+    this.exchangeRateError.set('');
+    this.exchangeRateLoading.set(false);
+    this.exchangeRateRequestId++;
     this.inclusionForm.reset(this.defaultInclusion());
     this.servicioForm.reset(this.defaultServicio());
     this.editingRoomIndex.set(null);
@@ -844,6 +872,11 @@ export class ReservaHospedajeComponent implements OnInit {
   private applyReservaDetalle(detalle: ReservaHabitacionDetalle): void {
     const formValue = ReservaHabitacionMapper.fromDetalle(detalle);
     this.editCodReserva = formValue.codReserva || this.editCodReserva;
+    this.originalInventorySnapshot = this.buildInventorySnapshot(formValue);
+    this.originalServerFingerprint = this.buildServerFingerprint(detalle);
+    this.originalTarifa = formValue.codTarifa.trim().toUpperCase();
+    this.originalMoneda = formValue.moneda.trim().toUpperCase();
+    this.reservationLocked.set(this.isLockedReservationState(formValue.estado));
 
     this.habitaciones.clear();
     this.inclusiones.clear();
@@ -873,6 +906,7 @@ export class ReservaHospedajeComponent implements OnInit {
     this.recalculateStay();
     this.refreshMealPlanForCurrentSelection(true);
     this.syncTotal();
+    this.reservaForm.updateValueAndValidity({ emitEvent: false });
   }
 
   private buildDetalleLabel(codigo: string, descripcion: string | undefined): string {
@@ -915,7 +949,15 @@ export class ReservaHospedajeComponent implements OnInit {
       return;
     }
 
+    if (!(await this.refreshExchangeRateForCriticalOperation())) {
+      return;
+    }
+
     if (!this.canConfirmReserva()) {
+      return;
+    }
+
+    if (!(await this.ensureEditReservationIsCurrent())) {
       return;
     }
 
@@ -954,7 +996,27 @@ export class ReservaHospedajeComponent implements OnInit {
   }
 
   private async guardarReserva(): Promise<void> {
+    if (this.saving()) {
+      return;
+    }
+
+    if (!(await this.ensureOperationalDateForValidation())) {
+      return;
+    }
+
+    if (!(await this.refreshExchangeRateForCriticalOperation())) {
+      return;
+    }
+
     if (!this.canConfirmReserva()) {
+      return;
+    }
+
+    if (!(await this.ensureEditReservationIsCurrent())) {
+      return;
+    }
+
+    if (!(await this.revalidateReservationAvailability())) {
       return;
     }
 
@@ -1026,6 +1088,15 @@ export class ReservaHospedajeComponent implements OnInit {
   }
 
   private canConfirmReserva(): boolean {
+    if (this.isEditMode() && this.reservationLocked()) {
+      this.toast.warning(
+        `La reserva se encuentra en estado ${this.reservaForm.controls.estado.value} y no admite modificaciones.`,
+        5500,
+        'Reserva protegida'
+      );
+      return false;
+    }
+
     if (this.reservaForm.hasError('entryBeforeOperationalDate')) {
       this.reservaForm.controls.fecIngreso.markAsTouched();
       this.toast.warning(
@@ -1042,12 +1113,6 @@ export class ReservaHospedajeComponent implements OnInit {
       return false;
     }
 
-    if (this.reservaForm.invalid) {
-      this.reservaForm.markAllAsTouched();
-      this.toast.warning('Complete los datos generales obligatorios antes de confirmar la reserva.', 5500, 'Reserva incompleta');
-      return false;
-    }
-
     if (this.habitaciones.length === 0) {
       this.toast.warning('Agregue al menos una habitacion a la reserva antes de confirmar.', 5500, 'Reserva incompleta');
       return false;
@@ -1058,7 +1123,349 @@ export class ReservaHospedajeComponent implements OnInit {
       return false;
     }
 
+    if (!this.reservaForm.controls.codTarifa.value.trim()) {
+      this.toast.warning('Seleccione una tarifa válida antes de confirmar.', 5500, 'Reserva incompleta');
+      return false;
+    }
+
+    if (!this.reservaForm.controls.codPlan.value.trim()) {
+      this.toast.warning('Seleccione un plan de alimentos antes de confirmar.', 5500, 'Reserva incompleta');
+      return false;
+    }
+
+    if (!this.reservaForm.controls.moneda.value.trim() || this.reservaForm.controls.tCambio.value <= 0) {
+      this.toast.warning('No existe un tipo de cambio válido para la moneda seleccionada.', 5500, 'Tipo de cambio');
+      return false;
+    }
+
+    if (this.reservaForm.invalid) {
+      this.reservaForm.markAllAsTouched();
+      this.toast.warning('Complete los datos generales obligatorios antes de confirmar la reserva.', 5500, 'Reserva incompleta');
+      return false;
+    }
+
     return true;
+  }
+
+  private async refreshExchangeRateForCriticalOperation(): Promise<boolean> {
+    const moneda = this.reservaForm.controls.moneda.value.trim().toUpperCase();
+    const tarifa = this.reservaForm.controls.codTarifa.value.trim().toUpperCase();
+    const preserveHistoricalRate =
+      this.isEditMode() &&
+      tarifa === this.originalTarifa &&
+      moneda === this.originalMoneda &&
+      this.reservaForm.controls.tCambio.value > 0;
+
+    if (preserveHistoricalRate) {
+      return true;
+    }
+
+    const loaded = await this.loadExchangeRate(moneda);
+    if (!loaded) {
+      this.toast.warning(
+        this.exchangeRateError() || 'No se pudo obtener el tipo de cambio de la fecha operativa.',
+        5500,
+        'Tipo de cambio'
+      );
+    }
+    return loaded;
+  }
+
+  private async loadExchangeRate(currencyValue: string): Promise<boolean> {
+    const currency = currencyValue.trim().toUpperCase();
+    const requestId = ++this.exchangeRateRequestId;
+    this.exchangeRateError.set('');
+
+    if (!currency) {
+      this.reservaForm.controls.tCambio.setValue(0);
+      this.exchangeRateError.set('Seleccione una tarifa con moneda válida.');
+      return false;
+    }
+
+    if (currency === 'COL') {
+      this.reservaForm.controls.tCambio.setValue(1);
+      return true;
+    }
+
+    this.exchangeRateLoading.set(true);
+    try {
+      const operationalDate = normalizePmsDateDDMMYYYY(
+        this.operationalDateService.operationalDate() ||
+        await firstValueFrom(this.operationalDateService.ensureLoaded())
+      );
+      if (!operationalDate) {
+        throw new Error('No se obtuvo una fecha operativa válida para consultar el tipo de cambio.');
+      }
+      const items = await firstValueFrom(
+        this.tipoCambioService.fetchTipoCambio(operationalDate, currency.toLowerCase())
+      );
+      if (requestId !== this.exchangeRateRequestId) {
+        return false;
+      }
+
+      const exchangeRate = Number(items[0]?.venta || items[0]?.compra || 0);
+      if (!Number.isFinite(exchangeRate) || exchangeRate <= 0) {
+        this.reservaForm.controls.tCambio.setValue(0);
+        this.exchangeRateError.set(`No hay tipo de cambio para ${currency} en la fecha operativa ${operationalDate}.`);
+        return false;
+      }
+
+      this.reservaForm.controls.tCambio.setValue(exchangeRate);
+      return true;
+    } catch (error) {
+      console.error('No se pudo cargar el tipo de cambio de la reserva.', error);
+      if (requestId === this.exchangeRateRequestId) {
+        this.reservaForm.controls.tCambio.setValue(0);
+        this.exchangeRateError.set(`No se pudo consultar el tipo de cambio para ${currency}.`);
+      }
+      return false;
+    } finally {
+      if (requestId === this.exchangeRateRequestId) {
+        this.exchangeRateLoading.set(false);
+      }
+    }
+  }
+
+  private async ensureEditReservationIsCurrent(): Promise<boolean> {
+    if (!this.isEditMode()) {
+      return true;
+    }
+
+    try {
+      const latestDetail = await firstValueFrom(this.service.getReservaDetalle(this.editCodReserva));
+      const latestForm = ReservaHabitacionMapper.fromDetalle(latestDetail);
+
+      if (this.isLockedReservationState(latestForm.estado)) {
+        this.reservaForm.controls.estado.setValue(latestForm.estado, { emitEvent: false });
+        this.reservationLocked.set(true);
+        await Swal.fire({
+          title: 'Reserva protegida',
+          text: `La reserva ahora se encuentra en estado ${latestForm.estado} y ya no admite modificaciones.`,
+          icon: 'warning',
+          confirmButtonText: 'Aceptar',
+          confirmButtonColor: '#b7791f'
+        });
+        return false;
+      }
+
+      const latestFingerprint = this.buildServerFingerprint(latestDetail);
+      if (this.originalServerFingerprint && latestFingerprint !== this.originalServerFingerprint) {
+        const result = await Swal.fire({
+          title: 'La reserva fue actualizada',
+          text: 'Otro usuario o proceso modificó esta reserva. Debe recargar la información antes de continuar.',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Recargar reserva',
+          cancelButtonText: 'Conservar mi pantalla',
+          confirmButtonColor: '#3157a4'
+        });
+
+        if (result.isConfirmed) {
+          this.applyReservaDetalle(latestDetail);
+        }
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('No se pudo revalidar la reserva antes de actualizarla.', error);
+      await Swal.fire({
+        title: 'No se pudo validar la reserva',
+        text: 'La actualización fue cancelada para evitar sobrescribir información desactualizada.',
+        icon: 'error',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#dc3545'
+      });
+      return false;
+    }
+  }
+
+  private async revalidateReservationAvailability(): Promise<boolean> {
+    const segments = this.buildAvailabilityValidationSegments();
+    if (segments.length === 0) {
+      return true;
+    }
+
+    this.checkingRoomAvailability.set(true);
+    try {
+      const results = await firstValueFrom(
+        forkJoin(
+          segments.map((segment) =>
+            this.service
+              .consultarDisponibilidadCategoria({
+                proceso: 1,
+                fechaIni: segment.fechaIni,
+                fechaSal: segment.fechaSal,
+                categoria: segment.categoria,
+                cantHab: segment.cantHab
+              })
+              .pipe(map((response) => ({ segment, response })))
+          )
+        )
+      );
+
+      const failedResponse = results.find(({ response }) => !response.success);
+      if (failedResponse) {
+        await this.showAvailabilityCheckError(failedResponse.response.message);
+        return false;
+      }
+
+      const conflicts = results.flatMap(({ segment, response }) => {
+        if (response.data.length > 0) {
+          return response.data.map((item) => ({
+            categoria: segment.categoria,
+            fecha: item.fecha,
+            disponibles: item.disponibles,
+            solicitadas: segment.cantHab
+          }));
+        }
+
+        return response.totalFechasInsuficientes > 0
+          ? [{
+              categoria: segment.categoria,
+              fecha: segment.fechaIni,
+              disponibles: 0,
+              solicitadas: segment.cantHab
+            }]
+          : [];
+      });
+
+      if (conflicts.length > 0) {
+        await this.showFinalAvailabilityAlert(conflicts);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('No se pudo revalidar la disponibilidad antes de guardar la reserva.', error);
+      await this.showAvailabilityCheckError();
+      return false;
+    } finally {
+      this.checkingRoomAvailability.set(false);
+    }
+  }
+
+  private buildAvailabilityValidationSegments(): AvailabilityValidationSegment[] {
+    const current = this.buildInventorySnapshot(this.reservaForm.getRawValue());
+    const dates = this.enumerateStayDates(current.fecIngreso, current.fecSalida);
+    if (dates.length === 0) {
+      return [];
+    }
+
+    const segments: AvailabilityValidationSegment[] = [];
+    for (const [categoria, currentQuantity] of Object.entries(current.categoryRooms)) {
+      let segmentStart = '';
+      let segmentQuantity = 0;
+
+      for (let index = 0; index <= dates.length; index++) {
+        const date = dates[index] ?? current.fecSalida;
+        const originalQuantity =
+          index < dates.length && this.originalInventorySnapshot &&
+          date >= this.originalInventorySnapshot.fecIngreso &&
+          date < this.originalInventorySnapshot.fecSalida
+            ? this.originalInventorySnapshot.categoryRooms[categoria] ?? 0
+            : 0;
+        const requiredQuantity = index < dates.length
+          ? Math.max(0, currentQuantity - originalQuantity)
+          : 0;
+
+        if (requiredQuantity !== segmentQuantity) {
+          if (segmentStart && segmentQuantity > 0) {
+            segments.push({
+              categoria,
+              fechaIni: segmentStart,
+              fechaSal: date,
+              cantHab: segmentQuantity
+            });
+          }
+          segmentStart = requiredQuantity > 0 ? date : '';
+          segmentQuantity = requiredQuantity;
+        }
+      }
+    }
+
+    return segments;
+  }
+
+  private enumerateStayDates(entryDate: string, departureDate: string): string[] {
+    const entry = this.parseDateValue(entryDate);
+    const departure = this.parseDateValue(departureDate);
+    if (!entry || !departure || departure <= entry) {
+      return [];
+    }
+
+    const dates: string[] = [];
+    const cursor = new Date(entry);
+    while (cursor < departure) {
+      dates.push(this.formatDateForInput(cursor));
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return dates;
+  }
+
+  private buildInventorySnapshot(
+    value: {
+      fecIngreso: string;
+      fecSalida: string;
+      habitaciones?: Array<{ categoria: string; cantidad: number }>;
+    }
+  ): ReservationInventorySnapshot {
+    const categoryRooms = (value.habitaciones ?? []).reduce<Record<string, number>>((result, room) => {
+      const category = String(room.categoria ?? '').trim().toUpperCase();
+      if (category) {
+        result[category] = (result[category] ?? 0) + Math.max(0, Number(room.cantidad) || 0);
+      }
+      return result;
+    }, {});
+
+    return {
+      fecIngreso: toPmsDateInputValue(value.fecIngreso),
+      fecSalida: toPmsDateInputValue(value.fecSalida),
+      categoryRooms
+    };
+  }
+
+  private buildServerFingerprint(detalle: ReservaHabitacionDetalle): string {
+    const value = ReservaHabitacionMapper.fromDetalle(detalle);
+    return JSON.stringify({
+      ...value,
+      habitaciones: value.habitaciones ?? [],
+      inclusiones: value.inclusiones ?? [],
+      servicios: value.servicios ?? []
+    });
+  }
+
+  private isLockedReservationState(state: string): boolean {
+    return ['CHK', 'ANU'].includes(state.trim().toUpperCase());
+  }
+
+  private async showFinalAvailabilityAlert(
+    conflicts: Array<{ categoria: string; fecha: string; disponibles: number; solicitadas: number }>
+  ): Promise<void> {
+    const rows = conflicts
+      .map((item) => `
+        <li style="display:grid;grid-template-columns:1fr auto;gap:12px;padding:10px 0;border-bottom:1px solid #e5e7eb;">
+          <span>
+            <strong style="display:block;color:#1f2937;">${this.escapeHtml(this.getCategoriaLabel(item.categoria))}</strong>
+            <small style="color:#6b7280;">${this.escapeHtml(this.formatAvailabilityDate(item.fecha))}</small>
+          </span>
+          <span style="color:#b91c1c;font-weight:700;">${Math.max(0, Number(item.disponibles) || 0)} disponibles / ${item.solicitadas} requeridas</span>
+        </li>`)
+      .join('');
+
+    await Swal.fire({
+      title: 'La disponibilidad cambió',
+      html: `
+        <div style="text-align:left;color:#4b5563;">
+          <p>La reserva no se guardó porque el inventario cambió desde la última validación.</p>
+          <ul style="list-style:none;padding:0;margin:0;">${rows}</ul>
+          <p style="font-size:13px;margin:14px 0 0;">Revise las habitaciones o las fechas antes de volver a confirmar.</p>
+        </div>`,
+      icon: 'warning',
+      confirmButtonText: 'Revisar reserva',
+      confirmButtonColor: '#b7791f',
+      width: 660
+    });
   }
 
   private getReservaErrorMessage(error: unknown): string {
@@ -1656,7 +2063,10 @@ export class ReservaHospedajeComponent implements OnInit {
     const codigo = this.reservaForm.controls.codTarifa.value.trim();
     const label = this.tarifaSearchControl.value.trim();
     if (codigo && !label.startsWith(`${codigo} -`)) {
-      this.reservaForm.patchValue({ codTarifa: '' }, { emitEvent: false });
+      this.exchangeRateRequestId++;
+      this.exchangeRateLoading.set(false);
+      this.exchangeRateError.set('');
+      this.reservaForm.patchValue({ codTarifa: '', moneda: '', tCambio: 0 }, { emitEvent: false });
       this.refreshMealPlanForCurrentSelection(true);
     }
   }
@@ -1760,6 +2170,14 @@ export class ReservaHospedajeComponent implements OnInit {
     return this.addDaysToInputDate(this.reservaForm.controls.fecIngreso.value, 1);
   }
 
+  minimumEntryDate(): string {
+    const operationalDate = this.operationalDateForInput();
+    const originalEntry = this.originalInventorySnapshot?.fecIngreso ?? '';
+    return this.isEditMode() && originalEntry && originalEntry < operationalDate
+      ? originalEntry
+      : operationalDate;
+  }
+
   operationalDateForInput(): string {
     return this.toInputDate(this.operationalDate());
   }
@@ -1772,8 +2190,12 @@ export class ReservaHospedajeComponent implements OnInit {
       const salida = this.parseDateValue(salidaValue);
       const errors: ValidationErrors = {};
       const operationalDate = this.toInputDate(this.operationalDateService.operationalDate());
+      const isOriginalHistoricalEntry =
+        this.isEditMode() &&
+        !!this.originalInventorySnapshot &&
+        ingresoValue === this.originalInventorySnapshot.fecIngreso;
 
-      if (operationalDate && ingresoValue && ingresoValue < operationalDate) {
+      if (operationalDate && ingresoValue && ingresoValue < operationalDate && !isOriginalHistoricalEntry) {
         errors['entryBeforeOperationalDate'] = true;
       }
 
@@ -1793,6 +2215,9 @@ export class ReservaHospedajeComponent implements OnInit {
         next: (operationalDate) => {
           this.applyOperationalDateDefaults(operationalDate);
           this.reservaForm.updateValueAndValidity({ emitEvent: false });
+          if (!this.isEditMode() && this.reservaForm.controls.moneda.value.trim()) {
+            void this.loadExchangeRate(this.reservaForm.controls.moneda.value);
+          }
         },
         error: () => this.reservaForm.updateValueAndValidity({ emitEvent: false })
       });
@@ -1800,7 +2225,11 @@ export class ReservaHospedajeComponent implements OnInit {
 
   private async ensureOperationalDateForValidation(): Promise<boolean> {
     try {
-      await firstValueFrom(this.operationalDateService.ensureLoaded());
+      const operationalDate = await firstValueFrom(this.operationalDateService.refresh());
+      if (!normalizePmsDateDDMMYYYY(operationalDate)) {
+        throw new Error('La fecha operativa recibida no es válida.');
+      }
+      this.applyOperationalDateDefaults(operationalDate);
       this.reservaForm.updateValueAndValidity({ emitEvent: false });
       return true;
     } catch {
@@ -1816,14 +2245,21 @@ export class ReservaHospedajeComponent implements OnInit {
   private applyOperationalDateDefaults(operationalDate: string): void {
     const ingresoControl = this.reservaForm.controls.fecIngreso;
     const salidaControl = this.reservaForm.controls.fecSalida;
+    const creationControl = this.reservaForm.controls.fecCreacion;
     const operationalInputDate = this.toInputDate(operationalDate);
 
-    if (!operationalInputDate || this.isEditMode() || ingresoControl.dirty || ingresoControl.value >= operationalInputDate) {
+    if (!operationalInputDate || this.isEditMode()) {
       return;
     }
 
-    ingresoControl.setValue(operationalInputDate);
-    salidaControl.setValue(this.addDaysToInputDate(operationalInputDate, 1));
+    if (!ingresoControl.dirty && ingresoControl.value < operationalInputDate) {
+      ingresoControl.setValue(operationalInputDate);
+      salidaControl.setValue(this.addDaysToInputDate(operationalInputDate, 1));
+    }
+
+    if (!creationControl.dirty) {
+      creationControl.setValue(operationalInputDate);
+    }
   }
 
   private recalculateRoomTotals(): void {
@@ -1874,7 +2310,7 @@ export class ReservaHospedajeComponent implements OnInit {
     return {
       fecIngreso      : entryDate,
       fecSalida       : this.addDaysToInputDate(entryDate, 1),
-      fecCreacion     : this.todayAsInputDate(),
+      fecCreacion     : entryDate,
       fecConfirma     : '',
       fecPrepago      : '',
       fecAnulada      : '',

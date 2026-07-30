@@ -18,7 +18,10 @@
       type="button"
       class="status-kpi"
       *ngFor="let kpi of kpis; trackBy: trackByEstado"
-      [ngClass]="kpi.className"
+      [ngClass]="[kpi.className, estadoKpiSeleccionado === kpi.estado ? 'is-active' : '']"
+      [attr.aria-pressed]="estadoKpiSeleccionado === kpi.estado"
+      [attr.aria-label]="'Filtrar por ' + kpi.label + ': ' + kpi.cantidad + ' habitaciones'"
+      (click)="seleccionarKpi(kpi)"
     >
       <span>{{ kpi.label }}</span>
       <strong>{{ kpi.cantidad }}</strong>
@@ -40,7 +43,7 @@
         <div class="rooms-grid">
           <article
             class="room-card"
-            *ngFor="let habitacion of habitaciones; trackBy: trackByHabitacion"
+            *ngFor="let habitacion of habitacionesFiltradas; trackBy: trackByHabitacion"
             [ngClass]="getEstadoClass(habitacion.estado)"
             (click)="seleccionarHabitacion(habitacion)"
             (keydown)="onRoomCardKeydown($event, habitacion)"
@@ -100,8 +103,12 @@
           </article>
         </div>
 
-        <div *ngIf="!isLoading && !errorMessage && habitaciones.length === 0" class="d-inline-flex align-items-center gap-2 mt-2 text-muted fw-semibold small">
-          No existen habitaciones para la fecha seleccionada.
+        <div
+          *ngIf="!isLoading && !errorMessage && habitacionesFiltradas.length === 0"
+          class="d-inline-flex align-items-center gap-2 mt-2 text-muted fw-semibold small"
+          role="status"
+        >
+          {{ getMensajeFiltroVacio() }}
         </div>
       </main>
     </div>
@@ -222,6 +229,7 @@
               class="room-block-native-date"
               type="date"
               [value]="toIsoDate(bloqueoForm.fechaInicial)"
+              [min]="toIsoDate(fechaOperacion)"
               [disabled]="bloqueandoHabitacion"
               tabindex="-1"
               aria-hidden="true"
@@ -258,6 +266,7 @@
               class="room-block-native-date"
               type="date"
               [value]="toIsoDate(bloqueoForm.fechaFin)"
+              [min]="toIsoDate(bloqueoForm.fechaInicial || fechaOperacion)"
               [disabled]="bloqueandoHabitacion"
               tabindex="-1"
               aria-hidden="true"

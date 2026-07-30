@@ -1252,3 +1252,22 @@ $line: rgba(15, 33, 51, 0.1);
   border-color: var(--room-state-accent);
   background: color-mix(in srgb, var(--room-state-start) 12%, #ffffff);
 }
+
+.status-kpi.is-active {
+  border-color: var(--room-state-accent);
+  background: color-mix(in srgb, var(--room-state-start) 16%, #ffffff);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--room-state-accent) 32%, transparent),
+    0 10px 22px rgba(15, 33, 51, 0.13);
+  transform: translateY(-1px);
+}
+
+.status-kpi.is-active span {
+  color: #0f2133;
+  font-weight: 850;
+}
+
+.status-kpi:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--room-state-accent) 42%, transparent);
+  outline-offset: 2px;
+}

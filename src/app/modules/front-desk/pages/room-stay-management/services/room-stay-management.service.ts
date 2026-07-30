@@ -28,6 +28,9 @@ export interface RoomStayApiGuest {
 }
 
 export interface RoomStayApiCharge {
+  tipCrgHab?         : string;
+  tipoCrgHab?        : string;
+  tipCargo?          : string;
   pntVenta            : string;
   numCrgHab           : string;
   codReserva          : string;

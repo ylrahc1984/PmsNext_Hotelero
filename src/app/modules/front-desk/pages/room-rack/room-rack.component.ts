@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { Router, NavigationExtras } from '@angular/router';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { of } from 'rxjs';
+import { firstValueFrom, fromEvent, interval, merge, of } from 'rxjs';
 import { catchError, distinctUntilChanged, filter, finalize } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
@@ -10,7 +10,12 @@ import { OperationalAction } from 'src/app/core/models/operational-context.model
 import { AuthService } from 'src/app/core/services/auth.service';
 import { OperationalDateService } from 'src/app/core/services/operational-date.service';
 import { OperationalPolicyService } from 'src/app/core/services/operational-policy.service';
-import { normalizePmsDateDDMMYYYY, parsePmsDate, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
+import {
+  differenceInPmsCalendarDays,
+  normalizePmsDateDDMMYYYY,
+  parsePmsDate,
+  toPmsDateInputValue
+} from 'src/app/core/utils/pms-date.util';
 import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import {
@@ -68,6 +73,7 @@ interface BloqueoHabitacionForm {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RoomRackComponent implements OnInit {
+  private static readonly automaticRefreshIntervalMs = 30_000;
   private readonly router               = inject(Router);
   private readonly roomRackService      = inject(RoomRackService);
   private readonly tipoCambioService    = inject(TipoCambioService);
@@ -77,6 +83,9 @@ export class RoomRackComponent implements OnInit {
   private readonly destroyRef           = inject(DestroyRef);
   private readonly cdr                  = inject(ChangeDetectorRef);
   private readonly operationalDate$     = toObservable(this.operationalDateService.operationalDate);
+  private isRackRefreshInProgress        = false;
+  private pendingRackRefresh             = false;
+  private isOperationalRefreshInProgress = false;
 
   readonly hotelActual                  = 'Hotel PMSNext Central';
   readonly ultimaActualizacion          = new Date();
@@ -97,6 +106,7 @@ export class RoomRackComponent implements OnInit {
   habitaciones          : HabitacionRack[] = [];
   kpis                  : EstadoKpi[] = this.generarKpis();
   resumen               = this.generarResumen();
+  estadoKpiSeleccionado : EstadoHabitacion | 'Todas' = 'Todas';
   isLoading             = false;
   errorMessage          = '';
   cleanActionMessage    = '';
@@ -125,6 +135,7 @@ export class RoomRackComponent implements OnInit {
     }
 
     this.bindOperationalDate();
+    this.bindAutomaticRefresh();
   }
 
   async seleccionarHabitacion(habitacion: HabitacionRack): Promise<void> {
@@ -148,19 +159,22 @@ export class RoomRackComponent implements OnInit {
       return;
     }
 
-    const navigationState: RoomRackNavigationState = {
-      ...habitacion.data
-    };
-    const extras: NavigationExtras = { state: { roomRackRoom: navigationState } };
-
     if (habitacion.estado === 'Disponible') {
       const allowed = await this.operationalPolicy.require(OperationalAction.CreateOperation);
       if (!allowed) return;
 
+      const refreshedRoom = await this.revalidateAvailableRoom(habitacion, 'iniciar el Walk In');
+      if (!refreshedRoom) return;
+
+      const extras: NavigationExtras = {
+        state: { roomRackRoom: { ...refreshedRoom.data } satisfies RoomRackNavigationState }
+      };
       await this.router.navigate(['/front-desk/walk-in'], extras);
       return;
     }
 
+    const navigationState: RoomRackNavigationState = { ...habitacion.data };
+    const extras: NavigationExtras = { state: { roomRackRoom: navigationState } };
     await this.router.navigate(['/front-desk/habitaciones/room-stay-management', habitacion.numero], extras);
   }
 
@@ -194,7 +208,10 @@ export class RoomRackComponent implements OnInit {
     const allowed = await this.operationalPolicy.require(OperationalAction.CreateOperation);
     if (!allowed) return;
 
-    this.abrirModalBloqueo(room);
+    const refreshedRoom = await this.revalidateAvailableRoom(room, 'bloquear la habitación');
+    if (!refreshedRoom) return;
+
+    this.abrirModalBloqueo(refreshedRoom);
   }
 
   abrirModalBloqueo(room: HabitacionRack): void {
@@ -219,19 +236,26 @@ export class RoomRackComponent implements OnInit {
       return;
     }
 
-    const validationMessage = this.validarBloqueoForm();
-    if (validationMessage) {
-      this.bloqueoErrorMessage = validationMessage;
-      return;
-    }
-
     const allowed = await this.operationalPolicy.require(
       OperationalAction.CreateOperation,
       { refresh: true }
     );
     if (!allowed) return;
 
-    const payload = this.buildBloqueoPayload(room);
+    this.fechaOperacion = normalizePmsDateDDMMYYYY(this.operationalDateService.operationalDate());
+    const validationMessage = this.validarBloqueoForm();
+    if (validationMessage) {
+      this.bloqueoErrorMessage = validationMessage;
+      return;
+    }
+
+    const refreshedRoom = await this.revalidateAvailableRoom(room, 'confirmar el bloqueo');
+    if (!refreshedRoom) {
+      this.bloqueoModalRoom = null;
+      return;
+    }
+
+    const payload = this.buildBloqueoPayload(refreshedRoom);
 
     this.bloqueandoHabitacion = true;
     this.bloqueoErrorMessage = '';
@@ -248,12 +272,9 @@ export class RoomRackComponent implements OnInit {
       )
       .subscribe({
         next: () => {
-          room.data.CR05_EstHab = 'B';
-          room.estado = 'Bloqueada';
-          this.kpis = this.generarKpis();
-          this.resumen = this.generarResumen();
           this.cleanActionMessage = 'Habitacion bloqueada correctamente.';
           this.bloqueoModalRoom = null;
+          this.cargarHabitaciones(true);
           this.cdr.markForCheck();
         },
         error: (error) => {
@@ -296,21 +317,36 @@ export class RoomRackComponent implements OnInit {
     return toPmsDateInputValue(value);
   }
 
-  actualizarVentana(): void {
+  actualizarVentana(silent = false): void {
+    if (this.isOperationalRefreshInProgress) {
+      return;
+    }
+
+    this.isOperationalRefreshInProgress = true;
     const previousOperationalDate = this.fechaOperacion;
 
     this.operationalDateService
       .refresh()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => {
+          this.isOperationalRefreshInProgress = false;
+          this.cdr.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
       .subscribe({
         next: (operationalDate) => {
           const normalizedDate = normalizePmsDateDDMMYYYY(operationalDate);
           if (normalizedDate && normalizedDate === previousOperationalDate) {
-            this.cargarHabitaciones();
+            this.cargarHabitaciones(silent);
             this.cargarTipoCambio();
           }
         },
-        error: () => this.handleOperationalDateError()
+        error: () => {
+          if (!silent) {
+            this.handleOperationalDateError();
+          }
+        }
       });
   }
 
@@ -336,6 +372,43 @@ export class RoomRackComponent implements OnInit {
 
   get venta(): number {
     return this.tipoCambio?.venta ?? 0;
+  }
+
+  get habitacionesFiltradas(): HabitacionRack[] {
+    if (this.estadoKpiSeleccionado === 'Todas') {
+      return this.habitaciones;
+    }
+
+    if (this.estadoKpiSeleccionado === 'Sucia') {
+      return this.habitaciones.filter(
+        (habitacion) => this.normalizeText(habitacion.data.CR05_Clean).toUpperCase() === 'S'
+      );
+    }
+
+    if (this.estadoKpiSeleccionado === 'Limpia') {
+      return this.habitaciones.filter(
+        (habitacion) => this.normalizeText(habitacion.data.CR05_Clean).toUpperCase() === 'L'
+      );
+    }
+
+    return this.habitaciones.filter(
+      (habitacion) => habitacion.estado === this.estadoKpiSeleccionado
+    );
+  }
+
+  seleccionarKpi(kpi: EstadoKpi): void {
+    this.estadoKpiSeleccionado =
+      this.estadoKpiSeleccionado === kpi.estado && kpi.estado !== 'Todas'
+        ? 'Todas'
+        : kpi.estado;
+  }
+
+  getMensajeFiltroVacio(): string {
+    if (this.estadoKpiSeleccionado === 'Todas') {
+      return 'No existen habitaciones para la fecha seleccionada.';
+    }
+
+    return `No existen habitaciones en el filtro "${this.estadoKpiSeleccionado}".`;
   }
 
   getEstadoClass(estado: EstadoHabitacion | 'Todas'): string {
@@ -393,34 +466,115 @@ export class RoomRackComponent implements OnInit {
     return this.updatingCleanRooms.has(habitacion.numero);
   }
 
-  private cargarHabitaciones(): void {
+  private async revalidateAvailableRoom(
+    requestedRoom: HabitacionRack,
+    operationLabel: string
+  ): Promise<HabitacionRack | null> {
+    try {
+      const operationalDate = normalizePmsDateDDMMYYYY(
+        await firstValueFrom(this.operationalDateService.refresh())
+      );
+      if (!operationalDate) {
+        throw new Error('No se obtuvo una fecha operativa válida.');
+      }
+
+      this.fechaOperacion = operationalDate;
+      const rooms = await firstValueFrom(
+        this.roomRackService.getAllRoomsStatus(operationalDate)
+      );
+      this.applyRackRooms(rooms);
+
+      const room = this.habitaciones.find(
+        (item) => item.numero === requestedRoom.numero
+      );
+      if (!room) {
+        await Swal.fire({
+          title: 'Habitación no disponible',
+          text: `La habitación ${requestedRoom.numero} ya no forma parte del inventario operativo.`,
+          icon: 'warning',
+          confirmButtonText: 'Aceptar'
+        });
+        return null;
+      }
+
+      if (room.estado !== 'Disponible') {
+        await Swal.fire({
+          title: 'Estado actualizado',
+          text: `No se puede ${operationLabel}: la habitación ${room.numero} ahora figura como ${room.estado}.`,
+          icon: 'warning',
+          confirmButtonText: 'Aceptar'
+        });
+        return null;
+      }
+
+      return room;
+    } catch (error) {
+      console.error(`No se pudo revalidar la habitación antes de ${operationLabel}.`, error);
+      await Swal.fire({
+        title: 'No se pudo validar la habitación',
+        text: 'La operación fue cancelada para evitar trabajar con información desactualizada.',
+        icon: 'error',
+        confirmButtonText: 'Aceptar'
+      });
+      return null;
+    }
+  }
+
+  private cargarHabitaciones(silent = false): void {
     if (!this.fechaOperacion) {
-      this.handleOperationalDateError();
+      if (!silent) {
+        this.handleOperationalDateError();
+      }
       return;
     }
 
-    this.isLoading = true;
-    this.errorMessage = '';
+    if (this.isRackRefreshInProgress) {
+      this.pendingRackRefresh = true;
+      return;
+    }
 
+    this.isRackRefreshInProgress = true;
+    if (!silent) {
+      this.isLoading = true;
+      this.errorMessage = '';
+    }
     this.roomRackService
       .getAllRoomsStatus(this.fechaOperacion)
       .pipe(
         catchError((error) => {
           console.error('No se pudo cargar el Room Rack.', error);
-          this.errorMessage = 'No se pudo cargar el estado de habitaciones.';
-          return of([] as RoomRackRoom[]);
+          if (!silent) {
+            this.errorMessage = 'No se pudo cargar el estado de habitaciones.';
+          }
+          return of(null);
         }),
         finalize(() => {
-          this.isLoading = false;
+          this.isRackRefreshInProgress = false;
+          if (!silent) {
+            this.isLoading = false;
+          }
           this.cdr.markForCheck();
+          if (this.pendingRackRefresh) {
+            this.pendingRackRefresh = false;
+            this.cargarHabitaciones(true);
+          }
         }),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((rooms) => {
-        this.habitaciones = rooms.map((room) => this.mapRoomRackRoom(room));
-        this.kpis = this.generarKpis();
-        this.resumen = this.generarResumen();
+        if (rooms) {
+          this.applyRackRooms(rooms);
+        }
       });
+  }
+
+  private applyRackRooms(rooms: RoomRackRoom[]): void {
+    this.habitaciones = rooms
+      .filter((room) => this.normalizeText(room.CR05_Activo).toUpperCase() !== 'N')
+      .map((room) => this.mapRoomRackRoom(room));
+    this.kpis = this.generarKpis();
+    this.resumen = this.generarResumen();
+    this.cdr.markForCheck();
   }
 
   private actualizarLimpiezaHabitacion(room: HabitacionRack, clean: 'L' | 'S'): void {
@@ -491,12 +645,22 @@ export class RoomRackComponent implements OnInit {
       return 'La fecha final no puede ser menor que la fecha inicial.';
     }
 
+    const operationalDate = normalizePmsDateDDMMYYYY(this.fechaOperacion);
+    const daysFromOperationalDate = differenceInPmsCalendarDays(operationalDate, fechaInicial);
+    if (!operationalDate || daysFromOperationalDate === null) {
+      return 'No se pudo validar el bloqueo contra la fecha operativa.';
+    }
+
+    if (daysFromOperationalDate < 0) {
+      return `La fecha inicial no puede ser anterior a la fecha operativa ${operationalDate}.`;
+    }
+
     return '';
   }
 
   private buildBloqueoPayload(room: HabitacionRack): RoomBlockRequest {
     return {
-      proceso: 0,
+      proceso: 1,
       numeroHabitacion: Number(room.data.CR05_NumHab || room.numero || 0),
       categoriaHabitacion: this.normalizeText(room.data.CR05_CateHab || room.categoria),
       descripcionHabitacion: this.normalizeText(room.data.CR05_Descripcion || room.data.CR05_TipoHab || room.categoria),
@@ -505,13 +669,13 @@ export class RoomRackComponent implements OnInit {
       descripcion: this.normalizeText(this.bloqueoForm.descripcion),
       observaciones: this.normalizeText(this.bloqueoForm.observaciones),
       operador: this.getOperador(),
-      respuesta: 'string'
+      respuesta: ''
     };
   }
 
   private getOperador(): string {
     const user = this.authService.getCurrentUser();
-    return this.normalizeText(user?.usuario ?? user?.nombre ?? user?.nombreUsu ?? 'Admin') || 'Admin';
+    return this.normalizeText(user?.usuario ?? user?.nombre ?? user?.nombreUsu ?? 'SISTEMA') || 'SISTEMA';
   }
 
   private isDisplayDate(value: string): boolean {
@@ -542,14 +706,15 @@ export class RoomRackComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (items) => {
-          this.tipoCambio = items[0] ?? this.tipoCambioService.getActual() ?? null;
+          this.tipoCambio = items[0] ?? null;
           this.tipoCambioLoading = false;
+          this.tipoCambioError = this.tipoCambio ? '' : 'Tipo de cambio no disponible para la fecha operativa';
           this.cdr.markForCheck();
         },
         error: () => {
-          this.tipoCambio = this.tipoCambioService.getActual() ?? null;
+          this.tipoCambio = null;
           this.tipoCambioLoading = false;
-          this.tipoCambioError = 'Referencia no actualizada';
+          this.tipoCambioError = 'No se pudo consultar el tipo de cambio';
           this.cdr.markForCheck();
         }
       });
@@ -647,6 +812,18 @@ export class RoomRackComponent implements OnInit {
       .subscribe({
         error: () => this.handleOperationalDateError()
       });
+  }
+
+  private bindAutomaticRefresh(): void {
+    merge(
+      interval(RoomRackComponent.automaticRefreshIntervalMs),
+      fromEvent(window, 'focus')
+    )
+      .pipe(
+        filter(() => Boolean(this.fechaOperacion)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => this.actualizarVentana(true));
   }
 
   private handleOperationalDateError(): void {

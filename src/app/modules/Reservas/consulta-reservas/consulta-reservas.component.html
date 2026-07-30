@@ -184,7 +184,8 @@
                       ngbDropdownItem
                       class="dropdown-item action-item"
                       (click)="abrirPrepagos(reserva)"
-                      [disabled]="!reserva.reserva"
+                      [disabled]="!puedeAdministrarPrepagos(reserva)"
+                      [title]="puedeAdministrarPrepagos(reserva) ? 'Administrar prepagos' : 'No disponible para reservas con check-in o canceladas'"
                     >
                       <span class="action-item__icon action-item__icon--money">
                         <i class="bi bi-cash-stack" aria-hidden="true"></i>

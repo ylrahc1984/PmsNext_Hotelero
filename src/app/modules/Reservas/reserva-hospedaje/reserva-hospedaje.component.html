@@ -16,7 +16,11 @@
         <i class="bi bi-eraser"></i>
         {{ clearButtonText() }}
       </button>
-      <button type="submit" class="btn btn-primary action-button action-button--primary" [disabled]="saving() || loadingDetalle()">
+      <button
+        type="submit"
+        class="btn btn-primary action-button action-button--primary"
+        [disabled]="saving() || loadingDetalle() || checkingRoomAvailability() || exchangeRateLoading() || reservationLocked()"
+      >
         <span class="spinner-border spinner-border-sm" *ngIf="saving() || loadingDetalle()"></span>
         <i class="bi bi-check-circle" *ngIf="!saving() && !loadingDetalle()"></i>
         {{ submitButtonText() }}
@@ -26,6 +30,9 @@
 
   <div class="alert alert-info mx-3 mt-3" *ngIf="loadingDetalle()">Cargando detalle de la reserva...</div>
   <div class="alert alert-danger mx-3 mt-3" *ngIf="detailError()">{{ detailError() }}</div>
+  <div class="alert alert-warning mx-3 mt-3" *ngIf="reservationLocked()" role="alert">
+    La reserva se encuentra en estado <strong>{{ reservaForm.controls.estado.value }}</strong> y está protegida contra modificaciones.
+  </div>
 
   <div class="reservation-layout">
     <aside class="left-column">
@@ -97,6 +104,9 @@
                 <small>{{ tarifa.moneda || 'Sin moneda' }} · {{ tarifa.activo ? 'Activa' : 'Inactiva' }}</small>
               </button>
             </div>
+            <small class="text-danger" *ngIf="reservaForm.controls.codTarifa.touched && reservaForm.controls.codTarifa.invalid">
+              Seleccione una tarifa válida.
+            </small>
           </label>
 
           <label class="field span-2">
@@ -105,6 +115,9 @@
               <option value="">Seleccione...</option>
               <option *ngFor="let plan of planes; trackBy: trackByCode" [value]="plan.codigo">{{ plan.descripcion }}</option>
             </select>
+            <small class="text-danger" *ngIf="reservaForm.controls.codPlan.touched && reservaForm.controls.codPlan.invalid">
+              Seleccione un plan de alimentos.
+            </small>
           </label>
 
           <label class="field">
@@ -114,7 +127,7 @@
                 type="date"
                 class="form-control date-input--compact"
                 formControlName="fecIngreso"
-                [min]="operationalDateForInput()"
+                [min]="minimumEntryDate()"
                 [class.is-invalid]="reservaForm.controls.fecIngreso.touched && (reservaForm.controls.fecIngreso.invalid || reservaForm.hasError('entryBeforeOperationalDate'))"
               >
             </div>
@@ -152,16 +165,25 @@
           <label class="field">
             <span>Moneda <b>*</b></span>
             <input type="text" class="form-control" formControlName="moneda" readonly placeholder="Seleccione tarifa">
+            <small class="text-danger" *ngIf="reservaForm.controls.moneda.touched && reservaForm.controls.moneda.invalid">
+              La tarifa debe definir una moneda.
+            </small>
           </label>
           <label class="field">
             <span>Tipo de cambio</span>
-            <input type="number" class="form-control" formControlName="tCambio" min="0" step="0.01">
+            <div class="input-group">
+              <input type="number" class="form-control text-end" formControlName="tCambio" min="0.01" step="0.01" readonly>
+              <span class="input-group-text" *ngIf="exchangeRateLoading()">
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+              </span>
+            </div>
+            <small class="text-danger" *ngIf="exchangeRateError()">{{ exchangeRateError() }}</small>
           </label>
 
           <label class="field">
             <span>Fecha creación</span>
             <div class="date-control">
-              <input type="date" class="form-control" formControlName="fecCreacion">
+              <input type="date" class="form-control" formControlName="fecCreacion" readonly>
             </div>
           </label>
 

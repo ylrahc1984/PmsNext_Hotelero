@@ -29,7 +29,7 @@ interface TipoCambioDto {
 })
 export class TipoCambioService {
   private readonly apiUrl = `${environment.apiUrl}/tipocambio`;
-  private historial = signal<TipoCambio[]>(this.buildMock());
+  private historial = signal<TipoCambio[]>([]);
 
   constructor(private http: HttpClient) {}
 
@@ -81,30 +81,5 @@ export class TipoCambioService {
   private normalizeNumber(value: unknown): number {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
-  }
-
-  private buildMock(): TipoCambio[] {
-    const today = new Date();
-    const baseCompra = 530.25;
-    const baseVenta = 545.75;
-    const data: TipoCambio[] = [];
-
-    for (let i = 0; i < 15; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() - i);
-      const variation = (Math.sin(i) * 0.8) + (Math.cos(i / 2) * 0.5);
-      const compra = +(baseCompra + variation - i * 0.1).toFixed(2);
-      const venta = +(baseVenta + variation - i * 0.1).toFixed(2);
-
-      data.push({
-        fecha: date.toISOString().split('T')[0],
-        monedaBase: 'COL',
-        monedaReferencia: 'USD',
-        compra,
-        venta
-      });
-    }
-
-    return data.sort((a, b) => b.fecha.localeCompare(a.fecha));
   }
 }

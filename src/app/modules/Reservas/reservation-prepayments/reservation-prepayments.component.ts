@@ -5,7 +5,10 @@ import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Va
 import { catchError, distinctUntilChanged, finalize, forkJoin, of } from 'rxjs';
 import Swal from 'sweetalert2';
 
+import { OperationalAction } from 'src/app/core/models/operational-context.model';
 import { AuthService } from 'src/app/core/services/auth.service';
+import { OperationalDateService } from 'src/app/core/services/operational-date.service';
+import { OperationalPolicyService } from 'src/app/core/services/operational-policy.service';
 import { normalizePmsDateDDMMYYYY, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 import { FormaPago } from 'src/app/demo/administracion/forma-pago/forma-pago.models';
 import { FormaPagoService } from 'src/app/demo/administracion/forma-pago/forma-pago.service';
@@ -56,6 +59,8 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
   private readonly tipoCambioService = inject(TipoCambioService);
   private readonly formaPagoService = inject(FormaPagoService);
   private readonly auth = inject(AuthService);
+  private readonly operationalDateService = inject(OperationalDateService);
+  private readonly operationalPolicy = inject(OperationalPolicyService);
   private readonly destroyRef = inject(DestroyRef);
 
   @Input() open = false;
@@ -141,6 +146,11 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
       return;
     }
 
+    const allowed = await this.operationalPolicy.require(OperationalAction.UpdateOperation, { refresh: true });
+    if (!allowed) {
+      return;
+    }
+
     const payload = this.buildPayload(this.isEditing() ? 2 : 1);
     const confirmation = await Swal.fire({
       title: this.isEditing() ? 'Actualizar prepago' : 'Guardar prepago',
@@ -212,6 +222,11 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
   }
 
   async eliminar(prepayment: ReservationPrepayment): Promise<void> {
+    const allowed = await this.operationalPolicy.require(OperationalAction.UpdateOperation, { refresh: true });
+    if (!allowed) {
+      return;
+    }
+
     const result = await Swal.fire({
       title: 'Eliminar prepago',
       text: `¿Desea eliminar el prepago ${prepayment.numInterno || prepayment.nOperacion || ''}?`,
@@ -451,7 +466,7 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
       codRsv: this.reserva?.codReserva ?? '',
       codAge: this.reserva?.codAgencia ?? '',
       fechaDepo: raw.fechaDepo,
-      fechaReg: raw.fechaReg,
+      fechaReg: this.todayIso() || raw.fechaReg,
       horaReg: base.horaReg || this.currentTime(),
       concepto: raw.concepto.trim(),
       cCosto: 'PREPA',
@@ -520,8 +535,7 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
   }
 
   private todayIso(): string {
-    const date = new Date();
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    return toPmsDateInputValue(this.operationalDateService.operationalDate());
   }
 
   private currentTime(): string {

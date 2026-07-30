@@ -4,17 +4,23 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { CdkScrollable } from '@angular/cdk/scrolling';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Subject, forkJoin, of } from 'rxjs';
+import { Subject, firstValueFrom, forkJoin, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, finalize, switchMap } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
 import { AuthService } from 'src/app/core/services/auth.service';
+import { OperationalDateService } from 'src/app/core/services/operational-date.service';
 import { ToastService } from 'src/app/core/services/toast.service';
-import { normalizePmsDateDDMMYYYY, parsePmsDate, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
+import {
+  differenceInPmsCalendarDays,
+  normalizePmsDateDDMMYYYY,
+  parsePmsDate,
+  toPmsDateInputValue
+} from 'src/app/core/utils/pms-date.util';
 import { ClienteService, SelectOption } from 'src/app/demo/catalogos/agencias-comisionistas/cliente.service';
 import { ClienteUI } from 'src/app/demo/catalogos/agencias-comisionistas/cliente.models';
 import { MonedaService, MonedaUI } from 'src/app/demo/administracion/monedas/moneda.service';
-import { TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
+import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { Nationality } from '../../settings/nationalities/models/nationality.model';
 import { NationalitiesService } from '../../settings/nationalities/services/nationalities.service';
@@ -23,6 +29,8 @@ import { PaxTypesService } from '../../settings/pax-types/services/pax-types.ser
 import { RoomRackNavigationState } from '../room-rack/models/room-rack-room.model';
 import { RoomChargePdfService } from './printing/room-charge-pdf.service';
 import { RoomChargePosPrintService } from './printing/room-charge-pos-print.service';
+import { RoomStatementPdfService } from './printing/room-statement-pdf.service';
+import { RoomStatementPosService } from './printing/room-statement-pos.service';
 import {
   DepartureDateChangePayload,
   PointOfSaleDocumentApi,
@@ -129,6 +137,7 @@ interface InvoiceAppliedPayment {
   vencimiento     : string;
   mtoTotal        : number;
   tCambio         : number;
+  rateDate        : string;
   orden           : number;
   description     : string;
 }
@@ -287,9 +296,12 @@ export class RoomStayManagementComponent implements OnInit {
   private readonly fb                             = inject(NonNullableFormBuilder);
   private readonly destroyRef                     = inject(DestroyRef);
   private readonly authService                    = inject(AuthService);
+  private readonly operationalDateService         = inject(OperationalDateService);
   private readonly roomStayManagementService      = inject(RoomStayManagementService);
   private readonly roomChargePdfService            = inject(RoomChargePdfService);
   private readonly roomChargePosPrintService       = inject(RoomChargePosPrintService);
+  private readonly roomStatementPdfService         = inject(RoomStatementPdfService);
+  private readonly roomStatementPosService         = inject(RoomStatementPosService);
   private readonly clienteService                 = inject(ClienteService);
   private readonly nationalitiesService           = inject(NationalitiesService);
   private readonly paxTypesService                = inject(PaxTypesService);
@@ -300,6 +312,7 @@ export class RoomStayManagementComponent implements OnInit {
   private readonly invoiceClientSearchChanges     = new Subject<string>();
   private requestedRoomNumber                     = '';
   private requestedReservationNumber              = '';
+  private invoiceExchangeRateRequestId             = 0;
 
   private readonly invoiceConsumerFinal: InvoiceClient = {
     code          : '000000000',
@@ -320,6 +333,8 @@ export class RoomStayManagementComponent implements OnInit {
   readonly isRoomChangeSubmitting                = signal(false);
   readonly isDepartureChangeSubmitting           = signal(false);
   readonly isCheckoutSubmitting                  = signal(false);
+  readonly isCriticalStayRefreshing              = signal(false);
+  readonly isStatementGenerating                 = signal(false);
   readonly isRoomChargeCatalogLoading            = signal(false);
   readonly isRoomChargeItemsLoading              = signal(false);
   readonly isRoomChargeSubmitting                = signal(false);
@@ -364,8 +379,12 @@ export class RoomStayManagementComponent implements OnInit {
     vencimiento     : '00/00',
     tCambio         : 1
   });
+  readonly isInvoicePaymentAmountEditing         = signal(false);
+  readonly invoicePaymentAmountText              = signal('');
   readonly invoiceValidationMessage         = signal('');
   readonly invoiceCurrencies                = signal<MonedaUI[]>([]);
+  readonly invoiceUsdExchangeRate           = signal<TipoCambio | null>(null);
+  readonly invoiceSelectedExchangeRate      = signal<TipoCambio | null>(null);
   readonly invoicePointOfSaleDocuments      = signal<PointOfSaleDocumentApi[]>([]);
   readonly isInvoiceDocumentsLoading        = signal(false);
   readonly invoiceDocumentSelectionError    = signal('');
@@ -626,6 +645,23 @@ export class RoomStayManagementComponent implements OnInit {
     const draft = this.invoicePaymentDraft();
     return this.roundCurrency(this.convertPaymentToInvoiceCurrency(Number(draft.amount || 0), draft.moneda, draft.tCambio));
   });
+  readonly invoicePaymentAmountDisplay = computed(() =>
+    this.isInvoicePaymentAmountEditing()
+      ? this.invoicePaymentAmountText()
+      : this.formatInvoicePaymentAmount(this.invoicePaymentDraft().amount)
+  );
+  readonly invoiceDraftExchangeRateLabel = computed(() => {
+    const currency = this.cleanText(this.invoicePaymentDraft().moneda).toUpperCase();
+    const rate = this.getInvoiceDraftExchangeRate(this.invoicePaymentDraft());
+
+    if (!currency || currency === this.invoiceBaseCurrency) {
+      return 'El pago se aplicará directamente en USD, sin conversión.';
+    }
+
+    return rate > 0
+      ? `1 USD = ${this.formatExchangeRate(rate)} ${currency}`
+      : `Tipo de cambio de ${currency} no disponible.`;
+  });
   readonly roomChargeGuests = computed<RoomChargeGuestOption[]>(() =>
     this.room().guests.map((guest, index) => ({
       name: guest.name,
@@ -701,6 +737,7 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.loadOperationalDate();
     this.setupInvoiceClientSearch();
     this.loadRoomStay();
   }
@@ -725,6 +762,23 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   openActionModal(action: StayOperation): void {
+    if (action.id === 'transfer-charges') {
+      this.toastService.info(
+        'La transferencia de cargos no está disponible hasta contar con el proceso correspondiente en el backend.',
+        4500,
+        'Transferencia de cargos'
+      );
+      return;
+    }
+
+    if (this.actionRequiresOperationalDate(action.id) && !this.todayDisplayDate()) {
+      const message = this.operationalDateService.loading()
+        ? 'La fecha operativa todavía se está cargando.'
+        : 'No se puede ejecutar esta operación sin una fecha operativa válida.';
+      this.toastService.warning(message, 4000, 'Fecha operativa');
+      return;
+    }
+
     if (action.id !== 'change-room') {
       this.availableRoomsLoaded.set(false);
       this.availableRoomOptions.set([]);
@@ -768,6 +822,12 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   canExecuteActiveAction(): boolean {
+    const actionId = this.activeAction()?.id;
+
+    if (actionId && this.actionRequiresOperationalDate(actionId) && !this.todayDisplayDate()) {
+      return false;
+    }
+
     if (this.isActionSelected('change-room')) {
       return (
         this.availableRoomsLoaded() &&
@@ -778,7 +838,7 @@ export class RoomStayManagementComponent implements OnInit {
     }
 
     if (this.isActionSelected('change-departure')) {
-      return Boolean(this.actionDraft().newCheckOut) && !this.isDepartureChangeSubmitting();
+      return !this.departureDateValidationMessage() && !this.isDepartureChangeSubmitting();
     }
 
     if (this.isActionSelected('new-charge')) {
@@ -792,11 +852,19 @@ export class RoomStayManagementComponent implements OnInit {
     }
 
     if (this.isActionSelected('invoice-room')) {
-      return !this.isInvoiceSubmitting();
+      return (
+        !this.isInvoiceSubmitting() &&
+        !this.isCriticalStayRefreshing() &&
+        !this.isInvoiceExchangeRateLoading()
+      );
+    }
+
+    if (this.isActionSelected('print-statement')) {
+      return !this.isStatementGenerating();
     }
 
     if (this.isActionSelected('check-out')) {
-      return !this.hasPendingExtraCharges() && !this.isCheckoutSubmitting();
+      return !this.isCheckoutSubmitting() && !this.isCriticalStayRefreshing();
     }
 
     return true;
@@ -836,14 +904,19 @@ export class RoomStayManagementComponent implements OnInit {
         void this.submitRoomCharge();
         break;
       case 'transfer-charges':
-        this.applyChargeTransfer();
+        this.toastService.info(
+          'La transferencia de cargos permanece deshabilitada hasta contar con soporte en el backend.',
+          4000,
+          'Transferencia de cargos'
+        );
         break;
       case 'print-statement':
-        this.applyDocumentAction('Estado de cuenta preparado');
+        shouldClose = false;
+        void this.generateRoomStatement();
         break;
       case 'invoice-room':
         shouldClose = false;
-        this.submitRoomInvoice();
+        void this.submitRoomInvoice();
         break;
       case 'check-out':
         shouldClose = false;
@@ -898,11 +971,49 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   updateInvoicePaymentDraft(patch: Partial<InvoicePaymentDraft>): void {
-    this.invoicePaymentDraft.update((currentDraft) => ({ ...currentDraft, ...patch }));
-
     if (patch.moneda !== undefined) {
-      this.loadInvoiceExchangeRateForCurrency(patch.moneda);
+      const currency = this.cleanText(patch.moneda).toUpperCase() || this.invoiceBaseCurrency;
+      this.invoiceValidationMessage.set('');
+      this.invoicePaymentDraft.update((currentDraft) => ({
+        ...currentDraft,
+        ...patch,
+        moneda: currency,
+        amount: currency === this.invoiceBaseCurrency ? this.invoicePending() : null,
+        tCambio: currency === this.invoiceBaseCurrency ? 1 : 0
+      }));
+      this.loadInvoiceExchangeRateForCurrency(currency);
+      return;
     }
+
+    this.invoicePaymentDraft.update((currentDraft) => ({ ...currentDraft, ...patch }));
+  }
+
+  onInvoicePaymentAmountFocus(): void {
+    this.isInvoicePaymentAmountEditing.set(true);
+    this.invoicePaymentAmountText.set(
+      this.formatInvoicePaymentAmount(this.invoicePaymentDraft().amount)
+    );
+  }
+
+  onInvoicePaymentAmountChange(value: string | number | null | undefined): void {
+    const formattedValue = this.normalizeInvoicePaymentAmountText(value);
+    const numericValue = this.parseInvoicePaymentAmount(formattedValue);
+
+    this.invoicePaymentAmountText.set(formattedValue);
+    this.invoicePaymentDraft.update((draft) => ({
+      ...draft,
+      amount: numericValue
+    }));
+  }
+
+  onInvoicePaymentAmountBlur(): void {
+    const amount = this.invoicePaymentDraft().amount;
+    this.invoicePaymentDraft.update((draft) => ({
+      ...draft,
+      amount: amount === null ? null : this.roundCurrency(amount)
+    }));
+    this.isInvoicePaymentAmountEditing.set(false);
+    this.invoicePaymentAmountText.set('');
   }
 
   toggleChargeInvoiceSelection(bucket: ChargeBucket, chargeId: string, selected: boolean): void {
@@ -929,6 +1040,11 @@ export class RoomStayManagementComponent implements OnInit {
     const convertedAmount = this.roundCurrency(this.convertPaymentToInvoiceCurrency(amount, moneda, exchangeRate));
 
     this.invoiceValidationMessage.set('');
+
+    if (this.isInvoiceExchangeRateLoading()) {
+      this.invoiceValidationMessage.set('Espera a que termine la consulta del tipo de cambio.');
+      return;
+    }
 
     if (!method) {
       this.invoiceValidationMessage.set('Selecciona una forma de pago.');
@@ -961,6 +1077,7 @@ export class RoomStayManagementComponent implements OnInit {
         vencimiento: this.cleanText(draft.vencimiento),
         mtoTotal: convertedAmount,
         tCambio: exchangeRate,
+        rateDate: this.todayDisplayDate(),
         orden: payments.length + 1,
         description: method.description,
       }
@@ -986,6 +1103,16 @@ export class RoomStayManagementComponent implements OnInit {
         .filter((payment) => payment.orden !== order)
         .map((payment, index) => ({ ...payment, orden: index + 1 }))
     );
+    this.invoicePaymentDraft.update((draft) => ({
+      ...draft,
+      amount: this.roundCurrency(
+        this.convertPaymentFromInvoiceCurrency(
+          this.invoicePending(),
+          draft.moneda,
+          this.getInvoiceDraftExchangeRate(draft)
+        )
+      )
+    }));
   }
 
   viewInvoiceChargeDetail(): void {
@@ -1336,7 +1463,26 @@ export class RoomStayManagementComponent implements OnInit {
     this.toastService.warning('Item retirado del borrador. Presione Guardar cambios para actualizar el cargo.', 4000, 'Cargos');
   }
 
-  async annulCharge(bucket: ChargeBucket, charge: Charge): Promise<void> {
+  async annulCharge(bucket: ChargeBucket, requestedCharge: Charge): Promise<void> {
+    const refreshedRoom = await this.refreshStayForCriticalOperation('anular el cargo');
+    if (!refreshedRoom) {
+      return;
+    }
+
+    const refreshedCharges = bucket === 'lodging' ? refreshedRoom.lodgingCharges : refreshedRoom.extraCharges;
+    const charge = refreshedCharges.find(
+      (item) => this.chargeBusinessKey(item) === this.chargeBusinessKey(requestedCharge)
+    );
+
+    if (!charge) {
+      this.toastService.warning(
+        'El cargo cambió o ya no está disponible. Se actualizó la estancia para mostrar la información vigente.',
+        5000,
+        'Cargos'
+      );
+      return;
+    }
+
     const payloadBase = this.buildAnnulRoomChargePayload(bucket, charge, '');
 
     if (!payloadBase) {
@@ -2066,6 +2212,11 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   private async submitRoomCharge(): Promise<void> {
+    if (!this.todayDisplayDate()) {
+      this.roomChargeValidationMessage.set('No se puede registrar el cargo sin una fecha operativa válida.');
+      return;
+    }
+
     const payload = this.buildRoomChargePayload();
 
     if (!payload) {
@@ -2126,7 +2277,15 @@ export class RoomStayManagementComponent implements OnInit {
     const currency         = this.cleanText(pointOfSale?.currency || draft.currency || this.roomChargeLines()[0]?.currency || this.invoiceBaseCurrency);
     const validLines       = this.roomChargeLines().filter((line) => line.quantity > 0 && line.price >= 0 && line.total > 0);
 
-    if (!guest || !draft.pointOfSale || !room.reservationNumber || !room.roomNumber || !validLines.length || this.roomChargeTotal() <= 0) {
+    if (
+      !fecha ||
+      !guest ||
+      !draft.pointOfSale ||
+      !room.reservationNumber ||
+      !room.roomNumber ||
+      !validLines.length ||
+      this.roomChargeTotal() <= 0
+    ) {
       return null;
     }
 
@@ -2437,6 +2596,97 @@ export class RoomStayManagementComponent implements OnInit {
     return [...room.lodgingCharges, ...room.extraCharges].filter((charge) => charge.invoiceSelected);
   }
 
+  private chargeBusinessKey(charge: Charge): string {
+    return [
+      this.cleanText(charge.tipCrgHab).toUpperCase(),
+      this.cleanText(charge.numCrgHab || charge.reference)
+    ].join('|');
+  }
+
+  private invoiceChargeSnapshot(charges: Charge[]): string {
+    return charges
+      .map((charge) => `${this.chargeBusinessKey(charge)}|${this.roundCurrency(charge.charge)}|${this.roundCurrency(charge.payment)}`)
+      .sort()
+      .join('||');
+  }
+
+  private applyInvoiceSelection(selectedChargeKeys: ReadonlySet<string>): void {
+    this.room.update((currentRoom) => {
+      const applySelection = (charges: Charge[]) =>
+        charges.map((charge) => ({
+          ...charge,
+          invoiceSelected: selectedChargeKeys.has(this.chargeBusinessKey(charge))
+        }));
+
+      return {
+        ...currentRoom,
+        lodgingCharges: applySelection(currentRoom.lodgingCharges),
+        extraCharges: applySelection(currentRoom.extraCharges)
+      };
+    });
+  }
+
+  private async refreshStayForCriticalOperation(operationLabel: string): Promise<RoomStay | null> {
+    if (this.isCriticalStayRefreshing()) {
+      return null;
+    }
+
+    const currentRoom = this.room();
+    const roomNumber = this.cleanText(this.requestedRoomNumber || currentRoom.roomNumber);
+    const reservationNumber = this.cleanText(this.requestedReservationNumber || currentRoom.reservationNumber);
+
+    if (!roomNumber) {
+      this.toastService.warning('No se pudo identificar la habitación que debe actualizarse.', 4000, 'Estancia');
+      return null;
+    }
+
+    this.isCriticalStayRefreshing.set(true);
+
+    try {
+      const stay = await firstValueFrom(
+        this.roomStayManagementService.getRoomStay(roomNumber, reservationNumber)
+      );
+
+      if (!stay) {
+        throw new Error('El backend no devolvió la estancia solicitada.');
+      }
+
+      const refreshedRoom = this.mapApiStayToRoomStay(stay);
+      const refreshedReservation = this.cleanText(refreshedRoom.reservationNumber);
+      const reservationChanged = Boolean(
+        reservationNumber &&
+        refreshedReservation &&
+        reservationNumber !== refreshedReservation
+      );
+
+      this.room.set(refreshedRoom);
+      this.requestedRoomNumber = refreshedRoom.roomNumber;
+      this.requestedReservationNumber = refreshedReservation;
+      this.stayErrorMessage.set('');
+
+      if (reservationChanged) {
+        this.toastService.warning(
+          'La habitación ahora pertenece a otra reserva. La operación fue cancelada y la vista fue actualizada.',
+          5500,
+          'Estancia'
+        );
+        return null;
+      }
+
+      return refreshedRoom;
+    } catch (error) {
+      console.error(`No se pudo actualizar la estancia antes de ${operationLabel}.`, error);
+      this.toastService.warning(
+        `No se pudo actualizar la estancia antes de ${operationLabel}. La operación fue cancelada.`,
+        5000,
+        'Estancia'
+      );
+      return null;
+    } finally {
+      this.isCriticalStayRefreshing.set(false);
+    }
+  }
+
   private buildChargeId(reference: string, date: string, time: string, index: number): string {
     return [reference || 'SIN-REF', date || 'SIN-FECHA', time || 'SIN-HORA', index].join('|');
   }
@@ -2461,6 +2711,8 @@ export class RoomStayManagementComponent implements OnInit {
     this.invoiceClientSearchError.set('');
     this.isInvoiceClientSearchLoading.set(false);
     this.invoiceAppliedPayments.set([]);
+    this.invoiceUsdExchangeRate.set(null);
+    this.invoiceSelectedExchangeRate.set(null);
     this.invoiceValidationMessage.set('');
     this.invoicePaymentDraft.set({
       methodCode      : defaultMethod,
@@ -2471,9 +2723,7 @@ export class RoomStayManagementComponent implements OnInit {
       tCambio         : defaultCurrency === this.invoiceBaseCurrency ? 1 : 0
     });
 
-    if (defaultCurrency !== this.invoiceBaseCurrency) {
-      this.loadInvoiceExchangeRateForCurrency(defaultCurrency);
-    }
+    this.loadInvoiceExchangeRateForCurrency(defaultCurrency);
   }
 
   private setupInvoiceClientSearch(): void {
@@ -2619,33 +2869,218 @@ export class RoomStayManagementComponent implements OnInit {
 
   private loadInvoiceExchangeRateForCurrency(currency: string): void {
     const moneda = this.cleanText(currency).toUpperCase();
+    const operationalDate = this.todayDisplayDate();
 
-    if (!moneda || moneda === this.invoiceBaseCurrency) {
-      this.invoicePaymentDraft.update((draft) => ({ ...draft, moneda: moneda || this.invoiceBaseCurrency, tCambio: 1 }));
+    if (!operationalDate) {
+      this.invoiceValidationMessage.set('No se puede consultar el tipo de cambio sin una fecha operativa válida.');
       return;
     }
 
+    const selectedCurrency = moneda || this.invoiceBaseCurrency;
+    const requestId = ++this.invoiceExchangeRateRequestId;
+    const selectedCurrencyRequest =
+      selectedCurrency === this.invoiceBaseCurrency || selectedCurrency === 'COL'
+        ? of([] as TipoCambio[])
+        : this.tipoCambioService.fetchTipoCambio(operationalDate, selectedCurrency.toLowerCase()).pipe(
+            catchError((error) => {
+              console.error(`No se pudo cargar el tipo de cambio de ${selectedCurrency}.`, error);
+              return of([] as TipoCambio[]);
+            })
+          );
+
     this.isInvoiceExchangeRateLoading.set(true);
 
-    this.tipoCambioService
-      .fetchTipoCambio(this.todayDisplayDate(), moneda.toLowerCase())
-      .pipe(
+    forkJoin({
+      usdItems: this.tipoCambioService.fetchTipoCambio(operationalDate, this.invoiceBaseCurrency.toLowerCase()).pipe(
         catchError((error) => {
-          console.error('No se pudo cargar el tipo de cambio.', error);
-          this.toastService.warning('No se pudo cargar el tipo de cambio para la moneda seleccionada.', 3500, 'Facturacion');
-          return of([]);
+          console.error('No se pudo cargar el tipo de cambio de USD.', error);
+          return of([] as TipoCambio[]);
+        })
+      ),
+      selectedItems: selectedCurrencyRequest
+    })
+      .pipe(
+        finalize(() => {
+          if (requestId === this.invoiceExchangeRateRequestId) {
+            this.isInvoiceExchangeRateLoading.set(false);
+          }
         }),
-        finalize(() => this.isInvoiceExchangeRateLoading.set(false)),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe((items) => {
-        const exchangeRate = Number(items[0]?.venta ?? 0);
+      .subscribe(({ usdItems, selectedItems }) => {
+        if (requestId !== this.invoiceExchangeRateRequestId) {
+          return;
+        }
+
+        const usdQuote = usdItems[0] ?? null;
+        const selectedQuote = selectedCurrency === this.invoiceBaseCurrency
+          ? usdQuote
+          : selectedCurrency === 'COL'
+            ? this.buildLocalCurrencyQuote(operationalDate)
+            : selectedItems[0] ?? null;
+        const exchangeRate = this.calculateInvoicePaymentExchangeRate(
+          selectedCurrency,
+          usdQuote,
+          selectedQuote
+        );
+
+        this.invoiceUsdExchangeRate.set(usdQuote);
+        this.invoiceSelectedExchangeRate.set(selectedQuote);
         this.invoicePaymentDraft.update((draft) => ({
           ...draft,
-          moneda,
-          tCambio: exchangeRate > 0 ? this.roundCurrency(exchangeRate) : 0
+          moneda: selectedCurrency,
+          amount: exchangeRate > 0
+            ? this.roundCurrency(this.convertPaymentFromInvoiceCurrency(this.invoicePending(), selectedCurrency, exchangeRate))
+            : null,
+          tCambio: exchangeRate
         }));
+
+        if (!usdQuote) {
+          this.invoiceValidationMessage.set(
+            selectedCurrency === this.invoiceBaseCurrency
+              ? 'No se pudo mostrar el tipo de cambio de USD para la fecha operativa.'
+              : 'No se pudo obtener el tipo de cambio de USD requerido para convertir el pago.'
+          );
+        } else if (selectedCurrency !== this.invoiceBaseCurrency && exchangeRate <= 0) {
+          this.invoiceValidationMessage.set(`No hay un tipo de cambio válido para recibir pagos en ${selectedCurrency}.`);
+        }
       });
+  }
+
+  private async validateInvoiceExchangeRatesBeforeSubmit(): Promise<boolean> {
+    const payments = this.invoiceAppliedPayments();
+    const draftCurrency = this.cleanText(this.invoicePaymentDraft().moneda).toUpperCase();
+    const requestedCurrencies = [
+      ...new Set(
+        [...payments.map((payment) => payment.moneda), draftCurrency]
+          .map((currency) => this.cleanText(currency).toUpperCase())
+          .filter((currency) => currency && currency !== this.invoiceBaseCurrency && currency !== 'COL')
+      )
+    ];
+
+    this.isInvoiceExchangeRateLoading.set(true);
+    const requestId = ++this.invoiceExchangeRateRequestId;
+
+    try {
+      const operationalDate = normalizePmsDateDDMMYYYY(
+        await firstValueFrom(this.operationalDateService.refresh())
+      );
+      if (!operationalDate) {
+        throw new Error('El backend no devolvió una fecha operativa válida.');
+      }
+
+      const responses = await firstValueFrom(
+        forkJoin([
+          this.tipoCambioService.fetchTipoCambio(operationalDate, this.invoiceBaseCurrency.toLowerCase()),
+          ...requestedCurrencies.map((currency) =>
+            this.tipoCambioService.fetchTipoCambio(operationalDate, currency.toLowerCase())
+          )
+        ])
+      );
+      const usdQuote = responses[0]?.[0] ?? null;
+      const quoteByCurrency = new Map<string, TipoCambio>();
+
+      requestedCurrencies.forEach((currency, index) => {
+        const quote = responses[index + 1]?.[0];
+        if (quote) {
+          quoteByCurrency.set(currency, quote);
+        }
+      });
+
+      this.invoiceUsdExchangeRate.set(usdQuote);
+
+      const invalidPayment = payments.find((payment) => {
+        const currency = this.cleanText(payment.moneda).toUpperCase();
+        if (currency === this.invoiceBaseCurrency) {
+          return false;
+        }
+
+        const quote = currency === 'COL'
+          ? this.buildLocalCurrencyQuote(operationalDate)
+          : quoteByCurrency.get(currency) ?? null;
+        const currentRate = this.calculateInvoicePaymentExchangeRate(currency, usdQuote, quote);
+
+        return (
+          currentRate <= 0 ||
+          Math.abs(currentRate - Number(payment.tCambio || 0)) > 0.000001 ||
+          normalizePmsDateDDMMYYYY(payment.rateDate) !== operationalDate
+        );
+      });
+
+      const selectedQuote = draftCurrency === this.invoiceBaseCurrency
+        ? usdQuote
+        : draftCurrency === 'COL'
+          ? this.buildLocalCurrencyQuote(operationalDate)
+          : quoteByCurrency.get(draftCurrency) ?? null;
+      const draftRate = this.calculateInvoicePaymentExchangeRate(draftCurrency, usdQuote, selectedQuote);
+
+      this.invoiceSelectedExchangeRate.set(selectedQuote);
+
+      if (invalidPayment) {
+        this.invoiceAppliedPayments.set([]);
+        this.invoicePaymentDraft.update((draft) => ({
+          ...draft,
+          amount: draftRate > 0
+            ? this.roundCurrency(this.convertPaymentFromInvoiceCurrency(this.invoiceTotal(), draftCurrency, draftRate))
+            : null,
+          tCambio: draftRate
+        }));
+        this.invoiceValidationMessage.set(
+          'La fecha operativa o el tipo de cambio cambió. Las formas de pago fueron limpiadas; vuelva a agregarlas con la tasa vigente.'
+        );
+        return false;
+      }
+
+      this.invoicePaymentDraft.update((draft) => ({ ...draft, tCambio: draftRate }));
+      return true;
+    } catch (error) {
+      console.error('No se pudo revalidar el tipo de cambio antes de facturar.', error);
+      this.invoiceValidationMessage.set(
+        'No se pudo validar el tipo de cambio vigente. La facturación fue bloqueada para evitar una conversión incorrecta.'
+      );
+      return false;
+    } finally {
+      if (requestId === this.invoiceExchangeRateRequestId) {
+        this.isInvoiceExchangeRateLoading.set(false);
+      }
+    }
+  }
+
+  private buildLocalCurrencyQuote(operationalDate: string): TipoCambio {
+    return {
+      fecha: toPmsDateInputValue(operationalDate),
+      monedaBase: 'COL',
+      monedaReferencia: 'COL',
+      compra: 1,
+      venta: 1
+    };
+  }
+
+  private calculateInvoicePaymentExchangeRate(
+    currency: string,
+    usdQuote: TipoCambio | null,
+    paymentQuote: TipoCambio | null
+  ): number {
+    const paymentCurrency = this.cleanText(currency).toUpperCase();
+    if (!paymentCurrency || paymentCurrency === this.invoiceBaseCurrency) {
+      return 1;
+    }
+
+    const usdSellingRate = Number(usdQuote?.venta ?? 0);
+    const paymentBuyingRate = paymentCurrency === 'COL'
+      ? 1
+      : Number(paymentQuote?.compra ?? 0);
+
+    if (
+      !Number.isFinite(usdSellingRate) ||
+      usdSellingRate <= 0 ||
+      !Number.isFinite(paymentBuyingRate) ||
+      paymentBuyingRate <= 0
+    ) {
+      return 0;
+    }
+
+    return this.roundExchangeRate(usdSellingRate / paymentBuyingRate);
   }
 
   private getDefaultInvoiceCurrency(): string {
@@ -2669,21 +3104,29 @@ export class RoomStayManagementComponent implements OnInit {
   private convertPaymentToInvoiceCurrency(amount: number, currency: string, rate: number): number {
     const paymentCurrency = this.cleanText(currency).toUpperCase();
 
-    if (!amount || !paymentCurrency || paymentCurrency === this.invoiceBaseCurrency || !rate) {
-      return amount || 0;
+    if (!amount || !paymentCurrency) {
+      return 0;
     }
 
-    return paymentCurrency === 'USD' ? amount : amount / rate;
+    if (paymentCurrency === this.invoiceBaseCurrency) {
+      return amount;
+    }
+
+    return rate > 0 ? amount / rate : 0;
   }
 
   private convertPaymentFromInvoiceCurrency(amount: number, currency: string, rate: number): number {
     const paymentCurrency = this.cleanText(currency).toUpperCase();
 
-    if (!amount || !paymentCurrency || paymentCurrency === this.invoiceBaseCurrency || !rate) {
-      return amount || 0;
+    if (!amount || !paymentCurrency) {
+      return 0;
     }
 
-    return paymentCurrency === 'USD' ? amount : amount * rate;
+    if (paymentCurrency === this.invoiceBaseCurrency) {
+      return amount;
+    }
+
+    return rate > 0 ? amount * rate : 0;
   }
 
   private buildActionDraft(actionId?: StayActionId): ActionModalDraft {
@@ -2824,19 +3267,38 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   private async submitDepartureChange(): Promise<void> {
-    const payload = this.buildDepartureDateChangePayload();
-
-    if (!payload) {
-      this.toastService.warning('Faltan datos para actualizar la fecha de salida.', 3500, 'Reserva');
-      return;
-    }
-
-    if (payload.fechaSalida === this.room().checkOut) {
-      this.toastService.info('Selecciona una fecha de salida distinta a la actual.', 3000, 'Reserva');
+    if (this.isDepartureChangeSubmitting()) {
       return;
     }
 
     this.isDepartureChangeSubmitting.set(true);
+
+    try {
+      await firstValueFrom(this.operationalDateService.refresh());
+    } catch (error) {
+      console.error('No se pudo actualizar la fecha operativa antes de cambiar la salida.', error);
+      this.toastService.warning(
+        'No se pudo validar la fecha operativa actual. El cambio de salida fue bloqueado.',
+        4500,
+        'Fecha operativa'
+      );
+      this.isDepartureChangeSubmitting.set(false);
+      return;
+    }
+
+    const validationMessage = this.departureDateValidationMessage();
+    if (validationMessage) {
+      this.toastService.warning(validationMessage, 4000, 'Reserva');
+      this.isDepartureChangeSubmitting.set(false);
+      return;
+    }
+
+    const payload = this.buildDepartureDateChangePayload();
+    if (!payload) {
+      this.toastService.warning('Faltan datos para actualizar la fecha de salida.', 3500, 'Reserva');
+      this.isDepartureChangeSubmitting.set(false);
+      return;
+    }
 
     const confirmation = await Swal.fire({
       title: 'Confirmar cambio de salida',
@@ -2997,46 +3459,69 @@ export class RoomStayManagementComponent implements OnInit {
     this.toastService.success('Cargo manual agregado al folio.', 4000, 'Cargos');
   }
 
-  private applyChargeTransfer(): void {
-    const draft = this.actionDraft();
-    const transferCharge: Charge = {
-      id                : this.buildChargeId(draft.destinationFolio, this.todayDisplayDate(), this.currentTimeLabel(), this.room().extraCharges.length),
-      tipCrgHab         : 'CH',
-      numCrgHab         : this.cleanText(draft.destinationFolio),
-      codRsv            : this.cleanText(this.room().reservationNumber),
-      numHab            : this.cleanText(this.room().roomNumber),
-      date              : this.todayDisplayDate(),
-      time              : this.currentTimeLabel(),
-      concept           : `Transferencia a ${draft.destinationFolio}`,
-      reference         : draft.destinationFolio,
-      charge            : 0,
-      payment           : draft.chargeAmount,
-      balance           : Math.max(this.totalToCharge() - draft.chargeAmount, 0),
-      invoiceSelected   : false
-    };
+  private async generateRoomStatement(): Promise<void> {
+    if (this.isStatementGenerating()) {
+      return;
+    }
 
-    this.room.update((currentRoom) => ({
-      ...currentRoom,
-      extraCharges: [transferCharge, ...currentRoom.extraCharges],
-      observations: [
-        `Transferencia operativa por ${this.formatCurrency(draft.chargeAmount)} hacia ${draft.destinationFolio}.`,
-        ...currentRoom.observations
-      ]
-    }));
+    const room = this.room();
+    const roomNumber = this.cleanText(room.roomNumber);
+    const reservationNumber = this.cleanText(room.reservationNumber);
+    const format = this.actionDraft().documentFormat;
 
-    this.addTimelineEntry('Transferencia de cargos', `Monto enviado al folio ${draft.destinationFolio}.`);
-    this.toastService.warning('Transferencia operativa registrada.', 4000, 'Folio');
+    if (!roomNumber || !reservationNumber) {
+      this.toastService.warning(
+        'La habitación o la reserva no están disponibles para generar el Estado de Cuenta.',
+        4500,
+        'Estado de Cuenta'
+      );
+      return;
+    }
+
+    this.isStatementGenerating.set(true);
+
+    try {
+      if (format === 'print') {
+        await this.roomStatementPosService.print(roomNumber, reservationNumber, 'TIQUETE');
+        this.toastService.success(
+          'Estado de Cuenta enviado a la impresora TIQUETE.',
+          4000,
+          'Estado de Cuenta'
+        );
+      } else {
+        const result = await this.roomStatementPdfService.open(roomNumber, reservationNumber);
+        this.toastService.success(
+          result === 'opened'
+            ? 'El Estado de Cuenta se abrió en una nueva pestaña.'
+            : 'El navegador bloqueó la vista previa; el PDF fue descargado.',
+          4500,
+          'Estado de Cuenta'
+        );
+      }
+
+      this.addTimelineEntry(
+        'Estado de Cuenta generado',
+        `Documento informativo generado en formato ${format === 'print' ? 'POS' : 'PDF'}.`
+      );
+      this.closeActionModal();
+    } catch (error) {
+      console.error('No se pudo generar el Estado de Cuenta.', error);
+      this.toastService.warning(
+        this.documentErrorMessage(error, 'No se pudo generar el Estado de Cuenta.'),
+        5500,
+        'Estado de Cuenta'
+      );
+    } finally {
+      this.isStatementGenerating.set(false);
+    }
   }
 
-  private applyDocumentAction(title: string): void {
-    const action = this.activeAction();
-    const draft = this.actionDraft();
+  private async submitRoomInvoice(): Promise<void> {
+    if (!this.todayDisplayDate()) {
+      this.invoiceValidationMessage.set('No se puede facturar sin una fecha operativa válida.');
+      return;
+    }
 
-    this.addTimelineEntry(title, `${action?.label ?? 'Documento'} en formato ${draft.documentFormat.toUpperCase()} listo para salida.`);
-    this.toastService.info(`${title} en formato ${draft.documentFormat.toUpperCase()}.`, 3500, 'Documentos');
-  }
-
-  private submitRoomInvoice(): void {
     const selectedCharges = this.getSelectedInvoiceCharges();
     const chargesWithoutDocument = selectedCharges.filter((charge) => !this.cleanText(charge.numCrgHab || charge.reference));
 
@@ -3065,7 +3550,31 @@ export class RoomStayManagementComponent implements OnInit {
       return;
     }
 
-    const payload = this.buildRoomInvoicePayload(selectedCharges);
+    if (!(await this.validateInvoiceExchangeRatesBeforeSubmit())) {
+      return;
+    }
+
+    const selectedChargeKeys = new Set(selectedCharges.map((charge) => this.chargeBusinessKey(charge)));
+    const selectedChargeSnapshot = this.invoiceChargeSnapshot(selectedCharges);
+    const refreshedRoom = await this.refreshStayForCriticalOperation('facturar la habitación');
+
+    if (!refreshedRoom) {
+      this.invoiceValidationMessage.set('No se pudo actualizar la estancia antes de facturar.');
+      return;
+    }
+
+    this.applyInvoiceSelection(selectedChargeKeys);
+    const refreshedSelectedCharges = this.getSelectedInvoiceCharges();
+
+    if (this.invoiceChargeSnapshot(refreshedSelectedCharges) !== selectedChargeSnapshot) {
+      this.resetInvoicePaymentsForSelectionChange();
+      this.invoiceValidationMessage.set(
+        'Los cargos cambiaron desde que se abrió la factura. La estancia fue actualizada; revise la selección y las formas de pago.'
+      );
+      return;
+    }
+
+    const payload = this.buildRoomInvoicePayload(refreshedSelectedCharges);
 
     console.log('[RoomStayManagement] POST /facturacion-fdesk payload', payload);
 
@@ -3174,7 +3683,7 @@ export class RoomStayManagementComponent implements OnInit {
         monto       : this.roundCurrency(payment.monto),
         vencimiento : this.cleanText(payment.vencimiento),
         mtoTotal    : this.roundCurrency(payment.mtoTotal),
-        tCambio     : this.roundCurrency(payment.tCambio)
+        tCambio     : this.roundExchangeRate(payment.tCambio)
       }))
     };
   }
@@ -3202,7 +3711,21 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   private async submitCheckOut(): Promise<void> {
-    const room = this.room();
+    const operationalDate = this.todayDisplayDate();
+
+    if (!operationalDate) {
+      this.toastService.warning(
+        'No se puede procesar el Check Out sin una fecha operativa válida.',
+        4500,
+        'Check Out'
+      );
+      return;
+    }
+
+    const room = await this.refreshStayForCriticalOperation('procesar el Check Out');
+    if (!room) {
+      return;
+    }
 
     if (this.hasPendingExtraCharges()) {
       this.toastService.warning(
@@ -3238,7 +3761,7 @@ export class RoomStayManagementComponent implements OnInit {
 
     const payload: RoomCheckoutPayload = {
       proceso: 1,
-      fecCheckout: this.todayDisplayDate(),
+      fecCheckout: operationalDate,
       codReserva: this.cleanText(room.reservationNumber),
       numHabitacion: this.cleanText(room.roomNumber),
       folio: 'N',
@@ -3291,11 +3814,70 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   todayDisplayDate(): string {
-    return normalizePmsDateDDMMYYYY(new Date());
+    return normalizePmsDateDDMMYYYY(this.operationalDateService.operationalDate());
+  }
+
+  private loadOperationalDate(): void {
+    this.operationalDateService
+      .ensureLoaded()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        error: (error) => {
+          console.error('No se pudo cargar la fecha operativa para gestionar la estancia.', error);
+          this.toastService.warning(
+            'No se pudo obtener la fecha operativa. Las operaciones financieras permanecerán bloqueadas.',
+            5000,
+            'Fecha operativa'
+          );
+        }
+      });
+  }
+
+  private actionRequiresOperationalDate(actionId: StayActionId): boolean {
+    return (
+      actionId === 'change-departure' ||
+      actionId === 'new-charge' ||
+      actionId === 'transfer-charges' ||
+      actionId === 'print-statement' ||
+      actionId === 'invoice-room' ||
+      actionId === 'check-out'
+    );
   }
 
   private toInputDate(date: string): string {
     return toPmsDateInputValue(date);
+  }
+
+  departureDateMinInput(): string {
+    return toPmsDateInputValue(this.todayDisplayDate());
+  }
+
+  departureDateValidationMessage(): string {
+    const selectedDate = normalizePmsDateDDMMYYYY(this.actionDraft().newCheckOut);
+    const operationalDate = this.todayDisplayDate();
+
+    if (!selectedDate) {
+      return 'Selecciona una fecha de salida válida.';
+    }
+
+    if (!operationalDate) {
+      return 'No hay una fecha operativa válida para comprobar la salida.';
+    }
+
+    const daysFromOperationalDate = differenceInPmsCalendarDays(operationalDate, selectedDate);
+    if (daysFromOperationalDate === null) {
+      return 'No fue posible comparar la fecha de salida con la fecha operativa.';
+    }
+
+    if (daysFromOperationalDate < 0) {
+      return `La fecha de salida no puede ser anterior a la fecha operativa ${operationalDate}.`;
+    }
+
+    if (selectedDate === normalizePmsDateDDMMYYYY(this.room().checkOut)) {
+      return 'Selecciona una fecha de salida distinta a la actual.';
+    }
+
+    return '';
   }
 
   private fromInputDate(date: string): string {
@@ -3335,6 +3917,55 @@ export class RoomStayManagementComponent implements OnInit {
 
   private roundCurrency(amount: number): number {
     return Math.round((amount + Number.EPSILON) * 100) / 100;
+  }
+
+  private formatInvoicePaymentAmount(amount: number | null): string {
+    if (amount === null || !Number.isFinite(Number(amount))) {
+      return '';
+    }
+
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(Number(amount));
+  }
+
+  private normalizeInvoicePaymentAmountText(value: string | number | null | undefined): string {
+    const rawValue = this.cleanText(value).replace(/,/g, '').replace(/[^\d.]/g, '');
+    if (!rawValue) {
+      return '';
+    }
+
+    const hasDecimalPoint = rawValue.includes('.');
+    const [rawInteger = '', ...decimalParts] = rawValue.split('.');
+    const integerDigits = rawInteger.replace(/^0+(?=\d)/, '') || '0';
+    const decimalDigits = decimalParts.join('').slice(0, 2);
+    const groupedInteger = integerDigits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+    return hasDecimalPoint
+      ? `${groupedInteger}.${decimalDigits}`
+      : groupedInteger;
+  }
+
+  private parseInvoicePaymentAmount(value: string): number | null {
+    const normalizedValue = value.replace(/,/g, '');
+    if (!normalizedValue || normalizedValue === '.') {
+      return null;
+    }
+
+    const amount = Number(normalizedValue);
+    return Number.isFinite(amount) && amount >= 0 ? amount : null;
+  }
+
+  private roundExchangeRate(rate: number): number {
+    return Math.round((rate + Number.EPSILON) * 1_000_000) / 1_000_000;
+  }
+
+  private formatExchangeRate(rate: number): string {
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 6
+    }).format(rate);
   }
 
   private getNavigationRoom(): RoomRackNavigationState | null {

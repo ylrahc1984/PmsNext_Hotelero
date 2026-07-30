@@ -3,11 +3,14 @@ import { Component, DestroyRef, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { EMPTY, catchError, debounceTime, distinctUntilChanged, finalize, firstValueFrom, switchMap } from 'rxjs';
+import { EMPTY, catchError, debounceTime, distinctUntilChanged, exhaustMap, finalize, firstValueFrom, fromEvent, switchMap } from 'rxjs';
 import Swal from 'sweetalert2';
 
+import { OperationalAction } from 'src/app/core/models/operational-context.model';
 import { AuthService } from 'src/app/core/services/auth.service';
-import { normalizePmsDateDDMMYYYY, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
+import { OperationalDateService } from 'src/app/core/services/operational-date.service';
+import { OperationalPolicyService } from 'src/app/core/services/operational-policy.service';
+import { addPmsCalendarDays, normalizePmsDateDDMMYYYY, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { WalkInAgenciaOption } from 'src/app/modules/front-desk/walk-in/models/walk-in.model';
 import { WalkInService } from 'src/app/modules/front-desk/walk-in/services/walk-in.service';
@@ -83,9 +86,11 @@ export class ConsultaReservasComponent implements OnInit {
     private readonly reservaService: ReservaHabitacionService,
     private readonly catalogService: WalkInService,
     private readonly auth: AuthService,
+    private readonly operationalDateService: OperationalDateService,
+    private readonly operationalPolicy: OperationalPolicyService,
     private readonly destroyRef: DestroyRef
   ) {
-    const { inicio, salida } = this.defaultDateRange();
+    const { inicio, salida } = this.defaultDateRange(this.operationalDateService.operationalDate());
     this.filterForm = this.fb.group({
       fechaInicio: this.fb.control(inicio),
       fechaFinal: this.fb.control(salida),
@@ -103,17 +108,28 @@ export class ConsultaReservasComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.buscar();
     this.quickSearchControl.valueChanges.pipe(debounceTime(700), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef)).subscribe(() => this.buscarDesdeBusquedaRapida());
     this.bindAgenciaSearch();
+    this.bindFocusRefresh();
+    this.initializeOperationalDate();
   }
 
-  nuevaReserva(): void {
+  async nuevaReserva(): Promise<void> {
+    const allowed = await this.operationalPolicy.require(OperationalAction.CreateOperation);
+    if (!allowed) {
+      return;
+    }
+
     void this.router.navigate(['/reservas/nueva-hospedaje']);
   }
 
-  editarReserva(reserva: ReservaConsulta): void {
+  async editarReserva(reserva: ReservaConsulta): Promise<void> {
     if (!this.puedeEditarReserva(reserva)) {
+      return;
+    }
+
+    const allowed = await this.operationalPolicy.require(OperationalAction.UpdateOperation);
+    if (!allowed) {
       return;
     }
 
@@ -125,9 +141,14 @@ export class ConsultaReservasComponent implements OnInit {
     return !!reserva.reserva.trim() && this.normalizeEstadoCode(reserva.estado) !== 'CHK' && this.normalizeEstadoCode(reserva.estado) !== 'ANU';
   }
 
-  consultarReserva(reserva: ReservaConsulta): void {
+  async consultarReserva(reserva: ReservaConsulta): Promise<void> {
     const codReserva = reserva.reserva.trim();
     if (!codReserva) {
+      return;
+    }
+
+    const allowed = await this.operationalPolicy.require(OperationalAction.View);
+    if (!allowed) {
       return;
     }
 
@@ -137,6 +158,11 @@ export class ConsultaReservasComponent implements OnInit {
   async anularReserva(reserva: ReservaConsulta): Promise<void> {
     const codReserva = reserva.reserva.trim();
     if (!codReserva || !this.puedeAnularReserva(reserva)) {
+      return;
+    }
+
+    const allowed = await this.operationalPolicy.require(OperationalAction.UpdateOperation, { refresh: true });
+    if (!allowed) {
       return;
     }
 
@@ -171,7 +197,17 @@ export class ConsultaReservasComponent implements OnInit {
 
     const observaciones = String(result.value ?? '').trim();
     const operador = this.auth.getCurrentUser()?.usuario?.trim() || reserva.operador?.trim() || 'admin';
-    const fecAnulada = normalizePmsDateDDMMYYYY(new Date());
+    const fecAnulada = normalizePmsDateDDMMYYYY(this.operationalDateService.operationalDate());
+    if (!fecAnulada) {
+      await Swal.fire({
+        title: 'Fecha operativa requerida',
+        text: 'No se pudo obtener la fecha operativa para anular la reserva.',
+        icon: 'warning',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#0d6efd'
+      });
+      return;
+    }
     this.cancellingReserva.set(codReserva);
 
     void Swal.fire({
@@ -239,6 +275,11 @@ export class ConsultaReservasComponent implements OnInit {
   async cambiarEstadoReserva(reserva: ReservaConsulta, estadoDestino: EstadoCambioReserva): Promise<void> {
     const codReserva = reserva.reserva.trim();
     if (!codReserva || !this.puedeCambiarEstadoReserva(reserva, estadoDestino)) {
+      return;
+    }
+
+    const allowed = await this.operationalPolicy.require(OperationalAction.UpdateOperation, { refresh: true });
+    if (!allowed) {
       return;
     }
 
@@ -327,9 +368,14 @@ export class ConsultaReservasComponent implements OnInit {
     }
   }
 
-  imprimirConfirmacion(reserva: ReservaConsulta): void {
+  async imprimirConfirmacion(reserva: ReservaConsulta): Promise<void> {
     const codReserva = reserva.reserva.trim();
     if (!codReserva || this.printingReserva()) {
+      return;
+    }
+
+    const allowed = await this.operationalPolicy.require(OperationalAction.View);
+    if (!allowed) {
       return;
     }
 
@@ -352,9 +398,19 @@ export class ConsultaReservasComponent implements OnInit {
       });
   }
 
-  abrirPrepagos(reserva: ReservaConsulta): void {
+  puedeAdministrarPrepagos(reserva: ReservaConsulta): boolean {
+    const estado = this.normalizeEstadoCode(reserva.estado);
+    return !!reserva.reserva.trim() && ['ABI', 'CCR', 'WLT', 'WLI'].includes(estado);
+  }
+
+  async abrirPrepagos(reserva: ReservaConsulta): Promise<void> {
     const codReserva = reserva.reserva.trim();
-    if (!codReserva) {
+    if (!codReserva || !this.puedeAdministrarPrepagos(reserva)) {
+      return;
+    }
+
+    const allowed = await this.operationalPolicy.require(OperationalAction.UpdateOperation, { refresh: true });
+    if (!allowed) {
       return;
     }
 
@@ -371,7 +427,12 @@ export class ConsultaReservasComponent implements OnInit {
     this.loadReservas();
   }
 
-  buscar(): void {
+  async buscar(): Promise<void> {
+    const allowed = await this.operationalPolicy.require(OperationalAction.View);
+    if (!allowed) {
+      return;
+    }
+
     const formValue = this.filterForm.getRawValue();
     this.filtro.set({
       ...formValue,
@@ -388,11 +449,16 @@ export class ConsultaReservasComponent implements OnInit {
       return;
     }
 
-    this.buscar();
+    void this.buscar();
   }
 
   limpiar(): void {
-    const { inicio, salida } = this.defaultDateRange();
+    const { inicio, salida } = this.defaultDateRange(this.operationalDateService.operationalDate());
+    if (!inicio || !salida) {
+      this.handleOperationalDateError();
+      return;
+    }
+
     this.filterForm.reset({ fechaInicio: inicio, fechaFinal: salida, agencia: '', estado: '' });
     this.agenciaSearchControl.setValue('', { emitEvent: false });
     this.agenciaSuggestions = [];
@@ -403,7 +469,12 @@ export class ConsultaReservasComponent implements OnInit {
     this.loadReservas();
   }
 
-  actualizar(): void {
+  async actualizar(): Promise<void> {
+    const allowed = await this.operationalPolicy.require(OperationalAction.View, { refresh: true });
+    if (!allowed) {
+      return;
+    }
+
     this.loadReservas();
   }
 
@@ -478,6 +549,11 @@ export class ConsultaReservasComponent implements OnInit {
   }
 
   private loadReservas(): void {
+    if (!this.operationalPolicy.can(OperationalAction.View)) {
+      this.errorMessage.set('El contexto operativo actual no permite consultar reservas.');
+      return;
+    }
+
     const filtro = this.filtro();
     const fechaInicio = this.normalizeDateForApi(filtro.fechaInicio);
     const fechaFinal = this.normalizeDateForApi(filtro.fechaFinal);
@@ -523,15 +599,74 @@ export class ConsultaReservasComponent implements OnInit {
       });
   }
 
-  private defaultDateRange(): { inicio: string; salida: string } {
-    const today = new Date();
-    const salida = new Date(today);
-    salida.setDate(today.getDate() + 2);
+  private defaultDateRange(operationalDate: string): { inicio: string; salida: string } {
+    const inicio = toPmsDateInputValue(operationalDate);
+    const departureDate = addPmsCalendarDays(operationalDate, 2);
 
     return {
-      inicio: toPmsDateInputValue(today),
-      salida: toPmsDateInputValue(salida)
+      inicio,
+      salida: departureDate ? toPmsDateInputValue(departureDate) : ''
     };
+  }
+
+  private initializeOperationalDate(): void {
+    this.loading.set(true);
+    this.operationalDateService
+      .ensureLoaded()
+      .pipe(
+        finalize(() => this.loading.set(false)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (operationalDate) => {
+          const { inicio, salida } = this.defaultDateRange(operationalDate);
+          if (!inicio || !salida) {
+            this.handleOperationalDateError();
+            return;
+          }
+
+          this.applyDefaultDateRange(inicio, salida);
+          if (!this.operationalPolicy.can(OperationalAction.View)) {
+            this.errorMessage.set('El contexto operativo actual no permite consultar reservas.');
+            return;
+          }
+          this.loadReservas();
+        },
+        error: () => this.handleOperationalDateError()
+      });
+  }
+
+  private bindFocusRefresh(): void {
+    fromEvent(window, 'focus')
+      .pipe(
+        exhaustMap(() =>
+          this.operationalDateService.refresh().pipe(
+            catchError(() => {
+              this.errorMessage.set('No se pudo actualizar la fecha operativa al recuperar el foco.');
+              return EMPTY;
+            })
+          )
+        ),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => {
+        if (this.operationalPolicy.can(OperationalAction.View)) {
+          this.loadReservas();
+        }
+      });
+  }
+
+  private applyDefaultDateRange(inicio: string, salida: string): void {
+    this.filterForm.patchValue({ fechaInicio: inicio, fechaFinal: salida }, { emitEvent: false });
+    this.filtro.update((current) => ({ ...current, fechaInicio: inicio, fechaFinal: salida }));
+  }
+
+  private handleOperationalDateError(): void {
+    this.loading.set(false);
+    this.errorMessage.set('No se pudo obtener la fecha operativa para consultar las reservas.');
+    this.reservas.set([]);
+    this.totalRecords.set(0);
+    this.totalPages.set(1);
   }
 
   private normalizeDateForApi(value: string): string {
