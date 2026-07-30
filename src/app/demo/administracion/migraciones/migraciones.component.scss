@@ -1,0 +1,51 @@
+.migration-header {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 1.25rem;
+  border-radius: 14px;
+  color: #fff;
+  background: linear-gradient(135deg, #12345b, #1767c0);
+
+  h4, p { margin: 0; }
+  p { margin-top: .35rem; opacity: .82; }
+}
+
+.migration-header__icon, .migration-card__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .15);
+  font-size: 1.35rem;
+}
+
+.migration-card {
+  width: 100%;
+  min-height: 126px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid #dce6f2;
+  border-radius: 14px;
+  background: #fff;
+  color: #172b4d;
+  text-align: left;
+  transition: .2s ease;
+
+  > span:nth-child(2) { flex: 1; }
+  strong, small { display: block; }
+  small { margin-top: .4rem; color: #6b7a90; }
+  .migration-card__icon { color: #1767c0; background: #eaf3ff; }
+}
+
+button.migration-card:hover {
+  transform: translateY(-2px);
+  border-color: #8ab9ee;
+  box-shadow: 0 10px 24px rgba(17, 61, 108, .12);
+}
+
+.migration-card--future { opacity: .65; border-style: dashed; }
+

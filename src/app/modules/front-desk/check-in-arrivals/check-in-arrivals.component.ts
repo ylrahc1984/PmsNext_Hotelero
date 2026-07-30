@@ -3,11 +3,12 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnIn
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { forkJoin, of } from 'rxjs';
+import { EMPTY, exhaustMap, forkJoin, fromEvent, of } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
 import { AuthService } from 'src/app/core/services/auth.service';
+import { OperationalDateService } from 'src/app/core/services/operational-date.service';
 import { normalizePmsDateDDMMYYYY, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 
 import {
@@ -49,6 +50,8 @@ export class CheckInArrivalsComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
   private readonly walkInService = inject(WalkInService);
+  private readonly operationalDateService = inject(OperationalDateService);
+  private operationalDateInput = '';
 
   readonly pageSizeOptions: PaginationOption[] = [
     { label: '10', value: 10 },
@@ -73,7 +76,7 @@ export class CheckInArrivalsComponent implements OnInit {
   ];
 
   readonly filtersForm = this.fb.nonNullable.group<CheckInArrivalFilterForm>({
-    fechaIngreso      : this.formatDateInput(new Date()),
+    fechaIngreso      : this.getOperationalDateInput(),
     soloPendientes    : true,
     busqueda          : ''
   });
@@ -125,7 +128,8 @@ export class CheckInArrivalsComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadRoomingCatalogs();
-    this.buscar();
+    this.bindFocusRefresh();
+    this.initializeOperationalDate();
   }
 
   buscar(): void {
@@ -161,8 +165,14 @@ export class CheckInArrivalsComponent implements OnInit {
   }
 
   limpiar(): void {
+    const operationalDate = this.getOperationalDateInput();
+    if (!operationalDate) {
+      this.handleOperationalDateError();
+      return;
+    }
+
     this.filtersForm.setValue({
-      fechaIngreso: this.formatDateInput(new Date()),
+      fechaIngreso: operationalDate,
       soloPendientes: true,
       busqueda: ''
     });
@@ -644,6 +654,71 @@ export class CheckInArrivalsComponent implements OnInit {
 
   private formatCheckInDate(value: string): string {
     return normalizePmsDateDDMMYYYY(value);
+  }
+
+  private initializeOperationalDate(): void {
+    this.loading = true;
+    this.operationalDateService
+      .ensureLoaded()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (operationalDate) => {
+          const inputDate = toPmsDateInputValue(operationalDate);
+          if (!inputDate) {
+            this.handleOperationalDateError();
+            return;
+          }
+
+          this.operationalDateInput = inputDate;
+          this.filtersForm.controls.fechaIngreso.setValue(inputDate, { emitEvent: false });
+          this.buscar();
+        },
+        error: () => this.handleOperationalDateError()
+      });
+  }
+
+  private bindFocusRefresh(): void {
+    fromEvent(window, 'focus')
+      .pipe(
+        exhaustMap(() =>
+          this.operationalDateService.refresh().pipe(
+            catchError(() => {
+              this.errorMessage = 'No se pudo actualizar la fecha operativa al recuperar el foco.';
+              this.cdr.markForCheck();
+              return EMPTY;
+            })
+          )
+        ),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((operationalDate) => {
+        const refreshedInputDate = toPmsDateInputValue(operationalDate);
+        if (!refreshedInputDate) {
+          this.handleOperationalDateError();
+          return;
+        }
+
+        const selectedDate = this.filtersForm.controls.fechaIngreso.value;
+        if (!selectedDate || selectedDate === this.operationalDateInput) {
+          this.filtersForm.controls.fechaIngreso.setValue(refreshedInputDate, { emitEvent: false });
+        }
+        this.operationalDateInput = refreshedInputDate;
+        this.buscar();
+      });
+  }
+
+  private getOperationalDateInput(): string {
+    return toPmsDateInputValue(this.operationalDateService.operationalDate());
+  }
+
+  private handleOperationalDateError(): void {
+    this.loading = false;
+    this.reloading = false;
+    this.errorMessage = 'No se pudo obtener la fecha operativa para consultar los arribos.';
+    this.arrivals = [];
+    this.selectedArrival = null;
+    this.refreshView();
+    this.cdr.markForCheck();
   }
 
   private escapeHtml(value: string): string {

@@ -1199,6 +1199,19 @@ const routes: Routes = [
     canActivateChild: [AuthGuard],
     children: [
       {
+        path: 'configuracion/migraciones/reservas',
+        canDeactivate: [CanDeactivateReservaCreateGuard],
+        loadComponent: () =>
+          import('./demo/administracion/migracion-reservas/migracion-reservas.component').then(
+            (c) => c.MigracionReservasComponent
+          )
+      },
+      {
+        path: 'configuracion/migraciones',
+        loadComponent: () =>
+          import('./demo/administracion/migraciones/migraciones.component').then((c) => c.MigracionesComponent)
+      },
+      {
         path: 'configuracion',
         loadComponent: () => import('./demo/administracion/configuracion-sistema/configuracion-sistema.component').then((c) => c.ConfiguracionSistemaComponent)
       },

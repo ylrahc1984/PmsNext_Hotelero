@@ -288,7 +288,38 @@ export const NavigationItems: NavigationItem[] = [
         icon: 'feather icon-settings',
         children: [
           { id: 'usuarios', title: 'Usuarios', type: 'item', url: '/usuarios', icon: 'feather icon-user', classes: 'nav-item' },
-          { id: 'configuracion-general', title: 'Configuración General', type: 'item', url: '/administracion/configuracion', icon: 'feather icon-sliders', classes: 'nav-item' }
+          {
+            id: 'configuracion-general',
+            title: 'Configuración General',
+            type: 'collapse',
+            icon: 'feather icon-sliders',
+            children: [
+              {
+                id: 'configuracion-panel',
+                title: 'Panel de Configuración',
+                type: 'item',
+                url: '/administracion/configuracion',
+                icon: 'feather icon-grid',
+                classes: 'nav-item'
+              },
+              {
+                id: 'migraciones',
+                title: 'Migraciones',
+                type: 'collapse',
+                icon: 'feather icon-repeat',
+                children: [
+                  {
+                    id: 'migracion-reservas',
+                    title: 'Migración de Reservas',
+                    type: 'item',
+                    url: '/administracion/configuracion/migraciones/reservas',
+                    icon: 'feather icon-calendar',
+                    classes: 'nav-item'
+                  }
+                ]
+              }
+            ]
+          }
         ]
       }
     ]

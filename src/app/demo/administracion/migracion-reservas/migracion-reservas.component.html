@@ -1,0 +1,274 @@
+<div class="page-header">
+  <div class="page-block">
+    <div class="page-header-title"><h5 class="m-b-10">Migración de Reservas</h5></div>
+    <ul class="breadcrumb">
+      <li class="breadcrumb-item"><a routerLink="/administracion/configuracion">Configuración General</a></li>
+      <li class="breadcrumb-item"><a routerLink="/administracion/configuracion/migraciones">Migraciones</a></li>
+      <li class="breadcrumb-item">Reservas</li>
+    </ul>
+  </div>
+</div>
+
+<div class="migration-shell">
+  <section class="intro-panel">
+    <div>
+      <span class="eyebrow">Herramienta administrativa</span>
+      <h3>Migración de Reservas</h3>
+      <p>Importe reservas provenientes de un sistema anterior mediante un archivo Excel. Antes de crear las reservas podrá revisar, homologar y validar toda la información.</p>
+    </div>
+    <div class="security-note"><i class="feather icon-shield"></i><span>El archivo se procesa localmente<br><small>No se envía al backend</small></span></div>
+  </section>
+
+  <nav class="wizard" aria-label="Progreso de migración">
+    @for (label of steps; track label; let index = $index) {
+      <button type="button" [class.active]="step === index" [class.complete]="step > index"
+        [disabled]="index > step || importing" (click)="goToStep(index)">
+        <span>{{ step > index ? '✓' : index + 1 }}</span>
+        <small>{{ label }}</small>
+      </button>
+    }
+  </nav>
+
+  @if (loadingMasters) {
+    <div class="alert alert-info"><i class="feather icon-loader spin mr-2"></i>Cargando maestros PMS…</div>
+  }
+
+  @if (step === 0) {
+    <section class="step-card">
+      <div class="section-title">
+        <div><span class="step-kicker">Paso 1</span><h4>Seleccione el archivo</h4></div>
+        @if (file) { <button class="btn btn-outline-danger btn-sm" type="button" (click)="removeFile()"><i class="feather icon-trash-2"></i> Comenzar nuevamente</button> }
+      </div>
+
+      <div class="drop-zone" [class.drop-zone--active]="dragActive" [class.drop-zone--loaded]="file"
+        (dragenter)="onDragEnter($event)" (dragover)="onDragOver($event)"
+        (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
+        <input #excelFileInput class="file-input" type="file"
+          accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          (change)="onFileInput($event)" [disabled]="reading || importing">
+        <span class="drop-icon"><i class="feather" [ngClass]="file ? 'icon-check-circle' : 'icon-upload-cloud'"></i></span>
+        @if (reading) {
+          <strong>Analizando archivo…</strong><small>Normalizando fechas, importes y reservas.</small>
+        } @else if (file) {
+          <strong>{{ file.name }}</strong><small>{{ sheetName }} · {{ reservas.length }} reservas · {{ ignoredRows }} filas ignoradas</small>
+          <button type="button" class="btn btn-outline-primary btn-sm mt-3" (click)="excelFileInput.click()">Reemplazar archivo</button>
+        } @else {
+          <strong>Arrastre aquí un archivo .xlsx</strong><small>o haga clic para seleccionarlo desde su equipo.</small>
+          <button type="button" class="btn btn-primary btn-sm mt-3" (click)="excelFileInput.click()">Seleccionar archivo</button>
+        }
+        <small class="drop-help"><i class="feather icon-info"></i> Arrastre el archivo desde el Explorador de Windows, no desde una celda abierta en Excel.</small>
+      </div>
+
+      @if (reservas.length) {
+        <div class="stats-grid mt-4">
+          <div><span>Reservas</span><strong>{{ summary.reservas }}</strong></div>
+          <div><span>Habitaciones</span><strong>{{ summary.habitaciones }}</strong></div>
+          <div><span>Noches</span><strong>{{ summary.noches }}</strong></div>
+          <div><span>Pax</span><strong>{{ summary.pax }}</strong></div>
+          <div><span>Total</span><strong>{{ summary.total | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+          <div><span>Depósitos</span><strong>{{ summary.depositado | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+          <div><span>Por homologar</span><strong>{{ summary.pendientesHomologacion }}</strong></div>
+          <div><span>Filas ignoradas</span><strong>{{ ignoredRows }}</strong></div>
+        </div>
+        <div class="table-responsive preview-table mt-4">
+          <table class="table table-hover">
+            <thead><tr><th>Fila</th><th>Externa</th><th>Huésped</th><th>Tarifa origen</th><th>Entrada</th><th>Salida</th><th>Hab.</th><th>Pax</th><th class="text-right">Total</th></tr></thead>
+            <tbody>
+              @for (item of reservas; track item.id) {
+                <tr><td>{{ item.filaExcel }}</td><td><strong>{{ item.numeroExterno }}</strong></td><td>{{ item.nombre || 'Sin nombre' }}</td><td>{{ item.tarifaOrigen || 'Sin valor' }}</td><td>{{ item.fechaEntrada }}</td><td>{{ item.fechaSalida }}</td><td>{{ item.habitaciones }}</td><td>{{ item.pax }}</td><td class="text-right">{{ item.total | number:'1.2-2' }}</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  }
+
+  @if (step === 1) {
+    <section class="step-card">
+      <div class="section-title">
+        <div><span class="step-kicker">Paso 2</span><h4>Homologación temporal</h4><p>Asocie cada valor externo con los maestros actuales del PMS.</p></div>
+        <span class="status-pill" [class.status-pill--ok]="summary.pendientesHomologacion === 0">{{ summary.pendientesHomologacion }} reservas pendientes</span>
+      </div>
+
+      <h5 class="subheading"><i class="feather icon-tag"></i> Tarifas y canales de origen</h5>
+      <div class="mapping-list">
+        @for (mapping of tarifaMappings; track mapping.origen) {
+          <article class="mapping-card">
+            <header><div><strong>{{ mapping.origen || 'Sin valor de tarifa' }}</strong><small>{{ mapping.cantidad }} reservas</small></div><span class="origin-badge">ORIGEN</span></header>
+            <div class="mapping-fields">
+              <label>Agencia PMS<select class="form-control" [(ngModel)]="mapping.codAgencia" (ngModelChange)="updateTariffMapping(mapping)"><option value="">Seleccione…</option>@for (agency of agencias; track agency.codigo) {<option [value]="agency.codigo">{{ agency.codigo }} · {{ agency.descripcion }}</option>}</select></label>
+              <label>Tarifa PMS<select class="form-control" [(ngModel)]="mapping.codTarifa" (ngModelChange)="updateTariffMapping(mapping)"><option value="">Seleccione…</option>@for (rate of tarifas; track rate.codigo) {<option [value]="rate.codigo">{{ rate.codigo }} · {{ rate.descripcion }}</option>}</select></label>
+              <label>Plan alimenticio<select class="form-control" [(ngModel)]="mapping.codPlan" (ngModelChange)="updateTariffMapping(mapping)"><option value="">Seleccione…</option>@for (plan of planes; track plan.codigo) {<option [value]="plan.codigo">{{ plan.codigo }} · {{ plan.descripcion }}</option>}</select></label>
+              <label>Directo<select class="form-control" [(ngModel)]="mapping.directo" (ngModelChange)="updateTariffMapping(mapping)"><option value="N">No</option><option value="S">Sí</option></select></label>
+            </div>
+          </article>
+        }
+      </div>
+
+      <h5 class="subheading mt-4"><i class="feather icon-git-merge"></i> Estados externos</h5>
+      <div class="state-grid">
+        @for (mapping of stateMappings; track mapping.origen) {
+          <label class="state-card"><span><strong>{{ mapping.origen || 'Sin estado' }}</strong><small>{{ mapping.cantidad }} reservas</small></span><i class="feather icon-arrow-right"></i><select class="form-control" [(ngModel)]="mapping.estadoPms" (ngModelChange)="updateStateMapping(mapping)"><option value="">Estado PMS…</option>@for (state of estadosPms; track state.codigo) {<option [value]="state.codigo">{{ state.codigo }} · {{ state.descripcion }}</option>}</select></label>
+        }
+      </div>
+    </section>
+  }
+
+  @if (step === 2 || step === 3) {
+    <section class="step-card">
+      <div class="section-title">
+        <div><span class="step-kicker">Paso {{ step + 1 }}</span><h4>{{ step === 2 ? 'Distribución de habitaciones' : 'Validación y selección' }}</h4><p>{{ step === 2 ? 'Configure categorías, tipos, cantidades, Pax y distribución monetaria.' : 'Revise errores y advertencias antes de crear reservas.' }}</p></div>
+        <div class="selection-counter">{{ selectedCount }} seleccionadas</div>
+      </div>
+
+      <div class="filters">
+        <label class="search-field"><i class="feather icon-search"></i><input class="form-control" placeholder="Buscar número o huésped" [(ngModel)]="filtros.busqueda" (ngModelChange)="page = 1"></label>
+        <select class="form-control" [(ngModel)]="filtros.validacion" (ngModelChange)="page = 1"><option value="TODAS">Todos los estados</option><option value="PENDIENTE">Pendientes</option><option value="VALIDA">Válidas</option><option value="ADVERTENCIA">Advertencias</option><option value="ERROR">Errores</option></select>
+        <select class="form-control" [(ngModel)]="filtros.tarifaOrigen" (ngModelChange)="page = 1"><option value="">Todos los canales</option>@for (mapping of tarifaMappings; track mapping.origen) {<option [value]="mapping.origen">{{ mapping.origen || 'Sin valor' }}</option>}</select>
+        <select class="form-control" [(ngModel)]="filtros.agencia" (ngModelChange)="page = 1"><option value="">Todas las agencias</option>@for (agency of agencias; track agency.codigo) {<option [value]="agency.codigo">{{ agency.descripcion }}</option>}</select>
+        <select class="form-control" [(ngModel)]="filtros.categoria" (ngModelChange)="page = 1"><option value="">Todas las categorías</option>@for (category of categorias; track category.CR01_CodCate) {<option [value]="category.CR01_CodCate">{{ category.CR01_Categoria }}</option>}</select>
+        <input type="date" class="form-control" [(ngModel)]="filtros.fechaEntrada" (ngModelChange)="page = 1">
+        <button type="button" class="btn btn-light" (click)="resetFilters()"><i class="feather icon-x"></i></button>
+      </div>
+
+      <div class="selection-bar">
+        <div><button class="btn btn-link btn-sm" type="button" (click)="selectAll()">Seleccionar elegibles</button><button class="btn btn-link btn-sm" type="button" (click)="selectVisible()">Seleccionar visibles</button><button class="btn btn-link btn-sm text-muted" type="button" (click)="clearSelection()">Limpiar</button></div>
+        <span>{{ filteredReservations.length }} resultados</span>
+      </div>
+
+      @if (step === 2) {
+        <div class="bulk-panel">
+          <div><strong>Aplicar habitación a seleccionadas</strong><small>Reemplaza la distribución simple; las configuraciones complejas requieren confirmación.</small></div>
+          <select class="form-control" [(ngModel)]="bulk.catHabita" (ngModelChange)="onBulkCategoryChange()"><option value="">Categoría…</option>@for (category of categorias; track category.CR01_CodCate) {<option [value]="category.CR01_CodCate">{{ category.CR01_CodCate }} · {{ category.CR01_Categoria }}</option>}</select>
+          <select class="form-control" [(ngModel)]="bulk.tipHabita"><option value="">Tipo…</option>@for (type of typesFor(bulk.catHabita); track type.CR02_TipHabita) {<option [value]="type.CR02_TipHabita">{{ type.CR02_TipHabita }} · {{ type.CR02_NomHabita }}</option>}</select>
+          <label>Cant.<input type="number" min="1" class="form-control" [(ngModel)]="bulk.cantHab"></label>
+          <label>Pax<input type="number" min="0" class="form-control" [(ngModel)]="bulk.numPax"></label>
+          <button class="btn btn-primary" type="button" (click)="applyBulkRoom()">Aplicar</button>
+        </div>
+      }
+
+      <div class="reservation-list">
+        @for (item of pagedReservations; track trackByReservation($index, item)) {
+          <article class="reservation-row" [class.reservation-row--error]="item.estadoValidacion === 'ERROR'" [class.reservation-row--warning]="item.estadoValidacion === 'ADVERTENCIA'">
+            <div class="reservation-main">
+              <input type="checkbox" [(ngModel)]="item.seleccionado" (change)="toggleSelection(item)" [disabled]="item.estadoValidacion === 'ERROR' || item.estadoImportacion === 'IMPORTADA'">
+              <button type="button" class="expand-button" (click)="toggleExpanded(item)"><i class="feather" [ngClass]="expandedId === item.id ? 'icon-chevron-up' : 'icon-chevron-down'"></i></button>
+              <div class="reservation-id"><strong>{{ item.numeroExterno }}</strong><small>Fila {{ item.filaExcel }}</small></div>
+              <div class="guest-cell"><strong>{{ item.nombre || 'Sin nombre' }}</strong><small>{{ item.tarifaOrigen }} · {{ item.fechaEntrada }} → {{ item.fechaSalida }}</small></div>
+              <div class="metric"><small>Hab.</small><strong>{{ distributedRooms(item) }}/{{ item.habitaciones }}</strong></div>
+              <div class="metric"><small>Pax</small><strong>{{ distributedPax(item) }}/{{ item.pax }}</strong></div>
+              <div class="metric metric--money"><small>Distribuido</small><strong>{{ distributedTotal(item) | number:'1.2-2' }}/{{ item.total | number:'1.2-2' }}</strong></div>
+              <span class="validation-badge" [attr.data-state]="item.estadoValidacion">{{ item.estadoValidacion }}</span>
+            </div>
+
+            @if (expandedId === item.id) {
+              <div class="reservation-editor">
+                <div class="reservation-context">
+                  <span><small>Nacionalidad</small><strong>{{ item.nacionalidad || 'No indicada' }}</strong></span>
+                  <span><small>Teléfono</small><strong>{{ item.telefono || 'No indicado' }}</strong></span>
+                  <span><small>Noches</small><strong>{{ item.noches }}</strong></span>
+                  <span><small>Depósito</small><strong>{{ item.depositado | currency:'USD':'symbol':'1.2-2' }}</strong></span>
+                </div>
+                <div class="editor-title"><strong>Distribución de habitaciones</strong><button type="button" class="btn btn-outline-primary btn-sm" (click)="addRoom(item)"><i class="feather icon-plus"></i> Agregar línea</button></div>
+                <div class="table-responsive">
+                  <table class="table room-table">
+                    <thead><tr><th>Categoría</th><th>Tipo</th><th>Cant.</th><th>Pax</th><th>Niños</th><th>Precio/noche</th><th>Total línea</th><th></th></tr></thead>
+                    <tbody>
+                      @for (room of item.detalleHabitaciones; track $index; let roomIndex = $index) {
+                        <tr>
+                          <td><select class="form-control" [(ngModel)]="room.catHabita" (ngModelChange)="onRoomCategoryChange(room)"><option value="">Seleccione…</option>@for (category of categorias; track category.CR01_CodCate) {<option [value]="category.CR01_CodCate">{{ category.CR01_CodCate }} · {{ category.CR01_Categoria }}</option>}</select></td>
+                          <td><select class="form-control" [(ngModel)]="room.tipHabita" (ngModelChange)="applyValidation()"><option value="">Seleccione…</option>@for (type of typesFor(room.catHabita); track type.CR02_TipHabita) {<option [value]="type.CR02_TipHabita">{{ type.CR02_TipHabita }} · {{ type.CR02_NomHabita }}</option>}</select></td>
+                          <td><input type="number" min="1" class="form-control numeric" [(ngModel)]="room.cantHab" (ngModelChange)="recalculateRooms(item)"></td>
+                          <td><input type="number" min="0" class="form-control numeric" [(ngModel)]="room.numPax" (ngModelChange)="applyValidation()"></td>
+                          <td><input type="number" min="0" class="form-control numeric" [(ngModel)]="room.numChild" (ngModelChange)="recalculateRooms(item)"></td>
+                          <td><input type="number" min="0" step=".01" class="form-control money" [(ngModel)]="room.precio" readonly></td>
+                          <td><input type="number" min="0" step=".01" class="form-control money" [(ngModel)]="room.total" (ngModelChange)="recalculateRooms(item)"></td>
+                          <td><button type="button" class="btn btn-icon btn-outline-danger" (click)="removeRoom(item, roomIndex)" title="Eliminar línea"><i class="feather icon-trash-2"></i></button></td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+                <div class="distribution-summary">
+                  <span>Total reserva <strong>{{ item.total | currency:'USD':'symbol':'1.2-2' }}</strong></span>
+                  <span>Total distribuido <strong>{{ distributedTotal(item) | currency:'USD':'symbol':'1.2-2' }}</strong></span>
+                  <span [class.text-danger]="(distributedTotal(item) - item.total) !== 0">Diferencia <strong>{{ distributedTotal(item) - item.total | currency:'USD':'symbol':'1.2-2' }}</strong></span>
+                </div>
+                @if (item.errores.length || item.advertencias.length) {
+                  <div class="validation-messages">
+                    @for (error of item.errores; track error) { <p class="text-danger"><i class="feather icon-x-circle"></i>{{ error }}</p> }
+                    @for (warning of item.advertencias; track warning) { <p class="text-warning"><i class="feather icon-alert-triangle"></i>{{ warning }}</p> }
+                  </div>
+                }
+              </div>
+            }
+          </article>
+        } @empty {
+          <div class="empty-state"><i class="feather icon-search"></i><strong>Sin resultados</strong><span>Ajuste o limpie los filtros.</span></div>
+        }
+      </div>
+      <div class="pagination-bar"><span>Página {{ page }} de {{ totalPages }}</span><div><button class="btn btn-outline-secondary btn-sm" [disabled]="page === 1" (click)="changePage(-1)">Anterior</button><button class="btn btn-outline-secondary btn-sm" [disabled]="page === totalPages" (click)="changePage(1)">Siguiente</button></div></div>
+    </section>
+  }
+
+  @if (step === 4) {
+    <section class="step-card">
+      <div class="section-title">
+        <div><span class="step-kicker">Paso 5</span><h4>{{ importFinished ? 'Importación completada' : 'Vista previa e importación' }}</h4><p>Las peticiones se ejecutan secuencialmente utilizando el servicio oficial de reservas.</p></div>
+        <span class="selection-counter">{{ selectedCount }} por procesar</span>
+      </div>
+
+      <div class="stats-grid">
+        <div><span>Seleccionadas</span><strong>{{ selectedCount }}</strong></div>
+        <div><span>Habitaciones</span><strong>{{ selectedRooms }}</strong></div>
+        <div><span>Total seleccionado</span><strong>{{ selectedTotal | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+        <div><span>Depósitos no migrados</span><strong>{{ summary.depositado | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+        <div class="success-stat"><span>Importadas</span><strong>{{ importedCount }}</strong></div>
+        <div class="danger-stat"><span>Errores de API</span><strong>{{ importErrorCount }}</strong></div>
+      </div>
+
+      <div class="deposit-warning"><i class="feather icon-alert-triangle"></i><div><strong>Los depósitos no se registrarán</strong><span>Se conservaron para revisión, pero esta etapa crea únicamente la reserva y sus habitaciones.</span></div></div>
+
+      @if (importing || currentImport > 0) {
+        <div class="progress-panel">
+          <div><strong>{{ importing ? 'Procesando' : 'Progreso final' }} {{ currentImport }} de {{ importTotal }}</strong><span>{{ currentReservation }}</span></div><strong>{{ progress }}%</strong>
+          <div class="progress"><div class="progress-bar" [style.width.%]="progress"></div></div>
+        </div>
+      }
+
+      <div class="table-responsive result-table">
+        <table class="table table-hover">
+          <thead><tr><th>Sel.</th><th>Externa</th><th>Huésped</th><th>Reserva PMS</th><th>Validación</th><th>Resultado</th><th>Mensaje</th></tr></thead>
+          <tbody>
+            @for (item of reservas; track item.id) {
+              <tr>
+                <td><input type="checkbox" [(ngModel)]="item.seleccionado" (change)="toggleSelection(item)" [disabled]="importing || item.estadoValidacion === 'ERROR' || item.estadoImportacion === 'IMPORTADA'"></td>
+                <td><strong>{{ item.numeroExterno }}</strong></td><td>{{ item.nombre || 'Sin nombre' }}</td><td>{{ item.codReservaPms || '—' }}</td>
+                <td><span class="validation-badge" [attr.data-state]="item.estadoValidacion">{{ item.estadoValidacion }}</span></td>
+                <td><span class="import-badge" [attr.data-state]="item.estadoImportacion">{{ item.estadoImportacion }}</span></td>
+                <td class="message-cell">{{ item.mensajeImportacion || (item.advertencias[0] ?? '—') }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="import-actions">
+        @if (importErrorCount > 0 && !importing) { <button class="btn btn-outline-danger" type="button" (click)="importSelected(true)"><i class="feather icon-refresh-cw"></i> Reintentar errores</button> }
+        <button class="btn btn-primary btn-lg" type="button" [disabled]="importing || selectedCount === 0" (click)="importSelected(false)">
+          @if (importing) { <i class="feather icon-loader spin"></i> Procesando… } @else { <i class="feather icon-play"></i> Importar {{ selectedCount }} reservas }
+        </button>
+      </div>
+    </section>
+  }
+
+  <footer class="wizard-footer">
+    <button type="button" class="btn btn-outline-secondary" [disabled]="step === 0 || importing" (click)="previous()"><i class="feather icon-arrow-left"></i> Anterior</button>
+    <div>
+      @if (step < 4) {
+        <button type="button" class="btn btn-primary" [disabled]="!canAdvance() || importing || loadingMasters" (click)="next()">Continuar <i class="feather icon-arrow-right"></i></button>
+      }
+    </div>
+  </footer>
+</div>

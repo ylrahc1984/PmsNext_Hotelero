@@ -1,0 +1,43 @@
+<div class="page-header">
+  <div class="page-block">
+    <div class="page-header-title"><h5 class="m-b-10">Migraciones</h5></div>
+    <ul class="breadcrumb">
+      <li class="breadcrumb-item"><a routerLink="/administracion/configuracion">Configuración General</a></li>
+      <li class="breadcrumb-item">Migraciones</li>
+    </ul>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12">
+    <app-card>
+      <div class="migration-header">
+        <div class="migration-header__icon"><i class="feather icon-repeat"></i></div>
+        <div>
+          <h4>Herramientas de migración</h4>
+          <p>Importe información de sistemas anteriores mediante procesos guiados, revisables y seguros.</p>
+        </div>
+      </div>
+
+      <div class="row mt-4">
+        <div class="col-xl-4 col-lg-6">
+          <button type="button" class="migration-card" (click)="openReservationMigration()">
+            <span class="migration-card__icon"><i class="feather icon-calendar"></i></span>
+            <span>
+              <strong>Migración de Reservas</strong>
+              <small>Leer, homologar, validar e importar reservas desde Excel.</small>
+            </span>
+            <i class="feather icon-arrow-right"></i>
+          </button>
+        </div>
+        <div class="col-xl-4 col-lg-6">
+          <div class="migration-card migration-card--future">
+            <span class="migration-card__icon"><i class="feather icon-plus"></i></span>
+            <span><strong>Próximas herramientas</strong><small>Esta sección está preparada para futuras migraciones.</small></span>
+          </div>
+        </div>
+      </div>
+    </app-card>
+  </div>
+</div>
+

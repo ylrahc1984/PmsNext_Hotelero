@@ -158,6 +158,14 @@ export class ConfiguracionSistemaComponent implements OnInit {
             icon: 'icon-shield',
             route: '/usuarios',
             iconColor: 'text-c-red'
+          },
+          {
+            id: 'migraciones',
+            title: 'Migraciones',
+            description: 'Importar información desde sistemas anteriores',
+            icon: 'icon-repeat',
+            route: '/administracion/configuracion/migraciones',
+            iconColor: 'text-c-blue'
           }
         ]
       }
