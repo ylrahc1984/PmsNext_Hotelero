@@ -8,6 +8,7 @@ import { of } from 'rxjs';
 import { OperationalDateService } from 'src/app/core/services/operational-date.service';
 import { environment } from 'src/environments/environment';
 import { CheckInArrivalsComponent } from './check-in-arrivals.component';
+import { CheckInArrival } from './models/check-in-arrival.model';
 
 describe('CheckInArrivalsComponent', () => {
   let component: CheckInArrivalsComponent;
@@ -73,4 +74,67 @@ describe('CheckInArrivalsComponent', () => {
     request.flush([]);
     expect(component.filtersForm.controls.fechaIngreso.value).toBe('2026-07-30');
   });
+
+  it('marca como pendiente y bloquea Check-In cuando el rooming list está vacío', () => {
+    const arrival = makeArrival();
+    component.buscar();
+
+    httpMock
+      .expectOne((req) => req.url === `${environment.apiUrl}/checkin/pendientes`)
+      .flush([arrival]);
+    expect(component.getRoomingListBadgeLabel(component.arrivals[0])).toBe('Verificando rooming');
+
+    httpMock
+      .expectOne(
+        (req) =>
+          req.url === `${environment.apiUrl}/rooming-list` &&
+          req.params.get('codRsv') === arrival.codReserva &&
+          req.params.get('numHabita') === arrival.numHabita
+      )
+      .flush({ success: true, data: [] });
+
+    expect(component.getRoomingListBadgeLabel(component.arrivals[0])).toBe('Rooming pendiente');
+    expect(component.isCheckInDisabled(component.arrivals[0])).toBeTrue();
+  });
+
+  it('habilita Check-In cuando existe al menos un huésped', () => {
+    const arrival = makeArrival();
+    component.buscar();
+
+    httpMock
+      .expectOne((req) => req.url === `${environment.apiUrl}/checkin/pendientes`)
+      .flush([arrival]);
+    httpMock.expectOne((req) => req.url === `${environment.apiUrl}/rooming-list`).flush({
+      success: true,
+      data: [{ numInterno: '1', codReserva: arrival.codReserva, numHabita: arrival.numHabita }]
+    });
+
+    expect(component.getRoomingListBadgeLabel(component.arrivals[0])).toBe('Rooming registrado');
+    expect(component.isCheckInDisabled(component.arrivals[0])).toBeFalse();
+  });
 });
+
+function makeArrival(): CheckInArrival {
+  return {
+    numHabita: '101',
+    catHabita: 'STD',
+    tipHabita: 'DOUBL',
+    codReserva: 'RSV-1',
+    codTarifa: 'FIT',
+    codPlan: 'DYN',
+    descripcion: 'Huésped prueba',
+    fechaIng: '29/07/2026',
+    fechaSal: '30/07/2026',
+    procesado: 0,
+    numPax: 2,
+    numChild: 0,
+    cpl: 0,
+    totNoches: 1,
+    totDias: 2,
+    folio: '',
+    estado: 'CCR',
+    codAgencia: 'DIR',
+    nomAgencia: 'Directos',
+    observacion: ''
+  };
+}

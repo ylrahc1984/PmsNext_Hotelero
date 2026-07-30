@@ -120,7 +120,17 @@
               @for (arrival of pagedArrivals; track trackByReserva($index, arrival)) {
                 <tr [class.table-active]="isSelected(arrival)" (click)="seleccionarArrival(arrival)">
                   <td class="col-numHabita">
-                    <strong class="room-value">{{ getHabitacionLabel(arrival) }}</strong>
+                    <div class="room-value-row">
+                      <strong class="room-value">{{ getHabitacionLabel(arrival) }}</strong>
+                      @if (getRoomingListStatus(arrival) && !isRoomingListComplete(arrival)) {
+                        <span
+                          class="rooming-alert material-icons"
+                          [ngClass]="getRoomingListBadgeClass(arrival)"
+                          [attr.title]="getRoomingListBadgeLabel(arrival)"
+                          [attr.aria-label]="getRoomingListBadgeLabel(arrival)"
+                        >warning_amber</span>
+                      }
+                    </div>
                     <span class="badge d-block mt-1" [ngClass]="getHabitacionBadgeClass(arrival)">{{ getHabitacionBadgeLabel(arrival) }}</span>
                   </td>
                   <td class="col-catHabita">{{ arrival.catHabita || '-' }}</td>
@@ -143,8 +153,8 @@
                         type="button"
                         class="action-checkin row-actions__primary"
                         [disabled]="isCheckInDisabled(arrival)"
-                        [attr.title]="isCheckInDisabled(arrival) ? 'Check-In realizado' : 'Confirmar ingreso del huésped'"
-                        [attr.aria-label]="isCheckInDisabled(arrival) ? 'Check-In ya realizado para reserva ' + arrival.codReserva : 'Realizar Check-In de reserva ' + arrival.codReserva"
+                        [attr.title]="getCheckInDisabledReason(arrival) || 'Confirmar ingreso del huésped'"
+                        [attr.aria-label]="getCheckInDisabledReason(arrival) || 'Realizar Check-In de reserva ' + arrival.codReserva"
                         (click)="realizarCheckIn(arrival)"
                       >
                         @if (isCheckingIn(arrival)) { <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> }
@@ -230,7 +240,17 @@
           @for (arrival of pagedArrivals; track trackByReserva($index, arrival)) {
             <article class="arrival-mobile-card" [class.arrival-mobile-card--selected]="isSelected(arrival)" (click)="seleccionarArrival(arrival)">
               <div>
-                <strong>{{ getHabitacionLabel(arrival) }}</strong>
+                <div class="room-value-row">
+                  <strong>{{ getHabitacionLabel(arrival) }}</strong>
+                  @if (getRoomingListStatus(arrival) && !isRoomingListComplete(arrival)) {
+                    <span
+                      class="rooming-alert material-icons"
+                      [ngClass]="getRoomingListBadgeClass(arrival)"
+                      [attr.title]="getRoomingListBadgeLabel(arrival)"
+                      [attr.aria-label]="getRoomingListBadgeLabel(arrival)"
+                    >warning_amber</span>
+                  }
+                </div>
                 <span>{{ arrival.codReserva }} · {{ arrival.nomAgencia || '-' }}</span>
               </div>
               <div class="mobile-badges">

@@ -407,6 +407,36 @@ $line: rgba(15, 33, 51, 0.1);
   font-weight: 880;
 }
 
+.room-value-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rooming-alert {
+  flex: 0 0 auto;
+  font-size: 1rem;
+  cursor: help;
+}
+
+.rooming-status--complete {
+  color: #176b45;
+}
+
+.rooming-status--missing {
+  color: #965f00;
+}
+
+.rooming-status--loading {
+  color: #3f627d;
+}
+
+.rooming-status--error {
+  color: #a32638;
+}
+
 .description-cell {
   max-width: 260px;
   overflow: hidden;

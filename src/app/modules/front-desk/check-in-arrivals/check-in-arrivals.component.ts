@@ -3,8 +3,8 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnIn
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { EMPTY, exhaustMap, forkJoin, fromEvent, of } from 'rxjs';
-import { catchError, finalize } from 'rxjs/operators';
+import { EMPTY, exhaustMap, forkJoin, from, fromEvent, of } from 'rxjs';
+import { catchError, finalize, map, mergeMap } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
 import { AuthService } from 'src/app/core/services/auth.service';
@@ -33,6 +33,8 @@ interface PaginationOption {
   label     : string;
   value     : number;
 }
+
+type RoomingListStatus = 'LOADING' | 'COMPLETE' | 'MISSING' | 'ERROR';
 
 @Component({
   selector: 'app-check-in-arrivals',
@@ -123,6 +125,8 @@ export class CheckInArrivalsComponent implements OnInit {
   roomingError = '';
   showRoomingForm = false;
   checkingInKey: string | null = null;
+  readonly roomingStatusByRoom = new Map<string, RoomingListStatus>();
+  private roomingStatusLoadId = 0;
   documentTypes: WalkInOption[] = [];
   nationalities: Nationality[] = [];
   nationalitySearchOpen = false;
@@ -158,6 +162,7 @@ export class CheckInArrivalsComponent implements OnInit {
       )
       .subscribe((arrivals) => {
         this.arrivals = arrivals.map((arrival) => this.normalizeArrival(arrival));
+        this.loadRoomingStatuses(this.arrivals);
         this.selectedArrival = this.arrivals[0] ?? null;
         this.activeObservationKey = null;
         this.page = 1;
@@ -290,6 +295,42 @@ export class CheckInArrivalsComponent implements OnInit {
     return this.hasHabitacion(arrival) ? 'Habitacion Asignada' : 'Sin Habitacion';
   }
 
+  getRoomingListStatus(arrival: CheckInArrival): RoomingListStatus | null {
+    if (!this.hasHabitacion(arrival) || Number(arrival.procesado) === 1) return null;
+    return this.roomingStatusByRoom.get(this.getRoomingKey(arrival)) ?? 'LOADING';
+  }
+
+  getRoomingListBadgeLabel(arrival: CheckInArrival): string {
+    const status = this.getRoomingListStatus(arrival);
+    if (status === 'COMPLETE') return 'Rooming registrado';
+    if (status === 'MISSING') return 'Rooming pendiente';
+    if (status === 'ERROR') return 'Rooming no verificado';
+    return 'Verificando rooming';
+  }
+
+  getRoomingListBadgeClass(arrival: CheckInArrival): string {
+    const status = this.getRoomingListStatus(arrival);
+    if (status === 'COMPLETE') return 'rooming-status--complete';
+    if (status === 'MISSING') return 'rooming-status--missing';
+    if (status === 'ERROR') return 'rooming-status--error';
+    return 'rooming-status--loading';
+  }
+
+  isRoomingListComplete(arrival: CheckInArrival): boolean {
+    return this.getRoomingListStatus(arrival) === 'COMPLETE';
+  }
+
+  getCheckInDisabledReason(arrival: CheckInArrival): string {
+    if (Number(arrival.procesado) === 1) return 'Check-In realizado';
+    if (this.checkingInKey === this.getArrivalKey(arrival)) return 'Check-In en proceso';
+    if (!this.hasHabitacion(arrival)) return 'Debe asignar una habitación antes del Check-In';
+    const roomingStatus = this.getRoomingListStatus(arrival);
+    if (roomingStatus === 'MISSING') return 'Debe ingresar al menos un huésped en el rooming list';
+    if (roomingStatus === 'ERROR') return 'No fue posible verificar el rooming list';
+    if (roomingStatus !== 'COMPLETE') return 'Verificando el rooming list';
+    return '';
+  }
+
   formatDisplayDate(value: string): string {
     return normalizePmsDateDDMMYYYY(value) || '-';
   }
@@ -303,7 +344,7 @@ export class CheckInArrivalsComponent implements OnInit {
   }
 
   isCheckInDisabled(arrival: CheckInArrival | null): boolean {
-    return !arrival || Number(arrival.procesado) === 1 || this.checkingInKey === this.getArrivalKey(arrival);
+    return !arrival || !!this.getCheckInDisabledReason(arrival);
   }
 
   isCheckingIn(arrival: CheckInArrival): boolean {
@@ -312,9 +353,21 @@ export class CheckInArrivalsComponent implements OnInit {
 
   async realizarCheckIn(reserva: CheckInArrival): Promise<void> {
     this.closeActionsMenu();
-    if (this.isCheckInDisabled(reserva)) return;
+    if (Number(reserva.procesado) === 1 || this.checkingInKey === this.getArrivalKey(reserva)) return;
     if (!this.hasHabitacion(reserva)) {
       await Swal.fire({ title: 'Habitación requerida', text: 'Asigne una habitación antes de realizar el Check-In.', icon: 'warning' });
+      return;
+    }
+    if (!this.isRoomingListComplete(reserva)) {
+      const status = this.getRoomingListStatus(reserva);
+      await Swal.fire({
+        title: status === 'ERROR' ? 'Rooming list no verificado' : 'Rooming list requerido',
+        text:
+          status === 'ERROR'
+            ? 'No fue posible verificar el rooming list. Intente consultarlo nuevamente antes del Check-In.'
+            : 'Debe ingresar al menos un huésped en el rooming list antes de realizar el Check-In.',
+        icon: 'warning'
+      });
       return;
     }
 
@@ -490,9 +543,56 @@ export class CheckInArrivalsComponent implements OnInit {
       finalize(() => { this.roomingLoading = false; this.cdr.markForCheck(); }),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe({
-      next: (guests) => { this.roomingGuests = guests; this.cdr.markForCheck(); },
-      error: () => { this.roomingError = 'No se pudo consultar el rooming list.'; this.cdr.markForCheck(); }
+      next: (guests) => {
+        this.roomingGuests = guests;
+        this.setRoomingStatus(arrival, guests.length > 0 ? 'COMPLETE' : 'MISSING');
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.roomingError = 'No se pudo consultar el rooming list.';
+        this.setRoomingStatus(arrival, 'ERROR');
+        this.cdr.markForCheck();
+      }
     });
+  }
+
+  private loadRoomingStatuses(arrivals: CheckInArrival[]): void {
+    const loadId = ++this.roomingStatusLoadId;
+    this.roomingStatusByRoom.clear();
+    const uniqueRooms = [
+      ...new Map(
+        arrivals
+          .filter((arrival) => this.hasHabitacion(arrival) && Number(arrival.procesado) !== 1)
+          .map((arrival) => [this.getRoomingKey(arrival), arrival])
+      ).values()
+    ];
+    uniqueRooms.forEach((arrival) => this.setRoomingStatus(arrival, 'LOADING'));
+    if (!uniqueRooms.length) {
+      this.cdr.markForCheck();
+      return;
+    }
+
+    from(uniqueRooms)
+      .pipe(
+        mergeMap(
+          (arrival) =>
+            this.arrivalsService.getRoomingList(arrival.codReserva, arrival.numHabita).pipe(
+              map((guests) => ({ arrival, status: guests.length > 0 ? 'COMPLETE' : 'MISSING' }) as const),
+              catchError(() => of({ arrival, status: 'ERROR' } as const))
+            ),
+          5
+        ),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(({ arrival, status }) => {
+        if (loadId !== this.roomingStatusLoadId) return;
+        this.setRoomingStatus(arrival, status);
+        this.cdr.markForCheck();
+      });
+  }
+
+  private setRoomingStatus(arrival: CheckInArrival, status: RoomingListStatus): void {
+    this.roomingStatusByRoom.set(this.getRoomingKey(arrival), status);
   }
 
   private loadRoomingCatalogs(): void {
@@ -562,6 +662,10 @@ export class CheckInArrivalsComponent implements OnInit {
 
   private getArrivalKey(arrival: CheckInArrival): string {
     return `${arrival.codReserva}-${arrival.numHabita}-${arrival.folio}`;
+  }
+
+  private getRoomingKey(arrival: CheckInArrival): string {
+    return `${arrival.codReserva.trim().toUpperCase()}-${arrival.numHabita.trim().toUpperCase()}`;
   }
 
   private filterArrivals(arrivals: CheckInArrival[]): CheckInArrival[] {
