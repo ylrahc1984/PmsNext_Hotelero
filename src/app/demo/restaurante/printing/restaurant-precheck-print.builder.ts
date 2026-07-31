@@ -54,9 +54,8 @@ export class RestaurantPrecheckPrintBuilder {
     const discount            = data.detalles.reduce((total, item) => total + receipt.number(item.ppV08_Descuento), 0);
     const consumptionTotal    = receipt.number(data.totales?.total);
     const tip                 = receipt.number(data.totalPropina);
-    const reportedGrandTotal  = receipt.number(data.totales?.granTotal);
-    const grandTotal          = reportedGrandTotal > 0 ? reportedGrandTotal : consumptionTotal + tip;
-    const currencyConversion  = this.buildCurrencyConversion(data, grandTotal);
+    const totalToPay          = consumptionTotal + tip;
+    const currencyConversion  = this.buildCurrencyConversion(data, totalToPay);
 
     receipt
       .initialize()
@@ -127,7 +126,7 @@ export class RestaurantPrecheckPrintBuilder {
       .bold(true)
       .size(2)
       .line('TOTAL')
-      .line(receipt.money(grandTotal, currency))
+      .line(receipt.money(totalToPay, currency))
       .size(1)
       .bold(false);
 
