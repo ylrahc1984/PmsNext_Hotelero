@@ -1,3 +1,5 @@
+import { ModuleAccessMode } from 'src/app/core/models/module-access.models';
+
 export interface NavigationItem {
   id: string;
   title: string;
@@ -13,6 +15,9 @@ export interface NavigationItem {
   target?: boolean;
   breadcrumbs?: boolean;
   locked?: boolean;
+  lockReason?: string;
+  requiredModules?: string[];
+  moduleAccessMode?: ModuleAccessMode;
 
   children?: NavigationItem[];
 }
@@ -44,6 +49,7 @@ export const NavigationItems: NavigationItem[] = [
         title: 'Front Desk',
         type: 'collapse',
         icon: 'feather icon-log-in',
+        requiredModules: ['FRONT'],
         children: [
           {
             id: 'front-desk-habitaciones',
@@ -98,6 +104,7 @@ export const NavigationItems: NavigationItem[] = [
         title: 'Reservas',
         type: 'collapse',
         icon: 'feather icon-calendar',
+        requiredModules: ['RESER'],
         activeUrls: ['/reservas', '/front-desk/forecast-ocupacion'],
         children: [
           { id: 'reservas-consulta', title: 'Consulta de Reservas', type: 'item', url: '/reservas/consulta-reservas', activeUrls: ['/reservas/consulta-reservas', '/reservas/nueva-hospedaje', '/reservas/editar-hospedaje', '/reservas/detalle-hospedaje'], icon: 'feather icon-search', classes: 'nav-item' },
@@ -124,6 +131,8 @@ export const NavigationItems: NavigationItem[] = [
         title: 'Restaurante',
         type: 'collapse',
         icon: 'feather icon-shopping-cart',
+        requiredModules: ['PNTVT', 'PVTCH'],
+        moduleAccessMode: 'any',
         activeUrls: ['/restaurante', '/restaurant'],
         children: [
           { id: 'restaurante-facturacion', title: 'Facturación Restaurante', type: 'item', url: '/restaurant/puntos-venta', activeUrls: ['/restaurant'], icon: 'feather icon-credit-card', classes: 'nav-item' },
@@ -193,6 +202,7 @@ export const NavigationItems: NavigationItem[] = [
         title: 'Compras e Inventario',
         type: 'collapse',
         icon: 'feather icon-package',
+        requiredModules: ['INVCO'],
         children: [
           { id: 'proveedores', title: 'Proveedores', type: 'item', url: '/compras/proveedores', icon: 'feather icon-users', classes: 'nav-item' },
           { id: 'producto-list', title: 'Productos', type: 'item', url: '/compras/producto-list', icon: 'feather icon-box', classes: 'nav-item' },
@@ -209,6 +219,8 @@ export const NavigationItems: NavigationItem[] = [
         title: 'Finanzas',
         type: 'collapse',
         icon: 'feather icon-pie-chart',
+        requiredModules: ['BANCO', 'CONTA'],
+        moduleAccessMode: 'any',
         children: [
           { id: 'cuentas-cobrar', title: 'Cuentas por Cobrar', type: 'item', url: '/finanzas/cuentas-cobrar', icon: 'feather icon-credit-card', classes: 'nav-item' },
           { id: 'cuentas-pagar', title: 'Cuentas por Pagar', type: 'item', url: '/finanzas/cuentas-pagar', icon: 'feather icon-credit-card', classes: 'nav-item' },
@@ -286,6 +298,7 @@ export const NavigationItems: NavigationItem[] = [
         title: 'Administración',
         type: 'collapse',
         icon: 'feather icon-settings',
+        requiredModules: ['CONFI'],
         children: [
           { id: 'usuarios', title: 'Usuarios', type: 'item', url: '/usuarios', icon: 'feather icon-user', classes: 'nav-item' },
           {

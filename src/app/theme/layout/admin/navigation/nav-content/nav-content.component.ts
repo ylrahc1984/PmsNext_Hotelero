@@ -8,6 +8,9 @@ import { filter } from 'rxjs/operators';
 import { environment } from 'src/environments/environment';
 import { APP_BRANDING } from 'src/app/core/config/app-branding';
 import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
+import { AuthService } from 'src/app/core/services/auth.service';
+import { ModuleAccessService } from 'src/app/core/services/module-access.service';
+import { ModuleAccessState } from 'src/app/core/models/module-access.models';
 import { NavigationItem, NavigationItems } from '../navigation';
 import { navigationItemMatchesUrl } from '../navigation-route.util';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
@@ -24,6 +27,8 @@ export class NavContentComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly router = inject(Router);
   private readonly empresaContext = inject(EmpresaContextService);
+  private readonly auth = inject(AuthService);
+  private readonly moduleAccess = inject(ModuleAccessService);
 
   // public method
   // version
@@ -41,7 +46,14 @@ export class NavContentComponent {
 
   // constructor
   constructor() {
-    this.navigations = NavigationItems;
+    this.navigations = this.buildNavigation(this.moduleAccess.snapshot);
+    this.moduleAccess.state$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((state) => {
+        this.navigations = this.buildNavigation(state);
+        this.syncExpandedRootWithUrl(this.router.url);
+      });
+    this.loadModuleAccess();
     this.syncExpandedRootWithUrl(this.router.url);
     this.router.events
       .pipe(
@@ -90,5 +102,54 @@ export class NavContentComponent {
 
   private normalizeUrl(url: string): string {
     return url.split('?')[0].split('#')[0];
+  }
+
+  private loadModuleAccess(): void {
+    const usuario = this.auth.getCurrentUser()?.usuario?.toString().trim() ?? '';
+    if (!usuario) {
+      return;
+    }
+
+    this.moduleAccess
+      .loadForUser(usuario)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        error: (error) => console.error('No se pudieron cargar los accesos a módulos:', error)
+      });
+  }
+
+  private buildNavigation(state: ModuleAccessState): NavigationItem[] {
+    return NavigationItems.map((item) => this.buildNavigationItem(item, state));
+  }
+
+  private buildNavigationItem(item: NavigationItem, state: ModuleAccessState): NavigationItem {
+    const staticallyLocked = item.locked === true;
+    const requiresAccess = Boolean(item.requiredModules?.length);
+    const deniedByModule = requiresAccess
+      ? !this.moduleAccess.hasAccess(item.requiredModules ?? [], item.moduleAccessMode ?? 'any', state)
+      : false;
+
+    return {
+      ...item,
+      locked: staticallyLocked || deniedByModule,
+      lockReason: this.resolveLockReason(staticallyLocked, deniedByModule, state),
+      children: item.children?.map((child) => this.buildNavigationItem(child, state))
+    };
+  }
+
+  private resolveLockReason(staticallyLocked: boolean, deniedByModule: boolean, state: ModuleAccessState): string | undefined {
+    if (staticallyLocked) {
+      return 'Esta opción no está disponible actualmente';
+    }
+    if (!deniedByModule) {
+      return undefined;
+    }
+    if (state.status === 'loading' || state.status === 'idle') {
+      return 'Verificando acceso al módulo';
+    }
+    if (state.status === 'error') {
+      return 'No fue posible verificar el acceso al módulo';
+    }
+    return 'No tienes acceso a este módulo';
   }
 }

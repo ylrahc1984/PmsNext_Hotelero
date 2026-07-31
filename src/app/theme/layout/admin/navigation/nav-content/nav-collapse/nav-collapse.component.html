@@ -12,7 +12,7 @@
       class="nav-link"
       (click)="navCollapse($event)"
       [attr.aria-disabled]="navItem.locked ? 'true' : null"
-      [attr.title]="navItem.locked ? 'No tienes permisos para acceder a esta opción' : navItem.title"
+      [attr.title]="navItem.locked ? (navItem.lockReason || 'No tienes acceso a esta opción') : navItem.title"
     >
       <ng-container *ngTemplateOutlet="itemContent"></ng-container>
     </a>
@@ -31,7 +31,7 @@
     </span>
     @if (navItem.locked) {
       <span class="nav-lock-badge" aria-hidden="true">
-        <i class="feather icon-lock"></i>
+        <i class="feather icon-key"></i>
       </span>
     }
   </ng-template>

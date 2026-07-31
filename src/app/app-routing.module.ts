@@ -6,6 +6,7 @@ import { AdminComponent } from './theme/layout/admin/admin.component';
 import { GuestComponent } from './theme/layout/guest/guest.component';
 import { AuthGuard } from './core/guards/auth.guard';
 import { LoginGuard } from './core/guards/login.guard';
+import { ModuleAccessGuard } from './core/guards/module-access.guard';
 import { CanDeactivateReservaCreateGuard } from './core/guards/can-deactivate-reserva-create.guard';
 
 const loadPmsPlaceholder = () => import('./pages/pms-placeholder/pms-placeholder.component').then((c) => c.PmsPlaceholderComponent);
@@ -92,8 +93,10 @@ const routes: Routes = [
   },
   {
     path: 'front-desk',
-    canActivate: [AuthGuard],
+    canMatch: [ModuleAccessGuard],
+    canActivate: [AuthGuard, ModuleAccessGuard],
     canActivateChild: [AuthGuard],
+    data: { requiredModules: ['FRONT'] },
     loadChildren: () => import('./modules/front-desk/front-desk.routes').then((m) => m.FRONT_DESK_ROUTES)
   },
   {
@@ -138,8 +141,9 @@ const routes: Routes = [
   {
     path: 'restaurante',
     component: AdminComponent,
-    canActivate: [AuthGuard],
+    canActivate: [AuthGuard, ModuleAccessGuard],
     canActivateChild: [AuthGuard],
+    data: { requiredModules: ['PNTVT', 'PVTCH'], moduleAccessMode: 'any' },
     children: [
       {
         path: 'analysis',
@@ -436,8 +440,9 @@ const routes: Routes = [
   {
     path: 'restaurant',
     component: AdminComponent,
-    canActivate: [AuthGuard],
+    canActivate: [AuthGuard, ModuleAccessGuard],
     canActivateChild: [AuthGuard],
+    data: { requiredModules: ['PNTVT', 'PVTCH'], moduleAccessMode: 'any' },
     children: [
       {
         path: '',
@@ -623,8 +628,9 @@ const routes: Routes = [
   {
     path: 'reservas',
     component: AdminComponent,
-    canActivate: [AuthGuard],
+    canActivate: [AuthGuard, ModuleAccessGuard],
     canActivateChild: [AuthGuard],
+    data: { requiredModules: ['RESER'] },
     children: [
       {
         path: 'calendario',
@@ -818,15 +824,19 @@ const routes: Routes = [
     pathMatch: 'full'
   },
   {
-    canActivate: [AuthGuard],
+    canMatch: [ModuleAccessGuard],
+    canActivate: [AuthGuard, ModuleAccessGuard],
     canActivateChild: [AuthGuard],
     path: 'comisiones',
+    data: { requiredModules: ['BANCO', 'CONTA'], moduleAccessMode: 'any' },
     loadChildren: () => import('./pages/comisiones/comisiones.routes').then((m) => m.COMISIONES_ROUTES)
   },
   {
-    canActivate: [AuthGuard],
+    canMatch: [ModuleAccessGuard],
+    canActivate: [AuthGuard, ModuleAccessGuard],
     canActivateChild: [AuthGuard],
     path: 'finanzas',
+    data: { requiredModules: ['BANCO', 'CONTA'], moduleAccessMode: 'any' },
     loadChildren: () => import('./finanzas/finanzas.module').then((m) => m.FinanzasModule)
   },
   {
@@ -936,8 +946,9 @@ const routes: Routes = [
   {
     path: 'compras',
     component: AdminComponent,
-    canActivate: [AuthGuard],
+    canActivate: [AuthGuard, ModuleAccessGuard],
     canActivateChild: [AuthGuard],
+    data: { requiredModules: ['INVCO'] },
     children: [
         {
           path: 'proveedores',
@@ -1079,10 +1090,11 @@ const routes: Routes = [
     pathMatch: 'full'
   },
   {
-    canActivate: [AuthGuard],
+    canActivate: [AuthGuard, ModuleAccessGuard],
     canActivateChild: [AuthGuard],
     path: 'usuarios',
     component: AdminComponent,
+    data: { requiredModules: ['CONFI'] },
     children: [
       {
         path: '',
@@ -1119,10 +1131,11 @@ const routes: Routes = [
     pathMatch: 'full'
   },
   {
-    canActivate: [AuthGuard],
+    canActivate: [AuthGuard, ModuleAccessGuard],
     canActivateChild: [AuthGuard],
     path: 'usuario-cambiar-clave',
     component: AdminComponent,
+    data: { requiredModules: ['CONFI'] },
     children: [
       {
         path: ':usuario',
@@ -1131,10 +1144,11 @@ const routes: Routes = [
     ]
   },
   {
-    canActivate: [AuthGuard],
+    canActivate: [AuthGuard, ModuleAccessGuard],
     canActivateChild: [AuthGuard],
     path: 'formas-pago',
     component: AdminComponent,
+    data: { requiredModules: ['CONFI'] },
     children: [
       {
         path: '',
@@ -1143,10 +1157,11 @@ const routes: Routes = [
     ]
   },
   {
-    canActivate: [AuthGuard],
+    canActivate: [AuthGuard, ModuleAccessGuard],
     canActivateChild: [AuthGuard],
     path: 'forma-pago-detalle',
     component: AdminComponent,
+    data: { requiredModules: ['CONFI'] },
     children: [
       {
         path: '',
@@ -1159,10 +1174,11 @@ const routes: Routes = [
     ]
   },
   {
-    canActivate: [AuthGuard],
+    canActivate: [AuthGuard, ModuleAccessGuard],
     canActivateChild: [AuthGuard],
     path: 'correlativos',
     component: AdminComponent,
+    data: { requiredModules: ['CONFI'] },
     children: [
       {
         path: '',
@@ -1172,9 +1188,10 @@ const routes: Routes = [
   },
   {
     path: 'monedas',
-    canActivate: [AuthGuard],
+    canActivate: [AuthGuard, ModuleAccessGuard],
     canActivateChild: [AuthGuard],
     component: AdminComponent,
+    data: { requiredModules: ['CONFI'] },
     children: [
       {
         path: '',
@@ -1195,8 +1212,9 @@ const routes: Routes = [
   {
     path: 'administracion',
     component: AdminComponent,
-    canActivate: [AuthGuard],
+    canActivate: [AuthGuard, ModuleAccessGuard],
     canActivateChild: [AuthGuard],
+    data: { requiredModules: ['CONFI'] },
     children: [
       {
         path: 'configuracion/migraciones/reservas',

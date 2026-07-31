@@ -97,6 +97,14 @@ export interface ModuloCatalogoUI {
   operador: string;
 }
 
+export interface ModuloUsuarioPayload {
+  tipo: number;
+  modulo: string;
+  usuario: string;
+  operador: string;
+  respuesta: string;
+}
+
 export interface PrivilegioCatalogo {
   CA08_CodParametro: string;
   CA08_Tipo: string;

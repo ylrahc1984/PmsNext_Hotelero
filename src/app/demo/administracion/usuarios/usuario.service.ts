@@ -10,6 +10,7 @@ import {
   DescuentoUsuario,
   ModuloCatalogo,
   ModuloCatalogoUI,
+  ModuloUsuarioPayload,
   PrivilegioCatalogo,
   PrivilegioCatalogoUI,
   PuntoVenta,
@@ -25,7 +26,7 @@ import {
 @Injectable({ providedIn: 'root' })
 export class UsuarioService {
   private apiUrl = `${environment.apiUrl}/usuarios`;
-  private modxUsaurio = `${environment.apiUrl}/modxusuario`;
+  private modxUsuarioUrl = `${environment.apiUrl}/modxusuario`;
   private modulosUrl = `${environment.apiUrl}/modulo`;
   private puntosVentaUrl = `${environment.apiUrl}/puntoventa`;
   private mozoxPntVentaUrl = `${environment.apiUrl}/mozoporpuntoventa`;
@@ -107,7 +108,7 @@ export class UsuarioService {
  
   getModulosUsuario(usuario: string): Observable<ModuloCatalogoUI[]> {
     return this.http
-      .get<ModuloCatalogo[]>(`${this.modxUsaurio}/usuario/${usuario}`)
+      .get<ModuloCatalogo[]>(`${this.modxUsuarioUrl}/usuario/${usuario}`)
       .pipe(map((response) => (response ?? []).map((item) => this.mapModuloFromApi(item))));
   }
 
@@ -117,8 +118,23 @@ export class UsuarioService {
       .pipe(map((response) => (response ?? []).map((item) => this.mapModuloFromApi(item))));
   }
 
-  asignarModulo(usuario: string, modulo: string): Observable<unknown> {
-    return this.http.post(`${this.apiUrl}/${usuario}/modulos`, { modulo });
+  asignarModulo(usuario: string, modulo: string): Observable<boolean> {
+    const payload: ModuloUsuarioPayload = {
+      tipo: 1,
+      modulo,
+      usuario,
+      operador: this.getOperador(),
+      respuesta: 'string'
+    };
+
+    return this.http.post<unknown>(this.modxUsuarioUrl, payload).pipe(
+      map((response) => {
+        if (!this.isTrueResponse(response)) {
+          throw new Error(`El API no confirmó la asignación del módulo ${modulo}.`);
+        }
+        return true;
+      })
+    );
   }
 
   quitarModulo(usuario: string, modulo: string): Observable<unknown> {
@@ -339,6 +355,28 @@ export class UsuarioService {
       return JSON.stringify(value);
     }
     return '';
+  }
+
+  private isTrueResponse(response: unknown): boolean {
+    if (response === true) {
+      return true;
+    }
+
+    if (typeof response === 'string') {
+      return response.trim().toLowerCase() === 'true';
+    }
+
+    if (response && typeof response === 'object' && 'respuesta' in response) {
+      const respuesta = (response as { respuesta?: unknown }).respuesta;
+      return respuesta === true || (typeof respuesta === 'string' && respuesta.trim().toLowerCase() === 'true');
+    }
+
+    if (response && typeof response === 'object' && 'success' in response) {
+      const success = (response as { success?: unknown }).success;
+      return success === true || (typeof success === 'string' && success.trim().toLowerCase() === 'true');
+    }
+
+    return false;
   }
 
   private parseTextResponse(response: string): UsuarioResponse {

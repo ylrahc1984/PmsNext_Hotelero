@@ -5,6 +5,7 @@ import { Observable, BehaviorSubject, tap, throwError, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { LoginRequest, LoginResponse } from '../models/auth.models';
 import { environment } from 'src/environments/environment';
+import { ModuleAccessService } from './module-access.service';
 
 @Injectable({
   providedIn: 'root'
@@ -22,7 +23,11 @@ export class AuthService {
 
   private refreshTimer: any;
 
-  constructor(private http: HttpClient, private router: Router) {
+  constructor(
+    private http: HttpClient,
+    private router: Router,
+    private moduleAccess: ModuleAccessService
+  ) {
     this.resumeSession();
   }
 
@@ -111,6 +116,7 @@ export class AuthService {
     if (this.refreshTimer) {
       clearTimeout(this.refreshTimer);
     }
+    this.moduleAccess.reset();
     this.currentUserSubject.next(null);
     this.isAuthenticatedSubject.next(false);
   }
