@@ -228,7 +228,7 @@ export class GuestRegistrationSheetPdfService {
           table: {
             headerRows: 1,
             keepWithHeaderRows: 1,
-            widths: [16, 54, 95, 54, 62, 105, 104],
+            widths: [16, 66, 95, 48, 62, 105, 98],
             heights: (rowIndex: number) => rowIndex === 0 ? 22 : 36,
             body: [
               [

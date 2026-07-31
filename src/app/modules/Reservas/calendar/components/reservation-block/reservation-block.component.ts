@@ -6,11 +6,12 @@ import {
   Input,
   OnDestroy,
   Output,
+  ViewChild,
   ViewEncapsulation,
   inject
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { NgbPopoverModule } from '@ng-bootstrap/ng-bootstrap';
+import { NgbPopover, NgbPopoverModule } from '@ng-bootstrap/ng-bootstrap';
 import { Subscription, timer } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 
@@ -43,6 +44,7 @@ export class ReservationBlockComponent implements OnDestroy {
   @Input() isGhost = false;
   @Output() reservationSelect = new EventEmitter<CalendarReservationBlockSelect>();
   @Output() dragStart = new EventEmitter<{ block: CalendarReservationBlockView; event: PointerEvent }>();
+  @ViewChild('reservationPopover') private reservationPopover?: NgbPopover;
 
   operationalDetail: ReservaHabitacionDetalle | null = null;
   detailLoading = false;
@@ -111,6 +113,8 @@ export class ReservationBlockComponent implements OnDestroy {
   }
 
   onSelect(event: MouseEvent): void {
+    this.dismissPopoverForInteraction();
+
     if (this.block.reservation.isOperationalBlock) {
       return;
     }
@@ -123,12 +127,20 @@ export class ReservationBlockComponent implements OnDestroy {
       return;
     }
 
+    this.dismissPopoverForInteraction();
     event.preventDefault();
     event.stopPropagation();
     if (event.currentTarget instanceof HTMLElement) {
       event.currentTarget.setPointerCapture(event.pointerId);
     }
     this.dragStart.emit({ block: this.block, event });
+  }
+
+  private dismissPopoverForInteraction(): void {
+    this.hovered = false;
+    this.focused = false;
+    this.reservationPopover?.close();
+    this.resetDetailWhenInactive();
   }
 
   private loadOperationalDetail(): void {

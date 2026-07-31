@@ -10,6 +10,7 @@
   [style.width.px]="block.width"
   [attr.aria-label]="block.tooltip"
   [attr.aria-disabled]="block.reservation.isOperationalBlock || null"
+  #reservationPopover="ngbPopover"
   [ngbPopover]="operationalDetailPopover"
   popoverClass="calendar-operational-popover"
   placement="auto"
