@@ -37,9 +37,12 @@ export class UsuarioFormComponent implements OnInit {
   }
 
   private initializeForm(): void {
+    const isEditing = !!this.route.snapshot.paramMap.get('usuario');
+
     this.form = this.fb.group({
       usuario: ['', [Validators.required]],
       nombre: ['', [Validators.required]],
+      clave: ['', isEditing ? [] : [Validators.required]],
       departamento: [null, [Validators.required]],
       telefono: [''],
       correo: ['', [Validators.email]],
@@ -129,7 +132,7 @@ export class UsuarioFormComponent implements OnInit {
       departamento: Number(raw.departamento),
       telefono: raw.telefono || '',
       correo: raw.correo || '',
-      clave: this.isEditing ? '' : 'NUEVO-PASS',
+      clave: raw.clave || '',
       pntVenta: raw.puntoVentaHabilitado ? 1 : 0,
       passPntVenta: raw.clavePuntoVenta || '',
       operador: '',

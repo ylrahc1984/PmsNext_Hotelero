@@ -35,10 +35,26 @@
                 <input type="text" class="form-control" formControlName="usuario" [class.is-invalid]="isFieldInvalid('usuario')" placeholder="Usuario">
                 <div class="invalid-feedback">El usuario es requerido.</div>
               </div>
-              <div class="col-md-8">
+              <div class="col-md-4">
                 <label class="form-label">Nombre <span class="text-danger">*</span></label>
                 <input type="text" class="form-control" formControlName="nombre" [class.is-invalid]="isFieldInvalid('nombre')" placeholder="Nombre completo">
                 <div class="invalid-feedback">El nombre es requerido.</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">
+                  Contraseña
+                  <span *ngIf="!isEditing" class="text-danger">*</span>
+                </label>
+                <input
+                  type="password"
+                  class="form-control"
+                  formControlName="clave"
+                  [class.is-invalid]="isFieldInvalid('clave')"
+                  autocomplete="new-password"
+                  [placeholder]="isEditing ? 'Dejar en blanco para conservar' : 'Contraseña'"
+                >
+                <div class="invalid-feedback">La contraseña es requerida.</div>
+                <small *ngIf="isEditing" class="text-muted">Escriba una contraseña solo si desea cambiarla.</small>
               </div>
             </div>
 
