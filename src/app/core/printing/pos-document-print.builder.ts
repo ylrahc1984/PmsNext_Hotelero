@@ -118,14 +118,12 @@ export class PosDocumentPrintBuilder {
       taxes.forEach((tax) => {
         commands.push(this.leftRight(this.taxLabel(tax), this.money(tax.monto, moneda)));
       });
-      if (taxes.length > 1) {
-        commands.push(this.leftRight('Total impuestos', this.money(data.resumen.impuesto, moneda)));
-      }
     } else {
       commands.push(this.leftRight('Impuesto', this.money(data.resumen.impuesto, moneda)));
     }
 
     commands.push(
+      `${'='.repeat(this.width)}\n`,
       '\x1B\x45\x01',
       this.leftRight('TOTAL', this.money(data.resumen.total, moneda)),
       '\x1B\x45\x00',

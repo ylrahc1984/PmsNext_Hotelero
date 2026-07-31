@@ -94,8 +94,8 @@ export class RestaurantInvoiceDialogComponent implements OnInit {
   @Output() closed = new EventEmitter<RestaurantInvoiceDialogResult | null>();
 
   readonly consumidorFinal: ConsumidorFinal = {
-    codigo      : '000000000',
-    ruc         : '000000000',
+    codigo      : '0000000000',
+    ruc         : '00000000',
     nombre      : 'CLIENTE EN GENERAL',
     direccion   : 'S/D',
     email       : ''

@@ -31,6 +31,7 @@ describe('PosDocumentPrintBuilder', () => {
     expect(commands).toContain('2,210.00 COL');
     expect(commands).toContain('Servicio 10%');
     expect(commands).toContain('1,700.00 COL');
-    expect(commands).toContain('Total impuestos');
+    expect(commands).not.toContain('Total impuestos');
+    expect(commands).toContain(`${'='.repeat(40)}\n\x1B\x45\x01TOTAL`);
   });
 });
