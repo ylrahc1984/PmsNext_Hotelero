@@ -135,6 +135,7 @@ export interface ReservaImportacion {
   estadoImportacion: EstadoImportacion;
   codReservaPms?: string;
   mensajeImportacion?: string;
+  advertenciaDisponibilidad?: string;
 }
 
 export interface HomologacionTarifa {

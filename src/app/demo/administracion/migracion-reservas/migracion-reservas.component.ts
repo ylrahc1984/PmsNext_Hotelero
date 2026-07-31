@@ -175,6 +175,12 @@ export class MigracionReservasComponent implements OnInit, CanDeactivateReservaC
     return this.reservas.filter((item) => item.estadoImportacion === 'ERROR').length;
   }
 
+  get availabilityWarningCount(): number {
+    return this.reservas.filter(
+      (item) => item.estadoImportacion === 'IMPORTADA' && !!item.advertenciaDisponibilidad
+    ).length;
+  }
+
   get omittedCount(): number {
     return this.reservas.filter((item) => item.estadoImportacion === 'OMITIDA').length;
   }
@@ -520,14 +526,10 @@ export class MigracionReservasComponent implements OnInit, CanDeactivateReservaC
       }
       reserva.estadoImportacion = 'PROCESANDO';
       reserva.mensajeImportacion = '';
+      reserva.advertenciaDisponibilidad = '';
       this.currentReservation = `${reserva.numeroExterno} — ${reserva.nombre}`;
       try {
-        const availabilityError = await this.validateAvailability(reserva);
-        if (availabilityError) {
-          reserva.estadoImportacion = 'ERROR';
-          reserva.mensajeImportacion = availabilityError;
-          continue;
-        }
+        reserva.advertenciaDisponibilidad = await this.getAvailabilityWarning(reserva);
         const response = await firstValueFrom(
           this.reservasService.createReserva(ReservaImportacionMapper.toRequest(reserva))
         );
@@ -546,6 +548,11 @@ export class MigracionReservasComponent implements OnInit, CanDeactivateReservaC
     this.currentReservation = '';
     if (connectivityFailure) {
       this.toast.connectivityIssue('El lote se detuvo porque se perdió la comunicación con el backend.');
+    } else if (this.availabilityWarningCount > 0) {
+      this.toast.warning(
+        `Importación finalizada: ${this.importedCount} importadas, ${this.importErrorCount} con error y ` +
+        `${this.availabilityWarningCount} requieren revisar disponibilidad.`
+      );
     } else {
       this.toast.success(`Importación finalizada: ${this.importedCount} importadas, ${this.importErrorCount} con error.`);
     }
@@ -796,29 +803,35 @@ export class MigracionReservasComponent implements OnInit, CanDeactivateReservaC
     reserva.seleccionado = false;
   }
 
-  private async validateAvailability(reserva: ReservaImportacion): Promise<string> {
-    const quantities = new Map<string, number>();
-    reserva.detalleHabitaciones.forEach((room) => {
-      quantities.set(room.catHabita, (quantities.get(room.catHabita) ?? 0) + Number(room.cantHab || 0));
-    });
-    const checks = [...quantities.entries()].map(([categoria, cantHab]) =>
-      this.reservasService.consultarDisponibilidadCategoria({
-        proceso: 1,
-        fechaIni: reserva.fechaEntrada,
-        fechaSal: reserva.fechaSalida,
-        categoria,
-        cantHab
-      })
-    );
-    if (!checks.length) return 'La reserva no posee habitaciones para validar.';
+  private async getAvailabilityWarning(reserva: ReservaImportacion): Promise<string> {
+    try {
+      const quantities = new Map<string, number>();
+      reserva.detalleHabitaciones.forEach((room) => {
+        quantities.set(room.catHabita, (quantities.get(room.catHabita) ?? 0) + Number(room.cantHab || 0));
+      });
+      const checks = [...quantities.entries()].map(([categoria, cantHab]) =>
+        this.reservasService.consultarDisponibilidadCategoria({
+          proceso: 1,
+          fechaIni: reserva.fechaEntrada,
+          fechaSal: reserva.fechaSalida,
+          categoria,
+          cantHab
+        })
+      );
+      if (!checks.length) return 'No fue posible validar disponibilidad porque la reserva no posee habitaciones.';
 
-    const results = await firstValueFrom(forkJoin(checks));
-    const failed = results.find((result) => !result.success);
-    if (failed) return failed.message || 'El backend no pudo validar la disponibilidad.';
-    if (results.some((result) => result.totalFechasInsuficientes > 0 || result.data.length > 0)) {
-      return 'La disponibilidad cambió: no hay suficientes habitaciones para una o más fechas del período.';
+      const results = await firstValueFrom(forkJoin(checks));
+      const failed = results.find((result) => !result.success);
+      if (failed) {
+        return failed.message || 'El backend no pudo validar la disponibilidad; revise esta reserva manualmente.';
+      }
+      if (results.some((result) => result.totalFechasInsuficientes > 0 || result.data.length > 0)) {
+        return 'No hay suficientes habitaciones para una o más fechas del período. La reserva requiere revisión.';
+      }
+      return '';
+    } catch (error) {
+      return `No se pudo consultar la disponibilidad. Revise esta reserva manualmente. ${this.messageFromError(error)}`;
     }
-    return '';
   }
 
   private messageFromError(error: unknown): string {

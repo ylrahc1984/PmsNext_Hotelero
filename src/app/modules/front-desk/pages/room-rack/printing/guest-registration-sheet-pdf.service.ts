@@ -113,9 +113,9 @@ export class GuestRegistrationSheetPdfService {
       pageOrientation: 'portrait',
       pageMargins: [36, 28, 36, 38],
       info: {
-        title: 'Hoja de Registro de Huéspedes',
+        title: 'Guest Registration Form',
         author: companyName,
-        subject: 'Registro de huéspedes de la estancia'
+        subject: 'Guest registration for the stay'
       },
       defaultStyle: {
         font: 'Roboto',
@@ -127,12 +127,12 @@ export class GuestRegistrationSheetPdfService {
         margin: [36, 8, 36, 0],
         columns: [
           {
-            text: 'Documento para uso interno del hotel',
+            text: 'For hotel use only',
             color: '#718096',
             fontSize: 7
           },
           {
-            text: `Página ${currentPage} de ${pageCount}`,
+            text: `Page ${currentPage} of ${pageCount}`,
             alignment: 'right',
             color: '#718096',
             fontSize: 7
@@ -162,8 +162,8 @@ export class GuestRegistrationSheetPdfService {
             {
               width: 170,
               stack: [
-                { text: 'HOJA DE REGISTRO', style: 'documentTitle' },
-                { text: 'HUÉSPEDES DE LA ESTANCIA', style: 'documentSubtitle' }
+                { text: 'GUEST REGISTRATION', style: 'documentTitle' },
+                { text: 'ALL OCCUPANTS', style: 'documentSubtitle' }
               ],
               margin: [12, 4, 0, 0]
             }
@@ -185,12 +185,13 @@ export class GuestRegistrationSheetPdfService {
           table: {
             widths: [65, '*', 75, '*'],
             body: [
-              this.stayInfoRow('Habitación', '', 'Reserva', ''),
-              this.stayInfoRow('Llegada', operationalDate, 'Salida', ''),
-              this.stayInfoRow('Titular', '', 'Fecha registro', operationalDate),
-              this.stayInfoRow('Adultos', '', 'Niños', ''),
-              this.wideInfoRow('Placa del vehículo', ''),
-              this.wideInfoRow('Comentarios', '')
+              this.stayInfoRow('Room', '', 'Reservation', ''),
+              this.stayInfoRow('Arrival', operationalDate, 'Departure', ''),
+              this.stayInfoRow('Primary guest', '', 'Registration date', operationalDate),
+              this.stayInfoRow('Adults', '', 'Children', ''),
+              this.wideInfoRow('Vehicle license plate', ''),
+              this.wideInfoRow('Comments', ''),
+              this.wideInfoRow('Allergies', '')
             ]
           },
           layout: {
@@ -208,14 +209,14 @@ export class GuestRegistrationSheetPdfService {
         {
           columns: [
             {
-              text: 'REGISTRO DE HUÉSPEDES',
+              text: 'GUEST DETAILS',
               bold: true,
               fontSize: 9,
               color: '#167D8D',
               characterSpacing: 0.65
             },
             {
-              text: 'Complete una fila por persona y escriba con letra legible.',
+              text: 'Complete one row per guest. Please print clearly.',
               alignment: 'right',
               fontSize: 7.5,
               color: '#66758A'
@@ -228,16 +229,16 @@ export class GuestRegistrationSheetPdfService {
             headerRows: 1,
             keepWithHeaderRows: 1,
             widths: [16, 54, 95, 54, 62, 105, 104],
-            heights: (rowIndex: number) => rowIndex === 0 ? 24 : 44,
+            heights: (rowIndex: number) => rowIndex === 0 ? 22 : 36,
             body: [
               [
                 this.tableHeader('#', 'center'),
-                this.tableHeader('Pasaporte / ID', 'left'),
-                this.tableHeader('Nombre completo', 'left'),
-                this.tableHeader('Nacionalidad', 'left'),
-                this.tableHeader('Teléfono', 'left'),
-                this.tableHeader('Correo electrónico', 'left'),
-                this.tableHeader('Firma', 'center')
+                this.tableHeader('Passport / ID', 'left'),
+                this.tableHeader('Full name', 'left'),
+                this.tableHeader('Nationality', 'left'),
+                this.tableHeader('Phone', 'left'),
+                this.tableHeader('Email address', 'left'),
+                this.tableHeader('Signature', 'center')
               ],
               ...guestRows
             ]
@@ -458,7 +459,7 @@ export class GuestRegistrationSheetPdfService {
 
   private guestRow(index: number): TableCell[] {
     return [
-      { text: String(index), alignment: 'center', bold: true, color: '#718096', margin: [0, 9, 0, 0] },
+      { text: String(index), alignment: 'center', bold: true, color: '#718096', margin: [0, 6, 0, 0] },
       { text: '' },
       { text: '' },
       { text: '' },
@@ -475,9 +476,9 @@ export class GuestRegistrationSheetPdfService {
     }
 
     preview.opener = null;
-    preview.document.title = 'Generando hoja de registro';
+    preview.document.title = 'Generating guest registration form';
     preview.document.body.innerHTML =
-      '<div style="font:600 15px Arial,sans-serif;color:#334155;padding:32px">Generando hoja de registro PDF...</div>';
+      '<div style="font:600 15px Arial,sans-serif;color:#334155;padding:32px">Generating guest registration PDF...</div>';
     return preview;
   }
 
@@ -494,7 +495,7 @@ export class GuestRegistrationSheetPdfService {
   }
 
   private filename(operationalDate: string): string {
-    const safeDate = (operationalDate || 'sin-fecha').replace(/[^0-9]+/g, '-');
-    return `Hoja_Registro_Huespedes_${safeDate}.pdf`;
+    const safeDate = operationalDate.replace(/[^0-9]+/g, '-') || 'undated';
+    return `Guest_Registration_Form_${safeDate}.pdf`;
   }
 }

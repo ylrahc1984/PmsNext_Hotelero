@@ -234,6 +234,7 @@
         <div><span>Total seleccionado (origen)</span><strong>{{ selectedTotal | number:'1.2-2' }}</strong></div>
         <div><span>Prepagos no migrados (origen)</span><strong>{{ summary.depositado | number:'1.2-2' }}</strong></div>
         <div class="success-stat"><span>Importadas</span><strong>{{ importedCount }}</strong></div>
+        <div class="warning-stat"><span>Revisar disponibilidad</span><strong>{{ availabilityWarningCount }}</strong></div>
         <div class="danger-stat"><span>Errores de API</span><strong>{{ importErrorCount }}</strong></div>
         <div><span>Omitidas</span><strong>{{ omittedCount }}</strong></div>
         <div><span>Total importado</span><strong>{{ importedTotal | number:'1.2-2' }}</strong></div>
@@ -259,7 +260,12 @@
                 <td><strong>{{ item.numeroExterno }}</strong></td><td>{{ item.nombre || 'Sin nombre' }}</td><td>{{ item.codReservaPms || '—' }}</td>
                 <td><span class="validation-badge" [attr.data-state]="item.estadoValidacion">{{ item.estadoValidacion }}</span></td>
                 <td><span class="import-badge" [attr.data-state]="item.estadoImportacion">{{ item.estadoImportacion }}</span></td>
-                <td class="message-cell">{{ item.mensajeImportacion || (item.advertencias[0] ?? '—') }}</td>
+                <td class="message-cell">
+                  <span>{{ item.mensajeImportacion || (item.advertencias[0] ?? '—') }}</span>
+                  @if (item.advertenciaDisponibilidad) {
+                    <span class="availability-warning"><i class="feather icon-alert-triangle"></i>{{ item.advertenciaDisponibilidad }}</span>
+                  }
+                </td>
               </tr>
             }
           </tbody>
