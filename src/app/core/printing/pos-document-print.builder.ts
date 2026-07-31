@@ -13,11 +13,25 @@ export interface DocumentoPosResumen {
   total: number;
 }
 
+export interface DocumentoPosImpuesto {
+  codigo         : string;
+  descripcion    : string;
+  porcentaje     : number;
+  baseImponible  : number;
+  monto          : number;
+}
+
 export interface DocumentoPosPrintData {
   empresaNombre: string;
   empresaRuc: string;
+  empresaRazonSocial?: string;
+  empresaDireccion?: string;
+  empresaTelefono?: string;
+  empresaEmail?: string;
+  empresaWeb?: string;
   encabezado: DocumentoEncabezado;
   detalle: DocumentoDetalleItem[];
+  impuestos?: DocumentoPosImpuesto[];
   pagos: DocumentoPago[];
   resumen: DocumentoPosResumen;
 }
@@ -35,6 +49,7 @@ export class PosDocumentPrintBuilder {
     const h = data.encabezado;
     const moneda = this.clean(h.moneda || '');
     const empresaNombre = this.clean(data.empresaNombre || 'EMPRESA');
+    const empresaRazonSocial = this.clean(data.empresaRazonSocial || '');
     const tituloDocumento = this.resolveTituloDocumento(h);
     const codigoDocumento = this.buildDocumentoCodigo(h);
 
@@ -48,9 +63,17 @@ export class PosDocumentPrintBuilder {
       '\x1B\x45\x00'
     ];
 
+    if (empresaRazonSocial && empresaRazonSocial.toUpperCase() !== empresaNombre.toUpperCase()) {
+      commands.push(...this.wrap(empresaRazonSocial));
+    }
+
     if (data.empresaRuc) {
       commands.push(...this.wrap(`CEDULA: ${data.empresaRuc}`));
     }
+    if (data.empresaDireccion) commands.push(...this.wrap(data.empresaDireccion));
+    if (data.empresaTelefono) commands.push(...this.wrap(`TEL: ${data.empresaTelefono}`));
+    if (data.empresaEmail) commands.push(...this.wrap(data.empresaEmail));
+    if (data.empresaWeb) commands.push(...this.wrap(data.empresaWeb));
 
     commands.push(
       '\n',
@@ -87,8 +110,22 @@ export class PosDocumentPrintBuilder {
     commands.push(
       `${this.separator}\n`,
       this.leftRight('Subtotal', this.money(data.resumen.subtotal, moneda)),
-      this.leftRight('Descuento', this.money(data.resumen.descuento, moneda)),
-      this.leftRight('Impuesto', this.money(data.resumen.impuesto, moneda)),
+      this.leftRight('Descuento', this.money(data.resumen.descuento, moneda))
+    );
+
+    const taxes = (data.impuestos || []).filter((item) => this.number(item.monto) !== 0);
+    if (taxes.length) {
+      taxes.forEach((tax) => {
+        commands.push(this.leftRight(this.taxLabel(tax), this.money(tax.monto, moneda)));
+      });
+      if (taxes.length > 1) {
+        commands.push(this.leftRight('Total impuestos', this.money(data.resumen.impuesto, moneda)));
+      }
+    } else {
+      commands.push(this.leftRight('Impuesto', this.money(data.resumen.impuesto, moneda)));
+    }
+
+    commands.push(
       '\x1B\x45\x01',
       this.leftRight('TOTAL', this.money(data.resumen.total, moneda)),
       '\x1B\x45\x00',
@@ -119,6 +156,22 @@ export class PosDocumentPrintBuilder {
     );
 
     return commands;
+  }
+
+  private taxLabel(tax: DocumentoPosImpuesto): string {
+    const code = this.clean(tax.codigo).toUpperCase();
+    const description = this.clean(tax.descripcion);
+    const name = code === 'IGV' || code === 'IVA'
+      ? 'IVA'
+      : code === 'SRV' || code === 'SERVICIO'
+        ? 'Servicio'
+        : description || code || 'Impuesto';
+    const rate = this.number(tax.porcentaje);
+    const rateLabel = Number.isInteger(rate)
+      ? rate.toFixed(0)
+      : rate.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+
+    return rate > 0 ? `${name} ${rateLabel}%` : name;
   }
 
   private buildLineaDetalle(item: DocumentoDetalleItem, moneda: string): string[] {

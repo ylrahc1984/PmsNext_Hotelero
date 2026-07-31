@@ -357,13 +357,12 @@ export class RestaurantInvoiceDialogComponent implements OnInit {
         );
       } else {
         try {
-          await this.posDocumentPrintService.printByReference(
+          await this.posDocumentPrintService.printRestaurantByReference(
             {
               tipoDocu: documento.TipDocu,
               serieDocu: documento.Serie,
               numDocu: documento.NumDocu
             },
-            this.data.operador,
             'TIQUETE'
           );
           this.toast.success(

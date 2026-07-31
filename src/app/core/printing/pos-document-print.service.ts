@@ -1,3 +1,4 @@
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom, timer } from 'rxjs';
 import { retry } from 'rxjs/operators';
@@ -15,8 +16,14 @@ import {
   DocumentoPago
 } from 'src/app/finanzas/pages-factura/documento-detalle/documento-detalle.interface';
 import { DocumentoDetalleService } from 'src/app/finanzas/services/documento-detalle.service';
+import { environment } from 'src/environments/environment';
 
-import { DocumentoPosPrintData, DocumentoPosResumen, PosDocumentPrintBuilder } from './pos-document-print.builder';
+import {
+  DocumentoPosImpuesto,
+  DocumentoPosPrintData,
+  DocumentoPosResumen,
+  PosDocumentPrintBuilder
+} from './pos-document-print.builder';
 
 export interface DocumentoPosReference {
   tipoDocu: string;
@@ -24,14 +31,43 @@ export interface DocumentoPosReference {
   numDocu: string;
 }
 
+interface RestauranteImpresionImpuestoApi {
+  ppV02_Orden?: number;
+  ppV02_CodImpu?: string;
+  ppV02_Descripcion?: string;
+  ppV02_PorImpu?: number;
+  ppV02_BaseImponible?: number;
+  ppV02_Monto?: number;
+}
+
+interface RestauranteImpresionEmpresaApi {
+  nombre?: string;
+  razonSocial?: string;
+  direccion?: string;
+  ruc?: string;
+  telefono?: string;
+  email?: string;
+  web?: string;
+}
+
+interface RestauranteImpresionResponse {
+  encabezado?: Partial<DocumentoDetalleEncabezadoApi> | null;
+  detalles?: Partial<DocumentoDetalleItemApi>[];
+  impuestos?: RestauranteImpresionImpuestoApi[];
+  formasPago?: Partial<DocumentoDetalleFormaPagoApi>[];
+  empresa?: RestauranteImpresionEmpresaApi | null;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class PosDocumentPrintService {
+  private readonly http = inject(HttpClient);
   private readonly detalleService = inject(DocumentoDetalleService);
   private readonly printBuilder = inject(PosDocumentPrintBuilder);
   private readonly qzPrintService = inject(QzPrintService);
   private readonly empresaContext = inject(EmpresaContextService);
+  private readonly restaurantPrintUrl = `${(environment.apiUrl || 'http://localhost:5000/api').toString().replace(/\/+$/, '')}/imprimir-restaurante`;
 
   async printByReference(
     reference: DocumentoPosReference,
@@ -62,6 +98,29 @@ export class PosDocumentPrintService {
     );
 
     const commands = this.printBuilder.build(this.mapPrintData(response, normalizedReference));
+    await this.qzPrintService.printRaw(commands, printerName);
+  }
+
+  async printRestaurantByReference(
+    reference: DocumentoPosReference,
+    printerName = 'TIQUETE'
+  ): Promise<void> {
+    const normalizedReference = this.normalizeReference(reference);
+    const params = new HttpParams()
+      .set('tipoDocu', normalizedReference.tipoDocu)
+      .set('serie', normalizedReference.serieDocu)
+      .set('numDocu', normalizedReference.numDocu);
+    const response = await firstValueFrom(
+      this.http
+        .get<RestauranteImpresionResponse>(this.restaurantPrintUrl, { params })
+        .pipe(
+          retry({
+            count: 2,
+            delay: (_error, retryCount) => timer(retryCount * 500)
+          })
+        )
+    );
+    const commands = this.printBuilder.build(this.mapRestaurantPrintData(response, normalizedReference));
     await this.qzPrintService.printRaw(commands, printerName);
   }
 
@@ -103,8 +162,40 @@ export class PosDocumentPrintService {
     };
   }
 
+  private mapRestaurantPrintData(
+    response: RestauranteImpresionResponse | null | undefined,
+    reference: DocumentoPosReference
+  ): DocumentoPosPrintData {
+    if (!response?.encabezado) {
+      throw new Error('El documento fue generado, pero el detalle de impresión del restaurante todavía no está disponible.');
+    }
+
+    const encabezado = this.mapEncabezado(response.encabezado, reference);
+    const detalle = (response.detalles || []).map((item) => this.mapDetalle(item));
+    const impuestos = (response.impuestos || []).map((item) => this.mapRestaurantTax(item));
+    const pagos = (response.formasPago || []).map((item) => this.mapPago(item));
+    const resumen = this.buildResumen(encabezado, detalle);
+    const fallbackCompany = this.empresaContext.empresa();
+    const company = response.empresa;
+
+    return {
+      empresaNombre: (company?.nombre || company?.razonSocial || fallbackCompany?.MA04_Nombre || fallbackCompany?.MA04_RazonSocial || '').trim(),
+      empresaRuc: (company?.ruc || fallbackCompany?.MA04_Ruc || '').trim(),
+      empresaRazonSocial: (company?.razonSocial || fallbackCompany?.MA04_RazonSocial || '').trim(),
+      empresaDireccion: (company?.direccion || fallbackCompany?.MA04_Direccion || '').trim(),
+      empresaTelefono: (company?.telefono || fallbackCompany?.MA04_Telefono1 || '').trim(),
+      empresaEmail: (company?.email || fallbackCompany?.MA04_Email || '').trim(),
+      empresaWeb: (company?.web || '').trim(),
+      encabezado,
+      detalle,
+      impuestos,
+      pagos,
+      resumen
+    };
+  }
+
   private mapEncabezado(
-    raw: DocumentoDetalleEncabezadoApi,
+    raw: Partial<DocumentoDetalleEncabezadoApi>,
     reference: DocumentoPosReference
   ): DocumentoEncabezado {
     return {
@@ -137,7 +228,7 @@ export class PosDocumentPrintService {
     };
   }
 
-  private mapDetalle(raw: DocumentoDetalleItemApi): DocumentoDetalleItem {
+  private mapDetalle(raw: Partial<DocumentoDetalleItemApi>): DocumentoDetalleItem {
     const item: DocumentoDetalleItem = {
       orden: this.toNumber(raw.ppV01_Orden),
       fechaConsumo: this.formatDate(raw.ppV01_FecConsumo),
@@ -177,7 +268,7 @@ export class PosDocumentPrintService {
     };
   }
 
-  private mapPago(raw: DocumentoDetalleFormaPagoApi): DocumentoPago {
+  private mapPago(raw: Partial<DocumentoDetalleFormaPagoApi>): DocumentoPago {
     return {
       orden: this.toNumber(raw.ppV03_Orden),
       frmPago: raw.ppV03_FrmPago || '',
@@ -188,6 +279,16 @@ export class PosDocumentPrintService {
       referencia: raw.ppV03_NumTarjeta || '',
       numTarjeta: raw.ppV03_NumTarjeta || '',
       vencimiento: this.formatDate(raw.ppV03_Vencimiento)
+    };
+  }
+
+  private mapRestaurantTax(raw: RestauranteImpresionImpuestoApi): DocumentoPosImpuesto {
+    return {
+      codigo: raw.ppV02_CodImpu || '',
+      descripcion: raw.ppV02_Descripcion || '',
+      porcentaje: this.toNumber(raw.ppV02_PorImpu),
+      baseImponible: this.toNumber(raw.ppV02_BaseImponible),
+      monto: this.toNumber(raw.ppV02_Monto)
     };
   }
 
