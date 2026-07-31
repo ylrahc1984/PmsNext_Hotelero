@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { Router, NavigationExtras } from '@angular/router';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { firstValueFrom, fromEvent, interval, merge, of } from 'rxjs';
+import { firstValueFrom, forkJoin, fromEvent, interval, merge, Observable, of } from 'rxjs';
 import { catchError, distinctUntilChanged, filter, finalize } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
@@ -18,12 +18,15 @@ import {
 } from 'src/app/core/utils/pms-date.util';
 import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
+import { CheckInArrival } from '../../check-in-arrivals/models/check-in-arrival.model';
+import { CheckInArrivalsService } from '../../check-in-arrivals/services/check-in-arrivals.service';
 import {
   getRoomOperationalStateLabel,
   resolveRackOperationalState,
   RoomOperationalVisualState
 } from 'src/app/shared/models/room-operational-visual-state';
 import { RoomRackNavigationState, RoomRackRoom } from './models/room-rack-room.model';
+import { GuestRegistrationSheetPdfService } from './printing/guest-registration-sheet-pdf.service';
 import { RoomBlockRequest, RoomRackService } from './services/room-rack.service';
 
 type EstadoHabitacion =
@@ -41,7 +44,14 @@ interface HabitacionRack {
   numero       : string;
   categoria    : string;
   estado       : EstadoHabitacion;
+  entraHoy     : boolean;
+  saleHoy      : boolean;
   data          : RoomRackRoom;
+}
+
+interface RoomRackSnapshot {
+  rooms    : RoomRackRoom[];
+  arrivals : CheckInArrival[];
 }
 
 interface EstadoKpi {
@@ -76,10 +86,12 @@ export class RoomRackComponent implements OnInit {
   private static readonly automaticRefreshIntervalMs = 30_000;
   private readonly router               = inject(Router);
   private readonly roomRackService      = inject(RoomRackService);
+  private readonly checkInArrivalsService = inject(CheckInArrivalsService);
   private readonly tipoCambioService    = inject(TipoCambioService);
   private readonly authService          = inject(AuthService);
   private readonly operationalDateService = inject(OperationalDateService);
   private readonly operationalPolicy    = inject(OperationalPolicyService);
+  private readonly guestRegistrationPdf = inject(GuestRegistrationSheetPdfService);
   private readonly destroyRef           = inject(DestroyRef);
   private readonly cdr                  = inject(ChangeDetectorRef);
   private readonly operationalDate$     = toObservable(this.operationalDateService.operationalDate);
@@ -117,6 +129,7 @@ export class RoomRackComponent implements OnInit {
   bloqueandoHabitacion  = false;
   bloqueoModalRoom      : HabitacionRack | null = null;
   bloqueoErrorMessage   = '';
+  isRegistrationSheetGenerating = false;
   bloqueoForm           : BloqueoHabitacionForm = this.createDefaultBloqueoForm();
 
   readonly acciones: AccionOperativa[] = [
@@ -139,7 +152,36 @@ export class RoomRackComponent implements OnInit {
   }
 
   async seleccionarHabitacion(habitacion: HabitacionRack): Promise<void> {
-    if (habitacion.estado === 'Entrada hoy') {
+    if (this.isTurnoverToday(habitacion)) {
+      const result = await Swal.fire({
+        title: `Habitación ${this.escapeHtml(habitacion.numero)}`,
+        html: 'Esta habitación tiene una <strong>salida</strong> y una <strong>entrada</strong> programadas para hoy.',
+        icon: 'info',
+        showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonText: 'Gestionar salida',
+        denyButtonText: 'Ingresar arribo',
+        cancelButtonText: 'Cerrar',
+        confirmButtonColor: '#dc2626',
+        denyButtonColor: '#eab308',
+        cancelButtonColor: '#64748b',
+        reverseButtons: true
+      });
+
+      if (result.isDenied) {
+        await this.router.navigate(['/front-desk/arribos-dia']);
+        return;
+      }
+
+      if (!result.isConfirmed) {
+        return;
+      }
+
+      await this.navigateToRoomStay(habitacion);
+      return;
+    }
+
+    if (habitacion.entraHoy) {
       const result = await Swal.fire({
         title: 'Habitación reservada',
         html: `La habitación <strong>${this.escapeHtml(habitacion.numero)}</strong> está pendiente de ingreso o de realizar el Check In.`,
@@ -173,6 +215,10 @@ export class RoomRackComponent implements OnInit {
       return;
     }
 
+    await this.navigateToRoomStay(habitacion);
+  }
+
+  private async navigateToRoomStay(habitacion: HabitacionRack): Promise<void> {
     const navigationState: RoomRackNavigationState = { ...habitacion.data };
     const extras: NavigationExtras = { state: { roomRackRoom: navigationState } };
     await this.router.navigate(['/front-desk/habitaciones/room-stay-management', habitacion.numero], extras);
@@ -350,7 +396,7 @@ export class RoomRackComponent implements OnInit {
       });
   }
 
-  ejecutarAccion(accion: AccionOperativa): void {
+  async ejecutarAccion(accion: AccionOperativa): Promise<void> {
     if (accion.label === 'Asignar Habitacion') {
       this.router.navigate(['/reservas/calendario']);
       return;
@@ -362,7 +408,44 @@ export class RoomRackComponent implements OnInit {
     }
 
     if (accion.label === 'Lista de Pax In House') {
-      this.router.navigate(['/front-desk/huespedes-in-house']);
+      await this.router.navigate(['/front-desk/huespedes-in-house']);
+      return;
+    }
+
+    if (accion.label === 'Imprimir Hoja Registro') {
+      await this.imprimirHojaRegistro();
+    }
+  }
+
+  private async imprimirHojaRegistro(): Promise<void> {
+    if (this.isRegistrationSheetGenerating) {
+      return;
+    }
+
+    this.isRegistrationSheetGenerating = true;
+    this.cdr.markForCheck();
+
+    try {
+      const result = await this.guestRegistrationPdf.open(this.fechaOperacion);
+      if (result === 'downloaded') {
+        await Swal.fire({
+          title: 'Hoja de registro descargada',
+          text: 'El navegador bloqueó la vista previa, por lo que el PDF fue descargado.',
+          icon: 'info',
+          confirmButtonText: 'Aceptar'
+        });
+      }
+    } catch (error) {
+      console.error('No se pudo generar la hoja de registro de huespedes.', error);
+      await Swal.fire({
+        title: 'No se pudo generar el PDF',
+        text: 'Intente nuevamente. Si el problema continúa, revise la configuración del navegador.',
+        icon: 'error',
+        confirmButtonText: 'Aceptar'
+      });
+    } finally {
+      this.isRegistrationSheetGenerating = false;
+      this.cdr.markForCheck();
     }
   }
 
@@ -391,9 +474,15 @@ export class RoomRackComponent implements OnInit {
       );
     }
 
-    return this.habitaciones.filter(
-      (habitacion) => habitacion.estado === this.estadoKpiSeleccionado
-    );
+    if (this.estadoKpiSeleccionado === 'Entrada hoy') {
+      return this.habitaciones.filter((habitacion) => habitacion.entraHoy);
+    }
+
+    if (this.estadoKpiSeleccionado === 'Salida Hoy') {
+      return this.habitaciones.filter((habitacion) => habitacion.saleHoy);
+    }
+
+    return this.habitaciones.filter((habitacion) => habitacion.estado === this.estadoKpiSeleccionado);
   }
 
   seleccionarKpi(kpi: EstadoKpi): void {
@@ -426,6 +515,23 @@ export class RoomRackComponent implements OnInit {
     };
 
     return `state-${stateByLabel[estado]}`;
+  }
+
+  getRoomCardClasses(habitacion: HabitacionRack): string[] {
+    return this.isTurnoverToday(habitacion)
+      ? ['state-turnover-today']
+      : [this.getEstadoClass(habitacion.estado)];
+  }
+
+  getRoomAriaLabel(habitacion: HabitacionRack): string {
+    const state = this.isTurnoverToday(habitacion)
+      ? 'Salida hoy y entrada hoy'
+      : habitacion.estado;
+    return `Habitacion ${habitacion.numero} ${habitacion.categoria}. ${state}.`;
+  }
+
+  isTurnoverToday(habitacion: HabitacionRack): boolean {
+    return habitacion.saleHoy && habitacion.entraHoy;
   }
 
   getCleanLabel(habitacion: HabitacionRack): string {
@@ -479,10 +585,8 @@ export class RoomRackComponent implements OnInit {
       }
 
       this.fechaOperacion = operationalDate;
-      const rooms = await firstValueFrom(
-        this.roomRackService.getAllRoomsStatus(operationalDate)
-      );
-      this.applyRackRooms(rooms);
+      const snapshot = await firstValueFrom(this.loadRackSnapshot(operationalDate));
+      this.applyRackRooms(snapshot.rooms, snapshot.arrivals);
 
       const room = this.habitaciones.find(
         (item) => item.numero === requestedRoom.numero
@@ -497,10 +601,10 @@ export class RoomRackComponent implements OnInit {
         return null;
       }
 
-      if (room.estado !== 'Disponible') {
+      if (room.estado !== 'Disponible' || room.entraHoy) {
         await Swal.fire({
           title: 'Estado actualizado',
-          text: `No se puede ${operationLabel}: la habitación ${room.numero} ahora figura como ${room.estado}.`,
+          text: `No se puede ${operationLabel}: la habitación ${room.numero} ahora figura como ${room.entraHoy ? 'Entrada hoy' : room.estado}.`,
           icon: 'warning',
           confirmButtonText: 'Aceptar'
         });
@@ -538,8 +642,7 @@ export class RoomRackComponent implements OnInit {
       this.isLoading = true;
       this.errorMessage = '';
     }
-    this.roomRackService
-      .getAllRoomsStatus(this.fechaOperacion)
+    this.loadRackSnapshot(this.fechaOperacion)
       .pipe(
         catchError((error) => {
           console.error('No se pudo cargar el Room Rack.', error);
@@ -561,17 +664,36 @@ export class RoomRackComponent implements OnInit {
         }),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe((rooms) => {
-        if (rooms) {
-          this.applyRackRooms(rooms);
+      .subscribe((snapshot) => {
+        if (snapshot) {
+          this.applyRackRooms(snapshot.rooms, snapshot.arrivals);
         }
       });
   }
 
-  private applyRackRooms(rooms: RoomRackRoom[]): void {
+  private loadRackSnapshot(fecha: string): Observable<RoomRackSnapshot> {
+    return forkJoin({
+      rooms: this.roomRackService.getAllRoomsStatus(fecha),
+      arrivals: this.checkInArrivalsService.getPendientes(fecha, true).pipe(
+        catchError((error) => {
+          console.warn('No se pudieron cruzar los arribos pendientes con el Room Rack.', error);
+          return of([] as CheckInArrival[]);
+        })
+      )
+    });
+  }
+
+  private applyRackRooms(rooms: RoomRackRoom[], arrivals: CheckInArrival[] = []): void {
+    const arrivalRoomNumbers = new Set(
+      arrivals
+        .filter((arrival) => Number(arrival.procesado) !== 1)
+        .map((arrival) => this.normalizeRoomNumber(arrival.numHabita))
+        .filter(Boolean)
+    );
+
     this.habitaciones = rooms
       .filter((room) => this.normalizeText(room.CR05_Activo).toUpperCase() !== 'N')
-      .map((room) => this.mapRoomRackRoom(room));
+      .map((room) => this.mapRoomRackRoom(room, arrivalRoomNumbers));
     this.kpis = this.generarKpis();
     this.resumen = this.generarResumen();
     this.cdr.markForCheck();
@@ -720,11 +842,15 @@ export class RoomRackComponent implements OnInit {
       });
   }
 
-  private mapRoomRackRoom(room: RoomRackRoom): HabitacionRack {
+  private mapRoomRackRoom(room: RoomRackRoom, arrivalRoomNumbers: ReadonlySet<string>): HabitacionRack {
+    const estado = this.mapEstadoHabitacion(room);
+
     return {
       numero: String(room.CR05_NumHab),
       categoria: room.CR05_Descripcion || room.CR05_TipoHab || room.CR05_CateHab,
-      estado: this.mapEstadoHabitacion(room),
+      estado,
+      entraHoy: estado === 'Entrada hoy' || arrivalRoomNumbers.has(this.normalizeRoomNumber(room.CR05_NumHab)),
+      saleHoy: estado === 'Salida Hoy',
       data: room
     };
   }
@@ -767,6 +893,14 @@ export class RoomRackComponent implements OnInit {
 
     if (estado === 'Limpia') {
       return this.habitaciones.filter((habitacion) => this.normalizeText(habitacion.data.CR05_Clean).toUpperCase() === 'L').length;
+    }
+
+    if (estado === 'Entrada hoy') {
+      return this.habitaciones.filter((habitacion) => habitacion.entraHoy).length;
+    }
+
+    if (estado === 'Salida Hoy') {
+      return this.habitaciones.filter((habitacion) => habitacion.saleHoy).length;
     }
 
     return this.habitaciones.filter((habitacion) => habitacion.estado === estado).length;
@@ -841,5 +975,13 @@ export class RoomRackComponent implements OnInit {
 
   private normalizeText(value: unknown): string {
     return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '';
+  }
+
+  private normalizeRoomNumber(value: unknown): string {
+    const normalized = String(value ?? '').replace(/\s+/g, '').trim().toUpperCase();
+    if (/^\d+$/.test(normalized)) {
+      return String(Number(normalized));
+    }
+    return normalized;
   }
 }

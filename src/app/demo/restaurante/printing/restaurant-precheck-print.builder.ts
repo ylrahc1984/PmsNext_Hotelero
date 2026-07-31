@@ -29,6 +29,12 @@ export interface RestaurantPrecheckPrintData {
   };
   cuenta            : number;
   moneda            : string;
+  tipoCambio        ?: {
+    monedaBase       : string;
+    monedaReferencia : string;
+    compra           : number;
+    venta            : number;
+  };
   detalles          : NotaPedidoRestauranteDetalle[];
   totales           : NotaPedidoRestauranteTotales;
   totalPropina      : number;
@@ -50,6 +56,7 @@ export class RestaurantPrecheckPrintBuilder {
     const tip                 = receipt.number(data.totalPropina);
     const reportedGrandTotal  = receipt.number(data.totales?.granTotal);
     const grandTotal          = reportedGrandTotal > 0 ? reportedGrandTotal : consumptionTotal + tip;
+    const currencyConversion  = this.buildCurrencyConversion(data, grandTotal);
 
     receipt
       .initialize()
@@ -120,10 +127,28 @@ export class RestaurantPrecheckPrintBuilder {
       .bold(true)
       .size(2)
       .line('TOTAL')
-      .line(receipt.money(consumptionTotal, currency))
+      .line(receipt.money(grandTotal, currency))
       .size(1)
-      .bold(false)
+      .bold(false);
+
+    if (currencyConversion) {
+      receipt
+        .align('left')
+        .line(
+          `T.C. ${currencyConversion.rateType}: 1 ${currencyConversion.referenceCurrency} = ` +
+          receipt.money(currencyConversion.rate, currencyConversion.baseCurrency)
+        )
+        .bold(true)
+        .columns(
+          `TOTAL ${currencyConversion.targetCurrency}`,
+          receipt.money(currencyConversion.total, currencyConversion.targetCurrency)
+        )
+        .bold(false);
+    }
+
+    receipt
       .separator('=')
+      .align('center')
       .wrapped(`Atendido por ${data.mesero || data.impresoPor || 'nuestro equipo'}`)
       .wrapped('Gracias por su preferencia')
       .wrapped('Este documento es informativo y no sustituye la factura.')
@@ -158,6 +183,74 @@ export class RestaurantPrecheckPrintBuilder {
 
   private documentNumber(data: RestaurantPrecheckPrintData): string {
     return [data.nota.tipo, data.nota.numero].filter(Boolean).join('-') || '-';
+  }
+
+  private buildCurrencyConversion(
+    data: RestaurantPrecheckPrintData,
+    total: number
+  ): {
+    total             : number;
+    rate              : number;
+    rateType          : 'compra' | 'venta';
+    baseCurrency      : string;
+    referenceCurrency : string;
+    targetCurrency    : string;
+  } | null {
+    const exchangeRate = data.tipoCambio;
+    if (!exchangeRate) {
+      return null;
+    }
+
+    const sourceCurrency = this.normalizeCurrency(data.moneda);
+    const baseCurrency = this.normalizeCurrency(exchangeRate.monedaBase || 'COL');
+    const referenceCurrency = this.normalizeCurrency(exchangeRate.monedaReferencia || 'USD');
+
+    if (!sourceCurrency || !baseCurrency || !referenceCurrency || this.sameCurrency(baseCurrency, referenceCurrency)) {
+      return null;
+    }
+
+    const compra = Number(exchangeRate.compra);
+    const venta = Number(exchangeRate.venta);
+
+    if (this.sameCurrency(sourceCurrency, baseCurrency) && Number.isFinite(compra) && compra > 0) {
+      return {
+        total: this.roundMoney(total / compra),
+        rate: compra,
+        rateType: 'compra',
+        baseCurrency,
+        referenceCurrency,
+        targetCurrency: referenceCurrency
+      };
+    }
+
+    if (this.sameCurrency(sourceCurrency, referenceCurrency) && Number.isFinite(venta) && venta > 0) {
+      return {
+        total: this.roundMoney(total * venta),
+        rate: venta,
+        rateType: 'venta',
+        baseCurrency,
+        referenceCurrency,
+        targetCurrency: baseCurrency
+      };
+    }
+
+    return null;
+  }
+
+  private normalizeCurrency(value: string | null | undefined): string {
+    return (value || '').trim().toUpperCase();
+  }
+
+  private sameCurrency(first: string, second: string): boolean {
+    return first === second || (this.isCostaRicanColon(first) && this.isCostaRicanColon(second));
+  }
+
+  private isCostaRicanColon(currency: string): boolean {
+    return currency === 'COL' || currency === 'CRC';
+  }
+
+  private roundMoney(value: number): number {
+    return Math.round((value + Number.EPSILON) * 100) / 100;
   }
 
   private formatDateTime(value: Date): string {

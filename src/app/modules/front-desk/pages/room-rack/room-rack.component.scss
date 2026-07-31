@@ -12,6 +12,8 @@
   --room-dirty: #c2185b;
   --room-clean: #06b6d4;
   --room-all: #17324d;
+  --room-turnover-checkout: #dc2626;
+  --room-turnover-arrival: #facc15;
 }
 
 .room-card,
@@ -341,6 +343,13 @@ $line: rgba(15, 33, 51, 0.1);
   font-size: 0.58rem;
   font-weight: 850;
   line-height: 1;
+}
+
+.room-card__statuses {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
 }
 
 .room-card__quick-actions {
@@ -1349,4 +1358,15 @@ $line: rgba(15, 33, 51, 0.1);
 .status-kpi:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--room-state-accent) 42%, transparent);
   outline-offset: 2px;
+}
+
+.room-card.state-turnover-today {
+  border-left-color: var(--room-turnover-checkout);
+  border-right: 4px solid var(--room-turnover-arrival);
+  background: linear-gradient(135deg, #fff1f2 0 50%, #fffbea 50% 100%);
+}
+
+.room-card.state-turnover-today::before,
+.legend-dot--turnover {
+  background: linear-gradient(90deg, var(--room-turnover-checkout) 0 50%, var(--room-turnover-arrival) 50% 100%) !important;
 }

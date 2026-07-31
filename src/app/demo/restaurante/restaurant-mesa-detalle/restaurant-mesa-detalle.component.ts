@@ -335,7 +335,7 @@ export class RestaurantMesaDetalleComponent implements OnInit {
       return true;
     }
     if (accion.id === 'imprimir-cuenta') {
-      return this.isPrintingAccount || this.notaPedidoLoading || !this.notaPedidoDetalleValido;
+      return this.isPrintingAccount || this.tipoCambioLoading || this.notaPedidoLoading || !this.notaPedidoDetalleValido;
     }
     if (accion.id === 'reimprimir-comanda') {
       return this.isReprintingCommand || this.notaPedidoLoading || !this.notaPedidoDetalleValido;
@@ -354,6 +354,20 @@ export class RestaurantMesaDetalleComponent implements OnInit {
       await Swal.fire({
         title: 'Sin consumo para imprimir',
         text: 'Debe existir una nota de pedido con consumos cargados antes de imprimir la pre-cuenta.',
+        icon: 'warning',
+        confirmButtonText: 'Aceptar',
+        customClass: {
+          popup: 'next-confirm-modal'
+        }
+      });
+      return;
+    }
+
+    const moneda = this.monedaPuntoVenta;
+    if (this.requiresPrecheckCurrencyConversion(moneda) && !this.hasValidPrecheckExchangeRate(moneda)) {
+      await Swal.fire({
+        title: 'Tipo de cambio no disponible',
+        text: 'No es posible imprimir la cuenta con una conversión confiable. Actualice el tipo de cambio e intente nuevamente.',
         icon: 'warning',
         confirmButtonText: 'Aceptar',
         customClass: {
@@ -390,7 +404,15 @@ export class RestaurantMesaDetalleComponent implements OnInit {
           hora: nota.hora
         },
         cuenta: this.cuentaFiltroActual,
-        moneda: this.monedaActual,
+        moneda,
+        tipoCambio: this.tipoCambio
+          ? {
+              monedaBase: this.tipoCambio.monedaBase || 'COL',
+              monedaReferencia: this.tipoCambio.monedaReferencia || 'USD',
+              compra: Number(this.tipoCambio.compra || 0),
+              venta: Number(this.tipoCambio.venta || 0)
+            }
+          : undefined,
         detalles: orderDetail.detalles,
         totales: orderDetail.totales,
         totalPropina: orderDetail.totalPropina,
@@ -1080,6 +1102,41 @@ export class RestaurantMesaDetalleComponent implements OnInit {
           this.cdr.markForCheck();
         }
       });
+  }
+
+  private requiresPrecheckCurrencyConversion(currency: string): boolean {
+    const normalized = this.normalizeCurrency(currency);
+    return this.isCostaRicanColon(normalized) || normalized === 'USD';
+  }
+
+  private hasValidPrecheckExchangeRate(currency: string): boolean {
+    if (!this.tipoCambio) {
+      return false;
+    }
+
+    const source = this.normalizeCurrency(currency);
+    const base = this.normalizeCurrency(this.tipoCambio.monedaBase || 'COL');
+    const reference = this.normalizeCurrency(this.tipoCambio.monedaReferencia || 'USD');
+
+    if (this.sameCurrency(source, base)) {
+      return Number(this.tipoCambio.compra) > 0;
+    }
+    if (this.sameCurrency(source, reference)) {
+      return Number(this.tipoCambio.venta) > 0;
+    }
+    return false;
+  }
+
+  private normalizeCurrency(value: string | null | undefined): string {
+    return (value || '').trim().toUpperCase();
+  }
+
+  private sameCurrency(first: string, second: string): boolean {
+    return first === second || (this.isCostaRicanColon(first) && this.isCostaRicanColon(second));
+  }
+
+  private isCostaRicanColon(currency: string): boolean {
+    return currency === 'COL' || currency === 'CRC';
   }
 
   private cargarNotaPedidoActual(): void {

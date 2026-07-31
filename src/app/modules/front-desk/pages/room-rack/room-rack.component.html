@@ -44,12 +44,12 @@
           <article
             class="room-card"
             *ngFor="let habitacion of habitacionesFiltradas; trackBy: trackByHabitacion"
-            [ngClass]="getEstadoClass(habitacion.estado)"
+            [ngClass]="getRoomCardClasses(habitacion)"
             (click)="seleccionarHabitacion(habitacion)"
             (keydown)="onRoomCardKeydown($event, habitacion)"
             role="button"
             tabindex="0"
-            [attr.aria-label]="'Habitacion ' + habitacion.numero + ' ' + habitacion.categoria"
+            [attr.aria-label]="getRoomAriaLabel(habitacion)"
           >
             <span
               class="room-card__clean-indicator"
@@ -60,9 +60,15 @@
             <div class="room-card__content">
               <strong class="room-card__number">{{ habitacion.numero }}</strong>
               <span class="room-card__category">{{ habitacion.categoria }}</span>
-              <span class="room-card__status" [ngClass]="getEstadoClass(habitacion.estado)">
-                {{ habitacion.estado }}
-              </span>
+              <div class="room-card__statuses" *ngIf="isTurnoverToday(habitacion); else singleRoomStatus">
+                <span class="room-card__status state-checkout-today">Sale hoy</span>
+                <span class="room-card__status state-arrival-today">Entra hoy</span>
+              </div>
+              <ng-template #singleRoomStatus>
+                <span class="room-card__status" [ngClass]="getEstadoClass(habitacion.estado)">
+                  {{ habitacion.estado }}
+                </span>
+              </ng-template>
             </div>
 
             <div class="room-card__quick-actions" aria-label="Acciones rapidas de habitacion">
@@ -127,10 +133,15 @@
             *ngFor="let accion of acciones; trackBy: trackByAccion"
             [class.operation-button--primary]="accion.accent === 'primary'"
             [class.operation-button--muted]="accion.accent === 'muted'"
+            [disabled]="isRegistrationSheetGenerating && accion.label === 'Imprimir Hoja Registro'"
             (click)="ejecutarAccion(accion)"
           >
-            <span class="material-icons" aria-hidden="true">{{ accion.icon }}</span>
-            <span>{{ accion.label }}</span>
+            <span class="material-icons" aria-hidden="true">
+              {{ isRegistrationSheetGenerating && accion.label === 'Imprimir Hoja Registro' ? 'hourglass_top' : accion.icon }}
+            </span>
+            <span>
+              {{ isRegistrationSheetGenerating && accion.label === 'Imprimir Hoja Registro' ? 'Generando PDF...' : accion.label }}
+            </span>
           </button>
         </div>
       </section>
@@ -145,6 +156,10 @@
           <div class="legend-item" *ngFor="let estado of estados">
             <span class="legend-dot" [ngClass]="getEstadoClass(estado)"></span>
             <strong>{{ estado }}</strong>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot legend-dot--turnover"></span>
+            <strong>Salida + entrada hoy</strong>
           </div>
         </div>
       </section>
