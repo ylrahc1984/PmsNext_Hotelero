@@ -164,12 +164,24 @@
                         type="button"
                         ngbDropdownItem
                         class="dropdown-item"
-                        (click)="imprimirDocumento(documento)"
+                        (click)="imprimirDocumentoPos(documento)"
                         [disabled]="isPrinting(documento)"
                       >
-                        <span *ngIf="isPrinting(documento)" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                        <i *ngIf="!isPrinting(documento)" class="feather icon-printer" aria-hidden="true"></i>
-                        <span>{{ isPrinting(documento) ? 'Imprimiendo...' : 'Imprimir documento' }}</span>
+                        <span *ngIf="isPrintingPos(documento)" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                        <i *ngIf="!isPrintingPos(documento)" class="feather icon-printer" aria-hidden="true"></i>
+                        <span>{{ isPrintingPos(documento) ? 'Imprimiendo POS...' : 'Imprimir POS' }}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        ngbDropdownItem
+                        class="dropdown-item"
+                        (click)="imprimirDocumentoPdf(documento)"
+                        [disabled]="isPrinting(documento)"
+                      >
+                        <span *ngIf="isPrintingPdf(documento)" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                        <i *ngIf="!isPrintingPdf(documento)" class="feather icon-file-text" aria-hidden="true"></i>
+                        <span>{{ isPrintingPdf(documento) ? 'Generando PDF...' : 'PDF formato grande' }}</span>
                       </button>
 
                       <div class="doc-action-divider"></div>

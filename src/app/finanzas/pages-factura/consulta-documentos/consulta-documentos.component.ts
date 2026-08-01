@@ -8,6 +8,7 @@ import { finalize } from 'rxjs/operators';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { AuthService } from 'src/app/core/services/auth.service';
+import { PosDocumentPrintService } from 'src/app/core/printing/pos-document-print.service';
 import { PuntoVentaUI } from 'src/app/demo/administracion/usuarios/usuario.models';
 import { UsuarioService } from 'src/app/demo/administracion/usuarios/usuario.service';
 import { ConsultaDocumentosService } from '../../services/consulta-documentos.service';
@@ -54,6 +55,7 @@ export class ConsultaDocumentosComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly consultaService = inject(ConsultaDocumentosService);
   private readonly detalleService = inject(DocumentoDetalleService);
+  private readonly posPrintService = inject(PosDocumentPrintService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly auth = inject(AuthService);
@@ -97,7 +99,8 @@ export class ConsultaDocumentosComponent implements OnInit {
 
   private filtrosBase!: Omit<ConsultaDocumentosFiltros, 'pageNumber' | 'pageSize'>;
   private activeRequest?: Subscription;
-  private printingDocs = new Set<string>();
+  private readonly printingPosDocs = new Set<string>();
+  private readonly printingPdfDocs = new Set<string>();
 
   ngOnInit(): void {
     this.cargarPuntosVenta();
@@ -227,27 +230,60 @@ export class ConsultaDocumentosComponent implements OnInit {
     return estadoDocumento === 'A' || estadoDocumento.includes('ANU') || estadoDocumento.includes('CANCEL');
   }
 
-  imprimirDocumento(documento: Documento): void {
+  async imprimirDocumentoPos(documento: Documento): Promise<void> {
+    const key = this.getDocumentoKey(documento);
+    if (this.isPrinting(documento)) return;
+
+    const reference = {
+      tipoDocu: (documento.tipoDocu || '').trim(),
+      serieDocu: (documento.PPV00_Serie || '000').trim() || '000',
+      numDocu: (documento.numDocu || '').trim()
+    };
+
+    if (!reference.tipoDocu || !reference.numDocu) {
+      window.alert('El documento no contiene una referencia válida para imprimir en POS.');
+      return;
+    }
+
+    this.printingPosDocs.add(key);
+    this.cdr.markForCheck();
+
+    try {
+      if (this.origenConsulta === 'Restaurante') {
+        await this.posPrintService.printRestaurantByReference(reference, 'TIQUETE');
+      } else {
+        const operador = this.auth.getCurrentUser()?.usuario?.trim() || documento.operador?.trim() || '';
+        await this.posPrintService.printByReference(reference, operador, 'TIQUETE');
+      }
+    } catch (error: unknown) {
+      window.alert(this.getErrorMessage(error));
+    } finally {
+      this.printingPosDocs.delete(key);
+      this.cdr.markForCheck();
+    }
+  }
+
+  imprimirDocumentoPdf(documento: Documento): void {
     const tipo = documento.tipoDocu;
     const serie = documento.PPV00_Serie || '000';
     const numero = documento.numDocu;
     const consecutivo = (documento.numeroConsecutivo || '').trim();
     const key = this.getDocumentoKey(documento);
-    if (this.printingDocs.has(key)) return;
+    if (this.isPrinting(documento)) return;
 
     if (!consecutivo) {
       window.alert('No se encontró el número consecutivo para imprimir.');
       return;
     }
 
-    this.printingDocs.add(key);
+    this.printingPdfDocs.add(key);
     this.cdr.markForCheck();
 
     this.detalleService
       .getPdf(tipo, serie, consecutivo)
       .pipe(
         finalize(() => {
-          this.printingDocs.delete(key);
+          this.printingPdfDocs.delete(key);
           this.cdr.markForCheck();
         }),
         takeUntilDestroyed(this.destroyRef)
@@ -262,8 +298,16 @@ export class ConsultaDocumentosComponent implements OnInit {
       });
   }
 
+  isPrintingPos(documento: Documento): boolean {
+    return this.printingPosDocs.has(this.getDocumentoKey(documento));
+  }
+
+  isPrintingPdf(documento: Documento): boolean {
+    return this.printingPdfDocs.has(this.getDocumentoKey(documento));
+  }
+
   isPrinting(documento: Documento): boolean {
-    return this.printingDocs.has(this.getDocumentoKey(documento));
+    return this.isPrintingPos(documento) || this.isPrintingPdf(documento);
   }
 
   trackByDocumento(index: number, documento: Documento): string {
