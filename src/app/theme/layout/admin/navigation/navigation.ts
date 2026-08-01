@@ -77,6 +77,14 @@ export const NavigationItems: NavigationItem[] = [
             classes: 'nav-item'
           },
           {
+            id: 'front-desk-limpieza-habitaciones',
+            title: 'Limpieza de Habitaciones',
+            type: 'item',
+            url: '/front-desk/limpieza-habitaciones',
+            icon: 'feather icon-check-square',
+            classes: 'nav-item'
+          },
+          {
             id: 'front-desk-folios-master',
             title: 'Folios Master',
             type: 'item',

@@ -44,6 +44,14 @@ export const FRONT_DESK_ROUTES: Routes = [
         loadComponent: () => import('./pages/blocked-rooms/blocked-rooms.component').then((c) => c.BlockedRoomsComponent)
       },
       {
+        path: 'limpieza-habitaciones',
+        data: frontDeskData('Limpieza de Habitaciones'),
+        loadComponent: () =>
+          import('src/app/modules/housekeeping/limpieza-habitaciones/limpieza-habitaciones.component').then(
+            (c) => c.LimpiezaHabitacionesComponent
+          )
+      },
+      {
         path: 'folios-master',
         data: frontDeskData('Folios Master'),
         loadComponent: () => import('./pages/folio-master/folio-master.component').then((c) => c.FolioMasterComponent)

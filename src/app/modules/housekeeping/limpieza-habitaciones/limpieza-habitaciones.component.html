@@ -1,0 +1,99 @@
+<section class="hk-page" aria-label="Limpieza de Habitaciones">
+  <header class="hk-hero">
+    <div class="hk-hero__identity">
+      <span class="hk-hero__icon" aria-hidden="true"><i class="feather icon-check-square"></i></span>
+      <div>
+        <span class="hk-eyebrow">Front Desk · Housekeeping</span>
+        <h1>Limpieza de Habitaciones</h1>
+        <p>Lista operativa para organizar prioridades, llegadas y habitaciones ocupadas.</p>
+      </div>
+    </div>
+
+    <div class="hk-hero__context">
+      <div><span>Fecha operativa</span><strong>{{ fechaOperativa || 'No disponible' }}</strong></div>
+      <div><span>Operador</span><strong>{{ operador || '-' }}</strong></div>
+      <button type="button" class="hk-btn hk-btn--light" (click)="actualizar()" [disabled]="isLoading">
+        <span *ngIf="isLoading" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+        <i *ngIf="!isLoading" class="feather icon-refresh-cw" aria-hidden="true"></i>
+        <span>{{ isLoading ? 'Preparando...' : 'Actualizar lista' }}</span>
+      </button>
+      <button type="button" class="hk-btn hk-btn--pdf" (click)="exportarPdf()" [disabled]="isLoading || isExportingPdf || habitacionesFiltradas.length === 0">
+        <span *ngIf="isExportingPdf" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+        <i *ngIf="!isExportingPdf" class="feather icon-file-text" aria-hidden="true"></i>
+        <span>{{ isExportingPdf ? 'Generando...' : 'Exportar PDF' }}</span>
+      </button>
+    </div>
+  </header>
+
+  <section class="hk-kpis" aria-label="Resumen de Housekeeping">
+    <article class="hk-kpi hk-kpi--total"><i class="feather icon-home"></i><div><span>Total habitaciones</span><strong>{{ kpis.total }}</strong></div></article>
+    <article class="hk-kpi hk-kpi--departure"><i class="feather icon-log-out"></i><div><span>Salidas hoy</span><strong>{{ kpis.salidasHoy }}</strong></div></article>
+    <article class="hk-kpi hk-kpi--arrival"><i class="feather icon-log-in"></i><div><span>Llegadas</span><strong>{{ kpis.llegadas }}</strong></div></article>
+    <article class="hk-kpi hk-kpi--occupied"><i class="feather icon-users"></i><div><span>Ocupadas</span><strong>{{ kpis.ocupadas }}</strong></div></article>
+    <article class="hk-kpi hk-kpi--pending"><i class="feather icon-clock"></i><div><span>Pendientes</span><strong>{{ kpis.pendientes }}</strong></div></article>
+    <article class="hk-kpi hk-kpi--clean"><i class="feather icon-check-circle"></i><div><span>Limpias</span><strong>{{ kpis.limpias }}</strong></div></article>
+  </section>
+
+  <section class="hk-filter-card" [formGroup]="filtersForm" aria-label="Filtros de la lista">
+    <label class="hk-search">
+      <span>Buscar habitación o huésped</span>
+      <div><i class="feather icon-search" aria-hidden="true"></i><input type="search" formControlName="buscar" placeholder="Ej. 101 o nombre del huésped"></div>
+    </label>
+    <label><span>Prioridad</span><select formControlName="prioridad"><option *ngFor="let option of prioridadOptions" [value]="option">{{ option }}</option></select></label>
+    <label><span>Estado operativo</span><select formControlName="estado"><option value="TODOS">TODOS</option><option *ngFor="let option of estadosDisponibles" [value]="option">{{ option }}</option></select></label>
+    <label><span>Grupo</span><select formControlName="grupo"><option value="TODOS">TODOS</option><option *ngFor="let option of gruposDisponibles" [value]="option">{{ option }}</option></select></label>
+    <label><span>Limpieza</span><select formControlName="limpieza"><option *ngFor="let option of limpiezaOptions" [value]="option">{{ option }}</option></select></label>
+    <button type="button" class="hk-clear" (click)="limpiarFiltros()"><i class="feather icon-x"></i><span>Limpiar</span></button>
+  </section>
+
+  <section class="hk-list-card">
+    <div class="hk-list-heading">
+      <div>
+        <span class="hk-eyebrow hk-eyebrow--dark">Plan de trabajo</span>
+        <h2>Habitaciones para atender</h2>
+      </div>
+      <div class="hk-list-heading__meta">
+        <strong>{{ habitacionesFiltradas.length }} de {{ habitaciones.length }}</strong>
+        <span *ngIf="lastUpdated">Actualizado {{ lastUpdated | date:'shortTime' }}</span>
+      </div>
+    </div>
+
+    <div class="hk-alert" *ngIf="errorMessage">
+      <i class="feather icon-alert-triangle" aria-hidden="true"></i>
+      <div><strong>No se pudo cargar la lista</strong><span>{{ errorMessage }}</span></div>
+      <button type="button" (click)="actualizar()">Reintentar</button>
+    </div>
+
+    <div class="hk-loading" *ngIf="isLoading">
+      <div class="hk-skeleton" *ngFor="let item of [1,2,3,4,5,6]"></div>
+    </div>
+
+    <div class="hk-empty" *ngIf="!isLoading && !errorMessage && habitacionesFiltradas.length === 0">
+      <span><i class="feather icon-search"></i></span>
+      <h3>No hay habitaciones para mostrar</h3>
+      <p>Revise los filtros seleccionados o actualice la lista operativa.</p>
+    </div>
+
+    <div class="table-responsive" *ngIf="!isLoading && !errorMessage && habitacionesFiltradas.length > 0">
+      <table class="table hk-table">
+        <thead>
+          <tr>
+            <th>Hab.</th><th>Prioridad</th><th>Estado</th><th>Limpieza</th><th>Estadía</th><th>Huésped</th><th class="text-center">Pax</th><th>Grupo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let room of habitacionesFiltradas; trackBy: trackByRoom" [ngClass]="prioridadClass(room.prioridad)">
+            <td><span class="hk-room-number">{{ room.room }}</span></td>
+            <td><span class="hk-priority-badge" [ngClass]="prioridadClass(room.prioridad)">{{ room.prioridad }}</span></td>
+            <td><span class="hk-status" [ngClass]="estadoClass(room.estado)">{{ room.estado || '-' }}</span></td>
+            <td><span class="hk-clean" [ngClass]="limpiezaClass(room.estadoLimpieza)"><i></i>{{ room.estadoLimpieza }}</span></td>
+            <td><div class="hk-stay"><span><b>Entrada</b>{{ room.fechaIni || '-' }}</span><i class="feather icon-arrow-right"></i><span><b>Salida</b>{{ room.fechaFin || '-' }}</span></div></td>
+            <td><div class="hk-guest"><strong>{{ room.huesped || 'Sin huésped registrado' }}</strong><span *ngIf="room.numChl">{{ room.numChl }} menor(es)</span></div></td>
+            <td class="text-center"><span class="hk-pax">{{ room.numPax }}</span></td>
+            <td><span class="hk-group">{{ room.grupo || '-' }}</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>
