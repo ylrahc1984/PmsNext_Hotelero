@@ -10,6 +10,7 @@ import { UsuarioService } from 'src/app/demo/administracion/usuarios/usuario.ser
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { CierreCajaService } from './cierre-caja.service';
 import { ReporteCierreEncabezado } from './models/cierre-caja.model';
+import { CierreCajaPosPrintService } from './printing/cierre-caja-pos-print.service';
 
 @Component({
   selector: 'app-cierre-caja-list',
@@ -24,6 +25,7 @@ export class CierreCajaListComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly usuarioService = inject(UsuarioService);
   private readonly cierreCajaService = inject(CierreCajaService);
+  private readonly cierreCajaPosPrintService = inject(CierreCajaPosPrintService);
 
   readonly filtrosForm = this.fb.group({
     fecha: this.fb.control(this.getTodayIsoDate()),
@@ -36,6 +38,7 @@ export class CierreCajaListComponent implements OnInit {
   isLoading = false;
   currentUsuario = '';
   printingCierres = new Set<string>();
+  printingPosCierres = new Set<string>();
 
   get baseRoute(): string {
     if (this.router.url.startsWith('/restaurante/cierre-caja')) {
@@ -100,6 +103,28 @@ export class CierreCajaListComponent implements OnInit {
   isPrinting(item: ReporteCierreEncabezado): boolean {
     const numCierre = this.cleanText(item.numCierre);
     return !!numCierre && this.printingCierres.has(numCierre);
+  }
+
+  async imprimirCierrePos(item: ReporteCierreEncabezado): Promise<void> {
+    const numCierre = this.cleanText(item.numCierre);
+    if (!numCierre || this.printingPosCierres.has(numCierre)) {
+      return;
+    }
+
+    this.printingPosCierres.add(numCierre);
+    try {
+      await this.cierreCajaPosPrintService.print(numCierre, 'TIQUETE');
+    } catch (error: unknown) {
+      console.error('No se pudo imprimir el cierre de caja en la impresora POS.', error);
+      window.alert(error instanceof Error ? error.message : 'No se pudo imprimir el cierre de caja en TIQUETE.');
+    } finally {
+      this.printingPosCierres.delete(numCierre);
+    }
+  }
+
+  isPrintingPos(item: ReporteCierreEncabezado): boolean {
+    const numCierre = this.cleanText(item.numCierre);
+    return !!numCierre && this.printingPosCierres.has(numCierre);
   }
 
   get abiertosCount(): number {

@@ -175,6 +175,77 @@ export interface CierreCajaReporteDetalle {
   rucEmpresa: string;
 }
 
+/** Contrato del reporte operativo usado para imprimir el cierre en ESC/POS. */
+export interface CierreCajaPosDocumento {
+  tipoDocumento: string;
+  serie: string;
+  numeroDocumento: string;
+  fechaDocumento: string;
+  hora: string;
+  codCliente: string;
+  rucCliente: string;
+  nombreCliente: string;
+  numMesa: string;
+  numPax: string;
+  codMozo: string;
+  moneda: string;
+  tipoCambio: number;
+  subTotal: number;
+  descuento: number;
+  neto: number;
+  impuesto: number;
+  exonerado: number;
+  propinas: number;
+  totalDocumento: number;
+  totalPago: number;
+  estado: string;
+  usuarioCreacion: string;
+}
+
+export interface CierreCajaPosConsumoColaborador {
+  tipo: string;
+  numero: string;
+  pntVenta: string;
+  fecha: string;
+  hora: string;
+  salonero: string;
+  nombre: string;
+  comentarios: string;
+  total: number;
+  estado: string;
+  moneda: string;
+}
+
+export interface CierreCajaPosPlatoEliminado {
+  fecha: string;
+  tipNdp: string;
+  numNdp: string;
+  codProducto: string;
+  desProducto: string;
+  cantidad: number;
+  precio: number;
+  total: number;
+  motivo: string;
+  operador: string;
+}
+
+export interface CierreCajaPosDatosEmpresa {
+  nombreEmpresa: string;
+  cedula: string;
+}
+
+export interface CierreCajaPosReporte {
+  encabezado: CierreCajaReporteEncabezado;
+  documentosVenta: CierreCajaPosDocumento[];
+  notasCredito: CierreCajaPosDocumento[];
+  formasPagoPorDocumento: CierreCajaFormaPagoReporte[];
+  denominaciones: CierreCajaDenominacionReporte[];
+  resumenFormasPago: CierreCajaResumenFormaPago[];
+  consumosColaborador: CierreCajaPosConsumoColaborador[];
+  platosEliminados: CierreCajaPosPlatoEliminado[];
+  datosEmpresa: CierreCajaPosDatosEmpresa;
+}
+
 export interface CierreCajaUpsertInput {
   usuario: string;
   operador: string;

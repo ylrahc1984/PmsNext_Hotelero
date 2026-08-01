@@ -119,6 +119,17 @@
                     <i class="ti ti-printer"></i>
                     <span>{{ isPrinting(item) ? 'Generando...' : 'PDF' }}</span>
                   </button>
+                  <button
+                    type="button"
+                    class="btn btn-outline-success btn-sm"
+                    (click)="imprimirCierrePos(item)"
+                    [disabled]="isPrintingPos(item)"
+                    title="Imprimir cierre en impresora POS"
+                  >
+                    <span *ngIf="isPrintingPos(item)" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                    <i *ngIf="!isPrintingPos(item)" class="ti ti-receipt"></i>
+                    <span>{{ isPrintingPos(item) ? 'Imprimiendo...' : 'POS' }}</span>
+                  </button>
                 </div>
               </td>
             </tr>
