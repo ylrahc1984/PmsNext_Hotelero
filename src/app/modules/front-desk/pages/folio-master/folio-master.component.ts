@@ -52,7 +52,7 @@ export class FolioMasterComponent implements OnInit {
   fechaIngreso = this.getCurrentMonthRange().start;
   fechaSalida = this.getCurrentMonthRange().end;
   searchTerm = '';
-  pageSize = 20;
+  pageSize = 10;
   currentPage = 1;
   folios: FolioMaster[] = [];
   selectedFolio: FolioMaster | null = null;

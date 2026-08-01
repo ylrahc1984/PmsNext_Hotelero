@@ -54,7 +54,7 @@
 
     <div class="folio-table-scroll" *ngIf="!isLoading && !errorMessage && filteredFolios.length > 0">
       <table class="folio-table">
-        <thead><tr><th>Folio</th><th>Reserva</th><th>Cód. agencia</th><th>Agencia</th><th>Descripción de la reserva</th><th>Check-in</th><th>Check-out</th><th>Estado</th><th class="text-center">Acciones</th></tr></thead>
+        <thead><tr><th>Folio</th><th>Reserva</th><th>Cód. agencia</th><th>Agencia</th><th>Descripción de la reserva</th><th>Check-in</th><th>Check-out</th><th class="text-end">Tarifa</th><th>Estado</th><th class="text-center">Acciones</th></tr></thead>
         <tbody>
           <tr *ngFor="let folio of pagedFolios; trackBy: trackByFolio">
             <td><button type="button" class="folio-link" (click)="openCommercialReceipt(folio)" title="Crear Recibo Comercial">{{ folio.PRV09_NumFolio || folio.PRV01_Folio || 'N/D' }}</button></td>
@@ -64,6 +64,7 @@
             <td><span class="folio-description" [title]="folio.PRV01_Descripcion">{{ folio.PRV01_Descripcion || 'Sin descripción' }}</span></td>
             <td><span class="folio-date"><i class="feather icon-log-in"></i>{{ formatDate(folio.PRV09_FechaIng) }}</span></td>
             <td><span class="folio-date"><i class="feather icon-log-out"></i>{{ formatDate(folio.PRV09_FechaSal) }}</span></td>
+            <td class="text-end"><strong>{{ folio.PRV09_MonedaTar || folio.PRV01_Moneda }} {{ folio.PRV09_TarxNoc | number:'1.2-2' }}</strong></td>
             <td><span class="folio-status" [ngClass]="getStatusClass(folio.PRV09_Estado)"><i></i>{{ getStatus(folio.PRV09_Estado).label }}</span></td>
             <td class="text-center"><div class="folio-actions">
               <button type="button" class="folio-action folio-action--detail" (click)="openDetail(folio)" title="Ver cargos del folio"><i class="feather icon-eye"></i><span>Detalle</span></button>
