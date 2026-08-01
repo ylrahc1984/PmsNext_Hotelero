@@ -81,10 +81,21 @@ describe('CierreCajaPosPrintBuilder', () => {
     };
 
     const output = builder.build(report, new Date(2026, 6, 31, 21, 5)).join('');
+    const salesSection = output.slice(
+      output.indexOf('DOCUMENTOS DE VENTA (1)'),
+      output.indexOf('NOTAS DE CREDITO (0)')
+    );
 
     expect(output).toContain('CCC-000003');
-    expect(output).toContain('DOCUMENTOS DE VENTA (1)');
-    expect(output).toContain('25,000.00 COL');
+    expect(salesSection).toContain('DOCUMENTOS DE VENTA (1)');
+    expect(salesSection).toContain('TRR 00100004040000000005');
+    expect(salesSection).toContain('31/07/2026 7:17PM');
+    expect(salesSection).toContain('25,000.00 COL');
+    expect(salesSection).not.toContain('CLIENTE EN GENERAL');
+    expect(salesSection).not.toContain('Subtotal');
+    expect(salesSection).not.toContain('Impuesto');
+    expect(salesSection).not.toContain('Total pagado');
+    expect(salesSection).not.toContain('TOTALES POR MONEDA');
     expect(output).toContain('FORMAS DE PAGO (1)');
     expect(output).toContain('CONSUMOS COLABORADOR (1)');
     expect(output).toContain('PLATOS ELIMINADOS (1)');

@@ -56,7 +56,7 @@ export class CierreCajaPosPrintBuilder {
       .columns('Fondo de caja', receipt.money(header.fondoCaja))
       .separator('=');
 
-    this.appendDocuments(receipt, 'DOCUMENTOS DE VENTA', data.documentosVenta);
+    this.appendSalesDocuments(receipt, data.documentosVenta);
     this.appendDocuments(receipt, 'NOTAS DE CREDITO', data.notasCredito);
     this.appendPaymentMethods(receipt, data.formasPagoPorDocumento);
     this.appendDenominations(receipt, data.denominaciones);
@@ -75,6 +75,25 @@ export class CierreCajaPosPrintBuilder {
       .cut();
 
     return receipt.build();
+  }
+
+  private appendSalesDocuments(receipt: EscPosReceiptComposer, documents: CierreCajaPosDocumento[]): void {
+    this.sectionHeader(receipt, `DOCUMENTOS DE VENTA (${documents.length})`);
+    if (!documents.length) {
+      receipt.line('Sin registros.');
+      return;
+    }
+
+    documents.forEach((item, index) => {
+      receipt
+        .wrapped([item.tipoDocumento, item.numeroDocumento].filter(Boolean).join(' ') || `Documento ${index + 1}`)
+        .bold(true)
+        .columns(
+          [this.formatApiDate(item.fechaDocumento), item.hora].filter(Boolean).join(' ') || '-',
+          receipt.money(item.totalDocumento, item.moneda)
+        )
+        .bold(false);
+    });
   }
 
   private appendDocuments(receipt: EscPosReceiptComposer, title: string, documents: CierreCajaPosDocumento[]): void {
