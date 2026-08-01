@@ -98,7 +98,7 @@ export class PosDocumentPrintBuilder {
       `${this.separator}\n`,
       '\x1B\x45\x01',
       'DETALLE\n',
-      this.leftRight('Descripcion', 'Precio'),
+      this.leftRight('Descripcion', 'Precio sin imp.'),
       '\x1B\x45\x00',
       `${this.separator}\n`
     );
@@ -175,18 +175,23 @@ export class PosDocumentPrintBuilder {
   private buildLineaDetalle(item: DocumentoDetalleItem, moneda: string): string[] {
     const cantidad = this.number(item.cantidad);
     const descripcion = this.clean(item.descripcion || item.codProdu || 'Linea');
-    const precio = this.number(item.pUndLst);
-    const descuento = this.number(item.descuento);
-    const impuesto = this.number(item.impuesto);
-    const total = this.resolveLineaTotal(item, cantidad, precio, descuento, impuesto);
+    const precioSinImpuesto = this.resolveLineaPrecioSinImpuesto(item, cantidad);
     const quantityLabel = Number.isInteger(cantidad)
       ? cantidad.toFixed(0)
       : cantidad.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
 
     return this.wrappedColumns(
       `${quantityLabel} x ${descripcion}`,
-      this.money(total, moneda)
+      this.money(precioSinImpuesto, moneda)
     );
+  }
+
+  private resolveLineaPrecioSinImpuesto(item: DocumentoDetalleItem, cantidad: number): number {
+    if (Number.isFinite(item.subtotal)) {
+      return this.number(item.subtotal);
+    }
+
+    return cantidad * this.number(item.uniSinImp || item.pUndLst);
   }
 
   private resolveTituloDocumento(encabezado: DocumentoEncabezado): string {
@@ -204,21 +209,6 @@ export class PosDocumentPrintBuilder {
     const consecutivo = [serie, numero].filter(Boolean).join('-');
 
     return [tipo, consecutivo].filter(Boolean).join(' ');
-  }
-
-  private resolveLineaTotal(
-    item: DocumentoDetalleItem,
-    cantidad: number,
-    precio: number,
-    descuento: number,
-    impuesto: number
-  ): number {
-    const explicitTotal = this.number(item.total);
-    if (explicitTotal) {
-      return explicitTotal;
-    }
-
-    return cantidad * precio - descuento + impuesto + this.number(item.mtoImpVarios);
   }
 
   private leftRight(left: string, right: string): string {

@@ -34,4 +34,33 @@ describe('PosDocumentPrintBuilder', () => {
     expect(commands).not.toContain('Total impuestos');
     expect(commands).toContain(`${'='.repeat(40)}\n\x1B\x45\x01TOTAL`);
   });
+
+  it('prints ppV01_PrecioSinImp as the detail price', () => {
+    const commands = new PosDocumentPrintBuilder().build({
+      empresaNombre: 'Casa Lamia Boutique Hotel',
+      empresaRuc: '3102852015',
+      encabezado: { tipDocu: 'TRR', serie: '000', numero: '00000001', moneda: 'COL' },
+      detalle: [
+        {
+          descripcion: 'BUBBLES IN A GLASS',
+          cantidad: 1,
+          pUndLst: 11070,
+          uniSinImp: 9000,
+          subtotal: 9000,
+          total: 11070
+        }
+      ],
+      pagos: [],
+      resumen: { subtotal: 9000, descuento: 0, impuesto: 2070, total: 11070 }
+    }).join('');
+
+    const detailSection = commands.slice(
+      commands.indexOf('DETALLE'),
+      commands.indexOf('Subtotal')
+    );
+
+    expect(detailSection).toContain('Precio sin imp.');
+    expect(detailSection).toContain('9,000.00 COL');
+    expect(detailSection).not.toContain('11,070.00 COL');
+  });
 });
