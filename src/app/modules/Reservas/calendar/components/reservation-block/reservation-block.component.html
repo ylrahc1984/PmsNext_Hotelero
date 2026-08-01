@@ -2,6 +2,8 @@
   type="button"
   class="reservation-block"
   [ngClass]="'state-' + block.visualState"
+  [class.reservation-block--checked-in]="isCheckedIn"
+  [class.reservation-block--checked-in-past-departure]="isCheckedInPastDeparture"
   [class.reservation-block--ghost]="isGhost"
   [class.reservation-block--continues-before]="block.continuesBefore"
   [class.reservation-block--continues-after]="block.continuesAfter"

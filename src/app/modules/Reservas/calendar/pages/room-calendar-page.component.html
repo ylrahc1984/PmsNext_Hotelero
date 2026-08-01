@@ -44,6 +44,19 @@
     (exchangeToggle)="toggleExchangeMode()"
   ></app-calendar-toolbar>
 
+  <aside class="calendar-color-legend" aria-label="Leyenda de colores de las reservas">
+    <span class="calendar-color-legend__title"><i class="feather icon-info"></i> Colores</span>
+    <span class="calendar-color-legend__item calendar-color-legend__item--arrival"><i></i>Ingreso hoy</span>
+    <span class="calendar-color-legend__item calendar-color-legend__item--future"><i></i>Reserva futura</span>
+    <span class="calendar-color-legend__item calendar-color-legend__item--checked-in"><i></i>Hospedada (CHK)</span>
+    <span class="calendar-color-legend__item calendar-color-legend__item--departed"><i></i>Estancia finalizada</span>
+    <span class="calendar-color-legend__item calendar-color-legend__item--occupied"><i></i>Ocupada</span>
+    <span class="calendar-color-legend__item calendar-color-legend__item--checkout-tomorrow"><i></i>Salida mañana</span>
+    <span class="calendar-color-legend__item calendar-color-legend__item--checkout-today"><i></i>Salida hoy</span>
+    <span class="calendar-color-legend__item calendar-color-legend__item--blocked"><i></i>Bloqueada</span>
+    <span class="calendar-color-legend__item calendar-color-legend__item--attention"><i></i>Requiere atención</span>
+  </aside>
+
   <section class="exchange-mode-toolbar" *ngIf="exchangeMode" aria-live="polite">
     <div class="exchange-mode-toolbar__status">
       <i class="feather icon-repeat"></i>

@@ -86,6 +86,7 @@ export interface CalendarReservationBlockView {
   width: number;
   continuesBefore: boolean;
   continuesAfter: boolean;
+  isPastDeparture: boolean;
   visualState: RoomOperationalVisualState;
   label: string;
   tooltip: string;

@@ -54,6 +54,14 @@ export class ReservationBlockComponent implements OnDestroy {
     this.detailRequest?.unsubscribe();
   }
 
+  get isCheckedIn(): boolean {
+    return this.block.reservation.reservationState?.trim().toUpperCase() === 'CHK';
+  }
+
+  get isCheckedInPastDeparture(): boolean {
+    return this.isCheckedIn && this.block.isPastDeparture;
+  }
+
   formatDate(value: string): string {
     return normalizePmsDateDDMMYYYY(value) || 'N/D';
   }

@@ -80,6 +80,99 @@
   font-size: 1rem;
 }
 
+.calendar-color-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem 0.65rem;
+  min-width: 0;
+  padding: 0.38rem 0.65rem;
+  border: 1px solid #dce6f1;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #52677d;
+  box-shadow: 0 5px 14px rgba(15, 33, 51, 0.04);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.calendar-color-legend__title,
+.calendar-color-legend__item {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.calendar-color-legend__title {
+  gap: 0.28rem;
+  padding-right: 0.3rem;
+  color: #29445f;
+  font-size: 0.65rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.calendar-color-legend__item {
+  gap: 0.25rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.calendar-color-legend__item i {
+  width: 20px;
+  height: 9px;
+  flex: 0 0 20px;
+  background: linear-gradient(90deg, var(--legend-start), var(--legend-end));
+  clip-path: polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%);
+  filter: drop-shadow(0 1px 1px rgba(15, 33, 51, 0.12));
+}
+
+.calendar-color-legend__item--arrival {
+  --legend-start: #eea58d;
+  --legend-end: #f7c8b8;
+}
+
+.calendar-color-legend__item--future {
+  --legend-start: #c5afea;
+  --legend-end: #d5c4f0;
+}
+
+.calendar-color-legend__item--checked-in {
+  --legend-start: #e7a9c5;
+  --legend-end: #f4ccdd;
+}
+
+.calendar-color-legend__item--departed {
+  --legend-start: #b2d88f;
+  --legend-end: #d5eaba;
+}
+
+.calendar-color-legend__item--occupied {
+  --legend-start: #9cbaf2;
+  --legend-end: #b0c8f7;
+}
+
+.calendar-color-legend__item--checkout-tomorrow {
+  --legend-start: #86cedd;
+  --legend-end: #a1dce7;
+}
+
+.calendar-color-legend__item--checkout-today {
+  --legend-start: #f3aaa8;
+  --legend-end: #f7bebc;
+}
+
+.calendar-color-legend__item--blocked {
+  --legend-start: #cfd3da;
+  --legend-end: #dfe2e7;
+}
+
+.calendar-color-legend__item--attention {
+  --legend-start: #f1cf82;
+  --legend-end: #f6dda4;
+}
+
 .calendar-workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 356px;

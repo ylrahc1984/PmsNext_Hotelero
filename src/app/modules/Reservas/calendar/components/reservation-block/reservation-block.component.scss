@@ -92,6 +92,29 @@ app-reservation-block {
   color: var(--room-state-ink);
 }
 
+app-room-calendar-page app-reservation-block .reservation-block.state-arrival-today {
+  --room-state-start: #eea58d;
+  --room-state-end: #f7c8b8;
+  --room-state-ink: #6e3529;
+  --room-state-accent: #dc7d63;
+}
+
+// Paleta exclusiva del calendario para reservas con check-in.
+// El selector se limita a la pagina para no alterar otros componentes operativos.
+app-room-calendar-page app-reservation-block .reservation-block.reservation-block--checked-in {
+  --room-state-start: #e7a9c5;
+  --room-state-end: #f4ccdd;
+  --room-state-ink: #68364d;
+  --room-state-accent: #d982aa;
+}
+
+app-room-calendar-page app-reservation-block .reservation-block.reservation-block--checked-in-past-departure {
+  --room-state-start: #b2d88f;
+  --room-state-end: #d5eaba;
+  --room-state-ink: #365421;
+  --room-state-accent: #8fbd69;
+}
+
 .reservation-block--operational {
   --reservation-background: linear-gradient(90deg, var(--room-blocked-start), var(--room-blocked-end));
   color: var(--room-blocked-ink);

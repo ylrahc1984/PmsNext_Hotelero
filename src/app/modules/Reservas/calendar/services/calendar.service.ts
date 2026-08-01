@@ -360,6 +360,7 @@ export class CalendarService {
     const startIndex = Math.max(0, this.diffDays(startDate, reservation.startDate));
     const endIndex = Math.min(totalDays, this.diffDays(startDate, reservation.endDate));
     const span = Math.max(1, endIndex - startIndex);
+    const daysToDeparture = differenceInPmsCalendarDays(operationalDate, reservation.endDate);
 
     const visualState = resolveReservationOperationalState({
       startDate: reservation.startDate,
@@ -378,6 +379,7 @@ export class CalendarService {
       width: Math.max(36, span * CELL_WIDTH - 4),
       continuesBefore: reservation.startDate < startDate,
       continuesAfter: reservation.endDate > visibleEndDate,
+      isPastDeparture: daysToDeparture !== null && daysToDeparture < 0,
       visualState,
       label: reservation.guestName,
       tooltip: `${reservation.guestName} | ${getRoomOperationalStateLabel(visualState)} | ${normalizePmsDateDDMMYYYY(reservation.startDate)} -> ${normalizePmsDateDDMMYYYY(reservation.endDate)} | ${reservation.source}`
