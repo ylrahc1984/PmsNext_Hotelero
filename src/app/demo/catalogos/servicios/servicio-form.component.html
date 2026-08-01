@@ -80,11 +80,20 @@
                           <i class="feather icon-shuffle"></i>
                           Unidad de Medida *
                         </label>
-                        <select class="form-control form-control-lg" [(ngModel)]="formData.uMedida" name="uMedida" required>
+                        <select
+                          class="form-control form-control-lg"
+                          [class.is-invalid]="cabysCorrespondeAServicio && !unidadServicioValida"
+                          [(ngModel)]="formData.uMedida"
+                          name="uMedida"
+                          required
+                        >
                           <option *ngFor="let unidad of unidadOptions" [value]="unidad.codigo">
                             {{ unidad.codigo }} - {{ unidad.descripcion }}
                           </option>
                         </select>
+                        <small class="text-danger" *ngIf="cabysCorrespondeAServicio && !unidadServicioValida">
+                          Para un CABYS iniciado entre 6 y 9 debe seleccionar Os - Otros servicios.
+                        </small>
                       </div>
                     </div>
 
@@ -105,7 +114,7 @@
                       <div class="form-group general-info-field">
                         <label class="form-label">
                           <i class="feather icon-hash"></i>
-                          CABYS
+                          CABYS *
                         </label>
                         <div class="cabys-input-group">
                           <input type="text" class="form-control form-control-lg" [(ngModel)]="formData.cabys" name="cabys"
@@ -114,7 +123,7 @@
                             <i class="feather icon-search"></i>
                           </button>
                         </div>
-                        <small class="text-muted">Consulta el codigo CABYS en Hacienda.</small>
+                        <small class="text-muted">Obligatorio. Consulte el código CABYS en Hacienda.</small>
                       </div>
                     </div>
                     <div class="col-lg-6 col-md-6">
@@ -528,15 +537,20 @@
             <table class="table table-hover mb-0">
               <thead>
                 <tr>
+                  <th>Acción</th>
                   <th>Codigo</th>
                   <th>Descripcion</th>
                   <th>Impuesto</th>
                   <th>Categorias</th>
-                  <th class="text-end">Accion</th>
                 </tr>
               </thead>
               <tbody>
                 <tr *ngFor="let item of cabysResults">
+                  <td>
+                    <button type="button" class="btn btn-sm btn-outline-primary" (click)="selectCabys(item)">
+                      Seleccionar
+                    </button>
+                  </td>
                   <td class="font-monospace">{{ item.codigo }}</td>
                   <td>
                     <div class="cell-stack">
@@ -549,11 +563,6 @@
                     <div class="cabys-categories">
                       <span class="category-chip" *ngFor="let categoria of item.categorias">{{ categoria }}</span>
                     </div>
-                  </td>
-                  <td class="text-end">
-                    <button type="button" class="btn btn-sm btn-outline-primary" (click)="selectCabys(item)">
-                      Seleccionar
-                    </button>
                   </td>
                 </tr>
               </tbody>

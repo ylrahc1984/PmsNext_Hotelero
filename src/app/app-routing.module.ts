@@ -279,7 +279,8 @@ const routes: Routes = [
       {
         path: 'configuracion',
         pathMatch: 'full',
-        data: { breadcrumbTrail: [
+        canActivate: [ModuleAccessGuard],
+        data: { requiredModules: ['PNTVT'], breadcrumbTrail: [
           { title: 'Restaurante', url: '/restaurant/puntos-venta' },
           { title: 'Configuración Restaurante' }
         ] },
@@ -319,7 +320,8 @@ const routes: Routes = [
       },
       {
         path: 'configuracion/categorias',
-        data: { breadcrumbTrail: [
+        canActivate: [ModuleAccessGuard],
+        data: { requiredModules: ['PNTVT'], breadcrumbTrail: [
           { title: 'Restaurante', url: '/restaurant/puntos-venta' },
           { title: 'Configuración Restaurante', url: '/restaurante/configuracion' },
           { title: 'Categorías' }
@@ -331,7 +333,8 @@ const routes: Routes = [
       },
       {
         path: 'configuracion/puntos-venta',
-        data: { breadcrumbTrail: [
+        canActivate: [ModuleAccessGuard],
+        data: { requiredModules: ['PNTVT'], breadcrumbTrail: [
           { title: 'Restaurante', url: '/restaurant/puntos-venta' },
           { title: 'Configuración Restaurante', url: '/restaurante/configuracion' },
           { title: 'Puntos de Venta' }
@@ -343,7 +346,8 @@ const routes: Routes = [
       },
       {
         path: 'configuracion/servicios',
-        data: { breadcrumbTrail: [
+        canActivate: [ModuleAccessGuard],
+        data: { requiredModules: ['PNTVT'], breadcrumbTrail: [
           { title: 'Restaurante', url: '/restaurant/puntos-venta' },
           { title: 'Configuración Restaurante', url: '/restaurante/configuracion' },
           { title: 'Catálogo Comercial' }
@@ -352,7 +356,8 @@ const routes: Routes = [
       },
       {
         path: 'configuracion/servicios/nuevo',
-        data: { breadcrumbTrail: [
+        canActivate: [ModuleAccessGuard],
+        data: { requiredModules: ['PNTVT'], breadcrumbTrail: [
           { title: 'Restaurante', url: '/restaurant/puntos-venta' },
           { title: 'Configuración Restaurante', url: '/restaurante/configuracion' },
           { title: 'Catálogo Comercial', url: '/restaurante/configuracion/servicios' },
@@ -362,7 +367,8 @@ const routes: Routes = [
       },
       {
         path: 'configuracion/servicios/editar/:codReceta',
-        data: { breadcrumbTrail: [
+        canActivate: [ModuleAccessGuard],
+        data: { requiredModules: ['PNTVT'], breadcrumbTrail: [
           { title: 'Restaurante', url: '/restaurant/puntos-venta' },
           { title: 'Configuración Restaurante', url: '/restaurante/configuracion' },
           { title: 'Catálogo Comercial', url: '/restaurante/configuracion/servicios' },
@@ -372,7 +378,8 @@ const routes: Routes = [
       },
       {
         path: 'configuracion/listas-precios',
-        data: { breadcrumbTrail: [
+        canActivate: [ModuleAccessGuard],
+        data: { requiredModules: ['PNTVT'], breadcrumbTrail: [
           { title: 'Restaurante', url: '/restaurant/puntos-venta' },
           { title: 'Configuración Restaurante', url: '/restaurante/configuracion' },
           { title: 'Listas de Precios' }
@@ -381,7 +388,8 @@ const routes: Routes = [
       },
       {
         path: 'configuracion/listas-precios/asignaciones',
-        data: { breadcrumbTrail: [
+        canActivate: [ModuleAccessGuard],
+        data: { requiredModules: ['PNTVT'], breadcrumbTrail: [
           { title: 'Restaurante', url: '/restaurant/puntos-venta' },
           { title: 'Configuración Restaurante', url: '/restaurante/configuracion' },
           { title: 'Listas de Precios', url: '/restaurante/configuracion/listas-precios' },
@@ -391,7 +399,8 @@ const routes: Routes = [
       },
       {
         path: 'configuracion/listas-precios/nuevo',
-        data: { breadcrumbTrail: [
+        canActivate: [ModuleAccessGuard],
+        data: { requiredModules: ['PNTVT'], breadcrumbTrail: [
           { title: 'Restaurante', url: '/restaurant/puntos-venta' },
           { title: 'Configuración Restaurante', url: '/restaurante/configuracion' },
           { title: 'Listas de Precios', url: '/restaurante/configuracion/listas-precios' },
@@ -401,7 +410,8 @@ const routes: Routes = [
       },
       {
         path: 'configuracion/listas-precios/:id/editar',
-        data: { breadcrumbTrail: [
+        canActivate: [ModuleAccessGuard],
+        data: { requiredModules: ['PNTVT'], breadcrumbTrail: [
           { title: 'Restaurante', url: '/restaurant/puntos-venta' },
           { title: 'Configuración Restaurante', url: '/restaurante/configuracion' },
           { title: 'Listas de Precios', url: '/restaurante/configuracion/listas-precios' },
@@ -411,7 +421,8 @@ const routes: Routes = [
       },
       {
         path: 'configuracion/listas-precios/:codListaPrecio/detalle',
-        data: { breadcrumbTrail: [
+        canActivate: [ModuleAccessGuard],
+        data: { requiredModules: ['PNTVT'], breadcrumbTrail: [
           { title: 'Restaurante', url: '/restaurant/puntos-venta' },
           { title: 'Configuración Restaurante', url: '/restaurante/configuracion' },
           { title: 'Listas de Precios', url: '/restaurante/configuracion/listas-precios' },
@@ -424,8 +435,10 @@ const routes: Routes = [
       },
       {
         path: 'configuracion/saloneros',
+        canActivate: [ModuleAccessGuard],
         loadComponent: loadPmsPlaceholder,
         data: {
+          requiredModules: ['PNTVT'],
           module: 'Restaurante',
           title: 'Saloneros',
           breadcrumbTrail: [

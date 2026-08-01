@@ -173,7 +173,16 @@ export const NavigationItems: NavigationItem[] = [
               }
             ]
           },
-          { id: 'restaurante-configuracion', title: 'Configuración Restaurante', type: 'item', url: '/restaurante/configuracion', activeUrls: ['/restaurante/configuracion'], icon: 'feather icon-sliders', classes: 'nav-item' }
+          {
+            id: 'restaurante-configuracion',
+            title: 'Configuración Restaurante',
+            type: 'item',
+            url: '/restaurante/configuracion',
+            activeUrls: ['/restaurante/configuracion'],
+            icon: 'feather icon-sliders',
+            classes: 'nav-item',
+            requiredModules: ['PNTVT']
+          }
         ]
       },
       {

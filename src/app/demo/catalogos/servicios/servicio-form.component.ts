@@ -102,6 +102,14 @@ export class ServicioFormComponent implements OnInit {
       : '/catalogos/servicios';
   }
 
+  get cabysCorrespondeAServicio(): boolean {
+    return /^[6-9]/.test(this.formData.cabys?.trim() || '');
+  }
+
+  get unidadServicioValida(): boolean {
+    return !this.cabysCorrespondeAServicio || this.normalizeUnidadMedida(this.formData.uMedida) === 'OS';
+  }
+
   showCabysModal     = false;
   cabysQuery         = '';
   cabysTop           = 10;
@@ -572,7 +580,32 @@ export class ServicioFormComponent implements OnInit {
   }
 
   async saveServicio(form: NgForm): Promise<void> {
-    if (!form.valid || this.isLoading) {
+    if (this.isLoading) {
+      return;
+    }
+
+    const cabys = this.formData.cabys?.trim() || '';
+    if (!cabys) {
+      await Swal.fire({
+        title: 'Código CABYS requerido',
+        text: 'Debe seleccionar o ingresar un código CABYS antes de guardar el servicio.',
+        icon: 'warning',
+        confirmButtonText: 'Entendido'
+      });
+      return;
+    }
+
+    if (!this.unidadServicioValida) {
+      await Swal.fire({
+        title: 'Unidad de medida incorrecta',
+        text: 'Los códigos CABYS que inician entre 6 y 9 corresponden a servicios y deben utilizar la unidad Os (Otros servicios).',
+        icon: 'warning',
+        confirmButtonText: 'Revisar unidad'
+      });
+      return;
+    }
+
+    if (!form.valid) {
       return;
     }
 
@@ -605,7 +638,7 @@ export class ServicioFormComponent implements OnInit {
       descripcion         : this.formData.descripcion?.trim() || '',
       visible             : Number(this.formData.visible ?? 0),
       urlImagen           : this.formData.urlImagen?.trim() || '',
-      cabys               : this.formData.cabys?.trim() || '',
+      cabys,
       compuesto           : this.formData.compuesto || 'N'
     };
 
@@ -695,6 +728,10 @@ export class ServicioFormComponent implements OnInit {
 
   cancel(): void {
     this.router.navigate([this.listRoute]);
+  }
+
+  private normalizeUnidadMedida(value: string | null | undefined): string {
+    return (value || '').trim().replace(/\.+$/g, '').toUpperCase();
   }
 
   openCabysModal(): void {
