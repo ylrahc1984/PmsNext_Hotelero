@@ -263,7 +263,7 @@ h1 {
   display: grid;
   gap: 6px;
   align-self: stretch;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto 1fr;
   min-width: 0;
 }
 
@@ -414,6 +414,168 @@ label {
   font-size: 0.82rem;
   font-weight: 720;
   line-height: 1.2;
+}
+
+.notes-card .notes-card__empty {
+  color: $muted;
+  font-weight: 650;
+}
+
+.comments-card {
+  align-self: start;
+  border-color: rgba($cyan, 0.18);
+  background: linear-gradient(135deg, #fbfdff, #f4f9fc);
+  box-shadow: 0 8px 20px rgba(29, 42, 68, 0.035);
+}
+
+.comments-card--editing {
+  border-color: rgba($cyan, 0.38);
+  box-shadow: 0 10px 24px rgba($cyan-dark, 0.08);
+}
+
+.comments-card__header,
+.comments-card__header > div,
+.comments-card__edit,
+.comments-card__actions,
+.comments-card__save {
+  display: flex;
+  align-items: center;
+}
+
+.comments-card__header {
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 40px;
+  padding: 6px 12px;
+}
+
+.comments-card__header > div {
+  gap: 8px;
+}
+
+.comments-card__header h2 {
+  font-size: 0.9rem;
+}
+
+.comments-card__header .material-icons {
+  color: $cyan-dark;
+  font-size: 1.08rem;
+}
+
+.comments-card__edit {
+  justify-content: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 0 8px;
+  border: 1px solid rgba($cyan, 0.22);
+  border-radius: 7px;
+  color: $cyan-dark;
+  background: rgba($paper, 0.8);
+  font-size: 0.68rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.comments-card__edit:hover,
+.comments-card__edit:focus-visible {
+  border-color: rgba($cyan, 0.5);
+  outline: none;
+  background: $paper;
+}
+
+.comments-card__edit .material-icons {
+  font-size: 0.9rem;
+}
+
+.comments-card__content {
+  padding: 0 12px 10px;
+  color: $ink;
+  font-size: 0.79rem;
+  font-weight: 680;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.comments-card__content--empty {
+  color: $muted;
+  font-style: italic;
+  font-weight: 600;
+}
+
+.comments-card__editor {
+  display: grid;
+  gap: 7px;
+  padding: 0 12px 11px;
+}
+
+.comments-card__editor label {
+  font-size: 0.67rem;
+}
+
+.comments-card__editor textarea {
+  width: 100%;
+  min-height: 76px;
+  resize: vertical;
+  padding: 9px 10px;
+  border: 1px solid $line;
+  border-radius: 9px;
+  outline: none;
+  color: $ink;
+  background: $paper;
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.comments-card__editor textarea:focus {
+  border-color: rgba($cyan, 0.65);
+  box-shadow: 0 0 0 3px rgba($cyan, 0.1);
+}
+
+.comments-card__editor textarea:disabled {
+  opacity: 0.7;
+}
+
+.comments-card__error {
+  color: #b4233d;
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+.comments-card__actions {
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.comments-card__cancel,
+.comments-card__save {
+  justify-content: center;
+  min-height: 29px;
+  padding: 0 10px;
+  border-radius: 7px;
+  font-size: 0.69rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.comments-card__cancel {
+  border: 1px solid $line;
+  color: $muted;
+  background: $paper;
+}
+
+.comments-card__save {
+  gap: 5px;
+  color: $paper;
+  background: linear-gradient(135deg, $cyan-dark, $cyan);
+}
+
+.comments-card__cancel:disabled,
+.comments-card__save:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .table {

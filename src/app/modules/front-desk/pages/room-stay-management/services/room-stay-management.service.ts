@@ -122,6 +122,11 @@ export interface RoomCheckoutResponse {
   fecCheckout     : string;
 }
 
+export interface RoomStayCommentsPayload {
+  comentarios     : string;
+  operador        : string;
+}
+
 export interface PointOfSalePaymentMethodApi {
   CA05_Codigo         : string;
   CA05_Descripcion    : string;
@@ -401,6 +406,7 @@ export class RoomStayManagementService {
   private readonly roomChangeUrl                   = `${this.baseApiUrl}/roomchange`;
   private readonly departureDateChangeUrl          = `${this.baseApiUrl}/cambio-fecha-salida`;
   private readonly roomCheckoutUrl                  = `${this.baseApiUrl}/checkout/habitacion`;
+  private readonly checkInUrl                       = `${this.baseApiUrl}/checkin`;
   private readonly pointOfSalePaymentMethodsUrl    = `${this.baseApiUrl}/forma-pago-punto-venta`;
   private readonly pointOfSaleDocumentsUrl         = `${this.baseApiUrl}/documento-puntoventa`;
   private readonly roomChargeUrl                   = `${this.baseApiUrl}/cargo-habitacion`;
@@ -448,6 +454,15 @@ export class RoomStayManagementService {
         fecCheckout: normalizePmsDateDDMMYYYY(payload.fecCheckout)
       })
       .pipe(map((response) => ({ ...response, fecCheckout: normalizePmsDateDDMMYYYY(response.fecCheckout) })));
+  }
+
+  updateStayComments(codReserva: string, roomNumber: string, payload: RoomStayCommentsPayload): Observable<string> {
+    const reservation = encodeURIComponent(this.cleanParam(codReserva));
+    const room = encodeURIComponent(this.cleanParam(roomNumber));
+
+    return this.http.put(`${this.checkInUrl}/${reservation}/${room}/comentarios`, payload, {
+      responseType: 'text'
+    });
   }
 
   getPointOfSalePaymentMethods(puntoVenta = 'PF'): Observable<PointOfSalePaymentMethodApi[]> {

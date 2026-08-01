@@ -196,25 +196,193 @@ $next-ink: #10263b;
 .mesa-comment {
   margin-top: 6px;
   min-height: 34px;
-  padding: 5px 8px;
-  border-radius: 8px;
-  background: #edf4ff;
+  padding: 6px 9px 8px;
   border: 1px solid rgba(83, 134, 255, 0.18);
+  border-radius: 8px;
+  background: linear-gradient(135deg, #f4f8ff, #edf4ff);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
 }
 
-.mesa-comment span {
-  display: block;
+.mesa-comment--editing {
+  border-color: rgba($next-blue, 0.38);
+  box-shadow: 0 8px 18px rgba($next-blue, 0.07);
+}
+
+.mesa-comment__header,
+.mesa-comment__header > div,
+.mesa-comment__edit,
+.mesa-comment__actions,
+.mesa-comment__save {
+  display: flex;
+  align-items: center;
+}
+
+.mesa-comment__header {
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mesa-comment__header > div {
+  gap: 6px;
+}
+
+.mesa-comment__header > div i {
+  color: $next-blue;
+  font-size: 0.78rem;
+}
+
+.mesa-comment__header span {
   color: #7d8b9b;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 800;
 }
 
-.mesa-comment p {
+.mesa-comment__edit {
+  justify-content: center;
+  gap: 4px;
+  min-height: 25px;
+  padding: 0 7px;
+  border: 1px solid rgba($next-blue, 0.2);
+  border-radius: 7px;
+  color: $next-blue;
+  background: rgba($next-paper, 0.82);
+  font-size: 0.65rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.mesa-comment__edit:hover:not(:disabled),
+.mesa-comment__edit:focus-visible {
+  border-color: rgba($next-blue, 0.48);
+  outline: none;
+  background: $next-paper;
+}
+
+.mesa-comment__edit:disabled {
+  color: #9da8b5;
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.mesa-comment__content {
   margin: 4px 0 0;
   color: #294158;
   font-size: 0.76rem;
   font-weight: 750;
-  line-height: 1.25;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.mesa-comment__content--empty {
+  color: #7d8b9b;
+  font-style: italic;
+  font-weight: 600;
+}
+
+.mesa-comment__content--loading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #62758a;
+  font-weight: 650;
+}
+
+.mesa-comment__content--loading .spinner-border {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-width: 0.12rem;
+}
+
+.mesa-comment__editor {
+  display: grid;
+  gap: 6px;
+  padding-top: 6px;
+}
+
+.mesa-comment__editor label {
+  color: #7d8b9b;
+  font-size: 0.65rem;
+  font-weight: 750;
+}
+
+.mesa-comment__editor textarea {
+  width: 100%;
+  min-height: 70px;
+  resize: vertical;
+  padding: 8px 9px;
+  border: 1px solid rgba($next-blue, 0.18);
+  border-radius: 8px;
+  outline: none;
+  color: $next-ink;
+  background: $next-paper;
+  font: inherit;
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.mesa-comment__editor textarea:focus {
+  border-color: rgba($next-blue, 0.62);
+  box-shadow: 0 0 0 3px rgba($next-blue, 0.09);
+}
+
+.mesa-comment__error,
+.mesa-comment__query-error,
+.mesa-comment__success {
+  margin: 0;
+  font-size: 0.65rem;
+  font-weight: 750;
+}
+
+.mesa-comment__error {
+  color: #b4233d;
+}
+
+.mesa-comment__query-error {
+  display: block;
+  margin-top: 5px;
+  color: #b45309;
+}
+
+.mesa-comment__success {
+  display: block;
+  margin-top: 5px;
+  color: #218558;
+}
+
+.mesa-comment__actions {
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.mesa-comment__cancel,
+.mesa-comment__save {
+  min-height: 27px;
+  padding: 0 9px;
+  border-radius: 7px;
+  font-size: 0.66rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.mesa-comment__cancel {
+  border: 1px solid rgba($next-bg, 0.12);
+  color: #6d7b8b;
+  background: $next-paper;
+}
+
+.mesa-comment__save {
+  justify-content: center;
+  gap: 5px;
+  border: 0;
+  color: $next-paper;
+  background: linear-gradient(135deg, $next-blue, #4c86ff);
+}
+
+.mesa-comment__cancel:disabled,
+.mesa-comment__save:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .cuentas-strip {

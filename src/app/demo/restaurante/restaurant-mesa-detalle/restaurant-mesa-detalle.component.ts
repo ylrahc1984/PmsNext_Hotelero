@@ -3,13 +3,15 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnIn
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { timer } from 'rxjs';
+import { firstValueFrom, timer } from 'rxjs';
+import { finalize } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
 import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
 import { QzPrintService } from 'src/app/core/services/qz-print.service';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
+import { UsuarioService } from 'src/app/demo/administracion/usuarios/usuario.service';
 import {
   RestaurantCollaboratorChargeDialogComponent,
   RestaurantCollaboratorChargeDialogData,
@@ -121,6 +123,7 @@ export class RestaurantMesaDetalleComponent implements OnInit {
   private readonly precheckPrintBuilder = inject(RestaurantPrecheckPrintBuilder);
   private readonly commandPrintService = inject(RestaurantCommandPrintService);
   private readonly tipoCambioService = inject(TipoCambioService);
+  private readonly usuarioService = inject(UsuarioService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -142,7 +145,7 @@ export class RestaurantMesaDetalleComponent implements OnInit {
     tiempoOcupada   : '01:25 h',
     habitacion      : '000',
     cliente         : 'Cliente General',
-    comentario      : 'Orden de mesa para 4 personas, sin requerimientos especiales.'
+    comentario      : ''
   };
 
   consumoActual                 : ConsumoMesa[] = [];
@@ -182,8 +185,17 @@ export class RestaurantMesaDetalleComponent implements OnInit {
   isReprintingCommand          = false;
   notaPedidoLoading            = false;
   notaPedidoError              = '';
+  comentarioEditando           = false;
+  comentarioGuardando          = false;
+  comentarioBorrador           = '';
+  comentarioError              = '';
+  comentarioMensaje            = '';
+  comentarioCargando           = false;
+  comentarioConsultaError      = '';
 
   private detalleRequestId = 0;
+  private comentarioRequestId = 0;
+  private comentarioReferenciaCargada = '';
   private currentOrderDetail: NotaPedidoRestauranteProceso91Response | null = null;
 
   readonly acciones: AccionOperativa[] = [
@@ -213,6 +225,152 @@ export class RestaurantMesaDetalleComponent implements OnInit {
 
   get monedaPuntoVenta(): string {
     return this.selectedTableContext?.puntoVenta.detalle?.MPV04_Moneda || this.monedaActual || 'USD';
+  }
+
+  abrirEdicionComentario(): void {
+    if (!this.notaPedidoInfo || this.comentarioGuardando) {
+      return;
+    }
+
+    this.comentarioBorrador = this.cleanValue(this.mesaDetalle.comentario);
+    this.comentarioError = '';
+    this.comentarioMensaje = '';
+    this.comentarioEditando = true;
+    this.cdr.markForCheck();
+  }
+
+  cancelarEdicionComentario(): void {
+    if (this.comentarioGuardando) {
+      return;
+    }
+
+    this.comentarioBorrador = this.cleanValue(this.mesaDetalle.comentario);
+    this.comentarioError = '';
+    this.comentarioEditando = false;
+    this.cdr.markForCheck();
+  }
+
+  actualizarComentarioBorrador(value: string): void {
+    this.comentarioBorrador = value;
+    this.comentarioError = '';
+  }
+
+  guardarComentario(): void {
+    const nota = this.notaPedidoInfo;
+    if (!nota || this.comentarioGuardando) {
+      return;
+    }
+
+    const comentario = this.cleanValue(this.comentarioBorrador);
+    this.comentarioGuardando = true;
+    this.comentarioError = '';
+    this.comentarioMensaje = '';
+    this.cdr.markForCheck();
+
+    this.notaPedidoService
+      .actualizarComentarios({
+        proceso: 1,
+        tipNP: nota.tipNp,
+        serieNP: nota.serieNp,
+        numNP: nota.numNp,
+        nRoom: '101',
+        comentario,
+        nItem: 0,
+        respuesta: ''
+      })
+      .pipe(
+        finalize(() => {
+          this.comentarioGuardando = false;
+          this.cdr.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (response) => {
+          const responseReference = this.buildComentarioReference(
+            response?.datos?.tipNP || '',
+            response?.datos?.serieNP || '',
+            response?.datos?.numNP || ''
+          );
+          const requestReference = this.buildComentarioReference(nota.tipNp, nota.serieNp, nota.numNp);
+
+          if (!responseReference || responseReference !== requestReference) {
+            this.comentarioError = response?.mensaje || 'El servidor no confirmó la actualización del comentario.';
+            this.cdr.markForCheck();
+            return;
+          }
+
+          this.mesaDetalle.comentario = comentario;
+          this.comentarioBorrador = comentario;
+          this.comentarioEditando = false;
+          this.comentarioConsultaError = '';
+          this.comentarioMensaje = response.mensaje || 'Comentario actualizado correctamente.';
+          this.cdr.markForCheck();
+        },
+        error: (error: unknown) => {
+          console.error('No se pudo actualizar el comentario de la nota de pedido.', error);
+          this.comentarioError = 'No se pudo guardar el comentario. Revise la conexión e intente nuevamente.';
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  private cargarComentarioNota(tipNp: string, serieNp: string, numNp: string): void {
+    const reference = this.buildComentarioReference(tipNp, serieNp, numNp);
+    if (!reference || reference === this.comentarioReferenciaCargada) {
+      return;
+    }
+
+    const requestId = ++this.comentarioRequestId;
+    this.comentarioCargando = true;
+    this.comentarioConsultaError = '';
+    this.comentarioMensaje = '';
+    this.mesaDetalle.comentario = '';
+    this.cdr.markForCheck();
+
+    this.notaPedidoService
+      .obtenerComentarios({ tipNP: tipNp, serieNP: serieNp, numNP: numNp })
+      .pipe(
+        finalize(() => {
+          if (requestId === this.comentarioRequestId) {
+            this.comentarioCargando = false;
+            this.cdr.markForCheck();
+          }
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (response) => {
+          if (requestId !== this.comentarioRequestId || reference !== this.getCurrentComentarioReference()) {
+            return;
+          }
+
+          const comentario = this.cleanValue(response?.datos?.comentario);
+          this.mesaDetalle.comentario = comentario;
+          this.comentarioBorrador = comentario;
+          this.comentarioReferenciaCargada = reference;
+          this.cdr.markForCheck();
+        },
+        error: (error: unknown) => {
+          if (requestId !== this.comentarioRequestId) {
+            return;
+          }
+
+          console.error('No se pudieron consultar los comentarios de la nota de pedido.', error);
+          this.comentarioConsultaError = 'No se pudo consultar el comentario registrado.';
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  private buildComentarioReference(tipNp: string, serieNp: string, numNp: string): string {
+    const values = [tipNp, serieNp, numNp].map((value) => this.cleanValue(value));
+    return values.every(Boolean) ? values.join('|') : '';
+  }
+
+  private getCurrentComentarioReference(): string {
+    const nota = this.notaPedidoInfo;
+    return nota ? this.buildComentarioReference(nota.tipNp, nota.serieNp, nota.numNp) : '';
   }
 
   abrirModalPropina(): void {
@@ -789,12 +947,66 @@ export class RestaurantMesaDetalleComponent implements OnInit {
       return;
     }
 
+    const usuario = this.getOperador();
+    this.eliminandoItems.add(item.id);
+    this.cdr.markForCheck();
+
+    let tienePermiso = false;
+    try {
+      tienePermiso = await firstValueFrom(
+        this.usuarioService.tienePrivilegioGeneral('MPVELIPLA', 'PVTCH', usuario)
+      );
+    } catch (error: unknown) {
+      console.error('No se pudo validar el privilegio MPVELIPLA.', error);
+      this.eliminandoItems.delete(item.id);
+      this.cdr.markForCheck();
+      await Swal.fire({
+        title: 'No se pudo validar el permiso',
+        text: 'Por seguridad, el ítem no fue eliminado. Intente nuevamente o contacte a un administrador.',
+        icon: 'error',
+        confirmButtonText: 'Aceptar',
+        customClass: {
+          popup: 'next-confirm-modal'
+        }
+      });
+      return;
+    }
+
+    if (!tienePermiso) {
+      this.eliminandoItems.delete(item.id);
+      this.cdr.markForCheck();
+      await Swal.fire({
+        title: 'Acción no permitida',
+        text: `El usuario ${usuario} no cuenta con el privilegio MPVELIPLA para eliminar ítems de la nota de pedido.`,
+        icon: 'warning',
+        confirmButtonText: 'Aceptar',
+        customClass: {
+          popup: 'next-confirm-modal'
+        }
+      });
+      return;
+    }
+
     const result = await Swal.fire({
-      title: 'Eliminar item',
-      text: `Desea eliminar ${item.producto || 'este item'} de la nota?`,
+      title: 'Anular ítem',
+      text: `Indique por qué desea anular ${item.producto || 'este ítem'} de la nota.`,
       icon: 'warning',
+      input: 'textarea',
+      inputLabel: 'Motivo de la anulación',
+      inputPlaceholder: 'Escriba el motivo...',
+      inputAttributes: {
+        maxlength: '500',
+        rows: '4',
+        'aria-label': 'Motivo de la anulación'
+      },
+      inputValidator: (value) => {
+        if (!this.cleanValue(value)) {
+          return 'Debe ingresar el motivo de la anulación para continuar.';
+        }
+        return null;
+      },
       showCancelButton: true,
-      confirmButtonText: 'Si, eliminar',
+      confirmButtonText: 'Sí, anular',
       cancelButtonText: 'Cancelar',
       reverseButtons: true,
       customClass: {
@@ -803,11 +1015,17 @@ export class RestaurantMesaDetalleComponent implements OnInit {
     });
 
     if (!result.isConfirmed) {
+      this.eliminandoItems.delete(item.id);
+      this.cdr.markForCheck();
       return;
     }
 
-    this.eliminandoItems.add(item.id);
-    this.cdr.markForCheck();
+    const motivoAnulacion = this.cleanValue(result.value);
+    if (!motivoAnulacion) {
+      this.eliminandoItems.delete(item.id);
+      this.cdr.markForCheck();
+      return;
+    }
 
     this.notaPedidoService
       .eliminarItem({
@@ -815,7 +1033,9 @@ export class RestaurantMesaDetalleComponent implements OnInit {
         serieNp: this.notaPedidoInfo.serieNp,
         numNp: this.notaPedidoInfo.numNp,
         nItem: item.id,
-        fecha: this.notaPedidoInfo.fecha || this.formatDate(new Date())
+        fecha: this.notaPedidoInfo.fecha || this.formatDate(new Date()),
+        comentario: motivoAnulacion,
+        operador: usuario
       })
       .subscribe({
         next: () => {
@@ -1142,6 +1362,16 @@ export class RestaurantMesaDetalleComponent implements OnInit {
   private cargarNotaPedidoActual(): void {
     this.notaPedidoDetalleValido = false;
     this.notaPedidoError = '';
+    this.comentarioEditando = false;
+    this.comentarioGuardando = false;
+    this.comentarioBorrador = '';
+    this.comentarioError = '';
+    this.comentarioMensaje = '';
+    this.comentarioCargando = false;
+    this.comentarioConsultaError = '';
+    this.comentarioReferenciaCargada = '';
+    this.comentarioRequestId += 1;
+    this.mesaDetalle.comentario = '';
     const tipNp = this.cleanValue(this.route.snapshot.queryParamMap.get('tipNp'));
     const serieNp = this.cleanValue(this.route.snapshot.queryParamMap.get('serieNp'));
     const numNp = this.cleanValue(this.route.snapshot.queryParamMap.get('numNp'));
@@ -1505,6 +1735,16 @@ export class RestaurantMesaDetalleComponent implements OnInit {
     this.currentOrderDetail = null;
     this.notaPedidoLoading = false;
     this.notaPedidoError = '';
+    this.comentarioEditando = false;
+    this.comentarioGuardando = false;
+    this.comentarioBorrador = '';
+    this.comentarioError = '';
+    this.comentarioMensaje = '';
+    this.comentarioCargando = false;
+    this.comentarioConsultaError = '';
+    this.comentarioReferenciaCargada = '';
+    this.comentarioRequestId += 1;
+    this.mesaDetalle.comentario = '';
     this.consumoActual = [];
     this.subtotal = 0;
     this.descuento = 0;
@@ -1525,7 +1765,6 @@ export class RestaurantMesaDetalleComponent implements OnInit {
       this.mesaDetalle.tiempoOcupada = '-';
       this.mesaDetalle.habitacion = '';
       this.mesaDetalle.cliente = '';
-      this.mesaDetalle.comentario = 'Mesa disponible para nueva nota de pedido.';
     }
   }
 
@@ -1583,6 +1822,13 @@ export class RestaurantMesaDetalleComponent implements OnInit {
         respuesta: response.respuesta || this.notaPedidoInfo.respuesta
       };
       this.persistirNotaPedidoMesaState(response);
+      if ((response.detalles || []).length > 0) {
+        this.cargarComentarioNota(
+          this.notaPedidoInfo.tipNp,
+          this.notaPedidoInfo.serieNp,
+          this.notaPedidoInfo.numNp
+        );
+      }
     }
     this.actualizarTiempoTranscurrido();
     this.cdr.markForCheck();

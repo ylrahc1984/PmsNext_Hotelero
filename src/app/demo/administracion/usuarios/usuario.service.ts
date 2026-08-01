@@ -23,6 +23,11 @@ import {
   UsuarioUI
 } from './usuario.models';
 
+export interface ValorPrivilegioGeneralApi {
+  Valor?: string;
+  valor?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class UsuarioService {
   private apiUrl = `${environment.apiUrl}/usuarios`;
@@ -149,6 +154,22 @@ export class UsuarioService {
 
   getPrivilegiosUsuario(usuario: string, modulo: string): Observable<string[]> {
     return this.http.get<string[]>(`${this.privilegiosUrl}/usuario?usuario=${usuario}&modulo=${modulo}`);
+  }
+
+  tienePrivilegioGeneral(codParametro: string, modulo: string, usuario: string): Observable<boolean> {
+    const params = new HttpParams()
+      .set('codParametro', codParametro)
+      .set('modulo', modulo)
+      .set('usuario', usuario);
+
+    return this.http
+      .get<ValorPrivilegioGeneralApi[]>(`${this.privilegiosUrl}/valorprivilegio`, { params })
+      .pipe(
+        map((response) => {
+          const value = response?.[0]?.Valor ?? response?.[0]?.valor ?? '';
+          return value.toString().trim().toUpperCase() === 'TRUE';
+        })
+      );
   }
 
   asignarPrivilegio(usuario: string, modulo: string, idPrivilegio: string): Observable<unknown> {

@@ -161,6 +161,8 @@ export interface NotaPedidoRestauranteEliminarItemParams {
   numNp: string;
   nItem: number;
   fecha: string;
+  comentario: string;
+  operador: string;
 }
 
 export interface NotaPedidoRestauranteCambiarCuentaParams {
@@ -255,6 +257,41 @@ export interface RestaurantRoomChargeResponse {
   respuesta?: string;
 }
 
+export interface ActualizarComentariosRequest {
+  proceso     : number;
+  tipNP       : string;
+  serieNP     : string;
+  numNP       : string;
+  nRoom       : string;
+  comentario  : string;
+  nItem       : number;
+  respuesta   : string;
+}
+
+export interface ConsultarComentariosParams {
+  tipNP    : string;
+  serieNP  : string;
+  numNP    : string;
+}
+
+export interface ConsultarComentariosResponse {
+  mensaje : string;
+  datos   : {
+    comentario  : string;
+    nRoom       : string;
+    items       : number;
+  } | null;
+}
+
+export interface ActualizarComentariosResponse {
+  mensaje : string;
+  datos   : {
+    tipNP      : string;
+    serieNP    : string;
+    numNP      : string;
+  } | null;
+}
+
 export interface RestaurantCreditRoom {
   numHabita: string;
   codReserva: string;
@@ -334,6 +371,21 @@ export class NotaPedidoRestauranteService {
 
   registrarCargoHabitacion(payload: RestaurantRoomChargePayload): Observable<RestaurantRoomChargeResponse> {
     return this.http.post<RestaurantRoomChargeResponse>(`${this.baseUrl}/cargo-habitacion-restaurante`, payload);
+  }
+
+  actualizarComentarios(payload: ActualizarComentariosRequest): Observable<ActualizarComentariosResponse> {
+    return this.http.put<ActualizarComentariosResponse>(`${this.baseUrl}/comentarios-nota-pedido`, payload);
+  }
+
+  obtenerComentarios(params: ConsultarComentariosParams): Observable<ConsultarComentariosResponse> {
+    const httpParams = new HttpParams()
+      .set('tipNP', params.tipNP)
+      .set('serieNP', params.serieNP)
+      .set('numNP', params.numNP);
+
+    return this.http.get<ConsultarComentariosResponse>(`${this.baseUrl}/comentarios-nota-pedido`, {
+      params: httpParams
+    });
   }
 
   obtenerHabitacionesConCredito(): Observable<RestaurantCreditRoom[]> {
@@ -426,8 +478,8 @@ export class NotaPedidoRestauranteService {
       lPrecio: '',
       nItem: Number(params.nItem || 0),
       nRoom: '',
-      comentario: '',
-      operador: '',
+      comentario: params.comentario.trim(),
+      operador: params.operador.trim(),
       detalle: [],
       respuesta: ''
     };

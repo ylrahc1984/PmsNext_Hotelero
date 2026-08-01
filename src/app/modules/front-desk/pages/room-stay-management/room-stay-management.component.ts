@@ -47,6 +47,7 @@ import {
   RoomChangePayload,
   RoomCheckoutPayload,
   RoomCheckoutResponse,
+  RoomStayCommentsPayload,
   RoomStayApiCharge,
   RoomStayApiData,
   RoomStayManagementService
@@ -232,6 +233,7 @@ interface RoomStay {
   plan                  : string;
   reservedAt            : string;
   observations          : string[];
+  comments              : string;
   guests                : Guest[];
   lodgingCharges        : Charge[];
   extraCharges          : Charge[];
@@ -278,6 +280,7 @@ const emptyRoomStay: RoomStay = {
   plan                  : '',
   reservedAt            : '',
   observations          : [],
+  comments              : '',
   guests                : [],
   lodgingCharges        : [],
   extraCharges          : [],
@@ -327,6 +330,10 @@ export class RoomStayManagementComponent implements OnInit {
   readonly room                                  = signal<RoomStay>({ ...emptyRoomStay });
   readonly isStayLoading                         = signal(false);
   readonly stayErrorMessage                      = signal('');
+  readonly isCommentsEditing                     = signal(false);
+  readonly isCommentsSaving                      = signal(false);
+  readonly commentsDraft                         = signal('');
+  readonly commentsErrorMessage                  = signal('');
   readonly availableRoomOptions                  = signal<RoomOption[]>([]);
   readonly isAvailableRoomsLoading               = signal(false);
   readonly availableRoomsLoaded                  = signal(false);
@@ -744,6 +751,76 @@ export class RoomStayManagementComponent implements OnInit {
 
   setActiveTab(tab: ActiveTab): void {
     this.activeTab.set(tab);
+  }
+
+  startCommentsEditing(): void {
+    if (this.isCommentsSaving()) {
+      return;
+    }
+
+    this.commentsDraft.set(this.room().comments);
+    this.commentsErrorMessage.set('');
+    this.isCommentsEditing.set(true);
+  }
+
+  cancelCommentsEditing(): void {
+    if (this.isCommentsSaving()) {
+      return;
+    }
+
+    this.commentsDraft.set(this.room().comments);
+    this.commentsErrorMessage.set('');
+    this.isCommentsEditing.set(false);
+  }
+
+  updateCommentsDraft(value: string): void {
+    this.commentsDraft.set(value);
+    this.commentsErrorMessage.set('');
+  }
+
+  saveStayComments(): void {
+    if (this.isCommentsSaving()) {
+      return;
+    }
+
+    const room = this.room();
+    const codReserva = this.cleanText(room.reservationNumber);
+    const roomNumber = this.cleanText(room.roomNumber);
+    const payload: RoomStayCommentsPayload = {
+      comentarios: this.cleanText(this.commentsDraft()),
+      operador: this.getOperador()
+    };
+
+    if (!codReserva || !roomNumber) {
+      this.commentsErrorMessage.set('No se pudo identificar la reserva o la habitación para guardar el comentario.');
+      return;
+    }
+
+    this.isCommentsSaving.set(true);
+    this.commentsErrorMessage.set('');
+
+    this.roomStayManagementService
+      .updateStayComments(codReserva, roomNumber, payload)
+      .pipe(
+        finalize(() => this.isCommentsSaving.set(false)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: () => {
+          this.room.update((currentRoom) => ({ ...currentRoom, comments: payload.comentarios }));
+          this.commentsDraft.set(payload.comentarios);
+          this.isCommentsEditing.set(false);
+          this.toastService.success(
+            payload.comentarios ? 'Comentario actualizado correctamente.' : 'Comentario eliminado correctamente.',
+            3500,
+            'Comentarios'
+          );
+        },
+        error: (error: unknown) => {
+          console.error('No se pudo actualizar el comentario de la estancia.', error);
+          this.commentsErrorMessage.set('No se pudo guardar el comentario. Intente nuevamente.');
+        }
+      });
   }
 
   backToRoomRack(): void {
@@ -2453,7 +2530,7 @@ export class RoomStayManagementComponent implements OnInit {
   private mapApiStayToRoomStay(stay: RoomStayApiData): RoomStay {
     const checkIn = this.formatApiDate(stay.fechaIng);
     const checkOut = this.formatApiDate(stay.fechaSal);
-    const observations = [stay.observacion, stay.comentarios]
+    const observations = [stay.observacion]
       .map((item) => this.cleanText(item))
       .filter((item) => item.length > 0);
 
@@ -2474,6 +2551,7 @@ export class RoomStayManagementComponent implements OnInit {
       plan                  : this.cleanText(stay.codPlan) || 'S/D',
       reservedAt            : '',
       observations          ,
+      comments              : this.cleanText(stay.comentarios),
       guests                : Array.isArray(stay.roomingList)
         ? stay.roomingList
             .slice()

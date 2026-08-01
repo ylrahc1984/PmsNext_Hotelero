@@ -91,9 +91,67 @@
 
         <div class="left-lower-stack">
           <article class="card notes-card">
-            <h2><span class="material-icons" aria-hidden="true">chat_bubble</span> Observaciones y Comentarios</h2>
+            <h2><span class="material-icons" aria-hidden="true">visibility</span> Observaciones</h2>
             @for (observation of room().observations; track observation) {
               <p>{{ observation }}</p>
+            } @empty {
+              <p class="notes-card__empty">Sin observaciones registradas.</p>
+            }
+          </article>
+
+          <article class="card comments-card" [class.comments-card--editing]="isCommentsEditing()">
+            <header class="comments-card__header">
+              <div>
+                <span class="material-icons" aria-hidden="true">edit_note</span>
+                <h2>Comentarios</h2>
+              </div>
+              @if (!isCommentsEditing()) {
+                <button
+                  type="button"
+                  class="comments-card__edit"
+                  [attr.aria-label]="room().comments ? 'Editar comentario' : 'Agregar comentario'"
+                  (click)="startCommentsEditing()"
+                >
+                  <span class="material-icons" aria-hidden="true">{{ room().comments ? 'edit' : 'add' }}</span>
+                  {{ room().comments ? 'Editar' : 'Agregar' }}
+                </button>
+              }
+            </header>
+
+            @if (isCommentsEditing()) {
+              <div class="comments-card__editor">
+                <label for="stay-comments">Comentario de la reserva</label>
+                <textarea
+                  id="stay-comments"
+                  rows="3"
+                  placeholder="Escriba un comentario para esta estancia..."
+                  [value]="commentsDraft()"
+                  [disabled]="isCommentsSaving()"
+                  (input)="updateCommentsDraft($any($event.target).value)"
+                ></textarea>
+
+                @if (commentsErrorMessage()) {
+                  <p class="comments-card__error" role="alert">{{ commentsErrorMessage() }}</p>
+                }
+
+                <footer class="comments-card__actions">
+                  <button type="button" class="comments-card__cancel" [disabled]="isCommentsSaving()" (click)="cancelCommentsEditing()">
+                    Cancelar
+                  </button>
+                  <button type="button" class="comments-card__save" [disabled]="isCommentsSaving()" (click)="saveStayComments()">
+                    @if (isCommentsSaving()) {
+                      <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                      Guardando...
+                    } @else {
+                      Guardar
+                    }
+                  </button>
+                </footer>
+              </div>
+            } @else {
+              <p class="comments-card__content" [class.comments-card__content--empty]="!room().comments">
+                {{ room().comments || 'Sin comentarios registrados.' }}
+              </p>
             }
           </article>
 

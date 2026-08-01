@@ -60,9 +60,62 @@
         </div>
       </div>
 
-      <div class="mesa-comment">
-        <span>Comentario</span>
-        <p>{{ mesaDetalle.comentario }}</p>
+      <div class="mesa-comment" [class.mesa-comment--editing]="comentarioEditando">
+        <div class="mesa-comment__header">
+          <div>
+            <i class="feather icon-edit-3" aria-hidden="true"></i>
+            <span>Comentario</span>
+          </div>
+          <button
+            *ngIf="!comentarioEditando"
+            type="button"
+            class="mesa-comment__edit"
+            [disabled]="!notaPedidoInfo || comentarioCargando"
+            [attr.title]="notaPedidoInfo ? (mesaDetalle.comentario ? 'Editar comentario' : 'Agregar comentario') : 'No hay una nota de pedido activa'"
+            (click)="abrirEdicionComentario()"
+          >
+            <i class="feather" [ngClass]="mesaDetalle.comentario ? 'icon-edit-2' : 'icon-plus'" aria-hidden="true"></i>
+            {{ mesaDetalle.comentario ? 'Editar' : 'Agregar' }}
+          </button>
+        </div>
+
+        <ng-container *ngIf="comentarioEditando; else comentarioLectura">
+          <div class="mesa-comment__editor">
+            <label for="restaurant-order-comment">Comentario de la nota de pedido</label>
+            <textarea
+              id="restaurant-order-comment"
+              rows="3"
+              placeholder="Escriba un comentario para esta mesa..."
+              [value]="comentarioBorrador"
+              [disabled]="comentarioGuardando"
+              (input)="actualizarComentarioBorrador($any($event.target).value)"
+            ></textarea>
+
+            <p *ngIf="comentarioError" class="mesa-comment__error" role="alert">{{ comentarioError }}</p>
+
+            <div class="mesa-comment__actions">
+              <button type="button" class="mesa-comment__cancel" [disabled]="comentarioGuardando" (click)="cancelarEdicionComentario()">
+                Cancelar
+              </button>
+              <button type="button" class="mesa-comment__save" [disabled]="comentarioGuardando" (click)="guardarComentario()">
+                <span *ngIf="comentarioGuardando" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                {{ comentarioGuardando ? 'Guardando...' : 'Guardar' }}
+              </button>
+            </div>
+          </div>
+        </ng-container>
+
+        <ng-template #comentarioLectura>
+          <p *ngIf="comentarioCargando" class="mesa-comment__content mesa-comment__content--loading">
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+            Consultando comentario...
+          </p>
+          <p *ngIf="!comentarioCargando" class="mesa-comment__content" [class.mesa-comment__content--empty]="!mesaDetalle.comentario">
+            {{ mesaDetalle.comentario || 'Sin comentarios registrados.' }}
+          </p>
+          <small *ngIf="comentarioConsultaError" class="mesa-comment__query-error" role="alert">{{ comentarioConsultaError }}</small>
+          <small *ngIf="comentarioMensaje" class="mesa-comment__success" role="status">{{ comentarioMensaje }}</small>
+        </ng-template>
       </div>
     </article>
 
