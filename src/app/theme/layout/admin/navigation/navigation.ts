@@ -68,6 +68,14 @@ export const NavigationItems: NavigationItem[] = [
             icon: 'feather icon-home',
             classes: 'nav-item'
           },
+        {
+            id: 'front-desk-folios-master',
+            title: 'Folios Master',
+            type: 'item',
+            url: '/front-desk/folios-master',
+            icon: 'feather icon-layers',
+            classes: 'nav-item'
+          },
           {
             id: 'front-desk-habitaciones-bloqueadas',
             title: 'Habitaciones Bloqueadas',
@@ -84,14 +92,7 @@ export const NavigationItems: NavigationItem[] = [
             icon: 'feather icon-check-square',
             classes: 'nav-item'
           },
-          {
-            id: 'front-desk-folios-master',
-            title: 'Folios Master',
-            type: 'item',
-            url: '/front-desk/folios-master',
-            icon: 'feather icon-layers',
-            classes: 'nav-item'
-          },
+
           { id: 'front-desk-pronostico-ocupacion', title: 'Pronóstico de Ocupación', type: 'item', url: '/front-desk/occupancy-forecast', icon: 'feather icon-trending-up', classes: 'nav-item' },
           { id: 'front-desk-cierre-caja', title: 'Cierre de Caja', type: 'item', url: '/front-desk/cierre-caja', icon: 'feather icon-lock', classes: 'nav-item' },
           {

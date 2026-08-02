@@ -92,13 +92,16 @@ export class OrdenPedidoService {
     );
   }
 
-  anularOrden(tipOrden: string, serie: string, numero: string): Observable<{ respuesta?: string }> {
+  anularOrden(tipOrden: string, serie: string, numero: string): Observable<OrdenPedidoCreateResponse> {
     const tip = this.clean(tipOrden);
     const normalizedSerie = this.clean(serie) || '000';
     const normalizedNumero = this.clean(numero);
+    const documento = normalizedNumero.includes('-')
+      ? normalizedNumero
+      : `${normalizedSerie}-${normalizedNumero}`;
 
     return this.http
-      .delete(`${this.apiUrl}/${encodeURIComponent(tip)}/${encodeURIComponent(`${normalizedSerie}-${normalizedNumero}`)}`, {
+      .delete(`${this.apiUrl}/${encodeURIComponent(tip)}/${encodeURIComponent(documento)}`, {
         responseType: 'text'
       })
       .pipe(

@@ -30,7 +30,7 @@
           </div>
         </section>
  
-        <section class="op-card op-context-card py-3">
+        <section class="op-card op-context-card py-2">
           <div class="op-context-card__company">
             <h6 class="op-section-title mb-2">{{ empresa()?.MA04_RazonSocial || '-' }}</h6>
             <div class="op-company-meta">Cedula: {{ empresa()?.MA04_Ruc || '-' }}</div>
@@ -52,7 +52,7 @@
 
           <div class="op-context-card__fields">
             <div class="row g-2">
-              <div class="col-lg-6 col-md-6">
+              <div class="col-lg-4 col-md-6">
                 <label class="form-label op-label">Punto de Venta</label>
                 <select class="form-control" formControlName="pntVenta" [disabled]="isSubmitting || puntosVentaLoading">
                   <option value="" *ngIf="puntosVentaCatalogo.length === 0">
@@ -66,13 +66,13 @@
                   </option>
                 </select>
               </div>
-              <div class="col-lg-6 col-md-6">
+              <div class="col-lg-4 col-md-6">
                 <label class="form-label op-label">Tipo Documento</label>
                 <select class="form-control" formControlName="tipNDP">
                   <option *ngFor="let tipo of tiposDocumento" [value]="tipo.value">{{ tipo.label }}</option>
                 </select>
               </div>
-              <div class="col-lg-6 col-md-6">
+              <div class="col-lg-4 col-md-6">
                 <label class="form-label op-label">Moneda</label>
                 <select class="form-control" formControlName="moneda" [disabled]="isSubmitting || monedasLoading">
                   <option value="" *ngIf="monedasCatalogo.length === 0">
@@ -83,11 +83,11 @@
                   </option>
                 </select>
               </div>
-              <div class="col-lg-6 col-md-6">
+              <div class="col-lg-4 col-md-6">
                 <label class="form-label op-label">Vendedor</label>
                 <input class="form-control" formControlName="codVendedor" placeholder="Código vendedor">
               </div>
-              <div class="col-lg-6 col-md-6">
+              <div class="col-lg-4 col-md-6">
                 <label class="form-label op-label">Plan Tarifario</label>
                 <select class="form-control" formControlName="planTarifario" [disabled]="isSubmitting || planesTarifariosLoading">
                   <option value="" *ngIf="planesTarifariosCatalogo.length === 0">
@@ -98,7 +98,7 @@
                   </option>
                 </select>
               </div>
-              <div class="col-lg-6 col-md-6">
+              <div class="col-lg-4 col-md-6">
                 <label class="form-label op-label">Lista de Precios</label>
                 <select class="form-control" formControlName="listaPrecio" [disabled]="isSubmitting || listasPrecioLoading">
                   <option value="" *ngIf="listasPrecioCatalogo.length === 0">
@@ -353,7 +353,7 @@
           </div>
         </section>
 
-        <div class="row g-4">
+        <div class="row g-2">
           <div class="col-xl-8">
             <section class="op-card">
               <div class="op-card__header">
@@ -380,10 +380,10 @@
                 </div>
               </div>
 
-              <div class="row g-3" formArrayName="pagos">
+              <div class="row g-2" formArrayName="pagos">
                 <div class="col-12" *ngFor="let group of pagosArray.controls; let i = index; trackBy: trackByIndex" [formGroupName]="i">
                   <div class="op-payment-row">
-                    <div class="row g-3 align-items-end">
+                    <div class="row g-2 align-items-end">
                       <div class="col-lg-3 col-md-6">
                         <label class="form-label op-label">Forma Pago</label>
                         <select class="form-control" formControlName="frmPago">

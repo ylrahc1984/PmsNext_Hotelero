@@ -157,11 +157,11 @@ export class WalkInService {
       .pipe(map((response) => this.mapAgenciaPage(response, pageNumber, pageSize)));
   }
 
-  searchTarifas(term: string): Observable<WalkInTarifaOption[]> {
+  searchTarifas(term: string, onlyActive = false): Observable<WalkInTarifaOption[]> {
     const sanitizedTerm = term.trim();
 
     return this.getTarifasReserva().pipe(
-      map((items) => this.filterTarifas(items, sanitizedTerm).slice(0, 8)),
+      map((items) => this.filterTarifas(items, sanitizedTerm, onlyActive).slice(0, 8)),
       catchError(() => of([]))
     );
   }
@@ -248,11 +248,12 @@ export class WalkInService {
     return Array.isArray(response?.data) ? response.data : [];
   }
 
-  filterTarifas(items: WalkInTarifaOption[], term: string): WalkInTarifaOption[] {
+  filterTarifas(items: WalkInTarifaOption[], term: string, onlyActive = false): WalkInTarifaOption[] {
     const normalizedTerm = term.trim().toLowerCase();
-    if (!normalizedTerm) return items;
+    const availableItems = onlyActive ? items.filter((item) => item.activo === true) : items;
+    if (!normalizedTerm) return availableItems;
 
-    return items.filter((item) =>
+    return availableItems.filter((item) =>
       [item.codigo, item.descripcion, item.moneda, item.operador].join(' ').toLowerCase().includes(normalizedTerm)
     );
   }

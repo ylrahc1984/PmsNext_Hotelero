@@ -6,6 +6,7 @@ import { finalize } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
+import { environment } from 'src/environments/environment';
 import { OrdenPedidoListadoItem } from '../../interfaces/orden-pedido.interface';
 import { OrdenPedidoService } from '../../services/orden-pedido.service';
 
@@ -134,6 +135,7 @@ export class OrdenPedidoListComponent implements OnInit {
     const serie = (item.serie ?? '').toString().trim() || '000';
     const numero = (item.numero ?? '').toString().trim();
     const key = this.getRowKey(item);
+    const documento = numero.includes('-') ? numero : `${serie}-${numero}`;
 
     if (!tipOrden || !numero || this.isAnulando(item) || this.isOrdenAnulada(item)) {
       return;
@@ -141,7 +143,7 @@ export class OrdenPedidoListComponent implements OnInit {
 
     const result = await Swal.fire({
       title: this.isFrontDeskContext ? 'Anular Recibo Comercial' : 'Anular orden de pedido',
-      html: `Esta acción anulará ${this.isFrontDeskContext ? 'el recibo' : 'la orden'} <strong>${tipOrden} ${serie}-${numero}</strong>.<br>No continúe si no está seguro.`,
+      html: `Esta acción anulará ${this.isFrontDeskContext ? 'el recibo' : 'la orden'} <strong>${tipOrden} ${documento}</strong>.<br>No continúe si no está seguro.`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Sí, anular',
@@ -155,6 +157,16 @@ export class OrdenPedidoListComponent implements OnInit {
       return;
     }
 
+    const baseApiUrl = (environment.apiUrl || 'http://localhost:5000/api').toString().replace(/\/+$/, '');
+    const endpoint = `${baseApiUrl}/nota-pedido/${encodeURIComponent(tipOrden)}/${encodeURIComponent(documento)}`;
+
+    console.groupCollapsed('[OrdenPedidoList] Solicitud para anular documento');
+    console.log('Método:', 'DELETE');
+    console.log('URL:', endpoint);
+    console.log('Parámetros:', { tipOrden, serie, numero, documento });
+    console.log('Body:', null);
+    console.groupEnd();
+
     this.anulatingKeys.add(key);
 
     this.ordenPedidoService
@@ -166,9 +178,10 @@ export class OrdenPedidoListComponent implements OnInit {
       )
       .subscribe({
         next: (response) => {
+          console.log('[OrdenPedidoList] Respuesta de anulación:', response);
           void Swal.fire({
             title: this.isFrontDeskContext ? 'Recibo anulado' : 'Orden anulada',
-            text: response?.respuesta || (
+            text: response?.mensaje || response?.respuesta || (
               this.isFrontDeskContext
                 ? 'El Recibo Comercial fue anulado correctamente.'
                 : 'La orden de pedido fue anulada correctamente.'

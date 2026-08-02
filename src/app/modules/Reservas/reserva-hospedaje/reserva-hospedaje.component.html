@@ -262,7 +262,9 @@
             <div class="room-editor-fields room-editor-fields--three">
               <label class="field">
                 <span>Precio por habitación <b>*</b></span>
-                <input type="number" class="form-control" formControlName="precio" min="0" step="0.01">
+                <input type="number" class="form-control" formControlName="precio" min="0" step="0.01" readonly>
+                <small class="text-muted" *ngIf="roomRateLoading()">Consultando precio de la tarifa...</small>
+                <small class="text-danger" *ngIf="!roomRateLoading() && roomRateError()">{{ roomRateError() }}</small>
               </label>
               <label class="field">
                 <span>Cantidad niños</span>
@@ -285,13 +287,13 @@
               <strong>{{ reservaForm.controls.moneda.value || '---' }} {{ habitacionForm.controls.total.value | number: '1.2-2' }}</strong>
             </div>
             <div class="room-editor-actions__buttons">
-              <button type="button" class="btn btn-light" (click)="habitacionForm.reset({ categoria: roomCategories[0]?.codigo || '', tipo: roomTypes[0]?.codigo || '', cantidad: 1, pax: roomTypes[0]?.pax || 0, precio: 200, cantidadNinos: 0, precioNino: 0, total: 0 })">
+              <button type="button" class="btn btn-light" (click)="habitacionForm.reset({ categoria: roomCategories[0]?.codigo || '', tipo: roomTypes[0]?.codigo || '', cantidad: 1, pax: roomTypes[0]?.pax || 0, precio: 0, cantidadNinos: 0, precioNino: 0, total: 0 })">
                 Cancelar
               </button>
-              <button type="button" class="btn btn-primary" (click)="agregarHabitacion()" [disabled]="checkingRoomAvailability()">
-                <span class="spinner-border spinner-border-sm" *ngIf="checkingRoomAvailability()"></span>
-                <i class="bi bi-plus-lg" *ngIf="!checkingRoomAvailability()"></i>
-                {{ checkingRoomAvailability() ? 'Verificando disponibilidad...' : (editingRoomIndex() === null ? 'Agregar a la reserva' : 'Actualizar habitación') }}
+              <button type="button" class="btn btn-primary" (click)="agregarHabitacion()" [disabled]="checkingRoomAvailability() || roomRateLoading()">
+                <span class="spinner-border spinner-border-sm" *ngIf="checkingRoomAvailability() || roomRateLoading()"></span>
+                <i class="bi bi-plus-lg" *ngIf="!checkingRoomAvailability() && !roomRateLoading()"></i>
+                {{ roomRateLoading() ? 'Consultando tarifa...' : (checkingRoomAvailability() ? 'Verificando disponibilidad...' : (editingRoomIndex() === null ? 'Agregar a la reserva' : 'Actualizar habitación')) }}
               </button>
             </div>
           </div>
@@ -356,7 +358,7 @@
             </div>
           </div>
           <div class="collapse-actions">
-            <button type="button" class="btn btn-outline-primary compact-button" (click)="abrirPlanModal(0); $event.stopPropagation()" [disabled]="isNoMealPlanSelected()">Ver / Editar plan</button>
+            <button type="button" class="btn btn-outline-primary compact-button" (click)="abrirPlanModal(0); $event.stopPropagation()" [disabled]="isNoMealPlanSelected() || inclusiones.length === 0">Ver detalle</button>
             <button type="button" class="collapse-toggle" [attr.aria-expanded]="planExpanded()" aria-label="Mostrar u ocultar plan">
               <i class="bi" [ngClass]="planExpanded() ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
             </button>
@@ -720,20 +722,19 @@
   <div class="modal-dialog modal-lg modal-dialog-centered" (click)="$event.stopPropagation()">
     <div class="modal-content" [formGroup]="inclusionForm">
       <div class="modal-header">
-        <h5 class="modal-title">Administrar Plan Alimentación</h5>
+        <h5 class="modal-title">Detalle del Plan de Alimentación</h5>
         <button type="button" class="btn-close" (click)="cerrarPlanModal()"></button>
       </div>
       <div class="modal-body modal-grid">
-        <label>Código Servicio<input type="text" class="form-control" formControlName="codServ"></label>
-        <label>Descripción<input type="text" class="form-control" formControlName="desServ"></label>
-        <label>Tipo Pax<input type="text" class="form-control" formControlName="tipPax"></label>
-        <label>Precio<input type="number" class="form-control" formControlName="precio" min="0" step="0.01"></label>
-        <label>Cantidad<input type="number" class="form-control" formControlName="cantidad" min="1"></label>
+        <label>Código Servicio<input type="text" class="form-control" formControlName="codServ" readonly></label>
+        <label>Descripción<input type="text" class="form-control" formControlName="desServ" readonly></label>
+        <label>Tipo Pax<input type="text" class="form-control" formControlName="tipPax" readonly></label>
+        <label>Precio<input type="number" class="form-control" formControlName="precio" readonly></label>
+        <label>Cantidad<input type="number" class="form-control" formControlName="cantidad" readonly></label>
         <div class="modal-total"><span>Total Servicio</span><strong>{{ inclusionForm.controls.totServ.value | number: '1.2-2' }}</strong></div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-light" (click)="cerrarPlanModal()">Cancelar</button>
-        <button type="button" class="btn btn-primary" (click)="guardarInclusion()">Guardar</button>
+        <button type="button" class="btn btn-primary" (click)="cerrarPlanModal()">Cerrar</button>
       </div>
     </div>
   </div>
