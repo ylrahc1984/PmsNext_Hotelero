@@ -23,6 +23,7 @@ export interface RestaurantCollaboratorChargePrintData {
 })
 export class RestaurantCollaboratorChargePrintBuilder {
   private readonly paperWidth = 40;
+  private readonly printedAmount = 0;
 
   build(data: RestaurantCollaboratorChargePrintData): string[] {
     const receipt = new EscPosReceiptComposer({ width: this.paperWidth });
@@ -98,7 +99,7 @@ export class RestaurantCollaboratorChargePrintBuilder {
     receipt.separator('=');
 
     if (discount > 0) {
-      receipt.columns('Descuento', `-${receipt.money(discount, currency)}`);
+      receipt.columns('Descuento', receipt.money(this.printedAmount, currency));
     }
 
     receipt
@@ -106,7 +107,7 @@ export class RestaurantCollaboratorChargePrintBuilder {
       .bold(true)
       .size(2)
       .line('TOTAL')
-      .line(receipt.money(header.PPV10_TotalDocu, currency))
+      .line(receipt.money(this.printedAmount, currency))
       .size(1)
       .bold(false)
       .separator('=')
@@ -138,7 +139,7 @@ export class RestaurantCollaboratorChargePrintBuilder {
 
     receipt.wrappedColumns(
       `${quantityLabel} x ${product}`,
-      receipt.money(item.PPV11_Total, lineCurrency)
+      receipt.money(this.printedAmount, lineCurrency)
     );
   }
 
