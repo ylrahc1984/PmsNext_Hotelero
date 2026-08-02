@@ -42,12 +42,26 @@
             <span class="step-badge">1.</span>
             <h2>Datos Generales</h2>
           </div>
-          <button type="button" class="icon-ghost" aria-label="Contraer datos generales">
-            <i class="bi bi-chevron-up"></i>
+          <button
+            type="button"
+            class="icon-ghost"
+            [attr.aria-expanded]="generalExpanded()"
+            [attr.aria-label]="generalExpanded() ? 'Contraer datos generales' : 'Expandir datos generales'"
+            (click)="toggleGeneral()"
+          >
+            <i class="bi" [ngClass]="generalExpanded() ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
           </button>
         </div>
 
-        <div class="general-form">
+        <div class="collapsed-summary" *ngIf="!generalExpanded()">
+          <span class="summary-dot summary-dot--purple"><i class="bi bi-calendar-check"></i></span>
+          <div>
+            <strong>{{ agenciaSearchControl.value || 'Agencia pendiente' }}</strong>
+            <span>{{ displayDate(reservaForm.controls.fecIngreso.value) }} – {{ displayDate(reservaForm.controls.fecSalida.value) }} · {{ reservaForm.controls.esCpl.value ? 'CPL' : 'Estándar' }}</span>
+          </div>
+        </div>
+
+        <div class="general-form" *ngIf="generalExpanded()">
           <label class="field span-2 lookup-field">
             <span>Agencia <b>*</b></span>
             <div class="lookup-row lookup-row-with-clear">
@@ -120,6 +134,40 @@
             </small>
           </label>
 
+          <div
+            class="cpl-option span-2"
+            [class.cpl-option--active]="reservaForm.controls.esCpl.value"
+            [class.cpl-option--mixed]="cplInconsistent()"
+          >
+            <div class="cpl-option__copy">
+              <span class="cpl-option__icon"><i class="bi bi-people-fill"></i></span>
+              <div>
+                <strong>Reserva CPL</strong>
+                <small>
+                  {{ reservaForm.controls.esCpl.value
+                    ? 'CPL se aplicará al hospedaje y a todas sus inclusiones.'
+                    : 'Reserva estándar: hospedaje e inclusiones se enviarán sin CPL.' }}
+                </small>
+                <small class="cpl-option__warning" *ngIf="cplInconsistent()">
+                  Esta reserva tiene valores CPL mezclados. Elija una modalidad antes de actualizar.
+                </small>
+              </div>
+            </div>
+            <label class="ios-switch" title="Marcar reserva como CPL">
+              <input
+                type="checkbox"
+                formControlName="esCpl"
+                role="switch"
+                [indeterminate]="cplInconsistent()"
+                [attr.aria-checked]="cplInconsistent() ? 'mixed' : reservaForm.controls.esCpl.value"
+                [disabled]="reservationLocked()"
+                (change)="onCplChange()"
+              >
+              <span class="ios-switch__track"><span class="ios-switch__thumb"></span></span>
+              <span class="visually-hidden">Marcar reserva como CPL</span>
+            </label>
+          </div>
+
           <label class="field">
             <span>Fecha ingreso <b>*</b></span>
             <div class="date-control">
@@ -189,12 +237,12 @@
 
           <label class="field span-2">
             <span>Descripción de la reserva</span>
-            <textarea class="form-control" rows="3" formControlName="descripcion" placeholder="Reserva familiar para vacaciones"></textarea>
+            <textarea class="form-control" rows="2" formControlName="descripcion" placeholder="Reserva familiar para vacaciones"></textarea>
           </label>
 
           <label class="field span-2">
             <span>Observaciones internas</span>
-            <textarea class="form-control" rows="4" formControlName="observaciones" placeholder="Notas internas sobre la reserva"></textarea>
+            <textarea class="form-control" rows="3" formControlName="observaciones" placeholder="Notas internas sobre la reserva"></textarea>
           </label>
         </div>
       </section>
@@ -528,6 +576,12 @@
           <div><span>Tipo de cambio</span><strong>{{ reservaForm.controls.tCambio.value | number: '1.2-2' }}</strong></div>
           <div><span>Folio</span><strong>(Auto)</strong></div>
           <div><span>Directo / Agencia</span><strong>{{ reservaForm.controls.directo.value ? 'Agencia' : 'Directo' }}</strong></div>
+          <div>
+            <span>Modalidad</span>
+            <strong class="cpl-summary" [class.cpl-summary--active]="reservaForm.controls.esCpl.value && !cplInconsistent()">
+              {{ cplInconsistent() ? 'CPL pendiente' : (reservaForm.controls.esCpl.value ? 'CPL' : 'Estándar') }}
+            </strong>
+          </div>
           <div><span>Operador</span><strong>{{ reservaForm.controls.operador.value }}</strong></div>
         </div>
         <div class="info-note">

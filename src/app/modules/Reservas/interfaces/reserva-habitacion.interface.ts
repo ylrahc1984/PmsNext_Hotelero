@@ -9,6 +9,7 @@ export interface ReservaHabitacionItem {
   cantidadNinos: number;
   precioNino: number;
   total: number;
+  cpl?: number;
 }
 
 export interface ReservaInclusionItem {
@@ -19,6 +20,7 @@ export interface ReservaInclusionItem {
   cantidad: number;
   totServ: number;
   cCosto?: string;
+  cpl?: number;
 }
 
 export interface ReservaServicioItem {

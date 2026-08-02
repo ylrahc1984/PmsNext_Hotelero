@@ -65,6 +65,7 @@ interface ReservaHeaderForm {
   observaciones   : FormControl<string>;
   procesa         : FormControl<string>;
   directo         : FormControl<boolean>;
+  esCpl           : FormControl<boolean>;
   operador        : FormControl<string>;
   habitaciones    : FormArray<FormGroup<HabitacionForm>>;
   inclusiones     : FormArray<FormGroup<InclusionForm>>;
@@ -195,6 +196,7 @@ export class ReservaHospedajeComponent implements OnInit {
   readonly saving                             = signal(false);
   readonly showPlanModal                      = signal(false);
   readonly showServiceModal                   = signal(false);
+  readonly generalExpanded                    = signal(true);
   readonly planExpanded                       = signal(false);
   readonly servicesExpanded                   = signal(false);
   readonly editingRoomIndex                   = signal<number | null>(null);
@@ -209,6 +211,7 @@ export class ReservaHospedajeComponent implements OnInit {
   readonly roomRateLoading                    = signal(false);
   readonly roomRateError                      = signal('');
   readonly reservationLocked                  = signal(false);
+  readonly cplInconsistent                    = signal(false);
   readonly operationalDate                    = this.operationalDateService.operationalDate;
   readonly agenciaSearchControl               = this.fb.control('02051 - DIRECTOS');
   readonly tarifaSearchControl                = this.fb.control('');
@@ -237,6 +240,7 @@ export class ReservaHospedajeComponent implements OnInit {
     observaciones         : this.fb.control(''),
     procesa               : this.fb.control('WEB'),
     directo               : this.fb.control(false),
+    esCpl                 : this.fb.control(false),
     operador              : this.fb.control(this.auth.getCurrentUser()?.usuario ?? 'admin'),
     habitaciones          : this.fb.array<FormGroup<HabitacionForm>>([]),
     inclusiones           : this.fb.array<FormGroup<InclusionForm>>([]),
@@ -561,6 +565,10 @@ export class ReservaHospedajeComponent implements OnInit {
     this.planExpanded.update((expanded) => !expanded);
   }
 
+  toggleGeneral(): void {
+    this.generalExpanded.update((expanded) => !expanded);
+  }
+
   toggleServices(): void {
     this.servicesExpanded.update((expanded) => !expanded);
   }
@@ -803,6 +811,7 @@ export class ReservaHospedajeComponent implements OnInit {
       observaciones     : '',
       procesa           : '0',
       directo           : false,
+      esCpl             : false,
       operador          : this.auth.getCurrentUser()?.usuario ?? 'admin',
       habitaciones      : [],
       inclusiones       : [],
@@ -821,6 +830,7 @@ export class ReservaHospedajeComponent implements OnInit {
     this.roomRateLoading.set(false);
     this.roomRateRequestId++;
     this.resolvedRoomRateKey = '';
+    this.cplInconsistent.set(false);
     this.inclusionForm.reset(this.defaultInclusion());
     this.servicioForm.reset(this.defaultServicio());
     this.editingRoomIndex.set(null);
@@ -869,6 +879,8 @@ export class ReservaHospedajeComponent implements OnInit {
 
   private applyReservaDetalle(detalle: ReservaHabitacionDetalle): void {
     const formValue = ReservaHabitacionMapper.fromDetalle(detalle);
+    const cplState = ReservaHabitacionMapper.resolveCplState(detalle);
+    this.cplInconsistent.set(cplState.inconsistent);
     this.editCodReserva = formValue.codReserva || this.editCodReserva;
     this.originalInventorySnapshot = this.buildInventorySnapshot(formValue);
     this.originalServerFingerprint = this.buildServerFingerprint(detalle);
@@ -905,6 +917,10 @@ export class ReservaHospedajeComponent implements OnInit {
     this.refreshMealPlanForCurrentSelection(true);
     this.syncTotal();
     this.reservaForm.updateValueAndValidity({ emitEvent: false });
+  }
+
+  onCplChange(): void {
+    this.cplInconsistent.set(false);
   }
 
   private buildDetalleLabel(codigo: string, descripcion: string | undefined): string {
@@ -1091,6 +1107,15 @@ export class ReservaHospedajeComponent implements OnInit {
         `La reserva se encuentra en estado ${this.reservaForm.controls.estado.value} y no admite modificaciones.`,
         5500,
         'Reserva protegida'
+      );
+      return false;
+    }
+
+    if (this.cplInconsistent()) {
+      this.toast.warning(
+        'La reserva contiene valores CPL diferentes entre habitaciones e inclusiones. Seleccione explícitamente una modalidad antes de continuar.',
+        6000,
+        'Configuración CPL pendiente'
       );
       return false;
     }
@@ -1492,6 +1517,7 @@ export class ReservaHospedajeComponent implements OnInit {
     const ingreso = this.escapeHtml(this.displayDate(this.reservaForm.controls.fecIngreso.value));
     const salida = this.escapeHtml(this.displayDate(this.reservaForm.controls.fecSalida.value));
     const moneda = this.escapeHtml(this.reservaForm.controls.moneda.value || 'USD');
+    const modalidad = this.reservaForm.controls.esCpl.value ? 'Reserva CPL' : 'Reserva estándar';
 
     return `
       <div style="text-align:left">
@@ -1500,6 +1526,10 @@ export class ReservaHospedajeComponent implements OnInit {
           <div style="border:1px solid #dee2e6;border-radius:8px;padding:12px">
             <span style="display:block;color:#6c757d;font-size:12px;font-weight:700">Agencia</span>
             <strong>${agencia}</strong>
+          </div>
+          <div style="border:1px solid #dee2e6;border-radius:8px;padding:12px">
+            <span style="display:block;color:#6c757d;font-size:12px;font-weight:700">Modalidad</span>
+            <strong>${modalidad}</strong>
           </div>
           <div style="border:1px solid #dee2e6;border-radius:8px;padding:12px">
             <span style="display:block;color:#6c757d;font-size:12px;font-weight:700">Estadía</span>
@@ -2501,6 +2531,7 @@ export class ReservaHospedajeComponent implements OnInit {
     const defaults = this.defaultReservationDates();
     return {
       ...draftReserva,
+      esCpl: draftReserva.esCpl ?? false,
       ...defaults
     };
   }

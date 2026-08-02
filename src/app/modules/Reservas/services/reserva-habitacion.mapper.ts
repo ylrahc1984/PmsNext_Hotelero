@@ -29,6 +29,7 @@ export interface ReservaHabitacionFormValue {
   observaciones: string;
   procesa: string;
   directo: boolean;
+  esCpl: boolean;
   operador: string;
   habitaciones: ReservaHabitacionItem[];
   inclusiones: ReservaInclusionItem[];
@@ -38,6 +39,7 @@ export interface ReservaHabitacionFormValue {
 export class ReservaHabitacionMapper {
   static fromDetalle(detalle: ReservaHabitacionDetalle): ReservaHabitacionFormValue {
     const noches = Number(detalle.totNoches ?? 0) || 0;
+    const cplState = this.resolveCplState(detalle);
     const habitaciones: ReservaHabitacionItem[] = (detalle.habitaciones ?? []).map((item) => {
       const cantidadNinos = Number(item.numChild ?? 0) || 0;
       const precioNino = cantidadNinos > 0 && noches > 0 ? (Number(item.totChild ?? 0) || 0) / cantidadNinos / noches : 0;
@@ -50,7 +52,8 @@ export class ReservaHabitacionMapper {
         precio: Number(item.precio ?? 0) || 0,
         cantidadNinos,
         precioNino,
-        total: Number(item.total ?? 0) || 0
+        total: Number(item.total ?? 0) || 0,
+        cpl: this.normalizeCpl(item.cpl)
       };
     });
 
@@ -61,7 +64,8 @@ export class ReservaHabitacionMapper {
       precio: Number(item.precio ?? 0) || 0,
       cantidad: Number(item.cantidad ?? 0) || 0,
       totServ: Number(item.totServ ?? 0) || 0,
-      cCosto: String(item.cCosto ?? '').trim()
+      cCosto: String(item.cCosto ?? '').trim(),
+      cpl: this.normalizeCpl(item.cpl)
     }));
 
     const servicios: ReservaServicioItem[] = (detalle.servicios ?? []).map((item) => ({
@@ -96,6 +100,7 @@ export class ReservaHabitacionMapper {
       observaciones: String(detalle.observaciones ?? detalle.observacion ?? '').trim(),
       procesa: String(detalle.procesa ?? detalle.procesado ?? 0),
       directo: String(detalle.directo ?? '').trim().toUpperCase() === 'S',
+      esCpl: cplState.esCpl,
       operador: String(detalle.operador ?? '').trim(),
       habitaciones,
       inclusiones,
@@ -107,6 +112,7 @@ export class ReservaHabitacionMapper {
     const moneda = value.moneda.trim();
     const noches = Number(value.totNoches) || 0;
     const includeMealPlan = !this.isNoMealPlan(value.codPlan);
+    const cpl = value.esCpl ? 1 : 0;
 
     return {
       proceso,
@@ -139,7 +145,7 @@ export class ReservaHabitacionMapper {
         precio: Number(item.precio) || 0,
         moneda,
         total: Number(item.total) || 0,
-        cpl: 0,
+        cpl,
         impuesto: 0,
         numPax: resolveNumPax(item.categoria, item.tipo) || Number(item.pax) || 0,
         numChild: Number(item.cantidadNinos) || 0,
@@ -156,7 +162,7 @@ export class ReservaHabitacionMapper {
             cantidad: Number(item.cantidad) || 0,
             totServ: Number(item.totServ) || 0,
             exonera: '0',
-            cpl: 0,
+            cpl,
             impInc: 0,
             cCosto: (item.cCosto ?? '').trim(),
             orden: index + 1
@@ -174,6 +180,19 @@ export class ReservaHabitacionMapper {
         cCosto: ''
       }))
     };
+  }
+
+  static resolveCplState(detalle: ReservaHabitacionDetalle): { esCpl: boolean; inconsistent: boolean } {
+    const values = [...(detalle.habitaciones ?? []), ...(detalle.inclusiones ?? [])].map((item) => this.normalizeCpl(item.cpl));
+    const uniqueValues = new Set(values);
+    return {
+      esCpl: values.length > 0 && values.every((value) => value === 1),
+      inconsistent: uniqueValues.size > 1
+    };
+  }
+
+  private static normalizeCpl(value: unknown): number {
+    return Number(value ?? 0) === 1 ? 1 : 0;
   }
 
   private static normalizeAutoCode(value: string): string {

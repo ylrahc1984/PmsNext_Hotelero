@@ -26,6 +26,7 @@ export class ReservaImportacionMapper {
       observaciones: this.observations(reserva),
       procesa: 'WEB',
       directo: reserva.directo === 'S',
+      esCpl: false,
       operador: 'CHANNEL',
       habitaciones: reserva.detalleHabitaciones.map((item) => ({
         categoria: item.catHabita,
