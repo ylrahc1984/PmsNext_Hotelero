@@ -46,11 +46,11 @@
     <fieldset class="view-filter">
       <legend>Tipo de Vista</legend>
       <label>
-        <input type="radio" name="forecastTipoVista" value="ocupacion" [(ngModel)]="tipoVista" />
+        <input type="radio" name="forecastTipoVista" value="ocupacion" [(ngModel)]="tipoVista" (ngModelChange)="onViewChange()" />
         <span>Ver Ocupación</span>
       </label>
       <label>
-        <input type="radio" name="forecastTipoVista" value="disponibilidad" [(ngModel)]="tipoVista" />
+        <input type="radio" name="forecastTipoVista" value="disponibilidad" [(ngModel)]="tipoVista" (ngModelChange)="onViewChange()" />
         <span>Ver Disponibilidad</span>
       </label>
     </fieldset>
@@ -65,7 +65,7 @@
     <article class="analysis-card chart-card">
       <div class="card-title">
         <span>Forecast</span>
-        <h2>Ocupación Proyectada</h2>
+        <h2>{{ chartTitle }}</h2>
       </div>
 
       <apx-chart
@@ -137,12 +137,12 @@
             <th>Fecha</th>
             <th>Total Hab.</th>
             <th>Bloq.</th>
-            <th>Total Ocupada</th>
-            <th>% Ocupación</th>
+            <th>{{ viewQuantityLabel }}</th>
+            <th>{{ viewPercentageLabel }}</th>
             <th>N° Pax</th>
             <th>Total C/LL</th>
             <th *ngFor="let categoria of selectedCategories; trackBy: trackByCategoriaFiltro">{{ categoria.descripcion }}</th>
-            <th>Por Ocupación</th>
+            <th>{{ viewSummaryLabel }}</th>
           </tr>
         </thead>
         <tbody>
@@ -150,10 +150,10 @@
             <td class="date-cell">{{ row.fecha }}</td>
             <td>{{ row.totalHabitaciones }}</td>
             <td>{{ row.bloqueadas }}</td>
-            <td>{{ row.totalOcupada }}</td>
+            <td>{{ getViewQuantity(row) }}</td>
             <td>
-              <span class="occupancy-badge" [ngClass]="getOccupancyClass(row.porcentajeOcupacion)">
-                {{ row.porcentajeOcupacion | number:'1.0-1' }}%
+              <span class="occupancy-badge" [ngClass]="getViewPercentageClass(getViewPercentage(row))">
+                {{ getViewPercentage(row) | number:'1.0-1' }}%
               </span>
             </td>
             <td>{{ row.pax }}</td>
@@ -165,7 +165,7 @@
             >
               {{ getCategoryValue(row, categoria.codigo) }}
             </td>
-            <td>{{ row.porOcupacion | number:'1.0-1' }}%</td>
+            <td>{{ getViewPercentage(row) | number:'1.0-1' }}%</td>
           </tr>
         </tbody>
       </table>

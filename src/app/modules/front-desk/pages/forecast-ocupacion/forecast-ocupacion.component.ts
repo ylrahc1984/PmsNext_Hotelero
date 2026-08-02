@@ -28,7 +28,6 @@ interface ForecastOcupacionRow {
   pax: number;
   totalCLL: number;
   categorias: Record<string, OccupancyForecastCategoryResult>;
-  porOcupacion: number;
 }
 
 interface ForecastCategoria {
@@ -122,6 +121,22 @@ export class ForecastOcupacionComponent implements OnInit {
     return this.categorias.filter((categoria) => this.categoriasSeleccionadas[categoria.codigo]);
   }
 
+  get viewQuantityLabel(): string {
+    return this.tipoVista === 'ocupacion' ? 'Total Ocupada' : 'Total Disponible';
+  }
+
+  get viewPercentageLabel(): string {
+    return this.tipoVista === 'ocupacion' ? '% Ocupación' : '% Disponibilidad';
+  }
+
+  get viewSummaryLabel(): string {
+    return this.tipoVista === 'ocupacion' ? 'Por Ocupación' : 'Por Disponibilidad';
+  }
+
+  get chartTitle(): string {
+    return this.tipoVista === 'ocupacion' ? 'Ocupación Proyectada' : 'Disponibilidad Proyectada';
+  }
+
   procesar(): void {
     this.currentPage = 1;
     this.loadForecast();
@@ -147,6 +162,13 @@ export class ForecastOcupacionComponent implements OnInit {
     this.currentPage = 1;
   }
 
+  onViewChange(): void {
+    this.kpis = this.buildKpis(this.rows);
+    this.resumenCategorias = this.buildCategorySummary(this.rows);
+    this.chartOptions = this.buildChartOptions(this.rows);
+    this.cdr.markForCheck();
+  }
+
   previousPage(): void {
     this.currentPage = Math.max(1, this.currentPage - 1);
   }
@@ -168,7 +190,39 @@ export class ForecastOcupacionComponent implements OnInit {
   }
 
   getCategoryValue(row: ForecastOcupacionRow, codigo: string): number {
-    return this.getCategoryResult(row, codigo).cantidad;
+    const result = this.getCategoryResult(row, codigo);
+    return this.tipoVista === 'ocupacion' ? result.cantidad : Math.max(0, result.total - result.cantidad);
+  }
+
+  getViewQuantity(row: ForecastOcupacionRow): number {
+    return this.tipoVista === 'ocupacion'
+      ? row.totalOcupada
+      : Math.max(0, row.totalHabitaciones - row.bloqueadas - row.totalOcupada);
+  }
+
+  getViewPercentage(row: ForecastOcupacionRow): number {
+    if (this.tipoVista === 'ocupacion') {
+      return row.porcentajeOcupacion;
+    }
+
+    const sellableRooms = Math.max(0, row.totalHabitaciones - row.bloqueadas);
+    return sellableRooms > 0 ? (this.getViewQuantity(row) / sellableRooms) * 100 : 0;
+  }
+
+  getViewPercentageClass(value: number): string {
+    if (this.tipoVista === 'ocupacion') {
+      return this.getOccupancyClass(value);
+    }
+
+    if (value >= 80) {
+      return 'occupancy-low';
+    }
+
+    if (value >= 50) {
+      return 'occupancy-medium';
+    }
+
+    return 'occupancy-high';
   }
 
   isCategoryUnavailable(row: ForecastOcupacionRow, codigo: string): boolean {
@@ -348,25 +402,26 @@ export class ForecastOcupacionComponent implements OnInit {
       porcentajeOcupacion: Number(row.porOcu) || 0,
       pax: Number(row.totPax) || 0,
       totalCLL: Number(row.totChl) || 0,
-      categorias: row.categorias ?? {},
-      porOcupacion: Number(row.porOcu) || 0
+      categorias: row.categorias ?? {}
     };
   }
 
   private buildKpis(rows: ForecastOcupacionRow[]): ForecastKpi[] {
-    const average = rows.length ? rows.reduce((total, row) => total + row.porcentajeOcupacion, 0) / rows.length : 0;
+    const viewPercentages = rows.map((row) => this.getViewPercentage(row));
+    const average = viewPercentages.length ? viewPercentages.reduce((total, percentage) => total + percentage, 0) / viewPercentages.length : 0;
     const peak = rows.reduce<ForecastOcupacionRow | null>(
-      (current, row) => (!current || row.porcentajeOcupacion > current.porcentajeOcupacion ? row : current),
+      (current, row) => (!current || this.getViewPercentage(row) > this.getViewPercentage(current) ? row : current),
       null
     );
     const adults = rows.reduce((total, row) => total + row.pax, 0);
     const children = rows.reduce((total, row) => total + row.totalCLL, 0);
     const availableRoomNights = rows.reduce((total, row) => total + Math.max(0, row.totalHabitaciones - row.bloqueadas - row.totalOcupada), 0);
     const occupiedRoomNights = rows.reduce((total, row) => total + row.totalOcupada, 0);
+    const isOccupancyView = this.tipoVista === 'ocupacion';
 
     return [
-      { titulo: 'Ocupación Promedio', valor: `${average.toFixed(1)}%`, subtitulo: 'En el período seleccionado', icono: 'insert_chart', color: '#2563eb' },
-      { titulo: 'Pico de Ocupación', valor: `${(peak?.porcentajeOcupacion ?? 0).toFixed(1)}%`, subtitulo: peak?.fecha ?? 'Sin datos', icono: 'trending_up', color: '#14b8a6' },
+      { titulo: isOccupancyView ? 'Ocupación Promedio' : 'Disponibilidad Promedio', valor: `${average.toFixed(1)}%`, subtitulo: 'En el período seleccionado', icono: 'insert_chart', color: '#2563eb' },
+      { titulo: isOccupancyView ? 'Pico de Ocupación' : 'Pico de Disponibilidad', valor: `${(peak ? this.getViewPercentage(peak) : 0).toFixed(1)}%`, subtitulo: peak?.fecha ?? 'Sin datos', icono: 'trending_up', color: '#14b8a6' },
       { titulo: 'Pax Totales', valor: adults + children, subtitulo: `${adults} adultos / ${children} niños`, icono: 'groups', color: '#9333ea' },
       { titulo: 'Total Habitaciones', valor: availableRoomNights, subtitulo: 'Disponibles para venta', icono: 'hotel', color: '#0f3b68' },
       { titulo: 'Total Noches', valor: occupiedRoomNights, subtitulo: 'Habitación noche', icono: 'hotel', color: '#f59e0b' }
@@ -379,26 +434,29 @@ export class ForecastOcupacionComponent implements OnInit {
     return this.selectedCategories.map((category, index) => {
       const occupied = rows.reduce((total, row) => total + this.getCategoryResult(row, category.codigo).cantidad, 0);
       const totalRooms = rows.reduce((total, row) => total + this.getCategoryResult(row, category.codigo).total, 0);
-      const percentage = totalRooms > 0 ? (occupied / totalRooms) * 100 : 0;
+      const quantity = this.tipoVista === 'ocupacion' ? occupied : Math.max(0, totalRooms - occupied);
+      const percentage = totalRooms > 0 ? (quantity / totalRooms) * 100 : 0;
 
       return {
         nombre: category.descripcion,
         codigo: category.codigo,
         porcentaje: percentage,
         color: colors[index % colors.length],
-        valor: `${occupied} hab.`
+        valor: `${quantity} hab.`
       };
     });
   }
 
   private buildChartOptions(rows: ForecastOcupacionRow[]): Partial<ApexOptions> {
-    const average = rows.length ? rows.reduce((total, row) => total + row.porcentajeOcupacion, 0) / rows.length : 0;
+    const viewPercentages = rows.map((row) => this.getViewPercentage(row));
+    const average = viewPercentages.length ? viewPercentages.reduce((total, percentage) => total + percentage, 0) / viewPercentages.length : 0;
+    const viewLabel = this.tipoVista === 'ocupacion' ? 'Ocupación' : 'Disponibilidad';
 
     return {
       series: [
         {
-          name: '% Ocupación',
-          data: rows.map((row) => Number(row.porcentajeOcupacion.toFixed(1)))
+          name: `% ${viewLabel}`,
+          data: rows.map((row) => Number(this.getViewPercentage(row).toFixed(1)))
         }
       ],
       chart: {
@@ -472,7 +530,7 @@ export class ForecastOcupacionComponent implements OnInit {
             label: {
               borderColor: '#14b8a6',
               style: { color: '#ffffff', background: '#14b8a6' },
-              text: `Promedio ${average.toFixed(1)}%`
+              text: `${viewLabel} promedio ${average.toFixed(1)}%`
             }
           }
         ]

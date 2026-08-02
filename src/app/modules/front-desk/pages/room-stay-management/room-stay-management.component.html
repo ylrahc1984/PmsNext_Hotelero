@@ -1429,14 +1429,6 @@
               </label>
 
               <label class="extra-guest-field">
-                <span>Fecha nacimiento</span>
-                <input type="date" formControlName="fecNac" [class.is-invalid]="isExtraGuestFieldInvalid('fecNac')" />
-                @if (isExtraGuestFieldInvalid('fecNac')) {
-                  <small>{{ getExtraGuestFieldError('fecNac') }}</small>
-                }
-              </label>
-
-              <label class="extra-guest-field">
                 <span>Tipo pax</span>
                 <select formControlName="tiPax" [class.is-invalid]="isExtraGuestFieldInvalid('tiPax')">
                   <option value="">Seleccione...</option>
@@ -1449,12 +1441,17 @@
                 }
               </label>
 
-              <label class="extra-guest-field">
+              <label class="extra-guest-field extra-guest-field--wide">
                 <span>Email</span>
                 <input type="email" formControlName="email" [class.is-invalid]="isExtraGuestFieldInvalid('email')" />
                 @if (isExtraGuestFieldInvalid('email')) {
                   <small>{{ getExtraGuestFieldError('email') }}</small>
                 }
+              </label>
+
+              <label class="extra-guest-field extra-guest-field--wide">
+                <span>Teléfono</span>
+                <input type="tel" inputmode="tel" autocomplete="tel" formControlName="motivo" />
               </label>
             </div>
 

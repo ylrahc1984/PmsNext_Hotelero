@@ -517,7 +517,8 @@ export class CheckInArrivalsComponent implements OnInit {
     if (!this.roomingArrival || this.roomingSaving) return;
     const result = await Swal.fire({
       title: 'Eliminar huésped', text: `${guest.nombre} ${guest.apellidos}`, icon: 'warning',
-      showCancelButton: true, confirmButtonText: 'Eliminar', cancelButtonText: 'Cancelar', confirmButtonColor: '#dc3545'
+      showCancelButton: true, confirmButtonText: 'Eliminar', cancelButtonText: 'Cancelar', confirmButtonColor: '#dc3545',
+      customClass: { container: 'next-confirm-container' }
     });
     if (!result.isConfirmed || !this.roomingArrival) return;
     this.roomingSaving = true;

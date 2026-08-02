@@ -1986,6 +1986,13 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   async saveExtraGuest(): Promise<void> {
+    const operationalDate = this.todayDisplayDate();
+    if (!operationalDate) {
+      this.extraGuestValidationMessage.set('No se puede agregar el huesped sin una fecha operativa valida.');
+      return;
+    }
+    this.extraGuestForm.controls.fecNac.setValue(operationalDate, { emitEvent: false });
+
     if (this.extraGuestForm.invalid) {
       this.extraGuestForm.markAllAsTouched();
       this.extraGuestValidationMessage.set('Completa los campos obligatorios del huesped.');
@@ -2066,7 +2073,7 @@ export class RoomStayManagementComponent implements OnInit {
       codNacion         : '',
       nombre            : '',
       apellido          : '',
-      fecNac            : '',
+      fecNac            : this.todayDisplayDate(),
       sexo              : '',
       estCivil          : '',
       tiPax             : this.extraGuestPaxTypes()[0]?.CR03_CodTipo ?? '',
@@ -2156,7 +2163,7 @@ export class RoomStayManagementComponent implements OnInit {
       numDocu       : this.cleanText(raw.numDocu),
       nombre        : this.cleanText(raw.nombre),
       apellido      : this.cleanText(raw.apellido),
-      fecNac        : this.formatInputDateForApi(raw.fecNac),
+      fecNac        : this.todayDisplayDate(),
       sexo          : this.cleanText(raw.sexo),
       estCivil      : this.cleanText(raw.estCivil),
       tiPax         : this.cleanText(raw.tiPax),
