@@ -143,6 +143,9 @@
   box-shadow: 0 3px 7px rgba(15, 23, 42, 0.13);
   cursor: grab;
   text-align: left;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .exchange-tray__reservation:focus-visible {

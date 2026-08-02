@@ -15,7 +15,7 @@ app-reservation-block {
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
-  padding: 0 0.72rem;
+  padding: 0 0.58rem 0 0.3rem;
   background: transparent;
   color: #ffffff;
   font-size: 0.68rem;
@@ -26,6 +26,32 @@ app-reservation-block {
   z-index: 2;
   isolation: isolate;
   cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.reservation-block__drag-handle {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 22px;
+  margin-right: 0.2rem;
+  border-radius: 6px;
+  display: inline-grid;
+  place-items: center;
+  color: currentColor;
+  cursor: grab;
+  touch-action: none;
+  opacity: 0.72;
+}
+
+.reservation-block__drag-handle:hover {
+  background: rgba(255, 255, 255, 0.32);
+  opacity: 1;
+}
+
+.reservation-block__drag-handle:active {
+  cursor: grabbing;
 }
 
 .reservation-block::before {

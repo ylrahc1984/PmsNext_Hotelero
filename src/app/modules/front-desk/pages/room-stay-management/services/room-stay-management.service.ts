@@ -4,6 +4,14 @@ import { Observable, map, of, switchMap } from 'rxjs';
 
 import { normalizePmsDateDDMMYYYY } from 'src/app/core/utils/pms-date.util';
 import { environment } from 'src/environments/environment';
+import {
+  RoomChargeAnnulPayload,
+  RoomChargeDetailPayload,
+  RoomChargePayload
+} from '../../../shared/room-charges/room-charge-mutation.model';
+import { RoomChargeMutationService } from '../../../shared/room-charges/room-charge-mutation.service';
+
+export type { RoomChargeAnnulPayload, RoomChargeDetailPayload, RoomChargePayload } from '../../../shared/room-charges/room-charge-mutation.model';
 
 export interface RoomStayApiGuest {
   numInterno        : string;
@@ -178,58 +186,6 @@ export interface RoomChargePriceListApiItem {
   MPV05_Operador         : string;
 }
 
-export interface RoomChargeDetailPayload {
-  codRsv            : string;
-  numHab            : string;
-  pntVenta          : string;
-  fecha             : string;
-  hora              : string;
-  grupo             : string;
-  categoria         : string;
-  codConsumo        : string;
-  nomConsumo        : string;
-  cantidad          : number;
-  precio            : number;
-  total             : number;
-  moneda            : string;
-  tipNPedido        : string;
-  numNPedido        : string;
-  codMozo           : string;
-  incluido          : number;
-  exonerado         : number;
-  orden             : number;
-  comentario        : string;
-  operador          : string;
-}
-
-export interface RoomChargePayload {
-  proceso         : number;
-  tipCrgHab       : string;
-  numCrgHab       : string;
-  codRsv          : string;
-  numHab          : string;
-  pntVenta        : string;
-  fecha           : string;
-  hora            : string;
-  numDocu         : string;
-  nombrePax       : string;
-  mtoTotal        : number;
-  moneda          : string;
-  cierre          : number;
-  numCierre       : number;
-  operador        : string;
-  detalle         : RoomChargeDetailPayload[];
-}
-
-export interface RoomChargeAnnulPayload {
-  tipCrgHab     : string;
-  numCrgHab     : string;
-  codRsv        : string;
-  numHab        : string;
-  motivo        : string;
-  operador      : string;
-}
-
 export interface RoomChargeLookupHeader {
   tipCrgHab     : string;
   numCrgHab     : string;
@@ -400,6 +356,7 @@ interface RoomChargePriceListApiResponse {
 @Injectable({ providedIn: 'root' })
 export class RoomStayManagementService {
   private readonly http                            = inject(HttpClient);
+  private readonly roomChargeMutationService       = inject(RoomChargeMutationService);
   private readonly baseApiUrl                      = (environment.apiUrl ?? '').toString().replace(/\/+$/, '');
   private readonly apiUrl                          = `${this.baseApiUrl}/walkin`;
   private readonly precheckingUrl                  = `${this.baseApiUrl}/prechecking`;
@@ -409,7 +366,6 @@ export class RoomStayManagementService {
   private readonly checkInUrl                       = `${this.baseApiUrl}/checkin`;
   private readonly pointOfSalePaymentMethodsUrl    = `${this.baseApiUrl}/forma-pago-punto-venta`;
   private readonly pointOfSaleDocumentsUrl         = `${this.baseApiUrl}/documento-puntoventa`;
-  private readonly roomChargeUrl                   = `${this.baseApiUrl}/cargo-habitacion`;
   private readonly roomChargeLookupUrl             = `${this.baseApiUrl}/consultar-cargos-habitacion/numero`;
   private readonly roomInvoiceUrl                  = `${this.baseApiUrl}/facturacion-fdesk`;
   private readonly roomingListUpdateUrl            = `${this.baseApiUrl}/rooming-list/con-actualizacion`;
@@ -504,25 +460,15 @@ export class RoomStayManagementService {
   }
 
   createRoomCharge(payload: RoomChargePayload): Observable<unknown> {
-    const normalizedPayload = this.normalizeRoomChargePayload(payload);
-
-    return this.http
-      .post(this.roomChargeUrl, normalizedPayload, { responseType: 'text' })
-      .pipe(map((response) => this.parseTextResponse(response)));
+    return this.roomChargeMutationService.create(payload);
   }
 
   updateRoomCharge(payload: RoomChargePayload): Observable<unknown> {
-    const normalizedPayload = this.normalizeRoomChargePayload(payload);
-
-    return this.http
-      .put(this.roomChargeUrl, normalizedPayload, { responseType: 'text' })
-      .pipe(map((response) => this.parseTextResponse(response)));
+    return this.roomChargeMutationService.update(payload);
   }
 
   annulRoomCharge(payload: RoomChargeAnnulPayload): Observable<unknown> {
-    return this.http
-      .delete(this.roomChargeUrl, { body: payload, responseType: 'text' })
-      .pipe(map((response) => this.parseTextResponse(response)));
+    return this.roomChargeMutationService.annul(payload);
   }
 
   getRoomChargeDetailByNumber(numCrgHab: string): Observable<RoomChargeLookupResponse> {
@@ -541,17 +487,6 @@ export class RoomStayManagementService {
             : []
         }))
       );
-  }
-
-  private normalizeRoomChargePayload(payload: RoomChargePayload): RoomChargePayload {
-    return {
-      ...payload,
-      fecha: normalizePmsDateDDMMYYYY(payload.fecha),
-      detalle: payload.detalle.map((item) => ({
-        ...item,
-        fecha: normalizePmsDateDDMMYYYY(item.fecha)
-      }))
-    };
   }
 
   createRoomingListGuest(payload: RoomingListUpdatePayload): Observable<unknown> {

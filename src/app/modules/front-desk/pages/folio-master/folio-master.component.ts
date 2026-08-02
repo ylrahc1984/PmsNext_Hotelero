@@ -15,7 +15,7 @@ import { FolioMasterCheckoutPayload, FolioMasterService } from './services/folio
 import { FolioMasterChargeHeader } from './models/folio-master-charge.model';
 import { FolioMasterChargeService } from './services/folio-master-charge.service';
 import { FolioMasterChargesModalComponent } from './components/folio-master-charges-modal/folio-master-charges-modal.component';
-import { FolioChargeDetailModalComponent } from './components/folio-charge-detail-modal/folio-charge-detail-modal.component';
+import { FolioChargeChangedEvent, FolioChargeDetailModalComponent } from './components/folio-charge-detail-modal/folio-charge-detail-modal.component';
 import { FolioMasterInvoiceModalComponent } from './components/folio-master-invoice-modal/folio-master-invoice-modal.component';
 
 interface FolioKpi {
@@ -249,6 +249,73 @@ export class FolioMasterComponent implements OnInit {
 
   closeChargeDetail(): void {
     this.selectedCharge = null;
+    this.refreshSelectedFolioCharges();
+  }
+
+  onChargeChanged(change: FolioChargeChangedEvent): void {
+    this.applyChargeChangeToView(change);
+    this.selectedCharge = null;
+    this.refreshSelectedFolioCharges();
+    this.refreshFolioSearchInBackground(change);
+  }
+
+  private refreshSelectedFolioCharges(): void {
+    const folio = this.selectedFolio;
+    if (folio) {
+      this.openDetail(folio);
+    }
+  }
+
+  private applyChargeChangeToView(change: FolioChargeChangedEvent): void {
+    this.folioCharges = this.folioCharges.map((charge) =>
+      charge.tipCrgHab === change.tipCrgHab && charge.numCrgHab === change.numCrgHab
+        ? { ...charge, mtoTot: change.mtoTotal }
+        : charge
+    );
+
+    if (change.basePrice === null || !this.selectedFolio) {
+      return;
+    }
+
+    const selectedFolioNumber = this.getFolioNumber(this.selectedFolio);
+    const updateTariff = (folio: FolioMaster): FolioMaster =>
+      this.getFolioNumber(folio) === selectedFolioNumber
+        ? { ...folio, PRV09_TarxNoc: change.basePrice as number }
+        : folio;
+
+    this.folios = this.folios.map(updateTariff);
+    this.selectedFolio = updateTariff(this.selectedFolio);
+    this.cdr.markForCheck();
+  }
+
+  private refreshFolioSearchInBackground(change: FolioChargeChangedEvent): void {
+    if (!this.validateDateRange()) {
+      return;
+    }
+
+    const selectedFolioNumber = this.getFolioNumber(this.selectedFolio);
+    this.folioService
+      .getPendingFolios(this.fechaIngreso, this.fechaSalida)
+      .pipe(
+        catchError((error) => {
+          console.error('No se pudo refrescar el listado de Folios Master después de actualizar el cargo.', error);
+          return of(null);
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((folios) => {
+        if (!folios) {
+          return;
+        }
+
+        this.folios = folios.map((folio) =>
+          change.basePrice !== null && this.getFolioNumber(folio) === selectedFolioNumber
+            ? { ...folio, PRV09_TarxNoc: change.basePrice as number }
+            : folio
+        );
+        this.selectedFolio = this.folios.find((folio) => this.getFolioNumber(folio) === selectedFolioNumber) ?? this.selectedFolio;
+        this.cdr.markForCheck();
+      });
   }
 
   invoiceFolio(folio: FolioMaster): void {

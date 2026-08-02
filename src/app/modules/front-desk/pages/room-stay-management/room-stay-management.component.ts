@@ -28,6 +28,7 @@ import { NationalitiesService } from '../../settings/nationalities/services/nati
 import { PaxType } from '../../settings/pax-types/models/pax-type.model';
 import { PaxTypesService } from '../../settings/pax-types/services/pax-types.service';
 import { RoomRackNavigationState } from '../room-rack/models/room-rack-room.model';
+import { buildRoomChargeUpdatePayload } from '../../shared/room-charges/room-charge-payload.util';
 import { RoomChargePdfService } from './printing/room-charge-pdf.service';
 import { RoomChargePosPrintService } from './printing/room-charge-pos-print.service';
 import { RoomStatementPdfService } from './printing/room-statement-pdf.service';
@@ -1751,64 +1752,18 @@ export class RoomStayManagementComponent implements OnInit {
       return null;
     }
 
-    const header = chargeDetail.encabezado;
-    const operator = this.getOperador();
-    const tipCrgHab = this.cleanText(header.tipCrgHab || source.charge.tipCrgHab);
-    const numCrgHab = this.cleanText(header.numCrgHab || source.charge.numCrgHab || source.charge.reference);
-    const codRsv = this.cleanText(header.codReserva || source.charge.codRsv || this.room().reservationNumber);
-    const numHab = this.cleanText(header.numHab || source.charge.numHab || this.room().roomNumber);
-    const pntVenta = this.cleanText(header.pntVenta);
-    const fecha = this.formatDetailDate(header.fecha);
-    const hora = this.formatDetailTime(header.hora);
-    const moneda = this.cleanText(header.moneda || this.invoiceBaseCurrency).toUpperCase();
-    const mtoTotal = this.roundCurrency(
-      chargeDetail.detalles.reduce((sum, detail) => sum + this.roundCurrency(Number(detail.total || 0)), 0)
+    return buildRoomChargeUpdatePayload(
+      chargeDetail.encabezado,
+      chargeDetail.detalles,
+      this.getOperador(),
+      {
+        tipCrgHab: source.charge.tipCrgHab,
+        numCrgHab: source.charge.numCrgHab || source.charge.reference,
+        codRsv: source.charge.codRsv || this.room().reservationNumber,
+        numHab: source.charge.numHab || this.room().roomNumber,
+        moneda: this.invoiceBaseCurrency
+      }
     );
-
-    if (!tipCrgHab || !numCrgHab || !codRsv || !numHab || !pntVenta || !fecha || fecha === '-' || !operator || mtoTotal <= 0) {
-      return null;
-    }
-
-    return {
-      proceso: 2,
-      tipCrgHab,
-      numCrgHab,
-      codRsv,
-      numHab,
-      pntVenta,
-      fecha,
-      hora: hora === '-' ? '' : hora,
-      numDocu: this.cleanText(header.numDocu),
-      nombrePax: this.cleanText(header.nombrePax),
-      mtoTotal,
-      moneda,
-      cierre: this.toRoomChargeFlag(header.cierre),
-      numCierre: Number(header.numCierre || 0),
-      operador: operator,
-      detalle: chargeDetail.detalles.map((detail, index) => ({
-        codRsv: this.cleanText(detail.codRsv || codRsv),
-        numHab: this.cleanText(detail.numHab || numHab),
-        pntVenta: this.cleanText(detail.pntVenta || pntVenta),
-        fecha: this.formatDetailDate(detail.fecha || fecha),
-        hora: this.formatDetailTime(detail.hora || hora),
-        grupo: this.cleanText(detail.grupo),
-        categoria: this.cleanText(detail.categoria),
-        codConsumo: this.cleanText(detail.codConsumo),
-        nomConsumo: this.cleanText(detail.nomConsumo),
-        cantidad: Number(detail.cantidad || 0),
-        precio: this.roundCurrency(Number(detail.precio || 0)),
-        total: this.roundCurrency(Number(detail.total || 0)),
-        moneda: this.cleanText(detail.moneda || moneda).toUpperCase(),
-        tipNPedido: this.cleanText(detail.tipNPedido),
-        numNPedido: this.cleanText(detail.numNPedido),
-        codMozo: this.cleanText(detail.codMozo),
-        incluido: this.toRoomChargeFlag(detail.incluido),
-        exonerado: this.toRoomChargeFlag(detail.exonerado),
-        orden: Number(detail.orden || index + 1),
-        comentario: this.cleanText(detail.comentario),
-        operador: operator
-      }))
-    };
   }
 
   private cloneRoomChargeDetail(detail: RoomChargeLookupResponse): RoomChargeLookupResponse {
@@ -1820,17 +1775,6 @@ export class RoomStayManagementComponent implements OnInit {
 
   private chargeDetailFingerprint(detail: RoomChargeLookupResponse | null): string {
     return detail ? JSON.stringify(detail) : '';
-  }
-
-  private toRoomChargeFlag(value: unknown): number {
-    const normalized = (value ?? '').toString().trim().toUpperCase();
-
-    if (normalized === 'S' || normalized === 'SI' || normalized === 'TRUE') {
-      return 1;
-    }
-
-    const numericValue = Number(normalized);
-    return Number.isFinite(numericValue) ? numericValue : 0;
   }
 
   private buildAnnulRoomChargePayload(bucket: ChargeBucket, charge: Charge, reason: string): RoomChargeAnnulPayload | null {

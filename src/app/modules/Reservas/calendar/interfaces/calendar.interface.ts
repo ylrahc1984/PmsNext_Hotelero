@@ -50,8 +50,6 @@ export interface CalendarRoomAssignmentRequest {
   newHabita: string;
   categoria: string;
   operador: string;
-  fechaIngreso?: string;
-  fechaSalida?: string;
 }
 
 export interface CalendarRoomAssignmentResponse {
@@ -59,6 +57,7 @@ export interface CalendarRoomAssignmentResponse {
   success?: boolean;
   respuesta?: string;
   mensaje?: string;
+  message?: string;
 }
 
 export interface CalendarDate {

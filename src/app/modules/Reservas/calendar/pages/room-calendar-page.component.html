@@ -136,7 +136,7 @@
           (scrollTopChange)="onGridScrollTop($event)"
           (viewportHeightChange)="onGridViewportHeightChange($event)"
           (scrollContentHeightChange)="onGridScrollContentHeightChange($event)"
-          (reservationSelect)="openReservationActionMenu($event)"
+          (reservationSelect)="openReservationDetail($event)"
           (reservationDrop)="onReservationDrop($event)"
           (assignmentTargetSelect)="onAssignmentTargetSelect($event)"
           (reservationTrayDrop)="onReservationTrayDrop($event)"
@@ -158,23 +158,13 @@
     ></app-reservation-assignment-panel>
   </section>
 
-  <div class="reservation-action-backdrop" *ngIf="reservationActionMenu as menu" (click)="closeReservationActionMenu()">
-    <div class="reservation-action-menu" [style.left.px]="menu.x" [style.top.px]="menu.y" (click)="$event.stopPropagation()">
-      <button type="button" class="reservation-action-menu__item" (click)="onUnassignReservationFromMenu(menu.block)" [disabled]="isAssigningRoom">
-        <i class="feather icon-log-out"></i>
-        Desasignar habitacion
-      </button>
-      <button
-        *ngIf="exchangeMode"
-        type="button"
-        class="reservation-action-menu__item reservation-action-menu__item--exchange"
-        (click)="onMoveReservationToTrayFromMenu(menu.block)"
-        [disabled]="isAssigningRoom"
-        aria-label="Mover reserva a la bandeja de intercambio"
-      >
-        <i class="feather icon-repeat"></i>
-        Mover a Bandeja de intercambio
-      </button>
-    </div>
-  </div>
+  <app-reservation-calendar-detail-panel
+    *ngIf="selectedReservationDetailBlock as selectedDetail"
+    [reservation]="selectedDetail.reservation"
+    [canEdit]="canEditSelectedReservation() && !isAssigningRoom"
+    [canMoveToTray]="exchangeMode && canManageSelectedReservation() && !isAssigningRoom"
+    (closed)="closeReservationDetail()"
+    (editRequested)="onDetailEditRequested()"
+    (moveToTrayRequested)="onDetailMoveToTrayRequested()"
+  ></app-reservation-calendar-detail-panel>
 </section>

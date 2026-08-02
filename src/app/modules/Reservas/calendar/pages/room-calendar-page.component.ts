@@ -1,12 +1,15 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, HostListener, OnInit, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { firstValueFrom, of } from 'rxjs';
 import { catchError, distinctUntilChanged, filter, finalize, map } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
 import { AuthService } from 'src/app/core/services/auth.service';
+import { OperationalAction } from 'src/app/core/models/operational-context.model';
 import { OperationalDateService } from 'src/app/core/services/operational-date.service';
+import { OperationalPolicyService } from 'src/app/core/services/operational-policy.service';
 import { CanDeactivateReservaCreate } from 'src/app/core/guards/can-deactivate-reserva-create.guard';
 import {
   addPmsCalendarDays,
@@ -23,6 +26,7 @@ import { CalendarGridComponent } from '../components/calendar-grid/calendar-grid
 import { CalendarHeaderComponent } from '../components/calendar-header/calendar-header.component';
 import { CalendarToolbarComponent } from '../components/calendar-toolbar/calendar-toolbar.component';
 import { ReservationAssignmentPanelComponent } from '../components/reservation-assignment-panel/reservation-assignment-panel.component';
+import { ReservationCalendarDetailPanelComponent } from '../components/reservation-calendar-detail-panel/reservation-calendar-detail-panel.component';
 import { RoomSidebarComponent } from '../components/room-sidebar/room-sidebar.component';
 import {
   CalendarAssignableReservation,
@@ -40,11 +44,30 @@ import {
   RoomExchangeChange
 } from '../interfaces/calendar.interface';
 import { CalendarService } from '../services/calendar.service';
+import { isCheckedInCalendarReservation } from '../utils/calendar-reservation.util';
+
+interface PendingRoomMoveVerification {
+  auditId: string;
+  flow: 'PRECHECKING_ASSIGNMENT' | 'ROOM_CHANGE_CHK';
+  reservationCode: string;
+  reservationId: string;
+  previousRoomNumber: string;
+  expectedRoomNumber: string;
+  apiResponse: unknown;
+}
 
 @Component({
   selector: 'app-room-calendar-page',
   standalone: true,
-  imports: [CommonModule, CalendarToolbarComponent, RoomSidebarComponent, CalendarHeaderComponent, CalendarGridComponent, ReservationAssignmentPanelComponent],
+  imports: [
+    CommonModule,
+    CalendarToolbarComponent,
+    RoomSidebarComponent,
+    CalendarHeaderComponent,
+    CalendarGridComponent,
+    ReservationAssignmentPanelComponent,
+    ReservationCalendarDetailPanelComponent
+  ],
   templateUrl: './room-calendar-page.component.html',
   styleUrls: ['./room-calendar-page.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -55,6 +78,8 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly operationalPolicy = inject(OperationalPolicyService);
   private readonly operationalDateService = inject(OperationalDateService);
   private readonly operationalDate$ = toObservable(this.operationalDateService.operationalDate);
 
@@ -89,7 +114,7 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
   assignmentPanelCollapsed            = false;
   isAssigningRoom                     = false;
   selectedPendingReservation          : CalendarAssignableReservation | null = null;
-  reservationActionMenu               : { block: CalendarReservationBlockView; x: number; y: number } | null = null;
+  selectedReservationDetailBlock      : CalendarReservationBlockView | null = null;
   exchangeMode                        = false;
   exchangeTrayReservations            : ExchangeTrayReservation[] = [];
   exchangeSessionChanges              : RoomExchangeChange[] = [];
@@ -97,6 +122,7 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
   readonly processingReservationIds   = new Set<string>();
   private rooms                       : RoomStatus[] = [];
   private workingReservations         : CalendarReservation[] = [];
+  private pendingRoomMoveVerification : PendingRoomMoveVerification | null = null;
   calendarData                        : CalendarData = this.calendarService.getCalendarData(
     this.buildQuery(),
     this.rooms,
@@ -207,26 +233,31 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
     this.calendarGrid?.setScrollTop(scrollTop);
   }
 
-  openReservationActionMenu(payload: CalendarReservationBlockSelect): void {
+  openReservationDetail(payload: CalendarReservationBlockSelect): void {
     if (payload.block.reservation.isOperationalBlock) {
       return;
     }
 
     payload.event.preventDefault();
     payload.event.stopPropagation();
-    if (this.isCheckedInReservation(payload.block.reservation)) {
-      this.onCheckedInReservationMoveBlocked(payload.block.reservation);
-      return;
-    }
-    this.reservationActionMenu = {
-      block: payload.block,
-      x: Math.min(payload.event.clientX, window.innerWidth - 220),
-      y: Math.min(payload.event.clientY + 8, window.innerHeight - 72)
-    };
+    this.selectedReservationDetailBlock = payload.block;
+    this.cdr.markForCheck();
   }
 
   onReservationDrop(drop: CalendarReservationDropRequest): void {
+    console.info('[RoomCalendar][DROP_RECEIVED] Movimiento recibido desde el grid.', {
+      reservationId: drop.reservationId,
+      fromRoomNumber: drop.fromRoomNumber,
+      toRoomNumber: drop.toRoomNumber,
+      toCategoryCode: drop.toCategoryCode,
+      targetDate: drop.targetDate,
+      pendingReservation: !!drop.pendingReservation
+    });
+
     if (drop.pendingReservation) {
+      console.info('[RoomCalendar][FLOW_SELECTED] Reserva pendiente: PRECHECKING_ASSIGNMENT.', {
+        codReserva: drop.pendingReservation.reservationCode
+      });
       void this.confirmAndAssignReservation(drop.pendingReservation, {
         roomNumber: drop.toRoomNumber,
         categoryCode: drop.toCategoryCode,
@@ -303,12 +334,12 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
     this.selectedExchangeTrayReservationId = null;
   }
 
-  closeReservationActionMenu(): void {
-    this.reservationActionMenu = null;
+  closeReservationDetail(): void {
+    this.selectedReservationDetailBlock = null;
+    this.cdr.markForCheck();
   }
 
   onUnassignReservationFromMenu(block: CalendarReservationBlockView): void {
-    this.closeReservationActionMenu();
     if (this.isCheckedInReservation(block.reservation)) {
       this.onCheckedInReservationMoveBlocked(block.reservation);
       return;
@@ -317,8 +348,45 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
   }
 
   onMoveReservationToTrayFromMenu(block: CalendarReservationBlockView): void {
-    this.closeReservationActionMenu();
     void this.moveReservationToExchangeTray(block.reservation.id);
+  }
+
+  onDetailMoveToTrayRequested(): void {
+    const block = this.selectedReservationDetailBlock;
+    if (!block) {
+      return;
+    }
+    this.closeReservationDetail();
+    this.onMoveReservationToTrayFromMenu(block);
+  }
+
+  async onDetailEditRequested(): Promise<void> {
+    const reservation = this.selectedReservationDetailBlock?.reservation;
+    const reservationCode = reservation?.reservationCode?.trim() || '';
+    const state = reservation?.reservationState?.trim().toUpperCase() || '';
+
+    if (!reservation || !reservationCode || ['CHK', 'ANU'].includes(state)) {
+      return;
+    }
+
+    const allowed = await this.operationalPolicy.require(OperationalAction.UpdateOperation, { refresh: true });
+    if (!allowed) {
+      return;
+    }
+
+    await this.router.navigate(['/reservas/editar-hospedaje', reservationCode], {
+      queryParams: { returnUrl: '/reservas/calendario' }
+    });
+  }
+
+  canEditSelectedReservation(): boolean {
+    const reservation = this.selectedReservationDetailBlock?.reservation;
+    const state = reservation?.reservationState?.trim().toUpperCase() || '';
+    return !!reservation?.reservationCode?.trim() && !reservation.isOperationalBlock && !['CHK', 'ANU'].includes(state);
+  }
+
+  canManageSelectedReservation(): boolean {
+    return !!this.selectedReservationDetailBlock && !this.isCheckedInReservation(this.selectedReservationDetailBlock.reservation);
   }
 
   get selectedExchangeTrayReservation(): ExchangeTrayReservation | null {
@@ -892,6 +960,10 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
   private async confirmAndReassignCalendarReservation(drop: CalendarReservationDropRequest): Promise<void> {
     const sourceReservation = this.workingReservations.find((reservation) => reservation.id === drop.reservationId);
     if (!sourceReservation) {
+      console.error('[RoomCalendar][RESERVATION_NOT_FOUND] El drop no coincide con workingReservations.', {
+        reservationId: drop.reservationId,
+        totalReservations: this.workingReservations.length
+      });
       await Swal.fire({
         title: 'Reserva no encontrada',
         text: 'No se encontro la reserva origen en el calendario actual. Recargue el calendario e intente nuevamente.',
@@ -902,7 +974,15 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
       return;
     }
 
-    if (this.isCheckedInReservation(sourceReservation)) {
+    const checkedIn = this.isCheckedInReservation(sourceReservation);
+    console.info('[RoomCalendar][FLOW_SELECTED] Flujo determinado por estado de reserva.', {
+      codReserva: sourceReservation.reservationCode,
+      reservationState: sourceReservation.reservationState || '',
+      operationalStatus: sourceReservation.status,
+      flow: checkedIn ? 'ROOM_CHANGE_CHK' : 'PRECHECKING_ASSIGNMENT'
+    });
+
+    if (checkedIn) {
       await this.confirmAndChangeCheckedInRoom(sourceReservation, drop);
       return;
     }
@@ -1009,16 +1089,12 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
 
     try {
       const response = await this.executeCheckedInRoomChange(
-        {
-          codReserva: reservationCode,
-          oldHab: reservation.roomNumber,
-          newHab: drop.toRoomNumber,
-          folio: 'S',
-          operador: this.getOperator()
-        },
-        reservation.id
+        reservation,
+        drop.toRoomNumber,
+        reservationCode
       );
       this.assertCheckedInRoomChangeSucceeded(response);
+      this.applyCalendarReservationMove(reservation.id, drop.toRoomNumber, reservation.startDate);
       this.loadCalendar();
       await Swal.fire({
         title: 'Habitación trasladada',
@@ -1045,10 +1121,18 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
     options: { existingReservationId?: string; exchangeTrayReservationId?: string; skipConfirmation?: boolean } = {}
   ): Promise<boolean> {
     if (this.isAssigningRoom) {
+      console.warn('[RoomCalendar][PRECHECKING_ASSIGNMENT][BLOCKED] Ya existe una asignación en proceso.', {
+        codReserva: reservation.reservationCode,
+        processingReservationIds: [...this.processingReservationIds]
+      });
       return false;
     }
 
     if (!target.valid) {
+      console.warn('[RoomCalendar][PRECHECKING_ASSIGNMENT][INVALID_TARGET] El destino fue marcado como no disponible.', {
+        codReserva: reservation.reservationCode,
+        target
+      });
       await Swal.fire({
         title: 'Habitacion no disponible',
         text: `La habitacion ${target.roomNumber} tiene una reserva o bloqueo en el rango seleccionado.`,
@@ -1060,6 +1144,10 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
     }
 
     if (!reservation.sourceRoom?.trim()) {
+      console.error('[RoomCalendar][PRECHECKING_ASSIGNMENT][MISSING_OLD_ROOM] Falta oldHabita.', {
+        codReserva: reservation.reservationCode,
+        reservation
+      });
       await Swal.fire({
         title: 'Habitacion origen requerida',
         text: `La reserva ${reservation.reservationCode} no trae habOrigen. No se puede enviar la asignacion sin oldHabita.`,
@@ -1073,6 +1161,9 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
     const reservationCategory = this.normalizeCode(reservation.categoryCode);
     const targetCategory = this.normalizeCode(target.categoryCode);
     if (!reservationCategory) {
+      console.error('[RoomCalendar][PRECHECKING_ASSIGNMENT][MISSING_RESERVATION_CATEGORY] Falta la categoría de la reserva.', {
+        codReserva: reservation.reservationCode
+      });
       await Swal.fire({
         title: 'Categoria requerida',
         text: `La reserva ${reservation.reservationCode} no tiene categoria de habitacion para validar la asignacion.`,
@@ -1084,6 +1175,10 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
     }
 
     if (!targetCategory) {
+      console.error('[RoomCalendar][PRECHECKING_ASSIGNMENT][MISSING_TARGET_CATEGORY] Falta la categoría del destino.', {
+        codReserva: reservation.reservationCode,
+        targetRoomNumber: target.roomNumber
+      });
       await Swal.fire({
         title: 'Categoria requerida',
         text: `La habitacion ${target.roomNumber} no tiene codigo de categoria para validar la asignacion.`,
@@ -1107,6 +1202,14 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
         cancelButtonColor: '#6c757d'
       });
 
+      console.info('[RoomCalendar][PRECHECKING_ASSIGNMENT][CONFIRMATION_RESULT] Resultado del modal.', {
+        codReserva: reservation.reservationCode,
+        isConfirmed: result.isConfirmed,
+        isDenied: result.isDenied,
+        isDismissed: result.isDismissed,
+        dismiss: result.dismiss || null
+      });
+
       if (!result.isConfirmed) {
         return false;
       }
@@ -1115,18 +1218,29 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
     const existingReservation = options.existingReservationId
       ? this.workingReservations.find((item) => item.id === options.existingReservationId)
       : null;
+    const currentRoomNumber = existingReservation?.roomNumber?.trim() || reservation.sourceRoom.trim();
+    const auditId = `${Date.now()}-${reservation.reservationCode}-${currentRoomNumber}-${target.roomNumber}`;
+
     try {
       const response = await this.executeRoomAssignment(
         {
-        codReserva: reservation.reservationCode,
-        oldHabita: reservation.sourceRoom,
-        newHabita: target.roomNumber,
-        categoria: target.categoryCode,
-        operador: this.auth.getCurrentUser()?.usuario?.trim() || reservation.operator || 'admin'
+          codReserva: reservation.reservationCode,
+          oldHabita: currentRoomNumber,
+          newHabita: target.roomNumber,
+          categoria: target.categoryCode,
+          operador: this.auth.getCurrentUser()?.usuario?.trim() || reservation.operator || 'admin'
         },
         reservation.id
       );
       this.assertAssignmentSucceeded(response, 'El endpoint no confirmó la asignación.');
+
+      console.info('[RoomCalendar][PRECHECKING_ASSIGNMENT][API_ACCEPTED] El API confirmó la solicitud.', {
+        auditId,
+        codReserva: reservation.reservationCode,
+        oldHabita: currentRoomNumber,
+        newHabita: target.roomNumber,
+        response
+      });
 
       if (options.exchangeTrayReservationId) {
         const item = this.exchangeTrayReservations.find((candidate) => candidate.reservation.id === options.exchangeTrayReservationId);
@@ -1150,6 +1264,15 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
       }
 
       if (!this.exchangeMode) {
+        this.pendingRoomMoveVerification = {
+          auditId,
+          flow: 'PRECHECKING_ASSIGNMENT',
+          reservationCode: reservation.reservationCode,
+          reservationId: reservation.id,
+          previousRoomNumber: currentRoomNumber,
+          expectedRoomNumber: target.roomNumber,
+          apiResponse: response
+        };
         this.loadCalendar();
       }
       await Swal.fire({
@@ -1161,7 +1284,13 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
       });
       return true;
     } catch (error) {
-      console.error('No se pudo asignar la habitacion.', error);
+      console.error('[RoomCalendar][PRECHECKING_ASSIGNMENT][FAILED] No se pudo aplicar la asignación.', {
+        codReserva: reservation.reservationCode,
+        oldHabita: currentRoomNumber,
+        newHabita: target.roomNumber,
+        diagnostics: this.getAssignmentErrorDiagnostics(error),
+        rawError: error
+      });
       await Swal.fire({
         title: 'Error al asignar habitacion',
         text: this.getAssignmentErrorMessage(error),
@@ -1250,12 +1379,61 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
     return httpError.message ? `${httpError.message}${statusDetail}` : fallback;
   }
 
+  private getAssignmentErrorDiagnostics(error: unknown): Record<string, unknown> {
+    if (!error || typeof error !== 'object') {
+      return { value: error ?? null };
+    }
+
+    const httpError = error as {
+      name?: string;
+      message?: string;
+      status?: number;
+      statusText?: string;
+      url?: string;
+      error?: unknown;
+      stack?: string;
+    };
+
+    return {
+      name: httpError.name || null,
+      message: httpError.message || null,
+      status: httpError.status ?? null,
+      statusText: httpError.statusText || null,
+      url: httpError.url || null,
+      backend: httpError.error ?? null,
+      stack: httpError.stack || null
+    };
+  }
+
   private async executeRoomAssignment(request: CalendarRoomAssignmentRequest, reservationId: string): Promise<CalendarRoomAssignmentResponse> {
     this.isAssigningRoom = true;
     this.processingReservationIds.add(reservationId);
     this.cdr.markForCheck();
     try {
-      return await firstValueFrom(this.calendarService.assignReservationRoom(request).pipe(takeUntilDestroyed(this.destroyRef)));
+      console.info('[RoomCalendar][PRECHECKING_ASSIGNMENT] Enviando movimiento no-CHK.', {
+        codReserva: request.codReserva,
+        oldHabita: request.oldHabita,
+        newHabita: request.newHabita,
+        categoria: request.categoria
+      });
+      const response = await firstValueFrom(
+        this.calendarService.assignReservationRoom(request).pipe(takeUntilDestroyed(this.destroyRef))
+      );
+      console.info('[RoomCalendar][PRECHECKING_ASSIGNMENT] Respuesta recibida.', response);
+      return response;
+    } catch (error) {
+      console.error('[RoomCalendar][PRECHECKING_ASSIGNMENT][HTTP_ERROR] Falló el PUT /api/prechecking/asignar-habitacion.', {
+        request: {
+          codReserva: request.codReserva,
+          oldHabita: request.oldHabita,
+          newHabita: request.newHabita,
+          categoria: request.categoria,
+          operador: request.operador
+        },
+        diagnostics: this.getAssignmentErrorDiagnostics(error),
+        rawError: error
+      });
+      throw error;
     } finally {
       this.processingReservationIds.delete(reservationId);
       this.isAssigningRoom = this.processingReservationIds.size > 0;
@@ -1263,14 +1441,51 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
     }
   }
 
-  private async executeCheckedInRoomChange(request: RoomChangePayload, reservationId: string): Promise<unknown> {
+  private async executeCheckedInRoomChange(
+    reservation: CalendarReservation,
+    newRoomNumber: string,
+    reservationCode: string
+  ): Promise<unknown> {
     this.isAssigningRoom = true;
-    this.processingReservationIds.add(reservationId);
+    this.processingReservationIds.add(reservation.id);
     this.cdr.markForCheck();
     try {
-      return await firstValueFrom(this.roomStayManagementService.changeRoom(request).pipe(takeUntilDestroyed(this.destroyRef)));
+      const stay = await firstValueFrom(
+        this.roomStayManagementService
+          .getRoomStay(reservation.roomNumber, reservationCode)
+          .pipe(takeUntilDestroyed(this.destroyRef))
+      );
+      const stayReservationCode = stay?.codReserva?.trim() || '';
+      const folio = stay?.folio?.trim() || '';
+
+      if (!stay || !folio) {
+        throw new Error('No fue posible obtener el folio maestro de la estancia hospedada.');
+      }
+
+      if (this.normalizeCode(stayReservationCode) !== this.normalizeCode(reservationCode)) {
+        throw new Error(`La habitación ${reservation.roomNumber} ya no corresponde a la reserva ${reservationCode}.`);
+      }
+
+      const request: RoomChangePayload = {
+        codReserva: reservationCode,
+        oldHab: reservation.roomNumber,
+        newHab: newRoomNumber,
+        folio,
+        operador: this.getOperator()
+      };
+
+      console.info('[RoomCalendar][ROOM_CHANGE] Enviando movimiento CHK.', {
+        codReserva: request.codReserva,
+        oldHab: request.oldHab,
+        newHab: request.newHab
+      });
+      const response = await firstValueFrom(
+        this.roomStayManagementService.changeRoom(request).pipe(takeUntilDestroyed(this.destroyRef))
+      );
+      console.info('[RoomCalendar][ROOM_CHANGE] Respuesta recibida.', response);
+      return response;
     } finally {
-      this.processingReservationIds.delete(reservationId);
+      this.processingReservationIds.delete(reservation.id);
       this.isAssigningRoom = this.processingReservationIds.size > 0;
       this.cdr.markForCheck();
     }
@@ -1297,8 +1512,13 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
   }
 
   private assertAssignmentSucceeded(response: CalendarRoomAssignmentResponse, fallbackMessage: string): void {
-    if (response?.ok === false || response?.success === false) {
-      throw new Error(response.respuesta || response.mensaje || fallbackMessage);
+    if (!response || response.ok === false || response.success === false) {
+      throw new Error(response?.respuesta || response?.mensaje || response?.message || fallbackMessage);
+    }
+
+    if (response.ok !== true && response.success !== true) {
+      console.error('[RoomCalendar][PRECHECKING_ASSIGNMENT][INVALID_RESPONSE] El API no devolvió una confirmación positiva.', response);
+      throw new Error(response.respuesta || response.mensaje || response.message || fallbackMessage);
     }
   }
 
@@ -1307,7 +1527,7 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
   }
 
   private isCheckedInReservation(reservation: CalendarReservation): boolean {
-    return reservation.reservationState?.trim().toUpperCase() === 'CHK';
+    return isCheckedInCalendarReservation(reservation);
   }
 
   private normalizeCode(value: string | null | undefined): string {
@@ -1336,6 +1556,14 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
       .pipe(
         catchError((error) => {
           console.error('No se pudo cargar el calendario de habitaciones.', error);
+          if (this.pendingRoomMoveVerification) {
+            console.error('[RoomCalendar][MOVE_VERIFICATION][REFRESH_FAILED] No fue posible verificar el movimiento.', {
+              audit: this.pendingRoomMoveVerification,
+              diagnostics: this.getAssignmentErrorDiagnostics(error),
+              rawError: error
+            });
+            this.pendingRoomMoveVerification = null;
+          }
           this.errorMessage = 'No se pudo cargar el calendario de habitaciones.';
           return of({ rooms: [] as RoomStatus[], reservations: [] as CalendarReservation[], typeOptions: [] as RoomType[] });
         }),
@@ -1350,12 +1578,46 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
         this.workingReservations = data.reservations;
         this.typeOptions = data.typeOptions;
 
+        this.verifyPendingRoomMove(data.reservations);
+
         if (this.type && !this.typeOptions.includes(this.type)) {
           this.type = null;
         }
 
         this.reloadCalendar(resetScroll);
       });
+  }
+
+  private verifyPendingRoomMove(reservations: CalendarReservation[]): void {
+    const audit = this.pendingRoomMoveVerification;
+    if (!audit) {
+      return;
+    }
+
+    this.pendingRoomMoveVerification = null;
+    const matches = reservations.filter(
+      (reservation) => this.normalizeCode(reservation.reservationCode || this.extractReservationCode(reservation.id)) === this.normalizeCode(audit.reservationCode)
+    );
+    const persisted = matches.some((reservation) => reservation.roomNumber.trim() === audit.expectedRoomNumber.trim());
+
+    if (persisted) {
+      console.info('[RoomCalendar][MOVE_VERIFICATION][PERSISTED] El calendario confirmó la habitación destino.', {
+        ...audit,
+        roomsReturned: matches.map((reservation) => reservation.roomNumber)
+      });
+      return;
+    }
+
+    console.error('[RoomCalendar][MOVE_VERIFICATION][NOT_PERSISTED] El API aceptó el movimiento, pero el calendario no devolvió la reserva en la habitación destino.', {
+      ...audit,
+      roomsReturned: matches.map((reservation) => reservation.roomNumber),
+      possibleCauses: [
+        'MANRV_PRECHECKING devolvió OK sin ejecutar UPDATE.',
+        'oldHabita no coincide con PRV06_NumHabita.',
+        'La habitación destino fue considerada ocupada por el procedimiento.',
+        'La reserva no fue devuelta por calendario-habitaciones después del cambio.'
+      ]
+    });
   }
 
   private bindOperationalDate(): void {

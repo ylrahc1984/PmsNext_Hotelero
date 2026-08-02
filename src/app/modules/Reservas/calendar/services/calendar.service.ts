@@ -110,7 +110,8 @@ export class CalendarService {
     const params = new HttpParams()
       .set('fechaInicio', this.toDisplayDate(startDate))
       .set('fechaFin', this.toDisplayDate(endDate))
-      .set('soloActivas', 'true');
+      .set('soloActivas', 'true')
+      .set('_ts', Date.now().toString());
 
     return this.http
       .get<CalendarApiResponse>(this.apiUrl, { params })
@@ -119,9 +120,11 @@ export class CalendarService {
 
   assignReservationRoom(request: CalendarRoomAssignmentRequest): Observable<CalendarRoomAssignmentResponse> {
     return this.http.put<CalendarRoomAssignmentResponse>(`${this.precheckingUrl}/asignar-habitacion`, {
-      ...request,
-      ...(request.fechaIngreso ? { fechaIngreso: normalizePmsDateDDMMYYYY(request.fechaIngreso) } : {}),
-      ...(request.fechaSalida ? { fechaSalida: normalizePmsDateDDMMYYYY(request.fechaSalida) } : {})
+      codReserva: request.codReserva.trim(),
+      oldHabita: request.oldHabita.trim(),
+      newHabita: request.newHabita.trim(),
+      categoria: request.categoria.trim(),
+      operador: request.operador.trim()
     });
   }
 

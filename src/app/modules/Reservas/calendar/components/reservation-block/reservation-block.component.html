@@ -24,9 +24,18 @@
   (mouseleave)="onPopoverMouseLeave()"
   (focus)="onPopoverFocus()"
   (blur)="onPopoverBlur()"
-  (pointerdown)="onDragStart($event)"
   (click)="onSelect($event)"
 >
+  <span
+    *ngIf="!block.reservation.isOperationalBlock"
+    class="reservation-block__drag-handle"
+    aria-label="Arrastrar reserva"
+    title="Arrastrar reserva"
+    (pointerdown)="onDragStart($event)"
+    (click)="onDragHandleClick($event)"
+  >
+    <i class="feather icon-more-vertical" aria-hidden="true"></i>
+  </span>
   <span class="reservation-block__guest" aria-hidden="true">{{ block.label }}</span>
 </button>
 
@@ -156,7 +165,7 @@
 
     <footer class="operational-detail__footer" *ngIf="!block.reservation.isOperationalBlock">
       <i class="feather icon-more-horizontal" aria-hidden="true"></i>
-      <span>Seleccione la reserva para ver sus acciones operativas</span>
+      <span>Seleccione la reserva para ver su información completa</span>
     </footer>
   </article>
 </ng-template>

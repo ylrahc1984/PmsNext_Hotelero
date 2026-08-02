@@ -61,15 +61,11 @@ $primary: #2563b7;
 .detail-footer { align-items: center; background: #fff; border-top: 2px solid #d9e5f1; display: flex; flex: 0 0 auto; justify-content: space-between; min-height: 68px; padding: 0.85rem 1.05rem; }
 .detail-footer > span { align-items: center; color: $muted; display: flex; font-size: 0.63rem; gap: 0.3rem; }
 .detail-footer > div { display: flex; gap: 0.4rem; }
-.button-secondary, .button-primary { align-items: center; border-radius: 7px; display: inline-flex; font-size: 0.69rem; font-weight: 750; gap: 0.28rem; padding: 0.42rem 0.65rem; }
+.button-secondary, .button-primary, .button-danger { align-items: center; border-radius: 7px; display: inline-flex; font-size: 0.69rem; font-weight: 750; gap: 0.28rem; padding: 0.42rem 0.65rem; }
 .button-secondary { background: #fff; border: 1px solid $line; color: #52677f; }
 .button-primary { background: $primary; border: 1px solid $primary; color: #fff; }
-.button-secondary:disabled, .button-primary:disabled { cursor: not-allowed; opacity: 0.45; }
-
-:host ::ng-deep .folio-charge-editor { display: grid; gap: 0.75rem; text-align: left; }
-:host ::ng-deep .folio-charge-editor > div { display: grid; gap: 0.65rem; grid-template-columns: 1fr 1fr; }
-:host ::ng-deep .folio-charge-editor label { color: #334b67; display: grid; font-size: 0.72rem; font-weight: 750; gap: 0.3rem; }
-:host ::ng-deep .folio-charge-editor .swal2-input, :host ::ng-deep .folio-charge-editor .swal2-textarea { box-sizing: border-box; font-size: 0.8rem; margin: 0; width: 100%; }
+.button-danger { background: #fff; border: 1px solid #efc4c9; color: #bd3343; }
+.button-secondary:disabled, .button-primary:disabled, .button-danger:disabled { cursor: not-allowed; opacity: 0.45; }
 
 @media (max-width: 950px) { .detail-summary { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 575px) { .detail-overlay { padding: 0.4rem; } .detail-dialog { max-height: 96vh; } .detail-header { min-height: 92px; } .detail-heading__icon, .draft-badge { display: none; } .detail-heading p { max-width: 230px; } .detail-summary { grid-template-columns: 1fr 1fr; } .detail-footer { align-items: stretch; flex-direction: column; gap: 0.5rem; } .detail-footer > div { display: grid; grid-template-columns: 1fr 1fr 1fr; } .button-secondary, .button-primary { justify-content: center; padding-inline: 0.3rem; } }
+@media (max-width: 575px) { .detail-overlay { padding: 0.4rem; } .detail-dialog { max-height: 96vh; } .detail-header { min-height: 92px; } .detail-heading__icon, .draft-badge { display: none; } .detail-heading p { max-width: 230px; } .detail-summary { grid-template-columns: 1fr 1fr; } .detail-footer { align-items: stretch; flex-direction: column; gap: 0.5rem; } .detail-footer > div { display: grid; grid-template-columns: 1fr 1fr; } .button-secondary, .button-primary, .button-danger { justify-content: center; padding-inline: 0.3rem; } }

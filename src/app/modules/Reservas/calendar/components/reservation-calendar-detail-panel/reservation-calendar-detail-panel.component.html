@@ -1,0 +1,153 @@
+<div class="reservation-detail-backdrop" role="presentation" (click)="onBackdropClick($event)">
+  <aside class="reservation-detail-panel" role="dialog" aria-modal="true" aria-labelledby="reservation-detail-title">
+    <header class="reservation-detail-panel__header">
+      <div class="reservation-detail-panel__identity">
+        <span class="reservation-detail-panel__eyebrow">Detalle completo de reserva</span>
+        <h2 id="reservation-detail-title">{{ reservation.reservationCode || 'Reserva sin código' }}</h2>
+        <p>{{ reservationDescription() }}</p>
+      </div>
+      <button type="button" class="reservation-detail-panel__close" (click)="close()" aria-label="Cerrar detalle">
+        <i class="feather icon-x"></i>
+      </button>
+    </header>
+
+    <section class="reservation-detail-panel__summary">
+      <div class="reservation-detail-summary-item">
+        <i class="feather icon-activity" aria-hidden="true"></i>
+        <span>Estado</span>
+        <strong class="reservation-detail-summary-item__status">{{ reservationStateLabel() }}</strong>
+      </div>
+      <div class="reservation-detail-summary-item">
+        <i class="feather icon-home" aria-hidden="true"></i>
+        <span>Habitación</span>
+        <strong>{{ reservation.roomNumber || 'Sin asignar' }}</strong>
+      </div>
+      <div class="reservation-detail-summary-item">
+        <i class="feather icon-log-in" aria-hidden="true"></i>
+        <span>Llegada</span>
+        <strong>{{ arrivalDateLabel() }}</strong>
+      </div>
+      <div class="reservation-detail-summary-item">
+        <i class="feather icon-log-out" aria-hidden="true"></i>
+        <span>Salida</span>
+        <strong>{{ departureDateLabel() }}</strong>
+      </div>
+      <div class="reservation-detail-summary-item">
+        <i class="feather icon-briefcase" aria-hidden="true"></i>
+        <span>Agencia</span>
+        <strong>{{ agencyName() }}</strong>
+      </div>
+      <div class="reservation-detail-summary-item reservation-detail-summary-item--total">
+        <i class="feather icon-credit-card" aria-hidden="true"></i>
+        <span>Total</span>
+        <strong>{{ totalLabel() }}</strong>
+      </div>
+    </section>
+
+    <main class="reservation-detail-panel__body">
+      <div class="reservation-detail-panel__loading" *ngIf="loading()">
+        <span class="reservation-detail-panel__spinner" aria-hidden="true"></span>
+        <strong>Consultando información completa…</strong>
+        <small>Estamos preparando todos los datos de la reserva.</small>
+      </div>
+
+      <div class="reservation-detail-panel__error" *ngIf="!loading() && errorMessage()">
+        <i class="feather icon-alert-circle"></i>
+        <strong>No fue posible cargar el detalle</strong>
+        <p>{{ errorMessage() }}</p>
+        <button type="button" (click)="retry()"><i class="feather icon-refresh-cw"></i> Reintentar</button>
+      </div>
+
+      <ng-container *ngIf="!loading() && detail() as completeDetail">
+        <section class="reservation-detail-section">
+          <header>
+            <div><i class="feather icon-book-open"></i><span>Encabezado</span></div>
+            <small>{{ entries(completeDetail.encabezado).length }} campos</small>
+          </header>
+          <div class="reservation-detail-fields">
+            <div
+              class="reservation-detail-field"
+              *ngFor="let entry of entries(completeDetail.encabezado); trackBy: trackEntry"
+              [class.reservation-detail-field--wide]="entry.wide"
+            >
+              <span>{{ entry.label }}</span>
+              <strong>{{ entry.value }}</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="reservation-detail-section">
+          <header>
+            <div><i class="feather icon-map-pin"></i><span>Desglose y asignaciones</span></div>
+            <small>{{ records(completeDetail.desgloseHabitaciones).length }} registros</small>
+          </header>
+          <div class="reservation-detail-records" *ngIf="records(completeDetail.desgloseHabitaciones).length; else noBreakdown">
+            <article *ngFor="let record of records(completeDetail.desgloseHabitaciones); let index = index; trackBy: trackRecord">
+              <h3>Asignación {{ index + 1 }}</h3>
+              <div class="reservation-detail-fields">
+                <div class="reservation-detail-field" *ngFor="let entry of breakdownEntries(record); trackBy: trackEntry" [class.reservation-detail-field--wide]="entry.wide">
+                  <span>{{ entry.label }}</span><strong>{{ entry.value }}</strong>
+                </div>
+              </div>
+            </article>
+          </div>
+          <ng-template #noBreakdown><p class="reservation-detail-empty">No hay habitaciones desglosadas.</p></ng-template>
+        </section>
+
+        <section class="reservation-detail-section">
+          <header>
+            <div><i class="feather icon-check-circle"></i><span>Servicios incluidos</span></div>
+            <small>{{ records(completeDetail.serviciosIncluidos).length }} registros</small>
+          </header>
+          <div class="reservation-detail-records" *ngIf="records(completeDetail.serviciosIncluidos).length; else noIncludedServices">
+            <article *ngFor="let record of records(completeDetail.serviciosIncluidos); let index = index; trackBy: trackRecord">
+              <h3>Servicio incluido {{ index + 1 }}</h3>
+              <div class="reservation-detail-fields">
+                <div class="reservation-detail-field" *ngFor="let entry of entries(record); trackBy: trackEntry" [class.reservation-detail-field--wide]="entry.wide">
+                  <span>{{ entry.label }}</span><strong>{{ entry.value }}</strong>
+                </div>
+              </div>
+            </article>
+          </div>
+          <ng-template #noIncludedServices><p class="reservation-detail-empty">La reserva no tiene servicios incluidos.</p></ng-template>
+        </section>
+
+        <section class="reservation-detail-section">
+          <header>
+            <div><i class="feather icon-plus-circle"></i><span>Servicios adicionales</span></div>
+            <small>{{ records(completeDetail.serviciosAdicionales).length }} registros</small>
+          </header>
+          <div class="reservation-detail-records" *ngIf="records(completeDetail.serviciosAdicionales).length; else noAdditionalServices">
+            <article *ngFor="let record of records(completeDetail.serviciosAdicionales); let index = index; trackBy: trackRecord">
+              <h3>Servicio adicional {{ index + 1 }}</h3>
+              <div class="reservation-detail-fields">
+                <div class="reservation-detail-field" *ngFor="let entry of entries(record); trackBy: trackEntry" [class.reservation-detail-field--wide]="entry.wide">
+                  <span>{{ entry.label }}</span><strong>{{ entry.value }}</strong>
+                </div>
+              </div>
+            </article>
+          </div>
+          <ng-template #noAdditionalServices><p class="reservation-detail-empty">La reserva no tiene servicios adicionales.</p></ng-template>
+        </section>
+      </ng-container>
+    </main>
+
+    <footer class="reservation-detail-panel__footer">
+      <div class="reservation-detail-panel__actions">
+        <button
+          type="button"
+          class="reservation-detail-action reservation-detail-action--primary"
+          *ngIf="canEditReservation()"
+          [disabled]="loading()"
+          (click)="requestEdit()"
+        >
+          <i class="feather icon-edit-2"></i> Editar reserva
+        </button>
+        <button type="button" class="reservation-detail-action reservation-detail-action--warning" *ngIf="canMoveToTray" (click)="requestMoveToTray()">
+          <i class="feather icon-repeat"></i> Mover a bandeja
+        </button>
+      </div>
+      <button type="button" class="reservation-detail-action reservation-detail-action--close" (click)="close()">Cerrar</button>
+    </footer>
+  </aside>
+</div>

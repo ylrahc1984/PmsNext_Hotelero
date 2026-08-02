@@ -1018,6 +1018,224 @@ gmpx-place-autocomplete.places-autocomplete-themed {
   z-index: 2000 !important;
 }
 
+// Editor de partidas del Folio Master. SweetAlert se monta bajo body, por eso
+// estos estilos deben ser globales y se limitan a una clase exclusiva.
+.folio-charge-editor-popup {
+  width: min(560px, calc(100vw - 24px));
+  padding: 0 0 20px;
+  overflow: hidden;
+  border: 1px solid #dce5ef;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 28px 80px rgba(15, 35, 58, 0.28);
+}
+
+.folio-charge-editor-popup__title {
+  margin: 0;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #e5ebf2;
+  color: #193653;
+  background: linear-gradient(180deg, #f8fbff 0%, #fff 100%);
+  font-size: 1.2rem;
+  font-weight: 850;
+  line-height: 1.25;
+  text-align: left;
+}
+
+.folio-charge-editor-popup__body {
+  margin: 0;
+  padding: 18px 24px 0;
+}
+
+.folio-charge-editor {
+  display: grid;
+  gap: 14px;
+  text-align: left;
+}
+
+.folio-charge-editor__inputs {
+  display: grid;
+  grid-template-columns: 0.7fr 1.3fr;
+  gap: 12px;
+}
+
+.folio-charge-editor__field {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  color: #334b67;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.folio-charge-editor__field .swal2-input,
+.folio-charge-editor__field .swal2-textarea {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  border: 1px solid #cfdae6;
+  border-radius: 9px;
+  color: #213b57;
+  background: #fff;
+  box-shadow: none;
+  font-size: 0.82rem;
+}
+
+.folio-charge-editor__field .swal2-input {
+  height: 42px;
+  padding: 0 12px;
+}
+
+.folio-charge-editor__field .swal2-textarea {
+  min-height: 58px;
+  padding: 9px 12px;
+  resize: vertical;
+}
+
+.folio-charge-editor__field .swal2-input:focus,
+.folio-charge-editor__field .swal2-textarea:focus {
+  border-color: #4e82c2;
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(37, 99, 183, 0.12);
+}
+
+.folio-charge-editor__field > small {
+  color: #718197;
+  font-size: 0.59rem;
+  font-weight: 550;
+}
+
+.folio-charge-totals {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid #d8e3ef;
+  border-radius: 11px;
+  background: #fafcff;
+}
+
+.folio-charge-totals header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid #dce6f0;
+  background: #edf4fc;
+}
+
+.folio-charge-totals header div {
+  display: grid;
+  gap: 1px;
+}
+
+.folio-charge-totals header small {
+  color: #718197;
+  font-size: 0.52rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.folio-charge-totals header strong {
+  color: #193653;
+  font-size: 0.69rem;
+}
+
+.folio-charge-totals header > span {
+  padding: 3px 8px;
+  border: 1px solid #c9d9ea;
+  border-radius: 999px;
+  color: #315f91;
+  background: #fff;
+  font-size: 0.58rem;
+  font-weight: 850;
+}
+
+.folio-charge-totals__row,
+.folio-charge-totals__grand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+}
+
+.folio-charge-totals__row + .folio-charge-totals__row {
+  border-top: 1px dashed #dce5ee;
+}
+
+.folio-charge-totals__row span {
+  color: #64758a;
+  font-size: 0.65rem;
+}
+
+.folio-charge-totals__row strong {
+  color: #314b67;
+  font-size: 0.73rem;
+}
+
+.folio-charge-totals__grand {
+  margin-top: 2px;
+  border-top: 1px solid #bfd5ef;
+  background: #e6f1ff;
+}
+
+.folio-charge-totals__grand span {
+  color: #174f9c;
+  font-size: 0.66rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.folio-charge-totals__grand strong {
+  color: #0f4d98;
+  font-size: 0.94rem;
+}
+
+.folio-charge-editor-popup__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  width: auto;
+  margin: 18px 24px 0;
+}
+
+.folio-charge-editor-popup__confirm,
+.folio-charge-editor-popup__cancel {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 9px;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.folio-charge-editor-popup__confirm {
+  border: 1px solid #2563b7;
+  color: #fff;
+  background: #2563b7;
+}
+
+.folio-charge-editor-popup__cancel {
+  border: 1px solid #d4dee9;
+  color: #52677f;
+  background: #fff;
+}
+
+@media (max-width: 575px) {
+  .folio-charge-editor-popup__title,
+  .folio-charge-editor-popup__body {
+    padding-inline: 16px;
+  }
+
+  .folio-charge-editor__inputs {
+    grid-template-columns: 1fr;
+  }
+
+  .folio-charge-editor-popup__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    margin-inline: 16px;
+  }
+}
+
 .stay-page .room-invoice-document-chip {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr);

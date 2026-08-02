@@ -108,6 +108,7 @@
   *ngIf="selectedCharge as charge"
   [charge]="charge"
   (closeModal)="closeChargeDetail()"
+  (chargeChanged)="onChargeChanged($event)"
 />
 
 <app-folio-master-invoice-modal

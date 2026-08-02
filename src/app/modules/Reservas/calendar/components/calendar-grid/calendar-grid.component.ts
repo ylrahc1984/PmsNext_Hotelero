@@ -30,6 +30,7 @@ import {
 } from '../../interfaces/calendar.interface';
 import { CalendarCellComponent } from '../calendar-cell/calendar-cell.component';
 import { ReservationBlockComponent } from '../reservation-block/reservation-block.component';
+import { isCheckedInCalendarReservation } from '../../utils/calendar-reservation.util';
 
 interface CalendarGridDragState {
   reservationId: string;
@@ -119,6 +120,7 @@ export class CalendarGridComponent implements AfterViewInit, OnChanges, OnDestro
   private dragStartClientX = 0;
   private dragStartClientY = 0;
   private wasDragCommitted = false;
+  private activePointerId: number | null = null;
 
   ngAfterViewInit(): void {
     const element = this.scrollContainer?.nativeElement;
@@ -148,8 +150,7 @@ export class CalendarGridComponent implements AfterViewInit, OnChanges, OnDestro
     if (this.viewportMeasureFrame !== null && typeof cancelAnimationFrame !== 'undefined') {
       cancelAnimationFrame(this.viewportMeasureFrame);
     }
-    window.removeEventListener('pointermove', this.handlePointerMove);
-    window.removeEventListener('pointerup', this.handlePointerUp);
+    this.removeDragListeners();
   }
 
   setScrollTop(value: number): void {
@@ -191,7 +192,7 @@ export class CalendarGridComponent implements AfterViewInit, OnChanges, OnDestro
       return;
     }
 
-    const checkedIn = payload.block.reservation.reservationState?.trim().toUpperCase() === 'CHK';
+    const checkedIn = isCheckedInCalendarReservation(payload.block.reservation);
 
     this.beginDrag(
       {
@@ -334,14 +335,17 @@ export class CalendarGridComponent implements AfterViewInit, OnChanges, OnDestro
     this.dragStartClientX = event.clientX;
     this.dragStartClientY = event.clientY;
     this.wasDragCommitted = false;
+    this.activePointerId = event.pointerId;
     this.dragState = state;
 
     window.addEventListener('pointermove', this.handlePointerMove, { passive: true });
     window.addEventListener('pointerup', this.handlePointerUp, { passive: true });
+    window.addEventListener('pointercancel', this.handlePointerCancel, { passive: true });
+    window.addEventListener('blur', this.handleWindowBlur);
   }
 
   private handlePointerMove = (event: PointerEvent): void => {
-    if (!this.isDragging || !this.dragState) {
+    if (!this.isDragging || !this.dragState || event.pointerId !== this.activePointerId) {
       return;
     }
 
@@ -358,7 +362,11 @@ export class CalendarGridComponent implements AfterViewInit, OnChanges, OnDestro
     this.updateDragPreview(event);
   };
 
-  private handlePointerUp = (): void => {
+  private handlePointerUp = (event: PointerEvent): void => {
+    if (event.pointerId !== this.activePointerId) {
+      return;
+    }
+
     if (this.hasDragMoved && this.dragState && this.dropCandidate?.valid) {
       if (this.dropCandidate.overExchangeTray && this.exchangeMode && !this.dragState.trayItem && !this.dragState.pendingReservation) {
         this.reservationTrayDrop.emit(this.dragState.reservationId);
@@ -395,6 +403,18 @@ export class CalendarGridComponent implements AfterViewInit, OnChanges, OnDestro
     }
 
     this.clearDragState();
+  };
+
+  private handlePointerCancel = (event: PointerEvent): void => {
+    if (event.pointerId === this.activePointerId) {
+      this.clearDragState();
+    }
+  };
+
+  private handleWindowBlur = (): void => {
+    if (this.isDragging) {
+      this.clearDragState();
+    }
   };
 
   private updateDragPreview(event: PointerEvent): void {
@@ -499,12 +519,19 @@ export class CalendarGridComponent implements AfterViewInit, OnChanges, OnDestro
   private clearDragState(): void {
     this.isDragging = false;
     this.hasDragMoved = false;
+    this.activePointerId = null;
     this.dragState = null;
     this.dragPreview = null;
     this.dropCandidate = null;
+    this.removeDragListeners();
+    this.cdr.detectChanges();
+  }
+
+  private removeDragListeners(): void {
     window.removeEventListener('pointermove', this.handlePointerMove);
     window.removeEventListener('pointerup', this.handlePointerUp);
-    this.cdr.detectChanges();
+    window.removeEventListener('pointercancel', this.handlePointerCancel);
+    window.removeEventListener('blur', this.handleWindowBlur);
   }
 
   private scheduleViewportMeasurement(): void {

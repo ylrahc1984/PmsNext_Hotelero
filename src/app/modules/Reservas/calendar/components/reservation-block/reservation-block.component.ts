@@ -22,6 +22,7 @@ import {
 } from 'src/app/shared/models/room-operational-visual-state';
 import { ReservaHabitacionDetalle } from '../../../interfaces/reserva-habitacion.interface';
 import { ReservaHabitacionService } from '../../../services/reserva-habitacion.service';
+import { isCheckedInCalendarReservation } from '../../utils/calendar-reservation.util';
 import { CalendarReservationBlockSelect, CalendarReservationBlockView } from '../../interfaces/calendar.interface';
 
 @Component({
@@ -55,7 +56,7 @@ export class ReservationBlockComponent implements OnDestroy {
   }
 
   get isCheckedIn(): boolean {
-    return this.block.reservation.reservationState?.trim().toUpperCase() === 'CHK';
+    return isCheckedInCalendarReservation(this.block.reservation);
   }
 
   get isCheckedInPastDeparture(): boolean {
@@ -142,6 +143,11 @@ export class ReservationBlockComponent implements OnDestroy {
       event.currentTarget.setPointerCapture(event.pointerId);
     }
     this.dragStart.emit({ block: this.block, event });
+  }
+
+  onDragHandleClick(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
   }
 
   private dismissPopoverForInteraction(): void {

@@ -7,8 +7,8 @@
       </div>
       <div class="detail-header__actions">
         <span class="draft-badge" *ngIf="pendingChanges"><i class="feather icon-edit-3"></i>Cambios locales</span>
-        <button type="button" class="icon-button" (click)="loadDetail()" [disabled]="loading" aria-label="Actualizar detalle"><i class="feather icon-refresh-cw"></i></button>
-        <button type="button" class="icon-button" (click)="requestClose()" aria-label="Cerrar"><i class="feather icon-x"></i></button>
+        <button type="button" class="icon-button" (click)="refreshDetail()" [disabled]="loading || submitting" aria-label="Actualizar detalle"><i class="feather icon-refresh-cw"></i></button>
+        <button type="button" class="icon-button" (click)="requestClose()" [disabled]="submitting" aria-label="Cerrar"><i class="feather icon-x"></i></button>
       </div>
     </header>
 
@@ -26,7 +26,7 @@
           <article class="detail-summary__total"><span>Total calculado</span><strong>{{ header.moneda || charge.moneda }} {{ total | number:'1.2-2' }}</strong></article>
         </section>
 
-        <aside class="draft-warning" *ngIf="pendingChanges"><i class="feather icon-info"></i><div><strong>Borrador operativo</strong><span>Los cambios todavía no se han enviado al backend porque falta el contrato de actualización y eliminación de partidas.</span></div></aside>
+        <aside class="draft-warning" *ngIf="pendingChanges"><i class="feather icon-info"></i><div><strong>Cambios pendientes</strong><span>Revise las partidas y presione Guardar cambios para actualizar el cargo de habitación.</span></div></aside>
 
         <section class="lines-card">
           <div class="lines-card__title"><div><small>Partidas del documento</small><h3>{{ detail.detalles.length }} consumo(s)</h3></div><strong>{{ header.moneda || charge.moneda }}</strong></div>
@@ -43,7 +43,7 @@
                   <td class="text-end">{{ line.impuestos | number:'1.2-2' }}</td>
                   <td class="text-end"><strong>{{ line.total | number:'1.2-2' }}</strong></td>
                   <td><span class="line-state" [class.line-state--muted]="stateLabel(line.estado) !== 'Activo'">{{ stateLabel(line.estado) }}</span></td>
-                  <td><div class="line-actions"><button type="button" title="Editar partida en el borrador" [disabled]="!canMutate(line)" (click)="editLine(line)"><i class="feather icon-edit-2"></i></button><button type="button" class="danger" title="Quitar partida del borrador" [disabled]="!canMutate(line)" (click)="removeLine(line)"><i class="feather icon-trash-2"></i></button></div></td>
+                  <td><div class="line-actions"><button type="button" title="Editar partida" [disabled]="!canMutate(line) || submitting" (click)="editLine(line)"><i class="feather icon-edit-2"></i></button><button type="button" title="Trasladar partida" [disabled]="!canMutate(line) || submitting" (click)="transferLine(line)"><i class="feather icon-repeat"></i></button><button type="button" class="danger" title="Anular partida" [disabled]="!canMutate(line) || submitting" (click)="removeLine(line)"><i class="feather icon-slash"></i></button></div></td>
                 </tr>
               </tbody>
             </table>
@@ -55,7 +55,7 @@
 
     <footer class="detail-footer">
       <span><i class="feather icon-shield"></i>Las acciones se habilitan únicamente para cargos abiertos y partidas activas.</span>
-      <div><button type="button" class="button-secondary" (click)="requestClose()">Cerrar</button><button type="button" class="button-secondary" [disabled]="!pendingChanges" (click)="discardChanges()"><i class="feather icon-rotate-ccw"></i>Descartar</button><button type="button" class="button-primary" [disabled]="!pendingChanges" (click)="explainPendingPersistence()"><i class="feather icon-save"></i>Guardar cambios</button></div>
+      <div><button type="button" class="button-danger" [disabled]="!canMutateCharge || submitting" (click)="annulCharge()"><i class="feather icon-slash"></i>Anular cargo completo</button><button type="button" class="button-secondary" [disabled]="submitting" (click)="requestClose()">Cerrar</button><button type="button" class="button-secondary" [disabled]="!pendingChanges || submitting" (click)="discardChanges()"><i class="feather icon-rotate-ccw"></i>Descartar</button><button type="button" class="button-primary" [disabled]="!pendingChanges || submitting" (click)="saveChanges()"><span *ngIf="submitting" class="spinner-border spinner-border-sm"></span><i *ngIf="!submitting" class="feather icon-save"></i>{{ submitting ? 'Guardando...' : 'Guardar cambios' }}</button></div>
     </footer>
   </section>
 </div>

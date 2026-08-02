@@ -127,6 +127,14 @@ export class FolioMasterChargeService {
   }
 
   private clean(value: unknown): string {
-    return (value ?? '').toString().trim();
+    if (typeof value === 'string') {
+      return value.trim();
+    }
+
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value).trim();
+    }
+
+    return '';
   }
 }

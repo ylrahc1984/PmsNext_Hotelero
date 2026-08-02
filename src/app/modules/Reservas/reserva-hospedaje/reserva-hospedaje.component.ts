@@ -292,8 +292,10 @@ export class ReservaHospedajeComponent implements OnInit {
   private exchangeRateRequestId       = 0;
   private roomRateRequestId           = 0;
   private resolvedRoomRateKey         = '';
+  private returnUrl                   = '/reservas/consulta-reservas';
 
   ngOnInit(): void {
+    this.returnUrl = this.resolveReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'));
     const codReserva = this.route.snapshot.paramMap.get('codReserva')?.trim() ?? '';
     this.editCodReserva = codReserva;
     this.isEditMode.set(!!codReserva);
@@ -786,6 +788,10 @@ export class ReservaHospedajeComponent implements OnInit {
     return this.isEditMode() ? 'Recargar' : 'Limpiar';
   }
 
+  volver(): void {
+    void this.router.navigateByUrl(this.returnUrl);
+  }
+
   limpiarFormulario(): void {
     if (this.isEditMode()) {
       this.loadReservaForEdit(this.editCodReserva);
@@ -1083,10 +1089,10 @@ export class ReservaHospedajeComponent implements OnInit {
         title: this.isEditMode() ? 'Reserva actualizada' : 'Reserva confirmada',
         html: this.buildReservationResponseHtml(response),
         icon: 'success',
-        confirmButtonText: 'Ir a consulta de reservas',
+        confirmButtonText: this.returnUrl === '/reservas/calendario' ? 'Volver al calendario' : 'Ir a consulta de reservas',
         confirmButtonColor: '#198754'
       });
-      await this.router.navigate(['/reservas/consulta-reservas']);
+      await this.router.navigateByUrl(this.returnUrl);
     } catch (error) {
       console.error('No se pudo guardar la reserva.', error);
       this.saving.set(false);
@@ -1460,6 +1466,12 @@ export class ReservaHospedajeComponent implements OnInit {
 
   private isLockedReservationState(state: string): boolean {
     return ['CHK', 'ANU'].includes(state.trim().toUpperCase());
+  }
+
+  private resolveReturnUrl(value: string | null): string {
+    const allowedReturnUrls = new Set(['/reservas/calendario', '/reservas/consulta-reservas']);
+    const normalized = (value ?? '').trim();
+    return allowedReturnUrls.has(normalized) ? normalized : '/reservas/consulta-reservas';
   }
 
   private async showFinalAvailabilityAlert(
