@@ -10,6 +10,7 @@ import type {
 } from 'pdfmake/interfaces';
 
 import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
+import { formatPmsDateTimeDDMMYYYY } from 'src/app/core/utils/pms-date.util';
 import {
   RoomChargeLookupDetail,
   RoomChargeLookupResponse,
@@ -533,10 +534,7 @@ export class RoomChargePdfService {
   }
 
   private formatDateTime(value: Date): string {
-    return new Intl.DateTimeFormat('es-CR', {
-      dateStyle: 'short',
-      timeStyle: 'short'
-    }).format(value);
+    return formatPmsDateTimeDDMMYYYY(value);
   }
 
   private isAnnulled(value: unknown): boolean {

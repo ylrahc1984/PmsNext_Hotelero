@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, injec
 import { ActivatedRoute, Router } from '@angular/router';
 import { CdkScrollable } from '@angular/cdk/scrolling';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Subject, firstValueFrom, forkJoin, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, finalize, switchMap } from 'rxjs/operators';
 import Swal from 'sweetalert2';
@@ -14,6 +14,7 @@ import { ToastService } from 'src/app/core/services/toast.service';
 import {
   differenceInPmsCalendarDays,
   normalizePmsDateDDMMYYYY,
+  normalizePmsDateInputDDMMYYYY,
   parsePmsDate,
   toPmsDateInputValue
 } from 'src/app/core/utils/pms-date.util';
@@ -52,6 +53,11 @@ import {
   RoomStayApiData,
   RoomStayManagementService
 } from './services/room-stay-management.service';
+
+function pmsDateInputValidator(control: AbstractControl<string>): ValidationErrors | null {
+  const value = control.value?.trim();
+  return !value || normalizePmsDateInputDDMMYYYY(value) ? null : { pmsDate: true };
+}
 
 type ActiveTab      = 'stay' | 'account' | 'operations' | 'timeline';
 type OperationKind  = 'workflow' | 'financial' | 'document' | 'critical';
@@ -441,7 +447,7 @@ export class RoomStayManagementComponent implements OnInit {
     codNacion       : this.fb.control('', { validators: [Validators.required] }),
     nombre          : this.fb.control('', { validators: [Validators.required, Validators.maxLength(80)] }),
     apellido        : this.fb.control('', { validators: [Validators.required, Validators.maxLength(120)] }),
-    fecNac          : this.fb.control('', { validators: [Validators.required] }),
+    fecNac          : this.fb.control('', { validators: [Validators.required, pmsDateInputValidator] }),
     sexo            : this.fb.control(''),
     estCivil        : this.fb.control(''),
     tiPax           : this.fb.control('', { validators: [Validators.required] }),
@@ -1979,10 +1985,21 @@ export class RoomStayManagementComponent implements OnInit {
     const control = this.extraGuestForm.controls[field];
 
     if (control.errors?.['required']) return 'Campo requerido';
+    if (control.errors?.['pmsDate']) return 'Ingresa una fecha válida en formato dd/mm/yyyy';
     if (control.errors?.['email']) return 'Correo invalido';
     if (control.errors?.['maxlength']) return 'Longitud maxima excedida';
 
     return '';
+  }
+
+  normalizeExtraGuestBirthDate(): void {
+    const control = this.extraGuestForm.controls.fecNac;
+    const normalized = normalizePmsDateInputDDMMYYYY(control.value);
+
+    if (normalized) {
+      control.setValue(normalized);
+    }
+    control.markAsTouched();
   }
 
   async saveExtraGuest(): Promise<void> {
@@ -1991,8 +2008,6 @@ export class RoomStayManagementComponent implements OnInit {
       this.extraGuestValidationMessage.set('No se puede agregar el huesped sin una fecha operativa valida.');
       return;
     }
-    this.extraGuestForm.controls.fecNac.setValue(operationalDate, { emitEvent: false });
-
     if (this.extraGuestForm.invalid) {
       this.extraGuestForm.markAllAsTouched();
       this.extraGuestValidationMessage.set('Completa los campos obligatorios del huesped.');
@@ -2073,7 +2088,7 @@ export class RoomStayManagementComponent implements OnInit {
       codNacion         : '',
       nombre            : '',
       apellido          : '',
-      fecNac            : this.todayDisplayDate(),
+      fecNac            : '',
       sexo              : '',
       estCivil          : '',
       tiPax             : this.extraGuestPaxTypes()[0]?.CR03_CodTipo ?? '',
@@ -2163,7 +2178,7 @@ export class RoomStayManagementComponent implements OnInit {
       numDocu       : this.cleanText(raw.numDocu),
       nombre        : this.cleanText(raw.nombre),
       apellido      : this.cleanText(raw.apellido),
-      fecNac        : this.todayDisplayDate(),
+      fecNac        : normalizePmsDateInputDDMMYYYY(raw.fecNac),
       sexo          : this.cleanText(raw.sexo),
       estCivil      : this.cleanText(raw.estCivil),
       tiPax         : this.cleanText(raw.tiPax),
@@ -3930,7 +3945,7 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   departureDateValidationMessage(): string {
-    const selectedDate = normalizePmsDateDDMMYYYY(this.actionDraft().newCheckOut);
+    const selectedDate = normalizePmsDateInputDDMMYYYY(this.actionDraft().newCheckOut);
     const operationalDate = this.todayDisplayDate();
 
     if (!selectedDate) {
@@ -3958,7 +3973,14 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   private formatInputDateForApi(date: string): string {
-    return normalizePmsDateDDMMYYYY(date);
+    return normalizePmsDateInputDDMMYYYY(date);
+  }
+
+  normalizeDepartureDateInput(): void {
+    const normalized = normalizePmsDateInputDDMMYYYY(this.actionDraft().newCheckOut);
+    if (normalized) {
+      this.updateActionDraft({ newCheckOut: normalized });
+    }
   }
 
   private escapeHtml(value: string | number | null | undefined): string {

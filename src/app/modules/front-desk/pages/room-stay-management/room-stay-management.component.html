@@ -85,7 +85,7 @@
           <div class="reservation-foot">
             <div><label>Folio Master</label><strong>{{ room().masterFolio }}</strong></div>
             <div><label>Plan</label><strong>{{ room().plan }}</strong></div>
-            <div><label>Reservada el</label><strong>{{ room().reservedAt }}</strong></div>
+            <div><label>Reservada el</label><strong>{{ formatDetailDate(room().reservedAt) }}</strong></div>
           </div>
         </article>
 
@@ -214,7 +214,7 @@
                       (change)="toggleChargeInvoiceSelection('lodging', charge.id, $any($event.target).checked)"
                     />
                   </span>
-                  <span data-label="Fecha">{{ charge.date }}</span>
+                  <span data-label="Fecha">{{ formatDetailDate(charge.date) }}</span>
                   <span data-label="Hora">{{ charge.time }}</span>
                   <span data-label="Concepto">{{ charge.concept }}</span>
                   <span data-label="Referencia">{{ charge.reference }}</span>
@@ -299,7 +299,7 @@
                       (change)="toggleChargeInvoiceSelection('extras', charge.id, $any($event.target).checked)"
                     />
                   </span>
-                  <span data-label="Fecha">{{ charge.date }}</span>
+                  <span data-label="Fecha">{{ formatDetailDate(charge.date) }}</span>
                   <span data-label="Hora">{{ charge.time }}</span>
                   <span data-label="Concepto">{{ charge.concept }}</span>
                   <span data-label="Referencia">{{ charge.reference }}</span>
@@ -984,9 +984,10 @@
                   inputmode="numeric"
                   maxlength="10"
                   placeholder="dd/mm/yyyy"
-                  pattern="\d{2}/\d{2}/\d{4}"
+                  pattern="\d{1,2}/\d{1,2}/\d{4}"
                   [ngModel]="actionDraft().newCheckOut"
                   (ngModelChange)="updateActionDraft({ newCheckOut: $event })"
+                  (blur)="normalizeDepartureDateInput()"
                   [attr.aria-invalid]="departureDateValidationMessage() ? 'true' : null"
                   [class.is-invalid]="departureDateValidationMessage()"
                 />
@@ -1425,6 +1426,23 @@
                 <input type="text" formControlName="apellido" [class.is-invalid]="isExtraGuestFieldInvalid('apellido')" />
                 @if (isExtraGuestFieldInvalid('apellido')) {
                   <small>{{ getExtraGuestFieldError('apellido') }}</small>
+                }
+              </label>
+
+              <label class="extra-guest-field">
+                <span>Fecha de nacimiento</span>
+                <input
+                  type="text"
+                  inputmode="numeric"
+                  maxlength="10"
+                  placeholder="dd/mm/yyyy"
+                  pattern="\d{1,2}/\d{1,2}/\d{4}"
+                  formControlName="fecNac"
+                  [class.is-invalid]="isExtraGuestFieldInvalid('fecNac')"
+                  (blur)="normalizeExtraGuestBirthDate()"
+                />
+                @if (isExtraGuestFieldInvalid('fecNac')) {
+                  <small>{{ getExtraGuestFieldError('fecNac') }}</small>
                 }
               </label>
 

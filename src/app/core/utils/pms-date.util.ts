@@ -23,7 +23,7 @@ export function normalizePmsDateDDMMYYYY(value: unknown): string {
     return month >= 0 ? formatValidDate(Number(namedMonthDate[2]), month + 1, Number(namedMonthDate[3])) : '';
   }
 
-  const slashDate = normalized.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  const slashDate = normalized.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?=$|[ T])/);
   if (!slashDate) {
     return '';
   }
@@ -36,6 +36,33 @@ export function normalizePmsDateDDMMYYYY(value: unknown): string {
   const month = isUnambiguousUsDate ? firstPart : secondPart;
 
   return formatValidDate(day, month, year);
+}
+
+/**
+ * Valida una fecha escrita por el usuario en orden D/M/YYYY o DD/MM/YYYY y
+ * devuelve siempre el contrato canónico DD/MM/YYYY.
+ *
+ * A diferencia de normalizePmsDateDDMMYYYY, esta función no acepta fechas ISO,
+ * horas ni texto adicional: está destinada a controles editables.
+ */
+export function normalizePmsDateInputDDMMYYYY(value: unknown): string {
+  const input = (value ?? '').toString().trim();
+  const match = input.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+
+  return match
+    ? formatValidDate(Number(match[1]), Number(match[2]), Number(match[3]))
+    : '';
+}
+
+/** Formatea fecha y hora local garantizando DD/MM/YYYY HH:mm. */
+export function formatPmsDateTimeDDMMYYYY(value: Date): string {
+  if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
+    return '';
+  }
+
+  const hours = String(value.getHours()).padStart(2, '0');
+  const minutes = String(value.getMinutes()).padStart(2, '0');
+  return `${formatLocalDate(value)} ${hours}:${minutes}`;
 }
 
 export function toPmsDateInputValue(value: unknown): string {
