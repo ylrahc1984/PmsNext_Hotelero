@@ -21,7 +21,6 @@ import {
   CalendarAssignmentTarget,
   CalendarDate,
   CalendarExchangeTrayAssignmentRequest,
-  CalendarReservation,
   CalendarReservationBlockSelect,
   CalendarReservationBlockView,
   CalendarReservationDropRequest,
@@ -42,6 +41,7 @@ interface CalendarGridDragState {
   pointerOffsetX: number;
   categoryCode: string;
   preserveDates: boolean;
+  checkedIn: boolean;
   block?: CalendarReservationBlockView;
   trayItem?: ExchangeTrayReservation;
   pendingReservation?: CalendarAssignableReservation;
@@ -73,7 +73,6 @@ export class CalendarGridComponent implements AfterViewInit, OnChanges, OnDestro
   @Output() scrollContentHeightChange = new EventEmitter<number>();
   @Output() reservationSelect = new EventEmitter<CalendarReservationBlockSelect>();
   @Output() reservationDrop = new EventEmitter<CalendarReservationDropRequest>();
-  @Output() reservationMoveBlocked = new EventEmitter<CalendarReservation>();
   @Output() assignmentTargetSelect = new EventEmitter<CalendarAssignmentTarget>();
   @Output() reservationTrayDrop = new EventEmitter<string>();
   @Output() trayReservationDrop = new EventEmitter<CalendarExchangeTrayAssignmentRequest>();
@@ -192,10 +191,7 @@ export class CalendarGridComponent implements AfterViewInit, OnChanges, OnDestro
       return;
     }
 
-    if (payload.block.reservation.reservationState?.trim().toUpperCase() === 'CHK') {
-      this.reservationMoveBlocked.emit(payload.block.reservation);
-      return;
-    }
+    const checkedIn = payload.block.reservation.reservationState?.trim().toUpperCase() === 'CHK';
 
     this.beginDrag(
       {
@@ -207,7 +203,8 @@ export class CalendarGridComponent implements AfterViewInit, OnChanges, OnDestro
         visualState: payload.block.visualState,
         pointerOffsetX: payload.event.offsetX,
         categoryCode: payload.block.reservation.categoryCode || '',
-        preserveDates: this.exchangeMode,
+        preserveDates: checkedIn || this.exchangeMode,
+        checkedIn,
         block: payload.block
       },
       payload.event
@@ -226,6 +223,7 @@ export class CalendarGridComponent implements AfterViewInit, OnChanges, OnDestro
         pointerOffsetX: 16,
         categoryCode: payload.reservation.categoryCode,
         preserveDates: false,
+        checkedIn: false,
         pendingReservation: payload.reservation
       },
       payload.event
@@ -253,6 +251,7 @@ export class CalendarGridComponent implements AfterViewInit, OnChanges, OnDestro
         pointerOffsetX: event.offsetX,
         categoryCode: item.reservation.categoryCode || '',
         preserveDates: true,
+        checkedIn: false,
         block: item.block,
         trayItem: item
       },
@@ -411,7 +410,7 @@ export class CalendarGridComponent implements AfterViewInit, OnChanges, OnDestro
       const block = this.dragState.block;
       const trayLeft = block?.left ?? 2;
       const trayWidth = block?.width ?? Math.max(36, this.dragState.span * this.cellWidth - 4);
-      const valid = !this.dragState.pendingReservation && !this.dragState.trayItem;
+      const valid = !this.dragState.pendingReservation && !this.dragState.trayItem && !this.dragState.checkedIn;
       this.dragPreview = {
         left: trayLeft,
         top: 8,

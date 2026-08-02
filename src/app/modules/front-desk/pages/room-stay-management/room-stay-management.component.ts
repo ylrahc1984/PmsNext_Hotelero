@@ -3216,7 +3216,7 @@ export class RoomStayManagementComponent implements OnInit {
     return {
       targetRoom                : firstOption?.number ?? room.roomNumber,
       targetRoomType            : firstOption?.type ?? room.roomType,
-      newCheckOut               : this.toInputDate(room.checkOut),
+      newCheckOut               : normalizePmsDateDDMMYYYY(room.checkOut),
       prepaymentAmount          : Math.max(Math.round(currentBalance * 0.35), 25),
       chargeConcept             : actionId === 'new-charge' ? 'Cargo operativo manual' : 'Ajuste operativo',
       chargeAmount              : 45,
@@ -3922,14 +3922,6 @@ export class RoomStayManagementComponent implements OnInit {
     );
   }
 
-  private toInputDate(date: string): string {
-    return toPmsDateInputValue(date);
-  }
-
-  departureDateMinInput(): string {
-    return toPmsDateInputValue(this.todayDisplayDate());
-  }
-
   departureDateValidationMessage(): string {
     const selectedDate = normalizePmsDateDDMMYYYY(this.actionDraft().newCheckOut);
     const operationalDate = this.todayDisplayDate();
@@ -3956,10 +3948,6 @@ export class RoomStayManagementComponent implements OnInit {
     }
 
     return '';
-  }
-
-  private fromInputDate(date: string): string {
-    return this.formatInputDateForApi(date) || this.room().checkOut;
   }
 
   private formatInputDateForApi(date: string): string {

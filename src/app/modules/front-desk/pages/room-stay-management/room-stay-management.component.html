@@ -980,8 +980,11 @@
               <label class="action-field">
                 <span>Nueva fecha de salida</span>
                 <input
-                  type="date"
-                  [min]="departureDateMinInput()"
+                  type="text"
+                  inputmode="numeric"
+                  maxlength="10"
+                  placeholder="dd/mm/yyyy"
+                  pattern="\d{2}/\d{2}/\d{4}"
                   [ngModel]="actionDraft().newCheckOut"
                   (ngModelChange)="updateActionDraft({ newCheckOut: $event })"
                   [attr.aria-invalid]="departureDateValidationMessage() ? 'true' : null"

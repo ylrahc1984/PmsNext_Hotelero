@@ -15,6 +15,10 @@ import {
   toPmsDateInputValue
 } from 'src/app/core/utils/pms-date.util';
 import { RoomStatus, RoomType } from '../../interfaces/room-status.interface';
+import {
+  RoomChangePayload,
+  RoomStayManagementService
+} from '../../../front-desk/pages/room-stay-management/services/room-stay-management.service';
 import { CalendarGridComponent } from '../components/calendar-grid/calendar-grid.component';
 import { CalendarHeaderComponent } from '../components/calendar-header/calendar-header.component';
 import { CalendarToolbarComponent } from '../components/calendar-toolbar/calendar-toolbar.component';
@@ -47,6 +51,7 @@ import { CalendarService } from '../services/calendar.service';
 })
 export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCreate {
   private readonly calendarService = inject(CalendarService);
+  private readonly roomStayManagementService = inject(RoomStayManagementService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly auth = inject(AuthService);
@@ -264,8 +269,8 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
 
   onCheckedInReservationMoveBlocked(reservation: CalendarReservation): void {
     void Swal.fire({
-      title: 'Movimiento no permitido',
-      text: `La reserva ${reservation.reservationCode || reservation.id} ya tiene Check-In realizado y no puede moverse de habitación.`,
+      title: 'Acción no permitida',
+      text: `La reserva ${reservation.reservationCode || reservation.id} tiene Check-In realizado. Únicamente puede trasladarse directamente a otra habitación.`,
       icon: 'warning',
       confirmButtonText: 'Aceptar',
       confirmButtonColor: '#2f5f8d'
@@ -898,7 +903,7 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
     }
 
     if (this.isCheckedInReservation(sourceReservation)) {
-      this.onCheckedInReservationMoveBlocked(sourceReservation);
+      await this.confirmAndChangeCheckedInRoom(sourceReservation, drop);
       return;
     }
 
@@ -935,6 +940,103 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
       },
       { existingReservationId: sourceReservation.id }
     );
+  }
+
+  private async confirmAndChangeCheckedInRoom(
+    reservation: CalendarReservation,
+    drop: CalendarReservationDropRequest
+  ): Promise<void> {
+    if (this.isAssigningRoom || reservation.roomNumber === drop.toRoomNumber) {
+      return;
+    }
+
+    const reservationCode = reservation.reservationCode || this.extractReservationCode(reservation.id);
+    const sourceCategory = this.normalizeCode(
+      reservation.categoryCode || this.rooms.find((room) => room.roomNumber === reservation.roomNumber)?.type
+    );
+    const targetCategory = this.normalizeCode(
+      drop.toCategoryCode || this.rooms.find((room) => room.roomNumber === drop.toRoomNumber)?.type
+    );
+
+    if (!sourceCategory || !targetCategory) {
+      await Swal.fire({
+        title: 'Categoría requerida',
+        text: 'No fue posible validar la categoría de la habitación actual o de la habitación destino.',
+        icon: 'warning',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#2f5f8d'
+      });
+      return;
+    }
+
+    if (sourceCategory !== targetCategory) {
+      await Swal.fire({
+        title: 'Categoría diferente',
+        text: `La habitación ${drop.toRoomNumber} no pertenece a la categoría ${sourceCategory} de la estancia.`,
+        icon: 'warning',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#2f5f8d'
+      });
+      return;
+    }
+
+    if (!this.isRoomPlacementValid(drop.toRoomNumber, reservation.startDate, reservation.endDate, reservation.id)) {
+      await Swal.fire({
+        title: 'Habitación no disponible',
+        text: `La habitación ${drop.toRoomNumber} tiene una reserva o bloqueo durante la estancia.`,
+        icon: 'warning',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#2f5f8d'
+      });
+      return;
+    }
+
+    const confirmation = await Swal.fire({
+      title: 'Confirmar cambio de habitación',
+      text: `Se trasladará la reserva ${reservationCode} de la habitación ${reservation.roomNumber} a la ${drop.toRoomNumber}. Las fechas no serán modificadas.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, trasladar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#198754',
+      cancelButtonColor: '#6c757d',
+      reverseButtons: true
+    });
+
+    if (!confirmation.isConfirmed) {
+      return;
+    }
+
+    try {
+      const response = await this.executeCheckedInRoomChange(
+        {
+          codReserva: reservationCode,
+          oldHab: reservation.roomNumber,
+          newHab: drop.toRoomNumber,
+          folio: 'S',
+          operador: this.getOperator()
+        },
+        reservation.id
+      );
+      this.assertCheckedInRoomChangeSucceeded(response);
+      this.loadCalendar();
+      await Swal.fire({
+        title: 'Habitación trasladada',
+        text: this.getRoomChangeResponseMessage(response) || `La reserva ${reservationCode} fue trasladada a la habitación ${drop.toRoomNumber}.`,
+        icon: 'success',
+        timer: 1800,
+        showConfirmButton: false
+      });
+    } catch (error) {
+      console.error('No se pudo trasladar la reserva con Check-In.', error);
+      await Swal.fire({
+        title: 'Error al cambiar habitación',
+        text: this.getAssignmentErrorMessage(error),
+        icon: 'error',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#dc3545'
+      });
+    }
   }
 
   private async confirmAndAssignReservation(
@@ -1159,6 +1261,39 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
       this.isAssigningRoom = this.processingReservationIds.size > 0;
       this.cdr.markForCheck();
     }
+  }
+
+  private async executeCheckedInRoomChange(request: RoomChangePayload, reservationId: string): Promise<unknown> {
+    this.isAssigningRoom = true;
+    this.processingReservationIds.add(reservationId);
+    this.cdr.markForCheck();
+    try {
+      return await firstValueFrom(this.roomStayManagementService.changeRoom(request).pipe(takeUntilDestroyed(this.destroyRef)));
+    } finally {
+      this.processingReservationIds.delete(reservationId);
+      this.isAssigningRoom = this.processingReservationIds.size > 0;
+      this.cdr.markForCheck();
+    }
+  }
+
+  private assertCheckedInRoomChangeSucceeded(response: unknown): void {
+    if (!response || typeof response !== 'object') {
+      return;
+    }
+
+    const apiResponse = response as { ok?: boolean; success?: boolean; respuesta?: string; mensaje?: string; message?: string };
+    if (apiResponse.ok === false || apiResponse.success === false) {
+      throw new Error(apiResponse.respuesta || apiResponse.mensaje || apiResponse.message || 'El endpoint no confirmó el cambio de habitación.');
+    }
+  }
+
+  private getRoomChangeResponseMessage(response: unknown): string {
+    if (!response || typeof response !== 'object') {
+      return '';
+    }
+
+    const apiResponse = response as { respuesta?: string; mensaje?: string; message?: string };
+    return apiResponse.respuesta || apiResponse.mensaje || apiResponse.message || '';
   }
 
   private assertAssignmentSucceeded(response: CalendarRoomAssignmentResponse, fallbackMessage: string): void {
