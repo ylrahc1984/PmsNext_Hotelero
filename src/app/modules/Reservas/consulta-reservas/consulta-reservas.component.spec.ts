@@ -28,11 +28,21 @@ describe('ConsultaReservasComponent', () => {
   beforeEach(async () => {
     reservaService = jasmine.createSpyObj<ReservaHabitacionService>('ReservaHabitacionService', [
       'consultarReservas',
+      'buscarReservas',
       'anularReserva',
       'cambiarEstadoReserva',
       'getConfirmacionPdf'
     ]);
     reservaService.consultarReservas.and.returnValue(
+      of({
+        reservas: [],
+        totalRegistros: 0,
+        paginaActual: 1,
+        tamanoPagina: 10,
+        totalPaginas: 1
+      })
+    );
+    reservaService.buscarReservas.and.returnValue(
       of({
         reservas: [],
         totalRegistros: 0,
@@ -117,6 +127,16 @@ describe('ConsultaReservasComponent', () => {
 
     expect(operationalPolicy.require).toHaveBeenCalledWith(OperationalAction.CreateOperation);
     expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('usa buscar-reservas únicamente cuando la búsqueda rápida tiene texto', async () => {
+    reservaService.consultarReservas.calls.reset();
+
+    component.quickSearchControl.setValue('mario', { emitEvent: false });
+    await component.buscar();
+
+    expect(reservaService.buscarReservas).toHaveBeenCalledWith('mario', 1, 10);
+    expect(reservaService.consultarReservas).not.toHaveBeenCalled();
   });
 });
 

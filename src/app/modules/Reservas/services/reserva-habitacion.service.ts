@@ -54,6 +54,7 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
   private readonly http = inject(HttpClient);
   private readonly baseApiUrl = (environment.apiUrl || 'http://localhost:5000/api').toString().replace(/\/+$/, '');
   private readonly apiUrl = `${this.baseApiUrl}/reservas-habitacion`;
+  private readonly reservationSearchUrl = `${this.baseApiUrl}/buscar-reservas`;
   private readonly categoryAvailabilityUrl = `${this.baseApiUrl}/reservas/disponibilidad-categoria`;
 
   createReserva(request: ReservaHabitacionRequest): Observable<ReservaHabitacionResponse> {
@@ -185,6 +186,17 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
       .pipe(map((response) => this.normalizeConsultaResponse(response, params.pagina, params.tamanoPagina)));
   }
 
+  buscarReservas(descripcion: string, pagina: number, tamanoPagina: number): Observable<ReservaConsultaPage> {
+    const query = new HttpParams()
+      .set('descripcion', descripcion.trim())
+      .set('pagina', String(pagina))
+      .set('tamanoPagina', String(tamanoPagina));
+
+    return this.http
+      .get<ReservaConsultaApiResponse>(this.reservationSearchUrl, { params: query })
+      .pipe(map((response) => this.normalizeConsultaResponse(response, pagina, tamanoPagina)));
+  }
+
   private normalizeConsultaResponse(response: ReservaConsultaApiResponse | null | undefined, pagina: number, tamanoPagina: number): ReservaConsultaPage {
     const reservas = (response?.reservas ?? []).map((item) => this.mapConsultaItem(item));
     const totalRegistros = Number(response?.totalRegistros ?? reservas.length);
@@ -216,15 +228,16 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
 
   private mapConsultaItem(item: ReservaConsultaApiItem): ReservaConsulta {
     return {
-      reserva: (item.codReserva ?? '').trim(),
-      codAgencia: (item.codAgencia ?? '').trim(),
-      codTarifa: (item.codTarifa ?? '').trim(),
-      codPlan: (item.codPlan ?? '').trim(),
+      reserva: (item.codReserva ?? item.prV01_CodReserva ?? '').trim(),
+      codAgencia: (item.codAgencia ?? item.prV01_CodAgencia ?? '').trim(),
+      codTarifa: (item.codTarifa ?? item.prV01_CodTarifa ?? '').trim(),
+      codPlan: (item.codPlan ?? item.prV01_CodPlan ?? '').trim(),
       categoria: (item.categoria ?? item.Categoria ?? item.catHabita ?? item.CatHabita ?? item.cateHab ?? item.CateHab ?? '').trim(),
       habOrigen: (item.habOrigen ?? item.HabOrigen ?? item.oldHabita ?? item.OldHabita ?? item.numHabita ?? item.NumHabita ?? '').trim(),
-      agencia: (item.nomAgencia ?? item.codAgencia ?? '').trim(),
+      agencia: (item.nomAgencia ?? item.mR01_NomAgencia ?? item.codAgencia ?? item.prV01_CodAgencia ?? '').trim(),
       descripcion: (
         item.descripcion ??
+        item.prV01_Descripcion ??
         item.Descripcion ??
         item.observaciones ??
         item.Observaciones ??
@@ -232,18 +245,18 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
         item.Observacion ??
         ''
       ).trim(),
-      ingreso: normalizePmsDateDDMMYYYY(item.fecIngresa ?? ''),
-      salida: normalizePmsDateDDMMYYYY(item.fecSalida ?? ''),
-      noches: Number(item.totNoches ?? 0),
-      habitaciones: Number(item.nHab ?? 0),
+      ingreso: normalizePmsDateDDMMYYYY(item.fecIngresa ?? item.prV01_FecIngresa ?? ''),
+      salida: normalizePmsDateDDMMYYYY(item.fecSalida ?? item.prV01_FecSalida ?? ''),
+      noches: Number(item.totNoches ?? item.prV01_TotNoches ?? 0),
+      habitaciones: Number(item.nHab ?? item.nhab ?? 0),
       pax: Number(item.nPax ?? 0),
       ninos: Number(item.nChild ?? 0),
-      estado: (item.estado ?? '').trim(),
-      total: Number(item.totalRsv ?? 0),
+      estado: (item.estado ?? item.prV01_Estado ?? '').trim(),
+      total: Number(item.totalRsv ?? item.prV01_TotalRsv ?? 0),
       prepago: (item.prepago ?? '').trim().toUpperCase() === 'S' ? 'S' : 'N',
-      moneda: (item.moneda ?? '').trim(),
-      tCambio: Number(item.tCambio ?? 0),
-      operador: (item.operador ?? '').trim()
+      moneda: (item.moneda ?? item.prV01_Moneda ?? '').trim(),
+      tCambio: Number(item.tCambio ?? item.prV01_TCambio ?? 0),
+      operador: (item.operador ?? item.prV01_Operador ?? '').trim()
     };
   }
 

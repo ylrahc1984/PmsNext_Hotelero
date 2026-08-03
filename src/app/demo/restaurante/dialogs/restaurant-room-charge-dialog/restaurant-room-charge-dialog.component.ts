@@ -10,12 +10,18 @@ import { RoomChargePosPrintService } from 'src/app/modules/front-desk/pages/room
 import {
   NotaPedidoRestauranteService,
   RestaurantCreditRoom,
+  RestaurantIncludedChargePayload,
+  RestaurantIncludedChargeResponse,
   RestaurantRoomChargePayload,
   RestaurantRoomChargeResponse
 } from '../../services/nota-pedido-restaurante.service';
 
+export type RestaurantRoomChargeDialogMode = 'habitacion' | 'desayuno-incluido';
+
 export interface RestaurantRoomChargeDialogData {
+  modo?: RestaurantRoomChargeDialogMode;
   puntoVenta: string;
+  puntoVentaNombre?: string;
   total: number;
   moneda: string;
   tipNP: string;
@@ -29,7 +35,7 @@ export interface RestaurantRoomChargeDialogResult {
   guardado: boolean;
   habitacion: RestaurantCreditRoom;
   numeroCargoHabitacion: string;
-  respuesta?: RestaurantRoomChargeResponse;
+  respuesta?: RestaurantRoomChargeResponse | RestaurantIncludedChargeResponse;
 }
 
 @Component({
@@ -55,6 +61,18 @@ export class RestaurantRoomChargeDialogComponent implements OnInit {
   loading = false;
   saving = false;
   errorMessage = '';
+
+  get esDesayunoIncluido(): boolean {
+    return this.data.modo === 'desayuno-incluido';
+  }
+
+  get tituloCargo(): string {
+    return this.esDesayunoIncluido ? 'Desayuno incluido' : 'Cargo a habitación';
+  }
+
+  get textoBotonConfirmar(): string {
+    return this.esDesayunoIncluido ? 'Confirmar desayuno incluido' : 'Confirmar cargo a habitación';
+  }
 
   ngOnInit(): void {
     this.cargarHabitaciones();
@@ -87,11 +105,13 @@ export class RestaurantRoomChargeDialogComponent implements OnInit {
 
     const habitacion = this.habitacionSeleccionada;
     const confirmation = await Swal.fire({
-      title: 'Confirmar cargo a habitación',
-      text: `Se registrará un cargo por ${this.formatTotal()} a la habitación ${habitacion.numHabita}.`,
+      title: this.esDesayunoIncluido ? 'Confirmar desayuno incluido' : 'Confirmar cargo a habitación',
+      text: this.esDesayunoIncluido
+        ? `Se registrará el desayuno incluido por ${this.formatTotal()} para la habitación ${habitacion.numHabita}.`
+        : `Se registrará un cargo por ${this.formatTotal()} a la habitación ${habitacion.numHabita}.`,
       icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'Sí, registrar cargo',
+      confirmButtonText: this.esDesayunoIncluido ? 'Sí, registrar desayuno' : 'Sí, registrar cargo',
       cancelButtonText: 'Cancelar',
       reverseButtons: true,
       customClass: { container: 'next-confirm-container', popup: 'next-confirm-modal' }
@@ -101,17 +121,22 @@ export class RestaurantRoomChargeDialogComponent implements OnInit {
       return;
     }
 
-    const payload = this.buildRequest(habitacion);
     this.saving = true;
     this.errorMessage = '';
     this.cdr.markForCheck();
 
     try {
-      const respuesta = await firstValueFrom(this.service.registrarCargoHabitacion(payload));
-      console.log('[RestaurantRoomChargeDialog] guardar response', respuesta);
+      const respuesta = this.esDesayunoIncluido
+        ? await firstValueFrom(this.service.registrarCargoIncluido(this.buildIncludedRequest(habitacion)))
+        : await firstValueFrom(this.service.registrarCargoHabitacion(this.buildRoomRequest(habitacion)));
+      console.log(`[RestaurantRoomChargeDialog] guardar ${this.tituloCargo} response`, respuesta);
 
+      const documentoIncluido = this.esDesayunoIncluido
+        ? (respuesta as RestaurantIncludedChargeResponse).documento
+        : undefined;
       const guardado = respuesta?.success === true
-        || (respuesta?.respuesta || '').trim().toUpperCase() === 'OK';
+        || (respuesta?.respuesta || '').trim().toUpperCase() === 'OK'
+        || Boolean(this.clean(documentoIncluido?.tipo) && this.clean(documentoIncluido?.numero));
 
       if (!guardado) {
         this.errorMessage = respuesta?.message
@@ -122,15 +147,33 @@ export class RestaurantRoomChargeDialogComponent implements OnInit {
         return;
       }
 
-      const tipoOperacion = (respuesta.tipCrgHab || respuesta.tipoOperacion || '').trim();
-      const numeroOperacion = (respuesta.numCrgHab || respuesta.numeroOperacion || '').trim();
+      const tipoOperacion = (
+        (this.esDesayunoIncluido
+          ? documentoIncluido?.tipo || (respuesta as RestaurantIncludedChargeResponse).tipCrgInc
+          : (respuesta as RestaurantRoomChargeResponse).tipCrgHab)
+        || respuesta.tipoOperacion
+        || ''
+      ).trim();
+      const numeroOperacion = (
+        (this.esDesayunoIncluido
+          ? documentoIncluido?.numero || (respuesta as RestaurantIncludedChargeResponse).numCrgInc
+          : (respuesta as RestaurantRoomChargeResponse).numCrgHab)
+        || respuesta.numeroOperacion
+        || ''
+      ).trim();
       let printError = '';
 
       if (!tipoOperacion || !numeroOperacion) {
         printError = 'La respuesta no incluyó el tipo y número de operación necesarios para imprimir.';
       } else {
         try {
-          await this.printService.printByOperation(tipoOperacion, numeroOperacion, 'TIQUETE');
+          await this.printService.printByOperation(
+            tipoOperacion,
+            numeroOperacion,
+            'TIQUETE',
+            'ORIGINAL',
+            this.data.puntoVentaNombre || this.data.puntoVenta
+          );
         } catch (error: unknown) {
           console.error('El cargo fue guardado, pero no se pudo imprimir:', error);
           printError = this.getErrorMessage(error);
@@ -140,13 +183,13 @@ export class RestaurantRoomChargeDialogComponent implements OnInit {
       if (printError) {
         await this.showResultDialog(
           'Cargo registrado; impresión pendiente',
-          `El cargo a la habitación ${habitacion.numHabita} fue guardado, pero no se pudo imprimir en TIQUETE. ${printError}`,
+          `${this.tituloCargo} para la habitación ${habitacion.numHabita} fue guardado, pero no se pudo imprimir en TIQUETE. ${printError}`,
           'warning'
         );
       } else {
         await this.showResultDialog(
           'Cargo registrado e impreso',
-          `El cargo a la habitación ${habitacion.numHabita} se guardó e imprimió correctamente. Operación ${tipoOperacion} ${numeroOperacion}.`,
+          `${this.tituloCargo} para la habitación ${habitacion.numHabita} se guardó e imprimió correctamente. Operación ${tipoOperacion} ${numeroOperacion}.`,
           'success'
         );
       }
@@ -158,8 +201,10 @@ export class RestaurantRoomChargeDialogComponent implements OnInit {
         respuesta
       });
     } catch (error: unknown) {
-      console.error('Error al registrar cargo a habitación:', error);
-      this.errorMessage = 'No se pudo registrar el cargo a la habitación.';
+      console.error(`Error al registrar ${this.tituloCargo}:`, error);
+      this.errorMessage = this.esDesayunoIncluido
+        ? 'No se pudo registrar el desayuno incluido.'
+        : 'No se pudo registrar el cargo a la habitación.';
       await this.showResultDialog('No se pudo registrar', this.errorMessage, 'error');
     } finally {
       this.saving = false;
@@ -182,6 +227,25 @@ export class RestaurantRoomChargeDialogComponent implements OnInit {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     })}`;
+  }
+
+  formatDisplayDate(value: unknown): string {
+    const dateValue = this.clean(value);
+    if (!dateValue) {
+      return '-';
+    }
+
+    const dayFirstMatch = dateValue.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (dayFirstMatch) {
+      return `${dayFirstMatch[1].padStart(2, '0')}/${dayFirstMatch[2].padStart(2, '0')}/${dayFirstMatch[3]}`;
+    }
+
+    const isoMatch = dateValue.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (isoMatch) {
+      return `${isoMatch[3].padStart(2, '0')}/${isoMatch[2].padStart(2, '0')}/${isoMatch[1]}`;
+    }
+
+    return dateValue.split(/[T\s]/, 1)[0] || '-';
   }
 
   private cargarHabitaciones(): void {
@@ -210,7 +274,7 @@ export class RestaurantRoomChargeDialogComponent implements OnInit {
       });
   }
 
-  private buildRequest(room: RestaurantCreditRoom): RestaurantRoomChargePayload {
+  private buildRoomRequest(room: RestaurantCreditRoom): RestaurantRoomChargePayload {
     const now = new Date();
     const numeroCargo = this.clean(room.numFolio) || this.clean(room.numHabita);
     return {
@@ -233,6 +297,32 @@ export class RestaurantRoomChargeDialogComponent implements OnInit {
       numNP: this.clean(this.data.numNP),
       numCuenta: Number(this.data.numCuenta || 0),
       operador: this.clean(this.data.operador)
+    };
+  }
+
+  private buildIncludedRequest(room: RestaurantCreditRoom): RestaurantIncludedChargePayload {
+    const now = new Date();
+    return {
+      proceso: 0,
+      tipCrgInc: 'CI',
+      numCrgInc: 'GENERA',
+      codRsv: this.clean(room.codReserva),
+      numHab: this.clean(room.numHabita),
+      pntVenta: this.clean(this.data.puntoVenta || 'PF'),
+      fecha: this.formatDate(now),
+      hora: this.formatTime(now),
+      numDocu: this.clean(room.codReserva),
+      nombrePax: this.cleanGuestName(room.nomPax) || 'HUESPED',
+      mtoTotal: Number(this.data.total || 0),
+      moneda: this.clean(this.data.moneda || room.monedaTar || 'USD'),
+      cierre: 0,
+      numCierre: 0,
+      tipNP: this.clean(this.data.tipNP),
+      serieNP: this.clean(this.data.serieNP),
+      numNP: this.clean(this.data.numNP),
+      numCuenta: Number(this.data.numCuenta || 0),
+      operador: this.clean(this.data.operador),
+      respuesta: ''
     };
   }
 

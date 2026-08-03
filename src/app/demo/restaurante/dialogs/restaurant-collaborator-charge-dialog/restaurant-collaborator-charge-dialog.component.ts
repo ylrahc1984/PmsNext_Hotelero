@@ -16,6 +16,7 @@ import {
 
 export interface RestaurantCollaboratorChargeDialogData {
   puntoVenta: string;
+  puntoVentaNombre?: string;
   vendedor: string;
   total: number;
   moneda: string;
@@ -130,7 +131,12 @@ export class RestaurantCollaboratorChargeDialogComponent implements OnInit {
         printError = 'La respuesta no incluyó el tipo y número de operación necesarios para imprimir.';
       } else {
         try {
-          await this.printService.printByOperation(tipoOperacion, numeroOperacion, 'TIQUETE');
+          await this.printService.printByOperation(
+            tipoOperacion,
+            numeroOperacion,
+            'TIQUETE',
+            this.data.puntoVentaNombre || this.data.puntoVenta
+          );
         } catch (error: unknown) {
           console.error('El cargo fue guardado, pero no se pudo imprimir:', error);
           printError = this.getErrorMessage(error);

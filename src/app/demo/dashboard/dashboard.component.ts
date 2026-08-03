@@ -28,6 +28,7 @@ import {
 import { RoomCategory } from 'src/app/modules/front-desk/settings/room-categories/models/room-category.model';
 import { RoomCategoriesService } from 'src/app/modules/front-desk/settings/room-categories/services/room-categories.service';
 import { OperationalContextService } from 'src/app/core/services/operational-context.service';
+import { resolveRackOperationalState } from 'src/app/shared/models/room-operational-visual-state';
 
 interface DashboardAlert {
   icon: string;
@@ -222,12 +223,40 @@ export class DashboardComponent implements OnInit {
     forkJoin({
       reservas: this.reservasService.getReservas(1, 500).pipe(
         map((response) => response.data ?? []),
-        catchError(() => of([] as Reserva[]))
+        catchError((error) => {
+          console.error('[Dashboard][RESERVAS] No se pudieron cargar las reservas para las métricas operativas.', {
+            requestedDate,
+            error
+          });
+          return of([] as Reserva[]);
+        })
       ),
-      habitaciones: this.roomRackService.getAllRoomsStatus(requestedDate).pipe(catchError(() => of([] as RoomRackRoom[]))),
-      llegadas: this.checkInArrivalsService.getPendientes(requestedDateIso, false).pipe(catchError(() => of([] as CheckInArrival[]))),
+      habitaciones: this.roomRackService.getAllRoomsStatus(requestedDate).pipe(
+        catchError((error) => {
+          console.error('[Dashboard][ROOM_RACK] No se pudieron cargar los estados de habitación.', {
+            requestedDate,
+            error
+          });
+          return of([] as RoomRackRoom[]);
+        })
+      ),
+      llegadas: this.checkInArrivalsService.getPendientes(requestedDateIso, false).pipe(
+        catchError((error) => {
+          console.error('[Dashboard][ARRIVALS] No se pudieron cargar las llegadas del día.', {
+            requestedDateIso,
+            error
+          });
+          return of([] as CheckInArrival[]);
+        })
+      ),
       llegadasPendientes: this.checkInArrivalsService.getPendientes(requestedDateIso, true).pipe(
-        catchError(() => of([] as CheckInArrival[]))
+        catchError((error) => {
+          console.error('[Dashboard][PENDING_ARRIVALS] No se pudieron cargar las llegadas pendientes.', {
+            requestedDateIso,
+            error
+          });
+          return of([] as CheckInArrival[]);
+        })
       )
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -448,6 +477,13 @@ export class DashboardComponent implements OnInit {
   private applyRoomMetrics(rooms: RoomRackRoom[]): void {
     const activeRooms = rooms.filter((room) => this.normalizeText(room.CR05_Activo).toUpperCase() !== 'N');
     const roomsForOccupancy = activeRooms.length ? activeRooms : rooms;
+    const pendingCheckoutRooms = activeRooms.filter(
+      (room) => resolveRackOperationalState(room.CR05_EstHab) === 'checkout-today'
+    );
+
+    if (rooms.length > 0) {
+      this.checkOutPendientes = pendingCheckoutRooms.length;
+    }
 
     this.habitacionesTotal = roomsForOccupancy.length;
     this.habitacionesOcupadas = roomsForOccupancy.filter((room) =>

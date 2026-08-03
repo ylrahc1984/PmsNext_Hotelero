@@ -19,7 +19,8 @@ export class RestaurantCollaboratorChargePrintService {
   async printByOperation(
     tipoOperacion: string,
     numeroOperacion: string,
-    printerName = 'TIQUETE'
+    printerName = 'TIQUETE',
+    puntoVentaNombre = ''
   ): Promise<void> {
     const tipOpe = (tipoOperacion || '').trim();
     const numOpe = (numeroOperacion || '').trim();
@@ -66,6 +67,7 @@ export class RestaurantCollaboratorChargePrintService {
       },
       encabezado,
       detalles,
+      puntoVentaNombre: puntoVentaNombre.trim() || encabezado.PPV10_PntVenta,
       fechaImpresion: new Date()
     });
 

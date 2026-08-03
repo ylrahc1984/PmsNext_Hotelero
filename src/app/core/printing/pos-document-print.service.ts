@@ -103,7 +103,8 @@ export class PosDocumentPrintService {
 
   async printRestaurantByReference(
     reference: DocumentoPosReference,
-    printerName = 'TIQUETE'
+    printerName = 'TIQUETE',
+    puntoVentaNombre = ''
   ): Promise<void> {
     const normalizedReference = this.normalizeReference(reference);
     const params = new HttpParams()
@@ -120,7 +121,9 @@ export class PosDocumentPrintService {
           })
         )
     );
-    const commands = this.printBuilder.build(this.mapRestaurantPrintData(response, normalizedReference));
+    const commands = this.printBuilder.build(
+      this.mapRestaurantPrintData(response, normalizedReference, puntoVentaNombre)
+    );
     await this.qzPrintService.printRaw(commands, printerName);
   }
 
@@ -164,7 +167,8 @@ export class PosDocumentPrintService {
 
   private mapRestaurantPrintData(
     response: RestauranteImpresionResponse | null | undefined,
-    reference: DocumentoPosReference
+    reference: DocumentoPosReference,
+    puntoVentaNombre = ''
   ): DocumentoPosPrintData {
     if (!response?.encabezado) {
       throw new Error('El documento fue generado, pero el detalle de impresión del restaurante todavía no está disponible.');
@@ -186,6 +190,7 @@ export class PosDocumentPrintService {
       empresaTelefono: (company?.telefono || fallbackCompany?.MA04_Telefono1 || '').trim(),
       empresaEmail: (company?.email || fallbackCompany?.MA04_Email || '').trim(),
       empresaWeb: (company?.web || '').trim(),
+      puntoVentaNombre: puntoVentaNombre.trim() || encabezado.pntVenta,
       encabezado,
       detalle,
       impuestos,

@@ -23,7 +23,8 @@ export class RoomChargePosPrintService {
     tipoOperacion: string,
     numeroOperacion: string,
     printerName = 'TIQUETE',
-    documentType: RoomChargePosDocumentType = 'ORIGINAL'
+    documentType: RoomChargePosDocumentType = 'ORIGINAL',
+    puntoVentaNombre = ''
   ): Promise<void> {
     const tipCrgHab = (tipoOperacion || '').trim();
     const numCrgHab = (numeroOperacion || '').trim();
@@ -72,6 +73,7 @@ export class RoomChargePosPrintService {
       },
       encabezado,
       detalles,
+      puntoVentaNombre: puntoVentaNombre.trim() || encabezado.pntVenta,
       tipoDocumento: documentType,
       fechaImpresion: new Date()
     });

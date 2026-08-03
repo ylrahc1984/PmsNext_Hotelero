@@ -73,6 +73,21 @@ export interface ReservaConsultaApiItem {
   nHab?: number;
   nPax?: number;
   nChild?: number;
+  prV01_CodReserva?: string;
+  prV01_CodAgencia?: string;
+  prV01_CodTarifa?: string;
+  prV01_CodPlan?: string;
+  prV01_FecIngresa?: string;
+  prV01_FecSalida?: string;
+  prV01_TotNoches?: number;
+  prV01_Descripcion?: string;
+  prV01_TCambio?: number;
+  prV01_Estado?: string;
+  prV01_Moneda?: string;
+  prV01_TotalRsv?: number;
+  prV01_Operador?: string;
+  mR01_NomAgencia?: string;
+  nhab?: number;
 }
 
 export interface ReservaConsultaApiResponse {

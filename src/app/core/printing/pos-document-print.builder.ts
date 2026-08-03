@@ -29,6 +29,7 @@ export interface DocumentoPosPrintData {
   empresaTelefono?: string;
   empresaEmail?: string;
   empresaWeb?: string;
+  puntoVentaNombre?: string;
   encabezado: DocumentoEncabezado;
   detalle: DocumentoDetalleItem[];
   impuestos?: DocumentoPosImpuesto[];
@@ -74,6 +75,14 @@ export class PosDocumentPrintBuilder {
     if (data.empresaTelefono) commands.push(...this.wrap(`TEL: ${data.empresaTelefono}`));
     if (data.empresaEmail) commands.push(...this.wrap(data.empresaEmail));
     if (data.empresaWeb) commands.push(...this.wrap(data.empresaWeb));
+
+    commands.push(
+      '\n',
+      '\x1B\x45\x01',
+      ...this.wrap('PUNTO DE VENTA'),
+      ...this.wrap(data.puntoVentaNombre || h.pntVenta || '-'),
+      '\x1B\x45\x00'
+    );
 
     commands.push(
       '\n',

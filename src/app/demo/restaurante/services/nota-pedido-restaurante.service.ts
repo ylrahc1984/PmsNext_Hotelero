@@ -257,6 +257,44 @@ export interface RestaurantRoomChargeResponse {
   respuesta?: string;
 }
 
+export interface RestaurantIncludedChargePayload {
+  proceso: number;
+  tipCrgInc: string;
+  numCrgInc: string;
+  codRsv: string;
+  numHab: string;
+  pntVenta: string;
+  fecha: string;
+  hora: string;
+  numDocu: string;
+  nombrePax: string;
+  mtoTotal: number;
+  moneda: string;
+  cierre: number;
+  numCierre: number;
+  tipNP: string;
+  serieNP: string;
+  numNP: string;
+  numCuenta: number;
+  operador: string;
+  respuesta: string;
+}
+
+export interface RestaurantIncludedChargeResponse {
+  success?: boolean;
+  message?: string;
+  tipCrgInc?: string;
+  numCrgInc?: string;
+  documento?: {
+    tipo?: string;
+    numero?: string;
+  };
+  mensaje?: string;
+  tipoOperacion?: string;
+  numeroOperacion?: string;
+  respuesta?: string;
+}
+
 export interface ActualizarComentariosRequest {
   proceso     : number;
   tipNP       : string;
@@ -371,6 +409,10 @@ export class NotaPedidoRestauranteService {
 
   registrarCargoHabitacion(payload: RestaurantRoomChargePayload): Observable<RestaurantRoomChargeResponse> {
     return this.http.post<RestaurantRoomChargeResponse>(`${this.baseUrl}/cargo-habitacion-restaurante`, payload);
+  }
+
+  registrarCargoIncluido(payload: RestaurantIncludedChargePayload): Observable<RestaurantIncludedChargeResponse> {
+    return this.http.post<RestaurantIncludedChargeResponse>(`${this.baseUrl}/cargo-incluido`, payload);
   }
 
   actualizarComentarios(payload: ActualizarComentariosRequest): Observable<ActualizarComentariosResponse> {

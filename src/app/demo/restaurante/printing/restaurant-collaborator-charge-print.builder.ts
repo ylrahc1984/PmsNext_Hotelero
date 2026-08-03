@@ -15,6 +15,7 @@ export interface RestaurantCollaboratorChargePrintData {
   };
   encabezado: CargoColaborador;
   detalles: CargoColaboradorDetalle[];
+  puntoVentaNombre?: string;
   fechaImpresion: Date;
 }
 
@@ -52,6 +53,13 @@ export class RestaurantCollaboratorChargePrintBuilder {
     if (data.empresa.ruc) receipt.wrapped(`CEDULA: ${data.empresa.ruc}`);
     if (data.empresa.direccion) receipt.wrapped(data.empresa.direccion);
     if (data.empresa.telefono) receipt.wrapped(`TEL: ${data.empresa.telefono}`);
+
+    receipt
+      .feed()
+      .bold(true)
+      .wrapped('PUNTO DE VENTA')
+      .wrapped(data.puntoVentaNombre || header.PPV10_PntVenta || '-')
+      .bold(false);
 
     receipt
       .feed()

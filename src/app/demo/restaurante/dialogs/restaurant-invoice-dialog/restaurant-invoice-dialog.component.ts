@@ -28,6 +28,7 @@ export interface RestaurantInvoiceDialogData {
   salon           : string;
   pax             : number;
   puntoVenta      : string;
+  puntoVentaNombre?: string;
   codArea         : string;
   codMozo         : string;
   moneda          : string;
@@ -363,7 +364,8 @@ export class RestaurantInvoiceDialogComponent implements OnInit {
               serieDocu: documento.Serie,
               numDocu: documento.NumDocu
             },
-            'TIQUETE'
+            'TIQUETE',
+            this.data.puntoVentaNombre || this.data.puntoVenta
           );
           this.toast.success(
             `Documento ${documento.TipDocu} ${documento.Serie}-${documento.NumDocu} enviado a TIQUETE.`

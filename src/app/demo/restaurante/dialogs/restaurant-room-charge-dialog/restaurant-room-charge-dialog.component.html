@@ -4,7 +4,7 @@
     <header class="room-header">
       <div>
         <span class="eyebrow">Consumo de restaurante</span>
-        <h2 id="room-dialog-title">Cargo a habitación</h2>
+        <h2 id="room-dialog-title">{{ tituloCargo }}</h2>
         <p>Revise el consumo y seleccione una habitación habilitada para crédito.</p>
       </div>
       <button type="button" class="icon-button" aria-label="Cerrar" (click)="cerrar()" [disabled]="saving"><i class="feather icon-x"></i></button>
@@ -28,7 +28,7 @@
 
         <dl class="room-meta" *ngIf="habitacionSeleccionada">
           <div><dt>Huéspedes</dt><dd>{{ habitacionSeleccionada.nomPax || 'No registrado' }}</dd></div>
-          <div><dt>Estadía</dt><dd>{{ habitacionSeleccionada.fechaIng || '-' }} - {{ habitacionSeleccionada.fechaSal || '-' }}</dd></div>
+          <div><dt>Estadía</dt><dd>{{ formatDisplayDate(habitacionSeleccionada.fechaIng) }} - {{ formatDisplayDate(habitacionSeleccionada.fechaSal) }}</dd></div>
           <div><dt>Tipo / tarifa</dt><dd>{{ habitacionSeleccionada.tipHabi || '-' }} / {{ habitacionSeleccionada.codTarifa || '-' }}</dd></div>
           <div><dt>Límite de crédito</dt><dd>{{ habitacionSeleccionada.limiteCre | currency:(habitacionSeleccionada.monedaLmt || data.moneda):'symbol':'1.2-2' }}</dd></div>
         </dl>
@@ -78,7 +78,7 @@
     <footer class="room-footer">
       <button type="button" class="secondary-button" (click)="cerrar()" [disabled]="saving">Cancelar</button>
       <button type="button" class="primary-button" (click)="confirmar()" [disabled]="!habitacionSeleccionada || saving">
-        <span class="spinner spinner--button" *ngIf="saving"></span>{{ saving ? 'Guardando...' : 'Confirmar cargo a habitación' }}
+        <span class="spinner spinner--button" *ngIf="saving"></span>{{ saving ? 'Guardando...' : textoBotonConfirmar }}
       </button>
     </footer>
   </section>

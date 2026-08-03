@@ -204,7 +204,7 @@ export class RestaurantMesaDetalleComponent implements OnInit {
     { id: 'transferir-cuenta', titulo: 'Transferir Cuenta', icono: 'icon-repeat', sinPermiso: true },
     { id: 'facturar-mesa', titulo: 'Facturar Mesa', icono: 'icon-credit-card', tipo: 'primary' },
     { id: 'cargo-colaborador', titulo: 'Cargo Colaborador', icono: 'icon-user' },
-    { id: 'cargo-incluido', titulo: 'Cargo Incluido', icono: 'icon-package', sinPermiso: true },
+    { id: 'cargo-incluido', titulo: 'Desayuno Incluido', icono: 'icon-package' },
     { id: 'cargo-habitacion', titulo: 'Cargo Habitacion', icono: 'icon-home' },
     { id: 'regresar-principal', titulo: 'Regresar a Principal', icono: 'icon-corner-up-left' }
   ];
@@ -225,6 +225,13 @@ export class RestaurantMesaDetalleComponent implements OnInit {
 
   get monedaPuntoVenta(): string {
     return this.selectedTableContext?.puntoVenta.detalle?.MPV04_Moneda || this.monedaActual || 'USD';
+  }
+
+  get nombrePuntoVenta(): string {
+    return this.selectedTableContext?.puntoVenta.descripcion
+      || this.selectedTableContext?.puntoVenta.detalle?.MPV07_NomPntVenta
+      || this.codPuntoVenta
+      || 'Punto de venta';
   }
 
   abrirEdicionComentario(): void {
@@ -477,6 +484,10 @@ export class RestaurantMesaDetalleComponent implements OnInit {
     }
     if (accion.id === 'cargo-colaborador') {
       this.abrirModalCargoColaborador();
+      return;
+    }
+    if (accion.id === 'cargo-incluido') {
+      this.abrirModalCargoHabitacion('desayuno-incluido');
       return;
     }
     if (accion.id === 'cargo-habitacion') {
@@ -821,6 +832,7 @@ export class RestaurantMesaDetalleComponent implements OnInit {
     const detallePuntoVenta = this.selectedTableContext?.puntoVenta.detalle;
     this.collaboratorChargeDialogData = {
       puntoVenta: this.codPuntoVenta,
+      puntoVentaNombre: this.nombrePuntoVenta,
       vendedor: this.codMozo,
       total: Number(this.total || 0),
       moneda: this.monedaActual || detallePuntoVenta?.MPV04_Moneda || 'USD',
@@ -845,11 +857,13 @@ export class RestaurantMesaDetalleComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
-  abrirModalCargoHabitacion(): void {
+  abrirModalCargoHabitacion(modo: 'habitacion' | 'desayuno-incluido' = 'habitacion'): void {
     if (!this.notaPedidoInfo || !this.consumoActual.length) {
       void Swal.fire({
         title: 'Sin consumo para cargar',
-        text: 'Debe existir una nota de pedido con consumos para registrar cargo a habitacion.',
+        text: modo === 'desayuno-incluido'
+          ? 'Debe existir una nota de pedido con consumos para registrar el desayuno incluido.'
+          : 'Debe existir una nota de pedido con consumos para registrar cargo a habitación.',
         icon: 'warning',
         confirmButtonText: 'Aceptar',
         customClass: {
@@ -860,7 +874,9 @@ export class RestaurantMesaDetalleComponent implements OnInit {
     }
 
     this.roomChargeDialogData = {
+      modo,
       puntoVenta: this.codPuntoVenta,
+      puntoVentaNombre: this.nombrePuntoVenta,
       total: Number(this.total || 0),
       moneda: this.monedaActual || 'USD',
       tipNP: this.notaPedidoInfo.tipNp,
@@ -874,9 +890,10 @@ export class RestaurantMesaDetalleComponent implements OnInit {
   }
 
   onRoomChargeDialogClosed(result: RestaurantRoomChargeDialogResult | null): void {
-    console.log('[RestaurantMesaDetalle] Cargo habitación - resultado del modal', result);
+    const modo = this.roomChargeDialogData?.modo || 'habitacion';
+    console.log(`[RestaurantMesaDetalle] ${modo} - resultado del modal`, result);
     console.log(
-      '[RestaurantMesaDetalle] POST /cargo-habitacion-restaurante response',
+      `[RestaurantMesaDetalle] POST ${modo === 'desayuno-incluido' ? '/cargo-incluido' : '/cargo-habitacion-restaurante'} response`,
       result?.respuesta ?? null
     );
 
@@ -1269,6 +1286,7 @@ export class RestaurantMesaDetalleComponent implements OnInit {
       salon         : this.mesaDetalle.salon || 'Salón Principal',
       pax           : Number(this.mesaDetalle.personas || 4),
       puntoVenta    : this.codPuntoVenta || 'PL',
+      puntoVentaNombre: this.nombrePuntoVenta,
       codArea       : this.codAreaOperativa || '08',
       codMozo       : this.codMozo || 'FFUENTES',
       moneda        ,

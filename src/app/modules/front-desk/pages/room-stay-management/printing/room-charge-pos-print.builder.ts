@@ -15,6 +15,7 @@ export interface RoomChargePosPrintData {
   };
   encabezado: RoomChargeLookupHeader;
   detalles: RoomChargeLookupDetail[];
+  puntoVentaNombre?: string;
   tipoDocumento: RoomChargePosDocumentType;
   fechaImpresion: Date;
 }
@@ -53,6 +54,13 @@ export class RoomChargePosPrintBuilder {
     if (data.empresa.ruc) receipt.wrapped(`CEDULA: ${data.empresa.ruc}`);
     if (data.empresa.direccion) receipt.wrapped(data.empresa.direccion);
     if (data.empresa.telefono) receipt.wrapped(`TEL: ${data.empresa.telefono}`);
+
+    receipt
+      .feed()
+      .bold(true)
+      .wrapped('PUNTO DE VENTA')
+      .wrapped(data.puntoVentaNombre || header.pntVenta || '-')
+      .bold(false);
 
     receipt
       .feed()

@@ -555,10 +555,11 @@ export class ConsultaReservasComponent implements OnInit {
     }
 
     const filtro = this.filtro();
+    const busqueda = filtro.busqueda.trim();
     const fechaInicio = this.normalizeDateForApi(filtro.fechaInicio);
     const fechaFinal = this.normalizeDateForApi(filtro.fechaFinal);
 
-    if (!fechaInicio || !fechaFinal) {
+    if (!busqueda && (!fechaInicio || !fechaFinal)) {
       this.errorMessage.set('Ingrese Fecha Inicio y Fecha Final en formato dd/MM/yyyy.');
       this.reservas.set([]);
       this.totalRecords.set(0);
@@ -569,16 +570,18 @@ export class ConsultaReservasComponent implements OnInit {
     this.loading.set(true);
     this.errorMessage.set('');
 
-    this.reservaService
-      .consultarReservas({
-        fecIngreso: fechaInicio,
-        fecSalida: fechaFinal,
-        pagina: this.currentPage(),
-        tamanoPagina: this.pageSize(),
-        agencia: filtro.agencia,
-        estado: filtro.estado,
-        busqueda: filtro.busqueda
-      })
+    const request$ = busqueda
+      ? this.reservaService.buscarReservas(busqueda, this.currentPage(), this.pageSize())
+      : this.reservaService.consultarReservas({
+          fecIngreso: fechaInicio,
+          fecSalida: fechaFinal,
+          pagina: this.currentPage(),
+          tamanoPagina: this.pageSize(),
+          agencia: filtro.agencia,
+          estado: filtro.estado
+        });
+
+    request$
       .pipe(
         catchError((error) => {
           console.error('No se pudieron consultar las reservas.', error);
