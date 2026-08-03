@@ -52,10 +52,12 @@ export class ReservationCalendarDetailPanelComponent implements OnChanges, OnDes
   @Input({ required: true }) reservation!: CalendarReservation;
   @Input() canEdit = false;
   @Input() canMoveToTray = false;
+  @Input() canUnassign = false;
 
   @Output() closed = new EventEmitter<void>();
   @Output() editRequested = new EventEmitter<void>();
   @Output() moveToTrayRequested = new EventEmitter<void>();
+  @Output() unassignRequested = new EventEmitter<void>();
 
   readonly detail = signal<ReservationCompleteResponse | null>(null);
   readonly loading = signal(false);
@@ -96,6 +98,12 @@ export class ReservationCalendarDetailPanelComponent implements OnChanges, OnDes
 
   requestMoveToTray(): void {
     this.moveToTrayRequested.emit();
+  }
+
+  requestUnassign(): void {
+    if (this.canUnassign) {
+      this.unassignRequested.emit();
+    }
   }
 
   requestEdit(): void {

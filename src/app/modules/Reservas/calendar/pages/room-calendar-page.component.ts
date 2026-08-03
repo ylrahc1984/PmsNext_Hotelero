@@ -7,6 +7,7 @@ import { catchError, distinctUntilChanged, filter, finalize, map } from 'rxjs/op
 import Swal from 'sweetalert2';
 
 import { AuthService } from 'src/app/core/services/auth.service';
+import { environment } from 'src/environments/environment';
 import { OperationalAction } from 'src/app/core/models/operational-context.model';
 import { OperationalDateService } from 'src/app/core/services/operational-date.service';
 import { OperationalPolicyService } from 'src/app/core/services/operational-policy.service';
@@ -82,6 +83,7 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
   private readonly operationalPolicy = inject(OperationalPolicyService);
   private readonly operationalDateService = inject(OperationalDateService);
   private readonly operationalDate$ = toObservable(this.operationalDateService.operationalDate);
+  private readonly assignmentEndpoint = `${(environment.apiUrl || 'http://localhost:5000/api').toString().replace(/\/+$/, '')}/prechecking/asignar-habitacion`;
 
   @ViewChild(RoomSidebarComponent) roomSidebar?: RoomSidebarComponent;
   @ViewChild(CalendarGridComponent) calendarGrid?: CalendarGridComponent;
@@ -360,6 +362,18 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
     this.onMoveReservationToTrayFromMenu(block);
   }
 
+  async onDetailUnassignRequested(): Promise<void> {
+    const block = this.selectedReservationDetailBlock;
+    if (!block || !this.canUnassignSelectedReservation()) {
+      return;
+    }
+
+    const unassigned = await this.confirmAndUnassignCalendarReservation(block);
+    if (unassigned) {
+      this.closeReservationDetail();
+    }
+  }
+
   async onDetailEditRequested(): Promise<void> {
     const reservation = this.selectedReservationDetailBlock?.reservation;
     const reservationCode = reservation?.reservationCode?.trim() || '';
@@ -379,6 +393,17 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
     });
   }
 
+  async createReservation(): Promise<void> {
+    const allowed = await this.operationalPolicy.require(OperationalAction.CreateOperation);
+    if (!allowed) {
+      return;
+    }
+
+    await this.router.navigate(['/reservas/nueva-hospedaje'], {
+      queryParams: { returnUrl: '/reservas/calendario' }
+    });
+  }
+
   canEditSelectedReservation(): boolean {
     const reservation = this.selectedReservationDetailBlock?.reservation;
     const state = reservation?.reservationState?.trim().toUpperCase() || '';
@@ -387,6 +412,11 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
 
   canManageSelectedReservation(): boolean {
     return !!this.selectedReservationDetailBlock && !this.isCheckedInReservation(this.selectedReservationDetailBlock.reservation);
+  }
+
+  canUnassignSelectedReservation(): boolean {
+    const reservation = this.selectedReservationDetailBlock?.reservation;
+    return !!reservation && !reservation.isOperationalBlock && !this.isCheckedInReservation(reservation) && !!reservation.roomNumber?.trim();
   }
 
   get selectedExchangeTrayReservation(): ExchangeTrayReservation | null {
@@ -874,9 +904,9 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
     this.reloadCalendar();
   }
 
-  private async confirmAndUnassignCalendarReservation(block: CalendarReservationBlockView): Promise<void> {
+  private async confirmAndUnassignCalendarReservation(block: CalendarReservationBlockView): Promise<boolean> {
     if (this.isAssigningRoom) {
-      return;
+      return false;
     }
 
     const reservation = block.reservation;
@@ -888,10 +918,11 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
         title: 'Habitacion origen requerida',
         text: `La reserva ${reservationCode} no trae habOrigen. No se puede desasignar sin saber a que habitacion origen debe regresar.`,
         icon: 'warning',
+        customClass: { container: 'next-confirm-container' },
         confirmButtonText: 'Aceptar',
         confirmButtonColor: '#2f5f8d'
       });
-      return;
+      return false;
     }
 
     const currentRoom = reservation.roomNumber;
@@ -902,16 +933,18 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
         title: 'Categoria requerida',
         text: `La reserva ${reservationCode} no tiene categoria para enviar la desasignacion.`,
         icon: 'warning',
+        customClass: { container: 'next-confirm-container' },
         confirmButtonText: 'Aceptar',
         confirmButtonColor: '#2f5f8d'
       });
-      return;
+      return false;
     }
 
     const result = await Swal.fire({
       title: 'Desasignar habitacion',
       html: this.buildUnassignmentConfirmationHtml(reservationCode, currentRoom, sourceRoom, categoryCode),
       icon: 'warning',
+      customClass: { container: 'next-confirm-container' },
       showCancelButton: true,
       confirmButtonText: 'Desasignar',
       cancelButtonText: 'Cancelar',
@@ -920,7 +953,7 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
     });
 
     if (!result.isConfirmed) {
-      return;
+      return false;
     }
 
     try {
@@ -942,18 +975,22 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
         title: 'Habitacion desasignada',
         text: response?.respuesta || response?.mensaje || `La reserva ${reservationCode} regreso a ${sourceRoom}.`,
         icon: 'success',
+        customClass: { container: 'next-confirm-container' },
         timer: 1800,
         showConfirmButton: false
       });
+      return true;
     } catch (error) {
       console.error('No se pudo desasignar la habitacion.', error);
       await Swal.fire({
         title: 'Error al desasignar habitacion',
         text: this.getAssignmentErrorMessage(error),
         icon: 'error',
+        customClass: { container: 'next-confirm-container' },
         confirmButtonText: 'Aceptar',
         confirmButtonColor: '#dc3545'
       });
+      return false;
     }
   }
 
@@ -1410,6 +1447,20 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
     this.processingReservationIds.add(reservationId);
     this.cdr.markForCheck();
     try {
+      const payload: CalendarRoomAssignmentRequest = {
+        codReserva: request.codReserva.trim(),
+        oldHabita: request.oldHabita.trim(),
+        newHabita: request.newHabita.trim(),
+        categoria: request.categoria.trim(),
+        operador: request.operador.trim()
+      };
+
+      console.log('[RoomCalendar] Solicitud para asignar reserva desde el panel derecho al calendario:', {
+        metodo: 'PUT',
+        endpoint: this.assignmentEndpoint,
+        payload
+      });
+
       console.info('[RoomCalendar][PRECHECKING_ASSIGNMENT] Enviando movimiento no-CHK.', {
         codReserva: request.codReserva,
         oldHabita: request.oldHabita,

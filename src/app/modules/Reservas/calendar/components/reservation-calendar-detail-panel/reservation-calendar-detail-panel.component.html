@@ -146,6 +146,15 @@
         <button type="button" class="reservation-detail-action reservation-detail-action--warning" *ngIf="canMoveToTray" (click)="requestMoveToTray()">
           <i class="feather icon-repeat"></i> Mover a bandeja
         </button>
+        <button
+          type="button"
+          class="reservation-detail-action reservation-detail-action--danger"
+          *ngIf="canUnassign"
+          [disabled]="loading()"
+          (click)="requestUnassign()"
+        >
+          <i class="feather icon-user-x"></i> Desasignar
+        </button>
       </div>
       <button type="button" class="reservation-detail-action reservation-detail-action--close" (click)="close()">Cerrar</button>
     </footer>

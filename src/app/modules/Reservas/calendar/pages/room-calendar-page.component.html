@@ -14,10 +14,10 @@
         <span>Ventana</span>
         <strong>{{ calendarData.dates.length }} dias</strong>
       </article>
-      <article>
-        <span>Habitaciones</span>
-        <strong>{{ calendarData.visibleRooms }}</strong>
-      </article>
+      <button type="button" class="room-calendar-page__new-reservation" (click)="createReservation()">
+        <i class="feather icon-plus-circle" aria-hidden="true"></i>
+        <span>Nueva Reserva</span>
+      </button>
     </div>
   </header>
 
@@ -163,8 +163,10 @@
     [reservation]="selectedDetail.reservation"
     [canEdit]="canEditSelectedReservation() && !isAssigningRoom"
     [canMoveToTray]="exchangeMode && canManageSelectedReservation() && !isAssigningRoom"
+    [canUnassign]="canUnassignSelectedReservation() && !isAssigningRoom"
     (closed)="closeReservationDetail()"
     (editRequested)="onDetailEditRequested()"
     (moveToTrayRequested)="onDetailMoveToTrayRequested()"
+    (unassignRequested)="onDetailUnassignRequested()"
   ></app-reservation-calendar-detail-panel>
 </section>

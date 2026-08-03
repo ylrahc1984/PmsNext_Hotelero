@@ -80,6 +80,42 @@
   font-size: 1rem;
 }
 
+.room-calendar-page__new-reservation {
+  min-width: 142px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 12px;
+  padding: 0.55rem 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  background: #ffffff;
+  color: #244b68;
+  font-size: 0.76rem;
+  font-weight: 850;
+  cursor: pointer;
+  box-shadow: 0 7px 18px rgba(10, 24, 40, 0.2);
+  transition: transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+.room-calendar-page__new-reservation span {
+  font-size: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+  opacity: 1;
+}
+
+.room-calendar-page__new-reservation i {
+  font-size: 1rem;
+}
+
+.room-calendar-page__new-reservation:hover,
+.room-calendar-page__new-reservation:focus-visible {
+  background: #eef8ff;
+  box-shadow: 0 9px 22px rgba(10, 24, 40, 0.26);
+  transform: translateY(-1px);
+}
+
 .calendar-color-legend {
   display: flex;
   align-items: center;
