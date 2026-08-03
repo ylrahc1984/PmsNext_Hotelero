@@ -388,7 +388,6 @@ export class ReservaHospedajeComponent implements OnInit {
 
       if (availability.totalFechasInsuficientes > 0 || availability.data.length > 0) {
         await this.showInsufficientAvailabilityAlert(roomDraft.categoria, requestedRooms, availability.data);
-        return;
       }
     } catch (error) {
       console.error('No se pudo validar la disponibilidad de la categoría.', error);
@@ -470,10 +469,10 @@ export class ReservaHospedajeComponent implements OnInit {
             <span style="font-size:13px;">La disponibilidad es menor que la cantidad solicitada.</span>
           </div>
           <ul style="list-style:none;padding:0;margin:0;">${dates}</ul>
-          <p style="font-size:13px;margin:16px 0 0;color:#6b7280;">La habitación no se agregó. Ajuste la cantidad, categoría o fechas para continuar.</p>
+          <p style="font-size:13px;margin:16px 0 0;color:#6b7280;">La habitación se agregará a la reserva. Puede ajustar la cantidad, categoría o fechas si lo considera necesario.</p>
         </div>`,
       icon: 'warning',
-      confirmButtonText: 'Entendido',
+      confirmButtonText: 'Continuar',
       confirmButtonColor: '#b7791f',
       width: 620
     });
@@ -1361,7 +1360,7 @@ export class ReservaHospedajeComponent implements OnInit {
 
       if (conflicts.length > 0) {
         await this.showFinalAvailabilityAlert(conflicts);
-        return false;
+        return true;
       }
 
       return true;
@@ -1489,15 +1488,15 @@ export class ReservaHospedajeComponent implements OnInit {
       .join('');
 
     await Swal.fire({
-      title: 'La disponibilidad cambió',
+      title: 'Disponibilidad insuficiente',
       html: `
         <div style="text-align:left;color:#4b5563;">
-          <p>La reserva no se guardó porque el inventario cambió desde la última validación.</p>
+          <p>El inventario disponible es menor que la cantidad solicitada en una o más fechas.</p>
           <ul style="list-style:none;padding:0;margin:0;">${rows}</ul>
-          <p style="font-size:13px;margin:14px 0 0;">Revise las habitaciones o las fechas antes de volver a confirmar.</p>
+          <p style="font-size:13px;margin:14px 0 0;">Esta es una advertencia. La reserva se guardará al continuar.</p>
         </div>`,
       icon: 'warning',
-      confirmButtonText: 'Revisar reserva',
+      confirmButtonText: 'Continuar y guardar',
       confirmButtonColor: '#b7791f',
       width: 660
     });
@@ -2003,6 +2002,18 @@ export class ReservaHospedajeComponent implements OnInit {
 
   totalReserva(): number {
     return this.habitacionesTotal() + this.inclusionesTotal() + this.serviciosSubtotal() + this.impuestos();
+  }
+
+  resumenSubtotalVisual(): number {
+    return this.totalReserva();
+  }
+
+  resumenIvaVisual(): number {
+    return this.resumenSubtotalVisual() * 0.13;
+  }
+
+  resumenTotalVisual(): number {
+    return this.resumenSubtotalVisual() + this.resumenIvaVisual();
   }
 
   private loadCatalogs(): void {

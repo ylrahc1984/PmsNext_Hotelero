@@ -206,6 +206,17 @@ const routes: Routes = [
           )
       },
       {
+        path: 'cargos-incluidos',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Cargos Incluidos' }
+        ] },
+        loadComponent: () =>
+          import('./demo/restaurante/cargos-incluidos/cargos-incluidos.component').then(
+            (c) => c.CargosIncluidosComponent
+          )
+      },
+      {
         path: 'facturacion',
         redirectTo: '/restaurant/puntos-venta',
         pathMatch: 'full'

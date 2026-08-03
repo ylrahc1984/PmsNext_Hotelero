@@ -36,6 +36,8 @@ export class RoomChargePosPrintBuilder {
     const firstDetail = data.detalles[0];
     const isReprint = data.tipoDocumento === 'REIMPRESION';
     const isAnnulled = Number(header.estado) === 1;
+    const isIncludedCharge = this.isIncludedCharge(header.tipCrgHab);
+    const showDetailPrices = !isIncludedCharge;
     const order = [firstDetail?.tipNPedido, firstDetail?.numNPedido].filter(Boolean).join('-');
     const discount = data.detalles.reduce(
       (total, item) => total + receipt.number(item.descuento),
@@ -69,7 +71,7 @@ export class RoomChargePosPrintBuilder {
       .size(1, 2)
       .line('COMPROBANTE DE CARGO')
       .size(1)
-      .line('CARGO A HABITACION')
+      .line(isIncludedCharge ? 'CARGO INCLUIDO' : 'CARGO A HABITACION')
       .bold(false);
 
     if (isReprint) {
@@ -105,13 +107,18 @@ export class RoomChargePosPrintBuilder {
     receipt
       .separator('=')
       .bold(true)
-      .line('DETALLE DE CONSUMO')
-      .columns('Descripcion', 'Precio')
-      .bold(false)
-      .separator('-');
+      .line('DETALLE DE CONSUMO');
+
+    if (showDetailPrices) {
+      receipt.columns('Descripcion', 'Precio');
+    } else {
+      receipt.columns('Cantidad', 'Descripcion');
+    }
+
+    receipt.bold(false).separator('-');
 
     data.detalles.forEach((item, index) => {
-      this.appendDetail(receipt, item, currency, index);
+      this.appendDetail(receipt, item, currency, index, showDetailPrices);
     });
 
     receipt.separator('=');
@@ -129,7 +136,7 @@ export class RoomChargePosPrintBuilder {
       .size(1)
       .bold(false)
       .separator('=')
-      .wrapped('Cargo aplicado al folio de la habitacion.')
+      .wrapped(isIncludedCharge ? 'Consumo incluido aplicado a la reserva.' : 'Cargo aplicado al folio de la habitacion.')
       .feed(2)
       .line('________________________________')
       .line('Firma del huesped')
@@ -146,19 +153,27 @@ export class RoomChargePosPrintBuilder {
     receipt: EscPosReceiptComposer,
     item: RoomChargeLookupDetail,
     currency: string,
-    index: number
+    index: number,
+    showPrice: boolean
   ): void {
     const quantity = receipt.number(item.cantidad);
     const quantityLabel = Number.isInteger(quantity)
       ? quantity.toFixed(0)
       : quantity.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
     const product = item.nomConsumo || item.codConsumo || `Consumo ${index + 1}`;
-    const lineCurrency = item.moneda || currency;
+    if (!showPrice) {
+      receipt.wrapped(`${quantityLabel} x ${product}`);
+      return;
+    }
 
     receipt.wrappedColumns(
       `${quantityLabel} x ${product}`,
-      receipt.money(item.total, lineCurrency)
+      receipt.money(item.total, item.moneda || currency)
     );
+  }
+
+  private isIncludedCharge(operationType: string | null | undefined): boolean {
+    return (operationType || '').trim().toUpperCase().startsWith('CI');
   }
 
   private documentDate(header: RoomChargeLookupHeader): string {

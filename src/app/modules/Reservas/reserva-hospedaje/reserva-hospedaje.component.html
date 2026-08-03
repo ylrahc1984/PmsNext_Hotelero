@@ -563,11 +563,11 @@
             <strong>{{ reservaForm.controls.moneda.value }} {{ serviciosSubtotal() | number: '1.2-2' }}</strong>
           </div>
           <hr>
-          <div class="summary-line"><span>Subtotal</span><strong>{{ reservaForm.controls.moneda.value }} {{ habitacionesTotal() + inclusionesTotal() + serviciosSubtotal() | number: '1.2-2' }}</strong></div>
-          <div class="summary-line"><span>Impuestos</span><strong>{{ reservaForm.controls.moneda.value }} {{ impuestos() | number: '1.2-2' }}</strong></div>
+          <div class="summary-line"><span>Subtotal</span><strong>{{ reservaForm.controls.moneda.value }} {{ resumenSubtotalVisual() | number: '1.2-2' }}</strong></div>
+          <div class="summary-line"><span>Impuestos (IVA 13%)</span><strong>{{ reservaForm.controls.moneda.value }} {{ resumenIvaVisual() | number: '1.2-2' }}</strong></div>
           <div class="grand-total">
             <span>Total</span>
-            <strong>{{ reservaForm.controls.moneda.value }} {{ totalReserva() | number: '1.2-2' }}</strong>
+            <strong>{{ reservaForm.controls.moneda.value }} {{ resumenTotalVisual() | number: '1.2-2' }}</strong>
           </div>
         </div>
       </section>
