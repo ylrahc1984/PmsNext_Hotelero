@@ -240,7 +240,7 @@ export class ReservaHospedajeComponent implements OnInit {
     observaciones         : this.fb.control(''),
     procesa               : this.fb.control('WEB'),
     directo               : this.fb.control(false),
-    esCpl                 : this.fb.control(false),
+    esCpl                 : this.fb.control({ value: false, disabled: true }),
     operador              : this.fb.control(this.auth.getCurrentUser()?.usuario ?? 'admin'),
     habitaciones          : this.fb.array<FormGroup<HabitacionForm>>([]),
     inclusiones           : this.fb.array<FormGroup<InclusionForm>>([]),

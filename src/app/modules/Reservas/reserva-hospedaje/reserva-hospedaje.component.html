@@ -237,7 +237,6 @@
                 role="switch"
                 [indeterminate]="cplInconsistent()"
                 [attr.aria-checked]="cplInconsistent() ? 'mixed' : reservaForm.controls.esCpl.value"
-                [disabled]="true"
                 (change)="onCplChange()"
               >
               <span class="ios-switch__track"><span class="ios-switch__thumb"></span></span>
