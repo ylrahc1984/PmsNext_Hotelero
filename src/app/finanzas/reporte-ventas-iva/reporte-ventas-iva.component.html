@@ -114,6 +114,15 @@
       <button class="btn btn-outline-secondary btn-sm" type="button" (click)="buscar()" [disabled]="loading() || !filters().pntVenta">
         Recalcular
       </button>
+      <button
+        class="btn btn-outline-success btn-sm"
+        type="button"
+        (click)="exportarExcel()"
+        [disabled]="loading() || exporting() || !visibleGridRows().length"
+      >
+        <i class="bi bi-file-earmark-excel" aria-hidden="true"></i>
+        {{ exporting() ? 'Exportando...' : 'Exportar Excel' }}
+      </button>
     </div>
     <div class="toolbar-summary">
       <strong>{{ summary().cantidadDocumentos }}</strong>

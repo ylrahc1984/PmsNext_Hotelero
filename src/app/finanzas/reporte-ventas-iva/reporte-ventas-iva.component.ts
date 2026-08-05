@@ -69,6 +69,7 @@ export class ReporteVentasIvaComponent implements OnInit {
   });
 
   readonly loading = signal(false);
+  readonly exporting = signal(false);
   readonly puntosVentaLoading = signal(false);
   readonly errorMessage = signal('');
   readonly puntosVenta = signal<PuntoVentaUI[]>([]);
@@ -233,6 +234,108 @@ export class ReporteVentasIvaComponent implements OnInit {
           this.errorMessage.set(this.getErrorMessage(error));
         }
       });
+  }
+
+  async exportarExcel(): Promise<void> {
+    const rows = this.filteredRows();
+    if (!rows.length || this.exporting()) return;
+
+    this.exporting.set(true);
+    this.errorMessage.set('');
+
+    try {
+      const XLSX = await import('xlsx');
+      const filters = this.filters();
+      const puntoVenta = this.puntoVentaSeleccionado();
+      const summary = this.summary();
+      const headers = [
+        'Fecha',
+        'Tipo documento',
+        'Número documento',
+        'Código cliente',
+        'Cliente',
+        'Exento',
+        'Subtotal',
+        'IVA',
+        'Servicio',
+        'Exoneración',
+        'Total',
+        'Tipo cambio',
+        'Moneda'
+      ];
+      const detail = rows.map((row) => [
+        this.formatDate(row.fecha),
+        row.tDoc,
+        row.nDocumento,
+        row.codCliente,
+        row.nomClien,
+        Number(row.exento ?? 0),
+        Number(row.subtotal ?? 0),
+        Number(row.imP_IVA ?? 0),
+        Number(row.imP_SRV ?? 0),
+        Number(row.exoneracion ?? 0),
+        Number(row.total ?? 0),
+        Number(row.tcambio ?? 0),
+        row.moneda
+      ]);
+      const totalRow = [
+        'TOTAL VISTA',
+        '',
+        '',
+        '',
+        `${summary.cantidadDocumentos} documentos`,
+        summary.totalExento,
+        summary.totalSubtotal,
+        summary.totalIVA,
+        summary.totalSRV,
+        summary.totalExoneracion,
+        summary.totalGeneral,
+        '',
+        filters.moneda
+      ];
+      const worksheet = XLSX.utils.aoa_to_sheet([
+        ['Reporte de ventas por IVA'],
+        [`Período: ${filters.fechaInicial} al ${filters.fechaFinal}`, `Moneda: ${filters.moneda}`],
+        [`Punto de venta: ${puntoVenta ? `${puntoVenta.codigo} - ${puntoVenta.descripcion}` : filters.pntVenta}`],
+        [],
+        headers,
+        ...detail,
+        totalRow
+      ]);
+
+      const lastColumn = headers.length - 1;
+      const headerRow = 4;
+      const firstDetailRow = headerRow + 1;
+      const lastDetailRow = firstDetailRow + detail.length - 1;
+      const totalRowIndex = lastDetailRow + 1;
+      worksheet['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: lastColumn } }];
+      worksheet['!autofilter'] = {
+        ref: XLSX.utils.encode_range({ s: { r: headerRow, c: 0 }, e: { r: lastDetailRow, c: lastColumn } })
+      };
+      worksheet['!cols'] = [
+        { wch: 12 }, { wch: 16 }, { wch: 20 }, { wch: 16 }, { wch: 34 },
+        { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
+        { wch: 14 }, { wch: 12 }, { wch: 10 }
+      ];
+
+      for (let rowIndex = firstDetailRow; rowIndex <= totalRowIndex; rowIndex += 1) {
+        for (let columnIndex = 5; columnIndex <= 11; columnIndex += 1) {
+          const cell = worksheet[XLSX.utils.encode_cell({ r: rowIndex, c: columnIndex })];
+          if (cell?.t === 'n') cell.z = '#,##0.00';
+        }
+      }
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Ventas por IVA');
+      const fileName = `ventas-iva-${filters.fechaInicial}-${filters.fechaFinal}-${filters.moneda}-${filters.pntVenta}.xlsx`
+        .replace(/[^a-zA-Z0-9._-]+/g, '-');
+      XLSX.writeFile(workbook, fileName, { compression: true });
+    } catch (error: unknown) {
+      console.error('No se pudo exportar el reporte de ventas por IVA.', error);
+      this.errorMessage.set('No se pudo generar el archivo Excel. Intente nuevamente.');
+    } finally {
+      this.exporting.set(false);
+    }
   }
 
   rowClass = (params: RowClassParams<ReporteVentasIvaGridRow>): string =>
