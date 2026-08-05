@@ -67,6 +67,13 @@ const routes: Routes = [
         loadComponent: () => import('./cuentas-cobrar/cuentas-cobrar.component').then((c) => c.CuentasCobrarComponent)
       },
       {
+        path: 'cuentas-cobrar-comerciales',
+        loadComponent: () =>
+          import('./cuentas-cobrar-comerciales/cuentas-cobrar-comerciales.component').then(
+            (c) => c.CuentasCobrarComercialesComponent
+          )
+      },
+      {
         path: 'cuentas-pagar',
         loadComponent: () => import('./cuentas-pagar/cuentas-pagar.component').then((c) => c.CuentasPagarComponent)
       },
@@ -104,6 +111,11 @@ const routes: Routes = [
         path: 'reporte-ventas-iva',
         loadComponent: () =>
           import('./reporte-ventas-iva/reporte-ventas-iva.component').then((c) => c.ReporteVentasIvaComponent)
+      },
+      {
+        path: 'reporte-compras-iva',
+        loadComponent: () =>
+          import('./reporte-compras-iva/reporte-compras-iva.component').then((c) => c.ReporteComprasIvaComponent)
       },
       {
         path: 'documento/:tipo/:serie/:numero',

@@ -1,27 +1,47 @@
 export interface ReporteVentasIvaFiltros {
-  Proceso         : number;
-  FechaInicial    : string;
-  FechaFinal      : string;
-  Moneda          : string;
+  fechaInicial : string;
+  fechaFinal   : string;
+  moneda       : string;
+  pntVenta     : string;
 }
 
 export interface ReporteVentasIvaRow {
-  fecha           : string;
-  tDoc            : string;
-  nDocumento      : string;
-  codCliente      : string;
-  nomClien        : string;
-  exento          : number;
-  subtotaL_1      : number;
-  imP_1           : number;
-  subtotaL_2      : number;
-  imP_2           : number;
-  subtotaL_4      : number;
-  imP_4           : number;
-  subtotaL_13     : number;
-  imP_13          : number;
-  exoneracion     : number;
-  total           : number;
-  tcambio         : number;
-  moneda          : string;
+  fecha         : string;
+  tDoc          : string;
+  nDocumento    : string;
+  codCliente    : string;
+  nomClien      : string;
+  exento        : number;
+  subtotal      : number;
+  imP_IVA       : number;
+  imP_SRV       : number;
+  exoneracion   : number;
+  total         : number;
+  tcambio       : number;
+  moneda        : string;
 }
+
+export interface ReporteVentasIvaResumen {
+  totalExento         : number;
+  totalSubtotal       : number;
+  totalIVA            : number;
+  totalSRV            : number;
+  totalExoneracion    : number;
+  totalGeneral        : number;
+  cantidadDocumentos  : number;
+}
+
+export interface ReporteVentasIvaResponse {
+  detalle : ReporteVentasIvaRow[];
+  resumen : ReporteVentasIvaResumen;
+}
+
+export const EMPTY_REPORTE_VENTAS_IVA_RESUMEN: ReporteVentasIvaResumen = {
+  totalExento        : 0,
+  totalSubtotal      : 0,
+  totalIVA           : 0,
+  totalSRV           : 0,
+  totalExoneracion   : 0,
+  totalGeneral       : 0,
+  cantidadDocumentos : 0
+};

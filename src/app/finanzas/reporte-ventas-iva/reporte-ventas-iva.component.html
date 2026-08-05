@@ -2,12 +2,17 @@
   <header class="report-header">
     <div>
       <span class="eyebrow">Reporte contable</span>
-      <h1>Ventas y notas de credito por IVA</h1>
-      <p>Detalle mensual de documentos de venta y notas de credito separado por tarifa de IVA.</p>
+      <h1>Ventas hoteleras y notas de crédito</h1>
+      <p>Detalle de documentos por período, moneda y punto de venta.</p>
     </div>
     <div class="header-status">
-      <span>Periodo</span>
-      <strong>{{ filters().fechaInicial }} - {{ filters().fechaFinal }} · {{ filters().moneda }}</strong>
+      <span>Consulta actual</span>
+      <strong>
+        {{ filters().fechaInicial }} - {{ filters().fechaFinal }} · {{ filters().moneda }}
+        @if (puntoVentaSeleccionado(); as punto) {
+          · {{ punto.codigo }} - {{ punto.descripcion }}
+        }
+      </strong>
     </div>
   </header>
 
@@ -25,19 +30,52 @@
     <div class="filter-grid">
       <label>
         <span>Fecha inicio</span>
-        <input type="date" [ngModel]="filters().fechaInicial" name="fechaInicial" (ngModelChange)="updateFilter('fechaInicial', $event)" />
+        <input
+          type="date"
+          [ngModel]="filters().fechaInicial"
+          name="fechaInicial"
+          (ngModelChange)="updateFilter('fechaInicial', $event)"
+          [disabled]="loading()"
+        />
       </label>
 
       <label>
         <span>Fecha fin</span>
-        <input type="date" [ngModel]="filters().fechaFinal" name="fechaFinal" (ngModelChange)="updateFilter('fechaFinal', $event)" />
+        <input
+          type="date"
+          [ngModel]="filters().fechaFinal"
+          name="fechaFinal"
+          (ngModelChange)="updateFilter('fechaFinal', $event)"
+          [disabled]="loading()"
+        />
       </label>
 
       <label>
         <span>Moneda</span>
-        <select [ngModel]="filters().moneda" name="moneda" (ngModelChange)="updateFilter('moneda', $event)">
+        <select
+          [ngModel]="filters().moneda"
+          name="moneda"
+          (ngModelChange)="updateFilter('moneda', $event)"
+          [disabled]="loading()">
+          <option value="COL">COL</option>
           <option value="USD">USD</option>
-          <option value="CRC">CRC</option>
+          <option value="EUR">EUR</option>
+        </select>
+      </label>
+
+      <label>
+        <span>Punto de venta</span>
+        <select
+          [ngModel]="filters().pntVenta"
+          name="pntVenta"
+          (ngModelChange)="updateFilter('pntVenta', $event)"
+          [disabled]="loading() || puntosVentaLoading()">
+          <option value="" disabled>
+            {{ puntosVentaLoading() ? 'Cargando...' : 'Seleccione' }}
+          </option>
+          @for (punto of puntosVenta(); track punto.codigo) {
+            <option [value]="punto.codigo">{{ punto.codigo }} - {{ punto.descripcion }}</option>
+          }
         </select>
       </label>
 
@@ -57,36 +95,34 @@
           type="search"
           [ngModel]="filters().search"
           name="search"
-          placeholder="Documento, cliente o codigo"
+          placeholder="Documento, cliente o código"
           (ngModelChange)="updateFilter('search', $event)"
         />
       </label>
     </div>
 
-    <button class="btn btn-primary btn-sm generate-btn" type="submit" [disabled]="loading()">
+    <button
+      class="btn btn-primary btn-sm generate-btn"
+      type="submit"
+      [disabled]="loading() || puntosVentaLoading() || !filters().pntVenta">
       {{ loading() ? 'Consultando...' : 'Buscar' }}
     </button>
   </form>
 
   <div class="financial-toolbar">
     <div class="toolbar-left">
-      <button class="btn btn-outline-secondary btn-sm" type="button" (click)="buscar()" [disabled]="loading()">Recalcular</button>
-      <button class="btn btn-outline-secondary btn-sm" type="button" (click)="exportExcel()" [disabled]="loading() || exportingExcel()">
-        {{ exportingExcel() ? 'Exportando...' : 'Exportar Excel' }}
+      <button class="btn btn-outline-secondary btn-sm" type="button" (click)="buscar()" [disabled]="loading() || !filters().pntVenta">
+        Recalcular
       </button>
     </div>
     <div class="toolbar-summary">
-      <strong>{{ summary().totalRegistros }}</strong>
+      <strong>{{ summary().cantidadDocumentos }}</strong>
       <span>documentos filtrados</span>
     </div>
   </div>
 
   @if (errorMessage()) {
     <div class="console-alert error">{{ errorMessage() }}</div>
-  }
-
-  @if (actionMessage()) {
-    <div class="console-alert info">{{ actionMessage() }}</div>
   }
 
   <section class="grid-shell">
@@ -104,27 +140,22 @@
       [enableBrowserTooltips]="true"
       [loading]="loading()"
       [rowClass]="rowClass"
-      (gridReady)="onGridReady($event)"
     />
 
     @if (!rows().length && !loading()) {
       <div class="empty-state">
         <strong>Sin documentos</strong>
-        <span>Seleccione el periodo contable y ejecute Buscar para cargar el detalle.</span>
+        <span>Seleccione el período, moneda y punto de venta para realizar la consulta.</span>
       </div>
     }
   </section>
 
   <footer class="totals-footer">
-    <span>Exento: <strong>{{ formatMoney(summary().exento) }}</strong></span>
-    <span>Base 1%: <strong>{{ formatMoney(summary().subtotal1) }}</strong></span>
-    <span>IVA 1%: <strong>{{ formatMoney(summary().imp1) }}</strong></span>
-    <span>Base 2%: <strong>{{ formatMoney(summary().subtotal2) }}</strong></span>
-    <span>IVA 2%: <strong>{{ formatMoney(summary().imp2) }}</strong></span>
-    <span>Base 4%: <strong>{{ formatMoney(summary().subtotal4) }}</strong></span>
-    <span>IVA 4%: <strong>{{ formatMoney(summary().imp4) }}</strong></span>
-    <span>Base 13%: <strong>{{ formatMoney(summary().subtotal13) }}</strong></span>
-    <span>IVA 13%: <strong>{{ formatMoney(summary().imp13) }}</strong></span>
-    <span>Total: <strong>{{ formatMoney(summary().total) }}</strong></span>
+    <span>Exento: <strong>{{ formatMoney(summary().totalExento) }}</strong></span>
+    <span>Subtotal: <strong>{{ formatMoney(summary().totalSubtotal) }}</strong></span>
+    <span>IVA: <strong>{{ formatMoney(summary().totalIVA) }}</strong></span>
+    <span>Servicio: <strong>{{ formatMoney(summary().totalSRV) }}</strong></span>
+    <span>Exoneración: <strong>{{ formatMoney(summary().totalExoneracion) }}</strong></span>
+    <span>Total general: <strong>{{ formatMoney(summary().totalGeneral) }}</strong></span>
   </footer>
 </section>

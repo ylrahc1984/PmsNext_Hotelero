@@ -242,12 +242,14 @@ export const NavigationItems: NavigationItem[] = [
         moduleAccessMode: 'any',
         children: [
           { id: 'cuentas-cobrar', title: 'Cuentas por Cobrar', type: 'item', url: '/finanzas/cuentas-cobrar', icon: 'feather icon-credit-card', classes: 'nav-item' },
+          { id: 'cuentas-cobrar-comerciales', title: 'Cuentas por Cobrar Comerciales', type: 'item', url: '/finanzas/cuentas-cobrar-comerciales', icon: 'feather icon-briefcase', classes: 'nav-item' },
           { id: 'cuentas-pagar', title: 'Cuentas por Pagar', type: 'item', url: '/finanzas/cuentas-pagar', icon: 'feather icon-credit-card', classes: 'nav-item' },
           { id: 'finanzas-facturacion', title: 'Facturación', type: 'item', url: '/finanzas/nueva-factura', icon: 'feather icon-file-plus', classes: 'nav-item' },
           { id: 'finanzas-recibos', title: 'Recibos', type: 'item', url: '/finanzas/recibos', icon: 'feather icon-file-text', classes: 'nav-item' },
           { id: 'finanzas-depositos', title: 'Depósitos Bancarios', type: 'item', url: '/finanzas/bancos/depositos-cxc', icon: 'feather icon-download', classes: 'nav-item' },
           { id: 'finanzas-retiros', title: 'Retiros Bancarios', type: 'item', url: '/finanzas/bancos/retiros-cxp', icon: 'feather icon-upload', classes: 'nav-item' },
           { id: 'finanzas-ventas-iva', title: 'Ventas por IVA', type: 'item', url: '/finanzas/reporte-ventas-iva', icon: 'feather icon-bar-chart-2', classes: 'nav-item' },
+          { id: 'finanzas-compras-iva', title: 'Compras por IVA', type: 'item', url: '/finanzas/reporte-compras-iva', icon: 'feather icon-bar-chart-2', classes: 'nav-item' },
           {
             id: 'comisiones-financieras',
             title: 'Comisiones',

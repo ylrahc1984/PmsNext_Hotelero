@@ -1,0 +1,39 @@
+@use '../cuentas-cobrar/cuentas-cobrar.component';
+
+.commercial-filters-grid {
+  grid-template-columns: repeat(2, minmax(220px, 320px)) minmax(220px, 1fr);
+}
+
+.commercial-table {
+  min-width: 1560px;
+}
+
+.commercial-table th,
+.commercial-table td {
+  white-space: nowrap;
+}
+
+.commercial-table .cliente-cell {
+  min-width: 210px;
+  white-space: normal;
+}
+
+.saldo-cell {
+  font-weight: 700;
+}
+
+@media print {
+  .consulta-header .header-actions,
+  form,
+  .table-footer,
+  .consulta-table th:first-child,
+  .consulta-table td:first-child {
+    display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .commercial-filters-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -31,24 +31,24 @@ import { OperationalContextService } from 'src/app/core/services/operational-con
 import { resolveRackOperationalState } from 'src/app/shared/models/room-operational-visual-state';
 
 interface DashboardAlert {
-  icon: string;
-  message: string;
+  icon        : string;
+  message     : string;
 }
 
 interface StatusSummary {
-  label: string;
-  value: number;
-  percent: number;
+  label       : string;
+  value       : number;
+  percent     : number;
 }
 
 interface OccupancyForecastPreviewDay {
-  fecha: string;
-  label: string;
-  ocupacion: number;
-  ocupadas: number;
-  total: number;
-  bloqueadas: number;
-  pax: number;
+  fecha           : string;
+  label           : string;
+  ocupacion       : number;
+  ocupadas        : number;
+  total           : number;
+  bloqueadas      : number;
+  pax             : number;
 }
 
 @Component({
@@ -60,60 +60,60 @@ interface OccupancyForecastPreviewDay {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DashboardComponent implements OnInit {
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly authService = inject(AuthService);
-  private readonly cdr = inject(ChangeDetectorRef);
-  readonly defaultCity = 'San Jose';
-  readonly userName = this.resolveUserName();
-  operationalDateIso = '';
-  operationalDateDisplay = '';
+  private readonly destroyRef        = inject(DestroyRef);
+  private readonly authService       = inject(AuthService);
+  private readonly cdr               = inject(ChangeDetectorRef);
+  readonly defaultCity               = 'San Jose';
+  readonly userName                  = this.resolveUserName();
+  operationalDateIso                = '';
+  operationalDateDisplay            = '';
 
-  reservasDia           = 0;
-  reservasPendientes    = 0;
-  ordenesActivas        = 0;
-  ingresosEstimados     = 0;
-  llegadasHoy           = 0;
-  salidasHoy            = 0;
-  checkInPendientes     = 0;
-  checkOutPendientes    = 0;
-  ocupacionActual       = 0;
-  habitacionesTotal     = 0;
-  habitacionesDisponibles = 0;
-  habitacionesOcupadas  = 0;
-  habitacionesLimpias   = 0;
-  habitacionesSucias    = 0;
-  habitacionesFueraServicio = 0;
-  habitacionesBloqueadas = 0;
-  housekeepingEnProceso = 0;
-  habitacionesSupervisadas = 0;
-  mesasTotal            = 0;
-  mesasOcupadas         = 0;
-  pedidosActivos        = 0;
-  ticketsAbiertos       = 0;
-  ventasRestaurante     = 0;
-  roomServiceActivo     = 0;
-  restaurantePuntoVenta = 'Sin punto de venta';
-  dashboardLoading      = false;
-  dashboardError        : string | null = null;
-  restaurantLoading     = false;
-  restaurantError       : string | null = null;
-  alertasOperativas     : DashboardAlert[] = [];
-  resumenReservas       : StatusSummary[] = [];
-  resumenHabitaciones   : StatusSummary[] = [];
-  weather               : Weather | null = null;
-  loading               = false;
-  weatherError          : string | null = null;
-  tipoCambio            : TipoCambio | null = null;
-  tipoCambioLoading     = false;
-  tipoCambioError       : string | null = null;
-  occupancyForecastLoading = false;
-  occupancyForecastError: string | null = null;
-  occupancyForecastDays: OccupancyForecastPreviewDay[] = [];
-  occupancyForecastToday: OccupancyForecastPreviewDay | null = null;
-  occupancyForecastAverage = 0;
-  occupancyForecastPeak: OccupancyForecastPreviewDay | null = null;
-  occupancyForecastRoomNights = 0;
-  occupancyForecastPax = 0;
+  reservasDia                   = 0;
+  reservasPendientes            = 0;
+  ordenesActivas                = 0;
+  ingresosEstimados             = 0;
+  llegadasHoy                   = 0;
+  salidasHoy                    = 0;
+  checkInPendientes             = 0;
+  checkOutPendientes            = 0;
+  ocupacionActual               = 0;
+  habitacionesTotal             = 0;
+  habitacionesDisponibles       = 0;
+  habitacionesOcupadas          = 0;
+  habitacionesLimpias           = 0;
+  habitacionesSucias            = 0;
+  habitacionesFueraServicio     = 0;
+  habitacionesBloqueadas        = 0;
+  housekeepingEnProceso         = 0;
+  habitacionesSupervisadas      = 0;
+  mesasTotal                    = 0;
+  mesasOcupadas                 = 0;
+  pedidosActivos                = 0;
+  ticketsAbiertos               = 0;
+  ventasRestaurante             = 0;
+  roomServiceActivo             = 0;
+  restaurantePuntoVenta         = 'Sin punto de venta';
+  dashboardLoading              = false;
+  dashboardError                : string | null = null;
+  restaurantLoading             = false;
+  restaurantError               : string | null = null;
+  alertasOperativas             : DashboardAlert[] = [];
+  resumenReservas               : StatusSummary[] = [];
+  resumenHabitaciones           : StatusSummary[] = [];
+  weather                       : Weather | null = null;
+  loading                       = false;
+  weatherError                  : string | null = null;
+  tipoCambio                    : TipoCambio | null = null;
+  tipoCambioLoading             = false;
+  tipoCambioError               : string | null = null;
+  occupancyForecastLoading      = false;
+  occupancyForecastError        : string | null = null;
+  occupancyForecastDays         : OccupancyForecastPreviewDay[] = [];
+  occupancyForecastToday        : OccupancyForecastPreviewDay | null = null;
+  occupancyForecastAverage      = 0;
+  occupancyForecastPeak         : OccupancyForecastPreviewDay | null = null;
+  occupancyForecastRoomNights   = 0;
+  occupancyForecastPax          = 0;
 
   sales = [
     {
@@ -154,18 +154,18 @@ export class DashboardComponent implements OnInit {
     }
   ];
 
-  private reservasService = inject(ReservasService);
-  private ordenesService = inject(OrdenesService);
-  private dashboardService = inject(DashboardService);
-  private tipoCambioService = inject(TipoCambioService);
-  private roomRackService = inject(RoomRackService);
-  private checkInArrivalsService = inject(CheckInArrivalsService);
-  private restaurantPuntoVentaService = inject(RestaurantPuntoVentaService);
-  private restaurantDashboardService = inject(RestaurantDashboardService);
-  private occupancyForecastService = inject(OccupancyForecastService);
-  private roomCategoriesService = inject(RoomCategoriesService);
-  private operationalContextService = inject(OperationalContextService);
-  private readonly operationalDate$ = toObservable(this.operationalContextService.operationalDate);
+  private reservasService                    = inject(ReservasService);
+  private ordenesService                     = inject(OrdenesService);
+  private dashboardService                   = inject(DashboardService);
+  private tipoCambioService                  = inject(TipoCambioService);
+  private roomRackService                    = inject(RoomRackService);
+  private checkInArrivalsService             = inject(CheckInArrivalsService);
+  private restaurantPuntoVentaService        = inject(RestaurantPuntoVentaService);
+  private restaurantDashboardService         = inject(RestaurantDashboardService);
+  private occupancyForecastService           = inject(OccupancyForecastService);
+  private roomCategoriesService              = inject(RoomCategoriesService);
+  private operationalContextService          = inject(OperationalContextService);
+  private readonly operationalDate$          = toObservable(this.operationalContextService.operationalDate);
 
   ngOnInit() {
     this.bindOperationalDate();
@@ -455,23 +455,23 @@ export class DashboardComponent implements OnInit {
   }
 
   private applyReservationMetrics(reservas: Reserva[], llegadas: CheckInArrival[], llegadasPendientes: CheckInArrival[]): void {
-    const reservasActivas = reservas.filter((reserva) => !this.isCancelledStatus(reserva.PRV01_Estado));
-    const reservasCreadasHoy = reservasActivas.filter((reserva) => this.toDateKey(reserva.PRV01_FecCreacion) === this.operationalDateIso);
-    const reservasIngresoHoy = reservasActivas.filter((reserva) => this.toDateKey(reserva.PRV01_FecIngresa) === this.operationalDateIso);
-    const reservasSalidaHoy = reservasActivas.filter((reserva) => this.toDateKey(reserva.PRV01_FecSalida) === this.operationalDateIso);
+    const reservasActivas        = reservas.filter((reserva) => !this.isCancelledStatus(reserva.PRV01_Estado));
+    const reservasCreadasHoy     = reservasActivas.filter((reserva) => this.toDateKey(reserva.PRV01_FecCreacion) === this.operationalDateIso);
+    const reservasIngresoHoy     = reservasActivas.filter((reserva) => this.toDateKey(reserva.PRV01_FecIngresa) === this.operationalDateIso);
+    const reservasSalidaHoy      = reservasActivas.filter((reserva) => this.toDateKey(reserva.PRV01_FecSalida) === this.operationalDateIso);
 
-    this.reservasDia = reservasCreadasHoy.length;
-    this.reservasPendientes = reservasActivas.filter((reserva) => this.isPendingReservationStatus(reserva.PRV01_Estado)).length;
-    this.llegadasHoy = llegadas.length || reservasIngresoHoy.length;
-    this.checkInPendientes = llegadasPendientes.length || llegadas.filter((item) => Number(item.procesado || 0) === 0).length;
-    this.salidasHoy = reservasSalidaHoy.length;
-    this.checkOutPendientes = reservasSalidaHoy.filter((reserva) => !this.isCheckedOutReservation(reserva)).length;
-    this.ingresosEstimados = reservasCreadasHoy.reduce((sum, reserva) => sum + Number(reserva.PRV01_TotalRsv || 0), 0);
-    this.resumenReservas = this.buildStatusSummary(reservasActivas.map((reserva) => reserva.PRV01_Estado));
+    this.reservasDia             = reservasCreadasHoy.length;
+    this.reservasPendientes      = reservasActivas.filter((reserva) => this.isPendingReservationStatus(reserva.PRV01_Estado)).length;
+    this.llegadasHoy             = llegadas.length || reservasIngresoHoy.length;
+    this.checkInPendientes       = llegadasPendientes.length || llegadas.filter((item) => Number(item.procesado || 0) === 0).length;
+    this.salidasHoy              = reservasSalidaHoy.length;
+    this.checkOutPendientes      = reservasSalidaHoy.filter((reserva) => !this.isCheckedOutReservation(reserva)).length;
+    this.ingresosEstimados       = reservasCreadasHoy.reduce((sum, reserva) => sum + Number(reserva.PRV01_TotalRsv || 0), 0);
+    this.resumenReservas         = this.buildStatusSummary(reservasActivas.map((reserva) => reserva.PRV01_Estado));
 
-    this.sales[0].amount = this.reservasDia.toString();
-    this.sales[1].amount = this.reservasPendientes.toString();
-    this.sales[3].amount = `CRC ${this.ingresosEstimados.toLocaleString()}`;
+    this.sales[0].amount         = this.reservasDia.toString();
+    this.sales[1].amount         = this.reservasPendientes.toString();
+    this.sales[3].amount         = `CRC ${this.ingresosEstimados.toLocaleString()}`;
   }
 
   private applyRoomMetrics(rooms: RoomRackRoom[]): void {
@@ -485,16 +485,16 @@ export class DashboardComponent implements OnInit {
       this.checkOutPendientes = pendingCheckoutRooms.length;
     }
 
-    this.habitacionesTotal = roomsForOccupancy.length;
-    this.habitacionesOcupadas = roomsForOccupancy.filter((room) =>
+    this.habitacionesTotal        = roomsForOccupancy.length;
+    this.habitacionesOcupadas     = roomsForOccupancy.filter((room) =>
       ['O', 'M'].includes(this.normalizeText(room.CR05_EstHab).toUpperCase())
     ).length;
-    this.habitacionesDisponibles = roomsForOccupancy.filter((room) => this.normalizeText(room.CR05_EstHab).toUpperCase() === 'D').length;
-    this.habitacionesBloqueadas = roomsForOccupancy.filter((room) => this.normalizeText(room.CR05_EstHab).toUpperCase() === 'B').length;
-    this.habitacionesLimpias = roomsForOccupancy.filter((room) => this.normalizeText(room.CR05_Clean).toUpperCase() === 'L').length;
-    this.habitacionesSucias = roomsForOccupancy.filter((room) => this.normalizeText(room.CR05_Clean).toUpperCase() === 'S').length;
-    this.habitacionesFueraServicio = rooms.filter((room) => this.normalizeText(room.CR05_Activo).toUpperCase() === 'N').length;
-    this.housekeepingEnProceso = roomsForOccupancy.filter((room) => {
+    this.habitacionesDisponibles       = roomsForOccupancy.filter((room) => this.normalizeText(room.CR05_EstHab).toUpperCase() === 'D').length;
+    this.habitacionesBloqueadas        = roomsForOccupancy.filter((room) => this.normalizeText(room.CR05_EstHab).toUpperCase() === 'B').length;
+    this.habitacionesLimpias           = roomsForOccupancy.filter((room) => this.normalizeText(room.CR05_Clean).toUpperCase() === 'L').length;
+    this.habitacionesSucias            = roomsForOccupancy.filter((room) => this.normalizeText(room.CR05_Clean).toUpperCase() === 'S').length;
+    this.habitacionesFueraServicio     = rooms.filter((room) => this.normalizeText(room.CR05_Activo).toUpperCase() === 'N').length;
+    this.housekeepingEnProceso         = roomsForOccupancy.filter((room) => {
       const clean = this.normalizeText(room.CR05_Clean).toUpperCase();
       return clean && clean !== 'L' && clean !== 'S';
     }).length;
@@ -508,17 +508,17 @@ export class DashboardComponent implements OnInit {
   }
 
   private applyRestaurantMetrics(
-    puntoVenta: PuntoVentaUsuario | null,
-    ubicaciones: UbicacionMesa[],
-    mesas: RestauranteMesaOperacion[]
+    puntoVenta    : PuntoVentaUsuario | null,
+    ubicaciones   : UbicacionMesa[],
+    mesas         : RestauranteMesaOperacion[]
   ): void {
-    this.restaurantePuntoVenta = puntoVenta?.MPV07_NomPntVenta || puntoVenta?.MPV07_CodPntVenta || 'Sin punto de venta';
-    this.mesasTotal = mesas.length || ubicaciones.reduce((sum, ubicacion) => sum + Number(ubicacion.MPV09_TotMesas || 0), 0);
-    this.mesasOcupadas = mesas.filter((mesa) => this.isOccupiedRestaurantTable(mesa)).length;
-    this.pedidosActivos = mesas.filter((mesa) => this.hasOpenRestaurantOrder(mesa)).length;
-    this.ticketsAbiertos = mesas.filter((mesa) => this.hasOpenRestaurantOrder(mesa) && this.isOccupiedRestaurantTable(mesa)).length;
-    this.ventasRestaurante = mesas.reduce((sum, mesa) => sum + Number(mesa.ppV07_TotalDocu || 0), 0);
-    this.roomServiceActivo = mesas.filter((mesa) => {
+    this.restaurantePuntoVenta    = puntoVenta?.MPV07_NomPntVenta || puntoVenta?.MPV07_CodPntVenta || 'Sin punto de venta';
+    this.mesasTotal               = mesas.length || ubicaciones.reduce((sum, ubicacion) => sum + Number(ubicacion.MPV09_TotMesas || 0), 0);
+    this.mesasOcupadas            = mesas.filter((mesa) => this.isOccupiedRestaurantTable(mesa)).length;
+    this.pedidosActivos           = mesas.filter((mesa) => this.hasOpenRestaurantOrder(mesa)).length;
+    this.ticketsAbiertos          = mesas.filter((mesa) => this.hasOpenRestaurantOrder(mesa) && this.isOccupiedRestaurantTable(mesa)).length;
+    this.ventasRestaurante        = mesas.reduce((sum, mesa) => sum + Number(mesa.ppV07_TotalDocu || 0), 0);
+    this.roomServiceActivo        = mesas.filter((mesa) => {
       const area = ubicaciones.find((ubicacion) => ubicacion.MPV09_CodUbicacion === mesa.cpV05_CodUbicacion);
       return this.isRoomServiceArea(area) && this.hasOpenRestaurantOrder(mesa);
     }).length;
@@ -531,8 +531,8 @@ export class DashboardComponent implements OnInit {
       .sort((left, right) => left.fecha.localeCompare(right.fecha))
       .slice(0, 7);
 
-    this.occupancyForecastDays = forecastDays;
-    this.occupancyForecastToday = forecastDays.find((row) => row.fecha === this.operationalDateIso) ?? forecastDays[0] ?? null;
+    this.occupancyForecastDays    = forecastDays;
+    this.occupancyForecastToday   = forecastDays.find((row) => row.fecha === this.operationalDateIso) ?? forecastDays[0] ?? null;
     this.occupancyForecastAverage = forecastDays.length
       ? Math.round((forecastDays.reduce((sum, row) => sum + row.ocupacion, 0) / forecastDays.length) * 10) / 10
       : 0;
@@ -597,13 +597,13 @@ export class DashboardComponent implements OnInit {
   }
 
   private resetOperationalMetrics(): void {
-    this.reservasDia = 0;
-    this.reservasPendientes = 0;
-    this.ingresosEstimados = 0;
-    this.llegadasHoy = 0;
-    this.salidasHoy = 0;
-    this.checkInPendientes = 0;
-    this.checkOutPendientes = 0;
+    this.reservasDia            = 0;
+    this.reservasPendientes     = 0;
+    this.ingresosEstimados      = 0;
+    this.llegadasHoy            = 0;
+    this.salidasHoy             = 0;
+    this.checkInPendientes      = 0;
+    this.checkOutPendientes     = 0;
     this.applyRoomMetrics([]);
     this.rebuildAlerts();
   }

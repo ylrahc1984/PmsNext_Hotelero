@@ -87,6 +87,7 @@ export class CierreDiarioComponent implements OnInit {
   private readonly operationalContextService = inject(OperationalContextService);
   private readonly cierreDiarioService = inject(CierreDiarioService);
   private readonly destroyRef = inject(DestroyRef);
+  private closeExecutionLocked = false;
 
   readonly operationStatus = signal<OperationStatus>({
     title: 'Estado General del Sistema',
@@ -195,6 +196,7 @@ export class CierreDiarioComponent implements OnInit {
 
   async executeDailyClose(): Promise<void> {
     if (
+      this.closeExecutionLocked ||
       this.isLoadingOperationalDate() ||
       this.operationalDateError() ||
       !this.operationStatus().operationalDate ||
@@ -230,6 +232,7 @@ export class CierreDiarioComponent implements OnInit {
       return;
     }
 
+    this.closeExecutionLocked = true;
     this.isExecuting.set(true);
     const confirmation = await Swal.fire({
       title: '¿Ejecutar cierre diario?',
@@ -245,6 +248,7 @@ export class CierreDiarioComponent implements OnInit {
     });
 
     if (!confirmation.isConfirmed) {
+      this.closeExecutionLocked = false;
       this.isExecuting.set(false);
       return;
     }
@@ -257,7 +261,10 @@ export class CierreDiarioComponent implements OnInit {
     this.cierreDiarioService
       .ejecutar({ empresa, operador })
       .pipe(
-        finalize(() => this.isExecuting.set(false)),
+        finalize(() => {
+          this.closeExecutionLocked = false;
+          this.isExecuting.set(false);
+        }),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({

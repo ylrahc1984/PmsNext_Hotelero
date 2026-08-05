@@ -1,0 +1,120 @@
+<div class="row">
+  <div class="col-12">
+    <app-card cardTitle="Cuentas por Cobrar Comerciales">
+      <div class="consulta-header">
+        <div>
+          <h4>Estado de Cuenta Comercial</h4>
+          <p class="subtitle">Documentos NDP y saldos de clientes comerciales</p>
+        </div>
+        <div class="header-stats">
+          <div class="stat"><span class="stat-label">Registros</span><strong class="stat-value">{{ totalRecords() }}</strong></div>
+          <div class="stat"><span class="stat-label">Mostrando</span><strong class="stat-value">{{ records().length }}</strong></div>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-primary" type="button" (click)="registrarCobranza()" [disabled]="selectedCount() === 0">
+            <i class="feather icon-check-circle me-1"></i> Registrar Cobranza
+          </button>
+          <span class="selected-info" *ngIf="selectedCount() > 0">{{ selectedCount() }} documentos seleccionados</span>
+        </div>
+      </div>
+
+      <form [formGroup]="filtrosForm" (ngSubmit)="onBuscar()">
+        <div class="filters-grid commercial-filters-grid">
+          <div class="filter-group">
+            <label for="fechaInicialComercial">Desde</label>
+            <input id="fechaInicialComercial" type="date" class="form-control" formControlName="fechaInicial" [disabled]="loading()">
+          </div>
+          <div class="filter-group">
+            <label for="fechaFinalComercial">Hasta</label>
+            <input id="fechaFinalComercial" type="date" class="form-control" formControlName="fechaFinal" [disabled]="loading()">
+          </div>
+          <div class="filter-actions">
+            <button class="btn btn-primary" type="submit" [disabled]="loading()">
+              <span *ngIf="loading()" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+              <i *ngIf="!loading()" class="feather icon-filter"></i> Buscar
+            </button>
+            <button class="btn btn-light" type="button" (click)="onLimpiar()" [disabled]="loading()">
+              <i class="feather icon-rotate-ccw"></i> Limpiar
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <div *ngIf="loading()" class="table-status">
+        <div class="spinner-border spinner-border-sm" aria-hidden="true"></div>
+        <span>Cargando estado de cuenta comercial...</span>
+      </div>
+
+      <div class="table-wrapper">
+        <div class="table-responsive">
+          <table class="table table-striped table-hover consulta-table table-compact commercial-table">
+            <thead>
+              <tr>
+                <th class="text-center">
+                  <input type="checkbox" title="Seleccionar documentos visibles" [checked]="allCurrentRecordsSelected()"
+                    [indeterminate]="someCurrentRecordsSelected()" [disabled]="loading() || selectableRecords().length === 0"
+                    (change)="toggleSeleccionPagina($any($event.target).checked)">
+                </th>
+                <th>Documento</th>
+                <th>Fecha</th>
+                <th>Vencimiento</th>
+                <th>Cliente</th>
+                <th>Referencia</th>
+                <th>Forma pago</th>
+                <th class="text-end">Subtotal</th>
+                <th class="text-end">Impuesto</th>
+                <th class="text-end">Total</th>
+                <th class="text-end">Pagado</th>
+                <th class="text-end">Saldo</th>
+                <th>Moneda</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of records(); trackBy: trackByRow">
+                <td class="text-center">
+                  <input type="checkbox" [checked]="isDocumentoSeleccionado(item)" [disabled]="!isDocumentoSeleccionable(item)"
+                    (change)="toggleDocumentoSeleccion(item, $any($event.target).checked)">
+                </td>
+                <td><div class="documento-cell"><span class="documento-numero">{{ item.PPV05_NumNDP }}</span><span class="documento-reserva">{{ item.PPV05_TipNDP }} · Serie {{ item.PPV05_SerieNDP }}</span></div></td>
+                <td>{{ item.PPV05_FecDocu | date:'dd/MM/yyyy' }}</td>
+                <td>{{ item.PPV07_Vencimiento || (item.PPV05_FechaVen | date:'dd/MM/yyyy') }}</td>
+                <td><div class="cliente-cell"><span class="cliente-nombre">{{ item.PPV05_NomCliente }}</span><span class="cliente-codigo">{{ item.PPV05_CodCliente }} · {{ item.PPV05_RucCliente }}</span></div></td>
+                <td>{{ item.PPV05_NReferencia || item.PPV07_Referencia || '—' }}</td>
+                <td>{{ item.PPV07_FrmPago || '—' }}</td>
+                <td class="text-end">{{ item.PPV05_SubTotal | number:'1.2-2' }}</td>
+                <td class="text-end">{{ item.PPV05_Impuesto | number:'1.2-2' }}</td>
+                <td class="text-end">{{ item.PPV05_TotalDocu | number:'1.2-2' }}</td>
+                <td class="text-end">{{ item.PPV05_TotalPago | number:'1.2-2' }}</td>
+                <td class="text-end saldo-cell">{{ item.Saldo | number:'1.2-2' }}</td>
+                <td>{{ item.PPV05_Moneda }}</td>
+                <td><span class="estado-badge" [ngClass]="getEstadoClase(item)">{{ getEstadoCobro(item) }}</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div *ngIf="!loading() && records().length === 0" class="empty-state">
+          <i class="feather icon-inbox"></i><p>No hay cuentas por cobrar comerciales para el rango seleccionado.</p>
+        </div>
+      </div>
+
+      <div class="table-footer">
+        <div class="page-size">
+          <label>Mostrar</label>
+          <select class="form-control" [value]="pageSize()" (change)="onPageSizeChange($any($event.target).value)" [disabled]="loading()">
+            <option *ngFor="let size of pageSizes" [value]="size">{{ size }}</option>
+          </select>
+          <span>por página</span>
+        </div>
+        <div class="pagination-controls">
+          <button class="btn btn-light" type="button" (click)="changePage(-1)" [disabled]="!canPrev() || loading()"><i class="feather icon-chevron-left"></i></button>
+          <span>Página {{ pageNumber() }} de {{ totalPages() }}</span>
+          <button class="btn btn-light" type="button" (click)="changePage(1)" [disabled]="!canNext() || loading()"><i class="feather icon-chevron-right"></i></button>
+        </div>
+        <div class="footer-actions">
+          <button class="btn btn-outline-secondary" type="button" (click)="imprimir()"><i class="feather icon-printer"></i> Imprimir</button>
+        </div>
+      </div>
+    </app-card>
+  </div>
+</div>
