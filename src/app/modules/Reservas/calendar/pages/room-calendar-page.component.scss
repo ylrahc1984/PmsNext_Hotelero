@@ -443,11 +443,15 @@
 
 @media (max-width: 991.98px) {
   .room-calendar-page__hero,
-  .calendar-shell,
   .calendar-workspace,
   .calendar-workspace--panel-collapsed {
     grid-template-columns: 1fr;
     display: grid;
+  }
+
+  .calendar-shell {
+    grid-template-columns: 132px minmax(0, 1fr);
+    gap: 0.4rem;
   }
 
   .room-calendar-page__hero {
@@ -474,6 +478,11 @@
 }
 
 @media (max-width: 575.98px) {
+  .calendar-shell {
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 0.25rem;
+  }
+
   .exchange-mode-toolbar__actions,
   .assignment-state__actions {
     width: 100%;

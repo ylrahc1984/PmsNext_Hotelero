@@ -55,16 +55,40 @@ header {
 }
 
 @media (max-width: 767px) {
+  .m-header {
+    position: relative;
+  }
+
+  .mobile-brand {
+    position: absolute;
+    left: 68px;
+    max-width: calc(100% - 252px);
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .mobile-brand img {
+    flex: 0 0 auto;
+  }
+
+  .mobile-brand span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .mobile-operational-date {
     display: block;
     position: absolute;
     top: 17px;
-    right: 54px;
+    right: 62px;
     z-index: 1031;
   }
 }
 
-@media (max-width: 389px) {
+@media (max-width: 479px) {
   .mobile-brand span {
     display: none;
   }

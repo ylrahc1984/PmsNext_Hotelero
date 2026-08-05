@@ -9,12 +9,12 @@ import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { CompraCorreo, ComprasCorreoResponse, ComprasCorreoService } from './compras-correo.service';
 
 interface ComprasCorreoFiltroForm {
-  fechaInicio: FormControl<string>;
-  fechaFin: FormControl<string>;
-  proveedor: FormControl<string>;
-  numeroFactura: FormControl<string>;
-  estado: FormControl<string>;
-  formaPago: FormControl<string>;
+  fechaInicio     : FormControl<string>;
+  fechaFin        : FormControl<string>;
+  proveedor       : FormControl<string>;
+  numeroFactura   : FormControl<string>;
+  estado          : FormControl<string>;
+  formaPago       : FormControl<string>;
 }
 
 @Component({
@@ -24,47 +24,47 @@ interface ComprasCorreoFiltroForm {
   styleUrls: ['./compras-correo.component.scss']
 })
 export class ComprasCorreoComponent implements OnInit {
-  private readonly fb = inject(NonNullableFormBuilder);
-  private readonly service = inject(ComprasCorreoService);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly router = inject(Router);
+  private readonly fb            = inject(NonNullableFormBuilder);
+  private readonly service       = inject(ComprasCorreoService);
+  private readonly destroyRef    = inject(DestroyRef);
+  private readonly router        = inject(Router);
 
   readonly filtrosForm: FormGroup<ComprasCorreoFiltroForm> = this.fb.group({
-    fechaInicio: this.fb.control(''),
-    fechaFin: this.fb.control(''),
-    proveedor: this.fb.control(''),
-    numeroFactura: this.fb.control(''),
-    estado: this.fb.control(''),
-    formaPago: this.fb.control('')
+    fechaInicio       : this.fb.control(''),
+    fechaFin          : this.fb.control(''),
+    proveedor         : this.fb.control(''),
+    numeroFactura     : this.fb.control(''),
+    estado            : this.fb.control(''),
+    formaPago         : this.fb.control('')
   });
 
-  readonly compras = signal<CompraCorreo[]>([]);
-  readonly loading = signal(false);
-  readonly errorMessage = signal('');
-  readonly filterTick = signal(0);
-  readonly skeletonRows = Array.from({ length: 5 });
-  readonly pageSizeOptions = [5, 10, 20, 50];
+  readonly compras             = signal<CompraCorreo[]>([]);
+  readonly loading             = signal(false);
+  readonly errorMessage        = signal('');
+  readonly filterTick          = signal(0);
+  readonly skeletonRows        = Array.from({ length: 5 });
+  readonly pageSizeOptions     = [5, 10, 20, 50];
 
-  pageNumber = 1;
-  pageSize = 5;
-  totalRecords = 0;
-  totalPages = 1;
-  pageStart = 0;
-  pageEnd = 0;
+  pageNumber       = 1;
+  pageSize         = 10;
+  totalRecords     = 0;
+  totalPages       = 1;
+  pageStart        = 0;
+  pageEnd          = 0;
 
   readonly comprasFiltradas = computed(() => {
     this.filterTick();
-    const raw = this.filtrosForm.getRawValue();
-    const proveedor = this.normalize(raw.proveedor);
-    const numeroFactura = this.normalize(raw.numeroFactura);
-    const estado = this.normalize(raw.estado);
-    const formaPago = this.normalize(raw.formaPago);
+    const raw              = this.filtrosForm.getRawValue();
+    const proveedor        = this.normalize(raw.proveedor);
+    const numeroFactura    = this.normalize(raw.numeroFactura);
+    const estado           = this.normalize(raw.estado);
+    const formaPago        = this.normalize(raw.formaPago);
 
     return this.compras().filter((item) => {
-      const proveedorText = this.normalize(`${item.PAC40_NomProve} ${item.PAC40_RucProve} ${item.PAC40_Correo}`);
-      const facturaText = this.normalize(`${item.PAC40_NumFacturaFmt} ${item.PAC40_NumDocu} ${item.PAC40_Clave}`);
-      const estadoText = this.normalize(item.PAC40_Estado);
-      const pagoText = this.normalize(item.PAC40_FrmPagoDesc);
+      const proveedorText    = this.normalize(`${item.PAC40_NomProve} ${item.PAC40_RucProve} ${item.PAC40_Correo}`);
+      const facturaText      = this.normalize(`${item.PAC40_NumFacturaFmt} ${item.PAC40_NumDocu} ${item.PAC40_Clave}`);
+      const estadoText       = this.normalize(item.PAC40_Estado);
+      const pagoText         = this.normalize(item.PAC40_FrmPagoDesc);
 
       return (
         (!proveedor || proveedorText.includes(proveedor)) &&
@@ -78,11 +78,11 @@ export class ComprasCorreoComponent implements OnInit {
   readonly kpis = computed(() => {
     const rows = this.comprasFiltradas();
     return {
-      documentos: rows.length,
-      total: rows.reduce((sum, item) => sum + this.toLocalAmount(item.PAC40_TotalDocu, item.PAC40_TCambio), 0),
-      impuesto: rows.reduce((sum, item) => sum + this.toLocalAmount(item.PAC40_Impuesto, item.PAC40_TCambio), 0),
-      credito: rows.filter((item) => this.normalize(item.PAC40_FrmPagoDesc) === 'CREDITO').length,
-      contado: rows.filter((item) => this.normalize(item.PAC40_FrmPagoDesc) === 'CONTADO').length
+      documentos    : rows.length,
+      total         : rows.reduce((sum, item) => sum + this.toLocalAmount(item.PAC40_TotalDocu, item.PAC40_TCambio), 0),
+      impuesto      : rows.reduce((sum, item) => sum + this.toLocalAmount(item.PAC40_Impuesto, item.PAC40_TCambio), 0),
+      credito       : rows.filter((item) => this.normalize(item.PAC40_FrmPagoDesc) === 'CREDITO').length,
+      contado       : rows.filter((item) => this.normalize(item.PAC40_FrmPagoDesc) === 'CONTADO').length
     };
   });
 
@@ -101,12 +101,12 @@ export class ComprasCorreoComponent implements OnInit {
 
   limpiar(): void {
     this.filtrosForm.reset({
-      fechaInicio: '',
-      fechaFin: '',
-      proveedor: '',
-      numeroFactura: '',
-      estado: '',
-      formaPago: ''
+      fechaInicio       : '',
+      fechaFin          : '',
+      proveedor         : '',
+      numeroFactura     : '',
+      estado            : '',
+      formaPago         : ''
     });
     this.setDefaultDates();
     this.pageNumber = 1;
