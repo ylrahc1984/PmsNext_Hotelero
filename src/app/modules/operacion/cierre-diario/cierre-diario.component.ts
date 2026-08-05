@@ -253,8 +253,15 @@ export class CierreDiarioComponent implements OnInit {
       return;
     }
 
+    // El análisis vigente se consume al iniciar el cierre. Esto evita que el
+    // mismo resultado al 100 % pueda habilitar una segunda ejecución.
+    this.analysisPerformed.set(false);
+    this.canExecuteClose.set(false);
+    this.analysisSummary.set({ errors: 0, warnings: 0, successes: 0, progress: 0 });
+    this.validationCards.set(INITIAL_VALIDATION_CARDS);
     this.operationStatus.update((status) => ({
       ...status,
+      progress: 0,
       description: `Ejecutando el cierre diario del ${fecha}...`
     }));
 
@@ -367,7 +374,7 @@ export class CierreDiarioComponent implements OnInit {
     this.completedCloseOperator.set(operador);
     this.operationStatus.set({
       title: 'Cierre diario ejecutado',
-      progress: 100,
+      progress: 0,
       description: response.mensaje || 'Cierre diario ejecutado exitosamente.',
       operationalDate: nuevaFechaOperativa
     });
