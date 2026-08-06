@@ -9,6 +9,7 @@ import { OperationalDateService } from 'src/app/core/services/operational-date.s
 import { environment } from 'src/environments/environment';
 import { CheckInArrivalsComponent } from './check-in-arrivals.component';
 import { CheckInArrival } from './models/check-in-arrival.model';
+import { GuestRegistrationPdfService } from './services/guest-registration-pdf.service';
 
 describe('CheckInArrivalsComponent', () => {
   let component: CheckInArrivalsComponent;
@@ -19,12 +20,20 @@ describe('CheckInArrivalsComponent', () => {
     ensureLoaded: jasmine.Spy;
     refresh: jasmine.Spy;
   };
+  let guestRegistrationPdf: {
+    reservePrintWindow: jasmine.Spy;
+    printRegistrationForm: jasmine.Spy;
+  };
 
   beforeEach(async () => {
     operationalDateService = {
       operationalDate: signal('29/07/2026'),
       ensureLoaded: jasmine.createSpy('ensureLoaded').and.returnValue(of('29/07/2026')),
       refresh: jasmine.createSpy('refresh').and.returnValue(of('29/07/2026'))
+    };
+    guestRegistrationPdf = {
+      reservePrintWindow: jasmine.createSpy('reservePrintWindow').and.returnValue(null),
+      printRegistrationForm: jasmine.createSpy('printRegistrationForm').and.resolveTo()
     };
 
     await TestBed.configureTestingModule({
@@ -33,7 +42,8 @@ describe('CheckInArrivalsComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         provideRouter([]),
-        { provide: OperationalDateService, useValue: operationalDateService }
+        { provide: OperationalDateService, useValue: operationalDateService },
+        { provide: GuestRegistrationPdfService, useValue: guestRegistrationPdf }
       ]
     }).compileComponents();
 
@@ -111,6 +121,28 @@ describe('CheckInArrivalsComponent', () => {
 
     expect(component.getRoomingListBadgeLabel(component.arrivals[0])).toBe('Rooming registrado');
     expect(component.isCheckInDisabled(component.arrivals[0])).toBeFalse();
+  });
+
+  it('imprime con los huéspedes ya consultados sin duplicar la petición de rooming list', async () => {
+    const arrival = makeArrival();
+    const guest = {
+      numInterno: '1', codReserva: arrival.codReserva, numHabita: arrival.numHabita,
+      nacionalidad: 'Costa Rica', tipDocu: 'PAS', numDocu: 'P-1', nombre: 'Ana', apellidos: 'Solano',
+      fecNaci: '01/01/1990', sexo: '', estCivil: '', tipoPax: 'PAX', direccion: '', email: 'ana@example.com',
+      motivo: '8888-8888', procede: '', mdoArribo: '', orden: 1, operador: 'tester'
+    };
+    component.buscar();
+    httpMock.expectOne((req) => req.url === `${environment.apiUrl}/checkin/pendientes`).flush([arrival]);
+    httpMock.expectOne((req) => req.url === `${environment.apiUrl}/rooming-list`).flush({ success: true, data: [guest] });
+
+    await component.generarHojaRegistro(component.arrivals[0]);
+
+    expect(guestRegistrationPdf.printRegistrationForm).toHaveBeenCalledWith(
+      component.arrivals[0],
+      [jasmine.objectContaining({ numInterno: '1', nombre: 'Ana' })],
+      { printWindow: null }
+    );
+    httpMock.expectNone((req) => req.url === `${environment.apiUrl}/rooming-list`);
   });
 });
 

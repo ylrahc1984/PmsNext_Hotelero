@@ -32,15 +32,15 @@ export class GuestRegistrationSheetPdfService {
       const blob = await pdfMake
         .createPdf(this.buildDocumentDefinition(operationalDate, lamiaLogo))
         .getBlob();
+      const validatedBlob = await this.validatePdfBlob(blob);
+      const filename = this.filename(operationalDate);
 
       if (previewWindow && !previewWindow.closed) {
-        const objectUrl = URL.createObjectURL(blob);
-        previewWindow.location.replace(objectUrl);
-        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 300_000);
+        this.renderPreview(previewWindow, validatedBlob, filename);
         return 'opened';
       }
 
-      this.downloadBlob(blob, this.filename(operationalDate));
+      this.downloadBlob(validatedBlob, filename);
       return 'downloaded';
     } catch (error) {
       if (previewWindow && !previewWindow.closed) {
@@ -482,6 +482,85 @@ export class GuestRegistrationSheetPdfService {
     return preview;
   }
 
+  private async validatePdfBlob(blob: Blob): Promise<Blob> {
+    if (!(blob instanceof Blob) || blob.size < 5) {
+      throw new Error('The generated guest registration PDF is empty.');
+    }
+
+    const signatureBytes = new Uint8Array(await blob.slice(0, 5).arrayBuffer());
+    const signature = String.fromCharCode(...signatureBytes);
+    if (signature !== '%PDF-') {
+      throw new Error('The generated guest registration file is not a valid PDF.');
+    }
+
+    return blob.type === 'application/pdf'
+      ? blob
+      : new Blob([blob], { type: 'application/pdf' });
+  }
+
+  private renderPreview(preview: Window, blob: Blob, filename: string): void {
+    const objectUrl = URL.createObjectURL(blob);
+    const doc = preview.document;
+
+    doc.open();
+    doc.write(`<!doctype html>
+      <html lang="en">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>Guest Registration Form</title>
+          <style>
+            * { box-sizing: border-box; }
+            html, body { width: 100%; height: 100%; margin: 0; }
+            body { display: grid; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; background: #e8eef5; color: #17364f; font-family: Arial, sans-serif; }
+            .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; min-height: 68px; padding: 12px 20px; background: #fff; border-bottom: 1px solid #ced9e5; box-shadow: 0 4px 16px rgba(15, 35, 55, .08); }
+            .title { min-width: 0; }
+            .title strong, .title span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            .title strong { font-size: 16px; }
+            .title span { margin-top: 3px; color: #64748b; font-size: 12px; }
+            .download { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; padding: 0 18px; border-radius: 10px; color: #fff; background: #1554c8; box-shadow: 0 8px 18px rgba(21, 84, 200, .22); font-size: 14px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+            .viewer { position: relative; min-height: 0; padding: 12px; }
+            .viewer iframe { position: relative; z-index: 1; width: 100%; height: 100%; border: 0; border-radius: 10px; background: #fff; box-shadow: 0 12px 34px rgba(15, 35, 55, .14); }
+            .fallback { position: absolute; inset: 12px; display: grid; place-items: center; padding: 32px; color: #5f7084; background: #fff; text-align: center; }
+            @media (max-width: 640px) { .toolbar { align-items: stretch; flex-direction: column; } .download { width: 100%; } }
+          </style>
+        </head>
+        <body>
+          <header class="toolbar">
+            <div class="title"><strong>Guest Registration Form</strong><span id="filename"></span></div>
+            <a id="download" class="download">Download PDF</a>
+          </header>
+          <main class="viewer">
+            <div class="fallback">If the preview remains blank, use the Download PDF button above.</div>
+            <iframe id="pdfViewer" title="Guest Registration Form PDF"></iframe>
+          </main>
+        </body>
+      </html>`);
+    doc.close();
+
+    const filenameNode = doc.getElementById('filename');
+    const downloadLink = doc.getElementById('download') as HTMLAnchorElement | null;
+    const viewer = doc.getElementById('pdfViewer') as HTMLIFrameElement | null;
+    if (!filenameNode || !downloadLink || !viewer) {
+      URL.revokeObjectURL(objectUrl);
+      throw new Error('The PDF preview could not be initialized.');
+    }
+
+    filenameNode.textContent = filename;
+    downloadLink.href = objectUrl;
+    downloadLink.download = filename;
+    downloadLink.rel = 'noopener';
+    viewer.src = objectUrl;
+
+    let released = false;
+    const releaseObjectUrl = (): void => {
+      if (released) return;
+      released = true;
+      URL.revokeObjectURL(objectUrl);
+    };
+    preview.addEventListener('beforeunload', releaseObjectUrl, { once: true });
+  }
+
   private downloadBlob(blob: Blob, filename: string): void {
     const objectUrl = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -491,7 +570,7 @@ export class GuestRegistrationSheetPdfService {
     document.body.appendChild(link);
     link.click();
     link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
   }
 
   private filename(operationalDate: string): string {

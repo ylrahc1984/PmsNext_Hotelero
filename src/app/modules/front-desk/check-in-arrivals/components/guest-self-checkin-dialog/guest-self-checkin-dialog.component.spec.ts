@@ -10,13 +10,13 @@ describe('GuestSelfCheckinDialogComponent', () => {
     await TestBed.configureTestingModule({ imports: [GuestSelfCheckinDialogComponent] }).compileComponents();
     fixture = TestBed.createComponent(GuestSelfCheckinDialogComponent);
     component = fixture.componentInstance;
-    component.reservation = { codigo: 'EE260000293' };
-    component.room = { numero: '12' };
-    component.adultCount = 2;
-    component.childCount = 1;
-    component.guestCount = 3;
-    component.documentTypes = [{ codigo: 'PAS', descripcion: 'Pasaporte' }];
-    component.nationalities = [{ codigo: 'CR', descripcion: 'Costarricense' }];
+    fixture.componentRef.setInput('reservation', { codigo: 'EE260000293' });
+    fixture.componentRef.setInput('room', { numero: '12' });
+    fixture.componentRef.setInput('adultCount', 2);
+    fixture.componentRef.setInput('childCount', 1);
+    fixture.componentRef.setInput('guestCount', 3);
+    fixture.componentRef.setInput('documentTypes', [{ codigo: 'PAS', descripcion: 'Pasaporte' }]);
+    fixture.componentRef.setInput('nationalities', [{ codigo: 'CR', descripcion: 'Costarricense' }]);
     fixture.detectChanges();
   });
 

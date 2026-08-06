@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnIn
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { EMPTY, exhaustMap, forkJoin, from, fromEvent, of } from 'rxjs';
+import { EMPTY, exhaustMap, firstValueFrom, forkJoin, from, fromEvent, of } from 'rxjs';
 import { catchError, finalize, map, mergeMap } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
@@ -20,6 +20,7 @@ import {
   RoomingListGuest
 } from './models/check-in-arrival.model';
 import { CheckInArrivalsService } from './services/check-in-arrivals.service';
+import { GuestRegistrationPdfService } from './services/guest-registration-pdf.service';
 import { Nationality } from '../settings/nationalities/models/nationality.model';
 import { WalkInOption } from '../walk-in/models/walk-in.model';
 import { WalkInService } from '../walk-in/services/walk-in.service';
@@ -60,6 +61,7 @@ export class CheckInArrivalsComponent implements OnInit {
   private readonly walkInService = inject(WalkInService);
   private readonly operationalDateService = inject(OperationalDateService);
   private readonly empresaContext = inject(EmpresaContextService);
+  private readonly guestRegistrationPdf = inject(GuestRegistrationPdfService);
   private operationalDateInput = '';
 
   readonly pageSizeOptions: PaginationOption[] = [
@@ -133,6 +135,7 @@ export class CheckInArrivalsComponent implements OnInit {
   showRoomingForm = false;
   checkingInKey: string | null = null;
   readonly roomingStatusByRoom = new Map<string, RoomingListStatus>();
+  private readonly roomingGuestsByRoom = new Map<string, RoomingListGuest[]>();
   private roomingStatusLoadId = 0;
   documentTypes: WalkInOption[] = [];
   nationalities: Nationality[] = [];
@@ -143,6 +146,7 @@ export class CheckInArrivalsComponent implements OnInit {
   selfCheckinSaving = false;
   selfCheckinError = '';
   private selfCheckinSavedAny = false;
+  registrationPrintingKey: string | null = null;
 
   ngOnInit(): void {
     this.loadRoomingCatalogs();
@@ -458,6 +462,7 @@ export class CheckInArrivalsComponent implements OnInit {
       next: (guests) => {
         if (this.selfCheckinArrival && this.getRoomingKey(this.selfCheckinArrival) === this.getRoomingKey(reserva)) {
           this.selfCheckinGuests = guests;
+          this.roomingGuestsByRoom.set(this.getRoomingKey(reserva), guests);
           this.cdr.markForCheck();
         }
       },
@@ -513,6 +518,7 @@ export class CheckInArrivalsComponent implements OnInit {
     ).subscribe({
       next: () => {
         this.selfCheckinSavedAny = true;
+        this.roomingGuestsByRoom.delete(this.getRoomingKey(arrival));
         this.setRoomingStatus(arrival, 'COMPLETE');
         this.cdr.markForCheck();
       },
@@ -646,6 +652,7 @@ export class CheckInArrivalsComponent implements OnInit {
     ).subscribe({
       next: (guests) => {
         this.roomingGuests = guests;
+        this.roomingGuestsByRoom.set(this.getRoomingKey(arrival), guests);
         this.setRoomingStatus(arrival, guests.length > 0 ? 'COMPLETE' : 'MISSING');
         this.cdr.markForCheck();
       },
@@ -660,6 +667,7 @@ export class CheckInArrivalsComponent implements OnInit {
   private loadRoomingStatuses(arrivals: CheckInArrival[]): void {
     const loadId = ++this.roomingStatusLoadId;
     this.roomingStatusByRoom.clear();
+    this.roomingGuestsByRoom.clear();
     const uniqueRooms = [
       ...new Map(
         arrivals
@@ -678,15 +686,16 @@ export class CheckInArrivalsComponent implements OnInit {
         mergeMap(
           (arrival) =>
             this.arrivalsService.getRoomingList(arrival.codReserva, arrival.numHabita).pipe(
-              map((guests) => ({ arrival, status: guests.length > 0 ? 'COMPLETE' : 'MISSING' }) as const),
-              catchError(() => of({ arrival, status: 'ERROR' } as const))
+              map((guests) => ({ arrival, guests, status: guests.length > 0 ? 'COMPLETE' : 'MISSING' }) as const),
+              catchError(() => of({ arrival, guests: null, status: 'ERROR' } as const))
             ),
           5
         ),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe(({ arrival, status }) => {
+      .subscribe(({ arrival, guests, status }) => {
         if (loadId !== this.roomingStatusLoadId) return;
+        if (guests) this.roomingGuestsByRoom.set(this.getRoomingKey(arrival), guests);
         this.setRoomingStatus(arrival, status);
         this.cdr.markForCheck();
       });
@@ -711,9 +720,44 @@ export class CheckInArrivalsComponent implements OnInit {
     });
   }
 
-  generarHojaRegistro(reserva: CheckInArrival): void {
+  async generarHojaRegistro(reserva: CheckInArrival): Promise<void> {
     this.closeActionsMenu();
-    console.log('Generar Hoja de Registro', reserva);
+    const arrivalKey = this.getArrivalKey(reserva);
+    if (this.registrationPrintingKey === arrivalKey) return;
+
+    const printWindow = this.guestRegistrationPdf.reservePrintWindow();
+    this.registrationPrintingKey = arrivalKey;
+    this.cdr.markForCheck();
+
+    try {
+      const roomKey = this.getRoomingKey(reserva);
+      const cachedGuests = this.roomingGuestsByRoom.get(roomKey);
+      const guests = cachedGuests
+        ?? await firstValueFrom(
+          this.arrivalsService.getRoomingList(reserva.codReserva, reserva.numHabita).pipe(
+            takeUntilDestroyed(this.destroyRef)
+          )
+        );
+      if (!cachedGuests) this.roomingGuestsByRoom.set(roomKey, guests);
+
+      await this.guestRegistrationPdf.printRegistrationForm(reserva, guests, { printWindow });
+    } catch (error) {
+      console.error('No se pudo imprimir la hoja de registro.', error);
+      if (printWindow && !printWindow.closed) printWindow.close();
+      await Swal.fire({
+        title: 'No se pudo imprimir',
+        text: 'No fue posible preparar la hoja de registro. Intente nuevamente.',
+        icon: 'error',
+        confirmButtonText: 'Aceptar'
+      });
+    } finally {
+      this.registrationPrintingKey = null;
+      this.cdr.markForCheck();
+    }
+  }
+
+  isRegistrationPrinting(arrival: CheckInArrival): boolean {
+    return this.registrationPrintingKey === this.getArrivalKey(arrival);
   }
 
   imprimirArribos(): void {

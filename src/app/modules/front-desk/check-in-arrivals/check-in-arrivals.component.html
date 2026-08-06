@@ -204,10 +204,15 @@
                               type="button"
                               class="actions-popover__item"
                               role="menuitem"
+                              [disabled]="isRegistrationPrinting(arrival)"
                               (click)="generarHojaRegistro(arrival); closeActionsMenu()"
                             >
-                              <span class="material-icons" aria-hidden="true">print</span>
-                              <span>Imprimir hoja</span>
+                              @if (isRegistrationPrinting(arrival)) {
+                                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                              } @else {
+                                <span class="material-icons" aria-hidden="true">print</span>
+                              }
+                              <span>{{ isRegistrationPrinting(arrival) ? 'Preparing form...' : 'Print Registration Form' }}</span>
                             </button>
 
                             <button
@@ -287,9 +292,10 @@
                   <span class="material-icons" aria-hidden="true">tablet_mac</span>
                   Self Check-in
                 </button>
-                <button type="button" class="btn btn-outline-secondary btn-sm" (click)="generarHojaRegistro(arrival); $event.stopPropagation()">
-                  <span class="material-icons" aria-hidden="true">print</span>
-                  Hoja
+                <button type="button" class="btn btn-outline-secondary btn-sm" [disabled]="isRegistrationPrinting(arrival)" (click)="generarHojaRegistro(arrival); $event.stopPropagation()">
+                  @if (isRegistrationPrinting(arrival)) { <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> }
+                  @else { <span class="material-icons" aria-hidden="true">print</span> }
+                  {{ isRegistrationPrinting(arrival) ? 'Preparing...' : 'Registration Form' }}
                 </button>
                 <button type="button" class="btn btn-success btn-sm mobile-checkin" [disabled]="isCheckInDisabled(arrival)" (click)="realizarCheckIn(arrival); $event.stopPropagation()">
                   @if (isCheckingIn(arrival)) { <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> }
