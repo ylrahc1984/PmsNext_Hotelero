@@ -192,6 +192,16 @@
 
                             <button
                               type="button"
+                              class="actions-popover__item actions-popover__item--self-checkin"
+                              role="menuitem"
+                              (click)="openSelfCheckIn(arrival); closeActionsMenu()"
+                            >
+                              <span class="material-icons" aria-hidden="true">tablet_mac</span>
+                              <span>Self Check-in</span>
+                            </button>
+
+                            <button
+                              type="button"
                               class="actions-popover__item"
                               role="menuitem"
                               (click)="generarHojaRegistro(arrival); closeActionsMenu()"
@@ -272,6 +282,10 @@
                 <button type="button" class="btn btn-outline-primary btn-sm" (click)="roomingList(arrival); $event.stopPropagation()">
                   <span class="material-icons" aria-hidden="true">group_add</span>
                   Rooming
+                </button>
+                <button type="button" class="btn btn-outline-primary btn-sm" (click)="openSelfCheckIn(arrival); $event.stopPropagation()">
+                  <span class="material-icons" aria-hidden="true">tablet_mac</span>
+                  Self Check-in
                 </button>
                 <button type="button" class="btn btn-outline-secondary btn-sm" (click)="generarHojaRegistro(arrival); $event.stopPropagation()">
                   <span class="material-icons" aria-hidden="true">print</span>
@@ -399,4 +413,23 @@
       </div>
     </section>
   </div>
+}
+
+@if (selfCheckinArrival) {
+  <app-guest-self-checkin-dialog
+    [reservation]="{ codigo: selfCheckinArrival.codReserva }"
+    [room]="{ numero: selfCheckinArrival.numHabita }"
+    [guestCount]="selfCheckinArrival.numPax + selfCheckinArrival.numChild"
+    [adultCount]="selfCheckinArrival.numPax"
+    [childCount]="selfCheckinArrival.numChild"
+    [existingGuests]="selfCheckinGuests"
+    [documentTypes]="documentTypes"
+    [nationalities]="selfCheckinNationalities"
+    [hotelName]="selfCheckInHotelName"
+    [saving]="selfCheckinSaving"
+    [errorMessage]="selfCheckinError"
+    (guestSaved)="saveSelfCheckInGuest($event)"
+    (registrationFinished)="finishSelfCheckIn()"
+    (cancelled)="closeSelfCheckIn()"
+  />
 }

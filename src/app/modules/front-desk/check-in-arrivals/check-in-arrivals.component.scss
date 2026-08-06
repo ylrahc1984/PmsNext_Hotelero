@@ -579,6 +579,11 @@ $line: rgba(15, 33, 51, 0.1);
   background: rgba($burgundy, 0.05);
 }
 
+.actions-popover__item--self-checkin {
+  color: #154f9f;
+  background: #f2f7ff;
+}
+
 .actions-popover__item:disabled {
   color: rgba($muted, 0.48);
   cursor: not-allowed;

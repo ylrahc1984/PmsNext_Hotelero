@@ -1,340 +1,219 @@
-<section class="hotel-dashboard" aria-label="Dashboard Ejecutivo Hotelero">
-  <section class="operations-grid">
-    <article class="operations-hero">
-      <div class="operations-hero__content">
-        <span class="section-eyebrow">Centro de operaciones hoteleras</span>
-        <h1>Operacion hotelera de hoy</h1>
-        <p>
-          Resumen ejecutivo de huespedes, habitaciones, restaurante y finanzas.
-          <strong>Fecha operativa: {{ operationalDateDisplay || 'consultando...' }}</strong>
-        </p>
-        @if (dashboardError) {
-          <p class="operations-hero__error"><i class="feather icon-alert-circle"></i>{{ dashboardError }}</p>
-        }
-      </div>
-
-      <div class="executive-metrics" aria-label="Indicadores principales">
-        <div class="executive-metric executive-metric--primary">
-          <span>Ocupacion Actual</span>
-          <strong>{{ ocupacionActual }}%</strong>
-        </div>
-        <div class="executive-metric executive-metric--primary">
-          <span>Forecast Hoy</span>
-          <strong>{{ (occupancyForecastToday?.ocupacion ?? 0) | number:'1.0-1' }}%</strong>
-        </div>
-        <div class="executive-metric">
-          <span>Habitaciones Ocupadas</span>
-          <strong>{{ habitacionesOcupadas }} / {{ habitacionesTotal }}</strong>
-        </div>
-        <div class="executive-metric">
-          <span>Llegadas de Hoy</span>
-          <strong>{{ llegadasHoy }}</strong>
-        </div>
-        <div class="executive-metric">
-          <span>Promedio 7 Dias</span>
-          <strong>{{ occupancyForecastAverage | number:'1.0-1' }}%</strong>
-        </div>
-      </div>
-
-      <section class="kpi-strip" aria-label="KPIs operativos">
-        <article class="kpi-card">
-          <span class="kpi-card__icon"><i class="feather icon-log-in"></i></span>
-          <div>
-            <strong>{{ llegadasHoy }}</strong>
-            <span>Llegadas</span>
-          </div>
-          <em>Hoy</em>
-        </article>
- 
-        <article class="kpi-card">
-          <span class="kpi-card__icon"><i class="feather icon-user-check"></i></span>
-          <div>
-            <strong>{{ checkInPendientes }}</strong>
-            <span>Check-In Pendientes</span>
-          </div>
-          <em>Hoy</em>
-        </article>
-        <article class="kpi-card">
-          <span class="kpi-card__icon"><i class="feather icon-user-x"></i></span>
-          <div>
-            <strong>{{ checkOutPendientes }}</strong>
-            <span>Check-Out Pendientes</span>
-          </div>
-          <em>Hoy</em>
-        </article>
-        <article class="kpi-card">
-          <span class="kpi-card__icon"><i class="feather icon-calendar"></i></span>
-          <div>
-            <strong>{{ reservasDia }}</strong>
-            <span>Reservas del Dia</span>
-          </div>
-          <em>Hoy</em>
-        </article>
-        <article class="kpi-card">
-          <span class="kpi-card__icon"><i class="feather icon-trending-up"></i></span>
-          <div>
-            <strong>{{ occupancyForecastPax }}</strong>
-            <span>Pax Forecast</span>
-          </div>
-          <em>7 dias</em>
-        </article>
-      </section>
-    </article>
-
-    <aside class="auxiliary-widgets" aria-label="Widgets auxiliares">
-      <section class="exchange-widget" aria-label="Tipo de cambio">
-        <div class="widget-header">
-          <div>
-            <span class="section-eyebrow">Tipo de cambio</span>
-            <h2>{{ tipoCambio?.monedaBase || 'COL' }} -> {{ tipoCambio?.monedaReferencia || 'USD' }}</h2>
-          </div>
-          <span class="widget-date">
-            @if (tipoCambio?.fecha) {
-              {{ tipoCambio?.fecha | date:'dd/MM/yyyy' }}
-            } @else {
-              Hoy
-            }
-          </span>
-        </div>
-
-        @if (tipoCambioLoading) {
-          <div class="widget-notice">
-            <i class="feather icon-loader"></i>
-            Actualizando
-          </div>
-        } @else {
-          <div class="exchange-values">
-            <div>
-              <span>Compra</span>
-              <strong>{{ (tipoCambio?.compra ?? 0) | number:'1.2-4' }}</strong>
-            </div>
-            <div>
-              <span>Venta</span>
-              <strong>{{ (tipoCambio?.venta ?? 0) | number:'1.2-4' }}</strong>
-            </div>
-          </div>
-        }
-
-        @if (tipoCambioError) {
-          <div class="widget-notice">{{ tipoCambioError }}</div>
-        }
-      </section>
-
-      <app-weather-card [weather]="weather" [loading]="loading" [error]="weatherError"></app-weather-card>
-    </aside>
-  </section>
-
-  <section class="dashboard-columns">
-    <article class="operations-panel rooms-panel">
-      <div class="panel-heading">
-        <div>
-          <span class="section-eyebrow">Habitaciones</span>
-          <h2>Estado de Habitaciones</h2>
-        </div>
-        <span class="panel-badge">{{ habitacionesTotal }} habitaciones</span>
-      </div>
-
-      <div class="room-status-grid">
-        <div class="room-status room-status--cyan">
-          <span>Disponibles</span>
-          <strong>{{ habitacionesDisponibles }}</strong>
-          <div class="status-bar"><i [style.width]="getRoomPercent(habitacionesDisponibles)"></i></div>
-        </div>
-        <div class="room-status room-status--blue">
-          <span>Ocupadas</span>
-          <strong>{{ habitacionesOcupadas }}</strong>
-          <div class="status-bar"><i [style.width]="getRoomPercent(habitacionesOcupadas)"></i></div>
-        </div>
-        <div class="room-status room-status--clean">
-          <span>Limpias</span>
-          <strong>{{ habitacionesLimpias }}</strong>
-          <div class="status-bar"><i [style.width]="getRoomPercent(habitacionesLimpias)"></i></div>
-        </div>
-        <div class="room-status room-status--dirty">
-          <span>Sucias</span>
-          <strong>{{ habitacionesSucias }}</strong>
-          <div class="status-bar"><i [style.width]="getRoomPercent(habitacionesSucias)"></i></div>
-        </div>
-        <div class="room-status room-status--burgundy">
-          <span>Fuera de Servicio</span>
-          <strong>{{ habitacionesFueraServicio }}</strong>
-          <div class="status-bar"><i [style.width]="getRoomPercent(habitacionesFueraServicio)"></i></div>
-        </div>
-        <div class="room-status room-status--muted">
-          <span>Bloqueadas</span>
-          <strong>{{ habitacionesBloqueadas }}</strong>
-          <div class="status-bar"><i [style.width]="getRoomPercent(habitacionesBloqueadas)"></i></div>
-        </div>
-      </div>
-    </article>
-
-    <article class="operations-panel restaurant-panel">
-      <div class="panel-heading">
-        <div>
-          <span class="section-eyebrow">Restaurante</span>
-          <h2>Operacion Restaurante</h2>
-        </div>
-        <span class="panel-badge">{{ restaurantLoading ? 'Actualizando' : restaurantePuntoVenta }}</span>
-      </div>
-
-      <div class="restaurant-grid">
-        <div><span>Mesas Ocupadas</span><strong>{{ mesasOcupadas }} / {{ mesasTotal }}</strong></div>
-        <div><span>Pedidos Activos</span><strong>{{ pedidosActivos }}</strong></div>
-        <div><span>Tickets Abiertos</span><strong>{{ ticketsAbiertos }}</strong></div>
-        <div><span>Ventas del Dia</span><strong>{{ ventasRestaurante ? ('USD ' + (ventasRestaurante | number:'1.0-0')) : 'USD 0' }}</strong></div>
-        <div><span>Room Service Activo</span><strong>{{ roomServiceActivo }}</strong></div>
-      </div>
-
-      @if (restaurantError) {
-        <div class="panel-note">{{ restaurantError }}</div>
-      }
-    </article>
-  </section>
-
-  <section class="dashboard-columns dashboard-columns--secondary">
-    <article class="operations-panel housekeeping-panel">
-      <div class="panel-heading">
-        <div>
-          <span class="section-eyebrow">Housekeeping</span>
-          <h2>Housekeeping</h2>
-        </div>
-        <span class="panel-badge">Rack actualizado</span>
-      </div>
-
-      <div class="housekeeping-grid">
-        <div><span>Habitaciones Pendientes</span><strong>{{ habitacionesSucias }}</strong></div>
-        <div><span>En Proceso</span><strong>{{ housekeepingEnProceso }}</strong></div>
-        <div><span>Limpias</span><strong>{{ habitacionesLimpias }}</strong></div>
-        <div><span>Supervisadas</span><strong>{{ habitacionesSupervisadas }}</strong></div>
-      </div>
-    </article>
-
-    <article class="operations-panel alerts-panel">
-      <div class="panel-heading">
-        <div>
-          <span class="section-eyebrow">Monitoreo</span>
-          <h2>Alertas Operativas</h2>
-        </div>
-        <span class="panel-badge" [class.panel-badge--danger]="alertasOperativas.length > 0 && alertasOperativas[0].icon !== 'icon-check-circle'">
-          {{ alertasOperativas.length }} alertas
+<main class="operations-center">
+  <header class="operations-header">
+    <div class="operations-header__identity">
+      <h1>Centro de Operaciones Hoteleras</h1>
+      <p class="operations-header__welcome">{{ greeting() }}, <strong>{{ userName() }}</strong></p>
+      <p class="operations-header__context">
+        <span class="operation-status" [class]="'operation-status operation-status--' + operationalSeverity()">
+          <i aria-hidden="true"></i>{{ operationalStatusLabel() }}
         </span>
-      </div>
-
-      <div class="alert-list">
-        @for (alert of alertasOperativas; track trackByAlert($index, alert)) {
-          <div><i class="feather" [ngClass]="alert.icon"></i><span>{{ alert.message }}</span></div>
-        }
-      </div>
-    </article>
-  </section>
-
-  <section class="operations-panel analytics-panel">
-    <div class="panel-heading">
-      <div>
-        <span class="section-eyebrow">Analisis ejecutivo</span>
-        <h2>Graficos Ejecutivos</h2>
-      </div>
+        <span aria-hidden="true">·</span>
+        <span>Fecha operativa <strong>{{ operationalDate() || '—' }}</strong></span>
+        <span aria-hidden="true">·</span>
+        <span>Última actualización <strong>{{ lastUpdatedAt() }}</strong></span>
+      </p>
     </div>
 
-    <div class="analytics-grid">
-      <article class="chart-card">
-        <h3>Resumen de Habitaciones</h3>
-        <div class="summary-list">
-          @for (item of resumenHabitaciones; track trackBySummary($index, item)) {
-            <div>
-              <span>{{ item.label }}</span>
-              <strong>{{ item.value }}</strong>
-              <em><i [style.width.%]="item.percent"></i></em>
+    <div class="operations-header__meta" aria-label="Tipo de cambio">
+      <div class="exchange-control" [class.exchange-control--warning]="tipoCambioError()" [attr.title]="tipoCambioError() || 'Tipo de cambio COL / USD'">
+        <span class="exchange-control__icon">
+          <i class="bi bi-currency-exchange" aria-hidden="true"></i>
+        </span>
+        <div class="exchange-control__heading">
+          <span>Tipo de cambio</span>
+          <strong>{{ tipoCambio()?.monedaBase || 'COL' }} / {{ tipoCambio()?.monedaReferencia || 'USD' }}</strong>
+        </div>
+        @if (tipoCambioLoading()) {
+          <span class="exchange-control__loading"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> Consultando</span>
+        } @else {
+          <div class="exchange-control__rates">
+            <span>Compra <strong>{{ tipoCambio() ? (tipoCambio()!.compra | number:'1.2-2') : '—' }}</strong></span>
+            <span>Venta <strong>{{ tipoCambio() ? (tipoCambio()!.venta | number:'1.2-2') : '—' }}</strong></span>
+          </div>
+        }
+      </div>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <section class="dashboard-state" aria-live="polite">
+      <span class="dashboard-spinner" aria-hidden="true"></span>
+      <div><strong>Preparando el centro de operaciones</strong><span>Consultando la fotografía de la fecha operativa.</span></div>
+    </section>
+  } @else if (error()) {
+    <section class="dashboard-state dashboard-state--error" role="alert">
+      <i class="bi bi-cloud-slash"></i>
+      <div><strong>Información no disponible</strong><span>{{ error() }}</span></div>
+    </section>
+  } @else {
+    <section class="general-section" aria-labelledby="general-title">
+      <div class="section-title">
+        <span>1.</span>
+        <h2 id="general-title">Estado General del Hotel</h2>
+      </div>
+
+      <div class="general-grid">
+        @for (metric of generalMetrics(); track metric.id; let first = $first) {
+          <article class="general-card" [class]="'general-card tone-' + metric.tone" [class.general-card--occupancy]="first" [attr.title]="metric.rule || null">
+            <span class="metric-icon"><i class="bi" [class]="metric.icon"></i></span>
+            <div class="general-card__copy">
+              <span>{{ metric.label }}</span>
+              @if (first) {
+                <div class="occupancy-ring" [style.--progress]="(metric.rawValue ?? 0) + '%'">
+                  <strong>{{ metric.value }}</strong>
+                </div>
+              } @else {
+                <strong>{{ metric.value }}</strong>
+              }
+              <small>{{ metric.description }}</small>
+            </div>
+          </article>
+        }
+      </div>
+    </section>
+
+    <section class="operations-flow-grid" aria-label="Operación diaria">
+      @for (process of processSections(); track process.id; let index = $index) {
+        <article class="dashboard-panel process-section" [class]="'dashboard-panel process-section process-' + process.id" [attr.aria-labelledby]="process.id + '-title'">
+          <header class="panel-heading">
+            <span>{{ index + 2 }}.</span>
+            <i class="bi" [class]="process.icon"></i>
+            <h2 [id]="process.id + '-title'">{{ process.title }}</h2>
+          </header>
+
+          <div class="process-grid">
+            @for (column of process.columns; track column.id) {
+              <section class="process-column" [class]="'process-column tone-' + column.tone">
+                <header>
+                  <span><i class="bi" [class]="column.icon"></i></span>
+                  <h3>{{ column.title }}</h3>
+                </header>
+                <div class="process-metrics">
+                  @for (metric of column.metrics; track metric.id) {
+                    <div class="process-metric" [attr.title]="metric.rule || null">
+                      <span>{{ metric.label }}</span>
+                      <strong>{{ metric.value }}</strong>
+                    </div>
+                  }
+                </div>
+              </section>
+            }
+          </div>
+
+          <footer class="process-footer">
+            @for (metric of process.footers; track metric.id) {
+              <div class="process-footer__metric" [class]="'tone-' + metric.tone" [attr.title]="metric.rule || null">
+                <span>{{ metric.label }}</span><strong>{{ metric.value }}</strong>
+              </div>
+            }
+          </footer>
+        </article>
+      }
+
+      <article class="dashboard-panel alerts-section" aria-labelledby="alerts-title">
+        <header class="panel-heading">
+          <span>4.</span>
+          <i class="bi bi-bell-fill"></i>
+          <h2 id="alerts-title">Alertas Operativas</h2>
+        </header>
+        <div class="alerts-list">
+          @for (alert of alerts(); track alert.id) {
+            <div class="alert-item" [class]="'alert-item alert-' + alert.tone">
+              <span><i class="bi" [class]="alert.icon"></i></span>
+              <div><strong>{{ alert.title }}</strong><p>{{ alert.detail }}</p></div>
+            </div>
+          }
+        </div>
+        <footer>{{ alerts().length }} {{ alerts().length === 1 ? 'evento operativo' : 'eventos operativos' }}</footer>
+      </article>
+    </section>
+
+    <section class="operations-split">
+      <article class="dashboard-panel housekeeping-section" aria-labelledby="housekeeping-title">
+        <header class="panel-heading">
+          <span>5.</span><i class="bi bi-stars"></i><h2 id="housekeeping-title">Housekeeping</h2>
+        </header>
+        <div class="compact-metric-grid">
+          @for (metric of housekeepingMetrics(); track metric.id) {
+            <div class="compact-metric" [class]="'compact-metric tone-' + metric.tone" [attr.title]="metric.rule || null">
+              <span class="metric-icon"><i class="bi" [class]="metric.icon"></i></span>
+              <div><strong>{{ metric.value }}</strong><span>{{ metric.label }}</span></div>
             </div>
           }
         </div>
       </article>
-      <article class="chart-card">
-        <h3>Ingresos del Dia</h3>
-        <div class="metric-breakdown">
-          <span>Reservas creadas hoy</span>
-          <strong>{{ ingresosEstimados ? ('USD ' + (ingresosEstimados | number:'1.0-0')) : 'USD 0' }}</strong>
-          <small>{{ reservasDia }} reservas registradas</small>
-        </div>
-      </article>
-      <article class="chart-card">
-        <h3>Reservas por Estado</h3>
-        <div class="summary-list">
-          @if (resumenReservas.length) {
-            @for (item of resumenReservas; track trackBySummary($index, item)) {
-              <div>
-                <span>{{ item.label }}</span>
-                <strong>{{ item.value }}</strong>
-                <em><i [style.width.%]="item.percent"></i></em>
-              </div>
-            }
-          } @else {
-            <div class="empty-summary">Sin reservas activas para resumir.</div>
+
+      <article class="dashboard-panel restaurant-section" aria-labelledby="restaurant-title">
+        <header class="panel-heading">
+          <span>6.</span><i class="bi bi-cup-hot"></i><h2 id="restaurant-title">Restaurante</h2>
+        </header>
+        <div class="compact-metric-grid restaurant-grid">
+          @for (metric of restaurantMetrics(); track metric.id) {
+            <div class="compact-metric" [class]="'compact-metric tone-' + metric.tone" [attr.title]="metric.rule || null">
+              <span class="metric-icon"><i class="bi" [class]="metric.icon"></i></span>
+              <div><strong>{{ metric.value }}</strong><span>{{ metric.label }}</span></div>
+            </div>
           }
         </div>
       </article>
-      <article class="chart-card">
-        <h3>Ventas Restaurante</h3>
-        <div class="summary-list">
-          <div>
-            <span>Mesas ocupadas</span>
-            <strong>{{ mesasOcupadas }}</strong>
-            <em><i [style.width]="getRestaurantPercent(mesasOcupadas)"></i></em>
-          </div>
-          <div>
-            <span>Pedidos activos</span>
-            <strong>{{ pedidosActivos }}</strong>
-            <em><i [style.width]="getRestaurantPercent(pedidosActivos)"></i></em>
-          </div>
-          <div>
-            <span>Tickets abiertos</span>
-            <strong>{{ ticketsAbiertos }}</strong>
-            <em><i [style.width]="getRestaurantPercent(ticketsAbiertos)"></i></em>
-          </div>
-        </div>
-      </article>
-      <article class="chart-card">
-        <h3>Acciones Operativas</h3>
-        <div class="chart-placeholder--list">
-          <span>{{ checkInPendientes }} check-in pendientes</span>
-          <span>{{ checkOutPendientes }} check-out pendientes</span>
-          <span>{{ habitacionesSucias }} habitaciones por limpiar</span>
-        </div>
-      </article>
-      <article class="chart-card">
-        <h3>Forecast de Ocupacion</h3>
-        <div class="forecast-summary">
-          <div>
-            <span>Promedio 7 dias</span>
-            <strong>{{ occupancyForecastAverage | number:'1.0-1' }}%</strong>
-          </div>
-          <div>
-            <span>Pico</span>
-            <strong>{{ (occupancyForecastPeak?.ocupacion ?? 0) | number:'1.0-1' }}%</strong>
-            <small>{{ occupancyForecastPeak?.label || 'Sin datos' }}</small>
-          </div>
-        </div>
+    </section>
 
-        @if (occupancyForecastLoading) {
-          <div class="forecast-empty">Actualizando forecast...</div>
-        } @else if (occupancyForecastDays.length) {
-          <div class="forecast-strip">
-            @for (day of occupancyForecastDays; track trackByForecastDay($index, day)) {
-              <div class="forecast-day" [class.forecast-day--today]="day.fecha === operationalDateIso">
-                <span [style.height.%]="day.ocupacion || 8"></span>
-                <strong>{{ day.ocupacion | number:'1.0-0' }}%</strong>
-                <em>{{ day.label }}</em>
+    <section class="dashboard-panel executive-section" aria-labelledby="executive-title">
+      <header class="panel-heading">
+        <span>7.</span><i class="bi bi-bar-chart-line"></i><h2 id="executive-title">Análisis Ejecutivo</h2>
+      </header>
+
+      <div class="executive-grid">
+        <article class="analysis-card forecast-card">
+          <h3>Forecast de Ocupación <small>(Próximos 7 días)</small></h3>
+          @if (forecastBars().length) {
+            <div class="forecast-bars" aria-label="Ocupación proyectada por día">
+              @for (bar of forecastBars(); track bar.id) {
+                <div class="forecast-bar"><strong>{{ bar.value }}</strong><span><i [style.height.%]="bar.height"></i></span><small>{{ bar.label }}</small></div>
+              }
+            </div>
+          } @else {
+            <div class="analysis-empty"><i class="bi bi-bar-chart"></i><span>{{ forecastError() || 'Sin desglose diario disponible.' }}</span></div>
+          }
+          <div class="forecast-summary-grid">
+            @for (metric of forecastSummary(); track metric.id) {
+              <div [class]="'tone-' + metric.tone" [attr.title]="metric.rule || null">
+                <span><i aria-hidden="true"></i>{{ metric.label }}</span><strong>{{ metric.value }}</strong>
               </div>
             }
           </div>
-          <div class="forecast-footnote">
-            <span>{{ occupancyForecastRoomNights }} noches ocupadas</span>
-            <span>{{ occupancyForecastPax }} pax proyectados</span>
+        </article>
+
+        <article class="analysis-card production-card">
+          <h3><i class="bi bi-currency-dollar"></i> Producción de Reservas <small>(Hoy)</small></h3>
+          <div class="production-list">
+            @for (metric of productionMetrics(); track metric.id) {
+              <div [attr.title]="metric.rule || null"><span>{{ metric.label }}</span><strong>{{ metric.value }}</strong></div>
+            }
           </div>
-        } @else {
-          <div class="forecast-empty">{{ occupancyForecastError || 'Sin forecast disponible.' }}</div>
-        }
-      </article>
-    </div>
-  </section>
-</section>
+          <footer><span>Moneda</span><strong>{{ productionCurrency() }}</strong></footer>
+        </article>
+
+        <article class="analysis-card reservation-card">
+          <h3><i class="bi bi-check-circle"></i> Reservas por Estado</h3>
+          <div class="reservation-state-list">
+            @for (metric of reservationStateMetrics(); track metric.id) {
+              <div [class]="'tone-' + metric.tone" [attr.title]="metric.rule || null"><span><i class="bi" [class]="metric.icon"></i>{{ metric.label }}</span><strong>{{ metric.value }}</strong></div>
+            }
+          </div>
+        </article>
+
+        <article class="analysis-card quick-card">
+          <h3>Indicadores Clave del Día</h3>
+          <div class="quick-list">
+            @for (metric of quickMetrics(); track metric.id) {
+              <div [attr.title]="metric.rule || null"><span><i class="bi" [class]="metric.icon"></i>{{ metric.label }}</span><strong>{{ metric.value }}</strong></div>
+            }
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <footer class="dashboard-note"><i class="bi bi-info-circle"></i> Todos los indicadores corresponden a la fecha operativa seleccionada.</footer>
+  }
+</main>

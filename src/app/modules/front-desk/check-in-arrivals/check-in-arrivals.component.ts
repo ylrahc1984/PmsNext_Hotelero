@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
 
 import { AuthService } from 'src/app/core/services/auth.service';
 import { OperationalDateService } from 'src/app/core/services/operational-date.service';
+import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
 import { normalizePmsDateDDMMYYYY, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 
 import {
@@ -22,6 +23,11 @@ import { CheckInArrivalsService } from './services/check-in-arrivals.service';
 import { Nationality } from '../settings/nationalities/models/nationality.model';
 import { WalkInOption } from '../walk-in/models/walk-in.model';
 import { WalkInService } from '../walk-in/services/walk-in.service';
+import {
+  GuestSelfCheckinDialogComponent,
+  SelfCheckInGuestSave,
+  SelfCheckInOption
+} from './components/guest-self-checkin-dialog/guest-self-checkin-dialog.component';
 
 interface CheckInArrivalFilterForm {
   fechaIngreso      : string;
@@ -39,7 +45,7 @@ type RoomingListStatus = 'LOADING' | 'COMPLETE' | 'MISSING' | 'ERROR';
 @Component({
   selector: 'app-check-in-arrivals',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, GuestSelfCheckinDialogComponent],
   templateUrl: './check-in-arrivals.component.html',
   styleUrls: ['./check-in-arrivals.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -53,6 +59,7 @@ export class CheckInArrivalsComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly walkInService = inject(WalkInService);
   private readonly operationalDateService = inject(OperationalDateService);
+  private readonly empresaContext = inject(EmpresaContextService);
   private operationalDateInput = '';
 
   readonly pageSizeOptions: PaginationOption[] = [
@@ -129,7 +136,13 @@ export class CheckInArrivalsComponent implements OnInit {
   private roomingStatusLoadId = 0;
   documentTypes: WalkInOption[] = [];
   nationalities: Nationality[] = [];
+  selfCheckinNationalities: SelfCheckInOption[] = [];
   nationalitySearchOpen = false;
+  selfCheckinArrival: CheckInArrival | null = null;
+  selfCheckinGuests: RoomingListGuest[] = [];
+  selfCheckinSaving = false;
+  selfCheckinError = '';
+  private selfCheckinSavedAny = false;
 
   ngOnInit(): void {
     this.loadRoomingCatalogs();
@@ -433,6 +446,93 @@ export class CheckInArrivalsComponent implements OnInit {
     this.loadRoomingList();
   }
 
+  openSelfCheckIn(reserva: CheckInArrival): void {
+    this.closeActionsMenu();
+    this.selfCheckinArrival = reserva;
+    this.selfCheckinGuests = [];
+    this.selfCheckinError = '';
+    this.selfCheckinSavedAny = false;
+    this.arrivalsService.getRoomingList(reserva.codReserva, reserva.numHabita).pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (guests) => {
+        if (this.selfCheckinArrival && this.getRoomingKey(this.selfCheckinArrival) === this.getRoomingKey(reserva)) {
+          this.selfCheckinGuests = guests;
+          this.cdr.markForCheck();
+        }
+      },
+      error: () => {
+        this.selfCheckinError = 'We could not retrieve the previously registered information. Please try again.';
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  closeSelfCheckIn(): void {
+    if (this.selfCheckinSaving) return;
+    if (this.selfCheckinArrival) {
+      this.setRoomingStatus(this.selfCheckinArrival, this.selfCheckinGuests.length || this.selfCheckinSavedAny ? 'COMPLETE' : 'MISSING');
+    }
+    this.selfCheckinArrival = null;
+    this.selfCheckinGuests = [];
+    this.selfCheckinError = '';
+    this.selfCheckinSavedAny = false;
+    this.cdr.markForCheck();
+  }
+
+  saveSelfCheckInGuest(guest: SelfCheckInGuestSave): void {
+    const arrival = this.selfCheckinArrival;
+    if (!arrival || this.selfCheckinSaving) return;
+
+    this.selfCheckinSaving = true;
+    this.selfCheckinError = '';
+    this.arrivalsService.addRoomingListGuest({
+      proceso: 0,
+      idOpe: '',
+      codRsv: arrival.codReserva,
+      numHabita: arrival.numHabita,
+      codNacion: guest.codigoNacionalidad,
+      tipDocu: guest.tipoDocumento,
+      numDocu: guest.numeroDocumento,
+      nombre: guest.nombre,
+      apellido: guest.apellidos,
+      fecNac: '',
+      sexo: '',
+      estCivil: '',
+      tiPax: guest.tipoPax,
+      direccion: '',
+      email: guest.email,
+      motivo: guest.telefono,
+      procede: '',
+      mdoArribo: '',
+      orden: guest.orden,
+      operador: this.authService.getCurrentUser()?.usuario?.trim() || 'admin'
+    }).pipe(
+      finalize(() => { this.selfCheckinSaving = false; this.cdr.markForCheck(); }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: () => {
+        this.selfCheckinSavedAny = true;
+        this.setRoomingStatus(arrival, 'COMPLETE');
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.selfCheckinError = 'We could not save your information. Please review the details and try again.';
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  finishSelfCheckIn(): void {
+    if (this.selfCheckinArrival) this.setRoomingStatus(this.selfCheckinArrival, 'COMPLETE');
+    this.cdr.markForCheck();
+  }
+
+  get selfCheckInHotelName(): string {
+    const empresa = this.empresaContext.getSnapshot();
+    return empresa?.MA04_Nombre?.trim() || empresa?.MA04_RazonSocial?.trim() || 'Casa Lamia Boutique Hotel';
+  }
+
   closeRoomingList(): void {
     if (this.roomingSaving) return;
     this.roomingArrival = null;
@@ -603,6 +703,10 @@ export class CheckInArrivalsComponent implements OnInit {
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(({ documentTypes, nationalities }) => {
       this.documentTypes = documentTypes;
       this.nationalities = nationalities;
+      this.selfCheckinNationalities = nationalities.map((item) => ({
+        codigo: item.CR06_Codigo,
+        descripcion: item.CR06_Descripcion
+      }));
       this.cdr.markForCheck();
     });
   }

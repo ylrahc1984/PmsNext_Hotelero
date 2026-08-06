@@ -15,6 +15,7 @@ import {
   LimpiezaHabitacionVista,
   PrioridadHousekeeping
 } from './models/limpieza-habitacion.model';
+import { resolveEstadoLimpieza } from './models/limpieza-habitacion.util';
 import { LimpiezaHabitacionesPdfService } from './printing/limpieza-habitaciones-pdf.service';
 import { LimpiezaHabitacionesService } from './services/limpieza-habitaciones.service';
 
@@ -196,18 +197,9 @@ export class LimpiezaHabitacionesComponent implements OnInit {
   }
 
   private toView(room: LimpiezaHabitacion): LimpiezaHabitacionVista {
-    const estadoLimpieza = this.resolveCleanStatus(room.clean);
+    const estadoLimpieza = resolveEstadoLimpieza(room.clean);
     const { prioridad, orden } = this.resolvePriority(room);
     return { ...room, estadoLimpieza, prioridad, prioridadOrden: orden };
-  }
-
-  private resolveCleanStatus(value: unknown): EstadoLimpiezaVisual {
-    if (value === true || Number(value) === 1) return 'LIMPIA';
-    const normalized = this.normalize(value).replace(/\s+/g, ' ');
-    if (['L', 'LIMPIA', 'LIMPIO', 'CLEAN', 'SI', 'TRUE'].includes(normalized)) return 'LIMPIA';
-    if (['EN PROCESO', 'PROCESO', 'P'].includes(normalized)) return 'EN PROCESO';
-    if (['INSPECCION', 'INSPECCIÓN', 'I'].includes(normalized)) return 'INSPECCION';
-    return 'PENDIENTE';
   }
 
   private resolvePriority(room: LimpiezaHabitacion): { prioridad: PrioridadHousekeeping; orden: number } {

@@ -1,0 +1,124 @@
+<div class="self-checkin-backdrop" role="dialog" aria-modal="true" aria-labelledby="selfCheckinTitle">
+  <section class="self-checkin-dialog">
+    @if (finished) {
+      <div class="completion-view">
+        <div class="completion-view__icon"><span class="material-icons" aria-hidden="true">check</span></div>
+        <span class="completion-view__eyebrow">Registration complete</span>
+        <h2>Thank you</h2>
+        <p>Your information has been successfully registered.</p>
+        <p>You may now return the tablet to the front desk.</p>
+        <button type="button" class="primary-action completion-view__button" (click)="close()">Close</button>
+      </div>
+    } @else {
+      <header class="guest-header">
+        <img class="guest-header__logo" [src]="hotelLogoUrl" [alt]="hotelName + ' logo'" />
+        <div class="guest-header__identity">
+          <h1 id="selfCheckinTitle">{{ hotelName }}</h1>
+          <span>Guest registration</span>
+        </div>
+        <div class="guest-header__stay">
+          <span>Reservation <strong>{{ reservation.codigo }}</strong></span>
+          <span>Room <strong>{{ room.numero || 'To be assigned' }}</strong></span>
+        </div>
+        <button type="button" class="guest-header__close" aria-label="Close Self Check-in" [disabled]="saving" (click)="close()">
+          <span class="material-icons">close</span>
+        </button>
+      </header>
+
+      <div class="progress-summary">
+        <div><strong>{{ completedCount }} of {{ guests.length }}</strong> guests registered</div>
+        <span>{{ progressPercent }}%</span>
+        <div class="progress-track" role="progressbar" [attr.aria-valuenow]="progressPercent" aria-valuemin="0" aria-valuemax="100">
+          <span [style.width.%]="progressPercent"></span>
+        </div>
+      </div>
+
+      <div class="guest-workspace" [class.guest-workspace--form-visible]="tabletFormVisible">
+        <aside class="guest-list-pane" aria-label="Reservation guests">
+          <div class="pane-heading">
+            <span class="pane-heading__eyebrow">Your party</span>
+            <h2>Who is checking in?</h2>
+            <p>Select a guest to complete their information.</p>
+          </div>
+
+          <div class="guest-cards">
+            @for (guest of guests; track trackGuest($index, guest)) {
+              <button
+                type="button"
+                class="guest-card"
+                [class.guest-card--completed]="guest.completed"
+                [class.guest-card--selected]="guest.id === selectedGuestId"
+                (click)="selectGuest(guest)"
+              >
+                <span class="guest-card__icon material-icons" aria-hidden="true">{{ guest.completed ? 'check' : (guest.tipoPax === 'CHD' ? 'child_care' : 'person') }}</span>
+                <span class="guest-card__copy">
+                  <strong>{{ guest.title }}</strong>
+                  <small>{{ guest.completed ? 'Completed' : 'Pending' }}</small>
+                </span>
+                <span class="guest-card__arrow material-icons" aria-hidden="true">chevron_right</span>
+              </button>
+            }
+          </div>
+        </aside>
+
+        <main class="guest-form-pane">
+          <button type="button" class="back-to-list" (click)="backToList()">
+            <span class="material-icons" aria-hidden="true">arrow_back</span>
+            Back to guest list
+          </button>
+
+          <div class="pane-heading pane-heading--form">
+            <span class="pane-heading__eyebrow">Personal information</span>
+            <h2>{{ selectedGuest?.title }}</h2>
+            <p>Please complete all fields to continue.</p>
+          </div>
+
+          @if (errorMessage) { <div class="self-checkin-error" role="alert">{{ errorMessage }}</div> }
+
+          <form class="guest-form" [formGroup]="guestForm" (ngSubmit)="submit()">
+            <label>
+              <span>Document type</span>
+              <select formControlName="tipoDocumento">
+                <option value="">Select an option</option>
+                @for (option of documentTypes; track option.codigo) { <option [value]="option.codigo">{{ option.descripcion }}</option> }
+              </select>
+            </label>
+            <label>
+              <span>Document number</span>
+              <input formControlName="numeroDocumento" autocomplete="off" placeholder="Enter your document number" />
+            </label>
+            <label>
+              <span>First name</span>
+              <input formControlName="nombre" autocomplete="given-name" placeholder="Your first name" />
+            </label>
+            <label>
+              <span>Last name</span>
+              <input formControlName="apellidos" autocomplete="family-name" placeholder="Your last name" />
+            </label>
+            <label>
+              <span>Email</span>
+              <input type="email" formControlName="email" autocomplete="email" inputmode="email" placeholder="nombre@correo.com" />
+            </label>
+            <label>
+              <span>Phone number</span>
+              <input type="tel" formControlName="telefono" autocomplete="tel" inputmode="tel" placeholder="Your contact number" />
+            </label>
+            <label>
+              <span>Nationality</span>
+              <select formControlName="codigoNacionalidad">
+                <option value="">Select your nationality</option>
+                @for (option of nationalities; track option.codigo) { <option [value]="option.codigo">{{ option.descripcion }}</option> }
+              </select>
+            </label>
+
+            <button type="submit" class="primary-action" [disabled]="saving">
+              @if (saving) { <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> }
+              <span>{{ allCompleted ? 'Complete registration' : 'Save guest' }}</span>
+              @if (!saving) { <span class="material-icons" aria-hidden="true">{{ allCompleted ? 'check_circle' : 'arrow_forward' }}</span> }
+            </button>
+          </form>
+        </main>
+      </div>
+    }
+  </section>
+</div>
