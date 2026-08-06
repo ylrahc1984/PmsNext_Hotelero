@@ -255,7 +255,7 @@ export class GuestRegistrationPdfService {
           this.summaryRow('Reservation', reservation.codReserva, 'Room', reservation.numHabita || 'To be assigned', 'Nights', String(reservation.totNoches || '')),
           this.summaryRow('Check-in', reservation.fechaIng, 'Check-out', reservation.fechaSal, 'Agency', reservation.nomAgencia || reservation.codAgencia),
           this.summaryRow('Rate', reservation.codTarifa, 'Meal plan', reservation.codPlan, 'Currency', '-'),
-          this.summaryRow('Adults', String(reservation.numPax ?? ''), 'Children', String(reservation.numChild ?? ''), 'Room type', reservation.tipHabita || reservation.catHabita),
+          this.summaryRow('Adults', String(reservation.numPax ?? ''), 'Children', String(reservation.numChild ?? ''), 'Room type', reservation.catHabita),
           [
             this.summaryLabel('Reservation holder'),
             { text: reservation.descripcion || ' ', bold: true, color: '#26364A', colSpan: 5, margin: [0, 2, 0, 0] },
@@ -316,7 +316,7 @@ export class GuestRegistrationPdfService {
         heights: [26, 34, 26],
         body: [
           [this.noteLabel('Vehicle License Plate'), { text: ' ' }],
-          [this.noteLabel('Comments'), { text: reservation.observacion || ' ', color: '#405469', margin: [0, 5, 0, 0] }],
+          [this.noteLabel('Comments'), { text: ' ', color: '#405469', margin: [0, 5, 0, 0] }],
           [this.noteLabel('Allergies'), { text: ' ' }]
         ]
       },
