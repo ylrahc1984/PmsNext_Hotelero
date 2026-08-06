@@ -117,7 +117,12 @@ export class FolioMasterInvoiceModalComponent implements OnInit {
   }
 
   get consumerFinal(): InvoiceClient {
-    return { code: '000000000', name: 'CLIENTE EN GENERAL', document: '0000000000', address: 'S/D', email: '', enviarCorreo: false };
+    const reservationGuestName = this.clean(this.folio?.PRV01_Descripcion);
+    const name = this.selectedDocumentIsTicket && reservationGuestName
+      ? reservationGuestName
+      : 'CLIENTE EN GENERAL';
+
+    return { code: '0000000000', name, document: '00000000', address: 'S/D', email: '', enviarCorreo: false };
   }
 
   get invoiceClient(): InvoiceClient {
@@ -126,6 +131,10 @@ export class FolioMasterInvoiceModalComponent implements OnInit {
 
   get selectedDocumentIsInvoice(): boolean {
     return this.clean(this.selectedDocument?.MPV31_CodDocu).startsWith('F');
+  }
+
+  get selectedDocumentIsTicket(): boolean {
+    return this.clean(this.selectedDocument?.MPV31_CodDocu).startsWith('T');
   }
 
   get selectedDocumentLabel(): string {

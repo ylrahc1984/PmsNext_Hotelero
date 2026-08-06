@@ -33,10 +33,11 @@ export class FolioMasterService {
   private readonly apiUrl = `${environment.apiUrl}/foliomaster`;
   private readonly checkoutUrl = `${environment.apiUrl}/checkout/folio`;
 
-  getPendingFolios(fechaIngreso: string, fechaSalida: string): Observable<FolioMaster[]> {
+  getPendingFolios(fechaIngreso: string, fechaSalida: string, filtro = ''): Observable<FolioMaster[]> {
     const params = new HttpParams()
       .set('fecIng', normalizePmsDateDDMMYYYY(fechaIngreso))
-      .set('fecSal', normalizePmsDateDDMMYYYY(fechaSalida));
+      .set('fecSal', normalizePmsDateDDMMYYYY(fechaSalida))
+      .set('filtro', filtro.trim());
 
     return this.http.get<FolioMaster[] | FolioMasterApiResponse>(`${this.apiUrl}/pendientes`, { params }).pipe(
       map((response) => (Array.isArray(response) ? response : response?.datos ?? []))

@@ -132,7 +132,7 @@ export class FolioMasterComponent implements OnInit {
     this.selectedFolio = null;
 
     this.folioService
-      .getPendingFolios(this.fechaIngreso, this.fechaSalida)
+      .getPendingFolios(this.fechaIngreso, this.fechaSalida, this.searchTerm)
       .pipe(
         catchError((error) => {
           console.error('No se pudieron cargar los Folios Master.', error);
@@ -295,7 +295,7 @@ export class FolioMasterComponent implements OnInit {
 
     const selectedFolioNumber = this.getFolioNumber(this.selectedFolio);
     this.folioService
-      .getPendingFolios(this.fechaIngreso, this.fechaSalida)
+      .getPendingFolios(this.fechaIngreso, this.fechaSalida, this.searchTerm)
       .pipe(
         catchError((error) => {
           console.error('No se pudo refrescar el listado de Folios Master después de actualizar el cargo.', error);
