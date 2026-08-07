@@ -5,6 +5,26 @@
         <span class="reservation-detail-panel__eyebrow">Detalle completo de reserva</span>
         <h2 id="reservation-detail-title">{{ reservation.reservationCode || 'Reserva sin código' }}</h2>
         <p>{{ reservationDescription() }}</p>
+        <div class="reservation-detail-panel__room-context" aria-label="Habitación y categoría seleccionadas">
+          <div class="reservation-detail-panel__room-badge reservation-detail-panel__room-badge--primary">
+            <span class="reservation-detail-panel__room-icon" aria-hidden="true">
+              <i class="feather icon-home"></i>
+            </span>
+            <span class="reservation-detail-panel__room-copy">
+              <small>Habitación seleccionada</small>
+              <strong>{{ roomNumberLabel() }}</strong>
+            </span>
+          </div>
+          <div class="reservation-detail-panel__room-badge">
+            <span class="reservation-detail-panel__room-icon" aria-hidden="true">
+              <i class="feather icon-tag"></i>
+            </span>
+            <span class="reservation-detail-panel__room-copy">
+              <small>Categoría</small>
+              <strong>{{ roomCategoryLabel() }}</strong>
+            </span>
+          </div>
+        </div>
       </div>
       <button type="button" class="reservation-detail-panel__close" (click)="close()" aria-label="Cerrar detalle">
         <i class="feather icon-x"></i>

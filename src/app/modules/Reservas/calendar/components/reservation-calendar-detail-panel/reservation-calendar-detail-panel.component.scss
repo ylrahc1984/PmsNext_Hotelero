@@ -27,7 +27,7 @@
 }
 
 .reservation-detail-panel__header {
-  padding: 1rem 1.35rem 0.9rem;
+  padding: 0.72rem 1.15rem 0.68rem;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -51,26 +51,88 @@
 }
 
 .reservation-detail-panel__identity h2 {
-  margin: 0.18rem 0 0;
+  margin: 0.12rem 0 0;
   color: #fff;
   font-size: 1.38rem;
   line-height: 1.15;
 }
 
 .reservation-detail-panel__identity p {
-  margin: 0.32rem 0 0;
+  margin: 0.2rem 0 0;
   max-width: 520px;
   color: rgba(235, 246, 255, 0.78);
   font-size: 0.76rem;
   line-height: 1.4;
 }
 
-.reservation-detail-panel__close {
-  flex: 0 0 38px;
-  width: 38px;
-  height: 38px;
+.reservation-detail-panel__room-context {
+  margin-top: 0.48rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.reservation-detail-panel__room-badge {
+  min-width: 150px;
+  padding: 0.32rem 0.62rem 0.32rem 0.4rem;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: rgba(255, 255, 255, 0.09);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+}
+
+.reservation-detail-panel__room-badge--primary {
+  border-color: rgba(142, 224, 238, 0.38);
+  background: rgba(101, 196, 216, 0.15);
+}
+
+.reservation-detail-panel__room-icon {
+  flex: 0 0 25px;
+  width: 25px;
+  height: 25px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.13);
+  color: #bceaf3;
+  font-size: 0.68rem;
+}
+
+.reservation-detail-panel__room-copy {
+  min-width: 0;
+  display: grid;
+  gap: 0.06rem;
+}
+
+.reservation-detail-panel__room-copy small {
+  color: rgba(224, 241, 250, 0.7);
+  font-size: 0.54rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.reservation-detail-panel__room-copy strong {
+  overflow: hidden;
+  color: #fff;
+  font-size: 0.76rem;
+  font-weight: 850;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reservation-detail-panel__close {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
   display: grid;
   place-items: center;
   background: rgba(255, 255, 255, 0.11);
@@ -85,7 +147,7 @@
 }
 
 .reservation-detail-panel__summary {
-  padding: 0.72rem 1.35rem;
+  padding: 0.5rem 1.15rem;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0;
@@ -157,19 +219,12 @@
 .reservation-detail-panel__body {
   min-height: 0;
   overflow-y: auto;
-  padding: 0.85rem 1rem 1.5rem;
-  scrollbar-color: #a9b9c8 transparent;
-  scrollbar-width: thin;
+  padding: 0.62rem 0.82rem 0.85rem;
+  scrollbar-width: none;
 }
 
 .reservation-detail-panel__body::-webkit-scrollbar {
-  width: 8px;
-}
-
-.reservation-detail-panel__body::-webkit-scrollbar-thumb {
-  border: 2px solid #f5f7fa;
-  border-radius: 999px;
-  background: #a9b9c8;
+  display: none;
 }
 
 .reservation-detail-section {
@@ -180,12 +235,12 @@
 }
 
 .reservation-detail-section + .reservation-detail-section {
-  margin-top: 0.72rem;
+  margin-top: 0.5rem;
 }
 
 .reservation-detail-section > header {
-  min-height: 42px;
-  padding: 0.55rem 0.85rem;
+  min-height: 36px;
+  padding: 0.4rem 0.75rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -214,7 +269,7 @@
 }
 
 .reservation-detail-fields {
-  padding: 0.4rem 0.85rem 0.65rem;
+  padding: 0.22rem 0.75rem 0.38rem;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   column-gap: 1rem;
@@ -223,8 +278,8 @@
 
 .reservation-detail-field {
   min-width: 0;
-  min-height: 48px;
-  padding: 0.48rem 0.15rem 0.42rem;
+  min-height: 39px;
+  padding: 0.32rem 0.12rem 0.28rem;
   display: grid;
   align-content: center;
   gap: 0.08rem;
@@ -246,7 +301,7 @@
 }
 
 .reservation-detail-records {
-  padding: 0.65rem 0.75rem 0.75rem;
+  padding: 0.45rem 0.6rem 0.55rem;
   display: grid;
   gap: 0.6rem;
 }
@@ -259,7 +314,7 @@
 
 .reservation-detail-records h3 {
   margin: 0;
-  padding: 0.48rem 0.75rem;
+  padding: 0.35rem 0.65rem;
   border-bottom: 1px solid #e9eef4;
   border-radius: 9px 9px 0 0;
   background: #f1f5f9;
@@ -335,7 +390,7 @@
 }
 
 .reservation-detail-panel__footer {
-  padding: 0.62rem 1rem;
+  padding: 0.45rem 0.82rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -354,7 +409,7 @@
 .reservation-detail-action {
   border: 0;
   border-radius: 9px;
-  padding: 0.5rem 0.72rem;
+  padding: 0.42rem 0.65rem;
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -412,6 +467,10 @@
   .reservation-detail-panel__summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     row-gap: 0.55rem;
+  }
+
+  .reservation-detail-panel__room-badge {
+    min-width: min(150px, 100%);
   }
 
   .reservation-detail-summary-item {

@@ -186,6 +186,19 @@ export class ReservationCalendarDetailPanelComponent implements OnChanges, OnDes
     return this.detail()?.encabezado?.['mR01_NomAgencia']?.toString().trim() || this.reservation.source || 'Directo';
   }
 
+  roomNumberLabel(): string {
+    return this.reservation?.roomNumber?.trim()
+      || this.findRoomDetailValue('prV06_NumHabita')
+      || 'Sin asignar';
+  }
+
+  roomCategoryLabel(): string {
+    return this.reservation?.categoryCode?.trim()
+      || this.findRoomDetailValue('prV06_CatHabita')
+      || this.findRoomDetailValue('prV02_CatHabita')
+      || 'Sin categoría';
+  }
+
   arrivalDateLabel(): string {
     return this.summaryDate('prV01_FecIngresa', this.reservation.startDate);
   }
@@ -236,6 +249,23 @@ export class ReservationCalendarDetailPanelComponent implements OnChanges, OnDes
   private summaryDate(key: string, fallback: string): string {
     const value = this.detail()?.encabezado?.[key]?.toString().trim() || fallback;
     return normalizePmsDateDDMMYYYY(value) || value || '—';
+  }
+
+  private findRoomDetailValue(key: string): string {
+    const completeDetail = this.detail();
+    const records = [
+      ...(completeDetail?.desgloseHabitaciones ?? []),
+      ...(completeDetail?.detalleHabitaciones ?? [])
+    ];
+
+    for (const record of records) {
+      const value = record?.[key]?.toString().trim();
+      if (value) {
+        return value;
+      }
+    }
+
+    return '';
   }
 
   private normalizeResponse(response: ReservationCompleteResponse | null | undefined): ReservationCompleteResponse {
