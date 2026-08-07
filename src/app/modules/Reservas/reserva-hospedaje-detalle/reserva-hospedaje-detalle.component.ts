@@ -6,12 +6,13 @@ import { finalize } from 'rxjs';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { normalizePmsDateDDMMYYYY } from 'src/app/core/utils/pms-date.util';
 import {
-  ReservaHabitacionDetalle,
-  ReservaHabitacionDetalleItem,
-  ReservaInclusionDetalleItem,
-  ReservaServicioDetalleItem
-} from '../interfaces/reserva-habitacion.interface';
-import { ReservaHabitacionService } from '../services/reserva-habitacion.service';
+  ReservaHospedajeDesgloseHabitacion,
+  ReservaHospedajeDetalle,
+  ReservaHospedajeHabitacionDetalle,
+  ReservaHospedajeInclusionDetalle,
+  ReservaHospedajeServicioDetalle
+} from './reserva-hospedaje-detalle.model';
+import { ReservaHospedajeDetalleService } from './reserva-hospedaje-detalle.service';
 
 @Component({
   selector: 'app-reserva-hospedaje-detalle',
@@ -23,16 +24,17 @@ import { ReservaHabitacionService } from '../services/reserva-habitacion.service
 export class ReservaHospedajeDetalleComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly service = inject(ReservaHabitacionService);
+  private readonly service = inject(ReservaHospedajeDetalleService);
 
   readonly codReserva = signal('');
-  readonly reserva = signal<ReservaHabitacionDetalle | null>(null);
+  readonly reserva = signal<ReservaHospedajeDetalle | null>(null);
   readonly loading = signal(false);
   readonly errorMessage = signal('');
 
   readonly habitaciones = computed(() => this.reserva()?.habitaciones ?? []);
   readonly inclusiones = computed(() => this.reserva()?.inclusiones ?? []);
   readonly servicios = computed(() => this.reserva()?.servicios ?? []);
+  readonly desgloseHabitaciones = computed(() => this.reserva()?.desgloseHabitaciones ?? []);
   readonly moneda = computed(() => this.reserva()?.moneda?.trim() || 'USD');
 
   readonly cantidadHabitaciones = computed(() => this.habitaciones().reduce((total, item) => total + this.toNumber(item.cantHab), 0));
@@ -40,7 +42,9 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
   readonly totalInclusiones = computed(() => this.inclusiones().reduce((total, item) => total + this.toNumber(item.totServ), 0));
   readonly totalServicios = computed(() => this.servicios().reduce((total, item) => total + this.serviceTotal(item), 0));
   readonly totalImpuestos = computed(() => this.servicios().reduce((total, item) => total + this.toNumber(item.impuesto), 0));
-  readonly totalPax = computed(() => this.habitaciones().reduce((total, item) => total + this.toNumber(item.numPax) * this.toNumber(item.cantHab), 0));
+  readonly totalPax = computed(() =>
+    this.habitaciones().reduce((total, item) => total + this.toNumber(item.numPax) * this.toNumber(item.cantHab), 0)
+  );
   readonly totalNinos = computed(() => this.habitaciones().reduce((total, item) => total + this.toNumber(item.numChild), 0));
   readonly accionesBloqueadas = computed(() => this.esEstadoBloqueado(this.reserva()?.estado));
 
@@ -115,19 +119,24 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
     return classes[normalized] ?? 'status-badge status-badge--muted';
   }
 
-  roomDescription(item: ReservaHabitacionDetalleItem): string {
-    return [item.catHabita, item.tipHabita].map((value) => String(value ?? '').trim()).filter(Boolean).join(' / ') || 'Habitacion';
+  roomDescription(item: ReservaHospedajeHabitacionDetalle): string {
+    return (
+      [item.catHabita, item.tipHabita]
+        .map((value) => String(value ?? '').trim())
+        .filter(Boolean)
+        .join(' / ') || 'Habitacion'
+    );
   }
 
-  inclusionDescription(item: ReservaInclusionDetalleItem): string {
+  inclusionDescription(item: ReservaHospedajeInclusionDetalle): string {
     return String(item.desServ ?? item.codServ ?? '').trim() || 'Inclusion';
   }
 
-  serviceDescription(item: ReservaServicioDetalleItem): string {
+  serviceDescription(item: ReservaHospedajeServicioDetalle): string {
     return String(item.descripcion ?? item.desServ ?? item.codSrv ?? item.codServ ?? '').trim() || 'Servicio';
   }
 
-  serviceTotal(item: ReservaServicioDetalleItem): number {
+  serviceTotal(item: ReservaHospedajeServicioDetalle): number {
     if (item.total != null) {
       return this.toNumber(item.total);
     }
@@ -137,6 +146,19 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
     }
 
     return this.toNumber(item.cantidad) * this.toNumber(item.precio);
+  }
+
+  breakdownRoomDescription(item: ReservaHospedajeDesgloseHabitacion): string {
+    return (
+      [item.catHabita, item.tipHabita]
+        .map((value) => String(value ?? '').trim())
+        .filter(Boolean)
+        .join(' / ') || 'Habitacion'
+    );
+  }
+
+  processedLabel(value: unknown): string {
+    return this.toNumber(value) === 1 ? 'Procesada' : 'Pendiente';
   }
 
   toNumber(value: unknown): number {
@@ -154,7 +176,7 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
     this.errorMessage.set('');
 
     this.service
-      .getReservaDetalle(codReserva)
+      .getByReservationCode(codReserva)
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (detalle) => this.reserva.set(detalle),

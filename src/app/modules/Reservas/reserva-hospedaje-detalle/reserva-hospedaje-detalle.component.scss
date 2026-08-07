@@ -425,6 +425,26 @@
   text-align: center;
 }
 
+.breakdown-status {
+  display: inline-flex !important;
+  align-items: center;
+  min-height: 24px;
+  margin-top: 0 !important;
+  padding: 0 0.6rem;
+  border-radius: 999px;
+  color: #a15c00 !important;
+  background: #fff4d7;
+}
+
+.breakdown-room-number {
+  font-size: 1.2rem !important;
+}
+
+.breakdown-status--processed {
+  color: #0b7b32 !important;
+  background: #e7f8ee;
+}
+
 .summary-list,
 .timeline-list {
   display: grid;
@@ -542,9 +562,7 @@
 .reservation-detail-shell {
   padding: 0.75rem 0.85rem 1.75rem;
   color: var(--reservation-ink);
-  background:
-    radial-gradient(circle at 100% 0, rgba(37, 99, 235, 0.055), transparent 24rem),
-    var(--reservation-background);
+  background: radial-gradient(circle at 100% 0, rgba(37, 99, 235, 0.055), transparent 24rem), var(--reservation-background);
 }
 
 .detail-topbar {
@@ -608,7 +626,11 @@
   color: var(--reservation-ink);
   background: var(--reservation-surface);
   box-shadow: 0 4px 12px rgba(23, 50, 77, 0.05);
-  transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease, background 200ms ease;
+  transition:
+    transform 200ms ease,
+    border-color 200ms ease,
+    box-shadow 200ms ease,
+    background 200ms ease;
 }
 
 .detail-action:hover:not(:disabled) {
@@ -686,12 +708,30 @@
   box-shadow: 0 5px 12px rgba(23, 50, 77, 0.12);
 }
 
-.status-badge--primary { color: #ffffff; background: var(--reservation-primary); }
-.status-badge--success { color: #ffffff; background: var(--reservation-success); }
-.status-badge--info { color: #ffffff; background: var(--reservation-info); }
-.status-badge--danger { color: #ffffff; background: var(--reservation-danger); }
-.status-badge--warning { color: #ffffff; background: var(--reservation-warning); }
-.status-badge--muted { color: #ffffff; background: #475569; }
+.status-badge--primary {
+  color: #ffffff;
+  background: var(--reservation-primary);
+}
+.status-badge--success {
+  color: #ffffff;
+  background: var(--reservation-success);
+}
+.status-badge--info {
+  color: #ffffff;
+  background: var(--reservation-info);
+}
+.status-badge--danger {
+  color: #ffffff;
+  background: var(--reservation-danger);
+}
+.status-badge--warning {
+  color: #ffffff;
+  background: var(--reservation-warning);
+}
+.status-badge--muted {
+  color: #ffffff;
+  background: #475569;
+}
 
 .hero-meta {
   gap: 0;
@@ -754,7 +794,10 @@
 .metric-card {
   grid-template-columns: 36px 1fr;
   padding: 0.75rem 0.85rem;
-  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+  transition:
+    transform 200ms ease,
+    box-shadow 200ms ease,
+    border-color 200ms ease;
 }
 
 .metric-card:hover {

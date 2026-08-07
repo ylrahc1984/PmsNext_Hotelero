@@ -21,7 +21,12 @@
         <i class="bi bi-arrow-clockwise" *ngIf="!loading()"></i>
         Actualizar
       </button>
-      <button type="button" class="detail-action detail-action--primary" (click)="editarReserva()" [disabled]="!codReserva() || accionesBloqueadas()">
+      <button
+        type="button"
+        class="detail-action detail-action--primary"
+        (click)="editarReserva()"
+        [disabled]="!codReserva() || accionesBloqueadas()"
+      >
         <i class="bi bi-pencil-square"></i>
         Editar
       </button>
@@ -46,7 +51,10 @@
             <h2>{{ r.descripcion || 'Sin descripcion' }}</h2>
             <div class="hero-reference">
               <i class="bi bi-building"></i>
-              <span>{{ r.codAgencia || 'N/D' }}<ng-container *ngIf="r.nomAgencia"> · {{ r.nomAgencia }}</ng-container></span>
+              <span>
+                {{ r.codAgencia || 'N/D' }}
+                <ng-container *ngIf="r.nomAgencia">· {{ r.nomAgencia }}</ng-container>
+              </span>
             </div>
           </div>
           <span [ngClass]="estadoClass(r.estado)">{{ estadoLabel(r.estado) }}</span>
@@ -77,9 +85,12 @@
       </div>
 
       <aside class="total-panel">
-        <span class="total-panel__label"><i class="bi bi-wallet2"></i> Total reserva</span>
-        <strong>{{ moneda() }} {{ toNumber(r.totalRsv) | number:'1.2-2' }}</strong>
-        <small>Tipo de cambio · {{ toNumber(r.tCambio) | number:'1.2-2' }}</small>
+        <span class="total-panel__label">
+          <i class="bi bi-wallet2"></i>
+          Total reserva
+        </span>
+        <strong>{{ moneda() }} {{ toNumber(r.totalRsv) | number: '1.2-2' }}</strong>
+        <small>Tipo de cambio · {{ toNumber(r.tCambio) | number: '1.2-2' }}</small>
       </aside>
     </div>
 
@@ -102,14 +113,14 @@
         <span class="metric-icon metric-icon--food"><i class="bi bi-cup-hot"></i></span>
         <div>
           <span>Inclusiones</span>
-          <strong>{{ moneda() }} {{ totalInclusiones() | number:'1.2-2' }}</strong>
+          <strong>{{ moneda() }} {{ totalInclusiones() | number: '1.2-2' }}</strong>
         </div>
       </article>
       <article class="metric-card">
         <span class="metric-icon metric-icon--service"><i class="bi bi-bag"></i></span>
         <div>
           <span>Servicios</span>
-          <strong>{{ moneda() }} {{ totalServicios() | number:'1.2-2' }}</strong>
+          <strong>{{ moneda() }} {{ totalServicios() | number: '1.2-2' }}</strong>
         </div>
       </article>
     </div>
@@ -123,14 +134,44 @@
           </div>
 
           <div class="info-grid">
-            <div><span>Codigo reserva</span><strong>{{ r.codReserva || codReserva() }}</strong></div>
-            <div><span>Folio</span><strong>{{ r.folio || 'N/D' }}</strong></div>
-            <div><span>Tarifa</span><strong>{{ r.codTarifa || 'N/D' }}<ng-container *ngIf="r.nomTarifa"> - {{ r.nomTarifa }}</ng-container></strong></div>
-            <div><span>Plan</span><strong>{{ r.codPlan || 'N/D' }}<ng-container *ngIf="r.planAlimenticio"> - {{ r.planAlimenticio }}</ng-container></strong></div>
-            <div><span>Moneda</span><strong>{{ moneda() }}</strong></div>
-            <div><span>Operador</span><strong>{{ r.operador || 'N/D' }}</strong></div>
-            <div><span>Creacion</span><strong>{{ formatDate(r.fecCreacion) }}</strong></div>
-            <div><span>Directo</span><strong>{{ (r.directo || '').toUpperCase() === 'S' ? 'Si' : 'No' }}</strong></div>
+            <div>
+              <span>Codigo reserva</span>
+              <strong>{{ r.codReserva || codReserva() }}</strong>
+            </div>
+            <div>
+              <span>Folio</span>
+              <strong>{{ r.folio || 'N/D' }}</strong>
+            </div>
+            <div>
+              <span>Tarifa</span>
+              <strong>
+                {{ r.codTarifa || 'N/D' }}
+                <ng-container *ngIf="r.nomTarifa">- {{ r.nomTarifa }}</ng-container>
+              </strong>
+            </div>
+            <div>
+              <span>Plan</span>
+              <strong>
+                {{ r.codPlan || 'N/D' }}
+                <ng-container *ngIf="r.planAlimenticio">- {{ r.planAlimenticio }}</ng-container>
+              </strong>
+            </div>
+            <div>
+              <span>Moneda</span>
+              <strong>{{ moneda() }}</strong>
+            </div>
+            <div>
+              <span>Operador</span>
+              <strong>{{ r.operador || 'N/D' }}</strong>
+            </div>
+            <div>
+              <span>Creacion</span>
+              <strong>{{ formatDate(r.fecCreacion) }}</strong>
+            </div>
+            <div>
+              <span>Directo</span>
+              <strong>{{ r.directo ? 'Si' : 'No' }}</strong>
+            </div>
           </div>
 
           <div class="note-box" *ngIf="r.observacion || r.observaciones">
@@ -145,7 +186,7 @@
               <span><i class="bi bi-building"></i></span>
               <h3>Habitaciones</h3>
             </div>
-            <strong>{{ moneda() }} {{ totalHabitaciones() | number:'1.2-2' }}</strong>
+            <strong>{{ moneda() }} {{ totalHabitaciones() | number: '1.2-2' }}</strong>
           </div>
 
           <div class="table-responsive detail-table">
@@ -171,8 +212,8 @@
                   <td class="text-center">{{ toNumber(item.cantHab) }}</td>
                   <td class="text-center">{{ toNumber(item.numPax) }}</td>
                   <td class="text-center">{{ toNumber(item.numChild) }}</td>
-                  <td class="text-end">{{ moneda() }} {{ toNumber(item.precio) | number:'1.2-2' }}</td>
-                  <td class="text-end fw-semibold">{{ moneda() }} {{ toNumber(item.total) | number:'1.2-2' }}</td>
+                  <td class="text-end">{{ moneda() }} {{ toNumber(item.precio) | number: '1.2-2' }}</td>
+                  <td class="text-end fw-semibold">{{ moneda() }} {{ toNumber(item.total) | number: '1.2-2' }}</td>
                 </tr>
                 <tr *ngIf="habitaciones().length === 0">
                   <td colspan="7" class="empty-cell">Sin habitaciones registradas.</td>
@@ -185,10 +226,61 @@
         <section class="detail-card">
           <div class="section-header">
             <div class="section-title">
+              <span><i class="bi bi-door-open"></i></span>
+              <h3>Desglose y asignaciones</h3>
+            </div>
+            <strong>{{ desgloseHabitaciones().length }} habitaciones</strong>
+          </div>
+
+          <div class="table-responsive detail-table">
+            <table class="table align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Habitacion</th>
+                  <th>Categoria / tipo</th>
+                  <th>Estadia</th>
+                  <th class="text-center">Pax</th>
+                  <th class="text-center">Ninos</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of desgloseHabitaciones()">
+                  <td>
+                    <strong class="breakdown-room-number">{{ item.numHabita || 'Sin asignar' }}</strong>
+                    <span>Origen: {{ item.habOrigen || 'N/D' }}</span>
+                  </td>
+                  <td>
+                    <strong>{{ breakdownRoomDescription(item) }}</strong>
+                    <span>Orden {{ toNumber(item.orden) }} · {{ item.operador || 'Sin operador' }}</span>
+                  </td>
+                  <td>
+                    <strong>{{ formatDate(item.fechaIngreso) }} - {{ formatDate(item.fechaSalida) }}</strong>
+                    <span>{{ item.cpl === 1 ? 'Complemento' : 'Reserva regular' }}</span>
+                  </td>
+                  <td class="text-center">{{ toNumber(item.numPax) }}</td>
+                  <td class="text-center">{{ toNumber(item.numChild) }}</td>
+                  <td>
+                    <span class="breakdown-status" [class.breakdown-status--processed]="item.procesado === 1">
+                      {{ processedLabel(item.procesado) }}
+                    </span>
+                  </td>
+                </tr>
+                <tr *ngIf="desgloseHabitaciones().length === 0">
+                  <td colspan="6" class="empty-cell">Sin habitaciones desglosadas.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="detail-card">
+          <div class="section-header">
+            <div class="section-title">
               <span><i class="bi bi-cup-hot"></i></span>
               <h3>Inclusiones</h3>
             </div>
-            <strong>{{ moneda() }} {{ totalInclusiones() | number:'1.2-2' }}</strong>
+            <strong>{{ moneda() }} {{ totalInclusiones() | number: '1.2-2' }}</strong>
           </div>
 
           <div class="table-responsive detail-table">
@@ -210,8 +302,8 @@
                   </td>
                   <td>{{ item.tipPax || 'N/D' }}</td>
                   <td class="text-center">{{ toNumber(item.cantidad) }}</td>
-                  <td class="text-end">{{ moneda() }} {{ toNumber(item.precio) | number:'1.2-2' }}</td>
-                  <td class="text-end fw-semibold">{{ moneda() }} {{ toNumber(item.totServ) | number:'1.2-2' }}</td>
+                  <td class="text-end">{{ moneda() }} {{ toNumber(item.precio) | number: '1.2-2' }}</td>
+                  <td class="text-end fw-semibold">{{ moneda() }} {{ toNumber(item.totServ) | number: '1.2-2' }}</td>
                 </tr>
                 <tr *ngIf="inclusiones().length === 0">
                   <td colspan="5" class="empty-cell">Sin inclusiones registradas.</td>
@@ -227,7 +319,7 @@
               <span><i class="bi bi-bag"></i></span>
               <h3>Servicios Extras</h3>
             </div>
-            <strong>{{ moneda() }} {{ totalServicios() | number:'1.2-2' }}</strong>
+            <strong>{{ moneda() }} {{ totalServicios() | number: '1.2-2' }}</strong>
           </div>
 
           <div class="table-responsive detail-table">
@@ -248,9 +340,9 @@
                     <span>{{ item.codSrv || item.codServ || 'N/D' }}</span>
                   </td>
                   <td class="text-center">{{ toNumber(item.cantidad) }}</td>
-                  <td class="text-end">{{ moneda() }} {{ toNumber(item.precio) | number:'1.2-2' }}</td>
-                  <td class="text-end">{{ moneda() }} {{ toNumber(item.impuesto) | number:'1.2-2' }}</td>
-                  <td class="text-end fw-semibold">{{ moneda() }} {{ serviceTotal(item) | number:'1.2-2' }}</td>
+                  <td class="text-end">{{ moneda() }} {{ toNumber(item.precio) | number: '1.2-2' }}</td>
+                  <td class="text-end">{{ moneda() }} {{ toNumber(item.impuesto) | number: '1.2-2' }}</td>
+                  <td class="text-end fw-semibold">{{ moneda() }} {{ serviceTotal(item) | number: '1.2-2' }}</td>
                 </tr>
                 <tr *ngIf="servicios().length === 0">
                   <td colspan="5" class="empty-cell">Sin servicios extras registrados.</td>
@@ -268,14 +360,26 @@
             <h3>Resumen</h3>
           </div>
           <div class="summary-list">
-            <div><span>Habitaciones</span><strong>{{ moneda() }} {{ totalHabitaciones() | number:'1.2-2' }}</strong></div>
-            <div><span>Inclusiones</span><strong>{{ moneda() }} {{ totalInclusiones() | number:'1.2-2' }}</strong></div>
-            <div><span>Servicios</span><strong>{{ moneda() }} {{ totalServicios() | number:'1.2-2' }}</strong></div>
-            <div><span>Impuestos servicios</span><strong>{{ moneda() }} {{ totalImpuestos() | number:'1.2-2' }}</strong></div>
+            <div>
+              <span>Habitaciones</span>
+              <strong>{{ moneda() }} {{ totalHabitaciones() | number: '1.2-2' }}</strong>
+            </div>
+            <div>
+              <span>Inclusiones</span>
+              <strong>{{ moneda() }} {{ totalInclusiones() | number: '1.2-2' }}</strong>
+            </div>
+            <div>
+              <span>Servicios</span>
+              <strong>{{ moneda() }} {{ totalServicios() | number: '1.2-2' }}</strong>
+            </div>
+            <div>
+              <span>Impuestos servicios</span>
+              <strong>{{ moneda() }} {{ totalImpuestos() | number: '1.2-2' }}</strong>
+            </div>
           </div>
           <div class="summary-total">
             <span>Total PMS</span>
-            <strong>{{ moneda() }} {{ toNumber(r.totalRsv) | number:'1.2-2' }}</strong>
+            <strong>{{ moneda() }} {{ toNumber(r.totalRsv) | number: '1.2-2' }}</strong>
           </div>
         </section>
 
@@ -285,10 +389,22 @@
             <h3>Fechas de control</h3>
           </div>
           <div class="timeline-list">
-            <div><span>Creacion</span><strong>{{ formatDate(r.fecCreacion) }}</strong></div>
-            <div><span>Confirmacion</span><strong>{{ formatDate(r.fecConfirma) }}</strong></div>
-            <div><span>Prepago</span><strong>{{ formatDate(r.fecPrepago) }}</strong></div>
-            <div><span>Anulada</span><strong>{{ formatDate(r.fecAnulada) }}</strong></div>
+            <div>
+              <span>Creacion</span>
+              <strong>{{ formatDate(r.fecCreacion) }}</strong>
+            </div>
+            <div>
+              <span>Confirmacion</span>
+              <strong>{{ formatDate(r.fecConfirma) }}</strong>
+            </div>
+            <div>
+              <span>Prepago</span>
+              <strong>{{ formatDate(r.fecPrepago) }}</strong>
+            </div>
+            <div>
+              <span>Anulada</span>
+              <strong>{{ formatDate(r.fecAnulada) }}</strong>
+            </div>
           </div>
         </section>
       </aside>
