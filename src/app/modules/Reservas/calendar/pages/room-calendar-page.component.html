@@ -162,10 +162,12 @@
     *ngIf="selectedReservationDetailBlock as selectedDetail"
     [reservation]="selectedDetail.reservation"
     [canEdit]="canEditSelectedReservation() && !isAssigningRoom"
+    [canAssign]="selectedReservationDetailIsPending && !!selectedPendingReservation && !isAssigningRoom"
     [canMoveToTray]="exchangeMode && canManageSelectedReservation() && !isAssigningRoom"
     [canUnassign]="canUnassignSelectedReservation() && !isAssigningRoom"
     (closed)="closeReservationDetail()"
     (editRequested)="onDetailEditRequested()"
+    (assignRequested)="onDetailAssignRequested()"
     (moveToTrayRequested)="onDetailMoveToTrayRequested()"
     (unassignRequested)="onDetailUnassignRequested()"
   ></app-reservation-calendar-detail-panel>

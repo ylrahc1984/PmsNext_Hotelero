@@ -109,9 +109,6 @@ export class ReservationAssignmentPanelComponent implements OnChanges {
   }
 
   selectReservation(reservation: CalendarAssignableReservation): void {
-    if (!this.isAssignable(reservation)) {
-      return;
-    }
     this.reservationSelect.emit(reservation);
   }
 

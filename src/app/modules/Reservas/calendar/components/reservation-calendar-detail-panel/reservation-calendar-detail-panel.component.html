@@ -137,6 +137,14 @@
         <button
           type="button"
           class="reservation-detail-action reservation-detail-action--primary"
+          *ngIf="canAssign"
+          (click)="requestAssign()"
+        >
+          <i class="feather icon-check-square"></i> Asignar habitación
+        </button>
+        <button
+          type="button"
+          class="reservation-detail-action reservation-detail-action--primary"
           *ngIf="canEditReservation()"
           [disabled]="loading()"
           (click)="requestEdit()"

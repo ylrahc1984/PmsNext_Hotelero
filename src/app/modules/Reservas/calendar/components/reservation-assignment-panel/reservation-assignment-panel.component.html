@@ -59,7 +59,6 @@
         class="assignment-card"
         [class.assignment-card--selected]="selectedReservationId === reservation.id"
         [class.assignment-card--assigned]="!isAssignable(reservation)"
-        [disabled]="!isAssignable(reservation)"
         *ngFor="let reservation of filteredReservations; trackBy: trackByReservation"
         (click)="selectReservation(reservation)"
       >
@@ -84,7 +83,7 @@
         </span>
 
         <span class="assignment-card__actions">
-          <span>{{ isAssignable(reservation) ? 'Click para seleccionar' : 'Reserva asignada' }}</span>
+          <span>Click para ver detalle</span>
           <span class="assignment-card__drag" *ngIf="isAssignable(reservation)" (pointerdown)="onReservationPointerDown(reservation, $event)" title="Arrastrar reserva">
             <i class="feather icon-move"></i>
           </span>

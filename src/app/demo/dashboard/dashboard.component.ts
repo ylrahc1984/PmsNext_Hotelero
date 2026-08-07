@@ -23,13 +23,13 @@ import { DashboardHousekeepingService } from './dashboard-housekeeping.service';
 import { DashboardService } from './dashboard.service';
 
 interface IndicatorDefinition {
-  label: string;
-  description: string;
-  icon: string;
-  tone: DashboardTone;
-  sections: string[];
-  indicators: string[];
-  subIndicators?: string[];
+  label           : string;
+  description     : string;
+  icon            : string;
+  tone            : DashboardTone;
+  sections        : string[];
+  indicators      : string[];
+  subIndicators   ?: string[];
 }
 
 @Component({
@@ -41,42 +41,42 @@ interface IndicatorDefinition {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DashboardComponent implements OnInit {
-  private readonly dashboardService = inject(DashboardService);
-  private readonly dashboardForecastService = inject(DashboardForecastService);
-  private readonly dashboardHousekeepingService = inject(DashboardHousekeepingService);
-  private readonly authService = inject(AuthService);
-  private readonly operationalContext = inject(OperationalContextService);
-  private readonly tipoCambioService = inject(TipoCambioService);
-  private readonly destroyRef = inject(DestroyRef);
+  private readonly dashboardService               = inject(DashboardService);
+  private readonly dashboardForecastService       = inject(DashboardForecastService);
+  private readonly dashboardHousekeepingService   = inject(DashboardHousekeepingService);
+  private readonly authService                    = inject(AuthService);
+  private readonly operationalContext             = inject(OperationalContextService);
+  private readonly tipoCambioService              = inject(TipoCambioService);
+  private readonly destroyRef                     = inject(DestroyRef);
 
-  private readonly itemIndex = new Map<string, DashboardOperativoItem>();
-  private readonly baseIndex = new Map<string, DashboardOperativoItem>();
+  private readonly itemIndex                      = new Map<string, DashboardOperativoItem>();
+  private readonly baseIndex                      = new Map<string, DashboardOperativoItem>();
 
-  readonly loading = signal(true);
-  readonly error = signal('');
-  readonly items = signal<DashboardOperativoItem[]>([]);
-  readonly greeting = signal(this.resolveGreeting());
-  readonly userName = signal('Usuario');
-  readonly operationalDate = this.operationalContext.operationalDate;
-  readonly operationalSeverity = this.operationalContext.severity;
-  readonly operationalStatusLabel = computed(() => this.resolveOperationalStatusLabel());
-  readonly lastUpdatedAt = signal('—');
-  readonly tipoCambio = signal<TipoCambio | null>(null);
-  readonly tipoCambioLoading = signal(true);
-  readonly tipoCambioError = signal('');
-  readonly generalMetrics = signal<DashboardMetricView[]>([]);
-  readonly processSections = signal<DashboardProcessView[]>([]);
-  readonly alerts = signal<DashboardAlertView[]>([]);
-  readonly housekeepingMetrics = signal<DashboardMetricView[]>([]);
-  readonly housekeepingError = signal('');
-  readonly restaurantMetrics = signal<DashboardMetricView[]>([]);
-  readonly forecastSummary = signal<DashboardMetricView[]>([]);
-  readonly forecastBars = signal<DashboardForecastBarView[]>([]);
-  readonly forecastError = signal('');
-  readonly productionMetrics = signal<DashboardMetricView[]>([]);
-  readonly productionCurrency = signal('—');
-  readonly reservationStateMetrics = signal<DashboardMetricView[]>([]);
-  readonly quickMetrics = signal<DashboardMetricView[]>([]);
+  readonly loading                                = signal(true);
+  readonly error                                  = signal('');
+  readonly items                                  = signal<DashboardOperativoItem[]>([]);
+  readonly greeting                               = signal(this.resolveGreeting());
+  readonly userName                               = signal('Usuario');
+  readonly operationalDate                        = this.operationalContext.operationalDate;
+  readonly operationalSeverity                    = this.operationalContext.severity;
+  readonly operationalStatusLabel                 = computed(() => this.resolveOperationalStatusLabel());
+  readonly lastUpdatedAt                          = signal('—');
+  readonly tipoCambio                             = signal<TipoCambio | null>(null);
+  readonly tipoCambioLoading                      = signal(true);
+  readonly tipoCambioError                        = signal('');
+  readonly generalMetrics                         = signal<DashboardMetricView[]>([]);
+  readonly processSections                        = signal<DashboardProcessView[]>([]);
+  readonly alerts                                 = signal<DashboardAlertView[]>([]);
+  readonly housekeepingMetrics                    = signal<DashboardMetricView[]>([]);
+  readonly housekeepingError                      = signal('');
+  readonly restaurantMetrics                      = signal<DashboardMetricView[]>([]);
+  readonly forecastSummary                        = signal<DashboardMetricView[]>([]);
+  readonly forecastBars                           = signal<DashboardForecastBarView[]>([]);
+  readonly forecastError                          = signal('');
+  readonly productionMetrics                      = signal<DashboardMetricView[]>([]);
+  readonly productionCurrency                     = signal('—');
+  readonly reservationStateMetrics                = signal<DashboardMetricView[]>([]);
+  readonly quickMetrics                           = signal<DashboardMetricView[]>([]);
 
   ngOnInit(): void {
     this.authService.currentUser$
@@ -384,8 +384,8 @@ export class DashboardComponent implements OnInit {
   private buildProductionMetrics(): DashboardMetricView[] {
     const sections = ['PRODUCCION', 'PRODUCCION DEL DIA', 'RESERVAS'];
     const metrics = [
-      this.createMetric({ label: 'Reservas creadas', description: 'Registradas en la fecha operativa', icon: 'bi-calendar-plus', tone: 'blue', sections, indicators: ['RESERVAS CREADAS', 'CREADAS HOY', 'RESERVAS DEL DIA'] }),
-      this.createMetric({ label: 'Producción', description: 'Valor generado por las reservas', icon: 'bi-cash-coin', tone: 'green', sections, indicators: ['PRODUCCION', 'PRODUCCION DEL DIA', 'TOTAL PRODUCCION'] })
+      this.createMetric({ label: 'Reservas creadas', description: 'Registradas en la fecha operativa', icon: 'bi-calendar-plus', tone: 'blue', sections, indicators: ['RESERVAS CREADAS', 'Creadas hoy — Cantidad', 'RESERVAS DEL DIA'] }),
+      this.createMetric({ label: 'Producción', description: 'Valor generado por las reservas', icon: 'bi-cash-coin', tone: 'green', sections, indicators: ['PRODUCCION', 'Creadas hoy — Producción', 'TOTAL PRODUCCION'] })
     ];
     this.productionCurrency.set(metrics[1].unit || '—');
     return metrics;

@@ -117,6 +117,7 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
   isAssigningRoom                     = false;
   selectedPendingReservation          : CalendarAssignableReservation | null = null;
   selectedReservationDetailBlock      : CalendarReservationBlockView | null = null;
+  selectedReservationDetailIsPending  = false;
   exchangeMode                        = false;
   exchangeTrayReservations            : ExchangeTrayReservation[] = [];
   exchangeSessionChanges              : RoomExchangeChange[] = [];
@@ -242,6 +243,7 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
 
     payload.event.preventDefault();
     payload.event.stopPropagation();
+    this.selectedReservationDetailIsPending = false;
     this.selectedReservationDetailBlock = payload.block;
     this.cdr.markForCheck();
   }
@@ -315,7 +317,28 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
   }
 
   onPendingReservationSelect(reservation: CalendarAssignableReservation): void {
-    this.selectedPendingReservation = this.selectedPendingReservation?.id === reservation.id ? null : reservation;
+    const isAssignable = reservation.roomNumber.trim().toUpperCase().startsWith('HB');
+    this.selectedPendingReservation = isAssignable ? reservation : null;
+    this.selectedReservationDetailIsPending = true;
+    this.selectedReservationDetailBlock = this.calendarService.getReservationBlockView(
+      {
+        id: reservation.id,
+        reservationCode: reservation.reservationCode,
+        roomNumber: reservation.roomNumber,
+        sourceRoom: reservation.sourceRoom,
+        categoryCode: reservation.categoryCode,
+        startDate: reservation.startDate,
+        endDate: reservation.endDate,
+        status: 'RESERVADA',
+        reservationState: reservation.status,
+        guestName: reservation.guestName,
+        source: reservation.agency
+      },
+      this.startDate,
+      Math.max(this.rangeLength, 1),
+      this.operationalDate
+    );
+    this.cdr.markForCheck();
   }
 
   onAssignmentTargetSelect(target: CalendarAssignmentTarget): void {
@@ -338,7 +361,16 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
 
   closeReservationDetail(): void {
     this.selectedReservationDetailBlock = null;
+    this.selectedReservationDetailIsPending = false;
     this.cdr.markForCheck();
+  }
+
+  onDetailAssignRequested(): void {
+    if (!this.selectedReservationDetailIsPending || !this.selectedPendingReservation) {
+      return;
+    }
+
+    this.closeReservationDetail();
   }
 
   onUnassignReservationFromMenu(block: CalendarReservationBlockView): void {
@@ -411,12 +443,18 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
   }
 
   canManageSelectedReservation(): boolean {
-    return !!this.selectedReservationDetailBlock && !this.isCheckedInReservation(this.selectedReservationDetailBlock.reservation);
+    return !this.selectedReservationDetailIsPending
+      && !!this.selectedReservationDetailBlock
+      && !this.isCheckedInReservation(this.selectedReservationDetailBlock.reservation);
   }
 
   canUnassignSelectedReservation(): boolean {
     const reservation = this.selectedReservationDetailBlock?.reservation;
-    return !!reservation && !reservation.isOperationalBlock && !this.isCheckedInReservation(reservation) && !!reservation.roomNumber?.trim();
+    return !this.selectedReservationDetailIsPending
+      && !!reservation
+      && !reservation.isOperationalBlock
+      && !this.isCheckedInReservation(reservation)
+      && !!reservation.roomNumber?.trim();
   }
 
   get selectedExchangeTrayReservation(): ExchangeTrayReservation | null {

@@ -51,11 +51,13 @@ const BREAKDOWN_FIELD_ORDER = [
 export class ReservationCalendarDetailPanelComponent implements OnChanges, OnDestroy {
   @Input({ required: true }) reservation!: CalendarReservation;
   @Input() canEdit = false;
+  @Input() canAssign = false;
   @Input() canMoveToTray = false;
   @Input() canUnassign = false;
 
   @Output() closed = new EventEmitter<void>();
   @Output() editRequested = new EventEmitter<void>();
+  @Output() assignRequested = new EventEmitter<void>();
   @Output() moveToTrayRequested = new EventEmitter<void>();
   @Output() unassignRequested = new EventEmitter<void>();
 
@@ -109,6 +111,12 @@ export class ReservationCalendarDetailPanelComponent implements OnChanges, OnDes
   requestEdit(): void {
     if (this.canEditReservation()) {
       this.editRequested.emit();
+    }
+  }
+
+  requestAssign(): void {
+    if (this.canAssign) {
+      this.assignRequested.emit();
     }
   }
 
