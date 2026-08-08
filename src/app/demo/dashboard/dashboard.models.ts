@@ -10,7 +10,7 @@ export interface DashboardOperativoItem {
   GeneradoEn: string;
 }
 
-export type DashboardTone = 'blue' | 'cyan' | 'green' | 'orange' | 'red' | 'violet' | 'slate';
+export type DashboardTone = 'blue' | 'cyan' | 'green' | 'orange' | 'red' | 'violet' | 'pink' | 'slate';
 
 export interface DashboardMetricView {
   id: string;

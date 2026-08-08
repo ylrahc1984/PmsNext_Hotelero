@@ -15,6 +15,8 @@
   --red-soft: #feebee;
   --violet: #7744cc;
   --violet-soft: #f1eafd;
+  --pink: #bf7187;
+  --pink-soft: #f8ebef;
   --slate: #66778b;
   --slate-soft: #edf1f5;
 }
@@ -220,6 +222,7 @@
 .tone-orange { --tone: var(--orange); --tone-soft: var(--orange-soft); }
 .tone-red { --tone: var(--red); --tone-soft: var(--red-soft); }
 .tone-violet { --tone: var(--violet); --tone-soft: var(--violet-soft); }
+.tone-pink { --tone: var(--pink); --tone-soft: var(--pink-soft); }
 .tone-slate { --tone: var(--slate); --tone-soft: var(--slate-soft); }
 
 @media (max-width: 1399.98px) {
