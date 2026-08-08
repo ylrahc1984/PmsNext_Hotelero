@@ -205,8 +205,8 @@ export class DashboardComponent implements OnInit {
       this.createMetric({ label: 'Disponibles', description: 'Habitaciones listas para venta', icon: 'bi-door-open', tone: 'cyan', sections: section, indicators: ['HABITACIONES DISPONIBLES', 'DISPONIBLES'], subIndicators: ['', 'HABITACIONES'] }),
       this.createMetric({ label: 'Ocupadas', description: 'Habitaciones actualmente ocupadas', icon: 'bi-door-closed', tone: 'violet', sections: section, indicators: ['HABITACIONES OCUPADAS', 'OCUPADAS'], subIndicators: ['', 'HABITACIONES'] }),
       this.createMetric({ label: 'Pax en casa', description: 'Huéspedes alojados en el hotel', icon: 'bi-people', tone: 'green', sections: section, indicators: ['PAX EN CASA', 'HUESPEDES EN CASA', 'PAX IN HOUSE'] }),
-      this.createMetric({ label: 'Forecast 7 días', description: 'Ocupación promedio proyectada', icon: 'bi-graph-up-arrow', tone: 'blue', sections: this.forecastSections(), indicators: ['PROMEDIO 7 DIAS HABITACIONES', 'FORECAST PROMEDIO 7 DIAS', 'PROMEDIO 7 DIAS', 'PROMEDIO'] }),
-      this.createMetric({ label: 'Pico de ocupación', description: 'Máximo de habitaciones proyectadas', icon: 'bi-bar-chart-line', tone: 'orange', sections: this.forecastSections(), indicators: ['PICO 7 DIAS HABITACIONES', 'PICO OCUPACION', 'PICO DE OCUPACION', 'PICO'] }),
+      this.createMetric({ label: 'Llegadas hoy', description: 'Habitaciones con ingreso programado', icon: 'bi-box-arrow-in-right', tone: 'blue', sections: section, indicators: ['LLEGADAS HOY'], subIndicators: ['HABITACIONES'] }),
+      this.createMetric({ label: 'Salidas hoy', description: 'Habitaciones con salida programada', icon: 'bi-box-arrow-right', tone: 'orange', sections: section, indicators: ['SALIDAS HOY'], subIndicators: ['HABITACIONES'] }),
       this.createMetric({ label: 'Bloqueadas', description: 'Habitaciones fuera del inventario', icon: 'bi-lock', tone: 'slate', sections: section, indicators: ['BLOQUEADAS HOY', 'HABITACIONES BLOQUEADAS', 'BLOQUEADAS'] })
     ];
   }
@@ -351,12 +351,6 @@ export class DashboardComponent implements OnInit {
       this.createForecastMetric('Promedio 7 días', forecast.average, 'blue'),
       this.createForecastMetric('Pico 7 días', forecast.peak, 'cyan')
     ]);
-
-    this.generalMetrics.update((metrics) => metrics.map((metric) => {
-      if (metric.label === 'Forecast 7 días') return this.createForecastMetric(metric.label, forecast.average, 'blue', metric);
-      if (metric.label === 'Pico de ocupación') return this.createForecastMetric(metric.label, forecast.peak, 'orange', metric);
-      return metric;
-    }));
   }
 
   private createForecastMetric(
@@ -592,10 +586,6 @@ export class DashboardComponent implements OnInit {
 
   private occupancySections(): string[] {
     return ['OCUPACION', 'ESTADO GENERAL', 'ESTADO GENERAL DEL HOTEL', 'HOUSEKEEPING'];
-  }
-
-  private forecastSections(): string[] {
-    return ['FORECAST', 'FORECAST 7 DIAS', 'PRONOSTICO OCUPACION', 'ANALISIS EJECUTIVO'];
   }
 
   private clearDashboard(): void {
