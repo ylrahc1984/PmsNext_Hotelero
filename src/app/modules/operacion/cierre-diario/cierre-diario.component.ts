@@ -28,6 +28,7 @@ export interface OperationStatus {
 export interface ValidationItem {
   readonly level: ValidationLevel;
   readonly text: string;
+  readonly guidance?: string;
 }
 
 export interface ValidationCard {
@@ -445,11 +446,12 @@ export class CierreDiarioComponent implements OnInit {
     const text = pending === 0
       ? `${detail.validacion}: sin pendientes.`
       : `${detail.validacion}: ${pending} ${pending === 1 ? 'pendiente' : 'pendientes'}.`;
+    const guidance = detail.mensaje?.trim() || undefined;
 
     return {
       id: code || detail.validacion,
       ...definition,
-      items: [{ level, text }]
+      items: [{ level, text, guidance }]
     };
   }
 

@@ -68,7 +68,7 @@ export interface CierreCajaDocumento {
   rucCliente: string;
   nombreCliente: string;
   numMesa: string;
-  numPax: number;
+  numPax: string;
   codMozo: string;
   moneda: string;
   tipoCambio: number;
@@ -146,14 +146,18 @@ export interface CierreCajaResumenReporte {
   totalVentasFinal: number;
   totalNotasCredito: number;
   totalNotasPedido: number;
+  totalConsumosColaborador: number;
+  totalPlatosEliminados: number;
   ventaNetaFinal: number;
-  totalSoles: number;
+  totalColones: number;
   totalDolares: number;
   totalesPorFormaPago: Record<string, number>;
   cantidadFacturas: number;
-  cantidadBoletas: number;
+  cantidadTiquetes: number;
   cantidadNotasCredito: number;
   cantidadNotasPedido: number;
+  cantidadConsumosColaborador: number;
+  cantidadPlatosEliminados: number;
   totalDocumentos: number;
   totalEfectivoMN: number;
   totalEfectivoME: number;
@@ -170,6 +174,8 @@ export interface CierreCajaReporteDetalle {
   resumenFormasPago: CierreCajaResumenFormaPago[];
   notasPedido: CierreCajaNotaPedido[];
   formasPagoNotasPedido: CierreCajaFormaPagoReporte[];
+  consumosColaborador: CierreCajaPosConsumoColaborador[];
+  platosEliminados: CierreCajaPosPlatoEliminado[];
   resumen: CierreCajaResumenReporte;
   nombreEmpresa: string;
   rucEmpresa: string;

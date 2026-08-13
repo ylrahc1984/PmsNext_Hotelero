@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { catchError, map, tap } from 'rxjs/operators';
 
 import { environment } from 'src/environments/environment';
 import {
@@ -55,8 +55,32 @@ export class NotasCreditoService {
   }
 
   crearNotaCredito(payload: NotaCreditoRequest): Observable<unknown> {
-    return this.http.post(this.baseUrl, payload).pipe(
+    console.groupCollapsed(`[NotasCredito] POST ${this.baseUrl}`);
+    console.log('Endpoint:', this.baseUrl);
+    console.log('Payload:', payload);
+    console.log('Payload JSON:', JSON.stringify(payload, null, 2));
+    console.groupEnd();
+
+    return this.http.post(this.baseUrl, payload, { observe: 'response' }).pipe(
+      tap((response) => {
+        console.groupCollapsed(`[NotasCredito] Respuesta POST ${this.baseUrl}`);
+        console.log('Status:', response.status, response.statusText);
+        console.log('Body:', response.body);
+        console.log('Headers:', response.headers.keys().reduce<Record<string, string | null>>((headers, key) => {
+          headers[key] = response.headers.get(key);
+          return headers;
+        }, {}));
+        console.groupEnd();
+      }),
+      map((response) => response.body),
       catchError((error: HttpErrorResponse) => {
+        console.error(`[NotasCredito] Error POST ${this.baseUrl}`, {
+          status: error.status,
+          statusText: error.statusText,
+          url: error.url,
+          error: error.error,
+          message: error.message
+        });
         const message =
           error.error?.mensaje || error.error?.respuesta || error.message || 'Error al crear la nota de crédito';
         return throwError(() => new Error(message));

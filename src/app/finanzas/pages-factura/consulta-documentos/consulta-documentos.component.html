@@ -113,6 +113,7 @@
                 <th class="text-end">Total</th>
                 <th>Moneda</th>
                 <th>Estado</th>
+                <th>Operador</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -142,6 +143,7 @@
                     {{ documento.estDocu || 'N/D' }}
                   </span>
                 </td>
+                <td class="text-nowrap">{{ documento.operador || 'N/D' }}</td>
                 <td class="text-center">
 
                   <div ngbDropdown container="body" placement="bottom-end" class="doc-action-menu">

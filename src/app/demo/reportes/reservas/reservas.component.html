@@ -10,9 +10,9 @@
         <i class="feather icon-printer"></i>
         Imprimir
       </button>
-      <button type="button" class="btn btn-primary" (click)="exportReport()">
+      <button type="button" class="btn btn-primary" (click)="exportReport()" [disabled]="loading || exporting || !kpis.length">
         <i class="feather icon-download"></i>
-        Exportar
+        {{ exporting ? 'Exportando' : 'Excel' }}
       </button>
     </div>
   </header>
@@ -20,27 +20,30 @@
   <section class="filters-panel" aria-label="Filtros del reporte operativo">
     <div>
       <label>Periodo</label>
-      <select class="form-control" [(ngModel)]="filters.period">
+      <select class="form-control" [ngModel]="filters.period" (ngModelChange)="onPeriodChange($event)">
         <option *ngFor="let option of periodOptions" [value]="option">{{ option }}</option>
       </select>
     </div>
     <div>
       <label>Desde</label>
-      <input type="date" class="form-control" [(ngModel)]="filters.from" />
+      <input type="date" class="form-control" [ngModel]="filters.from" (ngModelChange)="onCustomDateChange('from', $event)" />
     </div>
     <div>
       <label>Hasta</label>
-      <input type="date" class="form-control" [(ngModel)]="filters.to" />
+      <input type="date" class="form-control" [ngModel]="filters.to" (ngModelChange)="onCustomDateChange('to', $event)" />
     </div>
-    <div>
-      <label>Moneda</label>
-      <input type="text" class="form-control" value="USD" readonly />
+    <div class="filter-actions">
+      <button type="button" class="btn btn-light" (click)="resetFilters()" [disabled]="loading">
+        <i class="feather icon-rotate-ccw"></i> Limpiar
+      </button>
+      <button type="button" class="btn btn-primary" (click)="loadReport()" [disabled]="loading">
+        <i class="feather" [ngClass]="loading ? 'icon-loader' : 'icon-search'"></i> {{ loading ? 'Consultando' : 'Consultar' }}
+      </button>
     </div>
-    <button type="button" class="btn btn-light" (click)="resetFilters()">
-      <i class="feather icon-rotate-ccw"></i>
-      Limpiar
-    </button>
   </section>
+
+  <div class="report-message report-message--error" *ngIf="error" role="alert">{{ error }}</div>
+  <div class="report-message report-message--warning" *ngIf="warning">{{ warning }}</div>
 
   <section class="kpi-grid" aria-label="Indicadores operativos">
     <article class="kpi-card" *ngFor="let kpi of kpis; trackBy: trackByLabel" [ngClass]="'kpi-card--' + kpi.tone">
@@ -58,7 +61,7 @@
           <span class="eyebrow">Habitaciones</span>
           <h2>Estado operativo</h2>
         </div>
-        <span class="date-badge">{{ todayDisplay }}</span>
+        <span class="date-badge">{{ reportDateDisplay }}</span>
       </div>
 
       <div class="room-status-grid">
@@ -74,22 +77,23 @@
       <div class="panel-heading">
         <div>
           <span class="eyebrow">Carga</span>
-          <h2>Movimientos por hora</h2>
+          <h2>Forecast de ocupación</h2>
         </div>
       </div>
 
-      <div class="workload-chart">
-        <div *ngFor="let point of workloadPoints; trackBy: trackByLabel">
+      <div class="workload-chart" *ngIf="forecastPoints.length; else noForecast">
+        <div *ngFor="let point of forecastPoints; trackBy: trackByLabel">
           <div class="bars">
-            <span class="bar bar--arrival" [style.height.%]="getWorkloadHeight(point.arrivals)"></span>
-            <span class="bar bar--departure" [style.height.%]="getWorkloadHeight(point.departures)"></span>
+            <span class="bar bar--arrival" [style.height.%]="getForecastHeight(point.occupied)" [attr.title]="point.occupied + ' ocupadas'"></span>
+            <span class="bar bar--departure" [style.height.%]="getForecastHeight(point.available)" [attr.title]="point.available + ' disponibles'"></span>
           </div>
-          <strong>{{ point.label }}</strong>
+          <strong>{{ point.label }} · {{ point.occupancy | number:'1.0-1' }}%</strong>
         </div>
       </div>
+      <ng-template #noForecast><div class="chart-empty">Sin forecast disponible para el período seleccionado.</div></ng-template>
       <div class="legend">
-        <span><i class="legend-dot legend-dot--arrival"></i> Llegadas</span>
-        <span><i class="legend-dot legend-dot--departure"></i> Salidas</span>
+        <span><i class="legend-dot legend-dot--arrival"></i> Ocupadas</span>
+        <span><i class="legend-dot legend-dot--departure"></i> Disponibles</span>
       </div>
     </article>
   </section>
@@ -107,14 +111,14 @@
         <div *ngFor="let movement of movements; trackBy: trackByLabel">
           <div class="row-main">
             <span>{{ movement.label }}</span>
-            <strong>{{ movement.completed }}/{{ movement.count }}</strong>
+            <strong>{{ movement.completed === null ? movement.count : (movement.completed + '/' + movement.count) }}</strong>
           </div>
-          <div class="bar-track">
+          <div class="bar-track" *ngIf="movement.completed !== null">
             <i [style.width.%]="getMovementPercent(movement)"></i>
           </div>
           <div class="row-meta">
             <span>{{ movement.detail }}</span>
-            <span>{{ getMovementPercent(movement) }}%</span>
+            <span *ngIf="movement.completed !== null">{{ getMovementPercent(movement) }}%</span>
           </div>
         </div>
       </div>

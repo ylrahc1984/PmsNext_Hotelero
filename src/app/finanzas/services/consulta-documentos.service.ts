@@ -62,7 +62,7 @@ export class ConsultaDocumentosService {
   }
 
   private mapDocumento(item: DocumentoFacturadoApi): Documento {
-    const estadoElectronico = item.xmlRespuesta?.trim() ? item.xmlRespuesta.trim() : item.clave?.trim() ? 'ACEPTADO' : 'PENDIENTE';
+    const estadoElectronico = item.xmlRespuesta?.trim() ? item.xmlRespuesta.trim() : item.clave?.trim() ? 'ACEPTADO' : 'RECHAZADO';
     return {
       ...item,
       PPV00_TipoDocu: item.tipoDocu ?? '',

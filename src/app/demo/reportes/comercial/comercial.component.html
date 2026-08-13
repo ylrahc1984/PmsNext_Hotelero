@@ -10,9 +10,9 @@
         <i class="feather icon-printer"></i>
         Imprimir
       </button>
-      <button type="button" class="btn btn-primary" (click)="exportReport()">
+      <button type="button" class="btn btn-primary" (click)="exportReport()" [disabled]="loading || exporting || !kpis.length">
         <i class="feather icon-download"></i>
-        Exportar
+        {{ exporting ? 'Exportando...' : 'Exportar' }}
       </button>
     </div>
   </header>
@@ -20,38 +20,85 @@
   <section class="filters-panel" aria-label="Filtros del reporte comercial">
     <div>
       <label>Periodo</label>
-      <select class="form-control" [(ngModel)]="filters.period">
+      <select class="form-control" [(ngModel)]="filters.period" (ngModelChange)="onPeriodChange($event)" [disabled]="loading">
         <option *ngFor="let option of periodOptions" [value]="option">{{ option }}</option>
       </select>
     </div>
     <div>
       <label>Desde</label>
-      <input type="date" class="form-control" [(ngModel)]="filters.from" />
+      <input
+        type="date"
+        class="form-control"
+        [ngModel]="filters.from"
+        (ngModelChange)="onCustomDateChange('from', $event)"
+        [disabled]="loading"
+      />
     </div>
     <div>
       <label>Hasta</label>
-      <input type="date" class="form-control" [(ngModel)]="filters.to" />
+      <input
+        type="date"
+        class="form-control"
+        [ngModel]="filters.to"
+        (ngModelChange)="onCustomDateChange('to', $event)"
+        [disabled]="loading"
+      />
     </div>
     <div>
       <label>Moneda</label>
-      <input type="text" class="form-control" value="USD" readonly />
+      <input type="text" class="form-control" [value]="filters.currency" readonly />
     </div>
-    <button type="button" class="btn btn-light" (click)="resetFilters()">
-      <i class="feather icon-rotate-ccw"></i>
-      Limpiar
-    </button>
+    <div class="filter-actions">
+      <button type="button" class="btn btn-primary" (click)="loadReport()" [disabled]="loading">
+        <i class="feather icon-search"></i>
+        Aplicar
+      </button>
+      <button type="button" class="btn btn-light" (click)="resetFilters()" [disabled]="loading">
+        <i class="feather icon-rotate-ccw"></i>
+        Limpiar
+      </button>
+    </div>
   </section>
 
-  <section class="kpi-grid" aria-label="Indicadores comerciales">
+  <div class="report-feedback report-feedback--loading" *ngIf="loading" role="status">
+    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+    Cargando información comercial...
+  </div>
+  <div class="report-feedback report-feedback--error" *ngIf="error" role="alert">
+    <span>{{ error }}</span>
+    <button type="button" class="btn btn-sm btn-outline-danger" (click)="loadReport()">Reintentar</button>
+  </div>
+  <div class="report-feedback report-feedback--warning" *ngIf="warning && !error" role="status">
+    <i class="feather icon-alert-triangle" aria-hidden="true"></i>
+    {{ warning }}
+  </div>
+
+  <section class="kpi-grid" aria-label="Indicadores comerciales" *ngIf="kpis.length">
     <article class="kpi-card" *ngFor="let kpi of kpis; trackBy: trackByLabel" [ngClass]="'kpi-card--' + kpi.tone">
-      <span>{{ kpi.label }}</span>
+      <span class="kpi-label">
+        {{ kpi.label }}
+        <i class="feather icon-help-circle" [attr.title]="kpi.help" [attr.aria-label]="kpi.help"></i>
+      </span>
       <strong>{{ formatValue(kpi) }}</strong>
       <p>{{ kpi.detail }}</p>
       <em>{{ kpi.trend }}</em>
     </article>
   </section>
 
-  <section class="report-grid">
+  <section class="executive-summary" *ngIf="executiveInsight" aria-label="Lectura ejecutiva del reporte">
+    <div class="executive-summary__icon"><i class="feather icon-compass" aria-hidden="true"></i></div>
+    <div class="executive-summary__content">
+      <span class="eyebrow">Lectura ejecutiva</span>
+      <p>{{ executiveInsight }}</p>
+    </div>
+    <div class="quality-indicator" [attr.title]="dataQualityDetail">
+      <span>Calidad de datos</span>
+      <strong>{{ formatPercent(dataQualityPercent) }}</strong>
+      <small>{{ dataQualityDetail }}</small>
+    </div>
+  </section>
+
+  <section class="report-grid" *ngIf="kpis.length">
     <article class="report-panel channel-panel">
       <div class="panel-heading">
         <div>
@@ -60,7 +107,7 @@
         </div>
         <div class="summary-badge">
           <span>Mejor canal</span>
-          <strong>{{ bestChannel.name }}</strong>
+          <strong>{{ bestChannelName }}</strong>
         </div>
       </div>
 
@@ -71,11 +118,11 @@
             <strong>{{ formatCurrency(channel.revenue) }}</strong>
           </div>
           <div class="bar-track">
-            <i [style.width.%]="getChannelPercent(channel.revenue)"></i>
+            <i [style.width.%]="getChannelPercent(channel.share)"></i>
           </div>
           <div class="row-meta">
-            <span>{{ channel.nights }} noches</span>
-            <span>{{ channel.conversion }}% conversion</span>
+            <span>{{ channel.reservations }} reservas · {{ channel.nights }} noches</span>
+            <span>ADR {{ formatCurrency(channel.adr) }}</span>
           </div>
         </div>
       </div>
@@ -84,45 +131,106 @@
     <article class="report-panel demand-panel">
       <div class="panel-heading">
         <div>
-          <span class="eyebrow">Demanda</span>
-          <h2>Pickup proximas semanas</h2>
+          <span class="eyebrow">Ritmo de reservas</span>
+          <h2>Captación reciente por semana</h2>
+          <p class="panel-description">
+            Compara las noches ya reservadas con las nuevas noches captadas en la ventana seleccionada.
+          </p>
         </div>
-        <span class="date-badge">{{ todayDisplay }}</span>
+        <div class="pickup-window" aria-label="Ventana de pickup">
+          <button type="button" [class.active]="pickupWindow === 7" (click)="setPickupWindow(7)">7 días</button>
+          <button type="button" [class.active]="pickupWindow === 30" (click)="setPickupWindow(30)">30 días</button>
+        </div>
       </div>
 
       <div class="demand-chart">
         <div *ngFor="let point of demandPoints; trackBy: trackByLabel">
           <div class="bars">
-            <span class="bar bar--demand" [style.height.%]="getDemandHeight(point.demand)"></span>
-            <span class="bar bar--pickup" [style.height.%]="getDemandHeight(point.pickup)"></span>
+            <div class="bar-column">
+              <span class="bar-value bar-value--demand">{{ point.demand }}</span>
+              <span class="bar bar--demand" [style.height.%]="getDemandHeight(point.demand)"></span>
+            </div>
+            <div class="bar-column">
+              <span class="bar-value bar-value--pickup">{{ getDemandPickup(point) }}</span>
+              <span class="bar bar--pickup" [style.height.%]="getDemandHeight(getDemandPickup(point))"></span>
+            </div>
           </div>
           <strong>{{ point.label }}</strong>
+          <small>{{ point.dateRange }}</small>
+          <div class="pickup-reading">
+            <span>{{ formatPercent(getDemandPickupPercent(point)) }}</span>
+            <em [ngClass]="'pickup-status pickup-status--' + getPickupStatus(getDemandPickupPercent(point))">
+              {{ getPickupStatusLabel(getDemandPickupPercent(point)) }}
+            </em>
+          </div>
         </div>
       </div>
       <div class="legend">
-        <span><i class="legend-dot legend-dot--demand"></i> Demanda</span>
-        <span><i class="legend-dot legend-dot--pickup"></i> Pickup</span>
+        <span><i class="legend-dot legend-dot--demand"></i> Noches reservadas</span>
+        <span><i class="legend-dot legend-dot--pickup"></i> Pickup últimos {{ pickupWindow }} días</span>
+      </div>
+      <div class="pickup-explanation">
+        <i class="feather icon-info" aria-hidden="true"></i>
+        <div>
+          <strong>Lectura comercial</strong>
+          <p>{{ demandInsight }}</p>
+        </div>
       </div>
     </article>
   </section>
 
-  <section class="report-grid report-grid--secondary">
+  <section class="report-grid report-grid--secondary" *ngIf="kpis.length">
     <article class="report-panel">
       <div class="panel-heading">
         <div>
-          <span class="eyebrow">Segmentos</span>
-          <h2>Mix comercial</h2>
+          <span class="eyebrow">Composición comercial</span>
+          <h2>Distribución por mercado</h2>
+          <p class="panel-description">Explica dónde se concentra el negocio y qué mercados están ganando impulso.</p>
         </div>
-        <span class="date-badge">{{ totalNights }} noches</span>
+        <div class="summary-badge" *ngIf="leadingSegment as leader">
+          <span>Mayor concentración</span>
+          <strong>{{ leader.name }} · {{ formatPercent(leader.share) }}</strong>
+        </div>
+      </div>
+
+      <div class="mix-distribution" aria-label="Distribución porcentual de la producción por mercado">
+        <span
+          *ngFor="let segment of segments; let index = index; trackBy: trackByLabel"
+          [class]="'mix-distribution__segment mix-distribution__segment--' + (index % 4)"
+          [style.width.%]="segment.share"
+          [attr.title]="segment.name + ': ' + formatPercent(segment.share)"
+        ></span>
       </div>
 
       <div class="segment-list">
         <div *ngFor="let segment of segments; trackBy: trackByLabel">
-          <div>
-            <span>{{ segment.name }}</span>
-            <strong>{{ segment.share }}%</strong>
+          <div class="segment-heading">
+            <div>
+              <strong>{{ segment.name }}</strong>
+              <em [ngClass]="'segment-status segment-status--' + getSegmentStatus(segment)">
+                {{ getSegmentStatusLabel(segment) }}
+              </em>
+            </div>
+            <strong>{{ formatPercent(segment.share) }}</strong>
           </div>
-          <p>{{ formatCurrency(segment.revenue) }} · ADR {{ formatCurrency(segment.adr) }}</p>
+          <p class="segment-amount">{{ formatCurrency(segment.revenue) }} · ADR {{ formatCurrency(segment.adr) }}</p>
+          <div class="segment-metrics">
+            <span>{{ segment.reservations }} reservas</span>
+            <span>{{ segment.nights }} noches</span>
+          </div>
+          <div class="segment-pickup">
+            <i class="feather icon-trending-up" aria-hidden="true"></i>
+            <span>Pickup 7 días: <strong>+{{ segment.pickup7Nights }} noches</strong> · {{ formatCurrency(segment.pickup7Revenue) }}</span>
+          </div>
+          <p class="segment-story">{{ getSegmentStory(segment) }}</p>
+        </div>
+      </div>
+
+      <div class="mix-insight" *ngIf="commercialMixInsight">
+        <i class="feather icon-pie-chart" aria-hidden="true"></i>
+        <div>
+          <strong>Lectura del mix</strong>
+          <p>{{ commercialMixInsight }}</p>
         </div>
       </div>
     </article>
@@ -130,8 +238,9 @@
     <article class="report-panel">
       <div class="panel-heading">
         <div>
-          <span class="eyebrow">Pipeline</span>
-          <h2>Oportunidades clave</h2>
+          <span class="eyebrow">Decisiones</span>
+          <h2>Oportunidades y acciones</h2>
+          <p class="panel-description">Prioriza las señales comerciales y propone el siguiente paso.</p>
         </div>
       </div>
 
@@ -142,25 +251,59 @@
             <span [class.priority-high]="opportunity.priority === 'Alta'">{{ opportunity.priority }}</span>
           </div>
           <p>{{ opportunity.detail }}</p>
-          <em>{{ formatCurrency(opportunity.value) }}</em>
+          <div class="opportunity-impact">
+            <span>Impacto de referencia</span>
+            <em>{{ formatOpportunityValue(opportunity) }}</em>
+          </div>
+          <div class="opportunity-action">
+            <i class="feather icon-arrow-right-circle" aria-hidden="true"></i>
+            <div>
+              <strong>Acción sugerida</strong>
+              <p>{{ opportunity.action }}</p>
+            </div>
+          </div>
         </div>
       </div>
     </article>
 
-    <article class="report-panel decision-panel">
+    <article class="report-panel driver-panel">
       <div class="panel-heading">
         <div>
-          <span class="eyebrow">Acciones</span>
-          <h2>Lectura recomendada</h2>
+          <span class="eyebrow">Explicación del resultado</span>
+          <h2>Causas de la variación</h2>
+          <p class="panel-description">Separa el efecto de vender más o menos noches del cambio en la tarifa promedio.</p>
         </div>
       </div>
 
-      <div class="decision-list">
-        <div *ngFor="let recommendation of recommendations; let index = index">
-          <strong>{{ index + 1 }}</strong>
-          <span>{{ recommendation }}</span>
+      <div class="driver-total">
+        <span>Brecha de producción</span>
+        <strong [class.positive]="productionGap > 0">{{ formatSignedCurrency(productionGap) }}</strong>
+        <small>{{ formatSignedPercent(productionVariation) }} vs periodo anterior</small>
+      </div>
+
+      <div class="driver-list" *ngIf="performanceDrivers.length; else noDrivers">
+        <div *ngFor="let driver of performanceDrivers">
+          <div class="driver-heading">
+            <span>{{ driver.label }}</span>
+            <strong>{{ formatSignedCurrency(driver.value) }}</strong>
+          </div>
+          <div class="driver-track">
+            <i [ngClass]="'driver-fill driver-fill--' + driver.tone" [style.width.%]="driver.share"></i>
+          </div>
+          <div class="driver-meta">
+            <span>{{ formatPercent(driver.share) }} del efecto estimado</span>
+            <small>{{ driver.detail }}</small>
+          </div>
         </div>
       </div>
+      <ng-template #noDrivers>
+        <p class="empty-reading">No existe una base anterior suficiente para separar los efectos de volumen y ADR.</p>
+      </ng-template>
+
+      <p class="driver-note">
+        <i class="feather icon-info" aria-hidden="true"></i>
+        Estimación analítica; puede existir una diferencia menor por redondeo del ADR.
+      </p>
     </article>
   </section>
 </section>

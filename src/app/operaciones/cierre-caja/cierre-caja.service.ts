@@ -397,6 +397,8 @@ export class CierreCajaService {
       resumenFormasPago: this.normalizeReporteResumenFormasPago(raw?.resumenFormasPago),
       notasPedido: this.normalizeReporteNotasPedido(raw?.notasPedido),
       formasPagoNotasPedido: this.normalizeReporteFormasPago(raw?.formasPagoNotasPedido),
+      consumosColaborador: this.normalizeConsumosColaborador(raw?.consumosColaborador),
+      platosEliminados: this.normalizePlatosEliminados(raw?.platosEliminados),
       resumen: {
         totalVentasBruto: this.toNumber(resumen.totalVentasBruto),
         totalDescuentos: this.toNumber(resumen.totalDescuentos),
@@ -405,14 +407,18 @@ export class CierreCajaService {
         totalVentasFinal: this.toNumber(resumen.totalVentasFinal),
         totalNotasCredito: this.toNumber(resumen.totalNotasCredito),
         totalNotasPedido: this.toNumber(resumen.totalNotasPedido),
+        totalConsumosColaborador: this.toNumber(resumen.totalConsumosColaborador),
+        totalPlatosEliminados: this.toNumber(resumen.totalPlatosEliminados),
         ventaNetaFinal: this.toNumber(resumen.ventaNetaFinal),
-        totalSoles: this.toNumber(resumen.totalSoles),
+        totalColones: this.toNumber(resumen.totalColones),
         totalDolares: this.toNumber(resumen.totalDolares),
         totalesPorFormaPago: this.normalizeNumberRecord(resumen.totalesPorFormaPago),
         cantidadFacturas: this.toNumber(resumen.cantidadFacturas),
-        cantidadBoletas: this.toNumber(resumen.cantidadBoletas),
+        cantidadTiquetes: this.toNumber(resumen.cantidadTiquetes),
         cantidadNotasCredito: this.toNumber(resumen.cantidadNotasCredito),
         cantidadNotasPedido: this.toNumber(resumen.cantidadNotasPedido),
+        cantidadConsumosColaborador: this.toNumber(resumen.cantidadConsumosColaborador),
+        cantidadPlatosEliminados: this.toNumber(resumen.cantidadPlatosEliminados),
         totalDocumentos: this.toNumber(resumen.totalDocumentos),
         totalEfectivoMN: this.toNumber(resumen.totalEfectivoMN),
         totalEfectivoME: this.toNumber(resumen.totalEfectivoME),
@@ -445,31 +451,8 @@ export class CierreCajaService {
       formasPagoPorDocumento: this.normalizeReporteFormasPago(raw?.formasPagoPorDocumento),
       denominaciones: this.normalizeReporteDenominaciones(raw?.denominaciones),
       resumenFormasPago: this.normalizeReporteResumenFormasPago(raw?.resumenFormasPago),
-      consumosColaborador: (Array.isArray(raw?.consumosColaborador) ? raw.consumosColaborador : []).map((item: any) => ({
-        tipo: this.cleanText(item.tipo),
-        numero: this.cleanText(item.numero),
-        pntVenta: this.cleanText(item.pntVenta),
-        fecha: this.cleanText(item.fecha),
-        hora: this.cleanText(item.hora),
-        salonero: this.cleanText(item.salonero),
-        nombre: this.cleanText(item.nombre),
-        comentarios: this.cleanText(item.comentarios),
-        total: this.toNumber(item.total),
-        estado: this.cleanText(item.estado),
-        moneda: this.cleanText(item.moneda)
-      })),
-      platosEliminados: (Array.isArray(raw?.platosEliminados) ? raw.platosEliminados : []).map((item: any) => ({
-        fecha: this.cleanText(item.fecha),
-        tipNdp: this.cleanText(item.tipNdp),
-        numNdp: this.cleanText(item.numNdp),
-        codProducto: this.cleanText(item.codProducto),
-        desProducto: this.cleanText(item.desProducto),
-        cantidad: this.toNumber(item.cantidad),
-        precio: this.toNumber(item.precio),
-        total: this.toNumber(item.total),
-        motivo: this.cleanText(item.motivo),
-        operador: this.cleanText(item.operador)
-      })),
+      consumosColaborador: this.normalizeConsumosColaborador(raw?.consumosColaborador),
+      platosEliminados: this.normalizePlatosEliminados(raw?.platosEliminados),
       datosEmpresa: {
         nombreEmpresa: this.cleanText(datosEmpresa.nombreEmpresa),
         cedula: this.cleanText(datosEmpresa.cedula)
@@ -518,7 +501,7 @@ export class CierreCajaService {
       rucCliente: this.cleanText(item.rucCliente),
       nombreCliente: this.cleanText(item.nombreCliente),
       numMesa: this.cleanText(item.numMesa),
-      numPax: this.toNumber(item.numPax),
+      numPax: this.cleanText(item.numPax),
       codMozo: this.cleanText(item.codMozo),
       moneda: this.cleanText(item.moneda),
       tipoCambio: this.toNumber(item.tipoCambio),
@@ -598,6 +581,39 @@ export class CierreCajaService {
       moneda: this.cleanText(item.moneda),
       total: this.toNumber(item.total),
       detalles: this.cleanText(item.detalles)
+    }));
+  }
+
+  private normalizeConsumosColaborador(value: unknown): CierreCajaPosReporte['consumosColaborador'] {
+    const list = Array.isArray(value) ? value : [];
+    return list.map((item: any) => ({
+      tipo: this.cleanText(item.tipo),
+      numero: this.cleanText(item.numero),
+      pntVenta: this.cleanText(item.pntVenta),
+      fecha: this.formatDateForInput(this.cleanText(item.fecha)),
+      hora: this.cleanText(item.hora),
+      salonero: this.cleanText(item.salonero),
+      nombre: this.cleanText(item.nombre),
+      comentarios: this.cleanText(item.comentarios),
+      total: this.toNumber(item.total),
+      estado: this.cleanText(item.estado),
+      moneda: this.cleanText(item.moneda)
+    }));
+  }
+
+  private normalizePlatosEliminados(value: unknown): CierreCajaPosReporte['platosEliminados'] {
+    const list = Array.isArray(value) ? value : [];
+    return list.map((item: any) => ({
+      fecha: this.formatDateForInput(this.cleanText(item.fecha)),
+      tipNdp: this.cleanText(item.tipNdp),
+      numNdp: this.cleanText(item.numNdp),
+      codProducto: this.cleanText(item.codProducto),
+      desProducto: this.cleanText(item.desProducto),
+      cantidad: this.toNumber(item.cantidad),
+      precio: this.toNumber(item.precio),
+      total: this.toNumber(item.total),
+      motivo: this.cleanText(item.motivo),
+      operador: this.cleanText(item.operador)
     }));
   }
 

@@ -16,28 +16,28 @@ import { DocumentoDetalleService } from '../../services/documento-detalle.servic
 import { ConsultaDocumentosFiltros, ConsultaDocumentosResponse, Documento } from './consulta-documentos.interface';
 
 type ConsultaDocumentosForm = {
-  fechaDesde: FormControl<string>;
-  fechaHasta: FormControl<string>;
-  pntVenta: FormControl<string>;
-  busqueda: FormControl<string>;
+  fechaDesde    : FormControl<string>;
+  fechaHasta    : FormControl<string>;
+  pntVenta      : FormControl<string>;
+  busqueda      : FormControl<string>;
 };
 
 interface ConsultaDocumentosViewModel {
-  documentos: Documento[];
-  totalRegistros: number;
-  totalDocuVisible: number;
-  totalNetoVisible: number;
-  totalImpuestoVisible: number;
-  totalPropinaVisible: number;
-  monedaResumen: string;
-  pageNumber: number;
-  pageSize: number;
-  totalPages: number;
-  pageStart: number;
-  pageEnd: number;
-  loading: boolean;
-  error: string | null;
-  hasSearched: boolean;
+  documentos                    : Documento[];
+  totalRegistros                : number;
+  totalDocuVisible              : number;
+  totalNetoVisible              : number;
+  totalImpuestoVisible          : number;
+  totalPropinaVisible           : number;
+  monedaResumen                 : string;
+  pageNumber                    : number;
+  pageSize                      : number;
+  totalPages                    : number;
+  pageStart                     : number;
+  pageEnd                       : number;
+  loading                       : boolean;
+  error                         : string | null;
+  hasSearched                   : boolean;
 }
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -50,25 +50,25 @@ const DEFAULT_PAGE_SIZE = 20;
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ConsultaDocumentosComponent implements OnInit {
-  private readonly fb = inject(NonNullableFormBuilder);
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
-  private readonly consultaService = inject(ConsultaDocumentosService);
-  private readonly detalleService = inject(DocumentoDetalleService);
-  private readonly posPrintService = inject(PosDocumentPrintService);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly cdr = inject(ChangeDetectorRef);
-  private readonly auth = inject(AuthService);
-  private readonly usuarioService = inject(UsuarioService);
+  private readonly fb                        = inject(NonNullableFormBuilder);
+  private readonly route                     = inject(ActivatedRoute);
+  private readonly router                    = inject(Router);
+  private readonly consultaService           = inject(ConsultaDocumentosService);
+  private readonly detalleService            = inject(DocumentoDetalleService);
+  private readonly posPrintService           = inject(PosDocumentPrintService);
+  private readonly destroyRef                = inject(DestroyRef);
+  private readonly cdr                       = inject(ChangeDetectorRef);
+  private readonly auth                      = inject(AuthService);
+  private readonly usuarioService            = inject(UsuarioService);
 
-  readonly pageSizeOptions = [20, 50, 100];
-  readonly origenConsulta = this.resolveOrigenConsulta();
-  readonly nuevaFacturaRoute = this.origenConsulta === 'Front Desk' ? '/front-desk/factura-directa' : '/finanzas/nueva-factura';
-  private readonly defaultDateRange = this.getDefaultDateRange();
-  dateRangeError = '';
-  puntosVenta: PuntoVentaUI[] = [];
-  puntosVentaLoading = false;
-  puntosVentaError = '';
+  readonly pageSizeOptions                   =   [20, 50, 100];
+  readonly origenConsulta                    =  this.resolveOrigenConsulta();
+  readonly nuevaFacturaRoute                 =   this.origenConsulta === 'Front Desk' ? '/front-desk/factura-directa' : '/finanzas/nueva-factura';
+  private readonly defaultDateRange          = this.getDefaultDateRange();
+  dateRangeError                             = '';
+  puntosVenta                                 : PuntoVentaUI[] = [];
+  puntosVentaLoading                         = false;
+  puntosVentaError                           = '';
 
   readonly filtrosForm: FormGroup<ConsultaDocumentosForm> = this.fb.group({
     fechaDesde: this.fb.control(this.defaultDateRange.fechaDesde, { validators: [Validators.required] }),
@@ -78,21 +78,21 @@ export class ConsultaDocumentosComponent implements OnInit {
   });
 
   private readonly vmSubject = new BehaviorSubject<ConsultaDocumentosViewModel>({
-    documentos: [],
-    totalRegistros: 0,
-    totalDocuVisible: 0,
-    totalNetoVisible: 0,
-    totalImpuestoVisible: 0,
-    totalPropinaVisible: 0,
-    monedaResumen: '',
-    pageNumber: 1,
-    pageSize: DEFAULT_PAGE_SIZE,
-    totalPages: 1,
-    pageStart: 0,
-    pageEnd: 0,
-    loading: false,
-    error: null,
-    hasSearched: false
+    documentos                      : [],
+    totalRegistros                  : 0,
+    totalDocuVisible                : 0,
+    totalNetoVisible                : 0,
+    totalImpuestoVisible            : 0,
+    totalPropinaVisible             : 0,
+    monedaResumen                   : '',
+    pageNumber                      : 1,
+    pageSize                        : DEFAULT_PAGE_SIZE,
+    totalPages                      : 1,
+    pageStart                       : 0,
+    pageEnd                         : 0,
+    loading                         : false,
+    error                           : null,
+    hasSearched                     : false
   });
 
   readonly vm$ = this.vmSubject.asObservable();
@@ -207,8 +207,8 @@ export class ConsultaDocumentosComponent implements OnInit {
 
   canCrearNotaCredito(documento: Documento): boolean {
     const estadoDocumento = (documento.estDocu || '').toString().trim().toUpperCase();
-    const estadoElectronico = (documento.PPV15_EstadoElectronico || '').toString().trim().toUpperCase();
-    return !this.isDocumentoAnulado(estadoDocumento) && (estadoElectronico === 'ACEPTADO' || estadoElectronico === 'ABIERTO');
+    const estadoElectronico = (documento.estDocu || '').toString().trim().toUpperCase();
+    return !this.isDocumentoAnulado(estadoDocumento) && (estadoElectronico === 'ACEPTADO');
   }
 
   getNotaCreditoDisabledReason(documento: Documento): string {

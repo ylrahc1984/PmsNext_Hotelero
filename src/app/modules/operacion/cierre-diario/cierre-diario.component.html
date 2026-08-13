@@ -86,7 +86,15 @@
             @for (item of card.items; track item.text) {
               <li [class]="'validation-item validation-item--' + item.level">
                 <i class="bi" [class.bi-check-circle-fill]="item.level === 'success'" [class.bi-exclamation-triangle-fill]="item.level === 'warning'" [class.bi-x-circle-fill]="item.level === 'error'" aria-hidden="true"></i>
-                <span>{{ item.text }}</span>
+                <div class="validation-item__content">
+                  <span>{{ item.text }}</span>
+                  @if (item.guidance) {
+                    <p class="validation-item__guidance">
+                      <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
+                      <span>{{ item.guidance }}</span>
+                    </p>
+                  }
+                </div>
               </li>
             }
           </ul>

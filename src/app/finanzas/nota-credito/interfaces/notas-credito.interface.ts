@@ -123,8 +123,6 @@ export interface NotaCreditoRequest {
   numNC             : string;
   fecha             : string;
   fechaFin          : string;
-  motivoAnulacion   ?: string;
-  observacion       ?: string;
   codCliente         : string;
   nomCliente         : string;
   tipDocCli          : string;
@@ -139,4 +137,7 @@ export interface NotaCreditoRequest {
   idNC               : string;
   operador           : string;
   detalle            : NotaCreditoDetalle[];
+  respuesta          : string;
+  page               : number;
+  pageSize           : number;
 }

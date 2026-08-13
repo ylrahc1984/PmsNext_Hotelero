@@ -64,22 +64,26 @@
       <div class="card cc-kpi-card">
         <div class="card-body">
           <span>Venta final</span>
-          <strong>$ {{ data.resumen.totalVentasFinal | number:'1.2-2' }}</strong>
-          <small>Neto $ {{ data.resumen.totalVentasNeto | number:'1.2-2' }}</small>
+          <strong>₡ {{ data.resumen.totalVentasFinal | number:'1.2-2' }}</strong>
+          <small>Neto ₡ {{ data.resumen.totalVentasNeto | number:'1.2-2' }}</small>
         </div>
       </div>
       <div class="card cc-kpi-card">
         <div class="card-body">
-          <span>Notas de pedido</span>
-          <strong>$ {{ data.resumen.totalNotasPedido | number:'1.2-2' }}</strong>
-          <small>{{ data.resumen.cantidadNotasPedido | number:'1.0-0' }} registros</small>
+          <span>Consumos colaboradores</span>
+          <strong>₡ {{ data.resumen.totalConsumosColaborador | number:'1.2-2' }}</strong>
+          <small>{{ data.resumen.cantidadConsumosColaborador | number:'1.0-0' }} registros</small>
         </div>
       </div>
       <div class="card cc-kpi-card">
         <div class="card-body">
           <span>Documentos</span>
           <strong>{{ data.resumen.totalDocumentos | number:'1.0-0' }}</strong>
-          <small>{{ documentos.length }} ventas · {{ notasCredito.length }} NC</small>
+          <small>
+            {{ data.resumen.cantidadFacturas | number:'1.0-0' }} facturas ·
+            {{ data.resumen.cantidadTiquetes | number:'1.0-0' }} tiquetes ·
+            {{ data.resumen.cantidadNotasCredito | number:'1.0-0' }} NC
+          </small>
         </div>
       </div>
       <div class="card cc-kpi-card">
@@ -100,14 +104,17 @@
           </div>
         </div>
         <div class="cc-summary-grid">
-          <div><span>Ventas bruto</span><strong>$ {{ data.resumen.totalVentasBruto | number:'1.2-2' }}</strong></div>
-          <div><span>Descuentos</span><strong>$ {{ data.resumen.totalDescuentos | number:'1.2-2' }}</strong></div>
-          <div><span>Impuestos</span><strong>$ {{ data.resumen.totalImpuestos | number:'1.2-2' }}</strong></div>
-          <div><span>Venta neta final</span><strong>$ {{ data.resumen.ventaNetaFinal | number:'1.2-2' }}</strong></div>
+          <div><span>Ventas bruto</span><strong>₡ {{ data.resumen.totalVentasBruto | number:'1.2-2' }}</strong></div>
+          <div><span>Descuentos</span><strong>₡ {{ data.resumen.totalDescuentos | number:'1.2-2' }}</strong></div>
+          <div><span>Impuestos</span><strong>₡ {{ data.resumen.totalImpuestos | number:'1.2-2' }}</strong></div>
+          <div><span>Venta neta final</span><strong>₡ {{ data.resumen.ventaNetaFinal | number:'1.2-2' }}</strong></div>
+          <div><span>Total colones</span><strong>₡ {{ data.resumen.totalColones | number:'1.2-2' }}</strong></div>
           <div><span>Total dólares</span><strong>$ {{ data.resumen.totalDolares | number:'1.2-2' }}</strong></div>
           <div><span>Efectivo MN</span><strong>₡ {{ data.resumen.totalEfectivoMN | number:'1.2-2' }}</strong></div>
           <div><span>Efectivo ME</span><strong>$ {{ data.resumen.totalEfectivoME | number:'1.2-2' }}</strong></div>
-          <div><span>Notas crédito</span><strong>$ {{ data.resumen.totalNotasCredito | number:'1.2-2' }}</strong></div>
+          <div><span>Notas crédito</span><strong>₡ {{ data.resumen.totalNotasCredito | number:'1.2-2' }}</strong></div>
+          <div><span>Consumos colaborador</span><strong>₡ {{ data.resumen.totalConsumosColaborador | number:'1.2-2' }}</strong></div>
+          <div><span>Platos eliminados</span><strong>₡ {{ data.resumen.totalPlatosEliminados | number:'1.2-2' }}</strong></div>
         </div>
 
         <div class="cc-payment-chips" *ngIf="totalesPorFormaPago.length > 0">
@@ -125,14 +132,17 @@
           <button type="button" [class.active]="activeTab === 'documentos'" (click)="setTab('documentos')">
             Documentos <span>{{ documentos.length }}</span>
           </button>
-          <button type="button" [class.active]="activeTab === 'notasPedido'" (click)="setTab('notasPedido')">
-            Notas pedido <span>{{ notasPedido.length }}</span>
+          <button type="button" [class.active]="activeTab === 'consumos'" (click)="setTab('consumos')">
+            Consumos colaboradores <span>{{ consumosColaborador.length }}</span>
           </button>
           <button type="button" [class.active]="activeTab === 'pagos'" (click)="setTab('pagos')">
             Pagos <span>{{ pagosDocumentos.length + pagosNotasPedido.length + resumenFormasPago.length }}</span>
           </button>
           <button type="button" [class.active]="activeTab === 'denominaciones'" (click)="setTab('denominaciones')">
             Denominaciones <span>{{ denominaciones.length }}</span>
+          </button>
+          <button type="button" [class.active]="activeTab === 'platosEliminados'" (click)="setTab('platosEliminados')">
+            Platos eliminados <span>{{ platosEliminados.length }}</span>
           </button>
         </div>
 
@@ -142,7 +152,7 @@
               <span>Ventas facturadas</span>
               <h5>Documentos del cierre</h5>
             </div>
-            <strong>$ {{ data.resumen.totalVentasFinal | number:'1.2-2' }}</strong>
+            <strong>₡ {{ data.resumen.totalVentasFinal | number:'1.2-2' }}</strong>
           </div>
 
           <div *ngIf="documentos.length === 0" class="cc-empty">No hay documentos en este cierre.</div>
@@ -186,52 +196,80 @@
               </tbody>
             </table>
           </div>
+
+          <div class="cc-panel cc-panel-wide" *ngIf="notasCredito.length > 0">
+            <div class="cc-panel-header">
+              <h6>Notas de crédito</h6>
+              <strong>₡ {{ data.resumen.totalNotasCredito | number:'1.2-2' }}</strong>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-sm align-middle cc-data-table mb-0">
+                <thead>
+                  <tr>
+                    <th>Documento</th>
+                    <th>Fecha</th>
+                    <th>Cliente</th>
+                    <th>Moneda</th>
+                    <th class="text-end">Subtotal</th>
+                    <th class="text-end">Impuesto</th>
+                    <th class="text-end">Total</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let item of notasCredito; trackBy: trackByDocumento">
+                    <td><strong>{{ item.tipoDocumento }}-{{ item.serie }}</strong><small>{{ item.numeroDocumento }}</small></td>
+                    <td>{{ item.fechaDocumento }} {{ item.hora }}</td>
+                    <td><strong>{{ item.nombreCliente || 'N/D' }}</strong><small>{{ item.codCliente }} · {{ item.rucCliente }}</small></td>
+                    <td>{{ item.moneda }}</td>
+                    <td class="text-end">{{ item.subTotal | number:'1.2-2' }}</td>
+                    <td class="text-end">{{ item.impuesto | number:'1.2-2' }}</td>
+                    <td class="text-end fw-semibold">{{ item.totalDocumento | number:'1.2-2' }}</td>
+                    <td><span [class]="estadoClass(item.estado)">{{ item.estado || 'N/D' }}</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </section>
 
-        <section *ngIf="activeTab === 'notasPedido'" class="cc-tab-panel">
+        <section *ngIf="activeTab === 'consumos'" class="cc-tab-panel">
           <div class="cc-section-title">
             <div>
-              <span>Pedidos abiertos</span>
-              <h5>Notas de pedido</h5>
+              <span>Movimientos operativos</span>
+              <h5>Consumos de colaboradores</h5>
             </div>
-            <strong>$ {{ data.resumen.totalNotasPedido | number:'1.2-2' }}</strong>
+            <strong>₡ {{ data.resumen.totalConsumosColaborador | number:'1.2-2' }}</strong>
           </div>
 
-          <div *ngIf="notasPedido.length === 0" class="cc-empty">No hay notas de pedido en este cierre.</div>
-          <div *ngIf="notasPedido.length > 0" class="table-responsive">
+          <div *ngIf="consumosColaborador.length === 0" class="cc-empty">No hay consumos de colaboradores en este cierre.</div>
+          <div *ngIf="consumosColaborador.length > 0" class="table-responsive">
             <table class="table table-sm align-middle cc-data-table">
               <thead>
                 <tr>
-                  <th>Nota</th>
+                  <th>Documento</th>
                   <th>Fecha</th>
-                  <th>Cliente</th>
-                  <th>Vendedor</th>
-                  <th>Items</th>
-                  <th class="text-end">Subtotal</th>
-                  <th class="text-end">Impuesto</th>
+                  <th>Colaborador</th>
+                  <th>Salonero</th>
+                  <th>Comentario</th>
+                  <th>Moneda</th>
                   <th class="text-end">Total</th>
-                  <th class="text-end">Pago</th>
                   <th>Estado</th>
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let item of notasPedido; trackBy: trackByNotaPedido">
+                <tr *ngFor="let item of consumosColaborador; trackBy: trackByConsumo">
                   <td>
-                    <strong>{{ item.tipoNDP }}-{{ item.serieNDP }}</strong>
-                    <small>{{ item.numeroNDP }}</small>
+                    <strong>{{ item.tipo }}</strong>
+                    <small>{{ item.numero }} · {{ item.pntVenta }}</small>
                   </td>
-                  <td>{{ item.fechaDocumento }} {{ item.hora }}</td>
-                  <td>
-                    <strong>{{ item.nombreCliente || 'N/D' }}</strong>
-                    <small>{{ item.codCliente }} · {{ item.rucCliente }}</small>
-                  </td>
-                  <td>{{ item.codVendedor || item.operador || '-' }}</td>
-                  <td>{{ item.cantidadItems | number:'1.0-0' }}</td>
-                  <td class="text-end">{{ item.subTotal | number:'1.2-2' }}</td>
-                  <td class="text-end">{{ item.impuesto | number:'1.2-2' }}</td>
-                  <td class="text-end fw-semibold">{{ item.totalDocumento | number:'1.2-2' }}</td>
-                  <td class="text-end fw-semibold">{{ item.totalPago | number:'1.2-2' }}</td>
-                  <td><span [class]="estadoClass(item.estadoDocumento)">{{ item.estadoDocumento || 'N/D' }}</span></td>
+                  <td>{{ item.fecha }} {{ item.hora }}</td>
+                  <td>{{ item.nombre || 'N/D' }}</td>
+                  <td>{{ item.salonero || '-' }}</td>
+                  <td>{{ item.comentarios || '-' }}</td>
+                  <td>{{ item.moneda }}</td>
+                  <td class="text-end fw-semibold">{{ item.total | number:'1.2-2' }}</td>
+                  <td><span [class]="estadoClass(item.estado)">{{ item.estado || 'N/D' }}</span></td>
                 </tr>
               </tbody>
             </table>
@@ -327,6 +365,52 @@
                   <strong>$ {{ item.totalMonedaExtranjera | number:'1.2-2' }}</strong>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section *ngIf="activeTab === 'platosEliminados'" class="cc-tab-panel">
+          <div class="cc-section-title">
+            <div>
+              <span>Movimientos operativos</span>
+              <h5>Platos eliminados</h5>
+            </div>
+            <strong>{{ platosEliminados.length }} registros</strong>
+          </div>
+
+          <div class="cc-panel">
+            <div class="cc-panel-header">
+              <h6>Platos eliminados</h6>
+              <strong>₡ {{ data.resumen.totalPlatosEliminados | number:'1.2-2' }}</strong>
+            </div>
+            <div *ngIf="platosEliminados.length === 0" class="cc-empty cc-empty-compact">Sin platos eliminados.</div>
+            <div class="table-responsive" *ngIf="platosEliminados.length > 0">
+              <table class="table table-sm align-middle cc-data-table mb-0">
+                <thead>
+                  <tr>
+                    <th>Nota</th>
+                    <th>Fecha</th>
+                    <th>Producto</th>
+                    <th class="text-end">Cantidad</th>
+                    <th class="text-end">Precio</th>
+                    <th class="text-end">Total</th>
+                    <th>Motivo</th>
+                    <th>Operador</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let item of platosEliminados; trackBy: trackByPlatoEliminado">
+                    <td>{{ item.tipNdp }}-{{ item.numNdp }}</td>
+                    <td>{{ item.fecha }}</td>
+                    <td><strong>{{ item.desProducto || 'N/D' }}</strong><small>{{ item.codProducto }}</small></td>
+                    <td class="text-end">{{ item.cantidad | number:'1.0-2' }}</td>
+                    <td class="text-end">{{ item.precio | number:'1.2-2' }}</td>
+                    <td class="text-end fw-semibold">{{ item.total | number:'1.2-2' }}</td>
+                    <td>{{ item.motivo || '-' }}</td>
+                    <td>{{ item.operador || '-' }}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </section>

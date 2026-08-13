@@ -10,12 +10,13 @@ import {
   CierreCajaDenominacionReporte,
   CierreCajaDocumento,
   CierreCajaFormaPagoReporte,
-  CierreCajaNotaPedido,
+  CierreCajaPosConsumoColaborador,
+  CierreCajaPosPlatoEliminado,
   CierreCajaReporteDetalle,
   CierreCajaResumenFormaPago
 } from './models/cierre-caja.model';
 
-type CierreCajaDetalleTab = 'documentos' | 'notasPedido' | 'pagos' | 'denominaciones';
+type CierreCajaDetalleTab = 'documentos' | 'consumos' | 'pagos' | 'denominaciones' | 'platosEliminados';
 
 @Component({
   selector: 'app-cierre-caja-detalle',
@@ -86,10 +87,6 @@ export class CierreCajaDetalleComponent implements OnInit {
     return this.reporte?.notasCredito ?? [];
   }
 
-  get notasPedido(): CierreCajaNotaPedido[] {
-    return this.reporte?.notasPedido ?? [];
-  }
-
   get pagosDocumentos(): CierreCajaFormaPagoReporte[] {
     return this.reporte?.formasPagoDocumentos ?? [];
   }
@@ -104,6 +101,14 @@ export class CierreCajaDetalleComponent implements OnInit {
 
   get denominaciones(): CierreCajaDenominacionReporte[] {
     return this.reporte?.denominaciones ?? [];
+  }
+
+  get consumosColaborador(): CierreCajaPosConsumoColaborador[] {
+    return this.reporte?.consumosColaborador ?? [];
+  }
+
+  get platosEliminados(): CierreCajaPosPlatoEliminado[] {
+    return this.reporte?.platosEliminados ?? [];
   }
 
   get totalesPorFormaPago(): Array<{ descripcion: string; total: number }> {
@@ -141,10 +146,6 @@ export class CierreCajaDetalleComponent implements OnInit {
     return `${item.tipoDocumento}-${item.serie}-${item.numeroDocumento}-${index}`;
   }
 
-  trackByNotaPedido(index: number, item: CierreCajaNotaPedido): string {
-    return `${item.tipoNDP}-${item.serieNDP}-${item.numeroNDP}-${index}`;
-  }
-
   trackByPago(index: number, item: CierreCajaFormaPagoReporte): string {
     return `${item.codFormaPago}-${item.moneda}-${item.monto}-${index}`;
   }
@@ -155,6 +156,14 @@ export class CierreCajaDetalleComponent implements OnInit {
 
   trackByDenominacion(index: number, item: CierreCajaDenominacionReporte): string {
     return `${item.codDenominacion}-${item.moneda}-${index}`;
+  }
+
+  trackByConsumo(index: number, item: CierreCajaPosConsumoColaborador): string {
+    return `${item.tipo}-${item.numero}-${index}`;
+  }
+
+  trackByPlatoEliminado(index: number, item: CierreCajaPosPlatoEliminado): string {
+    return `${item.tipNdp}-${item.numNdp}-${item.codProducto}-${index}`;
   }
 
   private loadDetalle(): void {

@@ -506,8 +506,6 @@ export class NuevaNotaCreditoComponent implements OnInit {
       numNC: raw.numNC,
       fecha: this.formatDate(raw.fecha),
       fechaFin: this.formatDate(raw.fecha),
-      motivoAnulacion: raw.motivoAnulacion,
-      observacion: raw.observacion,
       codCliente: raw.codCliente,
       nomCliente: raw.nomCliente,
       tipDocCli: raw.tipDocCli,
@@ -521,7 +519,10 @@ export class NuevaNotaCreditoComponent implements OnInit {
       asiento: '',
       idNC: raw.motivoAnulacion,
       operador,
-      detalle
+      detalle,
+      respuesta: '',
+      page: 0,
+      pageSize: 0
     };
   }
 
@@ -609,10 +610,10 @@ export class NuevaNotaCreditoComponent implements OnInit {
   }
 
   private validateDocumentoParaNotaCredito(header: DocumentoRecord): string {
-    const estadoDocumento = this.readString(header, 'estadoDocu', 'ppV00_EstadoDocumento', 'PPV00_EstadoDocumento').toUpperCase();
+    const estadoDocumento = this.readString(header, 'estDocu', 'ppV00_EstadoDocumento', 'PPV00_EstadoDocumento').toUpperCase();
     const estadoElectronico = this.readString(
       header,
-      'estadoElectronico',
+      'estDocu',
       'ppV15_EstadoElectronico',
       'PPV15_EstadoElectronico'
     ).toUpperCase();
@@ -623,9 +624,7 @@ export class NuevaNotaCreditoComponent implements OnInit {
     if (estadoElectronico === 'RECHAZADO') {
       return 'No se puede aplicar nota de crédito a un documento rechazado.';
     }
-    if (estadoElectronico !== 'ACEPTADO') {
-      return 'La nota de crédito solo aplica para documentos aceptados.';
-    }
+ 
     return '';
   }
 

@@ -66,7 +66,7 @@
       <span class="kpi-item__icon kpi-item__icon--billing"><i class="feather icon-dollar-sign"></i></span>
       <div class="kpi-item__content">
         <span>Facturación total</span>
-        <strong>{{ resumenKpis().facturacionTotal | currency:'USD':'symbol':'1.2-2' }}</strong>
+        <strong>{{ resumenKpis().facturacionTotal | currency:'₡':'symbol':'1.2-2' }}</strong>
       </div>
     </article>
     <article class="kpi-item">
@@ -80,7 +80,7 @@
       <span class="kpi-item__icon kpi-item__icon--profit"><i class="feather icon-trending-up"></i></span>
       <div class="kpi-item__content">
         <span>Ganancia bruta</span>
-        <strong>{{ resumenKpis().gananciaBruta | currency:'USD':'symbol':'1.2-2' }}</strong>
+        <strong>{{ resumenKpis().gananciaBruta | currency:'₡':'symbol':'1.2-2' }}</strong>
         <small>{{ resumenKpis().margenBrutoPonderado | number:'1.1-1' }}% ponderado</small>
       </div>
     </article>
@@ -108,8 +108,8 @@
             @for (item of productosPaginados(); track item.codigo; let index = $index) {
               <tr>
                 <td>{{ registroInicial() + index }}</td><td><span class="category-badge">{{ item.codigo }}</span></td><td class="primary-cell">{{ item.descripcion || 'Sin descripción' }}</td>
-                <td class="text-end">{{ item.cantidad | number:'1.0-4' }}</td><td class="text-end">{{ item.costo | currency:'USD':'symbol':'1.2-4' }}</td>
-                <td class="text-end">{{ item.precio | currency:'USD':'symbol':'1.2-4' }}</td><td class="text-end primary-cell">{{ item.total | currency:'USD':'symbol':'1.2-2' }}</td>
+                <td class="text-end">{{ item.cantidad | number:'1.0-4' }}</td><td class="text-end">{{ item.costo | currency:'₡':'symbol':'1.2-4' }}</td>
+                <td class="text-end">{{ item.precio | currency:'₡':'symbol':'1.2-4' }}</td><td class="text-end primary-cell">{{ item.total | currency:'₡':'symbol':'1.2-2' }}</td>
                 <td><div class="participation"><div class="participation__bar"><span [style.width.%]="anchoParticipacion(item.porcentaje)"></span></div><strong>{{ item.porcentaje | number:'1.2-4' }}%</strong></div></td>
               </tr>
             } @empty {

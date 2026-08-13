@@ -73,10 +73,43 @@ $slate: #475569;
 
 .filters-panel {
   display: grid;
-  grid-template-columns: 1.15fr repeat(3, minmax(150px, 1fr)) auto;
+  grid-template-columns: 1.15fr repeat(2, minmax(150px, 1fr)) auto;
   gap: 12px;
   align-items: end;
   padding: 16px;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.report-message {
+  padding: 11px 14px;
+  border: 1px solid;
+  border-radius: 10px;
+  font-size: .82rem;
+  font-weight: 700;
+}
+
+.report-message--error {
+  color: #b42318;
+  border-color: #fecdca;
+  background: #fff6f5;
+}
+
+.report-message--warning {
+  color: #92400e;
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+
+.icon-loader {
+  animation: report-spin 1s linear infinite;
+}
+
+@keyframes report-spin {
+  to { transform: rotate(360deg); }
 }
 
 .filters-panel label {
@@ -238,13 +271,27 @@ $slate: #475569;
 
 .workload-chart {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
   gap: 12px;
   min-height: 220px;
   padding: 16px;
   background: $soft;
   border: 1px solid $line;
   border-radius: 12px;
+}
+
+.chart-empty {
+  display: grid;
+  min-height: 220px;
+  place-items: center;
+  padding: 20px;
+  color: $muted;
+  background: $soft;
+  border: 1px dashed $line;
+  border-radius: 12px;
+  font-size: .85rem;
+  font-weight: 700;
+  text-align: center;
 }
 
 .workload-chart > div {
