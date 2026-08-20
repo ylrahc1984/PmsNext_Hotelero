@@ -386,7 +386,7 @@ export class FolioMasterComponent implements OnInit {
   }
 
   async checkoutFolio(folio: FolioMaster): Promise<void> {
-    if (this.checkoutLoadingFolioNumber) {
+    if (this.checkoutLoadingFolioNumber || this.isFolioClosed(folio)) {
       return;
     }
 
@@ -485,6 +485,10 @@ export class FolioMasterComponent implements OnInit {
   getStatus(value: number | string): FolioMasterStatus {
     const status = this.statuses.find((item) => item.value === Number(value));
     return status ?? { value: Number(value), label: 'Desconocido', helper: 'Estado no identificado' };
+  }
+
+  isFolioClosed(folio: FolioMaster): boolean {
+    return Number(folio.PRV09_Estado) === 2;
   }
 
   getStatusClass(value: number | string): string {

@@ -29,75 +29,75 @@ const DAY_NAMES = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
 const MONTH_NAMES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
 interface CalendarApiInventoryRoom {
-  numHab: number | string;
-  cateHab?: string | null;
-  tipoHab?: string | null;
-  codGrp?: string | null;
-  numPax?: number | null;
-  totCamas?: number | null;
-  descripcion?: string | null;
-  estHab?: string | null;
-  clean?: string | null;
-  activo?: string | null;
+  numHab            : number | string;
+  cateHab           ?: string | null;
+  tipoHab           ?: string | null;
+  codGrp            ?: string | null;
+  numPax            ?: number | null;
+  totCamas          ?: number | null;
+  descripcion       ?: string | null;
+  estHab            ?: string | null;
+  clean             ?: string | null;
+  activo            ?: string | null;
 }
 
 interface CalendarApiDay {
-  numHab: number | string;
-  categoria?: string | null;
-  codGrp?: string | null;
-  habOrigen?: string | null;
-  fecha: string;
-  estado?: string | null;
-  codReserva?: string | null;
-  codigoPlan?: string | null;
-  numPax?: number | null;
-  numChild?: number | null;
-  estadoReserva?: string | null;
-  reservaDescripcion?: string | null;
-  agenciaNombre?: string | null;
-  fechaIngEvento?: string | null;
-  fechaSalEvento?: string | null;
+  numHab                  : number | string;
+  categoria               ?: string | null;
+  codGrp                  ?: string | null;
+  habOrigen               ?: string | null;
+  fecha                   : string;
+  estado                  ?: string | null;
+  codReserva              ?: string | null;
+  codigoPlan              ?: string | null;
+  numPax                  ?: number | null;
+  numChild                ?: number | null;
+  estadoReserva           ?: string | null;
+  reservaDescripcion      ?: string | null;
+  agenciaNombre           ?: string | null;
+  fechaIngEvento          ?: string | null;
+  fechaSalEvento          ?: string | null;
 }
 
 interface CalendarApiResponse {
-  inventario?: CalendarApiInventoryRoom[];
-  calendario?: CalendarApiDay[];
-  respuesta?: string;
-  totalHabitaciones?: number;
-  totalDias?: number;
+  inventario            ?: CalendarApiInventoryRoom[];
+  calendario            ?: CalendarApiDay[];
+  respuesta             ?: string;
+  totalHabitaciones     ?: number;
+  totalDias             ?: number;
 }
 
 interface PrecheckingReservationApiItem {
-  numHabita?: string | null;
-  catHabita?: string | null;
-  tipHabita?: string | null;
-  codReserva?: string | null;
-  descripcion?: string | null;
-  fechaIng?: string | null;
-  fechaSal?: string | null;
-  estado?: string | null;
-  numPax?: number | null;
-  numChild?: number | null;
-  orden?: number | null;
-  habOrigen?: string | null;
-  observacion?: string | null;
-  nomAgencia?: string | null;
-  codPlan?: string | null;
-  totNoches?: number | null;
-  codAgencia?: string | null;
-  listaHabitaciones?: string | number | null;
-  roomingList?: string | null;
+  numHabita               ?: string | null;
+  catHabita               ?: string | null;
+  tipHabita               ?: string | null;
+  codReserva              ?: string | null;
+  descripcion             ?: string | null;
+  fechaIng                ?: string | null;
+  fechaSal                ?: string | null;
+  estado                  ?: string | null;
+  numPax                  ?: number | null;
+  numChild                ?: number | null;
+  orden                   ?: number | null;
+  habOrigen               ?: string | null;
+  observacion             ?: string | null;
+  nomAgencia              ?: string | null;
+  codPlan                 ?: string | null;
+  totNoches               ?: number | null;
+  codAgencia              ?: string | null;
+  listaHabitaciones       ?: string | number | null;
+  roomingList             ?: string | null;
 }
 
 interface PrecheckingReservationApiResponse {
-  success?: boolean;
-  data?: PrecheckingReservationApiItem[];
+  success   ?: boolean;
+  data      ?: PrecheckingReservationApiItem[];
 }
 
 export interface CalendarApiDataSource {
-  rooms: RoomStatus[];
-  reservations: CalendarReservation[];
-  typeOptions: RoomType[];
+  rooms           : RoomStatus[];
+  reservations    : CalendarReservation[];
+  typeOptions     : RoomType[];
 }
 
 @Injectable({ providedIn: 'root' })

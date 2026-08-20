@@ -69,7 +69,7 @@
             <td class="text-center"><div class="folio-actions">
               <button type="button" class="folio-action folio-action--detail" (click)="openDetail(folio)" title="Ver cargos del folio"><i class="feather icon-eye"></i><span>Detalle</span></button>
               <button type="button" class="folio-action folio-action--invoice" (click)="invoiceFolio(folio)" [disabled]="!!invoiceLoadingFolioNumber" title="Facturar cargos"><i class="feather" [ngClass]="invoiceLoadingFolioNumber === (folio.PRV09_NumFolio || folio.PRV01_Folio) ? 'icon-loader' : 'icon-file-text'"></i><span>{{ invoiceLoadingFolioNumber === (folio.PRV09_NumFolio || folio.PRV01_Folio) ? 'Cargando' : 'Facturar' }}</span></button>
-              <button type="button" class="folio-action folio-action--checkout" (click)="checkoutFolio(folio)" [disabled]="!!checkoutLoadingFolioNumber" title="Procesar Check Out"><i class="feather icon-log-out"></i><span>{{ checkoutLoadingFolioNumber === (folio.PRV09_NumFolio || folio.PRV01_Folio) ? 'Procesando' : 'Cierre' }}</span></button>
+              <button type="button" class="folio-action folio-action--checkout" (click)="checkoutFolio(folio)" [disabled]="!!checkoutLoadingFolioNumber || isFolioClosed(folio)" [title]="isFolioClosed(folio) ? 'El folio ya está cerrado' : 'Procesar Check Out'"><i class="feather icon-log-out"></i><span>{{ checkoutLoadingFolioNumber === (folio.PRV09_NumFolio || folio.PRV01_Folio) ? 'Procesando' : 'Cierre' }}</span></button>
             </div></td>
           </tr>
         </tbody>
