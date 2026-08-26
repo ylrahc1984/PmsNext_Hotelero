@@ -192,13 +192,20 @@ export const NavigationItems: NavigationItem[] = [
         title: 'Clientes / Huéspedes',
         type: 'collapse',
         icon: 'feather icon-users',
-        locked: true,
         children: [
-          { id: 'huespedes-perfil', title: 'Perfil de Huéspedes', type: 'item', url: '/clientes', icon: 'feather icon-user', classes: 'nav-item' },
-          { id: 'huespedes-historial', title: 'Historial de Estadías', type: 'item', url: '/huespedes/historial-estadias', icon: 'feather icon-clock', classes: 'nav-item' },
-          { id: 'huespedes-preferencias', title: 'Preferencias', type: 'item', url: '/huespedes/preferencias', icon: 'feather icon-heart', classes: 'nav-item' },
-          { id: 'huespedes-documentos', title: 'Documentos de Identificación', type: 'item', url: '/huespedes/documentos-identificacion', icon: 'feather icon-file', classes: 'nav-item' },
-          { id: 'huespedes-crm', title: 'CRM de Huéspedes', type: 'item', url: '/huespedes/crm', icon: 'feather icon-message-square', classes: 'nav-item' }
+          { id: 'huespedes-perfil', title: 'Perfil de Huéspedes', type: 'item', url: '/clientes', icon: 'feather icon-user', classes: 'nav-item', hidden: true },
+          { id: 'huespedes-historial', title: 'Historial de Estadías', type: 'item', url: '/huespedes/historial-estadias', icon: 'feather icon-clock', classes: 'nav-item', hidden: true },
+          { id: 'huespedes-preferencias', title: 'Preferencias', type: 'item', url: '/huespedes/preferencias', icon: 'feather icon-heart', classes: 'nav-item', hidden: true },
+          { id: 'huespedes-documentos', title: 'Documentos de Identificación', type: 'item', url: '/huespedes/documentos-identificacion', icon: 'feather icon-file', classes: 'nav-item', hidden: true },
+          { id: 'huespedes-crm', title: 'CRM de Huéspedes', type: 'item', url: '/huespedes/crm', icon: 'feather icon-message-square', classes: 'nav-item', hidden: true },
+          {
+            id: 'huespedes-analisis',
+            title: 'Análisis de Huéspedes',
+            type: 'item',
+            url: '/clientes-huespedes/analisis-huespedes',
+            icon: 'feather icon-bar-chart-2',
+            classes: 'nav-item'
+          }
         ]
       },
       {

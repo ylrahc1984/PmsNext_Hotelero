@@ -1,0 +1,612 @@
+<section class="guest-analysis-page" aria-labelledby="guest-analysis-title">
+  <header class="page-header">
+    <div>
+      <span class="eyebrow">Clientes y Huéspedes</span>
+      <h1 id="guest-analysis-title">Análisis de Huéspedes</h1>
+      <p>Conozca la procedencia, las estancias y la disponibilidad de contacto de los huéspedes alojados.</p>
+      @if (narrative) {
+        <p class="narrative">{{ narrative }}</p>
+      }
+    </div>
+    <button
+      type="button"
+      class="btn btn-outline-primary export-button"
+      (click)="exportReport()"
+      [disabled]="!filteredRows.length || loading || exporting"
+    >
+      @if (exporting) {
+        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+      } @else {
+        <i class="feather icon-download" aria-hidden="true"></i>
+      }
+      {{ exporting ? 'Exportando…' : 'Exportar' }}
+    </button>
+  </header>
+
+  <form class="filters-card" [formGroup]="filtersForm" (ngSubmit)="consultar()" novalidate>
+    <div class="filter-field">
+      <label for="guest-date-from">Fecha desde</label>
+      <input
+        id="guest-date-from"
+        type="date"
+        class="form-control"
+        formControlName="fechaDesde"
+        [class.is-invalid]="dateRangeError"
+        required
+      />
+    </div>
+    <div class="filter-field">
+      <label for="guest-date-to">Fecha hasta</label>
+      <input
+        id="guest-date-to"
+        type="date"
+        class="form-control"
+        formControlName="fechaHasta"
+        [class.is-invalid]="dateRangeError"
+        required
+      />
+    </div>
+    <div class="filter-field">
+      <label for="guest-nationality">Nacionalidad</label>
+      <select id="guest-nationality" class="form-select" formControlName="nacionalidad">
+        <option value="">Todas</option>
+        @for (option of nationalityOptions; track trackOption($index, option)) {
+          <option [value]="option">{{ option }}</option>
+        }
+      </select>
+    </div>
+    <div class="filter-field">
+      <label for="guest-agency">Agencia</label>
+      <select id="guest-agency" class="form-select" formControlName="agencia">
+        <option value="">Todas</option>
+        @for (option of agencyOptions; track trackOption($index, option)) {
+          <option [value]="option">{{ option }}</option>
+        }
+      </select>
+    </div>
+    <div class="filter-actions">
+      <button type="submit" class="btn btn-primary" [disabled]="loading || filtersForm.invalid">
+        @if (loading) {
+          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+        } @else {
+          <i class="feather icon-search" aria-hidden="true"></i>
+        }
+        Consultar
+      </button>
+      <button type="button" class="btn btn-light" (click)="limpiar()" [disabled]="loading">
+        <i class="feather icon-refresh-cw" aria-hidden="true"></i>
+        Limpiar
+      </button>
+    </div>
+
+    @if (
+      (filtersForm.controls.fechaDesde.hasError('required') && filtersForm.controls.fechaDesde.touched) ||
+      (filtersForm.controls.fechaHasta.hasError('required') && filtersForm.controls.fechaHasta.touched)
+    ) {
+      <p class="validation-message" role="alert">Las fechas desde y hasta son obligatorias.</p>
+    } @else if (dateRangeError) {
+      <p class="validation-message" role="alert">La fecha desde no puede ser mayor que la fecha hasta.</p>
+    }
+
+    <div class="search-row">
+      <div class="search-field">
+        <i class="feather icon-search" aria-hidden="true"></i>
+        <label class="visually-hidden" for="guest-search">Buscar huéspedes</label>
+        <input
+          id="guest-search"
+          type="search"
+          class="form-control"
+          formControlName="search"
+          placeholder="Buscar huésped, correo, teléfono o reserva…"
+        />
+      </div>
+      <button type="button" class="more-filters-button" (click)="toggleMoreFilters()" [attr.aria-expanded]="moreFiltersOpen">
+        <i class="feather icon-sliders" aria-hidden="true"></i>
+        Más filtros
+        <span class="material-icons" aria-hidden="true">{{ moreFiltersOpen ? 'expand_less' : 'expand_more' }}</span>
+      </button>
+    </div>
+
+    @if (moreFiltersOpen) {
+      <div class="extra-filters">
+        <div class="filter-field">
+          <label for="guest-contact-status">Estado de contacto</label>
+          <select id="guest-contact-status" class="form-select" formControlName="estadoContacto">
+            <option value="">Todos</option>
+            @for (option of contactStatusOptions; track trackOption($index, option)) {
+              <option [value]="option">{{ option }}</option>
+            }
+          </select>
+        </div>
+        <div class="filter-field">
+          <label for="guest-email-type">Tipo de correo</label>
+          <select id="guest-email-type" class="form-select" formControlName="tipoEmail">
+            <option value="">Todos</option>
+            @for (option of emailTypeOptions; track trackOption($index, option)) {
+              <option [value]="option">{{ option }}</option>
+            }
+          </select>
+        </div>
+        <div class="filter-field">
+          <label for="guest-booking-source">Origen de reserva</label>
+          <select id="guest-booking-source" class="form-select" formControlName="origenReserva">
+            <option value="">Todos</option>
+            <option value="DIRECTA">Directa</option>
+            <option value="AGENCIA">Agencia</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label for="guest-reservation-status">Estado de reserva</label>
+          <select id="guest-reservation-status" class="form-select" formControlName="estadoReserva">
+            <option value="">Todos</option>
+            @for (option of reservationStatusOptions; track trackOption($index, option)) {
+              <option [value]="option">{{ option }}</option>
+            }
+          </select>
+        </div>
+        <div class="filter-field">
+          <label for="guest-pax-type">Tipo de pax</label>
+          <select id="guest-pax-type" class="form-select" formControlName="tipoPax">
+            <option value="">Todos</option>
+            @for (option of paxTypeOptions; track trackOption($index, option)) {
+              <option [value]="option">{{ option }}</option>
+            }
+          </select>
+        </div>
+      </div>
+    }
+  </form>
+
+  @if (loading && !loadedOnce) {
+    <div class="loading-state" role="status">
+      <span class="spinner-border" aria-hidden="true"></span>
+      <strong>Consultando huéspedes alojados…</strong>
+    </div>
+  } @else if (errorMessage) {
+    <div class="feedback-state feedback-state--error" role="alert">
+      <i class="feather icon-alert-circle" aria-hidden="true"></i>
+      <span>{{ errorMessage }}</span>
+      <button type="button" class="btn btn-sm btn-outline-danger" (click)="consultar()">Reintentar</button>
+    </div>
+  } @else if (!loadedOnce) {
+    <div class="feedback-state">
+      <i class="feather icon-calendar" aria-hidden="true"></i>
+      <span>Seleccione un rango de fechas para consultar los huéspedes alojados.</span>
+    </div>
+  }
+
+  @if (loadedOnce) {
+    <section class="kpi-grid" aria-label="Indicadores de huéspedes">
+      <article class="kpi-card kpi-card--navy">
+        <span>Pax alojados</span>
+        <strong>{{ kpis.paxAlojados | number: '1.0-0' }}</strong>
+        <small>Estancias tras filtros activos</small>
+      </article>
+      <article class="kpi-card kpi-card--cyan">
+        <span>Huéspedes únicos</span>
+        <strong>{{ kpis.huespedesUnicos | number: '1.0-0' }}</strong>
+        <small>Identidades dentro del periodo</small>
+      </article>
+      <article class="kpi-card kpi-card--blue">
+        <span>Nacionalidades</span>
+        <strong>{{ kpis.nacionalidades | number: '1.0-0' }}</strong>
+        <small>Procedencias identificadas</small>
+      </article>
+      <article class="kpi-card kpi-card--green">
+        <span>Contacto disponible</span>
+        <strong>{{ kpis.contactables | number: '1.0-0' }}</strong>
+        <small>{{ kpis.contactablesPercentage }}% del resultado</small>
+      </article>
+      <article class="kpi-card kpi-card--teal">
+        <span>Correos directos</span>
+        <strong>{{ kpis.correosDirectos | number: '1.0-0' }}</strong>
+        <small>{{ kpis.correosDirectosPercentage }}% del resultado</small>
+      </article>
+    </section>
+
+    @if (sourceRows.length && !filteredRows.length) {
+      <div class="feedback-state">
+        <i class="feather icon-filter" aria-hidden="true"></i>
+        <span>No hay huéspedes que coincidan con los filtros locales.</span>
+        <button type="button" class="btn btn-sm btn-outline-primary" (click)="limpiarFiltrosLocales()">Restablecer filtros</button>
+      </div>
+    } @else if (!sourceRows.length) {
+      <div class="feedback-state">
+        <i class="feather icon-users" aria-hidden="true"></i>
+        <span>No se encontraron huéspedes para los criterios seleccionados.</span>
+      </div>
+    }
+
+    @if (filteredRows.length) {
+      <section class="analysis-grid" aria-label="Análisis visual de huéspedes">
+        <article class="analysis-card">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Procedencia</span>
+              <h2>Huéspedes por nacionalidad</h2>
+            </div>
+            <span class="result-pill">{{ nationalityItems.length }} grupos</span>
+          </div>
+          <apx-chart
+            [series]="nationalityChartOptions.series!"
+            [chart]="nationalityChartOptions.chart!"
+            [colors]="nationalityChartOptions.colors!"
+            [plotOptions]="nationalityChartOptions.plotOptions!"
+            [dataLabels]="nationalityChartOptions.dataLabels!"
+            [xaxis]="nationalityChartOptions.xaxis!"
+            [grid]="nationalityChartOptions.grid!"
+            [tooltip]="nationalityChartOptions.tooltip!"
+            [legend]="nationalityChartOptions.legend!"
+          ></apx-chart>
+          <p class="chart-summary">
+            La gráfica muestra cantidad y participación sobre el resultado filtrado. Las procedencias restantes se agrupan en “Otros”.
+          </p>
+        </article>
+
+        <article class="analysis-card contact-analysis">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Contacto</span>
+              <h2>Disponibilidad de contacto</h2>
+            </div>
+          </div>
+          <div class="contact-distribution" aria-label="Distribución porcentual de disponibilidad de contacto">
+            @for (item of contactItems; track trackContact($index, item)) {
+              @if (item.percentage > 0) {
+                <span
+                  [class]="'contact-distribution__segment contact-distribution__segment--' + item.tone"
+                  [style.width.%]="item.percentage"
+                  [attr.title]="item.label + ': ' + item.percentage + '%'"
+                ></span>
+              }
+            }
+          </div>
+          <div class="contact-list">
+            @for (item of contactItems; track trackContact($index, item)) {
+              <div>
+                <span [class]="'contact-dot contact-dot--' + item.tone" aria-hidden="true"></span>
+                <span>{{ item.label }}</span>
+                <strong>{{ item.count }}</strong>
+                <em>{{ item.percentage }}%</em>
+              </div>
+            }
+          </div>
+          <div class="privacy-note" role="note">
+            <i class="feather icon-info" aria-hidden="true"></i>
+            <span>La disponibilidad de un correo o teléfono no implica autorización para recibir comunicaciones comerciales.</span>
+          </div>
+        </article>
+      </section>
+
+      <section class="table-card" aria-labelledby="guest-detail-table-title">
+        <div class="table-toolbar">
+          <div>
+            <span class="eyebrow">Listado</span>
+            <h2 id="guest-detail-table-title">Detalle de huéspedes</h2>
+          </div>
+          <div class="table-toolbar__meta">
+            @if (loading) {
+              <span class="refreshing">
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                Actualizando
+              </span>
+            }
+            <span>{{ paginationLabel }}</span>
+            <label for="guest-page-size">Mostrar</label>
+            <select
+              id="guest-page-size"
+              class="form-select form-select-sm"
+              [value]="pageSize"
+              (change)="onPageSizeChange($any($event.target).value)"
+            >
+              @for (size of pageSizes; track size) {
+                <option [value]="size">{{ size }}</option>
+              }
+            </select>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table guest-table align-middle">
+            <thead>
+              <tr>
+                <th>
+                  <button type="button" (click)="sortBy('nombreCompleto')">
+                    Huésped
+                    <span class="material-icons">{{ sortIcon('nombreCompleto') }}</span>
+                  </button>
+                </th>
+                <th>
+                  <button type="button" (click)="sortBy('nacionalidad')">
+                    Nacionalidad
+                    <span class="material-icons">{{ sortIcon('nacionalidad') }}</span>
+                  </button>
+                </th>
+                <th>
+                  <div class="stay-sort-header">
+                    <span>Estancia</span>
+                    <div>
+                      <button
+                        type="button"
+                        (click)="sortBy('fechaIngreso')"
+                        title="Ordenar por ingreso"
+                        aria-label="Ordenar por fecha de ingreso"
+                      >
+                        Ing.
+                        <span class="material-icons">{{ sortIcon('fechaIngreso') }}</span>
+                      </button>
+                      <button
+                        type="button"
+                        (click)="sortBy('fechaSalida')"
+                        title="Ordenar por salida"
+                        aria-label="Ordenar por fecha de salida"
+                      >
+                        Sal.
+                        <span class="material-icons">{{ sortIcon('fechaSalida') }}</span>
+                      </button>
+                      <button type="button" (click)="sortBy('noches')" title="Ordenar por noches" aria-label="Ordenar por número de noches">
+                        Noches
+                        <span class="material-icons">{{ sortIcon('noches') }}</span>
+                      </button>
+                    </div>
+                  </div>
+                </th>
+                <th>
+                  <button type="button" (click)="sortBy('nomAgencia')">
+                    Agencia
+                    <span class="material-icons">{{ sortIcon('nomAgencia') }}</span>
+                  </button>
+                </th>
+                <th>Contacto</th>
+                <th>Estado</th>
+                <th><span class="visually-hidden">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (guest of pagedRows; track trackGuest($index, guest)) {
+                <tr>
+                  <td>
+                    <div class="primary-cell">
+                      <strong>{{ guest.nombreCompleto || 'Huésped sin nombre' }}</strong>
+                      <span>{{ guest.codReserva || 'Sin reserva' }}</span>
+                    </div>
+                  </td>
+                  <td>{{ guest.nacionalidad || 'SIN CLASIFICAR' }}</td>
+                  <td>
+                    <div class="primary-cell">
+                      <strong>{{ formatStay(guest) }}</strong>
+                      <span>{{ nightsLabel(guest.noches) }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="primary-cell">
+                      <strong>{{ guest.nomAgencia || 'Sin agencia' }}</strong>
+                      <span>{{ guest.codAgencia || '' }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="contact-cell">
+                      <span>
+                        {{ guest.email || 'Sin correo' }}
+                        @if (guest.email) {
+                          <button type="button" (click)="copyValue(guest.email, 'Correo')" aria-label="Copiar correo">
+                            <i class="feather icon-copy"></i>
+                          </button>
+                        }
+                      </span>
+                      <span>
+                        {{ guest.telefono || 'Sin teléfono' }}
+                        @if (guest.telefono) {
+                          <button type="button" (click)="copyValue(guest.telefono, 'Teléfono')" aria-label="Copiar teléfono">
+                            <i class="feather icon-copy"></i>
+                          </button>
+                        }
+                      </span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="status-cell">
+                      <span [class]="'contact-badge ' + contactBadgeClass(guest.estadoContacto)">
+                        {{ guest.estadoContacto || 'SIN CONTACTO' }}
+                      </span>
+                      <small>{{ emailTypeLabel(guest.tipoEmail) }}</small>
+                    </div>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="detail-button"
+                      (click)="openDetail(guest, $event)"
+                      [attr.aria-label]="'Ver detalle de ' + guest.nombreCompleto"
+                    >
+                      <i class="feather icon-eye" aria-hidden="true"></i>
+                      <span>Ver detalle</span>
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <footer class="pagination-bar">
+          <button type="button" class="btn btn-light btn-sm" (click)="previousPage()" [disabled]="page <= 1" aria-label="Página anterior">
+            <span class="material-icons">chevron_left</span>
+          </button>
+          <span>Página {{ page }} de {{ totalPages }}</span>
+          <button
+            type="button"
+            class="btn btn-light btn-sm"
+            (click)="nextPage()"
+            [disabled]="page >= totalPages"
+            aria-label="Página siguiente"
+          >
+            <span class="material-icons">chevron_right</span>
+          </button>
+        </footer>
+      </section>
+    }
+  }
+
+  @if (detailOpen && selectedGuest) {
+    <div class="drawer-backdrop" (click)="closeDetail()" aria-hidden="true"></div>
+    <aside class="guest-drawer" role="dialog" aria-modal="true" aria-labelledby="guest-drawer-title">
+      <header>
+        <div>
+          <span class="eyebrow">Detalle del huésped</span>
+          <h2 id="guest-drawer-title">{{ selectedGuest.nombreCompleto || 'Huésped sin nombre' }}</h2>
+          <p>{{ selectedGuest.codReserva }} · Habitación {{ selectedGuest.numHabitacion || '—' }}</p>
+        </div>
+        <button type="button" class="drawer-close" (click)="closeDetail()" aria-label="Cerrar detalle">
+          <span class="material-icons">close</span>
+        </button>
+      </header>
+      <div class="drawer-content">
+        <section class="drawer-section">
+          <h3>Identidad</h3>
+          <dl class="detail-grid">
+            <div>
+              <dt>Nombre completo</dt>
+              <dd>{{ selectedGuest.nombreCompleto || 'Sin nombre' }}</dd>
+            </div>
+            <div>
+              <dt>Nacionalidad</dt>
+              <dd>{{ selectedGuest.nacionalidad || 'SIN CLASIFICAR' }}</dd>
+            </div>
+            <div>
+              <dt>Tipo de pax</dt>
+              <dd>{{ selectedGuest.tipoPax || 'Sin clasificar' }}</dd>
+            </div>
+            <div>
+              <dt>Tipo de documento</dt>
+              <dd>{{ selectedGuest.tipoDocumento || 'Sin documento' }}</dd>
+            </div>
+            <div>
+              <dt>Número de documento</dt>
+              <dd>{{ selectedGuest.numeroDocumento || 'Sin documento' }}</dd>
+            </div>
+          </dl>
+        </section>
+        <section class="drawer-section">
+          <h3>Información de contacto</h3>
+          <dl class="detail-grid">
+            <div>
+              <dt>Correo</dt>
+              <dd>
+                {{ selectedGuest.email || 'Sin correo' }}
+                @if (selectedGuest.email) {
+                  <button type="button" class="copy-link" (click)="copyValue(selectedGuest.email, 'Correo')">
+                    <i class="feather icon-copy"></i>
+                    Copiar
+                  </button>
+                }
+              </dd>
+            </div>
+            <div>
+              <dt>Tipo de correo</dt>
+              <dd>{{ emailTypeLabel(selectedGuest.tipoEmail) }}</dd>
+            </div>
+            <div>
+              <dt>Teléfono</dt>
+              <dd>
+                {{ selectedGuest.telefono || 'Sin teléfono' }}
+                @if (selectedGuest.telefono) {
+                  <button type="button" class="copy-link" (click)="copyValue(selectedGuest.telefono, 'Teléfono')">
+                    <i class="feather icon-copy"></i>
+                    Copiar
+                  </button>
+                }
+              </dd>
+            </div>
+            <div>
+              <dt>Estado</dt>
+              <dd>
+                <span [class]="'contact-badge ' + contactBadgeClass(selectedGuest.estadoContacto)">
+                  {{ selectedGuest.estadoContacto || 'SIN CONTACTO' }}
+                </span>
+              </dd>
+            </div>
+          </dl>
+        </section>
+        <section class="drawer-section">
+          <h3>Estancia</h3>
+          <dl class="detail-grid">
+            <div>
+              <dt>Reserva</dt>
+              <dd>{{ selectedGuest.codReserva || 'Sin reserva' }}</dd>
+            </div>
+            <div>
+              <dt>Habitación</dt>
+              <dd>{{ selectedGuest.numHabitacion || 'Sin asignar' }}</dd>
+            </div>
+            <div>
+              <dt>Ingreso</dt>
+              <dd>{{ formatDate(selectedGuest.fechaIngreso) }}</dd>
+            </div>
+            <div>
+              <dt>Salida</dt>
+              <dd>{{ formatDate(selectedGuest.fechaSalida) }}</dd>
+            </div>
+            <div>
+              <dt>Noches</dt>
+              <dd>{{ nightsLabel(selectedGuest.noches) }}</dd>
+            </div>
+            <div>
+              <dt>Agencia</dt>
+              <dd>{{ selectedGuest.nomAgencia || 'Sin agencia' }}</dd>
+            </div>
+            <div>
+              <dt>Origen</dt>
+              <dd>{{ directReservationLabel(selectedGuest.esReservaDirecta) }}</dd>
+            </div>
+            <div>
+              <dt>Tarifa</dt>
+              <dd>{{ selectedGuest.codTarifa || 'Sin tarifa' }}</dd>
+            </div>
+            <div>
+              <dt>Plan</dt>
+              <dd>{{ selectedGuest.codPlan || 'Sin plan' }}</dd>
+            </div>
+            <div>
+              <dt>Estado de reserva</dt>
+              <dd>{{ selectedGuest.estadoReserva || 'Sin estado' }}</dd>
+            </div>
+          </dl>
+        </section>
+        @if (matchingStays.length > 1) {
+          <section class="drawer-section">
+            <h3>Estancias encontradas en el periodo</h3>
+            <div class="matching-stays">
+              @for (stay of matchingStays; track trackGuest($index, stay)) {
+                <article>
+                  <strong>{{ stay.codReserva }}</strong>
+                  <span>{{ formatStay(stay) }} · {{ nightsLabel(stay.noches) }}</span>
+                  <small>{{ stay.nomAgencia || 'Sin agencia' }}</small>
+                </article>
+              }
+            </div>
+          </section>
+        }
+        <details class="technical-details">
+          <summary>Información técnica</summary>
+          <dl class="detail-grid">
+            <div>
+              <dt>Rooming ID</dt>
+              <dd>{{ selectedGuest.idRooming }}</dd>
+            </div>
+            <div>
+              <dt>Operador</dt>
+              <dd>{{ selectedGuest.operadorReserva || 'Sin operador' }}</dd>
+            </div>
+            <div>
+              <dt>Registros consolidados</dt>
+              <dd>{{ selectedGuest.registrosMismaEstancia }}</dd>
+            </div>
+            <div>
+              <dt>Fue consolidado</dt>
+              <dd>{{ consolidatedLabel(selectedGuest.fueConsolidado) }}</dd>
+            </div>
+          </dl>
+        </details>
+      </div>
+    </aside>
+  }
+</section>

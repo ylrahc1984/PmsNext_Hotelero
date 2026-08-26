@@ -798,6 +798,28 @@ const routes: Routes = [
     ]
   },
   {
+    canActivate: [AuthGuard],
+    canActivateChild: [AuthGuard],
+    path: 'clientes-huespedes',
+    component: AdminComponent,
+    children: [
+      {
+        path: 'analisis-huespedes',
+        loadComponent: () =>
+          import('./modules/clientes-huespedes/analisis-huespedes/analisis-huespedes.component').then(
+            (component) => component.AnalisisHuespedesComponent
+          ),
+        data: {
+          breadcrumbTrail: [
+            { title: 'Inicio', url: '/dashboard' },
+            { title: 'Clientes y Huéspedes' },
+            { title: 'Análisis de Huéspedes' }
+          ]
+        }
+      }
+    ]
+  },
+  {
     path: 'cuentas-cobrar',
     redirectTo: 'finanzas/cuentas-cobrar',
     pathMatch: 'full'
