@@ -14,7 +14,7 @@ import {
   Validators
 } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { catchError, debounceTime, distinctUntilChanged, finalize, firstValueFrom, forkJoin, map, merge, of, switchMap } from 'rxjs';
+import { Subject, catchError, debounceTime, distinctUntilChanged, finalize, firstValueFrom, forkJoin, map, merge, of, startWith, switchMap } from 'rxjs';
 import Swal from 'sweetalert2';
 
 import { AuthService } from 'src/app/core/services/auth.service';
@@ -37,11 +37,30 @@ import {
   ReservaServicioItem
 } from '../interfaces/reserva-habitacion.interface';
 import { ReservaHabitacionMapper } from '../services/reserva-habitacion.mapper';
+import { ReservaContactoMapper } from '../services/reserva-contacto.mapper';
+import {
+  ApiResponse,
+  GuardarReservaTagsBatchResponse,
+  ReservaTagAsignado,
+  ReservaTagCatalogo,
+  ReservaTagGrupo,
+  ReservaTagSeleccionado
+} from '../models/reserva-tag.model';
+import {
+  GuardarReservaContactoRequest,
+  ReservaContactoApiResponse
+} from '../models/reserva-contacto.model';
 import {
   ReservaDisponibilidadCategoriaFecha,
   ReservaHabitacionService,
   ReservaTarifaAlimento
 } from '../services/reserva-habitacion.service';
+import { ReservaContactoService } from '../services/reserva-contacto.service';
+import { ReservaTagsService } from '../services/reserva-tags.service';
+
+function trimmedRequiredValidator(control: AbstractControl<string>): ValidationErrors | null {
+  return control.value.trim().length > 0 ? null : { whitespace: true };
+}
 
 interface ReservaHeaderForm {
   codReserva      : FormControl<string>;
@@ -57,6 +76,9 @@ interface ReservaHeaderForm {
   totNoches       : FormControl<number>;
   totDias         : FormControl<number>;
   descripcion     : FormControl<string>;
+  contactoNombre  : FormControl<string>;
+  contactoEmail   : FormControl<string>;
+  contactoTelefono: FormControl<string>;
   tCambio         : FormControl<number>;
   folio           : FormControl<string>;
   estado          : FormControl<string>;
@@ -184,10 +206,12 @@ export class ReservaHospedajeComponent implements OnInit {
   private readonly operationalDateService      = inject(OperationalDateService);
   private readonly tipoCambioService           = inject(TipoCambioService);
   private readonly detalleTarifaService        = inject(DetalleTarifaService);
+  private readonly reservaContactoService      = inject(ReservaContactoService);
+  private readonly reservaTagsService          = inject(ReservaTagsService);
   private readonly router                      = inject(Router);
   private readonly route                       = inject(ActivatedRoute);
   private readonly destroyRef                  = inject(DestroyRef);
-  private readonly apiBaseUrl                  = (environment.apiUrl || 'http://localhost:5000/api').toString().replace(/\/+$/, '');
+  private readonly apiBaseUrl                  = (environment.apiUrl ?? '').toString().replace(/\/+$/, '');
   private readonly categoriaHabitacionUrl      = `${this.apiBaseUrl}/categoriahabitacion`;
   private readonly draftStorageKey             = 'pmsnext.reserva-hospedaje.draft.v1';
 
@@ -217,6 +241,23 @@ export class ReservaHospedajeComponent implements OnInit {
   readonly tarifaSearchControl                = this.fb.control('');
   readonly agencyModalSearchControl           = this.fb.control('');
   readonly tarifaModalSearchControl           = this.fb.control('');
+  readonly tagSearchControl                    = this.fb.control('');
+  readonly showTagsModal                       = signal(false);
+  readonly showAllTags                         = signal(false);
+  readonly loadingTagCatalog                   = signal(false);
+  readonly loadingAssignedTags                = signal(false);
+  readonly savingTags                         = signal(false);
+  readonly tagCatalogError                    = signal('');
+  readonly assignedTagsError                  = signal('');
+  readonly tagSelectionMessage                = signal('');
+  readonly createdReservationPendingTags      = signal(false);
+  readonly createdReservationCode             = signal<string | null>(null);
+  readonly tagSaveError                       = signal<string | null>(null);
+  readonly loadingContact                     = signal(false);
+  readonly savingContact                      = signal(false);
+  readonly contactLoadError                   = signal('');
+  readonly reservationPendingContact          = signal(false);
+  readonly contactSaveError                   = signal<string | null>(null);
 
   readonly reservaForm: FormGroup<ReservaHeaderForm> = this.fb.group({
     codReserva            : this.fb.control('AUTO'),
@@ -232,6 +273,15 @@ export class ReservaHospedajeComponent implements OnInit {
     totNoches             : this.fb.control(1),
     totDias               : this.fb.control(2),
     descripcion           : this.fb.control(''),
+    contactoNombre        : this.fb.control('', {
+      validators: [Validators.required, trimmedRequiredValidator, Validators.maxLength(150)]
+    }),
+    contactoEmail         : this.fb.control('', {
+      validators: [Validators.email, Validators.maxLength(254)]
+    }),
+    contactoTelefono      : this.fb.control('', {
+      validators: [Validators.maxLength(30), Validators.pattern(/^[0-9+()\-\s]*$/)]
+    }),
     tCambio               : this.fb.control(0, { validators: [Validators.required, Validators.min(0.01)] }),
     folio                 : this.fb.control(''),
     estado                : this.fb.control('ABI'),
@@ -247,18 +297,18 @@ export class ReservaHospedajeComponent implements OnInit {
     servicios             : this.fb.array<FormGroup<ServicioForm>>([])
   }, { validators: [this.reservationDatesValidator()] });
 
-  readonly habitacionForm: FormGroup<HabitacionForm> = this.createHabitacionGroup();
-  readonly inclusionForm: FormGroup<InclusionForm> = this.createInclusionGroup();
-  readonly servicioForm: FormGroup<ServicioForm> = this.createServicioGroup();
+  readonly habitacionForm : FormGroup<HabitacionForm>  = this.createHabitacionGroup();
+  readonly inclusionForm  : FormGroup<InclusionForm>   = this.createInclusionGroup();
+  readonly servicioForm   : FormGroup<ServicioForm>    = this.createServicioGroup();
 
-  planes                  : WalkInOption[] = [];
-  roomCategories          : CategoriaHabitacionOption[] = [];
-  roomTypes               : TipoHabitacionOption[] = [];
-  agenciaSuggestions      : WalkInAgenciaOption[] = [];
-  tarifaSuggestions       : WalkInTarifaOption[] = [];
-  agencyModalAgencies     : WalkInAgenciaOption[] = [];
-  tarifaModalTarifas      : WalkInTarifaOption[] = [];
-  private allTarifas      : WalkInTarifaOption[] = [];
+  planes                  : WalkInOption[]                = [];
+  roomCategories          : CategoriaHabitacionOption[]   = [];
+  roomTypes               : TipoHabitacionOption[]        = [];
+  agenciaSuggestions      : WalkInAgenciaOption[]         = [];
+  tarifaSuggestions       : WalkInTarifaOption[]          = [];
+  agencyModalAgencies     : WalkInAgenciaOption[]         = [];
+  tarifaModalTarifas      : WalkInTarifaOption[]          = [];
+  private allTarifas      : WalkInTarifaOption[]          = [];
 
   isCatalogLoading                    = false;
   isRoomTypesLoading                  = false;
@@ -291,22 +341,31 @@ export class ReservaHospedajeComponent implements OnInit {
   private originalMoneda              = '';
   private exchangeRateRequestId       = 0;
   private roomRateRequestId           = 0;
+  private contactLoadRequestId        = 0;
   private resolvedRoomRateKey         = '';
   private returnUrl                   = '/reservas/consulta-reservas';
+  tagCatalog                          : ReservaTagCatalogo[] = [];
+  persistedTags                      : ReservaTagAsignado[] = [];
+  newTags                            : ReservaTagSeleccionado[] = [];
+  modalTagSelection                  : ReservaTagSeleccionado[] = [];
+  removingTagIds                     = new Set<number>();
+  private readonly tagSearchRetry    = new Subject<string>();
 
   ngOnInit(): void {
-    this.returnUrl = this.resolveReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'));
-    const codReserva = this.route.snapshot.paramMap.get('codReserva')?.trim() ?? '';
-    this.editCodReserva = codReserva;
+    this.returnUrl        = this.resolveReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'));
+    const codReserva      = this.route.snapshot.paramMap.get('codReserva')?.trim() ?? '';
+    this.editCodReserva   = codReserva;
     this.isEditMode.set(!!codReserva);
     if (codReserva) {
       this.draftRestorePending = false;
       this.loadReservaForEdit(codReserva);
+      this.loadAssignedTags(codReserva);
     }
 
     this.loadCatalogs();
     this.loadOperationalDate();
     this.bindCatalogSearch();
+    this.bindTagSearch();
     if (!this.isEditMode()) {
       // Una reserva nueva siempre debe comenzar limpia, incluso si existe un
       // borrador creado por una versión anterior de esta pantalla.
@@ -373,11 +432,11 @@ export class ReservaHospedajeComponent implements OnInit {
     try {
       const availability = await firstValueFrom(
         this.service.consultarDisponibilidadCategoria({
-          proceso       : 1,
-          fechaIni      : this.formatDate(this.parseDateValue(this.reservaForm.controls.fecIngreso.value)!),
-          fechaSal      : this.formatDate(this.parseDateValue(this.reservaForm.controls.fecSalida.value)!),
-          categoria     : roomDraft.categoria.trim(),
-          cantHab       : requestedRooms
+          proceso    : 1,
+          fechaIni   : this.formatDate(this.parseDateValue(this.reservaForm.controls.fecIngreso.value)!),
+          fechaSal   : this.formatDate(this.parseDateValue(this.reservaForm.controls.fecSalida.value)!),
+          categoria  : roomDraft.categoria.trim(),
+          cantHab    : requestedRooms
         })
       );
 
@@ -671,11 +730,11 @@ export class ReservaHospedajeComponent implements OnInit {
   }
 
   loadAgencyModalPage(page: number): void {
-    const normalizedPage = Math.max(page, 1);
-    const searchTerm = this.agencyModalSearchControl.value.trim();
-    const pageSize = searchTerm.length >= 2 ? 50 : 10;
+    const normalizedPage    = Math.max(page, 1);
+    const searchTerm        = this.agencyModalSearchControl.value.trim();
+    const pageSize          = searchTerm.length >= 2 ? 50 : 10;
     this.agencyModalLoading = true;
-    this.agencyModalError = '';
+    this.agencyModalError   = '';
 
     const request =
       searchTerm.length >= 2
@@ -691,17 +750,17 @@ export class ReservaHospedajeComponent implements OnInit {
       )
       .subscribe({
         next: (response: WalkInAgenciaPage) => {
-          this.agencyModalAgencies = response.datos;
-          this.agencyModalPage = response.paginaActual || normalizedPage;
-          this.agencyModalPageSize = response.tamanoPagina || pageSize;
-          this.agencyModalTotalRecords = response.totalRegistros || response.datos.length;
-          this.agencyModalTotalPages = response.totalPaginas || (response.datos.length ? 1 : 0);
+          this.agencyModalAgencies      = response.datos;
+          this.agencyModalPage          = response.paginaActual || normalizedPage;
+          this.agencyModalPageSize      = response.tamanoPagina || pageSize;
+          this.agencyModalTotalRecords  = response.totalRegistros || response.datos.length;
+          this.agencyModalTotalPages    = response.totalPaginas || (response.datos.length ? 1 : 0);
         },
         error: () => {
-          this.agencyModalAgencies = [];
-          this.agencyModalTotalRecords = 0;
-          this.agencyModalTotalPages = 0;
-          this.agencyModalError = 'No se pudo cargar la lista de agencias.';
+          this.agencyModalAgencies      = [];
+          this.agencyModalTotalRecords  = 0;
+          this.agencyModalTotalPages    = 0;
+          this.agencyModalError         = 'No se pudo cargar la lista de agencias.';
         }
       });
   }
@@ -780,6 +839,21 @@ export class ReservaHospedajeComponent implements OnInit {
   }
 
   submitButtonText(): string {
+    if (this.reservationPendingContact()) {
+      return this.savingContact() ? 'Guardando contacto...' : 'Reintentar contacto';
+    }
+    if (this.createdReservationPendingTags()) {
+      return this.savingTags() ? 'Guardando etiquetas...' : 'Reintentar etiquetas';
+    }
+    if (this.savingContact()) {
+      return 'Guardando contacto...';
+    }
+    if (this.savingTags()) {
+      return 'Guardando etiquetas...';
+    }
+    if (this.saving()) {
+      return this.isEditMode() ? 'Actualizando reserva...' : 'Guardando reserva...';
+    }
     return this.isEditMode() ? 'Actualizar reserva' : 'Confirmar reserva';
   }
 
@@ -791,9 +865,31 @@ export class ReservaHospedajeComponent implements OnInit {
     void this.router.navigateByUrl(this.returnUrl);
   }
 
-  limpiarFormulario(): void {
+  async limpiarFormulario(): Promise<void> {
+    if (this.reservationPendingContact() || this.createdReservationPendingTags()) {
+      const code = this.createdReservationCode() ?? this.editCodReserva;
+      const pendingDescription = this.reservationPendingContact()
+        ? 'el contacto pendiente no se guardará desde este formulario'
+        : 'las etiquetas pendientes no se guardarán desde este formulario';
+      const result = await Swal.fire({
+        title: 'La reserva ya fue guardada',
+        text: `La reserva ${code} ya existe. Si ${this.isEditMode() ? 'recarga' : 'limpia'} la pantalla, ${pendingDescription}.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: this.isEditMode() ? 'Recargar de todos modos' : 'Limpiar de todos modos',
+        cancelButtonText: 'Conservar y reintentar',
+        confirmButtonColor: '#b7791f'
+      });
+      if (!result.isConfirmed) {
+        return;
+      }
+    }
+
     if (this.isEditMode()) {
+      this.resetReservationPostSaveState();
       this.loadReservaForEdit(this.editCodReserva);
+      this.loadAssignedTags(this.editCodReserva);
+      this.resetTagSelector();
       return;
     }
 
@@ -808,6 +904,9 @@ export class ReservaHospedajeComponent implements OnInit {
       codPlan           : '',
       ...this.defaultReservationDates(),
       descripcion       : '',
+      contactoNombre    : '',
+      contactoEmail     : '',
+      contactoTelefono  : '',
       tCambio           : 0,
       folio             : '',
       estado            : 'ABI',
@@ -856,6 +955,13 @@ export class ReservaHospedajeComponent implements OnInit {
     this.reservaForm.markAsUntouched();
     this.habitacionForm.markAsPristine();
     this.habitacionForm.markAsUntouched();
+    this.persistedTags = [];
+    this.newTags = [];
+    this.resetReservationPostSaveState();
+    this.contactLoadError.set('');
+    this.contactLoadRequestId++;
+    this.loadingContact.set(false);
+    this.resetTagSelector();
   }
 
   private loadReservaForEdit(codReserva: string): void {
@@ -873,7 +979,10 @@ export class ReservaHospedajeComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
-        next: (detalle) => this.applyReservaDetalle(detalle),
+        next: (detalle) => {
+          this.applyReservaDetalle(detalle);
+          this.loadReservationContact(codReserva, String(detalle.descripcion ?? '').trim());
+        },
         error: (error) => {
           console.error('No se pudo cargar el detalle de la reserva.', error);
           this.detailError.set('No se pudo cargar el detalle de la reserva.');
@@ -883,14 +992,14 @@ export class ReservaHospedajeComponent implements OnInit {
   }
 
   private applyReservaDetalle(detalle: ReservaHabitacionDetalle): void {
-    const formValue = ReservaHabitacionMapper.fromDetalle(detalle);
-    const cplState = ReservaHabitacionMapper.resolveCplState(detalle);
+    const formValue                 = ReservaHabitacionMapper.fromDetalle(detalle);
+    const cplState                  = ReservaHabitacionMapper.resolveCplState(detalle);
     this.cplInconsistent.set(cplState.inconsistent);
-    this.editCodReserva = formValue.codReserva || this.editCodReserva;
-    this.originalInventorySnapshot = this.buildInventorySnapshot(formValue);
-    this.originalServerFingerprint = this.buildServerFingerprint(detalle);
-    this.originalTarifa = formValue.codTarifa.trim().toUpperCase();
-    this.originalMoneda = formValue.moneda.trim().toUpperCase();
+    this.editCodReserva             = formValue.codReserva || this.editCodReserva;
+    this.originalInventorySnapshot  = this.buildInventorySnapshot(formValue);
+    this.originalServerFingerprint  = this.buildServerFingerprint(detalle);
+    this.originalTarifa             = formValue.codTarifa.trim().toUpperCase();
+    this.originalMoneda             = formValue.moneda.trim().toUpperCase();
     this.reservationLocked.set(this.isLockedReservationState(formValue.estado));
 
     this.habitaciones.clear();
@@ -922,6 +1031,696 @@ export class ReservaHospedajeComponent implements OnInit {
     this.refreshMealPlanForCurrentSelection(true);
     this.syncTotal();
     this.reservaForm.updateValueAndValidity({ emitEvent: false });
+  }
+
+  retryLoadContact(): void {
+    const code = this.editCodReserva || this.reservaForm.controls.codReserva.value.trim();
+    if (code) {
+      this.loadReservationContact(code, this.reservaForm.controls.descripcion.value.trim());
+    }
+  }
+
+  private loadReservationContact(codReserva: string, legacyDescription: string): void {
+    const requestId = ++this.contactLoadRequestId;
+    this.loadingContact.set(true);
+    this.contactLoadError.set('');
+
+    this.reservaContactoService.obtenerContactoReserva(codReserva)
+      .pipe(
+        finalize(() => {
+          if (requestId === this.contactLoadRequestId) {
+            this.loadingContact.set(false);
+          }
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (response) => {
+          if (requestId !== this.contactLoadRequestId) {
+            return;
+          }
+
+          if (!this.isSuccessfulContactResponse(response)) {
+            if (this.isContactNotFoundMessage(response?.message)) {
+              this.applyLegacyContactFallback(legacyDescription);
+              return;
+            }
+            this.applyLegacyContactFallback(legacyDescription);
+            this.contactLoadError.set(this.cleanApiMessage(response?.message) || 'No se pudo cargar el contacto de la reserva.');
+            return;
+          }
+
+          if (!response.data) {
+            this.applyLegacyContactFallback(legacyDescription);
+            return;
+          }
+
+          this.reservaForm.patchValue({
+            contactoNombre   : String(response.data.nombre ?? '').trim(),
+            contactoEmail    : String(response.data.email ?? '').trim(),
+            contactoTelefono : String(response.data.telefono ?? '').trim()
+          }, { emitEvent: false });
+          this.reservaForm.controls.contactoNombre.markAsPristine();
+          this.reservaForm.controls.contactoEmail.markAsPristine();
+          this.reservaForm.controls.contactoTelefono.markAsPristine();
+        },
+        error: (error: unknown) => {
+          if (requestId !== this.contactLoadRequestId) {
+            return;
+          }
+          this.applyLegacyContactFallback(legacyDescription);
+          if (!this.isContactNotFoundError(error)) {
+            this.contactLoadError.set(this.getReservaErrorMessage(error, 'No se pudo cargar el contacto de la reserva.'));
+          }
+        }
+      });
+  }
+
+  private applyLegacyContactFallback(legacyDescription: string): void {
+    if (!this.reservaForm.controls.contactoNombre.value.trim() && legacyDescription) {
+      this.reservaForm.controls.contactoNombre.setValue(legacyDescription, { emitEvent: false });
+      this.reservaForm.controls.contactoNombre.markAsPristine();
+    }
+  }
+
+  openTagsModal(): void {
+    if (this.loadingTagCatalog() || this.savingTags() || this.reservationLocked()) {
+      return;
+    }
+
+    this.modalTagSelection = this.isEditMode()
+      ? []
+      : this.newTags.map((selection) => ({ ...selection }));
+    this.tagSelectionMessage.set('');
+    this.showTagsModal.set(true);
+  }
+
+  closeTagsModal(): void {
+    if (this.savingTags()) {
+      return;
+    }
+    this.showTagsModal.set(false);
+    this.tagSelectionMessage.set('');
+  }
+
+  @HostListener('document:keydown.escape')
+  closeTagModalOnEscape(): void {
+    if (this.showTagsModal()) {
+      this.closeTagsModal();
+    }
+  }
+
+  get groupedTagCatalog(): ReservaTagGrupo[] {
+    const groups = new Map<number, ReservaTagGrupo>();
+    for (const tag of this.tagCatalog) {
+      const existing = groups.get(tag.idCategoria);
+      if (existing) {
+        existing.tags.push(tag);
+      } else {
+        groups.set(tag.idCategoria, {
+          idCategoria: tag.idCategoria,
+          categoria: tag.categoria,
+          descripcionCategoria: tag.descripcionCategoria,
+          ordenCategoria: tag.ordenCategoria,
+          tags: [tag]
+        });
+      }
+    }
+
+    return [...groups.values()]
+      .sort((left, right) => left.ordenCategoria - right.ordenCategoria || left.categoria.localeCompare(right.categoria))
+      .map((group) => ({ ...group, tags: [...group.tags].sort((left, right) => this.compareTags(left, right)) }));
+  }
+
+  get allReservationTags(): Array<ReservaTagCatalogo | ReservaTagAsignado> {
+    return [
+      ...this.persistedTags,
+      ...this.newTags.filter((selection) => !this.persistedTags.some((tag) => tag.idTag === selection.tag.idTag)).map((selection) => selection.tag)
+    ].sort((left, right) => this.compareTags(left, right));
+  }
+
+  get visibleReservationTags(): Array<ReservaTagCatalogo | ReservaTagAsignado> {
+    return this.showAllTags() ? this.allReservationTags : this.allReservationTags.slice(0, 4);
+  }
+
+  get hiddenTagCount(): number {
+    return Math.max(this.allReservationTags.length - 4, 0);
+  }
+
+  get modalSelectionCount(): number {
+    return this.modalTagSelection.filter((selection) => !this.isTagAssigned(selection.tag.idTag)).length;
+  }
+
+  tagConfirmationText(): string {
+    const count = this.modalSelectionCount;
+    return count === 1 ? 'Agregar etiqueta' : `Agregar ${count} etiquetas`;
+  }
+
+  isTagAssigned(idTag: number): boolean {
+    return this.persistedTags.some((tag) => tag.idTag === idTag);
+  }
+
+  isTagSelected(idTag: number): boolean {
+    return this.modalTagSelection.some((selection) => selection.tag.idTag === idTag) || this.isTagAssigned(idTag);
+  }
+
+  isTagAutomatic(idTag: number): boolean {
+    return this.persistedTags.some((tag) => tag.idTag === idTag && tag.tipoAsignacion.toUpperCase() === 'AUTOMATICO');
+  }
+
+  persistedTagConflict(tag: ReservaTagCatalogo): ReservaTagAsignado | null {
+    if (!tag.grupoExclusion) {
+      return null;
+    }
+    const group = tag.grupoExclusion.trim().toUpperCase();
+    return this.persistedTags.find(
+      (assigned) => assigned.idTag !== tag.idTag && assigned.grupoExclusion?.trim().toUpperCase() === group
+    ) ?? null;
+  }
+
+  toggleTagSelection(tag: ReservaTagCatalogo): void {
+    if (this.isTagAssigned(tag.idTag)) {
+      return;
+    }
+
+    const conflict = this.persistedTagConflict(tag);
+    if (conflict) {
+      this.tagSelectionMessage.set(`Retire primero la etiqueta “${conflict.nombre}”, ya que es incompatible con “${tag.nombre}”.`);
+      return;
+    }
+
+    const selectedIndex = this.modalTagSelection.findIndex((selection) => selection.tag.idTag === tag.idTag);
+    if (selectedIndex >= 0) {
+      this.modalTagSelection = this.modalTagSelection.filter((selection) => selection.tag.idTag !== tag.idTag);
+      this.tagSelectionMessage.set('');
+      return;
+    }
+
+    if (tag.grupoExclusion) {
+      const exclusionGroup = tag.grupoExclusion.trim().toUpperCase();
+      const replaced = this.modalTagSelection.find(
+        (selection) => selection.tag.idTag !== tag.idTag && selection.tag.grupoExclusion?.trim().toUpperCase() === exclusionGroup
+      );
+      if (replaced) {
+        this.modalTagSelection = this.modalTagSelection.filter(
+          (selection) => selection.tag.grupoExclusion?.trim().toUpperCase() !== exclusionGroup
+        );
+        this.tagSelectionMessage.set(`“${replaced.tag.nombre}” fue reemplazada por “${tag.nombre}”.`);
+      } else {
+        this.tagSelectionMessage.set('');
+      }
+    } else {
+      this.tagSelectionMessage.set('');
+    }
+
+    this.modalTagSelection = [...this.modalTagSelection, { tag, observacion: null }];
+  }
+
+  updateTagObservation(idTag: number, event: Event): void {
+    const value = (event.target as HTMLTextAreaElement).value.slice(0, 200);
+    this.modalTagSelection = this.modalTagSelection.map((selection) =>
+      selection.tag.idTag === idTag ? { ...selection, observacion: value } : selection
+    );
+  }
+
+  tagObservation(idTag: number): string {
+    return this.modalTagSelection.find((selection) => selection.tag.idTag === idTag)?.observacion ?? '';
+  }
+
+  async confirmTagSelection(): Promise<void> {
+    const selections = this.normalizeTagSelections(this.modalTagSelection)
+      .filter((selection) => !this.isTagAssigned(selection.tag.idTag));
+
+    if (!this.isEditMode()) {
+      this.newTags = selections;
+      this.showTagsModal.set(false);
+      return;
+    }
+
+    if (!selections.length) {
+      this.closeTagsModal();
+      return;
+    }
+
+    await this.saveNewTagsForExistingReservation(this.editCodReserva, selections);
+  }
+
+  removeLocalTag(idTag: number): void {
+    this.newTags = this.newTags.filter((selection) => selection.tag.idTag !== idTag);
+    this.modalTagSelection = this.modalTagSelection.filter((selection) => selection.tag.idTag !== idTag);
+  }
+
+  async removePersistedTag(tag: ReservaTagAsignado): Promise<void> {
+    if (tag.tipoAsignacion.toUpperCase() !== 'MANUAL' || this.removingTagIds.has(tag.idTag) || this.reservationLocked()) {
+      return;
+    }
+
+    const result = await Swal.fire<string>({
+      title: 'Retirar etiqueta',
+      text: `¿Desea retirar la etiqueta “${tag.nombre}” de esta reserva? Esta acción quedará registrada en el historial.`,
+      input: 'text',
+      inputValue: 'Retirada desde la edición de la reserva.',
+      inputLabel: 'Motivo (opcional)',
+      inputAttributes: { maxlength: '200' },
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, retirar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#dc3545'
+    });
+    if (!result.isConfirmed) {
+      return;
+    }
+
+    const motivo = String(result.value ?? '').trim() || 'Retirada desde la edición de la reserva.';
+    this.removingTagIds.add(tag.idTag);
+    try {
+      const response = await firstValueFrom(this.reservaTagsService.retirarTag(this.editCodReserva, tag.idTag, motivo));
+      this.ensureSuccessfulTagResponse(response, 'No fue posible retirar la etiqueta.');
+      this.persistedTags = this.persistedTags.filter((assigned) => assigned.idTag !== tag.idTag);
+      this.toast.success(`La etiqueta “${tag.nombre}” fue retirada.`, 4500, 'Etiquetas');
+    } catch (error) {
+      this.toast.error(this.getReservaErrorMessage(error), 6000, 'No se pudo retirar la etiqueta');
+    } finally {
+      this.removingTagIds.delete(tag.idTag);
+    }
+  }
+
+  canRemoveTag(tag: ReservaTagCatalogo | ReservaTagAsignado): boolean {
+    if (!('tipoAsignacion' in tag)) {
+      return true;
+    }
+    return tag.tipoAsignacion.toUpperCase() === 'MANUAL' && !this.reservationLocked();
+  }
+
+  tagIsPersisted(tag: ReservaTagCatalogo | ReservaTagAsignado): tag is ReservaTagAsignado {
+    return 'tipoAsignacion' in tag;
+  }
+
+  tagIsAutomatic(tag: ReservaTagCatalogo | ReservaTagAsignado): boolean {
+    return this.tagIsPersisted(tag) && tag.tipoAsignacion.toUpperCase() === 'AUTOMATICO';
+  }
+
+  tagAccessibleTitle(tag: ReservaTagCatalogo | ReservaTagAsignado): string {
+    const details = [tag.descripcion];
+    if (tag.esAlerta) {
+      details.push('Etiqueta de alerta.');
+    }
+    if (this.tagIsAutomatic(tag)) {
+      details.push('Etiqueta administrada automáticamente por el sistema.');
+    }
+    return details.filter(Boolean).join(' ');
+  }
+
+  removeReservationTag(tag: ReservaTagCatalogo | ReservaTagAsignado): void {
+    if ('tipoAsignacion' in tag) {
+      void this.removePersistedTag(tag);
+    } else {
+      this.removeLocalTag(tag.idTag);
+    }
+  }
+
+  isRemovingTag(idTag: number): boolean {
+    return this.removingTagIds.has(idTag);
+  }
+
+  safeTagColor(color: string | null | undefined): string {
+    return /^#[0-9A-Fa-f]{6}$/.test(color ?? '') ? color! : '#E5E7EB';
+  }
+
+  tagIconClass(icon: string | null | undefined): string {
+    const icons: Record<string, string> = {
+      crown: 'bi-crown',
+      'panels-top-left': 'bi-grid-1x2',
+      alert: 'bi-exclamation-triangle',
+      star: 'bi-star',
+      heart: 'bi-heart',
+      clock: 'bi-clock',
+      accessibility: 'bi-universal-access',
+      tag: 'bi-tag'
+    };
+    return icons[(icon ?? '').toLowerCase()] ?? 'bi-tag';
+  }
+
+  retryTagCatalog(): void {
+    this.tagSearchRetry.next(this.tagSearchControl.value.trim());
+  }
+
+  retryAssignedTags(): void {
+    const code = this.editCodReserva || this.createdReservationCode() || '';
+    if (code) {
+      this.loadAssignedTags(code);
+    }
+  }
+
+  async retryPendingContact(): Promise<void> {
+    const code = this.createdReservationCode() || this.editCodReserva.trim();
+    if (!this.reservationPendingContact() || this.savingContact()) {
+      return;
+    }
+    if (!code) {
+      this.toast.warning(
+        'La reserva ya fue guardada, pero el servidor no devolvió el código necesario para reintentar el contacto.',
+        7000,
+        'Contacto pendiente'
+      );
+      return;
+    }
+    if (!this.validateContactFields()) {
+      return;
+    }
+
+    void Swal.fire({
+      title: 'Guardando contacto',
+      text: `Reintentando el contacto de la reserva ${code}...`,
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    try {
+      await this.saveReservationContact(code, this.buildContactRequest());
+      this.reservationPendingContact.set(false);
+      this.contactSaveError.set(null);
+
+      let savedWithTags = false;
+      if (!this.isEditMode() && this.newTags.length > 0) {
+        this.createdReservationPendingTags.set(true);
+        Swal.update({ title: 'Guardando etiquetas', text: 'Contacto guardado. Asociando las etiquetas pendientes...' });
+        try {
+          await this.saveTagBatch(code, this.newTags);
+          savedWithTags = true;
+          this.createdReservationPendingTags.set(false);
+          this.tagSaveError.set(null);
+          this.newTags = [];
+        } catch (tagError) {
+          const message = this.getReservaErrorMessage(tagError, 'No fue posible guardar las etiquetas de la reserva.');
+          this.tagSaveError.set(message);
+          Swal.close();
+          const retryResult = await Swal.fire({
+            title: 'Contacto guardado con etiquetas pendientes',
+            html: `El contacto de la reserva <strong>${this.escapeHtml(code)}</strong> fue guardado, pero sus etiquetas continúan pendientes.<br><small>${this.escapeHtml(message)}</small>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Reintentar etiquetas',
+            cancelButtonText: 'Permanecer en la reserva',
+            confirmButtonColor: '#0d6efd',
+            allowOutsideClick: false
+          });
+          if (retryResult.isConfirmed) {
+            await this.retryPendingTags();
+          }
+          return;
+        }
+      }
+
+      if (!this.isEditMode()) {
+        this.clearDraft();
+      }
+      Swal.close();
+      await Swal.fire({
+        title: this.isEditMode() ? 'Reserva actualizada' : 'Reserva completada',
+        text: savedWithTags
+          ? 'Reserva, contacto y etiquetas guardados correctamente.'
+          : this.isEditMode()
+            ? 'Reserva y contacto actualizados correctamente.'
+            : 'Reserva y contacto guardados correctamente.',
+        icon: 'success',
+        confirmButtonText: this.returnUrl === '/reservas/calendario' ? 'Volver al calendario' : 'Ir a consulta de reservas',
+        confirmButtonColor: '#198754'
+      });
+      await this.router.navigateByUrl(this.returnUrl);
+    } catch (error) {
+      const message = this.getReservaErrorMessage(error, 'No fue posible guardar el contacto de la reserva.');
+      this.contactSaveError.set(message);
+      Swal.close();
+      this.toast.warning(
+        `La reserva ${code} ya existe, pero aún no fue posible guardar su contacto. ${message}`,
+        7500,
+        'Contacto pendiente'
+      );
+    }
+  }
+
+  async retryPendingTags(): Promise<void> {
+    const code = this.createdReservationCode();
+    if (!code || !this.createdReservationPendingTags() || this.savingTags()) {
+      return;
+    }
+
+    try {
+      await this.saveTagBatch(code, this.newTags);
+      this.createdReservationPendingTags.set(false);
+      this.tagSaveError.set(null);
+      this.newTags = [];
+      this.clearDraft();
+      await Swal.fire({
+        title: 'Reserva completada',
+        text: 'Reserva, contacto y etiquetas guardados correctamente.',
+        icon: 'success',
+        confirmButtonText: this.returnUrl === '/reservas/calendario' ? 'Volver al calendario' : 'Ir a consulta de reservas',
+        confirmButtonColor: '#198754'
+      });
+      await this.router.navigateByUrl(this.returnUrl);
+    } catch (error) {
+      this.tagSaveError.set(this.getReservaErrorMessage(error));
+      this.toast.warning(`La reserva ${code} ya existe, pero aún no fue posible guardar sus etiquetas.`, 6500, 'Etiquetas pendientes');
+    }
+  }
+
+  private bindTagSearch(): void {
+    merge(
+      this.tagSearchControl.valueChanges.pipe(
+        startWith(''),
+        map((value) => value?.trim() ?? ''),
+        debounceTime(300),
+        distinctUntilChanged()
+      ),
+      this.tagSearchRetry
+    )
+      .pipe(
+        switchMap((busqueda) => {
+          this.loadingTagCatalog.set(true);
+          this.tagCatalogError.set('');
+          return this.reservaTagsService.buscarTags(busqueda, true).pipe(
+            catchError((error: unknown) => {
+              this.tagCatalogError.set(this.getReservaErrorMessage(error));
+              return of(null);
+            }),
+            finalize(() => this.loadingTagCatalog.set(false))
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((response) => {
+        if (!response) {
+          this.tagCatalog = [];
+          return;
+        }
+        if (!this.isSuccessfulTagResponse(response)) {
+          this.tagCatalog = [];
+          this.tagCatalogError.set(this.cleanApiMessage(response.respuesta) || 'No se pudo cargar el catálogo de etiquetas.');
+          return;
+        }
+        this.tagCatalog = Array.isArray(response.datos)
+          ? response.datos.filter((tag) => tag.activo && tag.permiteAsignacionManual)
+          : [];
+      });
+  }
+
+  private loadAssignedTags(codReserva: string): void {
+    this.loadingAssignedTags.set(true);
+    this.assignedTagsError.set('');
+    this.reservaTagsService.obtenerTagsReserva(codReserva)
+      .pipe(finalize(() => this.loadingAssignedTags.set(false)), takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          if (!this.isSuccessfulTagResponse(response)) {
+            this.assignedTagsError.set(this.cleanApiMessage(response.respuesta) || 'No se pudieron cargar las etiquetas asignadas.');
+            return;
+          }
+          this.persistedTags = Array.isArray(response.datos) ? [...response.datos].sort((a, b) => this.compareTags(a, b)) : [];
+          this.newTags = [];
+        },
+        error: (error: unknown) => {
+          this.assignedTagsError.set(this.getReservaErrorMessage(error));
+        }
+      });
+  }
+
+  private async saveNewTagsForExistingReservation(codReserva: string, selections: ReservaTagSeleccionado[]): Promise<void> {
+    try {
+      const response = await this.saveTagBatch(codReserva, selections);
+      const inserted = response.datos;
+      const byId = new Map(this.persistedTags.map((tag) => [tag.idTag, tag]));
+      for (const tag of inserted) {
+        byId.set(tag.idTag, tag);
+      }
+      this.persistedTags = [...byId.values()].sort((a, b) => this.compareTags(a, b));
+      this.modalTagSelection = [];
+      this.showTagsModal.set(false);
+      this.toast.success(
+        selections.length === 1 ? 'Etiqueta agregada correctamente.' : `${selections.length} etiquetas agregadas correctamente.`,
+        4500,
+        'Etiquetas'
+      );
+    } catch (error) {
+      const message = this.getReservaErrorMessage(error);
+      this.tagSelectionMessage.set(message);
+      this.toast.error(message, 6000, 'No se pudieron guardar las etiquetas');
+    }
+  }
+
+  private async saveTagBatch(codReserva: string, selections: ReservaTagSeleccionado[]): Promise<GuardarReservaTagsBatchResponse> {
+    if (this.savingTags()) {
+      throw new Error('Ya se está guardando una selección de etiquetas.');
+    }
+    this.savingTags.set(true);
+    try {
+      const response = await firstValueFrom(this.reservaTagsService.guardarTagsBatch(codReserva, {
+        tags: this.normalizeTagSelections(selections).map((selection) => ({
+          idTag: selection.tag.idTag,
+          observacion: selection.observacion
+        }))
+      }));
+      this.ensureSuccessfulTagResponse(response, 'El servidor no confirmó el guardado de las etiquetas.');
+      if (!Array.isArray(response.datos)) {
+        throw new Error('El servidor no devolvió las etiquetas guardadas.');
+      }
+      return response;
+    } finally {
+      this.savingTags.set(false);
+    }
+  }
+
+  private async saveReservationContact(
+    codReserva: string,
+    request: GuardarReservaContactoRequest
+  ): Promise<void> {
+    if (this.savingContact()) {
+      throw new Error('Ya se está guardando el contacto de la reserva.');
+    }
+
+    this.savingContact.set(true);
+    try {
+      const response = await firstValueFrom(this.reservaContactoService.guardarContactoReserva(codReserva, request));
+      this.ensureSuccessfulContactResponse(response, 'El servidor no confirmó el guardado del contacto.');
+      if (!response.data) {
+        throw new Error('El servidor no devolvió el contacto guardado.');
+      }
+    } finally {
+      this.savingContact.set(false);
+    }
+  }
+
+  private buildContactRequest(): GuardarReservaContactoRequest {
+    return ReservaContactoMapper.toRequest({
+      nombre: this.reservaForm.controls.contactoNombre.value,
+      email: this.reservaForm.controls.contactoEmail.value,
+      telefono: this.reservaForm.controls.contactoTelefono.value
+    });
+  }
+
+  normalizeContactInput(controlName: 'contactoNombre' | 'contactoEmail' | 'contactoTelefono'): void {
+    const control = this.reservaForm.controls[controlName];
+    const trimmedValue = control.value.trim();
+    if (trimmedValue !== control.value) {
+      control.setValue(trimmedValue);
+    }
+  }
+
+  private normalizeContactFormValues(): void {
+    this.normalizeContactInput('contactoNombre');
+    this.normalizeContactInput('contactoEmail');
+    this.normalizeContactInput('contactoTelefono');
+  }
+
+  private validateContactFields(): boolean {
+    this.normalizeContactFormValues();
+    const controls = [
+      this.reservaForm.controls.contactoNombre,
+      this.reservaForm.controls.contactoEmail,
+      this.reservaForm.controls.contactoTelefono
+    ];
+    controls.forEach((control) => {
+      control.markAsTouched();
+      control.updateValueAndValidity({ emitEvent: false });
+    });
+    if (controls.some((control) => control.invalid)) {
+      this.toast.warning('Revise los datos del contacto antes de continuar.', 5500, 'Contacto inválido');
+      return false;
+    }
+    return true;
+  }
+
+  private normalizeTagSelections(selections: ReservaTagSeleccionado[]): ReservaTagSeleccionado[] {
+    const unique = new Map<number, ReservaTagSeleccionado>();
+    for (const selection of selections) {
+      const observation = (selection.observacion ?? '').trim().slice(0, 200);
+      unique.set(selection.tag.idTag, { tag: selection.tag, observacion: observation || null });
+    }
+    return [...unique.values()];
+  }
+
+  private resetTagSelector(): void {
+    this.tagSearchControl.setValue('', { emitEvent: false });
+    this.tagSearchRetry.next('');
+    this.modalTagSelection = [];
+    this.showTagsModal.set(false);
+    this.showAllTags.set(false);
+    this.tagSelectionMessage.set('');
+  }
+
+  private compareTags(left: ReservaTagCatalogo | ReservaTagAsignado, right: ReservaTagCatalogo | ReservaTagAsignado): number {
+    return Number(right.esAlerta) - Number(left.esAlerta)
+      || right.prioridad - left.prioridad
+      || left.ordenCategoria - right.ordenCategoria
+      || left.nombre.localeCompare(right.nombre);
+  }
+
+  private isSuccessfulTagResponse<T>(response: ApiResponse<T>): boolean {
+    return response?.exito === true && (response.respuesta?.startsWith('OK|') ?? false);
+  }
+
+  private isSuccessfulContactResponse<T>(response: ReservaContactoApiResponse<T>): boolean {
+    return response?.success === true && (response.message?.startsWith('OK|') ?? false);
+  }
+
+  private ensureSuccessfulContactResponse<T>(response: ReservaContactoApiResponse<T>, fallback: string): void {
+    if (!this.isSuccessfulContactResponse(response)) {
+      throw new Error(this.cleanApiMessage(response?.message) || fallback);
+    }
+  }
+
+  private isContactNotFoundMessage(message: string | null | undefined): boolean {
+    const normalized = (message ?? '').toLocaleLowerCase();
+    return normalized.includes('no encontr') || normalized.includes('no existe') || normalized.includes('sin contacto');
+  }
+
+  private isContactNotFoundError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') {
+      return false;
+    }
+    const httpError = error as { status?: number; error?: unknown };
+    if (httpError.status === 404) {
+      return true;
+    }
+    if (httpError.error && typeof httpError.error === 'object') {
+      const apiError = httpError.error as { message?: string; mensaje?: string; respuesta?: string };
+      return this.isContactNotFoundMessage(apiError.message || apiError.mensaje || apiError.respuesta);
+    }
+    return false;
+  }
+
+  private ensureSuccessfulTagResponse<T>(response: ApiResponse<T>, fallback: string): void {
+    if (!this.isSuccessfulTagResponse(response)) {
+      throw new Error(this.cleanApiMessage(response?.respuesta) || fallback);
+    }
+  }
+
+  private cleanApiMessage(message: string | null | undefined): string {
+    return (message ?? '').replace(/^(OK|ERROR)\|/i, '').replace(/\|/g, ' · ').trim();
   }
 
   onCplChange(): void {
@@ -964,6 +1763,18 @@ export class ReservaHospedajeComponent implements OnInit {
   }
 
   async confirmarReserva(): Promise<void> {
+    this.normalizeContactFormValues();
+
+    if (this.reservationPendingContact()) {
+      await this.retryPendingContact();
+      return;
+    }
+
+    if (this.createdReservationPendingTags()) {
+      await this.retryPendingTags();
+      return;
+    }
+
     if (!(await this.ensureOperationalDateForValidation())) {
       return;
     }
@@ -1019,6 +1830,8 @@ export class ReservaHospedajeComponent implements OnInit {
       return;
     }
 
+    this.normalizeContactFormValues();
+
     if (!(await this.ensureOperationalDateForValidation())) {
       return;
     }
@@ -1040,8 +1853,11 @@ export class ReservaHospedajeComponent implements OnInit {
     }
 
     this.syncTotal();
+    const contactRequest = this.buildContactRequest();
+    const reservationFormValue = this.reservaForm.getRawValue();
+    reservationFormValue.descripcion = contactRequest.nombre;
     const payload = ReservaHabitacionMapper.toRequest(
-      this.reservaForm.getRawValue(),
+      reservationFormValue,
       this.totalReserva(),
       0,
       (categoria, tipo) => this.getTipoHabitacionPax(categoria, tipo)
@@ -1062,12 +1878,7 @@ export class ReservaHospedajeComponent implements OnInit {
     try {
       const request$ = this.isEditMode() ? this.service.updateReserva(this.editCodReserva, payload) : this.service.createReserva(payload);
       const response = await firstValueFrom(
-        request$.pipe(
-          finalize(() => {
-            this.saving.set(false);
-            Swal.close();
-          })
-        )
+        request$
       );
 
       if (response.ok === false) {
@@ -1081,12 +1892,98 @@ export class ReservaHospedajeComponent implements OnInit {
         return;
       }
 
+      const codReserva = this.isEditMode()
+        ? this.editCodReserva.trim()
+        : this.extractReservationCode(response);
+      if (!codReserva) {
+        this.reservationPendingContact.set(true);
+        this.contactSaveError.set('El servidor guardó la reserva, pero no devolvió su código para guardar el contacto.');
+        Swal.close();
+        await Swal.fire({
+          title: 'Reserva guardada con contacto pendiente',
+          text: 'La reserva fue guardada, pero el servidor no devolvió el código necesario para asociar el contacto. No vuelva a confirmar la reserva.',
+          icon: 'warning',
+          confirmButtonText: 'Aceptar',
+          confirmButtonColor: '#b7791f'
+        });
+        return;
+      }
+
+      this.createdReservationCode.set(codReserva);
+      this.reservaForm.controls.codReserva.setValue(codReserva, { emitEvent: false });
+      this.reservationPendingContact.set(true);
+      Swal.update({
+        title: 'Guardando contacto',
+        text: `La reserva ${codReserva} fue guardada. Asociando el contacto...`
+      });
+
+      try {
+        await this.saveReservationContact(codReserva, contactRequest);
+        this.reservationPendingContact.set(false);
+        this.contactSaveError.set(null);
+      } catch (contactError) {
+        const message = this.getReservaErrorMessage(contactError, 'No fue posible guardar el contacto de la reserva.');
+        this.contactSaveError.set(message);
+        Swal.close();
+        const retryResult = await Swal.fire({
+          title: 'Reserva guardada con contacto pendiente',
+          html: `La reserva <strong>${this.escapeHtml(codReserva)}</strong> fue ${this.isEditMode() ? 'actualizada' : 'creada'} correctamente, pero no fue posible guardar el contacto de la reserva.<br><small>${this.escapeHtml(message)}</small>`,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Reintentar contacto',
+          cancelButtonText: 'Permanecer en la reserva',
+          confirmButtonColor: '#0d6efd',
+          allowOutsideClick: false
+        });
+        if (retryResult.isConfirmed) {
+          await this.retryPendingContact();
+        }
+        return;
+      }
+
+      let savedWithTags = false;
+      if (!this.isEditMode() && this.newTags.length > 0) {
+        this.createdReservationPendingTags.set(true);
+        Swal.update({ title: 'Guardando etiquetas', text: 'Reserva y contacto guardados. Asociando las etiquetas...' });
+
+        try {
+          await this.saveTagBatch(codReserva, this.newTags);
+          savedWithTags = true;
+          this.createdReservationPendingTags.set(false);
+          this.tagSaveError.set(null);
+          this.newTags = [];
+        } catch (tagError) {
+          const message = this.getReservaErrorMessage(tagError, 'No fue posible guardar las etiquetas de la reserva.');
+          this.tagSaveError.set(message);
+          Swal.close();
+          const retryResult = await Swal.fire({
+            title: 'Reserva creada con etiquetas pendientes',
+            html: `La reserva <strong>${this.escapeHtml(codReserva)}</strong> y su contacto fueron guardados correctamente, pero no fue posible guardar sus etiquetas.<br><small>${this.escapeHtml(message)}</small>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Reintentar etiquetas',
+            cancelButtonText: 'Permanecer en la reserva',
+            confirmButtonColor: '#0d6efd',
+            allowOutsideClick: false
+          });
+          if (retryResult.isConfirmed) {
+            await this.retryPendingTags();
+          }
+          return;
+        }
+      }
+
       if (!this.isEditMode()) {
         this.clearDraft();
       }
+      Swal.close();
       await Swal.fire({
         title: this.isEditMode() ? 'Reserva actualizada' : 'Reserva confirmada',
-        html: this.buildReservationResponseHtml(response),
+        html: `<p>${savedWithTags
+          ? 'Reserva, contacto y etiquetas guardados correctamente.'
+          : this.isEditMode()
+            ? 'Reserva y contacto actualizados correctamente.'
+            : 'Reserva y contacto guardados correctamente.'}</p><strong>${this.escapeHtml(codReserva)}</strong>`,
         icon: 'success',
         confirmButtonText: this.returnUrl === '/reservas/calendario' ? 'Volver al calendario' : 'Ir a consulta de reservas',
         confirmButtonColor: '#198754'
@@ -1094,7 +1991,6 @@ export class ReservaHospedajeComponent implements OnInit {
       await this.router.navigateByUrl(this.returnUrl);
     } catch (error) {
       console.error('No se pudo guardar la reserva.', error);
-      this.saving.set(false);
       Swal.close();
       await Swal.fire({
         title: this.isEditMode() ? 'Error al actualizar la reserva' : 'Error al confirmar la reserva',
@@ -1103,7 +1999,21 @@ export class ReservaHospedajeComponent implements OnInit {
         confirmButtonText: 'Aceptar',
         confirmButtonColor: '#dc3545'
       });
+    } finally {
+      this.saving.set(false);
     }
+  }
+
+  private extractReservationCode(response: { codReserva?: string; datos?: { codReserva?: string } | null }): string {
+    return String(response.codReserva || response.datos?.codReserva || '').trim();
+  }
+
+  private resetReservationPostSaveState(): void {
+    this.reservationPendingContact.set(false);
+    this.createdReservationPendingTags.set(false);
+    this.createdReservationCode.set(null);
+    this.contactSaveError.set(null);
+    this.tagSaveError.set(null);
   }
 
   private canConfirmReserva(): boolean {
@@ -1502,8 +2412,10 @@ export class ReservaHospedajeComponent implements OnInit {
     });
   }
 
-  private getReservaErrorMessage(error: unknown): string {
-    const fallback = 'No se pudo confirmar la reserva. Revise la conexion con el API o la respuesta del servidor.';
+  private getReservaErrorMessage(
+    error: unknown,
+    fallback = 'No se pudo confirmar la reserva. Revise la conexion con el API o la respuesta del servidor.'
+  ): string {
     if (!error || typeof error !== 'object') {
       return fallback;
     }
@@ -1511,13 +2423,13 @@ export class ReservaHospedajeComponent implements OnInit {
     const httpError = error as { error?: unknown; message?: string; status?: number; statusText?: string };
     const statusDetail = httpError.status ? ` Codigo HTTP ${httpError.status}${httpError.statusText ? `: ${httpError.statusText}` : ''}.` : '';
     if (typeof httpError.error === 'string' && httpError.error.trim()) {
-      return `${httpError.error}${statusDetail}`;
+      return `${this.cleanApiMessage(httpError.error) || httpError.error}${statusDetail}`;
     }
 
     if (httpError.error && typeof httpError.error === 'object') {
       const apiError = httpError.error as { respuesta?: string; mensaje?: string; message?: string };
       const apiMessage = apiError.respuesta || apiError.mensaje || apiError.message;
-      return apiMessage ? `${apiMessage}${statusDetail}` : `${fallback}${statusDetail}`;
+      return apiMessage ? `${this.cleanApiMessage(apiMessage) || apiMessage}${statusDetail}` : `${fallback}${statusDetail}`;
     }
 
     return httpError.message ? `${httpError.message}${statusDetail}` : `${fallback}${statusDetail}`;
@@ -1675,6 +2587,9 @@ export class ReservaHospedajeComponent implements OnInit {
     return (
       this.habitaciones.length > 0 ||
       this.servicios.length > 0 ||
+      raw.contactoNombre.trim().length > 0 ||
+      raw.contactoEmail.trim().length > 0 ||
+      raw.contactoTelefono.trim().length > 0 ||
       raw.descripcion.trim().length > 0 ||
       raw.observaciones.trim().length > 0 ||
       this.agenciaSearchControl.value.trim().length > 0 ||

@@ -1,3 +1,5 @@
+import { ReservaTagResumen } from './reserva-tag.model';
+
 export interface ReservaConsulta {
   reserva: string;
   codAgencia: string;
@@ -19,6 +21,9 @@ export interface ReservaConsulta {
   moneda: string;
   tCambio: number;
   operador: string;
+  tags: ReservaTagResumen[];
+  cantidadTags: number;
+  tieneAlertas: boolean;
 }
 
 export interface ReservaFiltro {
@@ -88,6 +93,12 @@ export interface ReservaConsultaApiItem {
   prV01_Operador?: string;
   mR01_NomAgencia?: string;
   nhab?: number;
+  tags?: ReservaTagResumen[] | null;
+  Tags?: ReservaTagResumen[] | null;
+  cantidadTags?: number;
+  CantidadTags?: number;
+  tieneAlertas?: boolean;
+  TieneAlertas?: boolean;
 }
 
 export interface ReservaConsultaApiResponse {

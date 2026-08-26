@@ -1,0 +1,16 @@
+<div class="tag-details-backdrop" role="presentation" (mousedown)="closed.emit()">
+  <section class="tag-details-modal" role="dialog" aria-modal="true" aria-labelledby="tag-details-title" (mousedown)="$event.stopPropagation()">
+    <header>
+      <div>
+        <small>Reserva {{ reservationCode() }}</small>
+        <h2 id="tag-details-title"><i class="bi bi-tags" aria-hidden="true"></i> Etiquetas de la reserva</h2>
+      </div>
+      <button type="button" aria-label="Cerrar detalle de etiquetas" (click)="closed.emit()">
+        <i class="bi bi-x-lg" aria-hidden="true"></i>
+      </button>
+    </header>
+    <div class="tag-details-modal__body">
+      <app-reservation-tag-list [tags]="tags()" [detailed]="true" />
+    </div>
+  </section>
+</div>

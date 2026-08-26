@@ -10,6 +10,7 @@ import { environment } from 'src/environments/environment';
 import { CheckInArrivalsComponent } from './check-in-arrivals.component';
 import { CheckInArrival } from './models/check-in-arrival.model';
 import { GuestRegistrationPdfService } from './services/guest-registration-pdf.service';
+import { ReservaTagAsignado } from 'src/app/modules/Reservas/models/reserva-tag.model';
 
 describe('CheckInArrivalsComponent', () => {
   let component: CheckInArrivalsComponent;
@@ -102,6 +103,7 @@ describe('CheckInArrivalsComponent', () => {
           req.params.get('numHabita') === arrival.numHabita
       )
       .flush({ success: true, data: [] });
+    flushTags(arrival.codReserva);
 
     expect(component.getRoomingListBadgeLabel(component.arrivals[0])).toBe('Rooming pendiente');
     expect(component.isCheckInDisabled(component.arrivals[0])).toBeTrue();
@@ -118,6 +120,7 @@ describe('CheckInArrivalsComponent', () => {
       success: true,
       data: [{ numInterno: '1', codReserva: arrival.codReserva, numHabita: arrival.numHabita }]
     });
+    flushTags(arrival.codReserva);
 
     expect(component.getRoomingListBadgeLabel(component.arrivals[0])).toBe('Rooming registrado');
     expect(component.isCheckInDisabled(component.arrivals[0])).toBeFalse();
@@ -134,6 +137,7 @@ describe('CheckInArrivalsComponent', () => {
     component.buscar();
     httpMock.expectOne((req) => req.url === `${environment.apiUrl}/checkin/pendientes`).flush([arrival]);
     httpMock.expectOne((req) => req.url === `${environment.apiUrl}/rooming-list`).flush({ success: true, data: [guest] });
+    flushTags(arrival.codReserva);
 
     await component.generarHojaRegistro(component.arrivals[0]);
 
@@ -144,7 +148,80 @@ describe('CheckInArrivalsComponent', () => {
     );
     httpMock.expectNone((req) => req.url === `${environment.apiUrl}/rooming-list`);
   });
+
+  it('consulta las etiquetas una sola vez cuando la reserva aparece en varias habitaciones', () => {
+    const first = { ...makeArrival(), procesado: 1 };
+    const second = { ...makeArrival(), numHabita: '102', folio: '2', procesado: 1 };
+    component.buscar();
+
+    httpMock.expectOne((req) => req.url === `${environment.apiUrl}/checkin/pendientes`).flush([first, second]);
+    const tagRequests = httpMock.match((req) => req.url === `${environment.apiUrl}/reservas/${first.codReserva}/tags`);
+
+    expect(tagRequests.length).toBe(1);
+    tagRequests[0].flush(successfulTags([]));
+  });
+
+  it('prioriza alertas, limita el resumen y permite ver el detalle completo', () => {
+    const arrival = { ...makeArrival(), procesado: 1 };
+    component.buscar();
+    httpMock.expectOne((req) => req.url === `${environment.apiUrl}/checkin/pendientes`).flush([arrival]);
+    flushTags(arrival.codReserva, [
+      makeTag(1, 'Regular', { prioridad: 1 }),
+      makeTag(2, 'VIP', { prioridad: 5 }),
+      makeTag(3, 'Atencion', { esAlerta: true, prioridad: 2 })
+    ]);
+    fixture.detectChanges();
+
+    const summary = fixture.nativeElement.querySelector('.reservation-tags-summary') as HTMLElement;
+    expect(summary.textContent).toContain('Atencion');
+    expect(summary.textContent).toContain('VIP');
+    expect(summary.textContent).toContain('+1');
+    expect(summary.textContent).not.toContain('Regular');
+
+    (summary.querySelector('.tag-more') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    const detail = fixture.nativeElement.querySelector('.reservation-detail') as HTMLElement;
+    expect(detail.textContent).toContain('Atencion');
+    expect(detail.textContent).toContain('VIP');
+    expect(detail.textContent).toContain('Regular');
+  });
+
+  function flushTags(codReserva: string, tags: ReservaTagAsignado[] = []): void {
+    httpMock
+      .expectOne((req) => req.url === `${environment.apiUrl}/reservas/${codReserva}/tags`)
+      .flush(successfulTags(tags));
+  }
 });
+
+function successfulTags(tags: ReservaTagAsignado[]) {
+  return { datos: tags, respuesta: 'OK|Consulta exitosa', exito: true, codigoHttp: 200 };
+}
+
+function makeTag(idTag: number, nombre: string, overrides: Partial<ReservaTagAsignado> = {}): ReservaTagAsignado {
+  return {
+    idAsignacion: idTag,
+    codReserva: 'RSV-1',
+    idCategoria: 1,
+    categoria: 'Atencion',
+    ordenCategoria: 1,
+    idTag,
+    nombre,
+    descripcion: null,
+    color: '#E5E7EB',
+    icono: 'tag',
+    prioridad: 0,
+    esAlerta: false,
+    permiteAsignacionManual: true,
+    grupoExclusion: null,
+    tipoAsignacion: 'MANUAL',
+    origen: null,
+    observacion: null,
+    fechaAsignacion: '24/08/2026',
+    operadorAsignacion: 'tester',
+    ...overrides
+  };
+}
 
 function makeArrival(): CheckInArrival {
   return {

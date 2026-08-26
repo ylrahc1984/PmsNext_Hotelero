@@ -135,7 +135,28 @@
                   </td>
                   <td class="col-catHabita">{{ arrival.catHabita || '-' }}</td>
                   <td class="col-tipHabita">{{ arrival.tipHabita || '-' }}</td>
-                  <td class="col-codReserva"><strong>{{ arrival.codReserva || '-' }}</strong></td>
+                  <td class="col-codReserva">
+                    <strong class="reservation-code">{{ arrival.codReserva || '-' }}</strong>
+                    @if (isReservationTagsLoading(arrival)) {
+                      <span class="reservation-tags-state" aria-label="Cargando etiquetas de la reserva">
+                        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                        Etiquetas
+                      </span>
+                    } @else if (hasReservationTagsError(arrival)) {
+                      <span class="reservation-tags-state reservation-tags-state--error" title="No se pudieron consultar las etiquetas">
+                        <span class="material-icons" aria-hidden="true">label_off</span>
+                        No disponibles
+                      </span>
+                    } @else if (getReservationTags(arrival).length) {
+                      <app-reservation-tag-list
+                        class="reservation-tags-summary"
+                        [tags]="getReservationTags(arrival)"
+                        [maxVisible]="2"
+                        (showAll)="toggleReservationTags(arrival)"
+                        (click)="$event.stopPropagation()"
+                      />
+                    }
+                  </td>
                   <td class="col-nomAgencia">{{ arrival.nomAgencia || arrival.codAgencia || '-' }}</td>
                   <td class="description-cell col-descripcion">{{ arrival.descripcion || '-' }}</td>
                   <td class="date-cell col-fechaIng">{{ formatDisplayDate(arrival.fechaIng) }}</td>
@@ -233,15 +254,28 @@
                     </div>
                   </td>
                 </tr>
-                @if (isObservacionOpen(arrival)) {
-                  <tr class="observation-detail-row">
+                @if (isReservationDetailOpen(arrival)) {
+                  <tr class="observation-detail-row reservation-detail-row">
                     <td [attr.colspan]="columns.length + 1">
-                      <article class="observation-detail">
-                        <span class="observation-detail__icon material-icons" aria-hidden="true">speaker_notes</span>
-                        <div>
-                          <strong>Observaciones</strong>
-                          <p>{{ arrival.observacion }}</p>
-                        </div>
+                      <article class="reservation-detail">
+                        @if (getReservationTags(arrival).length) {
+                          <section class="reservation-detail__section" aria-label="Todas las etiquetas de la reserva">
+                            <div class="reservation-detail__heading">
+                              <span class="material-icons" aria-hidden="true">sell</span>
+                              <strong>Etiquetas de la reserva</strong>
+                            </div>
+                            <app-reservation-tag-list [tags]="getReservationTags(arrival)" [detailed]="true" />
+                          </section>
+                        }
+                        @if (hasObservacion(arrival)) {
+                          <section class="reservation-detail__section">
+                            <div class="reservation-detail__heading">
+                              <span class="material-icons" aria-hidden="true">speaker_notes</span>
+                              <strong>Observaciones</strong>
+                            </div>
+                            <p>{{ arrival.observacion }}</p>
+                          </section>
+                        }
                       </article>
                     </td>
                   </tr>
@@ -268,6 +302,26 @@
                 </div>
                 <span>{{ arrival.codReserva }} · {{ arrival.nomAgencia || '-' }}</span>
               </div>
+              @if (isReservationTagsLoading(arrival)) {
+                <span class="reservation-tags-state" aria-label="Cargando etiquetas de la reserva">
+                  <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                  Cargando etiquetas
+                </span>
+              } @else if (hasReservationTagsError(arrival)) {
+                <span class="reservation-tags-state reservation-tags-state--error">
+                  <span class="material-icons" aria-hidden="true">label_off</span>
+                  Etiquetas no disponibles
+                </span>
+              } @else if (getReservationTags(arrival).length) {
+                <app-reservation-tag-list
+                  class="mobile-reservation-tags"
+                  [tags]="getReservationTags(arrival)"
+                  [maxVisible]="3"
+                  [expanded]="isReservationDetailOpen(arrival)"
+                  (showAll)="toggleReservationTags(arrival)"
+                  (click)="$event.stopPropagation()"
+                />
+              }
               <div class="mobile-badges">
                 <span class="badge" [ngClass]="getHabitacionBadgeClass(arrival)">{{ getHabitacionBadgeLabel(arrival) }}</span>
                 <span class="badge" [ngClass]="getProcesadoBadgeClass(arrival)">{{ getProcesadoBadgeLabel(arrival) }}</span>

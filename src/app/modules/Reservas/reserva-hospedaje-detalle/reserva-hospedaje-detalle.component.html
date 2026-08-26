@@ -16,7 +16,7 @@
         <i class="bi bi-arrow-left"></i>
         Volver
       </button>
-      <button type="button" class="detail-action" (click)="reload()" [disabled]="loading() || accionesBloqueadas()">
+      <button type="button" class="detail-action" (click)="reload()" [disabled]="loading() || isAssignedTagsLoading()">
         <span class="spinner-border spinner-border-sm" *ngIf="loading()"></span>
         <i class="bi bi-arrow-clockwise" *ngIf="!loading()"></i>
         Actualizar
@@ -173,6 +173,81 @@
               <strong>{{ r.directo ? 'Si' : 'No' }}</strong>
             </div>
           </div>
+
+          <section class="reservation-tags-section" aria-labelledby="reservation-tags-title">
+            <header class="reservation-tags-section__header">
+              <div>
+                <i class="bi bi-tags" aria-hidden="true"></i>
+                <div>
+                  <h4 id="reservation-tags-title">Etiquetas de la reserva</h4>
+                  <small>Estas etiquetas aplican a toda la reserva.</small>
+                </div>
+              </div>
+              <div class="reservation-tags-section__actions">
+                <button
+                  *ngIf="assignedReservationTags().length"
+                  type="button"
+                  class="reservation-tags-section__action"
+                  aria-label="Ver detalle completo de las etiquetas de la reserva"
+                  (click)="openReservationTagDetails()"
+                >
+                  <i class="bi bi-eye" aria-hidden="true"></i>
+                  Ver detalle
+                </button>
+                <button
+                  *ngIf="puedeGestionarTags()"
+                  type="button"
+                  class="reservation-tags-section__action reservation-tags-section__action--manage"
+                  aria-label="Gestionar etiquetas de la reserva"
+                  (click)="openReservationTagsManagement()"
+                >
+                  <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                  Gestionar
+                </button>
+              </div>
+            </header>
+
+            <div class="reservation-tags-section__loading" *ngIf="isAssignedTagsLoading()" role="status">
+              <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+              Cargando etiquetas...
+            </div>
+
+            <div class="reservation-tags-section__error" *ngIf="!isAssignedTagsLoading() && assignedTagsError()" role="alert">
+              <span>{{ assignedTagsError() }}</span>
+              <button type="button" (click)="retryAssignedReservationTags()">Reintentar</button>
+            </div>
+
+            <ng-container *ngIf="!isAssignedTagsLoading() && !assignedTagsError()">
+              <app-reservation-tag-list
+                *ngIf="assignedReservationTags().length; else noReservationTags"
+                [tags]="assignedReservationTags()"
+                [maxVisible]="6"
+                [showRemove]="puedeGestionarTags()"
+                [removingTagIds]="removingReservationTagIds()"
+                [readOnlyReason]="tagsReadOnlyReason()"
+                (removeTag)="removeReservationTag($event)"
+                (showAll)="openReservationTagDetails()"
+              />
+
+              <ng-template #noReservationTags>
+                <div class="reservation-tags-section__empty">
+                  <div>
+                    <strong>Sin etiquetas asignadas</strong>
+                    <span>Agregue información especial para facilitar la atención y coordinación de la reserva.</span>
+                  </div>
+                  <button
+                    *ngIf="puedeGestionarTags()"
+                    type="button"
+                    class="reservation-tags-section__action reservation-tags-section__action--manage"
+                    (click)="openReservationTagsManagement()"
+                  >
+                    <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                    Agregar etiqueta
+                  </button>
+                </div>
+              </ng-template>
+            </ng-container>
+          </section>
 
           <div class="note-box" *ngIf="r.observacion || r.observaciones">
             <span>Observaciones</span>
@@ -410,4 +485,18 @@
       </aside>
     </div>
   </ng-container>
+
+  <app-reservation-tag-selector
+    *ngIf="showReservationTagsModal()"
+    [assignedTags]="assignedReservationTags()"
+    [saving]="isSavingReservationTags()"
+    [saveError]="reservationTagsSaveError()"
+    [removingTagIds]="removingReservationTagIds()"
+    [canManage]="puedeGestionarTags()"
+    [catalogEnabled]="!reservationTagsDetailsOnly()"
+    (closed)="closeReservationTagsModal()"
+    (save)="saveReservationTags($event)"
+    (removeTag)="removeReservationTag($event)"
+    (selectionNotice)="notifyReservationTagSelection($event)"
+  />
 </section>

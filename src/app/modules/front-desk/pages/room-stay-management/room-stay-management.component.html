@@ -89,6 +89,57 @@
           </div>
         </article>
 
+        <article class="card reservation-tags-card" aria-labelledby="stay-reservation-tags-title">
+          <header class="reservation-tags-card__header">
+            <div>
+              <span class="material-icons" aria-hidden="true">sell</span>
+              <h2 id="stay-reservation-tags-title">Etiquetas de la reserva</h2>
+            </div>
+            <button
+              type="button"
+              class="reservation-tags-card__manage"
+              [disabled]="!canManageReservationTags() || isAssignedTagsLoading()"
+              [attr.title]="canManageReservationTags() ? 'Agregar, revisar o retirar etiquetas' : 'La reserva no está disponible para modificaciones'"
+              aria-label="Gestionar etiquetas de la reserva"
+              (click)="openReservationTagsModal()"
+            >
+              <span class="material-icons" aria-hidden="true">tune</span>
+              Gestionar
+            </button>
+          </header>
+
+          <div class="reservation-tags-card__body">
+            @if (isAssignedTagsLoading()) {
+              <div class="reservation-tags-card__loading" role="status">
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                <span>Cargando etiquetas...</span>
+              </div>
+            } @else if (assignedTagsError()) {
+              <div class="reservation-tags-card__error" role="alert">
+                <span>{{ assignedTagsError() }}</span>
+                <button type="button" (click)="retryAssignedReservationTags()">Reintentar</button>
+              </div>
+            } @else if (assignedReservationTags().length) {
+              <app-reservation-tag-list
+                [tags]="assignedReservationTags()"
+                [maxVisible]="4"
+                [showRemove]="canManageReservationTags()"
+                [removingTagIds]="removingReservationTagIds()"
+                (showAll)="openReservationTagsModal()"
+                (removeTag)="removeReservationTag($event)"
+              />
+              <small>Estas etiquetas aplican a toda la reserva.</small>
+            } @else {
+              <div class="reservation-tags-card__empty">
+                <div><strong>Sin etiquetas asignadas</strong><span>Agregue información especial para facilitar la atención y coordinación durante la estadía.</span></div>
+                <button type="button" [disabled]="!canManageReservationTags()" (click)="openReservationTagsModal()">
+                  <span class="material-icons" aria-hidden="true">add</span> Agregar etiqueta
+                </button>
+              </div>
+            }
+          </div>
+        </article>
+
         <div class="left-lower-stack">
           <article class="card notes-card">
             <h2><span class="material-icons" aria-hidden="true">visibility</span> Observaciones</h2>
@@ -1493,3 +1544,17 @@
     </div>
   }
 </section>
+
+@if (showReservationTagsModal()) {
+  <app-reservation-tag-selector
+    [assignedTags]="assignedReservationTags()"
+    [saving]="isSavingReservationTags()"
+    [saveError]="reservationTagsSaveError()"
+    [removingTagIds]="removingReservationTagIds()"
+    [canManage]="canManageReservationTags()"
+    (closed)="closeReservationTagsModal()"
+    (save)="saveReservationTags($event)"
+    (removeTag)="removeReservationTag($event)"
+    (selectionNotice)="notifyReservationTagSelection($event)"
+  />
+}

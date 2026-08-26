@@ -1,0 +1,9 @@
+:host { position: fixed; z-index: 2050; inset: 0; }
+.tag-details-backdrop { position: fixed; display: grid; place-items: center; inset: 0; padding: 1rem; background: rgba(15,23,42,.58); }
+.tag-details-modal { width: min(680px, 100%); max-height: min(760px, calc(100vh - 2rem)); overflow: hidden; border: 1px solid #dbe4ef; border-radius: 14px; background: #fff; box-shadow: 0 24px 70px rgba(15,23,42,.3); }
+.tag-details-modal > header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .9rem 1rem; border-bottom: 1px solid #e5ebf3; }
+.tag-details-modal h2 { display: flex; align-items: center; gap: .45rem; margin: .08rem 0 0; color: #17324d; font-size: 1rem; font-weight: 850; }
+.tag-details-modal small { color: #64748b; font-size: .68rem; font-weight: 750; }
+.tag-details-modal header button { display: inline-grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 8px; color: #475569; background: #f1f5f9; }
+.tag-details-modal header button:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+.tag-details-modal__body { overflow: auto; max-height: calc(100vh - 8rem); padding: 1rem; }

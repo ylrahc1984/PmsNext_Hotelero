@@ -12,19 +12,25 @@
         <i class="bi bi-arrow-left"></i>
         Volver
       </button>
-      <button type="button" class="btn btn-outline-light action-button" (click)="limpiarFormulario()">
+      <button type="button" class="btn btn-outline-light action-button" (click)="limpiarFormulario()" [disabled]="saving() || savingContact() || savingTags()">
         <i class="bi bi-eraser"></i>
         {{ clearButtonText() }}
       </button>
-      <button
-        type="submit"
-        class="btn btn-primary action-button action-button--primary"
-        [disabled]="saving() || loadingDetalle() || checkingRoomAvailability() || exchangeRateLoading() || reservationLocked()"
-      >
-        <span class="spinner-border spinner-border-sm" *ngIf="saving() || loadingDetalle()"></span>
-        <i class="bi bi-check-circle" *ngIf="!saving() && !loadingDetalle()"></i>
-        {{ submitButtonText() }}
-      </button>
+      <div class="primary-action-group">
+        <small class="creation-date">
+          <i class="bi bi-calendar3" aria-hidden="true"></i>
+          Creación: {{ displayDate(reservaForm.controls.fecCreacion.value) }}
+        </small>
+        <button
+          type="submit"
+          class="btn btn-primary action-button action-button--primary"
+          [disabled]="saving() || savingContact() || savingTags() || loadingDetalle() || loadingContact() || checkingRoomAvailability() || exchangeRateLoading() || reservationLocked()"
+        >
+          <span class="spinner-border spinner-border-sm" *ngIf="saving() || savingContact() || savingTags() || loadingDetalle()"></span>
+          <i class="bi bi-check-circle" *ngIf="!saving() && !savingContact() && !savingTags() && !loadingDetalle()"></i>
+          {{ submitButtonText() }}
+        </button>
+      </div>
     </div>
   </header>
 
@@ -194,21 +200,106 @@
             <small class="text-danger" *ngIf="exchangeRateError()">{{ exchangeRateError() }}</small>
           </label>
 
-          <label class="field">
-            <span>Fecha creación</span>
-            <div class="date-control">
-              <input type="date" class="form-control" formControlName="fecCreacion" readonly>
+          <section class="contact-section span-2" aria-labelledby="reservation-contact-title">
+            <div class="contact-section__header" *ngIf="loadingContact()">
+              <span class="contact-section__loading" role="status">
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                Cargando
+              </span>
             </div>
-          </label>
 
-          <label class="field span-2">
-            <span>Descripción de la reserva</span>
-            <textarea class="form-control" rows="2" formControlName="descripcion" placeholder="Reserva familiar para vacaciones"></textarea>
-          </label>
+            <div class="contact-section__error" *ngIf="contactLoadError()" role="alert">
+              <span>{{ contactLoadError() }}</span>
+              <button type="button" class="btn btn-sm btn-link" (click)="retryLoadContact()" [disabled]="loadingContact()">
+                Reintentar
+              </button>
+            </div>
+
+            <div class="contact-fields">
+              <label class="field contact-field--name" for="contactoNombre">
+                <span>Nombre del contacto <b>*</b></span>
+                <input
+                  id="contactoNombre"
+                  type="text"
+                  class="form-control"
+                  formControlName="contactoNombre"
+                  maxlength="150"
+                  autocomplete="name"
+                  required
+                  placeholder="Nombre de quien solicita la reserva"
+                  (blur)="normalizeContactInput('contactoNombre')"
+                  [class.is-invalid]="reservaForm.controls.contactoNombre.touched && reservaForm.controls.contactoNombre.invalid"
+                  aria-describedby="contactoNombreError"
+                >
+                <small id="contactoNombreError" class="text-danger" role="alert" *ngIf="reservaForm.controls.contactoNombre.touched && reservaForm.controls.contactoNombre.invalid">
+                  {{ reservaForm.controls.contactoNombre.hasError('maxlength') ? 'El nombre admite hasta 150 caracteres.' : 'Ingrese el nombre del contacto.' }}
+                </small>
+              </label>
+
+              <label class="field" for="contactoEmail">
+                <span>Email</span>
+                <input
+                  id="contactoEmail"
+                  type="email"
+                  class="form-control"
+                  formControlName="contactoEmail"
+                  maxlength="254"
+                  autocomplete="email"
+                  placeholder="correo@ejemplo.com"
+                  (blur)="normalizeContactInput('contactoEmail')"
+                  [class.is-invalid]="reservaForm.controls.contactoEmail.touched && reservaForm.controls.contactoEmail.invalid"
+                  aria-describedby="contactoEmailError"
+                >
+                <small id="contactoEmailError" class="text-danger" role="alert" *ngIf="reservaForm.controls.contactoEmail.touched && reservaForm.controls.contactoEmail.invalid">
+                  {{ reservaForm.controls.contactoEmail.hasError('maxlength') ? 'El email admite hasta 254 caracteres.' : 'Ingrese un email válido.' }}
+                </small>
+              </label>
+
+              <label class="field" for="contactoTelefono">
+                <span>Teléfono</span>
+                <input
+                  id="contactoTelefono"
+                  type="tel"
+                  class="form-control"
+                  formControlName="contactoTelefono"
+                  maxlength="30"
+                  autocomplete="tel"
+                  placeholder="8888-8888"
+                  (blur)="normalizeContactInput('contactoTelefono')"
+                  [class.is-invalid]="reservaForm.controls.contactoTelefono.touched && reservaForm.controls.contactoTelefono.invalid"
+                  aria-describedby="contactoTelefonoError"
+                >
+                <small id="contactoTelefonoError" class="text-danger" role="alert" *ngIf="reservaForm.controls.contactoTelefono.touched && reservaForm.controls.contactoTelefono.invalid">
+                  {{ reservaForm.controls.contactoTelefono.hasError('maxlength') ? 'El teléfono admite hasta 30 caracteres.' : 'Use números, espacios, +, guiones o paréntesis.' }}
+                </small>
+              </label>
+            </div>
+
+            <small
+              class="contact-section__hint"
+              *ngIf="!reservaForm.controls.contactoEmail.value.trim()
+                && !reservaForm.controls.contactoTelefono.value.trim()
+                && (reservaForm.controls.contactoEmail.touched || reservaForm.controls.contactoTelefono.touched)"
+            >
+              Se recomienda indicar email o teléfono para seguimiento.
+            </small>
+
+            <div class="contact-section__pending" *ngIf="reservationPendingContact()" role="alert">
+              <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+              <span>
+                La reserva {{ createdReservationCode() || reservaForm.controls.codReserva.value }} ya fue guardada; su contacto continúa pendiente.
+                <small *ngIf="contactSaveError()">{{ contactSaveError() }}</small>
+              </span>
+              <button type="button" class="btn btn-sm btn-warning" (click)="retryPendingContact()" [disabled]="savingContact()">
+                <span class="spinner-border spinner-border-sm" *ngIf="savingContact()" aria-hidden="true"></span>
+                {{ savingContact() ? 'Guardando...' : 'Reintentar contacto' }}
+              </button>
+            </div>
+          </section>
 
           <label class="field span-2">
             <span>Observaciones internas</span>
-            <textarea class="form-control" rows="3" formControlName="observaciones" placeholder="Notas internas sobre la reserva"></textarea>
+            <textarea class="form-control" rows="4" formControlName="observaciones" placeholder="Notas internas sobre la reserva"></textarea>
           </label>
 
           <div
@@ -219,12 +310,10 @@
             <div class="cpl-option__copy">
               <span class="cpl-option__icon"><i class="bi bi-people-fill"></i></span>
               <div>
-                <strong>Reserva CPL</strong>
-                <small>
-                  {{ reservaForm.controls.esCpl.value
-                    ? 'CPL se aplicará al hospedaje y a todas sus inclusiones.'
-                    : 'Reserva estándar: hospedaje e inclusiones se enviarán sin CPL.' }}
-                </small>
+                <span class="cpl-option__summary">
+                  <strong>Modalidad CPL</strong>
+                  <small>{{ cplInconsistent() ? 'Valores mixtos' : (reservaForm.controls.esCpl.value ? 'CPL activa' : 'Estándar') }}</small>
+                </span>
                 <small class="cpl-option__warning" *ngIf="cplInconsistent()">
                   Esta reserva tiene valores CPL mezclados. Elija una modalidad antes de actualizar.
                 </small>
@@ -572,34 +661,221 @@
         </div>
       </section>
 
-      <section class="info-panel">
-        <div class="info-title">
-          <span><i class="bi bi-info-circle"></i></span>
-          <h2>Información de la Reserva</h2>
-        </div>
-        <div class="info-list">
-          <div><span>Código de reserva</span><strong>{{ isEditMode() ? reservaForm.controls.codReserva.value : '(Auto)' }}</strong></div>
-          <div><span>Estado</span><strong class="status-pill">{{ reservaForm.controls.estado.value }}</strong></div>
-          <div><span>Moneda</span><strong>{{ reservaForm.controls.moneda.value || 'Seleccione tarifa' }}</strong></div>
-          <div><span>Tipo de cambio</span><strong>{{ reservaForm.controls.tCambio.value | number: '1.2-2' }}</strong></div>
-          <div><span>Folio</span><strong>(Auto)</strong></div>
-          <div><span>Directo / Agencia</span><strong>{{ reservaForm.controls.directo.value ? 'Agencia' : 'Directo' }}</strong></div>
-          <div>
-            <span>Modalidad</span>
-            <strong class="cpl-summary" [class.cpl-summary--active]="reservaForm.controls.esCpl.value && !cplInconsistent()">
-              {{ cplInconsistent() ? 'CPL pendiente' : (reservaForm.controls.esCpl.value ? 'CPL' : 'Estándar') }}
-            </strong>
+      <section class="reservation-tags-card" aria-labelledby="reservation-tags-title">
+        <div class="reservation-tags-header">
+          <div class="reservation-tags-title">
+            <span><i class="bi bi-tags" aria-hidden="true"></i></span>
+            <h2 id="reservation-tags-title">Etiquetas de la reserva</h2>
           </div>
-          <div><span>Operador</span><strong>{{ reservaForm.controls.operador.value }}</strong></div>
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-primary reservation-tags-manage"
+            (click)="openTagsModal()"
+            [disabled]="loadingTagCatalog() || savingTags() || reservationLocked()"
+          >
+            <span class="spinner-border spinner-border-sm" *ngIf="loadingTagCatalog()" aria-hidden="true"></span>
+            <i class="bi bi-plus-lg" *ngIf="!loadingTagCatalog()" aria-hidden="true"></i>
+            {{ allReservationTags.length ? 'Gestionar' : 'Agregar' }}
+          </button>
         </div>
-        <div class="info-note">
-          <i class="bi bi-info-circle-fill"></i>
-          <p>Los totales se calculan automáticamente. Verifique la información antes de confirmar la reserva.</p>
+
+        <div class="reservation-tags-loading" *ngIf="loadingAssignedTags()" role="status">
+          <span class="placeholder-glow"><span class="placeholder col-8"></span></span>
+          <span>Cargando etiquetas...</span>
+        </div>
+
+        <div class="reservation-tags-error" *ngIf="!loadingAssignedTags() && assignedTagsError()" role="alert">
+          <span>{{ assignedTagsError() }}</span>
+          <button type="button" class="btn btn-sm btn-link" (click)="retryAssignedTags()">Reintentar</button>
+        </div>
+
+        <ng-container *ngIf="!loadingAssignedTags() && !assignedTagsError()">
+          <div class="reservation-tags-empty" *ngIf="allReservationTags.length === 0">
+            <strong>Sin etiquetas seleccionadas</strong>
+            <span>Agregue información especial para facilitar la atención y coordinación de la reserva.</span>
+          </div>
+
+          <div class="reservation-tags-content" *ngIf="allReservationTags.length > 0">
+            <div class="reservation-tags-chips" aria-live="polite">
+              <span
+                class="reservation-tag-chip"
+                *ngFor="let tag of visibleReservationTags"
+                [class.reservation-tag-chip--alert]="tag.esAlerta"
+                [class.reservation-tag-chip--automatic]="tagIsAutomatic(tag)"
+                [style.background-color]="safeTagColor(tag.color)"
+                [attr.title]="tagAccessibleTitle(tag)"
+              >
+                <i class="bi" [ngClass]="tagIconClass(tag.icono)" aria-hidden="true"></i>
+                <span class="reservation-tag-name">{{ tag.nombre }}</span>
+                <i class="bi bi-exclamation-triangle-fill reservation-tag-alert" *ngIf="tag.esAlerta" aria-hidden="true"></i>
+                <span class="visually-hidden" *ngIf="tag.esAlerta">Etiqueta de alerta.</span>
+                <i class="bi bi-gear-fill reservation-tag-auto" *ngIf="tagIsAutomatic(tag)" aria-hidden="true"></i>
+                <button
+                  type="button"
+                  class="reservation-tag-remove"
+                  *ngIf="canRemoveTag(tag)"
+                  (click)="removeReservationTag(tag)"
+                  [disabled]="isRemovingTag(tag.idTag) || savingTags()"
+                  [attr.aria-label]="(tagIsPersisted(tag) ? 'Retirar etiqueta ' : 'Quitar etiqueta ') + tag.nombre"
+                >
+                  <span class="spinner-border spinner-border-sm" *ngIf="isRemovingTag(tag.idTag)" aria-hidden="true"></span>
+                  <i class="bi bi-x" *ngIf="!isRemovingTag(tag.idTag)" aria-hidden="true"></i>
+                </button>
+              </span>
+              <button
+                type="button"
+                class="reservation-tags-more"
+                *ngIf="hiddenTagCount > 0 || showAllTags()"
+                (click)="showAllTags.set(!showAllTags())"
+                [attr.aria-expanded]="showAllTags()"
+              >
+                {{ showAllTags() ? 'Ver menos' : '+' + hiddenTagCount + ' más' }}
+              </button>
+            </div>
+            <small *ngIf="!isEditMode() && !createdReservationPendingTags()">Se guardarán al confirmar la reserva.</small>
+          </div>
+        </ng-container>
+
+        <div class="reservation-tags-pending" *ngIf="createdReservationPendingTags()" role="alert">
+          <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+          <div>
+            <strong>Reserva {{ createdReservationCode() || 'creada' }} con etiquetas pendientes</strong>
+            <span>{{ tagSaveError() }}</span>
+            <button type="button" class="btn btn-sm btn-warning" (click)="retryPendingTags()" [disabled]="savingTags()">
+              <span class="spinner-border spinner-border-sm" *ngIf="savingTags()" aria-hidden="true"></span>
+              Reintentar solo etiquetas
+            </button>
+          </div>
         </div>
       </section>
     </aside>
   </div>
 </form>
+
+<div class="modal-backdrop fade show" *ngIf="showTagsModal()"></div>
+<div
+  class="modal fade show d-block reservation-tags-modal"
+  tabindex="-1"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="reservation-tags-modal-title"
+  *ngIf="showTagsModal()"
+  (click)="closeTagsModal()"
+>
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title" id="reservation-tags-modal-title">
+            <i class="bi bi-tags me-2" aria-hidden="true"></i>
+            Agregar etiquetas a la reserva
+          </h5>
+          <small class="text-muted">Seleccione varias etiquetas y guárdelas en una sola operación.</small>
+        </div>
+        <button type="button" class="btn-close" aria-label="Cerrar" (click)="closeTagsModal()" [disabled]="savingTags()"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="input-group reservation-tags-search">
+          <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+          <input
+            type="search"
+            class="form-control"
+            placeholder="Buscar por nombre, categoría o descripción..."
+            aria-label="Buscar etiquetas por nombre, categoría o descripción"
+            [formControl]="tagSearchControl"
+            [disabled]="savingTags()"
+            autofocus
+          >
+          <span class="input-group-text" *ngIf="loadingTagCatalog()">
+            <span class="spinner-border spinner-border-sm" aria-label="Buscando etiquetas"></span>
+          </span>
+        </div>
+
+        <div class="alert alert-info py-2 mt-3 mb-0" *ngIf="tagSelectionMessage()" role="status">
+          <i class="bi bi-info-circle me-2" aria-hidden="true"></i>{{ tagSelectionMessage() }}
+        </div>
+
+        <div class="reservation-tags-catalog-error" *ngIf="tagCatalogError()" role="alert">
+          <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+          <span>{{ tagCatalogError() }}</span>
+          <button type="button" class="btn btn-sm btn-outline-danger" (click)="retryTagCatalog()">Reintentar</button>
+        </div>
+
+        <div class="reservation-tags-modal-loading" *ngIf="loadingTagCatalog() && tagCatalog.length === 0" role="status">
+          <span class="spinner-border text-primary" aria-hidden="true"></span>
+          <span>Buscando etiquetas disponibles...</span>
+        </div>
+
+        <div class="reservation-tags-groups" *ngIf="!tagCatalogError() && groupedTagCatalog.length > 0">
+          <section class="reservation-tags-group" *ngFor="let group of groupedTagCatalog">
+            <div class="reservation-tags-group-title" [attr.title]="group.descripcionCategoria">
+              <strong>{{ group.categoria }}</strong>
+              <span>{{ group.tags.length }}</span>
+            </div>
+
+            <div class="reservation-tags-results">
+              <div class="reservation-tag-result-wrap" *ngFor="let tag of group.tags">
+                <button
+                  type="button"
+                  class="reservation-tag-result"
+                  [class.reservation-tag-result--selected]="isTagSelected(tag.idTag)"
+                  [disabled]="isTagAssigned(tag.idTag) || !!persistedTagConflict(tag) || savingTags()"
+                  [attr.aria-pressed]="isTagSelected(tag.idTag)"
+                  [attr.aria-label]="(isTagSelected(tag.idTag) ? 'Quitar ' : 'Seleccionar ') + tag.nombre"
+                  (click)="toggleTagSelection(tag)"
+                >
+                  <span class="reservation-tag-check" aria-hidden="true">
+                    <i class="bi" [ngClass]="isTagSelected(tag.idTag) ? 'bi-check-lg' : ''"></i>
+                  </span>
+                  <span class="reservation-tag-color" [style.background-color]="safeTagColor(tag.color)" aria-hidden="true"></span>
+                  <i class="bi reservation-tag-result-icon" [ngClass]="tagIconClass(tag.icono)" aria-hidden="true"></i>
+                  <span class="reservation-tag-result-copy">
+                    <strong>{{ tag.nombre }}</strong>
+                    <small *ngIf="tag.descripcion">{{ tag.descripcion }}</small>
+                    <small class="reservation-tag-conflict" *ngIf="persistedTagConflict(tag) as conflict">
+                      Incompatible con {{ conflict.nombre }}. Retírela primero.
+                    </small>
+                  </span>
+                  <span class="badge text-bg-light" *ngIf="isTagAssigned(tag.idTag)">Asignada</span>
+                  <i class="bi bi-exclamation-triangle-fill text-warning" *ngIf="tag.esAlerta" aria-label="Etiqueta de alerta"></i>
+                </button>
+
+                <div class="reservation-tag-observation" *ngIf="isTagSelected(tag.idTag) && !isTagAssigned(tag.idTag)">
+                  <label [for]="'tag-observation-' + tag.idTag">Observación opcional</label>
+                  <textarea
+                    class="form-control"
+                    rows="2"
+                    maxlength="200"
+                    [id]="'tag-observation-' + tag.idTag"
+                    [value]="tagObservation(tag.idTag)"
+                    (input)="updateTagObservation(tag.idTag, $event)"
+                    placeholder="Agregue una nota para esta etiqueta..."
+                  ></textarea>
+                  <small>{{ tagObservation(tag.idTag).length }}/200</small>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="reservation-tags-modal-empty" *ngIf="!loadingTagCatalog() && !tagCatalogError() && groupedTagCatalog.length === 0">
+          <i class="bi bi-search" aria-hidden="true"></i>
+          <strong>Sin resultados</strong>
+          <span>No encontramos etiquetas para esta búsqueda.</span>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" (click)="closeTagsModal()" [disabled]="savingTags()">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="confirmTagSelection()" [disabled]="savingTags() || modalSelectionCount === 0">
+          <span class="spinner-border spinner-border-sm me-1" *ngIf="savingTags()" aria-hidden="true"></span>
+          {{ savingTags() ? 'Guardando etiquetas...' : tagConfirmationText() }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="modal-backdrop fade show" *ngIf="showTarifaModal"></div>
 <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" *ngIf="showTarifaModal" (click)="closeTarifaModal()">

@@ -3,7 +3,7 @@ import { Component, DestroyRef, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { EMPTY, catchError, debounceTime, distinctUntilChanged, exhaustMap, finalize, firstValueFrom, fromEvent, switchMap } from 'rxjs';
+import { EMPTY, Observable, catchError, debounceTime, distinctUntilChanged, exhaustMap, finalize, firstValueFrom, forkJoin, fromEvent, map, of, switchMap } from 'rxjs';
 import Swal from 'sweetalert2';
 
 import { OperationalAction } from 'src/app/core/models/operational-context.model';
@@ -14,10 +14,13 @@ import { addPmsCalendarDays, normalizePmsDateDDMMYYYY, toPmsDateInputValue } fro
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { WalkInAgenciaOption } from 'src/app/modules/front-desk/walk-in/models/walk-in.model';
 import { WalkInService } from 'src/app/modules/front-desk/walk-in/services/walk-in.service';
-import { ReservaConsulta, ReservaFiltro } from '../models/reserva-consulta.model';
+import { ReservaConsulta, ReservaConsultaPage, ReservaFiltro } from '../models/reserva-consulta.model';
+import { ReservationTagDetailsComponent } from '../components/reservation-tags/reservation-tag-details.component';
+import { ReservationTagListComponent } from '../components/reservation-tags/reservation-tag-list.component';
 import { ReservationPrepaymentsComponent } from '../reservation-prepayments/reservation-prepayments.component';
 import { ReservationPrepaymentSummary, buildReservationPrepaymentSummary } from '../reservation-prepayments/models/reservation-prepayment.model';
 import { ReservaHabitacionService } from '../services/reserva-habitacion.service';
+import { ReservaTagsService } from '../services/reserva-tags.service';
 
 interface ConsultaReservasFilterForm {
   fechaInicio: FormControl<string>;
@@ -36,7 +39,15 @@ type EstadoCambioReserva = 'WLT' | 'CCR';
 @Component({
   selector: 'app-consulta-reservas',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, SharedModule, ReservationPrepaymentsComponent],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    RouterModule,
+    SharedModule,
+    ReservationPrepaymentsComponent,
+    ReservationTagListComponent,
+    ReservationTagDetailsComponent
+  ],
   templateUrl: './consulta-reservas.component.html',
   styleUrls: ['./consulta-reservas.component.scss']
 })
@@ -77,6 +88,7 @@ export class ConsultaReservasComponent implements OnInit {
   readonly quickSearchControl = this.fb.control('');
   readonly reservas = signal<ReservaConsulta[]>([]);
   readonly pagedReservas = this.reservas.asReadonly();
+  readonly selectedTagDetails = signal<ReservaConsulta | null>(null);
   agenciaSuggestions: WalkInAgenciaOption[] = [];
   agenciaSearchOpen = false;
 
@@ -84,6 +96,7 @@ export class ConsultaReservasComponent implements OnInit {
     private readonly fb: NonNullableFormBuilder,
     private readonly router: Router,
     private readonly reservaService: ReservaHabitacionService,
+    private readonly reservaTagsService: ReservaTagsService,
     private readonly catalogService: WalkInService,
     private readonly auth: AuthService,
     private readonly operationalDateService: OperationalDateService,
@@ -153,6 +166,20 @@ export class ConsultaReservasComponent implements OnInit {
     }
 
     void this.router.navigate(['/reservas/detalle-hospedaje', codReserva]);
+  }
+
+  async gestionarEtiquetas(reserva: ReservaConsulta): Promise<void> {
+    if (!this.puedeEditarReserva(reserva)) return;
+    if (!(await this.operationalPolicy.require(OperationalAction.UpdateOperation))) return;
+    void this.router.navigate(['/reservas/detalle-hospedaje', reserva.reserva.trim()]);
+  }
+
+  openTagDetails(reserva: ReservaConsulta): void {
+    if (reserva.tags.length) this.selectedTagDetails.set(reserva);
+  }
+
+  closeTagDetails(): void {
+    this.selectedTagDetails.set(null);
   }
 
   async anularReserva(reserva: ReservaConsulta): Promise<void> {
@@ -464,7 +491,13 @@ export class ConsultaReservasComponent implements OnInit {
     this.agenciaSuggestions = [];
     this.agenciaSearchOpen = false;
     this.quickSearchControl.setValue('', { emitEvent: false });
-    this.filtro.set({ fechaInicio: inicio, fechaFinal: salida, agencia: '', estado: '', busqueda: '' });
+    this.filtro.set({
+      fechaInicio: inicio,
+      fechaFinal: salida,
+      agencia: '',
+      estado: '',
+      busqueda: ''
+    });
     this.currentPage.set(1);
     this.loadReservas();
   }
@@ -479,9 +512,18 @@ export class ConsultaReservasComponent implements OnInit {
   }
 
   exportar(): void {
-    const csv = this.reservas()
-      .map((r) => `${r.reserva},${r.agencia},${r.ingreso},${r.salida},${r.estado},${r.total}`)
-      .join('\n');
+    const header = 'Reserva,Agencia,Ingreso,Salida,Estado,Total,Etiquetas,Tiene alerta';
+    const rows = this.reservas().map((reserva) => [
+      reserva.reserva,
+      reserva.agencia,
+      reserva.ingreso,
+      reserva.salida,
+      reserva.estado,
+      reserva.total,
+      reserva.tags.map((tag) => tag.nombre).join(' | '),
+      reserva.tieneAlertas ? 'Sí' : 'No'
+    ].map((value) => this.escapeCsvValue(value)).join(','));
+    const csv = [header, ...rows].join('\n');
     console.info('Export reservas\n' + csv);
   }
 
@@ -489,6 +531,11 @@ export class ConsultaReservasComponent implements OnInit {
     this.pageSize.set(Number(value) || 5);
     this.currentPage.set(1);
     this.loadReservas();
+  }
+
+  onPageSizeChange(event: Event): void {
+    const target = event.target;
+    this.setPageSize(target instanceof HTMLSelectElement ? target.value : '');
   }
 
   goToPage(page: number): void {
@@ -583,6 +630,7 @@ export class ConsultaReservasComponent implements OnInit {
 
     request$
       .pipe(
+        switchMap((response) => this.loadReservationTags(response)),
         catchError((error) => {
           console.error('No se pudieron consultar las reservas.', error);
           this.errorMessage.set('No se pudieron consultar las reservas.');
@@ -600,6 +648,47 @@ export class ConsultaReservasComponent implements OnInit {
         this.pageSize.set(response.tamanoPagina || this.pageSize());
         this.totalPages.set(Math.max(response.totalPaginas || 1, 1));
       });
+  }
+
+  private loadReservationTags(response: ReservaConsultaPage): Observable<ReservaConsultaPage> {
+    if (!response.reservas.length) {
+      return of(response);
+    }
+
+    const reservationsWithTags$ = response.reservas.map((reserva) => {
+      const codReserva = reserva.reserva.trim();
+      if (!codReserva) {
+        return of(reserva);
+      }
+
+      return this.reservaTagsService.obtenerTagsReserva(codReserva).pipe(
+        map((tagResponse) => {
+          const tags = tagResponse.exito && Array.isArray(tagResponse.datos)
+            ? tagResponse.datos
+            : reserva.tags;
+
+          return {
+            ...reserva,
+            tags: [...tags],
+            cantidadTags: tags.length,
+            tieneAlertas: tags.some((tag) => tag.esAlerta)
+          };
+        }),
+        catchError((error) => {
+          console.warn(`No se pudieron consultar los tags de la reserva ${codReserva}.`, error);
+          return of(reserva);
+        })
+      );
+    });
+
+    return forkJoin(reservationsWithTags$).pipe(
+      map((reservas) => ({ ...response, reservas }))
+    );
+  }
+
+  private escapeCsvValue(value: string | number): string {
+    const text = String(value ?? '');
+    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
   }
 
   private defaultDateRange(operationalDate: string): { inicio: string; salida: string } {

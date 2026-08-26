@@ -1,0 +1,86 @@
+@if (detailed()) {
+  <div class="tag-detail-list">
+    @for (tag of orderedTags(); track tag.idAsignacion ?? tag.idTag) {
+      <article class="tag-detail" [class.tag-detail--alert]="tag.esAlerta">
+        <header>
+          <span class="tag-color" [style.background-color]="safeColor(tag.color)" aria-hidden="true"></span>
+          <i class="bi" [ngClass]="iconClass(tag.icono)" aria-hidden="true"></i>
+          <div>
+            <strong>{{ tag.nombre }}</strong>
+            <small>Categoría: {{ tag.categoria || 'Sin categoría' }}</small>
+          </div>
+          @if (tag.esAlerta) {
+            <span class="tag-alert"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> Alerta</span>
+          }
+          @if (canRemove(tag)) {
+            <button
+              type="button"
+              class="tag-remove"
+              [disabled]="removingTagIds().has(tag.idTag)"
+              [attr.aria-label]="'Retirar etiqueta ' + tag.nombre"
+              (click)="requestRemoval(tag)"
+            >
+              @if (removingTagIds().has(tag.idTag)) { <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> }
+              @else { <i class="bi bi-x-lg" aria-hidden="true"></i> }
+            </button>
+          }
+        </header>
+        @if (tag.descripcion) { <p>{{ tag.descripcion }}</p> }
+        @if (tag.observacion) {
+          <div class="tag-note"><strong>Observación</strong><span>{{ tag.observacion }}</span></div>
+        }
+        @if (tag.tipoAsignacion || tag.operadorAsignacion || tag.fechaAsignacion) {
+        <footer>
+          <span>Asignación: {{ assignmentLabel(tag) }}</span>
+          @if (isAutomatic(tag)) {
+            <span><i class="bi bi-gear-fill" aria-hidden="true"></i> Administrada automáticamente por el sistema.</span>
+          } @else {
+            <span>Registrada por: {{ tag.operadorAsignacion || '-' }}</span>
+          }
+          @if (tag.fechaAsignacion) { <span>Fecha: {{ formatAssignedAt(tag.fechaAsignacion) }}</span> }
+        </footer>
+        }
+      </article>
+    }
+  </div>
+} @else {
+  <div class="tag-chip-list" [class.tag-chip-list--compact]="compact()" aria-live="polite">
+    @for (tag of visibleTags(); track tag.idAsignacion ?? tag.idTag) {
+      <span
+        class="tag-chip"
+        [class.tag-chip--alert]="tag.esAlerta"
+        [class.tag-chip--automatic]="isAutomatic(tag)"
+        [style.background-color]="safeColor(tag.color)"
+        [attr.title]="accessibleTitle(tag)"
+      >
+        <i class="bi" [ngClass]="iconClass(tag.icono)" aria-hidden="true"></i>
+        <span class="tag-name">{{ tag.nombre }}</span>
+        @if (tag.esAlerta) {
+          <i class="bi bi-exclamation-triangle-fill tag-chip__alert" aria-hidden="true"></i>
+          <span class="visually-hidden">Etiqueta de alerta.</span>
+        }
+        @if (isAutomatic(tag)) {
+          <i class="bi bi-gear-fill tag-chip__automatic" aria-hidden="true"></i>
+          <span class="visually-hidden">Etiqueta administrada automáticamente por el sistema.</span>
+        }
+        @if (canRemove(tag)) {
+          <button
+            type="button"
+            class="tag-chip__remove"
+            [disabled]="removingTagIds().has(tag.idTag)"
+            [attr.aria-label]="'Retirar etiqueta ' + tag.nombre"
+            (click)="requestRemoval(tag)"
+          >
+            @if (removingTagIds().has(tag.idTag)) { <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> }
+            @else { <i class="bi bi-x" aria-hidden="true"></i> }
+          </button>
+        }
+      </span>
+    }
+    @if (hiddenCount() > 0 || (expanded() && orderedTags().length > maxVisible())) {
+      <button type="button" class="tag-more" [attr.aria-expanded]="expanded()" (click)="showAll.emit()">
+        {{ expanded() ? 'Ver menos' : '+' + hiddenCount() + ' más' }}
+      </button>
+    }
+  </div>
+}

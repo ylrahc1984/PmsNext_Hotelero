@@ -245,7 +245,7 @@ h1 {
   grid-row: 1 / 4;
   align-self: stretch;
   display: grid;
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto auto auto 1fr;
   gap: 6px;
   min-width: 0;
   padding: 4px 8px;
@@ -390,6 +390,84 @@ label {
   padding-left: 0;
   border-left: 0;
 }
+
+.reservation-tags-card {
+  align-self: start;
+  border-color: rgba($cyan, 0.18);
+}
+
+.reservation-tags-card__header,
+.reservation-tags-card__header > div,
+.reservation-tags-card__manage,
+.reservation-tags-card__loading,
+.reservation-tags-card__empty button {
+  display: flex;
+  align-items: center;
+}
+
+.reservation-tags-card__header {
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 42px;
+  padding: 7px 12px;
+  border-bottom: 1px solid $line;
+}
+
+.reservation-tags-card__header > div { min-width: 0; gap: 8px; }
+.reservation-tags-card__header > div > .material-icons { color: $cyan-dark; font-size: 1.05rem; }
+.reservation-tags-card__header h2 { overflow: hidden; font-size: 0.9rem; text-overflow: ellipsis; white-space: nowrap; }
+
+.reservation-tags-card__manage {
+  justify-content: center;
+  gap: 4px;
+  min-height: 29px;
+  padding: 0 8px;
+  border: 1px solid rgba($cyan, 0.3);
+  border-radius: 7px;
+  color: $cyan-dark;
+  background: $paper;
+  font-size: 0.67rem;
+  font-weight: 850;
+}
+
+.reservation-tags-card__manage .material-icons { font-size: 0.88rem; }
+.reservation-tags-card__manage:hover:not(:disabled),
+.reservation-tags-card__manage:focus-visible { border-color: $cyan; outline: none; background: rgba($cyan, 0.05); }
+.reservation-tags-card__manage:disabled,
+.reservation-tags-card__empty button:disabled { cursor: not-allowed; opacity: 0.58; }
+
+.reservation-tags-card__body { padding: 10px 12px; }
+.reservation-tags-card__body > small { display: block; margin-top: 7px; color: $muted; font-size: 0.63rem; }
+.reservation-tags-card__loading { gap: 7px; min-height: 36px; color: $muted; font-size: 0.7rem; font-weight: 750; }
+.reservation-tags-card__loading .spinner-border { width: 0.8rem; height: 0.8rem; color: $cyan-dark; }
+
+.reservation-tags-card__error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 8px;
+  color: #991b1b;
+  background: #fef2f2;
+  font-size: 0.67rem;
+  font-weight: 720;
+}
+
+.reservation-tags-card__error button { padding: 0; border: 0; color: #991b1b; background: transparent; font-size: inherit; font-weight: 880; text-decoration: underline; }
+
+.reservation-tags-card__empty {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.reservation-tags-card__empty > div { display: grid; gap: 2px; }
+.reservation-tags-card__empty strong { color: $ink; font-size: 0.72rem; font-weight: 850; }
+.reservation-tags-card__empty span { color: $muted; font-size: 0.64rem; line-height: 1.3; }
+.reservation-tags-card__empty button { justify-content: center; gap: 3px; min-height: 28px; padding: 0 8px; border: 1px solid rgba($cyan, 0.28); border-radius: 7px; color: $cyan-dark; background: $paper; font-size: 0.65rem; font-weight: 850; }
+.reservation-tags-card__empty button .material-icons { color: inherit; font-size: 0.85rem; }
 
 .notes-card {
   align-self: start;
@@ -669,6 +747,7 @@ label {
 }
 
 .left-stack .reservation-card,
+.left-stack .reservation-tags-card,
 .left-stack .notes-card,
 .left-stack .guest-card {
   box-shadow: 0 8px 18px rgba(29, 42, 68, 0.035);
@@ -1737,7 +1816,7 @@ label {
   }
 
   .left-stack {
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto auto auto auto;
   }
 
   .actions-card {
@@ -1825,6 +1904,14 @@ label {
 }
 
 @media (max-width: 767.98px) {
+  .reservation-tags-card__empty {
+    grid-template-columns: 1fr;
+  }
+
+  .reservation-tags-card__empty button {
+    width: 100%;
+  }
+
   .stay-header,
   .room-title,
   .card-head {

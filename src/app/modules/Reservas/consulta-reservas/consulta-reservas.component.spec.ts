@@ -10,13 +10,16 @@ import { OperationalDateService } from 'src/app/core/services/operational-date.s
 import { OperationalPolicyService } from 'src/app/core/services/operational-policy.service';
 import { WalkInService } from 'src/app/modules/front-desk/walk-in/services/walk-in.service';
 import { ReservaConsulta } from '../models/reserva-consulta.model';
+import { ReservaTagResumen } from '../models/reserva-tag.model';
 import { ReservaHabitacionService } from '../services/reserva-habitacion.service';
+import { ReservaTagsService } from '../services/reserva-tags.service';
 import { ConsultaReservasComponent } from './consulta-reservas.component';
 
 describe('ConsultaReservasComponent', () => {
   let component: ConsultaReservasComponent;
   let fixture: ComponentFixture<ConsultaReservasComponent>;
   let reservaService: jasmine.SpyObj<ReservaHabitacionService>;
+  let reservaTagsService: jasmine.SpyObj<ReservaTagsService>;
   let operationalDateService: {
     operationalDate: ReturnType<typeof signal<string>>;
     ensureLoaded: jasmine.Spy;
@@ -51,6 +54,10 @@ describe('ConsultaReservasComponent', () => {
         totalPaginas: 1
       })
     );
+    reservaTagsService = jasmine.createSpyObj<ReservaTagsService>('ReservaTagsService', ['obtenerTagsReserva']);
+    reservaTagsService.obtenerTagsReserva.and.returnValue(
+      of({ datos: [], respuesta: 'OK|TAGS ACTIVOS CONSULTADOS', exito: true, codigoHttp: 200 })
+    );
 
     operationalDateService = {
       operationalDate: signal('29/07/2026'),
@@ -66,6 +73,7 @@ describe('ConsultaReservasComponent', () => {
       imports: [ConsultaReservasComponent, HttpClientTestingModule],
       providers: [
         { provide: ReservaHabitacionService, useValue: reservaService },
+        { provide: ReservaTagsService, useValue: reservaTagsService },
         { provide: WalkInService, useValue: { searchAgencias: () => of([]) } },
         { provide: AuthService, useValue: { getCurrentUser: () => ({ usuario: 'TEST' }) } },
         { provide: OperationalDateService, useValue: operationalDateService },
@@ -138,6 +146,90 @@ describe('ConsultaReservasComponent', () => {
     expect(reservaService.buscarReservas).toHaveBeenCalledWith('mario', 1, 10);
     expect(reservaService.consultarReservas).not.toHaveBeenCalled();
   });
+
+  it('muestra dos tags embebidos y abre el detalle completo desde +N', () => {
+    const reserva = buildReserva('CCR');
+    reserva.tags = [makeTag(1, 'VIP'), makeTag(2, 'Alerta', true), makeTag(3, 'Llegada tardía')];
+    reserva.cantidadTags = 3;
+    reserva.tieneAlertas = true;
+    component.reservas.set([reserva]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelectorAll('.reservation-row-tags .tag-chip').length).toBe(2);
+    expect(fixture.nativeElement.querySelector('.reservation-row-tags .tag-more').textContent).toContain('+1');
+    fixture.nativeElement.querySelector('.reservation-row-tags .tag-more').click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelectorAll('.tag-details-modal .tag-detail').length).toBe(3);
+    expect(fixture.nativeElement.querySelector('.tag-details-modal').textContent).toContain(reserva.reserva);
+  });
+
+  it('no muestra texto de estado vacío cuando una reserva no tiene tags', () => {
+    component.reservas.set([buildReserva('ABI'), { ...buildReserva('CCR'), reserva: 'RS26000002' }]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelectorAll('.reservation-row-tags').length).toBe(0);
+    expect(fixture.nativeElement.querySelector('.reserva-table').textContent).not.toContain('Sin etiquetas');
+  });
+
+  it('consulta y muestra los tags activos de cada reserva listada', async () => {
+    const reserva = { ...buildReserva('CCR'), reserva: 'NA260000372' };
+    const tags = [makeTag(1, 'VIP'), makeTag(30, 'ADULTO MAYOR'), makeTag(4, 'CUMPLEAÑOS')];
+    const assignedTags = tags.map((tag, index) => ({
+      ...tag,
+      idAsignacion: index + 1,
+      codReserva: reserva.reserva,
+      tipoAsignacion: 'MANUAL',
+      origen: 'RESERVA',
+      observacion: null,
+      permiteAsignacionManual: true,
+      grupoExclusion: null,
+      fechaAsignacion: '2026-08-24T17:10:19',
+      operadorAsignacion: 'CHARLY'
+    }));
+    reservaService.consultarReservas.and.returnValue(of({
+      reservas: [reserva],
+      totalRegistros: 1,
+      paginaActual: 1,
+      tamanoPagina: 10,
+      totalPaginas: 1
+    }));
+    reservaTagsService.obtenerTagsReserva.and.returnValue(
+      of({ datos: assignedTags, respuesta: 'OK|TAGS ACTIVOS CONSULTADOS CORRECTAMENTE', exito: true, codigoHttp: 200 })
+    );
+
+    await component.buscar();
+    fixture.detectChanges();
+
+    expect(reservaTagsService.obtenerTagsReserva).toHaveBeenCalledWith('NA260000372');
+    expect(component.reservas()[0].tags.map((tag) => tag.nombre)).toEqual(['VIP', 'ADULTO MAYOR', 'CUMPLEAÑOS']);
+    expect(fixture.nativeElement.querySelectorAll('.reservation-row-tags .tag-chip').length).toBe(2);
+    expect(fixture.nativeElement.querySelector('.reservation-row-tags .tag-more').textContent).toContain('+1');
+  });
+
+  it('dirige la gestión de tags al detalle reutilizable cuando la reserva es modificable', async () => {
+    const reserva = buildReserva('CCR');
+
+    await component.gestionarEtiquetas(reserva);
+
+    expect(operationalPolicy.require).toHaveBeenCalledWith(OperationalAction.UpdateOperation);
+    expect(router.navigate).toHaveBeenCalledWith(['/reservas/detalle-hospedaje', reserva.reserva]);
+  });
+
+  it('exporta nombres de tags y alerta sin metadatos técnicos', () => {
+    const reserva = buildReserva('CCR');
+    reserva.tags = [makeTag(1, 'VIP'), makeTag(2, 'Alergia', true)];
+    reserva.tieneAlertas = true;
+    component.reservas.set([reserva]);
+    const consoleInfo = spyOn(console, 'info');
+
+    component.exportar();
+
+    const csv = String(consoleInfo.calls.mostRecent().args[0]);
+    expect(csv).toContain('Etiquetas,Tiene alerta');
+    expect(csv).toContain('VIP | Alergia,Sí');
+    expect(csv).not.toContain('#DBEAFE');
+  });
 });
 
 function buildReserva(estado: string): ReservaConsulta {
@@ -161,6 +253,26 @@ function buildReserva(estado: string): ReservaConsulta {
     prepago: 'N',
     moneda: 'USD',
     tCambio: 1,
-    operador: 'TEST'
+    operador: 'TEST',
+    tags: [],
+    cantidadTags: 0,
+    tieneAlertas: false
+  };
+}
+
+function makeTag(idTag: number, nombre: string, esAlerta = false): ReservaTagResumen {
+  return {
+    idTag,
+    idCategoria: 1,
+    categoria: 'Experiencia',
+    ordenCategoria: 10,
+    nombre,
+    descripcion: `${nombre} descripción`,
+    color: '#DBEAFE',
+    icono: 'tag',
+    prioridad: esAlerta ? 3 : 1,
+    esAlerta,
+    tipoAsignacion: 'MANUAL',
+    observacion: null
   };
 }

@@ -11,6 +11,9 @@ import { AuthService } from 'src/app/core/services/auth.service';
 import { OperationalDateService } from 'src/app/core/services/operational-date.service';
 import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
 import { normalizePmsDateDDMMYYYY, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
+import { ReservaTagAsignado } from 'src/app/modules/Reservas/models/reserva-tag.model';
+import { ReservaTagsService } from 'src/app/modules/Reservas/services/reserva-tags.service';
+import { ReservationTagListComponent } from 'src/app/modules/Reservas/components/reservation-tags/reservation-tag-list.component';
 
 import {
   CheckInArrival,
@@ -46,7 +49,7 @@ type RoomingListStatus = 'LOADING' | 'COMPLETE' | 'MISSING' | 'ERROR';
 @Component({
   selector: 'app-check-in-arrivals',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, GuestSelfCheckinDialogComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, GuestSelfCheckinDialogComponent, ReservationTagListComponent],
   templateUrl: './check-in-arrivals.component.html',
   styleUrls: ['./check-in-arrivals.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -62,6 +65,7 @@ export class CheckInArrivalsComponent implements OnInit {
   private readonly operationalDateService = inject(OperationalDateService);
   private readonly empresaContext = inject(EmpresaContextService);
   private readonly guestRegistrationPdf = inject(GuestRegistrationPdfService);
+  private readonly reservaTagsService = inject(ReservaTagsService);
   private operationalDateInput = '';
 
   readonly pageSizeOptions: PaginationOption[] = [
@@ -125,7 +129,7 @@ export class CheckInArrivalsComponent implements OnInit {
   totalPages = 1;
   sortColumn: CheckInArrivalSortColumn = 'fechaIng';
   sortDirection: CheckInArrivalSortDirection = 'asc';
-  activeObservationKey: string | null = null;
+  activeDetailKey: string | null = null;
   activeActionsMenuKey: string | null = null;
   roomingArrival: CheckInArrival | null = null;
   roomingGuests: RoomingListGuest[] = [];
@@ -135,8 +139,12 @@ export class CheckInArrivalsComponent implements OnInit {
   showRoomingForm = false;
   checkingInKey: string | null = null;
   readonly roomingStatusByRoom = new Map<string, RoomingListStatus>();
+  readonly tagsByReservation = new Map<string, ReservaTagAsignado[]>();
+  readonly tagLoadingReservations = new Set<string>();
+  readonly tagErrorReservations = new Set<string>();
   private readonly roomingGuestsByRoom = new Map<string, RoomingListGuest[]>();
   private roomingStatusLoadId = 0;
+  private tagLoadId = 0;
   documentTypes: WalkInOption[] = [];
   nationalities: Nationality[] = [];
   selfCheckinNationalities: SelfCheckInOption[] = [];
@@ -180,8 +188,9 @@ export class CheckInArrivalsComponent implements OnInit {
       .subscribe((arrivals) => {
         this.arrivals = arrivals.map((arrival) => this.normalizeArrival(arrival));
         this.loadRoomingStatuses(this.arrivals);
+        this.loadReservationTags(this.arrivals);
         this.selectedArrival = this.arrivals[0] ?? null;
-        this.activeObservationKey = null;
+        this.activeDetailKey = null;
         this.page = 1;
         this.refreshView();
       });
@@ -217,8 +226,15 @@ export class CheckInArrivalsComponent implements OnInit {
       return;
     }
 
-    const key = this.getArrivalKey(arrival);
-    this.activeObservationKey = this.activeObservationKey === key ? null : key;
+    this.toggleReservationDetail(arrival);
+  }
+
+  toggleReservationTags(arrival: CheckInArrival): void {
+    if (!this.getReservationTags(arrival).length) {
+      return;
+    }
+
+    this.toggleReservationDetail(arrival);
   }
 
   toggleActionsMenu(arrival: CheckInArrival): void {
@@ -292,12 +308,24 @@ export class CheckInArrivalsComponent implements OnInit {
     return !!this.selectedArrival && this.getArrivalKey(this.selectedArrival) === this.getArrivalKey(arrival);
   }
 
-  isObservacionOpen(arrival: CheckInArrival): boolean {
-    return this.activeObservationKey === this.getArrivalKey(arrival);
+  isReservationDetailOpen(arrival: CheckInArrival): boolean {
+    return this.activeDetailKey === this.getArrivalKey(arrival);
   }
 
   hasObservacion(arrival: CheckInArrival): boolean {
     return arrival.observacion.trim().length > 0;
+  }
+
+  getReservationTags(arrival: CheckInArrival): ReservaTagAsignado[] {
+    return this.tagsByReservation.get(this.getReservationCodeKey(arrival.codReserva)) ?? [];
+  }
+
+  isReservationTagsLoading(arrival: CheckInArrival): boolean {
+    return this.tagLoadingReservations.has(this.getReservationCodeKey(arrival.codReserva));
+  }
+
+  hasReservationTagsError(arrival: CheckInArrival): boolean {
+    return this.tagErrorReservations.has(this.getReservationCodeKey(arrival.codReserva));
   }
 
   getHabitacionLabel(arrival: CheckInArrival): string {
@@ -701,6 +729,54 @@ export class CheckInArrivalsComponent implements OnInit {
       });
   }
 
+  private loadReservationTags(arrivals: CheckInArrival[]): void {
+    const loadId = ++this.tagLoadId;
+    this.tagsByReservation.clear();
+    this.tagLoadingReservations.clear();
+    this.tagErrorReservations.clear();
+
+    const reservationCodes = [...new Map(
+      arrivals
+        .map((arrival) => arrival.codReserva.trim())
+        .filter(Boolean)
+        .map((code) => [this.getReservationCodeKey(code), code])
+    ).values()];
+
+    reservationCodes.forEach((code) => this.tagLoadingReservations.add(this.getReservationCodeKey(code)));
+    if (!reservationCodes.length) {
+      this.cdr.markForCheck();
+      return;
+    }
+
+    from(reservationCodes)
+      .pipe(
+        mergeMap(
+          (code) => this.reservaTagsService.obtenerTagsReserva(code).pipe(
+            map((response) => ({
+              code,
+              tags: response?.exito && Array.isArray(response.datos)
+                ? [...response.datos].sort((left, right) => this.compareReservationTags(left, right))
+                : null
+            })),
+            catchError(() => of({ code, tags: null }))
+          ),
+          5
+        ),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(({ code, tags }) => {
+        if (loadId !== this.tagLoadId) return;
+        const key = this.getReservationCodeKey(code);
+        this.tagLoadingReservations.delete(key);
+        if (tags) {
+          this.tagsByReservation.set(key, tags);
+        } else {
+          this.tagErrorReservations.add(key);
+        }
+        this.cdr.markForCheck();
+      });
+  }
+
   private setRoomingStatus(arrival: CheckInArrival, status: RoomingListStatus): void {
     this.roomingStatusByRoom.set(this.getRoomingKey(arrival), status);
   }
@@ -811,6 +887,22 @@ export class CheckInArrivalsComponent implements OnInit {
 
   private getArrivalKey(arrival: CheckInArrival): string {
     return `${arrival.codReserva}-${arrival.numHabita}-${arrival.folio}`;
+  }
+
+  private getReservationCodeKey(codReserva: string): string {
+    return codReserva.trim().toUpperCase();
+  }
+
+  private toggleReservationDetail(arrival: CheckInArrival): void {
+    const key = this.getArrivalKey(arrival);
+    this.activeDetailKey = this.activeDetailKey === key ? null : key;
+  }
+
+  private compareReservationTags(left: ReservaTagAsignado, right: ReservaTagAsignado): number {
+    return Number(right.esAlerta) - Number(left.esAlerta)
+      || right.prioridad - left.prioridad
+      || left.ordenCategoria - right.ordenCategoria
+      || left.nombre.localeCompare(right.nombre);
   }
 
   private getRoomingKey(arrival: CheckInArrival): string {

@@ -331,8 +331,19 @@ $line: rgba(15, 33, 51, 0.1);
 
 .arrivals-table .col-numHabita { min-width: 130px; }
 .arrivals-table .col-catHabita { min-width: 110px; }
-.arrivals-table .col-tipHabita { min-width: 100px; }
-.arrivals-table .col-codReserva { min-width: 116px; }
+.arrivals-table .col-tipHabita {
+  width: 78px;
+  min-width: 78px;
+  max-width: 78px;
+}
+.arrivals-table .col-tipHabita .sort-button {
+  gap: 4px;
+  padding-inline: 8px;
+}
+.arrivals-table .col-codReserva {
+  min-width: 190px;
+  white-space: normal;
+}
 .arrivals-table .col-nomAgencia { min-width: 180px; }
 .arrivals-table .col-descripcion { min-width: 220px; }
 .arrivals-table .col-fechaIng,
@@ -435,6 +446,43 @@ $line: rgba(15, 33, 51, 0.1);
 
 .rooming-status--error {
   color: #a32638;
+}
+
+.reservation-code {
+  display: block;
+  color: $ink;
+  font-size: 0.84rem;
+  font-weight: 880;
+  white-space: nowrap;
+}
+
+.reservation-tags-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  color: rgba($muted, 0.82);
+  font-size: 0.66rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.reservation-tags-state .spinner-border {
+  width: 0.72rem;
+  height: 0.72rem;
+}
+
+.reservation-tags-state .material-icons {
+  font-size: 0.95rem;
+}
+
+.reservation-tags-state--error {
+  color: #9d3443;
+}
+
+.reservation-tags-summary {
+  display: block;
+  margin-top: 6px;
 }
 
 .description-cell {
@@ -790,6 +838,61 @@ $line: rgba(15, 33, 51, 0.1);
   border-bottom: 1px solid rgba($cyan, 0.16);
 }
 
+.reservation-detail-row {
+  cursor: default !important;
+}
+
+.reservation-detail {
+  display: grid;
+  gap: 12px;
+  max-width: 980px;
+  margin-left: auto;
+  padding: 13px 14px;
+  border: 1px solid rgba($cyan, 0.18);
+  border-left: 4px solid $cyan;
+  border-radius: 14px;
+  background: $paper;
+  box-shadow: 0 14px 28px rgba(15, 33, 51, 0.08);
+}
+
+.reservation-detail__section {
+  display: grid;
+  gap: 8px;
+}
+
+.reservation-detail__section + .reservation-detail__section {
+  padding-top: 11px;
+  border-top: 1px solid rgba($bg, 0.08);
+}
+
+.reservation-detail__heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: $ink;
+}
+
+.reservation-detail__heading .material-icons {
+  color: $blue;
+  font-size: 1.1rem;
+}
+
+.reservation-detail__heading strong {
+  font-size: 0.82rem;
+  font-weight: 880;
+}
+
+.reservation-detail p {
+  max-height: 150px;
+  margin: 0;
+  overflow: auto;
+  color: rgba($ink, 0.76);
+  font-size: 0.8rem;
+  font-weight: 650;
+  line-height: 1.45;
+  white-space: pre-line;
+}
+
 .observation-detail {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -941,6 +1044,11 @@ $line: rgba(15, 33, 51, 0.1);
 
 .arrival-mobile-card p {
   margin: 0;
+}
+
+.mobile-reservation-tags {
+  display: block;
+  padding-block: 2px;
 }
 
 .mobile-badges,

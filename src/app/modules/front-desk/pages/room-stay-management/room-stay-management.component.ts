@@ -23,6 +23,15 @@ import { ClienteUI } from 'src/app/demo/catalogos/agencias-comisionistas/cliente
 import { MonedaService, MonedaUI } from 'src/app/demo/administracion/monedas/moneda.service';
 import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
+import { ReservationTagListComponent } from 'src/app/modules/Reservas/components/reservation-tags/reservation-tag-list.component';
+import { ReservationTagSelectorComponent } from 'src/app/modules/Reservas/components/reservation-tags/reservation-tag-selector.component';
+import {
+  ApiResponse,
+  ReservaTagAsignado,
+  ReservaTagCatalogo,
+  ReservaTagSeleccionado
+} from 'src/app/modules/Reservas/models/reserva-tag.model';
+import { ReservaTagsService } from 'src/app/modules/Reservas/services/reserva-tags.service';
 import { Nationality } from '../../settings/nationalities/models/nationality.model';
 import { NationalitiesService } from '../../settings/nationalities/services/nationalities.service';
 import { PaxType } from '../../settings/pax-types/models/pax-type.model';
@@ -297,7 +306,14 @@ const emptyRoomStay: RoomStay = {
 @Component({
   selector: 'app-room-stay-management',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, SharedModule, CdkScrollable],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    SharedModule,
+    CdkScrollable,
+    ReservationTagListComponent,
+    ReservationTagSelectorComponent
+  ],
   templateUrl: './room-stay-management.component.html',
   styleUrls: ['./room-stay-management.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -317,12 +333,15 @@ export class RoomStayManagementComponent implements OnInit {
   private readonly paxTypesService                = inject(PaxTypesService);
   private readonly monedaService                  = inject(MonedaService);
   private readonly tipoCambioService              = inject(TipoCambioService);
+  private readonly reservaTagsService              = inject(ReservaTagsService);
   private readonly invoiceBaseCurrency            = 'USD';
   private readonly roomChargeCatalogPageSize      = 8;
   private readonly invoiceClientSearchChanges     = new Subject<string>();
   private requestedRoomNumber                     = '';
   private requestedReservationNumber              = '';
   private invoiceExchangeRateRequestId             = 0;
+  private assignedTagsRequestId                    = 0;
+  private assignedTagsReservationCode              = '';
 
   private readonly invoiceConsumerFinal: InvoiceClient = {
     code          : '000000000',
@@ -341,6 +360,13 @@ export class RoomStayManagementComponent implements OnInit {
   readonly isCommentsSaving                      = signal(false);
   readonly commentsDraft                         = signal('');
   readonly commentsErrorMessage                  = signal('');
+  readonly assignedReservationTags               = signal<ReservaTagAsignado[]>([]);
+  readonly isAssignedTagsLoading                 = signal(false);
+  readonly assignedTagsError                     = signal('');
+  readonly showReservationTagsModal              = signal(false);
+  readonly isSavingReservationTags               = signal(false);
+  readonly reservationTagsSaveError              = signal('');
+  readonly removingReservationTagIds             = signal<ReadonlySet<number>>(new Set<number>());
   readonly availableRoomOptions                  = signal<RoomOption[]>([]);
   readonly isAvailableRoomsLoading               = signal(false);
   readonly availableRoomsLoaded                  = signal(false);
@@ -730,6 +756,9 @@ export class RoomStayManagementComponent implements OnInit {
   readonly hasChargeDetailChanges = computed(() =>
     this.chargeDetailFingerprint(this.selectedChargeDetail()) !== this.chargeDetailFingerprint(this.originalSelectedChargeDetail())
   );
+  readonly canManageReservationTags = computed(() =>
+    Boolean(this.cleanText(this.room().reservationNumber)) && !this.isCheckoutSubmitting()
+  );
 
   constructor(
     private readonly route: ActivatedRoute,
@@ -828,6 +857,121 @@ export class RoomStayManagementComponent implements OnInit {
           this.commentsErrorMessage.set('No se pudo guardar el comentario. Intente nuevamente.');
         }
       });
+  }
+
+  openReservationTagsModal(): void {
+    if (!this.canManageReservationTags()) {
+      this.toastService.info('La reserva todavía no está disponible para gestionar etiquetas.', 3500, 'Etiquetas');
+      return;
+    }
+    this.reservationTagsSaveError.set('');
+    this.showReservationTagsModal.set(true);
+  }
+
+  closeReservationTagsModal(): void {
+    if (!this.isSavingReservationTags()) this.showReservationTagsModal.set(false);
+  }
+
+  retryAssignedReservationTags(): void {
+    this.loadAssignedReservationTags(this.room().reservationNumber, true);
+  }
+
+  saveReservationTags(selections: ReservaTagSeleccionado[]): void {
+    if (this.isSavingReservationTags()) return;
+    const codReserva = this.cleanText(this.room().reservationNumber);
+    const normalizedSelections = this.normalizeReservationTagSelections(selections);
+
+    if (!codReserva) {
+      this.reservationTagsSaveError.set('No se pudo identificar la reserva activa.');
+      return;
+    }
+    if (!normalizedSelections.length) {
+      this.reservationTagsSaveError.set('Seleccione al menos una etiqueta nueva.');
+      return;
+    }
+
+    const validationError = this.validateReservationTagSelections(normalizedSelections);
+    if (validationError) {
+      this.reservationTagsSaveError.set(validationError);
+      return;
+    }
+
+    this.isSavingReservationTags.set(true);
+    this.reservationTagsSaveError.set('');
+    this.reservaTagsService.guardarTagsBatch(codReserva, {
+      tags: normalizedSelections.map((selection) => ({
+        idTag: selection.tag.idTag,
+        observacion: selection.observacion?.trim().slice(0, 200) || null
+      }))
+    }).pipe(
+      finalize(() => this.isSavingReservationTags.set(false)),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (response) => {
+        if (!this.isSuccessfulTagResponse(response) || !Array.isArray(response.datos)) {
+          this.reservationTagsSaveError.set(this.cleanTagApiMessage(response?.respuesta) || 'El servidor no confirmó el guardado de las etiquetas.');
+          return;
+        }
+        const byTagId = new Map(this.assignedReservationTags().map((tag) => [tag.idTag, tag]));
+        response.datos.forEach((tag) => byTagId.set(tag.idTag, tag));
+        this.assignedReservationTags.set([...byTagId.values()].sort((left, right) => this.compareAssignedTags(left, right)));
+        this.showReservationTagsModal.set(false);
+        this.toastService.success('Etiquetas agregadas correctamente.', 4000, 'Etiquetas');
+      },
+      error: (error: unknown) => {
+        this.reservationTagsSaveError.set(this.getReservationTagErrorMessage(error, 'No se pudieron guardar las etiquetas. Intente nuevamente.'));
+      }
+    });
+  }
+
+  notifyReservationTagSelection(message: string): void {
+    this.toastService.info(message, 3500, 'Etiquetas');
+  }
+
+  async removeReservationTag(tag: ReservaTagAsignado): Promise<void> {
+    if (tag.tipoAsignacion.toUpperCase() !== 'MANUAL') {
+      this.toastService.info('Esta etiqueta es administrada automáticamente por el sistema.', 4000, 'Etiquetas');
+      return;
+    }
+    if (!this.canManageReservationTags() || this.removingReservationTagIds().has(tag.idTag)) return;
+
+    const result = await Swal.fire<string>({
+      title: 'Retirar etiqueta',
+      text: `¿Desea retirar la etiqueta “${tag.nombre}” de esta reserva? Esta acción quedará registrada en el historial.`,
+      input: 'text',
+      inputValue: 'Retirada desde la gestión de estadía.',
+      inputLabel: 'Motivo (opcional)',
+      inputAttributes: { maxlength: '200' },
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, retirar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#dc3545'
+    });
+    if (!result.isConfirmed) return;
+
+    const codReserva = this.cleanText(this.room().reservationNumber);
+    if (!codReserva) return;
+    const motivo = this.cleanText(result.value).slice(0, 200) || 'Retirada desde la gestión de estadía.';
+    this.removingReservationTagIds.update((ids) => new Set([...ids, tag.idTag]));
+    try {
+      const response = await firstValueFrom(
+        this.reservaTagsService.retirarTag(codReserva, tag.idTag, motivo).pipe(takeUntilDestroyed(this.destroyRef))
+      );
+      if (!this.isSuccessfulTagResponse(response)) {
+        throw new Error(this.cleanTagApiMessage(response?.respuesta) || 'El servidor no confirmó el retiro de la etiqueta.');
+      }
+      this.assignedReservationTags.update((tags) => tags.filter((assigned) => assigned.idTag !== tag.idTag));
+      this.toastService.success('Etiqueta retirada correctamente.', 4000, 'Etiquetas');
+    } catch (error: unknown) {
+      this.toastService.error(this.getReservationTagErrorMessage(error, 'No se pudo retirar la etiqueta.'), 5000, 'Etiquetas');
+    } finally {
+      this.removingReservationTagIds.update((ids) => {
+        const next = new Set(ids);
+        next.delete(tag.idTag);
+        return next;
+      });
+    }
   }
 
   backToRoomRack(): void {
@@ -2485,12 +2629,52 @@ export class RoomStayManagementComponent implements OnInit {
       )
       .subscribe((stay) => {
         if (!stay) {
+          this.loadAssignedReservationTags(this.room().reservationNumber);
           return;
         }
 
         this.room.set(this.mapApiStayToRoomStay(stay));
         this.requestedReservationNumber = stay.codReserva;
+        this.loadAssignedReservationTags(stay.codReserva);
       });
+  }
+
+  private loadAssignedReservationTags(codReservaValue: string, force = false): void {
+    const codReserva = this.cleanText(codReservaValue);
+    const normalizedCode = codReserva.toUpperCase();
+    if (!codReserva) {
+      this.assignedTagsReservationCode = '';
+      this.assignedReservationTags.set([]);
+      this.assignedTagsError.set('No se pudo identificar la reserva para consultar sus etiquetas.');
+      return;
+    }
+    if (!force && normalizedCode === this.assignedTagsReservationCode) return;
+
+    const requestId = ++this.assignedTagsRequestId;
+    this.assignedTagsReservationCode = normalizedCode;
+    this.assignedReservationTags.set([]);
+    this.assignedTagsError.set('');
+    this.isAssignedTagsLoading.set(true);
+
+    this.reservaTagsService.obtenerTagsReserva(codReserva).pipe(
+      finalize(() => {
+        if (requestId === this.assignedTagsRequestId) this.isAssignedTagsLoading.set(false);
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (response) => {
+        if (requestId !== this.assignedTagsRequestId || normalizedCode !== this.assignedTagsReservationCode) return;
+        if (!this.isSuccessfulTagResponse(response) || !Array.isArray(response.datos)) {
+          this.assignedTagsError.set(this.cleanTagApiMessage(response?.respuesta) || 'No se pudieron cargar las etiquetas asignadas.');
+          return;
+        }
+        this.assignedReservationTags.set([...response.datos].sort((left, right) => this.compareAssignedTags(left, right)));
+      },
+      error: (error: unknown) => {
+        if (requestId !== this.assignedTagsRequestId) return;
+        this.assignedTagsError.set(this.getReservationTagErrorMessage(error, 'No se pudieron cargar las etiquetas asignadas.'));
+      }
+    });
   }
 
   private mapApiStayToRoomStay(stay: RoomStayApiData): RoomStay {
@@ -2586,6 +2770,74 @@ export class RoomStayManagementComponent implements OnInit {
 
   private formatApiDate(value: string | null | undefined): string {
     return normalizePmsDateDDMMYYYY(value);
+  }
+
+  private normalizeReservationTagSelections(selections: ReservaTagSeleccionado[]): ReservaTagSeleccionado[] {
+    const unique = new Map<number, ReservaTagSeleccionado>();
+    selections.forEach((selection) => {
+      if (!unique.has(selection.tag.idTag)) {
+        unique.set(selection.tag.idTag, {
+          tag: selection.tag,
+          observacion: selection.observacion?.trim().slice(0, 200) || null
+        });
+      }
+    });
+    return [...unique.values()];
+  }
+
+  private validateReservationTagSelections(selections: ReservaTagSeleccionado[]): string {
+    const assigned = this.assignedReservationTags();
+    const assignedIds = new Set(assigned.map((tag) => tag.idTag));
+    const localGroups = new Map<string, ReservaTagCatalogo>();
+
+    for (const selection of selections) {
+      const tag = selection.tag;
+      if (!tag.activo || !tag.permiteAsignacionManual) {
+        return `La etiqueta “${tag.nombre}” ya no está disponible para asignación manual.`;
+      }
+      if (assignedIds.has(tag.idTag)) {
+        return `La etiqueta “${tag.nombre}” ya está asignada a la reserva.`;
+      }
+      const group = this.cleanText(tag.grupoExclusion).toUpperCase();
+      if (!group) continue;
+      const persistedConflict = assigned.find((item) =>
+        item.idTag !== tag.idTag && this.cleanText(item.grupoExclusion).toUpperCase() === group
+      );
+      if (persistedConflict) {
+        return `Retire primero la etiqueta existente “${persistedConflict.nombre}” antes de agregar “${tag.nombre}”.`;
+      }
+      const localConflict = localGroups.get(group);
+      if (localConflict && localConflict.idTag !== tag.idTag) {
+        return `Las etiquetas “${localConflict.nombre}” y “${tag.nombre}” son incompatibles.`;
+      }
+      localGroups.set(group, tag);
+    }
+    return '';
+  }
+
+  private compareAssignedTags(left: ReservaTagAsignado, right: ReservaTagAsignado): number {
+    return Number(right.esAlerta) - Number(left.esAlerta)
+      || right.prioridad - left.prioridad
+      || left.ordenCategoria - right.ordenCategoria
+      || left.nombre.localeCompare(right.nombre);
+  }
+
+  private isSuccessfulTagResponse<T>(response: ApiResponse<T> | null | undefined): boolean {
+    return response?.exito === true && (response.respuesta?.startsWith('OK|') ?? false);
+  }
+
+  private cleanTagApiMessage(message: string | null | undefined): string {
+    return (message ?? '').replace(/^(OK|ERROR)\|/i, '').replace(/\|/g, ' · ').trim();
+  }
+
+  private getReservationTagErrorMessage(error: unknown, fallback: string): string {
+    if (error instanceof Error && error.message) return this.cleanTagApiMessage(error.message);
+    if (typeof error === 'object' && error !== null) {
+      const candidate = error as { error?: { respuesta?: unknown; message?: unknown }; message?: unknown };
+      const value = candidate.error?.respuesta ?? candidate.error?.message ?? candidate.message;
+      if (typeof value === 'string' && value.trim()) return this.cleanTagApiMessage(value);
+    }
+    return fallback;
   }
 
   private cleanText(value: string | number | null | undefined): string {
@@ -2707,6 +2959,7 @@ export class RoomStayManagementComponent implements OnInit {
       this.requestedRoomNumber = refreshedRoom.roomNumber;
       this.requestedReservationNumber = refreshedReservation;
       this.stayErrorMessage.set('');
+      this.loadAssignedReservationTags(refreshedReservation);
 
       if (reservationChanged) {
         this.toastService.warning(

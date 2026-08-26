@@ -101,24 +101,32 @@
         <table class="table table-hover align-middle mb-0">
           <thead>
             <tr>
-              <th>Reserva</th>
-              <th>Descripción</th>
-              <th>Agencia</th>
-              <th>Ingreso</th>
-              <th>Salida</th>
-              <th class="text-center">Noches</th>
-              <th class="text-center">Habitaciones</th>
-              <th>Estado</th>
-              <th class="text-end">Total</th>
+              <th class="reservation-column">Reserva</th>
+              <th class="description-column">Descripción</th>
+              <th class="agency-column">Agencia</th>
+              <th class="date-column">Ingreso</th>
+              <th class="date-column">Salida</th>
+              <th class="text-center nights-column">Noches</th>
+              <th class="text-center rooms-column" title="Habitaciones"><span aria-hidden="true">Hab.</span><span class="visually-hidden">Habitaciones</span></th>
+              <th class="status-column">Estado</th>
+              <th class="text-end total-column">Total</th>
               <th class="text-end prepago-column">Prepago</th>
-              <th>Operador</th>
-              <th class="text-center">Acciones</th>
+              <th class="operator-column">Operador</th>
+              <th class="text-center actions-column">Acciones</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let reserva of pagedReservas(); trackBy: trackByReserva">
-              <td>
+              <td class="reservation-column">
                 <strong>{{ reserva.reserva }}</strong>
+                <app-reservation-tag-list
+                  *ngIf="reserva.tags.length"
+                  class="reservation-row-tags"
+                  [tags]="reserva.tags"
+                  [maxVisible]="2"
+                  [compact]="true"
+                  (showAll)="openTagDetails(reserva)"
+                />
               </td>
               <td class="reservation-description" [title]="reserva.descripcion || 'Sin descripción'">
                 {{ reserva.descripcion || 'Sin descripción' }}
@@ -160,6 +168,21 @@
                       </span>
                       <span class="action-item__content">
                         <span class="action-item__label">Ver detalle reserva</span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      ngbDropdownItem
+                      class="dropdown-item action-item"
+                      (click)="gestionarEtiquetas(reserva)"
+                      [disabled]="!puedeEditarReserva(reserva)"
+                      [title]="puedeEditarReserva(reserva) ? 'Gestionar etiquetas de la reserva' : 'Etiquetas disponibles en modo de solo lectura'"
+                    >
+                      <span class="action-item__icon action-item__icon--primary">
+                        <i class="bi bi-tags" aria-hidden="true"></i>
+                      </span>
+                      <span class="action-item__content">
+                        <span class="action-item__label">Gestionar etiquetas</span>
                       </span>
                     </button>
                     <button
@@ -269,7 +292,7 @@
 
       <div class="reserva-pagination">
         <span>Página {{ currentPage() }} de {{ totalPages() }}</span>
-        <select class="form-select form-select-sm" [value]="pageSize()" (change)="setPageSize($any($event.target).value)">
+        <select class="form-select form-select-sm" [value]="pageSize()" (change)="onPageSizeChange($event)">
           <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }} registros</option>
         </select>
         <div class="btn-group btn-group-sm">
@@ -286,4 +309,11 @@
     (close)="cerrarPrepagos()"
     (changed)="onPrepagosChanged()"
   ></app-reservation-prepayments>
+
+  <app-reservation-tag-details
+    *ngIf="selectedTagDetails() as selected"
+    [reservationCode]="selected.reserva"
+    [tags]="selected.tags"
+    (closed)="closeTagDetails()"
+  />
 </div>

@@ -51,15 +51,15 @@ export interface ReservaDisponibilidadCategoriaResponse {
 
 @Injectable({ providedIn: 'root' })
 export class ReservaHabitacionService implements ReservaHabitacionRepository {
-  private readonly http = inject(HttpClient);
-  private readonly baseApiUrl = (environment.apiUrl || 'http://localhost:5000/api').toString().replace(/\/+$/, '');
-  private readonly apiUrl = `${this.baseApiUrl}/reservas-habitacion`;
-  private readonly reservationSearchUrl = `${this.baseApiUrl}/buscar-reservas`;
-  private readonly categoryAvailabilityUrl = `${this.baseApiUrl}/reservas/disponibilidad-categoria`;
+  private readonly http                      = inject(HttpClient);
+  private readonly baseApiUrl                = (environment.apiUrl ?? '').toString().replace(/\/+$/, '');
+  private readonly apiUrl                    = `${this.baseApiUrl}/reservas-habitacion`;
+  private readonly reservationSearchUrl      = `${this.baseApiUrl}/buscar-reservas`;
+  private readonly categoryAvailabilityUrl   = `${this.baseApiUrl}/reservas/disponibilidad-categoria`;
 
   createReserva(request: ReservaHabitacionRequest): Observable<ReservaHabitacionResponse> {
-    const normalizedRequest = this.normalizeReservationRequest(request);
-    const requestSnapshot = JSON.parse(JSON.stringify(normalizedRequest)) as ReservaHabitacionRequest;
+    const normalizedRequest        = this.normalizeReservationRequest(request);
+    const requestSnapshot          = JSON.parse(JSON.stringify(normalizedRequest)) as ReservaHabitacionRequest;
     console.groupCollapsed('[Reservas] POST confirmar reserva');
     console.log('method', 'POST');
     console.log('url', this.apiUrl);
@@ -227,6 +227,7 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
   }
 
   private mapConsultaItem(item: ReservaConsultaApiItem): ReservaConsulta {
+    const tags = Array.isArray(item.tags) ? item.tags : Array.isArray(item.Tags) ? item.Tags : [];
     return {
       reserva: (item.codReserva ?? item.prV01_CodReserva ?? '').trim(),
       codAgencia: (item.codAgencia ?? item.prV01_CodAgencia ?? '').trim(),
@@ -256,7 +257,10 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
       prepago: (item.prepago ?? '').trim().toUpperCase() === 'S' ? 'S' : 'N',
       moneda: (item.moneda ?? item.prV01_Moneda ?? '').trim(),
       tCambio: Number(item.tCambio ?? item.prV01_TCambio ?? 0),
-      operador: (item.operador ?? item.prV01_Operador ?? '').trim()
+      operador: (item.operador ?? item.prV01_Operador ?? '').trim(),
+      tags: [...tags],
+      cantidadTags: Math.max(Number(item.cantidadTags ?? item.CantidadTags ?? tags.length), tags.length),
+      tieneAlertas: Boolean(item.tieneAlertas ?? item.TieneAlertas ?? tags.some((tag) => tag.esAlerta))
     };
   }
 

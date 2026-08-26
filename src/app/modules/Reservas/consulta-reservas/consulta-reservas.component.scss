@@ -137,6 +137,37 @@
   --bs-table-hover-bg: #f8fbff;
 }
 
+.reserva-table .table {
+  min-width: 1180px;
+  table-layout: fixed;
+}
+
+.reservation-column { width: 150px; }
+.description-column { width: 215px; }
+.agency-column { width: 110px; }
+.date-column { width: 92px; }
+.nights-column { width: 58px; }
+.rooms-column { width: 58px; }
+.status-column { width: 86px; }
+.total-column { width: 98px; }
+.operator-column { width: 92px; }
+.actions-column { width: 62px; }
+
+td.reservation-column > strong {
+  display: block;
+  overflow: hidden;
+  color: #172f55;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reservation-row-tags {
+  display: block;
+  max-width: 140px;
+  margin-top: 0.28rem;
+}
+
 .table thead th {
   border-bottom: 1px solid #e7edf4;
   color: #5b6876;
@@ -158,16 +189,15 @@
 }
 
 .reservation-description {
-  min-width: 180px;
-  max-width: 280px;
+  width: 215px;
   color: #607080;
-  white-space: normal;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .prepago-column {
-  width: 1%;
-  min-width: 62px;
+  width: 76px;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }

@@ -1,0 +1,117 @@
+<div class="tag-modal-backdrop" role="presentation" (mousedown)="requestClose()">
+  <section class="tag-modal" role="dialog" aria-modal="true" aria-labelledby="tag-modal-title" (mousedown)="$event.stopPropagation()">
+    <header class="tag-modal__header">
+      <div>
+        <span>Reserva activa</span>
+        <h2 id="tag-modal-title">
+          <i class="bi bi-tags" aria-hidden="true"></i>
+          {{ catalogEnabled() ? 'Gestionar etiquetas de la reserva' : 'Etiquetas de la reserva' }}
+        </h2>
+      </div>
+      <button type="button" aria-label="Cerrar gestión de etiquetas" [disabled]="saving()" (click)="requestClose()">
+        <i class="bi bi-x-lg" aria-hidden="true"></i>
+      </button>
+    </header>
+
+    <div class="tag-modal__body">
+      <section class="current-tags" aria-labelledby="current-tags-title">
+        <div class="section-heading">
+          <div><h3 id="current-tags-title">Etiquetas actuales</h3><small>Aplican a toda la reserva.</small></div>
+          <span>{{ assignedTags().length }}</span>
+        </div>
+        @if (assignedTags().length) {
+          <app-reservation-tag-list
+            [tags]="assignedTags()"
+            [detailed]="true"
+            [showRemove]="canManage()"
+            [removingTagIds]="removingTagIds()"
+            (removeTag)="removeTag.emit($event)"
+          />
+        } @else {
+          <p class="tag-modal__empty">Sin etiquetas asignadas.</p>
+        }
+      </section>
+
+      @if (catalogEnabled()) {
+      <section class="catalog-tags" aria-labelledby="catalog-tags-title">
+        <div class="section-heading"><div><h3 id="catalog-tags-title">Agregar etiquetas</h3><small>Seleccione una o varias antes de guardar.</small></div></div>
+        <label class="tag-search">
+          <i class="bi bi-search" aria-hidden="true"></i>
+          <input #tagSearchInput type="search" [formControl]="searchControl" placeholder="Buscar por nombre, categoría o descripción..." />
+          @if (loadingCatalog()) { <span class="spinner-border spinner-border-sm" aria-label="Buscando etiquetas"></span> }
+        </label>
+
+        @if (catalogError()) {
+          <div class="tag-inline-error" role="alert">
+            <span>{{ catalogError() }}</span>
+            <button type="button" (click)="retryCatalog()">Reintentar</button>
+          </div>
+        }
+        @if (selectionMessage()) { <p class="selection-notice" role="status">{{ selectionMessage() }}</p> }
+        @if (saveError()) { <p class="tag-inline-error" role="alert">{{ saveError() }}</p> }
+
+        @if (!loadingCatalog() && !catalogError() && groupedCatalog().length === 0) {
+          <p class="tag-modal__empty">No encontramos etiquetas para esta búsqueda.</p>
+        }
+
+        <div class="tag-groups">
+          @for (group of groupedCatalog(); track group.idCategoria) {
+            <section class="tag-group">
+              <header><strong>{{ group.categoria }}</strong><small>{{ group.descripcionCategoria }}</small></header>
+              <div class="tag-results">
+                @for (tag of group.tags; track tag.idTag) {
+                  <article class="tag-result-wrap" [class.tag-result-wrap--selected]="isSelected(tag.idTag)">
+                    <button
+                      type="button"
+                      class="tag-result"
+                      [class.tag-result--selected]="isSelected(tag.idTag)"
+                      [disabled]="!canManage() || isAssigned(tag.idTag) || !!persistedConflict(tag)"
+                      [attr.aria-pressed]="isSelected(tag.idTag)"
+                      [attr.title]="resultDisabledReason(tag) || tag.descripcion || tag.nombre"
+                      (click)="toggleTag(tag)"
+                    >
+                      <span class="tag-check"><i class="bi" [ngClass]="isSelected(tag.idTag) ? 'bi-check-lg' : 'bi-plus-lg'" aria-hidden="true"></i></span>
+                      <span class="tag-color" [style.background-color]="safeColor(tag.color)" aria-hidden="true"></span>
+                      <i class="bi tag-result__icon" [ngClass]="iconClass(tag.icono)" aria-hidden="true"></i>
+                      <span class="tag-result__copy">
+                        <strong>{{ tag.nombre }}</strong>
+                        <small>{{ tag.descripcion || 'Sin descripción.' }}</small>
+                        @if (resultDisabledReason(tag)) { <em>{{ resultDisabledReason(tag) }}</em> }
+                      </span>
+                      @if (tag.esAlerta) { <span class="tag-result__alert"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> Alerta</span> }
+                      @if (isAssigned(tag.idTag)) { <span class="tag-result__assigned">Asignada</span> }
+                    </button>
+                    @if (isSelected(tag.idTag)) {
+                      <label class="tag-observation">
+                        <span>Observación opcional</span>
+                        <textarea
+                          rows="2"
+                          maxlength="200"
+                          [value]="observationFor(tag.idTag)"
+                          placeholder="Agregue una nota para esta etiqueta..."
+                          (input)="onObservationInput(tag.idTag, $event)"
+                        ></textarea>
+                        <small>{{ observationFor(tag.idTag).length }}/200</small>
+                      </label>
+                    }
+                  </article>
+                }
+              </div>
+            </section>
+          }
+        </div>
+      </section>
+      }
+    </div>
+
+    @if (catalogEnabled()) {
+    <footer class="tag-modal__footer">
+      <button type="button" class="tag-modal__cancel" [disabled]="saving()" (click)="requestClose()">Cancelar</button>
+      <button type="button" class="tag-modal__confirm" [disabled]="saving() || !selectionCount() || !canManage()" (click)="confirmSelection()">
+        @if (saving()) { <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Guardando etiquetas... }
+        @else { {{ confirmationText() }} }
+      </button>
+    </footer>
+    }
+  </section>
+</div>
