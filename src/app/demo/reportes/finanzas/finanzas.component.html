@@ -3,16 +3,16 @@
     <div>
       <span class="eyebrow">Reportes / Finanzas</span>
       <h1>Reporte Financiero</h1>
-      <p>Vista ejecutiva para entender ingresos, cartera y flujo operativo del hotel.</p>
+      <p>Vista ejecutiva de ingresos, gastos y resultado del período del hotel.</p>
     </div>
     <div class="header-actions">
-      <button type="button" class="btn btn-outline-secondary" (click)="printReport()">
+      <button type="button" class="btn btn-outline-secondary" (click)="printReport()" [disabled]="loading || !report">
         <i class="feather icon-printer"></i>
         Imprimir
       </button>
-      <button type="button" class="btn btn-primary" (click)="exportReport()">
+      <button type="button" class="btn btn-primary" (click)="exportReport()" [disabled]="loading || exporting || !report">
         <i class="feather icon-download"></i>
-        Exportar
+        {{ exporting ? 'Exportando...' : 'Exportar' }}
       </button>
     </div>
   </header>
@@ -20,21 +20,23 @@
   <section class="filters-panel" aria-label="Filtros del reporte">
     <div>
       <label>Periodo</label>
-      <select class="form-control" [(ngModel)]="filters.period">
+      <select class="form-control" [ngModel]="filters.period" (ngModelChange)="onPeriodChange($event)">
         <option *ngFor="let option of periodOptions" [value]="option">{{ option }}</option>
       </select>
     </div>
     <div>
       <label>Desde</label>
-      <input type="date" class="form-control" [(ngModel)]="filters.from" />
+      <input type="date" class="form-control" [ngModel]="filters.from" (ngModelChange)="onDateChange('from', $event)" />
     </div>
     <div>
       <label>Hasta</label>
-      <input type="date" class="form-control" [(ngModel)]="filters.to" />
+      <input type="date" class="form-control" [ngModel]="filters.to" (ngModelChange)="onDateChange('to', $event)" />
     </div>
     <div>
       <label>Moneda</label>
-      <input type="text" class="form-control" value="USD" readonly />
+      <select class="form-control" [ngModel]="filters.currency" (ngModelChange)="onCurrencyChange($event)">
+        <option *ngFor="let currency of currencyOptions" [ngValue]="currency">{{ currency }}</option>
+      </select>
     </div>
     <button type="button" class="btn btn-light" (click)="resetFilters()">
       <i class="feather icon-rotate-ccw"></i>
@@ -42,122 +44,155 @@
     </button>
   </section>
 
-  <section class="kpi-grid" aria-label="Indicadores financieros">
-    <article class="kpi-card" *ngFor="let kpi of kpis; trackBy: trackByLabel" [ngClass]="'kpi-card--' + kpi.tone">
+  <div class="report-feedback report-feedback--loading" *ngIf="loading" role="status" aria-live="polite">
+    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+    Cargando información financiera...
+  </div>
+  <div class="report-feedback report-feedback--error" *ngIf="error && !loading" role="alert">
+    <span>{{ error }}</span>
+    <button type="button" class="btn btn-sm btn-outline-danger" (click)="loadReport()">Reintentar</button>
+  </div>
+  <div class="report-feedback report-feedback--empty" *ngIf="report && isEmptyReport && !loading" role="status">
+    <i class="feather icon-info" aria-hidden="true"></i>
+    No hay información financiera para el período seleccionado.
+  </div>
+
+  <section class="kpi-grid" aria-label="Indicadores financieros" *ngIf="loading || report">
+    <article class="kpi-card" *ngFor="let kpi of kpis; trackBy: trackKpi" [ngClass]="'kpi-card--' + kpi.tone">
       <span>{{ kpi.label }}</span>
-      <strong>{{ formatValue(kpi) }}</strong>
+      <strong *ngIf="!loading; else kpiSkeleton">{{ formatValue(kpi) }}</strong>
+      <ng-template #kpiSkeleton><span class="skeleton skeleton--value"></span></ng-template>
       <p>{{ kpi.detail }}</p>
-      <em>{{ kpi.trend }}</em>
     </article>
   </section>
 
-  <section class="report-grid">
-    <article class="report-panel revenue-panel">
-      <div class="panel-heading">
-        <div>
-          <span class="eyebrow">Ingresos</span>
-          <h2>Centros de ingreso</h2>
-        </div>
-        <div class="variance" [class.variance--positive]="budgetVariance >= 0">
-          <span>Vs presupuesto</span>
-          <strong>{{ formatCurrency(budgetVariance) }}</strong>
-        </div>
-      </div>
-
-      <div class="revenue-list">
-        <div *ngFor="let center of revenueCenters; trackBy: trackByLabel">
-          <div class="row-main">
-            <span>{{ center.name }}</span>
-            <strong>{{ formatCurrency(center.amount) }}</strong>
-          </div>
-          <div class="bar-track">
-            <i [style.width.%]="getCenterPercent(center.amount)"></i>
-          </div>
-          <div class="row-meta">
-            <span>{{ getCenterPercent(center.amount) }}% del ingreso</span>
-            <span>Margen {{ center.margin }}%</span>
-          </div>
-        </div>
-      </div>
-    </article>
-
-    <article class="report-panel trend-panel">
-      <div class="panel-heading">
-        <div>
-          <span class="eyebrow">Tendencia</span>
-          <h2>Ingreso vs gasto</h2>
-        </div>
-        <span class="date-badge">{{ todayDisplay }}</span>
-      </div>
-
-      <div class="trend-chart">
-        <div *ngFor="let point of monthlyPoints; trackBy: trackByLabel">
-          <div class="bars">
-            <span class="bar bar--revenue" [style.height.%]="getMonthlyHeight(point.revenue)"></span>
-            <span class="bar bar--expense" [style.height.%]="getMonthlyHeight(point.expenses)"></span>
-          </div>
-          <strong>{{ point.month }}</strong>
-        </div>
-      </div>
-      <div class="legend">
-        <span><i class="legend-dot legend-dot--revenue"></i> Ingreso</span>
-        <span><i class="legend-dot legend-dot--expense"></i> Gasto</span>
-      </div>
-    </article>
-  </section>
-
-  <section class="report-grid report-grid--secondary">
-    <article class="report-panel">
-      <div class="panel-heading">
-        <div>
-          <span class="eyebrow">Flujo</span>
-          <h2>Caja operativa</h2>
-        </div>
-      </div>
-
-      <div class="cash-list">
-        <div *ngFor="let item of cashItems; trackBy: trackByLabel">
-          <span>{{ item.label }}</span>
-          <strong>{{ formatCurrency(item.amount) }}</strong>
-          <small>{{ item.detail }}</small>
-        </div>
-      </div>
-    </article>
-
-    <article class="report-panel">
-      <div class="panel-heading">
-        <div>
-          <span class="eyebrow">Cartera</span>
-          <h2>Cuentas por cobrar</h2>
-        </div>
-        <span class="date-badge">{{ formatCurrency(totalReceivables) }}</span>
-      </div>
-
-      <div class="receivable-list">
-        <div *ngFor="let bucket of receivableBuckets; trackBy: trackByLabel">
+  <ng-container *ngIf="report as data; else loadingPanels">
+    <section class="report-grid">
+      <article class="report-panel revenue-panel">
+        <div class="panel-heading">
           <div>
-            <span>{{ bucket.label }}</span>
-            <strong>{{ formatCurrency(bucket.amount) }}</strong>
+            <span class="eyebrow">Ingresos</span>
+            <h2>Centros de ingreso</h2>
           </div>
-          <em><i [style.width.%]="bucket.percent"></i></em>
         </div>
-      </div>
-    </article>
 
-    <article class="report-panel decision-panel">
-      <div class="panel-heading">
-        <div>
-          <span class="eyebrow">Decisiones</span>
-          <h2>Lectura recomendada</h2>
+        <div class="revenue-list" *ngIf="data.centrosIngreso.length; else noRevenueCenters">
+          <div *ngFor="let center of data.centrosIngreso; trackBy: trackRevenueCenter">
+            <div class="row-main">
+              <span>{{ center.centroCosto }}</span>
+              <strong>{{ formatCurrency(center.ingresoNeto) }}</strong>
+            </div>
+            <div class="bar-track" role="progressbar" [attr.aria-valuenow]="getCenterPercent(center.participacionPorcentaje)" aria-valuemin="0" aria-valuemax="100">
+              <i [style.width.%]="getCenterPercent(center.participacionPorcentaje)"></i>
+            </div>
+            <div class="row-meta">
+              <span>{{ formatPercent(center.participacionPorcentaje) }} del ingreso</span>
+            </div>
+          </div>
         </div>
-      </div>
+        <ng-template #noRevenueCenters><p class="panel-empty">Sin centros de ingreso para el período.</p></ng-template>
+      </article>
 
-      <div class="decision-list">
-        <div *ngFor="let decision of decisions; let index = index">
-          <strong>{{ index + 1 }}</strong>
-          <span>{{ decision }}</span>
+      <article class="report-panel trend-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="eyebrow">Tendencia</span>
+            <h2>Ingreso vs gasto</h2>
+          </div>
+          <span class="date-badge">{{ reportPeriodDisplay }}</span>
         </div>
-      </div>
-    </article>
-  </section>
+
+        <div class="chart-container" *ngIf="data.evolucionDiaria.length; else noEvolution">
+          <apx-chart
+            [series]="chartOptions.series!"
+            [chart]="chartOptions.chart!"
+            [colors]="chartOptions.colors!"
+            [stroke]="chartOptions.stroke!"
+            [fill]="chartOptions.fill!"
+            [dataLabels]="chartOptions.dataLabels!"
+            [markers]="chartOptions.markers!"
+            [xaxis]="chartOptions.xaxis!"
+            [yaxis]="chartOptions.yaxis!"
+            [grid]="chartOptions.grid!"
+            [tooltip]="chartOptions.tooltip!"
+            [legend]="chartOptions.legend!"
+          ></apx-chart>
+        </div>
+        <ng-template #noEvolution><p class="panel-empty panel-empty--chart">Sin evolución diaria para el período.</p></ng-template>
+        <div class="legend" *ngIf="data.evolucionDiaria.length">
+          <span><i class="legend-dot legend-dot--revenue"></i> Ingresos</span>
+          <span><i class="legend-dot legend-dot--expense"></i> Gastos</span>
+        </div>
+      </article>
+    </section>
+
+    <section class="report-grid report-grid--secondary">
+      <article class="report-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="eyebrow">Origen</span>
+            <h2>Composición de ingresos</h2>
+          </div>
+        </div>
+
+        <div class="cash-list" *ngIf="data.ingresosPorOrigen.length; else noSources">
+          <div *ngFor="let item of data.ingresosPorOrigen; trackBy: trackRevenueSource">
+            <span>{{ getOriginLabel(item.origen) }}</span>
+            <strong>{{ formatCurrency(item.ingresoNeto) }}</strong>
+            <small>{{ item.cantidadDocumentos }} {{ item.cantidadDocumentos === 1 ? 'documento' : 'documentos' }}</small>
+          </div>
+        </div>
+        <ng-template #noSources><p class="panel-empty">Sin orígenes de ingreso para el período.</p></ng-template>
+      </article>
+
+      <article class="report-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="eyebrow">Gastos</span>
+            <h2>Resumen de compras</h2>
+          </div>
+        </div>
+
+        <div class="purchase-counts">
+          <div><strong>{{ data.resumenGastos.cantidadCompras }}</strong><span>compras</span></div>
+          <div><strong>{{ data.resumenGastos.cantidadLineas }}</strong><span>líneas</span></div>
+        </div>
+        <div class="expense-summary">
+          <div><span>Gasto neto</span><strong>{{ formatCurrency(data.resumenGastos.gastoNeto) }}</strong></div>
+          <div><span>Impuestos</span><strong>{{ formatCurrency(data.resumenGastos.impuesto) }}</strong></div>
+          <div><span>Exoneraciones</span><strong>{{ formatCurrency(data.resumenGastos.exoneracion) }}</strong></div>
+          <div class="expense-total"><span>Total compras</span><strong>{{ formatCurrency(data.resumenGastos.totalCompras) }}</strong></div>
+        </div>
+      </article>
+
+      <article class="report-panel decision-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="eyebrow">Análisis</span>
+            <h2>Lectura del período</h2>
+          </div>
+        </div>
+
+        <div class="decision-list" *ngIf="observations.length; else noObservations">
+          <div *ngFor="let observation of observations; let index = index; trackBy: trackText">
+            <strong>{{ index + 1 }}</strong>
+            <span>{{ observation }}</span>
+          </div>
+        </div>
+        <ng-template #noObservations><p class="panel-empty">No hay datos suficientes para describir el período.</p></ng-template>
+      </article>
+    </section>
+  </ng-container>
+
+  <ng-template #loadingPanels>
+    <ng-container *ngIf="loading">
+      <section class="report-grid loading-panels" aria-hidden="true">
+        <article class="report-panel"><span class="skeleton skeleton--heading"></span><span class="skeleton skeleton--block"></span></article>
+        <article class="report-panel"><span class="skeleton skeleton--heading"></span><span class="skeleton skeleton--block"></span></article>
+      </section>
+      <section class="report-grid report-grid--secondary loading-panels" aria-hidden="true">
+        <article class="report-panel" *ngFor="let item of [1, 2, 3]"><span class="skeleton skeleton--heading"></span><span class="skeleton skeleton--block skeleton--small"></span></article>
+      </section>
+    </ng-container>
+  </ng-template>
 </section>

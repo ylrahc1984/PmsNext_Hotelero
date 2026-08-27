@@ -1075,8 +1075,9 @@ export class ReservaHospedajeComponent implements OnInit {
             return;
           }
 
+          const contactoNombre = String(response.data.nombre ?? '').trim() || legacyDescription.trim();
           this.reservaForm.patchValue({
-            contactoNombre   : String(response.data.nombre ?? '').trim(),
+            contactoNombre,
             contactoEmail    : String(response.data.email ?? '').trim(),
             contactoTelefono : String(response.data.telefono ?? '').trim()
           }, { emitEvent: false });
