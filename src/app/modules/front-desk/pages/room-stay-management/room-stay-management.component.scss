@@ -246,9 +246,9 @@ h1 {
   align-self: stretch;
   display: grid;
   grid-template-rows: auto auto auto 1fr;
-  gap: 6px;
+  gap: 3px;
   min-width: 0;
-  padding: 4px 8px;
+  padding: 2px 8px;
 }
 
 .middle-stack {
@@ -261,7 +261,7 @@ h1 {
 
 .left-lower-stack {
   display: grid;
-  gap: 6px;
+  gap: 3px;
   align-self: stretch;
   grid-template-rows: auto auto 1fr;
   min-width: 0;
@@ -341,21 +341,42 @@ h3 {
 
 .reservation-main {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  padding: 14px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(140px, 0.8fr);
+  gap: 12px;
+  padding: 10px 12px;
 }
 
 .reservation-pair {
   display: grid;
   grid-template-columns: 1fr;
+  align-content: start;
   gap: 6px;
-  padding-right: 14px;
+  min-width: 0;
+  padding-right: 12px;
   border-right: 1px solid $line;
 }
 
 .reservation-pair:last-child {
   border-right: 0;
+}
+
+.reservation-field {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.reservation-field strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+}
+
+.reservation-field--agency strong {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 label {
@@ -374,15 +395,16 @@ label {
 .reservation-foot {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  margin: 0 14px 14px;
-  padding-top: 12px;
+  margin: 0 12px 10px;
+  padding-top: 8px;
   border-top: 1px solid $line;
 }
 
 .reservation-foot div {
   display: grid;
-  gap: 4px;
-  padding-left: 14px;
+  gap: 2px;
+  min-width: 0;
+  padding-left: 12px;
   border-left: 1px solid $line;
 }
 
@@ -408,8 +430,8 @@ label {
 .reservation-tags-card__header {
   justify-content: space-between;
   gap: 10px;
-  min-height: 42px;
-  padding: 7px 12px;
+  min-height: 38px;
+  padding: 5px 10px;
   border-bottom: 1px solid $line;
 }
 
@@ -436,7 +458,7 @@ label {
 .reservation-tags-card__manage:disabled,
 .reservation-tags-card__empty button:disabled { cursor: not-allowed; opacity: 0.58; }
 
-.reservation-tags-card__body { padding: 10px 12px; }
+.reservation-tags-card__body { padding: 7px 10px; }
 .reservation-tags-card__body > small { display: block; margin-top: 7px; color: $muted; font-size: 0.63rem; }
 .reservation-tags-card__loading { gap: 7px; min-height: 36px; color: $muted; font-size: 0.7rem; font-weight: 750; }
 .reservation-tags-card__loading .spinner-border { width: 0.8rem; height: 0.8rem; color: $cyan-dark; }
@@ -471,7 +493,7 @@ label {
 
 .notes-card {
   align-self: start;
-  padding: 8px 14px;
+  padding: 6px 12px;
   background: linear-gradient(135deg, #e6f7fe, #f7fcff);
 }
 
@@ -523,8 +545,8 @@ label {
 .comments-card__header {
   justify-content: space-between;
   gap: 10px;
-  min-height: 40px;
-  padding: 6px 12px;
+  min-height: 38px;
+  padding: 4px 10px;
 }
 
 .comments-card__header > div {
@@ -566,7 +588,7 @@ label {
 }
 
 .comments-card__content {
-  padding: 0 12px 10px;
+  padding: 0 10px 8px;
   color: $ink;
   font-size: 0.79rem;
   font-weight: 680;
@@ -686,6 +708,8 @@ label {
 .guest-table .table-row {
   grid-template-columns: 32px minmax(120px, 1.35fr) minmax(130px, 1.05fr) minmax(92px, 0.9fr) minmax(92px, 0.9fr) 24px;
   gap: 8px;
+  min-height: 38px;
+  padding: 0 12px;
 }
 
 .ledger-table .table-row {
@@ -729,7 +753,7 @@ label {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 2px 4px;
+  padding: 0 2px 2px;
   gap: 10px;
 }
 
@@ -749,8 +773,14 @@ label {
 .left-stack .reservation-card,
 .left-stack .reservation-tags-card,
 .left-stack .notes-card,
+.left-stack .comments-card,
 .left-stack .guest-card {
-  box-shadow: 0 8px 18px rgba(29, 42, 68, 0.035);
+  box-shadow: 0 5px 14px rgba(29, 42, 68, 0.03);
+}
+
+.left-stack .card-head {
+  min-height: 40px;
+  padding: 0 12px;
 }
 
 .guest-card {
@@ -1805,7 +1835,7 @@ label {
 
   .left-lower-stack {
     display: grid;
-    gap: 10px;
+    gap: 3px;
   }
 
   .left-stack,
@@ -1941,6 +1971,14 @@ label {
   .reservation-foot div {
     border-right: 0;
     border-left: 0;
+  }
+
+  .reservation-pair {
+    padding-right: 0;
+  }
+
+  .reservation-foot div {
+    padding-left: 0;
   }
 
   .reservation-foot {

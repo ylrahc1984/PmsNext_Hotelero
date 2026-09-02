@@ -2,14 +2,15 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, EventEmitter, Input, OnInit, Output, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { Subject, of } from 'rxjs';
+import { Subject, firstValueFrom, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, finalize, switchMap } from 'rxjs/operators';
 
 import { AuthService } from 'src/app/core/services/auth.service';
+import { OperationalDateService } from 'src/app/core/services/operational-date.service';
 import { ToastService } from 'src/app/core/services/toast.service';
 import { normalizePmsDateDDMMYYYY } from 'src/app/core/utils/pms-date.util';
 import { MonedaService, MonedaUI } from 'src/app/demo/administracion/monedas/moneda.service';
-import { TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
+import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
 import { ClienteService } from 'src/app/demo/catalogos/agencias-comisionistas/cliente.service';
 import { ClienteUI } from 'src/app/demo/catalogos/agencias-comisionistas/cliente.models';
 import {
@@ -75,6 +76,7 @@ export class FolioMasterInvoiceModalComponent implements OnInit {
   private readonly roomStayService = inject(RoomStayManagementService);
   private readonly monedaService = inject(MonedaService);
   private readonly tipoCambioService = inject(TipoCambioService);
+  private readonly operationalDateService = inject(OperationalDateService);
   private readonly clienteService = inject(ClienteService);
   private readonly authService = inject(AuthService);
   private readonly toastService = inject(ToastService);
@@ -82,6 +84,7 @@ export class FolioMasterInvoiceModalComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly invoiceBaseCurrency = 'USD';
   private readonly clientSearchChanges = new Subject<string>();
+  private exchangeRateRequestId = 0;
 
   @Input({ required: true }) folio!: FolioMaster;
   @Input({ required: true }) charges: FolioMasterChargeHeader[] = [];
@@ -107,6 +110,9 @@ export class FolioMasterInvoiceModalComponent implements OnInit {
   documentSelectionError = '';
   isExchangeRateLoading = false;
   isSubmitting = false;
+  isPaymentAmountEditing = false;
+  paymentAmountText = '';
+  invoiceUsdExchangeRate: TipoCambio | null = null;
   paymentDraft: InvoicePaymentDraft = this.createPaymentDraft();
 
   ngOnInit(): void {
@@ -114,6 +120,7 @@ export class FolioMasterInvoiceModalComponent implements OnInit {
     this.paymentDraft = this.createPaymentDraft(this.invoiceTotal);
     this.setupClientSearch();
     this.loadCatalogs();
+    this.loadExchangeRate(this.paymentDraft.moneda);
   }
 
   get consumerFinal(): InvoiceClient {
@@ -181,6 +188,12 @@ export class FolioMasterInvoiceModalComponent implements OnInit {
     return this.round(this.convertToInvoiceCurrency(Number(this.paymentDraft.amount || 0), this.paymentDraft.moneda, this.getExchangeRate()));
   }
 
+  get paymentAmountDisplay(): string {
+    return this.isPaymentAmountEditing
+      ? this.paymentAmountText
+      : this.formatPaymentAmount(this.paymentDraft.amount);
+  }
+
   get currencyOptions(): MonedaUI[] {
     return this.currencies.length ? this.currencies : [{ codMoneda: 'USD', moneda: 'DOLAR', simbolo: '$', activo: 1, primario: 0, secundario: 1, orden: 1 }];
   }
@@ -221,6 +234,30 @@ export class FolioMasterInvoiceModalComponent implements OnInit {
   updatePaymentDraft(patch: Partial<InvoicePaymentDraft>): void {
     this.paymentDraft = { ...this.paymentDraft, ...patch };
     if (patch.moneda !== undefined) this.loadExchangeRate(patch.moneda);
+  }
+
+  onPaymentAmountFocus(): void {
+    this.isPaymentAmountEditing = true;
+    this.paymentAmountText = this.formatPaymentAmount(this.paymentDraft.amount);
+  }
+
+  onPaymentAmountChange(value: string | number | null | undefined): void {
+    const formattedValue = this.normalizePaymentAmountText(value);
+
+    this.paymentAmountText = formattedValue;
+    this.paymentDraft = {
+      ...this.paymentDraft,
+      amount: this.parsePaymentAmount(formattedValue)
+    };
+  }
+
+  onPaymentAmountBlur(): void {
+    this.paymentDraft = {
+      ...this.paymentDraft,
+      amount: this.paymentDraft.amount === null ? null : this.round(this.paymentDraft.amount)
+    };
+    this.isPaymentAmountEditing = false;
+    this.paymentAmountText = '';
   }
 
   toggleCharge(charge: SelectableCharge, selected: boolean): void {
@@ -264,7 +301,7 @@ export class FolioMasterInvoiceModalComponent implements OnInit {
     this.appliedPayments = this.appliedPayments.filter((payment) => payment.orden !== order).map((payment, index) => ({ ...payment, orden: index + 1 }));
   }
 
-  submitInvoice(): void {
+  async submitInvoice(): Promise<void> {
     if (!this.selectedCharges.length) return this.setValidation('Selecciona al menos un cargo para facturar.');
     if (this.selectedCharges.some((charge) => !this.clean(charge.numCrgHab))) return this.setValidation('Uno o más cargos seleccionados no tienen número de cargo de habitación.');
     if (!this.selectedDocument) return this.setValidation('No hay un tipo de documento configurado para el punto de venta PF.');
@@ -272,10 +309,39 @@ export class FolioMasterInvoiceModalComponent implements OnInit {
       return this.setValidation(this.appliedPayments.length ? 'El total pagado debe cubrir el total de la cuenta.' : 'Agrega al menos una forma de pago para confirmar la facturación.');
     }
 
-    const payload = this.buildPayload();
-    console.log('[FolioMaster] POST /facturacion-fdesk payload', payload);
     this.isSubmitting = true;
     this.validationMessage = '';
+    this.cdr.markForCheck();
+
+    let invoiceSellingExchangeRate = 0;
+    let operationalDate = '';
+
+    try {
+      operationalDate = normalizePmsDateDDMMYYYY(
+        await firstValueFrom(this.operationalDateService.refresh())
+      );
+      if (!operationalDate) {
+        throw new Error('El backend no devolvió una fecha operativa válida.');
+      }
+
+      const exchangeRates = await firstValueFrom(
+        this.tipoCambioService.fetchTipoCambio(operationalDate, this.invoiceBaseCurrency.toLowerCase())
+      );
+      this.invoiceUsdExchangeRate = exchangeRates[0] ?? null;
+      invoiceSellingExchangeRate = this.normalizeExchangeRate(this.invoiceUsdExchangeRate?.venta);
+    } catch (error) {
+      console.error('No se pudo revalidar el tipo de cambio antes de facturar el Folio Master.', error);
+    }
+
+    if (invoiceSellingExchangeRate <= 0) {
+      this.isSubmitting = false;
+      this.validationMessage = 'No se pudo determinar el tipo de cambio de venta vigente. La facturación fue bloqueada.';
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const payload = this.buildPayload(invoiceSellingExchangeRate, operationalDate);
+    console.log('[FolioMaster] POST /facturacion-fdesk payload', payload);
 
     this.roomStayService.invoiceRoom(payload).pipe(
       finalize(() => { this.isSubmitting = false; this.cdr.markForCheck(); }),
@@ -448,36 +514,38 @@ export class FolioMasterInvoiceModalComponent implements OnInit {
   }
 
   private loadExchangeRate(currency: string): void {
-    const moneda = this.clean(currency).toUpperCase();
-    if (!moneda || moneda === this.invoiceBaseCurrency) {
-      this.paymentDraft = {
-        ...this.paymentDraft,
-        moneda: moneda || this.invoiceBaseCurrency,
-        tCambio: 1,
-        amount: this.invoicePending > 0 ? this.invoicePending : null
-      };
-      return;
-    }
+    const moneda = this.clean(currency).toUpperCase() || this.invoiceBaseCurrency;
+    const requestId = ++this.exchangeRateRequestId;
 
     this.isExchangeRateLoading = true;
-    // La factura está expresada en USD. Para recibir un pago en moneda local
-    // necesitamos la venta del USD (unidades locales por cada USD), no la tasa
-    // 1:1 de la moneda primaria.
-    this.tipoCambioService.fetchTipoCambio(this.today(), this.invoiceBaseCurrency.toLowerCase()).pipe(
+    this.operationalDateService.ensureLoaded().pipe(
+      switchMap((operationalDate) => {
+        const normalizedDate = normalizePmsDateDDMMYYYY(operationalDate);
+        return normalizedDate
+          ? this.tipoCambioService.fetchTipoCambio(normalizedDate, this.invoiceBaseCurrency.toLowerCase())
+          : of([] as TipoCambio[]);
+      }),
       catchError((error) => {
         console.error('No se pudo cargar el tipo de cambio.', error);
         this.toastService.warning('No se pudo cargar el tipo de cambio para la moneda seleccionada.', 3500, 'Facturación');
-        return of([]);
+        return of([] as TipoCambio[]);
       }),
-      finalize(() => { this.isExchangeRateLoading = false; this.cdr.markForCheck(); }),
+      finalize(() => {
+        if (requestId === this.exchangeRateRequestId) {
+          this.isExchangeRateLoading = false;
+          this.cdr.markForCheck();
+        }
+      }),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe((items) => {
-      if (this.clean(this.paymentDraft.moneda).toUpperCase() !== moneda) {
+      if (requestId !== this.exchangeRateRequestId || this.clean(this.paymentDraft.moneda).toUpperCase() !== moneda) {
         return;
       }
 
-      const exchangeRate = Number(items[0]?.venta ?? 0);
-      const normalizedRate = exchangeRate > 0 ? this.round(exchangeRate) : 0;
+      this.invoiceUsdExchangeRate = items[0] ?? null;
+      const normalizedRate = moneda === this.invoiceBaseCurrency
+        ? 1
+        : this.normalizeExchangeRate(this.invoiceUsdExchangeRate?.venta);
       this.paymentDraft = {
         ...this.paymentDraft,
         moneda,
@@ -496,28 +564,69 @@ export class FolioMasterInvoiceModalComponent implements OnInit {
     this.paymentDraft = { ...this.paymentDraft, amount: this.round(this.convertFromInvoiceCurrency(this.invoiceTotal, this.paymentDraft.moneda, this.getExchangeRate())) };
   }
 
-  private buildPayload(): RoomInvoicePayload {
+  private buildPayload(invoiceSellingExchangeRate: number, operationalDate: string): RoomInvoicePayload {
     const firstPayment = this.appliedPayments[0];
     const client = this.invoiceClient;
-    const fecha = this.today();
+    const fecha = operationalDate;
     const operador = this.getOperator();
 
     return {
-      proceso: 1, tipDocu: this.clean(this.selectedDocument?.MPV31_CodDocu), serieDocu: '', numDocu: 'GENERA',
-      codCliente: this.clean(client.code), rucClie: this.clean(client.document) || '0000000000',
-      nomClie: this.clean(client.name) || 'CLIENTE EN GENERAL', direccion: this.clean(client.address) || 'S/D',
-      numInterno: '', codReserva: this.reservationNumber, habita: this.folioNumber, master: this.folioNumber,
-      fechaDocu: fecha, fechaPago: fecha, fechaVen: fecha,
-      subTotal: this.invoiceSubtotal, descuento: 0, neto: this.invoiceSubtotal, impuesto: this.invoiceTaxes,
-      exonera: 0, totDocumento: this.invoiceTotal, totPago: this.invoicePaid, totPropina: this.invoiceTip,
-      pntVenta: 'PF', codVendedor: operador, moneda: this.invoiceBaseCurrency, tCambio: 1, estado: 'P',
-      formaPago: this.clean(firstPayment?.frmPago), numCuenta: 0, tipo: firstPayment ? 'CONTADO' : '',
-      tipNdp: '', numeroNdp: '', operador,
+      proceso: 1, 
+      tipDocu: this.clean(this.selectedDocument?.MPV31_CodDocu), 
+      serieDocu: '', 
+      numDocu: 'GENERA',
+      codCliente: this.clean(client.code), 
+      rucClie: this.clean(client.document) || '0000000000',
+      nomClie: this.clean(client.name) || 'CLIENTE EN GENERAL', 
+      direccion: this.clean(client.address) || 'S/D',
+      numInterno: '', 
+      codReserva: this.reservationNumber, 
+      habita: this.folioNumber, 
+      master: this.folioNumber,
+      fechaDocu: fecha, 
+      fechaPago: fecha, 
+      fechaVen: fecha,
+      subTotal: this.invoiceSubtotal, 
+      descuento: 0, 
+      neto: this.invoiceSubtotal, 
+      impuesto: this.invoiceTaxes,
+      exonera: 0, 
+      totDocumento: this.invoiceTotal, 
+      totPago: this.invoicePaid, 
+      totPropina: this.invoiceTip,
+      pntVenta: 'PF', 
+      codVendedor: operador, 
+      moneda: this.invoiceBaseCurrency, 
+      tCambio: invoiceSellingExchangeRate, 
+      estado: 'P',
+      formaPago: this.clean(firstPayment?.frmPago), 
+      numCuenta: 0, 
+      tipo: firstPayment ? 'CONTADO' : '',
+      tipNdp: '', 
+      numeroNdp: '', 
+      operador,
       detDocumento: this.selectedCharges.map((charge, index) => ({
-        orden: index + 1, fecha: normalizePmsDateDDMMYYYY(charge.fecha) || fecha, grupo: '', codConsumo: '', nomConsumo: '',
-        cantidad: 0, precio: 0, subTotal: 0, porDescuento: 0, descuento: 0, neto: 0, impuest: 0, total: 0,
-        tipNPedido: this.clean(charge.tipCrgHab), numNPedido: this.clean(charge.numCrgHab), codMozo: '', pntVenta: '',
-        almacen: '', incluido: '', moneda: '', operador: ''
+        orden: index + 1, 
+        fecha: normalizePmsDateDDMMYYYY(charge.fecha) || fecha, 
+        grupo: '', 
+        codConsumo: '', 
+        nomConsumo: '',
+        cantidad: 0, 
+        precio: 0, 
+        subTotal: 0, 
+        porDescuento: 0, 
+        descuento: 0, 
+        neto: 0, 
+        impuest: 0, 
+        total: 0,
+        tipNPedido: this.clean(charge.tipCrgHab), 
+        numNPedido: this.clean(charge.numCrgHab), 
+        codMozo: '', 
+        pntVenta: '',
+        almacen: '', 
+        incluido: '', 
+        moneda: '', 
+        operador: ''
       })),
       frmPago: this.appliedPayments.map((payment, index) => ({
         orden: index + 1, frmPago: this.clean(payment.frmPago), tipo: this.clean(payment.tipo), numTarjeta: this.clean(payment.numTarjeta),
@@ -556,12 +665,54 @@ export class FolioMasterInvoiceModalComponent implements OnInit {
     this.validationMessage = message;
   }
 
-  private today(): string {
-    return normalizePmsDateDDMMYYYY(new Date());
-  }
-
   private round(value: number): number {
     return Math.round((value + Number.EPSILON) * 100) / 100;
+  }
+
+  private formatPaymentAmount(amount: number | null): string {
+    if (amount === null || !Number.isFinite(Number(amount))) {
+      return '';
+    }
+
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(Number(amount));
+  }
+
+  private normalizePaymentAmountText(value: string | number | null | undefined): string {
+    const rawValue = this.clean(value).replace(/,/g, '').replace(/[^\d.]/g, '');
+    if (!rawValue) {
+      return '';
+    }
+
+    const hasDecimalPoint = rawValue.includes('.');
+    const [rawInteger = '', ...decimalParts] = rawValue.split('.');
+    const integerDigits = rawInteger.replace(/^0+(?=\d)/, '') || '0';
+    const decimalDigits = decimalParts.join('').slice(0, 2);
+    const groupedInteger = integerDigits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+    return hasDecimalPoint
+      ? `${groupedInteger}.${decimalDigits}`
+      : groupedInteger;
+  }
+
+  private parsePaymentAmount(value: string): number | null {
+    const normalizedValue = value.replace(/,/g, '');
+    if (!normalizedValue || normalizedValue === '.') {
+      return null;
+    }
+
+    const amount = Number(normalizedValue);
+    return Number.isFinite(amount) && amount >= 0 ? amount : null;
+  }
+
+  private normalizeExchangeRate(value: unknown): number {
+    const rate = Number(value ?? 0);
+
+    return Number.isFinite(rate) && rate > 0
+      ? Math.round((rate + Number.EPSILON) * 1_000_000) / 1_000_000
+      : 0;
   }
 
   private clean(value: unknown): string {

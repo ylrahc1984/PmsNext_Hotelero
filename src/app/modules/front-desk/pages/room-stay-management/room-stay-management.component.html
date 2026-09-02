@@ -71,14 +71,32 @@
 
           <div class="reservation-main">
             <div class="reservation-pair">
-              <label>Agencia</label><strong>{{ room().agency | uppercase }}</strong>
-              <label>Tarifa</label><strong>{{ room().rate | uppercase }}</strong>
-              <label>No. Reserva</label><strong>{{ room().reservationNumber }}</strong>
+              <div class="reservation-field reservation-field--agency">
+                <label>Agencia</label>
+                <strong [attr.title]="room().agency">{{ room().agency | uppercase }}</strong>
+              </div>
+              <div class="reservation-field">
+                <label>Tarifa</label>
+                <strong>{{ room().rate | uppercase }}</strong>
+              </div>
+              <div class="reservation-field">
+                <label>No. Reserva</label>
+                <strong>{{ room().reservationNumber }}</strong>
+              </div>
             </div>
             <div class="reservation-pair">
-              <label>Check In</label><strong>{{ formatDetailDate(room().checkIn) }}</strong>
-              <label>Check Out</label><strong>{{ formatDetailDate(room().checkOut) }}</strong>
-              <label>Noches</label><strong>{{ room().nights }}</strong>
+              <div class="reservation-field">
+                <label>Check In</label>
+                <strong>{{ formatDetailDate(room().checkIn) }}</strong>
+              </div>
+              <div class="reservation-field">
+                <label>Check Out</label>
+                <strong>{{ formatDetailDate(room().checkOut) }}</strong>
+              </div>
+              <div class="reservation-field">
+                <label>Noches</label>
+                <strong>{{ room().nights }}</strong>
+              </div>
             </div>
           </div>
 

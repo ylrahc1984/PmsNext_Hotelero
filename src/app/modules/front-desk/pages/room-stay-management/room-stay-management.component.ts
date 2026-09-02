@@ -3286,6 +3286,14 @@ export class RoomStayManagementComponent implements OnInit {
 
       this.invoiceUsdExchangeRate.set(usdQuote);
 
+      const invoiceSellingExchangeRate = this.getInvoiceSellingExchangeRate(usdQuote);
+      if (invoiceSellingExchangeRate <= 0) {
+        this.invoiceValidationMessage.set(
+          'No se pudo determinar el tipo de cambio de venta vigente. La facturación fue bloqueada.'
+        );
+        return false;
+      }
+
       const invalidPayment = payments.find((payment) => {
         const currency = this.cleanText(payment.moneda).toUpperCase();
         if (currency === this.invoiceBaseCurrency) {
@@ -3378,6 +3386,14 @@ export class RoomStayManagementComponent implements OnInit {
     }
 
     return this.roundExchangeRate(usdSellingRate / paymentBuyingRate);
+  }
+
+  private getInvoiceSellingExchangeRate(quote: TipoCambio | null = this.invoiceUsdExchangeRate()): number {
+    const sellingRate = Number(quote?.venta ?? 0);
+
+    return Number.isFinite(sellingRate) && sellingRate > 0
+      ? this.roundExchangeRate(sellingRate)
+      : 0;
   }
 
   private getDefaultInvoiceCurrency(): string {
@@ -3904,14 +3920,14 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   private buildRoomInvoicePayload(selectedCharges: Charge[]): RoomInvoicePayload {
-    const room = this.room();
-    const billedClient = this.invoiceClient();
-    const payments = this.invoiceAppliedPayments();
-    const firstPayment = payments[0];
-    const fecha = this.todayDisplayDate();
-    const operador = this.getOperador();
-    const moneda = this.invoiceBaseCurrency;
-    const pntVenta = 'PF';
+    const room          = this.room();
+    const billedClient  = this.invoiceClient();
+    const payments      = this.invoiceAppliedPayments();
+    const firstPayment  = payments[0];
+    const fecha         = this.todayDisplayDate();
+    const operador      = this.getOperador();
+    const moneda        = this.invoiceBaseCurrency;
+    const pntVenta      = 'PF';
 
     return {
       proceso       : 1,
@@ -3940,7 +3956,7 @@ export class RoomStayManagementComponent implements OnInit {
       pntVenta,
       codVendedor   : operador,
       moneda,
-      tCambio       : 1,
+      tCambio       : this.getInvoiceSellingExchangeRate(),
       estado        : 'P',
       formaPago     : this.cleanText(firstPayment?.frmPago),
       numCuenta     : 0,

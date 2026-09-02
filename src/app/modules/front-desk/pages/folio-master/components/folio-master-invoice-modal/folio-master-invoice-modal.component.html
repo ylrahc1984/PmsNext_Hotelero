@@ -8,8 +8,24 @@
       </div>
       <div class="room-invoice-header-actions">
         <label class="room-invoice-exchange-rate">
-          <span>Tipo cambio</span>
-          <input type="number" [ngModel]="paymentDraft.tCambio" disabled>
+          <span>Moneda documento</span>
+          <input type="text" value="USD" disabled>
+        </label>
+        <label class="room-invoice-exchange-rate">
+          <span>Compra USD · COL</span>
+          <input
+            type="text"
+            [value]="isExchangeRateLoading ? 'Cargando...' : invoiceUsdExchangeRate ? (invoiceUsdExchangeRate.compra | number:'1.2-4') : 'No disponible'"
+            disabled
+          >
+        </label>
+        <label class="room-invoice-exchange-rate">
+          <span>Venta USD · COL</span>
+          <input
+            type="text"
+            [value]="isExchangeRateLoading ? 'Cargando...' : invoiceUsdExchangeRate ? (invoiceUsdExchangeRate.venta | number:'1.2-4') : 'No disponible'"
+            disabled
+          >
         </label>
         <button type="button" class="room-invoice-close" aria-label="Cerrar" (click)="closeModal.emit()">
           <span class="material-icons" aria-hidden="true">close</span>
@@ -99,7 +115,17 @@
           </label>
           <label>
             <span>Monto</span>
-            <input type="number" min="0" step="0.01" [ngModel]="paymentDraft.amount" (ngModelChange)="updatePaymentDraft({ amount: +$event })" [disabled]="isExchangeRateLoading">
+            <input
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              class="text-end"
+              [ngModel]="paymentAmountDisplay"
+              (focus)="onPaymentAmountFocus()"
+              (ngModelChange)="onPaymentAmountChange($event)"
+              (blur)="onPaymentAmountBlur()"
+              [disabled]="isExchangeRateLoading"
+            >
           </label>
           <label>
             <span>No. tarjeta</span>
