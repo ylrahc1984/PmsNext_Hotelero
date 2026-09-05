@@ -415,7 +415,7 @@ $line: #e3e9f2;
 }
 
 .detail-summary span,
-.guest-list-card span,
+.guest-list-card span:not(.material-icons),
 .timeline-item span,
 .occupancy-grid em {
   display: block;
@@ -462,10 +462,224 @@ $line: #e3e9f2;
   font-weight: 880;
 }
 
-.guest-list-card span {
+.guest-list-card span:not(.material-icons) {
   color: rgba($ink, 0.78);
   font-size: 0.8rem;
   line-height: 1.35;
+}
+
+.passport-card {
+  display: grid;
+  gap: 12px;
+  margin: 0 16px 16px;
+  padding: 12px;
+  border: 1px solid #e6edf6;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.passport-card__header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.passport-card__icon,
+.passport-row__icon {
+  display: inline-grid;
+  place-items: center;
+  color: $blue;
+  background: rgba($blue, 0.08);
+}
+
+.passport-card__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  font-size: 1.2rem;
+}
+
+.passport-card h3 {
+  margin: 0 0 3px;
+  color: $ink;
+  font-size: 0.88rem;
+  font-weight: 880;
+}
+
+.passport-card p {
+  margin: 0;
+  color: rgba($ink, 0.62);
+  font-size: 0.72rem;
+  font-weight: 720;
+  line-height: 1.35;
+}
+
+.passport-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 82px;
+  padding: 12px;
+  color: rgba($ink, 0.66);
+  border: 1px dashed rgba($bg, 0.14);
+  border-radius: 10px;
+  background: #f8fbff;
+  font-size: 0.76rem;
+  font-weight: 760;
+  text-align: center;
+}
+
+.passport-state--error {
+  color: #b42318;
+  border-color: rgba(#b42318, 0.24);
+  background: rgba(#b42318, 0.045);
+}
+
+.passport-list {
+  display: grid;
+  gap: 8px;
+}
+
+.passport-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid #edf2f8;
+  border-radius: 9px;
+  background: #f8fbff;
+}
+
+.passport-row__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  font-size: 1.08rem;
+}
+
+.passport-row__content {
+  min-width: 0;
+}
+
+.passport-row__content strong,
+.passport-row__content span,
+.passport-row__content small {
+  display: block;
+}
+
+.passport-row__content strong {
+  color: $ink;
+  font-size: 0.82rem;
+  font-weight: 860;
+  overflow-wrap: anywhere;
+}
+
+.passport-row__content span {
+  margin-top: 3px;
+  color: rgba($ink, 0.74);
+  font-size: 0.73rem;
+  font-weight: 740;
+}
+
+.passport-row__content small {
+  margin-top: 4px;
+  color: #1f7a3f;
+  font-size: 0.68rem;
+  font-weight: 780;
+  line-height: 1.35;
+}
+
+.passport-row__content .passport-row__missing {
+  color: rgba($ink, 0.56);
+}
+
+.passport-view-button {
+  grid-column: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid #cfe0ff;
+  border-radius: 8px;
+  color: $blue;
+  background: #eef6ff;
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.passport-view-button .material-icons {
+  font-size: 1rem;
+}
+
+.passport-view-button:disabled {
+  color: #74839a;
+  border-color: #dbe3ee;
+  background: #f3f6fa;
+  cursor: default;
+  opacity: 0.72;
+}
+
+.passport-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(7, 20, 36, 0.74);
+}
+
+.passport-viewer__panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(100%, 860px);
+  max-height: min(90dvh, 820px);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 18px;
+  background: $paper;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
+}
+
+.passport-viewer__panel header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5ebf3;
+}
+
+.passport-viewer__panel h2 {
+  margin: 4px 0 0;
+  color: $ink;
+  font-size: 0.98rem;
+  font-weight: 870;
+}
+
+.passport-viewer__panel button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  border: 1px solid #e5ebf3;
+  border-radius: 11px;
+  color: #52647b;
+  background: $paper;
+}
+
+.passport-viewer__panel img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: calc(min(90dvh, 820px) - 73px);
+  object-fit: contain;
+  background: #111827;
 }
 
 .detail-actions {

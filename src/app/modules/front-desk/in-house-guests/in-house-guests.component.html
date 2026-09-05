@@ -277,6 +277,59 @@
             </div>
           </article>
 
+          <section class="passport-card" aria-labelledby="passportSectionTitle">
+            <div class="passport-card__header">
+              <span class="passport-card__icon material-icons" aria-hidden="true">lock_outline</span>
+              <div>
+                <h3 id="passportSectionTitle">Pasaporte</h3>
+                <p>Visualizacion segura del documento registrado.</p>
+              </div>
+            </div>
+
+            @if (passportLoading && passportRows.length === 0) {
+              <div class="passport-state" role="status">
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                Consultando pasaportes...
+              </div>
+            } @else if (passportError) {
+              <div class="passport-state passport-state--error" role="alert">
+                <span class="material-icons" aria-hidden="true">error_outline</span>
+                {{ passportError }}
+              </div>
+            } @else if (passportRows.length === 0) {
+              <div class="passport-state">
+                <span class="material-icons" aria-hidden="true">folder_open</span>
+                No hay huespedes de rooming list para consultar.
+              </div>
+            } @else {
+              <div class="passport-list">
+                @for (row of passportRows; track row.roomingGuest.numInterno) {
+                  <article class="passport-row">
+                    <span class="passport-row__icon material-icons" aria-hidden="true">{{ row.document ? 'badge' : 'description' }}</span>
+                    <div class="passport-row__content">
+                      <strong>{{ getPassportGuestName(row) }}</strong>
+                      <span>{{ getPassportGuestDocument(row) }}</span>
+                      <small [class.passport-row__missing]="!row.document">{{ row.loading ? 'Verificando documento...' : getPassportDocumentMeta(row) }}</small>
+                    </div>
+                    <button
+                      type="button"
+                      class="passport-view-button"
+                      [disabled]="!row.document || row.loading || row.viewing"
+                      (click)="viewPassport(row)"
+                    >
+                      @if (row.viewing) {
+                        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                      } @else {
+                        <span class="material-icons" aria-hidden="true">visibility</span>
+                      }
+                      Ver pasaporte
+                    </button>
+                  </article>
+                }
+              </div>
+            }
+          </section>
+
         } @else {
           <div class="state-box state-box--compact">
             <span class="state-illustration material-icons" aria-hidden="true">person_search</span>
@@ -286,5 +339,22 @@
       </div>
     </aside>
   </section>
+
+  @if (passportViewerUrl) {
+    <div class="passport-viewer" role="dialog" aria-modal="true" aria-labelledby="passportViewerTitle">
+      <section class="passport-viewer__panel">
+        <header>
+          <div>
+            <span class="section-eyebrow">Solo lectura</span>
+            <h2 id="passportViewerTitle">{{ passportViewerTitle }}</h2>
+          </div>
+          <button type="button" aria-label="Cerrar visor de pasaporte" (click)="closePassportViewer()">
+            <span class="material-icons" aria-hidden="true">close</span>
+          </button>
+        </header>
+        <img [src]="passportViewerUrl" alt="Pasaporte del huesped" />
+      </section>
+    </div>
+  }
 
 </section>

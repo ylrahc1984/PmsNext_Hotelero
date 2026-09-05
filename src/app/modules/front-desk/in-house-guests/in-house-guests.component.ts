@@ -1,12 +1,16 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnDestroy, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { of } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
 
+import { ToastService } from 'src/app/core/services/toast.service';
 import { normalizePmsDateDDMMYYYY, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
+import { GuestIdentityDocument, RoomingListGuest } from '../check-in-arrivals/models/check-in-arrival.model';
+import { CheckInArrivalsService } from '../check-in-arrivals/services/check-in-arrivals.service';
+import { GuestIdentityDocumentService } from '../check-in-arrivals/services/guest-identity-document.service';
 import {
   InHouseGuest,
   InHouseKpi,
@@ -43,6 +47,14 @@ interface TimelineItem {
   accent: 'primary' | 'green' | 'amber' | 'burgundy';
 }
 
+interface InHouseGuestPassportRow {
+  roomingGuest: RoomingListGuest;
+  document: GuestIdentityDocument | null;
+  loading: boolean;
+  error: string;
+  viewing: boolean;
+}
+
 @Component({
   selector: 'app-in-house-guests',
   standalone: true,
@@ -51,8 +63,11 @@ interface TimelineItem {
   styleUrls: ['./in-house-guests.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class InHouseGuestsComponent implements OnInit {
+export class InHouseGuestsComponent implements OnInit, OnDestroy {
   private readonly inHouseService = inject(InHouseGuestsService);
+  private readonly roomingService = inject(CheckInArrivalsService);
+  private readonly documentService = inject(GuestIdentityDocumentService);
+  private readonly toast = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(FormBuilder);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -116,9 +131,20 @@ export class InHouseGuestsComponent implements OnInit {
   totalPages = 1;
   sortColumn: InHouseSortColumn = 'numHabita';
   sortDirection: InHouseSortDirection = 'asc';
+  passportRows: InHouseGuestPassportRow[] = [];
+  passportLoading = false;
+  passportError = '';
+  passportViewerUrl = '';
+  passportViewerTitle = '';
+  private passportViewerObjectUrl = '';
+  private passportLoadId = 0;
 
   ngOnInit(): void {
     this.buscar();
+  }
+
+  ngOnDestroy(): void {
+    this.closePassportViewer();
   }
 
   buscar(): void {
@@ -149,6 +175,7 @@ export class InHouseGuestsComponent implements OnInit {
         this.selectedGuest = this.guests[0] ?? null;
         this.page = 1;
         this.refreshView();
+        this.loadPassportsForSelectedGuest();
       });
   }
 
@@ -171,6 +198,7 @@ export class InHouseGuestsComponent implements OnInit {
 
   seleccionarGuest(guest: InHouseGuest): void {
     this.selectedGuest = guest;
+    this.loadPassportsForSelectedGuest();
   }
 
   ordenar(column: InHouseSortColumn): void {
@@ -290,6 +318,61 @@ export class InHouseGuestsComponent implements OnInit {
     return normalizePmsDateDDMMYYYY(value) || '-';
   }
 
+  getPassportGuestName(row: InHouseGuestPassportRow): string {
+    const guest = row.roomingGuest;
+    return this.toTitleCase(`${guest.nombre || ''} ${guest.apellidos || ''}`.trim()) || 'Huesped';
+  }
+
+  getPassportGuestDocument(row: InHouseGuestPassportRow): string {
+    const guest = row.roomingGuest;
+    const parts = [guest.tipDocu, guest.numDocu].map((value) => this.toStringValue(value)).filter(Boolean);
+    return parts.length ? parts.join(' · ') : 'Sin documento personal';
+  }
+
+  getPassportDocumentMeta(row: InHouseGuestPassportRow): string {
+    const document = row.document;
+    if (!document) return 'Sin pasaporte registrado';
+    const parts = [
+      document.nombreArchivo,
+      this.formatFileSize(document.tamanoBytes),
+      this.formatDocumentDate(document.fechaModificacion || document.fechaCreacion)
+    ].filter(Boolean);
+    return parts.join(' · ');
+  }
+
+  viewPassport(row: InHouseGuestPassportRow): void {
+    const idDocumento = row.document?.idDocumento;
+    if (!idDocumento || row.viewing) return;
+
+    row.viewing = true;
+    this.documentService.getContent(idDocumento).pipe(
+      finalize(() => {
+        row.viewing = false;
+        this.cdr.markForCheck();
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (blob) => {
+        this.closePassportViewer();
+        this.passportViewerObjectUrl = URL.createObjectURL(blob);
+        this.passportViewerUrl = this.passportViewerObjectUrl;
+        this.passportViewerTitle = `${this.getPassportGuestName(row)} · Pasaporte`;
+        this.cdr.markForCheck();
+      },
+      error: (error) => {
+        console.error('No se pudo visualizar el pasaporte del huesped.', error);
+        this.toast.error('No fue posible visualizar el pasaporte del huesped.');
+      }
+    });
+  }
+
+  closePassportViewer(): void {
+    if (this.passportViewerObjectUrl) URL.revokeObjectURL(this.passportViewerObjectUrl);
+    this.passportViewerObjectUrl = '';
+    this.passportViewerUrl = '';
+    this.passportViewerTitle = '';
+  }
+
   cambiarHabitacion(item: InHouseGuest): void {
     console.log('Cambiar Habitacion', item);
   }
@@ -376,6 +459,69 @@ export class InHouseGuestsComponent implements OnInit {
 
     const selectedKey = this.getGuestKey(this.selectedGuest);
     this.selectedGuest = this.filteredGuests.find((guest) => this.getGuestKey(guest) === selectedKey) ?? this.filteredGuests[0] ?? null;
+  }
+
+  private loadPassportsForSelectedGuest(): void {
+    this.closePassportViewer();
+    const selected = this.selectedGuest;
+    const loadId = ++this.passportLoadId;
+    this.passportRows = [];
+    this.passportError = '';
+
+    if (!selected?.codReserva || !selected?.numHabita) {
+      this.passportLoading = false;
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.passportLoading = true;
+    this.roomingService.getRoomingList(selected.codReserva, selected.numHabita).pipe(
+      catchError((error) => {
+        console.error('No se pudo cargar el rooming list para pasaportes.', error);
+        this.passportError = 'No fue posible consultar los pasaportes de esta habitacion.';
+        return of([] as RoomingListGuest[]);
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe((roomingGuests) => {
+      if (loadId !== this.passportLoadId) return;
+      this.passportRows = roomingGuests.map((roomingGuest) => ({
+        roomingGuest,
+        document: null,
+        loading: true,
+        error: '',
+        viewing: false
+      }));
+
+      if (!this.passportRows.length) {
+        this.passportLoading = false;
+        this.cdr.markForCheck();
+        return;
+      }
+
+      forkJoin(
+        this.passportRows.map((row) =>
+          this.documentService.getByRooming(row.roomingGuest.numInterno).pipe(
+            catchError((error) => {
+              console.error('No se pudo cargar la metadata del pasaporte.', error);
+              row.error = 'No fue posible verificar el documento.';
+              return of(null);
+            })
+          )
+        )
+      ).pipe(
+        finalize(() => {
+          if (loadId === this.passportLoadId) {
+            this.passportLoading = false;
+            this.passportRows.forEach((row) => row.loading = false);
+            this.cdr.markForCheck();
+          }
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      ).subscribe((documents) => {
+        if (loadId !== this.passportLoadId) return;
+        this.passportRows = this.passportRows.map((row, index) => ({ ...row, document: documents[index] }));
+      });
+    });
   }
 
   private filterGuests(guests: InHouseGuest[]): InHouseGuest[] {
@@ -515,6 +661,27 @@ export class InHouseGuestsComponent implements OnInit {
 
   private toStringValue(value: unknown): string {
     return value == null ? '' : String(value).trim();
+  }
+
+  private formatFileSize(bytes: number): string {
+    if (!Number.isFinite(bytes) || bytes <= 0) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  }
+
+  private formatDocumentDate(value: string): string {
+    if (!value) return '';
+    const normalized = value.includes('/') ? value.split('/').reverse().join('-') : value;
+    const date = new Date(normalized);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat('es-CR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
   }
 
   private normalizeText(value: string): string {
