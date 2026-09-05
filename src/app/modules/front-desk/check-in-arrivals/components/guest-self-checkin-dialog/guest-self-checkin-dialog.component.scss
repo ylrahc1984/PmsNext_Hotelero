@@ -99,6 +99,27 @@ $muted: #64748b;
 .guest-card--completed .guest-card__copy small { color: #16784b; }
 .guest-card__arrow { color: #91a0b4; }
 
+.concierge-note { display: grid; gap: 7px; margin-top: 24px; }
+.concierge-note > span { color: #344860; font-size: .82rem; font-weight: 700; }
+.concierge-note textarea {
+  width: 100%;
+  min-height: 108px;
+  padding: 13px 15px;
+  resize: vertical;
+  border: 1px solid #ccd8e6;
+  border-radius: 13px;
+  outline: none;
+  color: $navy;
+  background: #fff;
+  font: inherit;
+  font-size: .9rem;
+  line-height: 1.45;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+.concierge-note textarea:focus { border-color: $blue; box-shadow: 0 0 0 4px rgba($blue,.11); }
+.concierge-note small { color: $muted; font-size: .74rem; line-height: 1.4; }
+.guest-form .concierge-note--guest-form { display: none; }
+
 .guest-form { display: grid; gap: 16px; padding-bottom: 18px; }
 .guest-form label { display: grid; gap: 7px; }
 .guest-form label > span { color: #344860; font-size: .82rem; font-weight: 700; }
@@ -165,6 +186,7 @@ $muted: #64748b;
   .guest-form-pane { display: none; }
   .guest-workspace--form-visible .guest-list-pane { display: none; }
   .guest-workspace--form-visible .guest-form-pane { display: block; }
+  .guest-form .concierge-note--guest-form { display: grid; }
   .back-to-list { display: inline-flex; }
   .guest-card { min-height: 84px; }
 }

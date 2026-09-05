@@ -35,7 +35,8 @@ describe('GuestSelfCheckinDialogComponent', () => {
       apellidos: 'Gómez',
       email: 'maria@example.com',
       telefono: '8888-8888',
-      codigoNacionalidad: 'CR'
+      codigoNacionalidad: 'CR',
+      procede: 'Celebramos nuestro aniversario.'
     });
 
     component.submit();
@@ -43,5 +44,24 @@ describe('GuestSelfCheckinDialogComponent', () => {
     expect(emitted).toEqual(['María']);
     expect(component.completedCount).toBe(1);
     expect(component.selectedGuest?.orden).toBe(2);
+  });
+
+  it('incluye la nota para el concierge al guardar el huésped', () => {
+    let savedGuest: unknown;
+    component.guestSaved.subscribe((guest) => { savedGuest = guest; });
+    component.guestForm.setValue({
+      tipoDocumento: 'PAS',
+      numeroDocumento: 'P123',
+      nombre: 'María',
+      apellidos: 'Gómez',
+      email: 'maria@example.com',
+      telefono: '8888-8888',
+      codigoNacionalidad: 'CR',
+      procede: 'Necesito una almohada adicional.'
+    });
+
+    component.submit();
+
+    expect(savedGuest).toEqual(jasmine.objectContaining({ procede: 'Necesito una almohada adicional.' }));
   });
 });

@@ -28,6 +28,7 @@ export interface SelfCheckInGuestSave {
   email: string;
   telefono: string;
   codigoNacionalidad: string;
+  procede: string;
 }
 
 interface GuestSlot {
@@ -68,13 +69,14 @@ export class GuestSelfCheckinDialogComponent implements OnChanges {
   @Output() cancelled = new EventEmitter<void>();
 
   readonly guestForm = this.fb.nonNullable.group({
-    tipoDocumento: ['', Validators.required],
-    numeroDocumento: ['', Validators.required],
-    nombre: ['', Validators.required],
-    apellidos: ['', Validators.required],
-    email: ['', [Validators.required, Validators.email]],
-    telefono: ['', Validators.required],
-    codigoNacionalidad: ['', Validators.required]
+    tipoDocumento           : ['', Validators.required],
+    numeroDocumento         : ['', Validators.required],
+    nombre                  : ['', Validators.required],
+    apellidos               : ['', Validators.required],
+    email                   : ['', [Validators.required, Validators.email]],
+    telefono                : ['', Validators.required],
+    codigoNacionalidad      : ['', Validators.required],
+    procede                 : ['']
   });
 
   guests: GuestSlot[] = [];
@@ -206,22 +208,24 @@ export class GuestSelfCheckinDialogComponent implements OnChanges {
       apellidos: data?.apellidos ?? '',
       email: data?.email ?? '',
       telefono: data?.telefono ?? '',
-      codigoNacionalidad: data?.codigoNacionalidad ?? ''
+      codigoNacionalidad: data?.codigoNacionalidad ?? '',
+      procede: data?.procede ?? ''
     });
   }
 
   private mapExistingGuest(guest: RoomingListGuest, orden: number, tipoPax: 'PAX' | 'CHD'): SelfCheckInGuestSave {
     return {
-      slotId: guest.numInterno,
+      slotId              : guest.numInterno,
       orden,
       tipoPax,
-      tipoDocumento: guest.tipDocu,
-      numeroDocumento: guest.numDocu,
-      nombre: guest.nombre,
-      apellidos: guest.apellidos,
-      email: guest.email,
-      telefono: guest.motivo,
-      codigoNacionalidad: this.nationalities.find((item) =>
+      tipoDocumento       : guest.tipDocu,
+      numeroDocumento     : guest.numDocu,
+      nombre              : guest.nombre,
+      apellidos           : guest.apellidos,
+      email               : guest.email,
+      telefono            : guest.motivo,
+      procede             : guest.procede ?? '',
+      codigoNacionalidad  : this.nationalities.find((item) =>
         item.codigo === guest.nacionalidad || item.descripcion.toLocaleLowerCase() === guest.nacionalidad.toLocaleLowerCase()
       )?.codigo ?? guest.nacionalidad
     };

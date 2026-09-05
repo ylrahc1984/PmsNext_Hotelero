@@ -2,6 +2,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { NgbDatepicker } from '@ng-bootstrap/ng-bootstrap';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import Swal, { SweetAlertResult } from 'sweetalert2';
@@ -47,6 +49,85 @@ describe('RoomStayManagementComponent reservation tags', () => {
   });
 
   afterEach(() => httpMock.verify());
+
+  it('does not write the calendar model again on unrelated render cycles', async () => {
+    httpMock.expectOne(tagsBaseUrl).flush(successfulResponse([]));
+    const action = component.operationGroups.flatMap((group) => group.actions).find((item) => item.id === 'change-departure')!;
+    component.openActionModal(action);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const calendar = fixture.debugElement.query(By.directive(NgbDatepicker)).componentInstance as NgbDatepicker;
+    const writeValue = spyOn(calendar, 'writeValue').and.callThrough();
+
+    for (let cycle = 0; cycle < 3; cycle++) {
+      fixture.detectChanges();
+      await fixture.whenStable();
+    }
+
+    expect(writeValue).not.toHaveBeenCalled();
+  });
+
+  it('opens the departure calendar and enables confirmation after selecting a new date', async () => {
+    httpMock.expectOne(tagsBaseUrl).flush(successfulResponse([]));
+    const openButton = Array.from(fixture.nativeElement.querySelectorAll('.action-button') as NodeListOf<HTMLButtonElement>)
+      .find((button) => button.textContent?.includes('Cambiar Fecha Salida'))!;
+    openButton.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('ngb-datepicker')).toBeTruthy();
+    const nextDate = Array.from(fixture.nativeElement.querySelectorAll('ngb-datepicker .ngb-dp-day') as NodeListOf<HTMLElement>)
+      .find((day) => day.textContent?.trim() === '26')!;
+    nextDate.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('.action-modal__primary').disabled).toBeFalse();
+    expect(fixture.nativeElement.querySelector('#new-departure-date').value).toBe('26/08/2026');
+  });
+
+  it('opens departure changes without an operational date but keeps saving blocked', async () => {
+    httpMock.expectOne(tagsBaseUrl).flush(successfulResponse([]));
+    const operationalDateService = TestBed.inject(OperationalDateService);
+    (operationalDateService.operationalDate as ReturnType<typeof signal<string>>).set('');
+    const openButton = Array.from(fixture.nativeElement.querySelectorAll('.action-button') as NodeListOf<HTMLButtonElement>)
+      .find((button) => button.textContent?.includes('Cambiar Fecha Salida'))!;
+
+    openButton.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('ngb-datepicker')).toBeTruthy();
+    expect(operationalDateService.ensureLoaded).toHaveBeenCalledTimes(2);
+    expect(fixture.nativeElement.querySelector('.action-modal__primary').disabled).toBeTrue();
+
+    (operationalDateService.operationalDate as ReturnType<typeof signal<string>>).set('24/08/2026');
+    component.selectDepartureDate({ day: 26, month: 8, year: 2026 });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('.action-modal__primary').disabled).toBeFalse();
+  });
+
+  it('formats calendar selections as dd/MM/yyyy and compares dates across months', () => {
+    httpMock.expectOne(tagsBaseUrl).flush(successfulResponse([]));
+
+    component.selectDepartureDate({ day: 5, month: 9, year: 2026 });
+
+    expect(component.actionDraft().newCheckOut).toBe('05/09/2026');
+    expect(component.departureDateValidationMessage()).toBe('');
+
+    component.selectDepartureDate({ day: 31, month: 7, year: 2026 });
+    expect(component.departureDateValidationMessage()).toContain('anterior a la fecha operativa');
+  });
+
+  it('rejects impossible and month-first dates entered into the departure field', () => {
+    httpMock.expectOne(tagsBaseUrl).flush(successfulResponse([]));
+
+    for (const newCheckOut of ['31/02/2026', '08/25/2026']) {
+      component.updateActionDraft({ newCheckOut });
+      expect(component.departureCalendarDate(newCheckOut)).toBeNull();
+      expect(component.departureDateValidationMessage()).toContain('fecha de salida válida');
+    }
+  });
 
   it('loads assigned tags once after obtaining the real reservation code', () => {
     const tag = makeAssignedTag(1, 'VIP');

@@ -59,6 +59,17 @@
               </button>
             }
           </div>
+
+          <label class="concierge-note concierge-note--guest-list" for="selfCheckinConciergeNote">
+            <span>Special note to your concierge</span>
+            <textarea
+              id="selfCheckinConciergeNote"
+              [formControl]="guestForm.controls.procede"
+              rows="4"
+              placeholder="Let us know how we can make your stay more comfortable"
+            ></textarea>
+            <small>Optional note for {{ selectedGuest?.title || 'this guest' }}.</small>
+          </label>
         </aside>
 
         <main class="guest-form-pane">
@@ -109,6 +120,17 @@
                 <option value="">Select your nationality</option>
                 @for (option of nationalities; track option.codigo) { <option [value]="option.codigo">{{ option.descripcion }}</option> }
               </select>
+            </label>
+
+            <label class="concierge-note concierge-note--guest-form" for="selfCheckinConciergeNoteMobile">
+              <span>Special note to your concierge</span>
+              <textarea
+                id="selfCheckinConciergeNoteMobile"
+                formControlName="procede"
+                rows="4"
+                placeholder="Let us know how we can make your stay more comfortable"
+              ></textarea>
+              <small>Optional note for {{ selectedGuest?.title || 'this guest' }}.</small>
             </label>
 
             <button type="submit" class="primary-action" [disabled]="saving">

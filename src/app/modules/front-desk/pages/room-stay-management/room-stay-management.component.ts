@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { NgbDatepickerModule, NgbDateStruct } from '@ng-bootstrap/ng-bootstrap';
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CdkScrollable } from '@angular/cdk/scrolling';
@@ -308,6 +309,7 @@ const emptyRoomStay: RoomStay = {
   standalone: true,
   imports: [
     CommonModule,
+    NgbDatepickerModule,
     ReactiveFormsModule,
     SharedModule,
     CdkScrollable,
@@ -398,6 +400,10 @@ export class RoomStayManagementComponent implements OnInit {
   readonly extraGuestPaxTypes                    = signal<PaxType[]>([]);
   readonly activeAction                          = signal<StayOperation | null>(null);
   readonly actionDraft                           = signal<ActionModalDraft>(this.buildActionDraft());
+  // Keep date object references stable: NgModel schedules another render when its model changes.
+  readonly departureCalendarSelection = computed(() => this.departureCalendarDate(this.actionDraft().newCheckOut));
+  readonly departureCalendarMinimum = computed(() => this.departureCalendarDate(this.todayDisplayDate()));
+  readonly departureCalendarStart = computed(() => this.departureCalendarSelection() || this.departureCalendarMinimum());
   readonly roomChargeDraft                       = signal<RoomChargeDraft>(this.buildRoomChargeDraft());
   readonly roomChargePointOfSales                = signal<RoomChargePointOfSale[]>([]);
   readonly roomChargeItems                       = signal<RoomChargePriceListApiItem[]>([]);
@@ -999,7 +1005,11 @@ export class RoomStayManagementComponent implements OnInit {
       return;
     }
 
-    if (this.actionRequiresOperationalDate(action.id) && !this.todayDisplayDate()) {
+    if (action.id === 'change-departure' && !this.todayDisplayDate() && !this.operationalDateService.loading()) {
+      this.loadOperationalDate();
+    }
+
+    if (action.id !== 'change-departure' && this.actionRequiresOperationalDate(action.id) && !this.todayDisplayDate()) {
       const message = this.operationalDateService.loading()
         ? 'La fecha operativa todavía se está cargando.'
         : 'No se puede ejecutar esta operación sin una fecha operativa válida.';
@@ -4187,6 +4197,21 @@ export class RoomStayManagementComponent implements OnInit {
 
   private formatInputDateForApi(date: string): string {
     return normalizePmsDateInputDDMMYYYY(date);
+  }
+
+  departureCalendarDate(value: string): NgbDateStruct | null {
+    const normalized = normalizePmsDateInputDDMMYYYY(value);
+    if (!normalized) {
+      return null;
+    }
+
+    const [day, month, year] = normalized.split('/').map(Number);
+    return { day, month, year };
+  }
+
+  selectDepartureDate(date: NgbDateStruct): void {
+    const newCheckOut = normalizePmsDateInputDDMMYYYY(`${date.day}/${date.month}/${date.year}`);
+    this.updateActionDraft({ newCheckOut });
   }
 
   normalizeDepartureDateInput(): void {

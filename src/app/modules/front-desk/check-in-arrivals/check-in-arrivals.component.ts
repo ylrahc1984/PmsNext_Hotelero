@@ -536,7 +536,7 @@ export class CheckInArrivalsComponent implements OnInit {
       direccion: '',
       email: guest.email,
       motivo: guest.telefono,
-      procede: '',
+      procede: guest.procede,
       mdoArribo: '',
       orden: guest.orden,
       operador: this.authService.getCurrentUser()?.usuario?.trim() || 'admin'

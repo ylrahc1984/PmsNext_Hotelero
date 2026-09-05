@@ -1046,13 +1046,23 @@
 
           @if (isActionSelected('change-departure')) {
             <div class="action-modal__grid action-modal__grid--single">
-              <label class="action-field">
-                <span>Nueva fecha de salida</span>
+              <div class="action-field">
+                <label for="new-departure-date">Nueva fecha de salida</label>
+                <ngb-datepicker
+                  [ngModel]="departureCalendarSelection()"
+                  (dateSelect)="selectDepartureDate($event)"
+                  [minDate]="departureCalendarMinimum()!"
+                  [startDate]="departureCalendarStart()"
+                  [outsideDays]="'collapsed'"
+                  [navigation]="'select'"
+                  aria-label="Calendario de nueva fecha de salida"
+                />
                 <input
+                  id="new-departure-date"
                   type="text"
                   inputmode="numeric"
                   maxlength="10"
-                  placeholder="dd/mm/yyyy"
+                  placeholder="dd/MM/yyyy"
                   pattern="\d{1,2}/\d{1,2}/\d{4}"
                   [ngModel]="actionDraft().newCheckOut"
                   (ngModelChange)="updateActionDraft({ newCheckOut: $event })"
@@ -1066,7 +1076,7 @@
                 @if (departureDateValidationMessage(); as validationMessage) {
                   <small class="text-danger fw-semibold">{{ validationMessage }}</small>
                 }
-              </label>
+              </div>
             </div>
           }
 

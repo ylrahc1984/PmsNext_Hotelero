@@ -1241,7 +1241,8 @@ label {
   grid-column: 1 / -1;
 }
 
-.action-field span {
+.action-field span,
+.action-field > label {
   color: $ink;
   font-size: 0.78rem;
   font-weight: 900;
