@@ -149,6 +149,75 @@ describe('CheckInArrivalsComponent', () => {
     httpMock.expectNone((req) => req.url === `${environment.apiUrl}/rooming-list`);
   });
 
+  it('sincroniza el huésped existente del self check-in sin volver a llamar al API', () => {
+    const arrival = makeArrival();
+    component.selfCheckinArrival = arrival;
+
+    component.saveSelfCheckInGuest({
+      slotId: 'RL-100',
+      existingGuestId: 'RL-100',
+      orden: 1,
+      tipoPax: 'PAX',
+      tipoDocumento: 'PAS',
+      numeroDocumento: 'P-100',
+      nombre: 'Ana',
+      apellidos: 'Solano',
+      email: 'ana@example.com',
+      telefono: '8888-8888',
+      codigoNacionalidad: 'CR',
+      procede: 'Actualizar datos.'
+    });
+
+    httpMock.expectNone((req) => req.url === `${environment.apiUrl}/rooming-list`);
+    expect(component.selfCheckinGuests).toEqual([
+      jasmine.objectContaining({
+        numInterno: 'RL-100',
+        nombre: 'Ana',
+        apellidos: 'Solano',
+        motivo: '8888-8888',
+        procede: 'Actualizar datos.',
+        orden: 1
+      })
+    ]);
+  });
+
+  it('sincroniza el idOpe emitido por el diálogo para convertir un self check-in nuevo en registro editable', () => {
+    const arrival = makeArrival();
+    component.selfCheckinArrival = arrival;
+
+    component.saveSelfCheckInGuest({
+      slotId: 'guest-1',
+      existingGuestId: '0000000361',
+      orden: 1,
+      tipoPax: 'PAX',
+      tipoDocumento: 'PAS',
+      numeroDocumento: 'P-361',
+      nombre: 'Carlos',
+      apellidos: 'Mora',
+      email: 'carlos@example.com',
+      telefono: '7777-7777',
+      codigoNacionalidad: 'CR',
+      procede: 'Llegada tarde.'
+    });
+
+    httpMock.expectNone((req) => req.url === `${environment.apiUrl}/rooming-list`);
+
+    expect(component.selfCheckinGuests).toEqual([
+      jasmine.objectContaining({
+        numInterno: '0000000361',
+        codReserva: arrival.codReserva,
+        numHabita: arrival.numHabita,
+        tipDocu: 'PAS',
+        numDocu: 'P-361',
+        nombre: 'Carlos',
+        apellidos: 'Mora',
+        motivo: '7777-7777',
+        procede: 'Llegada tarde.',
+        orden: 1
+      })
+    ]);
+  });
+
   it('consulta las etiquetas una sola vez cuando la reserva aparece en varias habitaciones', () => {
     const first = { ...makeArrival(), procesado: 1 };
     const second = { ...makeArrival(), numHabita: '102', folio: '2', procesado: 1 };

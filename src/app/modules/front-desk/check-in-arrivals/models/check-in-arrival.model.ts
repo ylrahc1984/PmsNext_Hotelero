@@ -90,6 +90,34 @@ export interface RoomingListSaveRequest {
   operador        : string;
 }
 
+export interface RoomingListMutationResponse {
+  success?: boolean;
+  message?: string;
+  respuesta?: string;
+  data?: {
+    idOpe?: string;
+    idGenerado?: number;
+    [key: string]: unknown;
+  } | null;
+}
+
+export interface GuestIdentityDocument {
+  idDocumento: number;
+  idRooming: string;
+  codReserva: string;
+  tipoDocumento: string;
+  ladoDocumento: string;
+  nombreArchivo: string;
+  formato: string;
+  mimeType: string;
+  tamanoBytes: number;
+  activo: boolean;
+  fechaCreacion: string;
+  operadorCreacion: string;
+  fechaModificacion?: string;
+  operadorModificacion?: string;
+}
+
 export interface CheckInRequest {
   proceso         : number;
   numHabitacion   : string;

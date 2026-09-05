@@ -4,7 +4,7 @@ import { Observable, catchError, map, throwError } from 'rxjs';
 
 import { normalizePmsDateDDMMYYYY } from 'src/app/core/utils/pms-date.util';
 import { environment } from 'src/environments/environment';
-import { CheckInArrival, CheckInRequest, RoomingListGuest, RoomingListSaveRequest } from '../models/check-in-arrival.model';
+import { CheckInArrival, CheckInRequest, RoomingListGuest, RoomingListMutationResponse, RoomingListSaveRequest } from '../models/check-in-arrival.model';
 
 @Injectable({ providedIn: 'root' })
 export class CheckInArrivalsService {
@@ -48,8 +48,12 @@ export class CheckInArrivalsService {
       );
   }
 
-  addRoomingListGuest(request: RoomingListSaveRequest): Observable<unknown> {
-    return this.http.post(this.roomingListUrl, { ...request, fecNac: normalizePmsDateDDMMYYYY(request.fecNac) });
+  addRoomingListGuest(request: RoomingListSaveRequest): Observable<RoomingListMutationResponse> {
+    return this.http.post<RoomingListMutationResponse>(this.roomingListUrl, { ...request, fecNac: normalizePmsDateDDMMYYYY(request.fecNac) });
+  }
+
+  updateRoomingListGuest(request: RoomingListSaveRequest): Observable<RoomingListMutationResponse | string> {
+    return this.http.put<RoomingListMutationResponse>(this.roomingListUrl, { ...request, fecNac: normalizePmsDateDDMMYYYY(request.fecNac) });
   }
 
   deleteRoomingListGuest(idOpe: string, codRsv: string): Observable<unknown> {

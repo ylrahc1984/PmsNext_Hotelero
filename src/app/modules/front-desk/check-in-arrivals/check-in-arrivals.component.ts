@@ -515,13 +515,16 @@ export class CheckInArrivalsComponent implements OnInit {
 
   saveSelfCheckInGuest(guest: SelfCheckInGuestSave): void {
     const arrival = this.selfCheckinArrival;
-    if (!arrival || this.selfCheckinSaving) return;
-
-    this.selfCheckinSaving = true;
-    this.selfCheckinError = '';
-    this.arrivalsService.addRoomingListGuest({
+    if (!arrival) return;
+    const existingGuestId = guest.existingGuestId?.trim() || '';
+    if (!existingGuestId) {
+      this.selfCheckinError = 'We could not sync the saved guest identifier. Please reopen the registration.';
+      this.cdr.markForCheck();
+      return;
+    }
+    const request = {
       proceso: 0,
-      idOpe: '',
+      idOpe: existingGuestId,
       codRsv: arrival.codReserva,
       numHabita: arrival.numHabita,
       codNacion: guest.codigoNacionalidad,
@@ -540,21 +543,89 @@ export class CheckInArrivalsComponent implements OnInit {
       mdoArribo: '',
       orden: guest.orden,
       operador: this.authService.getCurrentUser()?.usuario?.trim() || 'admin'
-    }).pipe(
-      finalize(() => { this.selfCheckinSaving = false; this.cdr.markForCheck(); }),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: () => {
-        this.selfCheckinSavedAny = true;
-        this.roomingGuestsByRoom.delete(this.getRoomingKey(arrival));
-        this.setRoomingStatus(arrival, 'COMPLETE');
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.selfCheckinError = 'We could not save your information. Please review the details and try again.';
-        this.cdr.markForCheck();
+    };
+
+    this.selfCheckinError = '';
+    this.selfCheckinSavedAny = true;
+    this.applySelfCheckInGuestMutation(guest, request, { success: true, data: { idOpe: existingGuestId } });
+    this.roomingGuestsByRoom.set(this.getRoomingKey(arrival), this.selfCheckinGuests);
+    this.setRoomingStatus(arrival, 'COMPLETE');
+    this.cdr.markForCheck();
+  }
+
+  private applySelfCheckInGuestMutation(guest: SelfCheckInGuestSave, request: {
+    codRsv: string;
+    numHabita: string;
+    codNacion: string;
+    tipDocu: string;
+    numDocu: string;
+    nombre: string;
+    apellido: string;
+    fecNac: string;
+    sexo: string;
+    estCivil: string;
+    tiPax: string;
+    direccion: string;
+    email: string;
+    motivo: string;
+    procede: string;
+    mdoArribo: string;
+    orden: number;
+    operador: string;
+  }, response: unknown): void {
+    const existingGuestId = guest.existingGuestId?.trim() || '';
+    const savedGuestId = existingGuestId || this.extractRoomingMutationId(response);
+
+    if (!savedGuestId) {
+      this.roomingGuestsByRoom.delete(this.getRoomingKey(this.selfCheckinArrival!));
+      return;
+    }
+
+    const updatedGuest: RoomingListGuest = {
+      numInterno: savedGuestId,
+      codReserva: request.codRsv,
+      numHabita: request.numHabita,
+      nacionalidad: request.codNacion,
+      tipDocu: request.tipDocu,
+      numDocu: request.numDocu,
+      nombre: request.nombre,
+      apellidos: request.apellido,
+      fecNaci: request.fecNac,
+      sexo: request.sexo,
+      estCivil: request.estCivil,
+      tipoPax: request.tiPax,
+      direccion: request.direccion,
+      email: request.email,
+      motivo: request.motivo,
+      procede: request.procede,
+      mdoArribo: request.mdoArribo,
+      orden: request.orden,
+      operador: request.operador
+    };
+
+    const currentIndex = this.selfCheckinGuests.findIndex((item) =>
+      item.numInterno === savedGuestId || Number(item.orden) === Number(request.orden)
+    );
+
+    if (currentIndex >= 0) {
+      this.selfCheckinGuests = this.selfCheckinGuests.map((item, index) => index === currentIndex ? updatedGuest : item);
+    } else {
+      this.selfCheckinGuests = [...this.selfCheckinGuests, updatedGuest].sort((left, right) => Number(left.orden) - Number(right.orden));
+    }
+  }
+
+  private extractRoomingMutationId(response: unknown): string {
+    if (!response) return '';
+    if (typeof response === 'string') {
+      try {
+        return this.extractRoomingMutationId(JSON.parse(response));
+      } catch {
+        return '';
       }
-    });
+    }
+    if (typeof response !== 'object') return '';
+    const data = (response as { data?: { idOpe?: unknown } | null }).data;
+    return typeof data?.idOpe === 'string' ? data.idOpe.trim() : '';
   }
 
   finishSelfCheckIn(): void {

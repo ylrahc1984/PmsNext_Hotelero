@@ -1,10 +1,10 @@
 <div class="self-checkin-backdrop" role="dialog" aria-modal="true" aria-labelledby="selfCheckinTitle">
-  <section class="self-checkin-dialog">
+  <section class="self-checkin-dialog" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" (keydown.escape)="close()">
     @if (finished) {
       <div class="completion-view">
         <div class="completion-view__icon"><span class="material-icons" aria-hidden="true">check</span></div>
         <span class="completion-view__eyebrow">Registration complete</span>
-        <h2>Thank you</h2>
+        <h2 id="selfCheckinTitle">Thank you</h2>
         <p>Your information has been successfully registered.</p>
         <p>You may now return the tablet to the front desk.</p>
         <button type="button" class="primary-action completion-view__button" (click)="close()">Close</button>
@@ -20,20 +20,20 @@
           <span>Reservation <strong>{{ reservation.codigo }}</strong></span>
           <span>Room <strong>{{ room.numero || 'To be assigned' }}</strong></span>
         </div>
-        <button type="button" class="guest-header__close" aria-label="Close Self Check-in" [disabled]="saving" (click)="close()">
-          <span class="material-icons">close</span>
+        <button type="button" class="guest-header__close" cdkFocusInitial aria-label="Close guest registration" [disabled]="effectiveSaving || documentActionsDisabled" (click)="close()">
+          <span class="material-icons" aria-hidden="true">close</span>
         </button>
       </header>
 
       <div class="progress-summary">
         <div><strong>{{ completedCount }} of {{ guests.length }}</strong> guests registered</div>
         <span>{{ progressPercent }}%</span>
-        <div class="progress-track" role="progressbar" [attr.aria-valuenow]="progressPercent" aria-valuemin="0" aria-valuemax="100">
+        <div class="progress-track" role="progressbar" aria-label="Guest registration progress" [attr.aria-valuenow]="progressPercent" aria-valuemin="0" aria-valuemax="100">
           <span [style.width.%]="progressPercent"></span>
         </div>
       </div>
 
-      <div class="guest-workspace" [class.guest-workspace--form-visible]="tabletFormVisible">
+      <div class="guest-workspace">
         <aside class="guest-list-pane" aria-label="Reservation guests">
           <div class="pane-heading">
             <span class="pane-heading__eyebrow">Your party</span>
@@ -48,6 +48,7 @@
                 class="guest-card"
                 [class.guest-card--completed]="guest.completed"
                 [class.guest-card--selected]="guest.id === selectedGuestId"
+                [attr.aria-pressed]="guest.id === selectedGuestId"
                 (click)="selectGuest(guest)"
               >
                 <span class="guest-card__icon material-icons" aria-hidden="true">{{ guest.completed ? 'check' : (guest.tipoPax === 'CHD' ? 'child_care' : 'person') }}</span>
@@ -60,33 +61,18 @@
             }
           </div>
 
-          <label class="concierge-note concierge-note--guest-list" for="selfCheckinConciergeNote">
-            <span>Special note to your concierge</span>
-            <textarea
-              id="selfCheckinConciergeNote"
-              [formControl]="guestForm.controls.procede"
-              rows="4"
-              placeholder="Let us know how we can make your stay more comfortable"
-            ></textarea>
-            <small>Optional note for {{ selectedGuest?.title || 'this guest' }}.</small>
-          </label>
         </aside>
 
         <main class="guest-form-pane">
-          <button type="button" class="back-to-list" (click)="backToList()">
-            <span class="material-icons" aria-hidden="true">arrow_back</span>
-            Back to guest list
-          </button>
-
           <div class="pane-heading pane-heading--form">
             <span class="pane-heading__eyebrow">Personal information</span>
             <h2>{{ selectedGuest?.title }}</h2>
             <p>Please complete all fields to continue.</p>
           </div>
 
-          @if (errorMessage) { <div class="self-checkin-error" role="alert">{{ errorMessage }}</div> }
+          @if (visibleErrorMessage) { <div class="self-checkin-error" role="alert">{{ visibleErrorMessage }}</div> }
 
-          <form class="guest-form" [formGroup]="guestForm" (ngSubmit)="submit()">
+          <form id="selfCheckinGuestForm" class="guest-form" [formGroup]="guestForm" (ngSubmit)="submit()">
             <label>
               <span>Document type</span>
               <select formControlName="tipoDocumento">
@@ -122,25 +108,84 @@
               </select>
             </label>
 
-            <label class="concierge-note concierge-note--guest-form" for="selfCheckinConciergeNoteMobile">
-              <span>Special note to your concierge</span>
-              <textarea
-                id="selfCheckinConciergeNoteMobile"
-                formControlName="procede"
-                rows="4"
-                placeholder="Let us know how we can make your stay more comfortable"
-              ></textarea>
-              <small>Optional note for {{ selectedGuest?.title || 'this guest' }}.</small>
-            </label>
-
-            <button type="submit" class="primary-action" [disabled]="saving">
-              @if (saving) { <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> }
-              <span>{{ allCompleted ? 'Complete registration' : 'Save guest' }}</span>
-              @if (!saving) { <span class="material-icons" aria-hidden="true">{{ allCompleted ? 'check_circle' : 'arrow_forward' }}</span> }
-            </button>
           </form>
+
+          @if (guestForm.invalid && guestForm.touched) {
+            <p class="form-validation" role="alert">Please complete the required fields and enter a valid email address.</p>
+          }
+
+          <section class="identity-documents" aria-labelledby="identityDocumentsTitle">
+            <div class="identity-documents__heading">
+              <h3 id="identityDocumentsTitle">Identity document</h3>
+            </div>
+            <p class="identity-documents__privacy">
+              <span class="material-icons" aria-hidden="true">lock_outline</span>
+              Stored securely. Only authorized staff can view these documents.
+            </p>
+            <div class="identity-documents__card">
+              <app-identity-document-card
+                [state]="selectedDocument.status"
+                [documentLabel]="selectedDocument.metadata ? getDocumentTypeLabel(selectedDocument.metadata.tipoDocumento) : ''"
+                [fileName]="selectedDocument.metadata?.nombreArchivo || selectedDocument.localFile?.name || ''"
+                [fileSizeLabel]="selectedDocument.metadata ? formatFileSize(selectedDocument.metadata.tamanoBytes) : (selectedDocument.localFile ? formatFileSize(selectedDocument.localFile.size) : '')"
+                [storedAtLabel]="selectedDocument.metadata ? formatStoredDate(selectedDocument.metadata.fechaModificacion || selectedDocument.metadata.fechaCreacion) : ''"
+                [storedByLabel]="selectedDocument.metadata?.operadorModificacion || selectedDocument.metadata?.operadorCreacion || ''"
+                [localPreviewUrl]="selectedDocument.localPreviewUrl"
+                [errorMessage]="selectedDocument.errorMessage"
+                [disabled]="documentActionsDisabled"
+                (takePhoto)="openCameraPicker()"
+                (chooseFile)="openFilePicker()"
+                (viewDocument)="viewDocument()"
+                (replaceDocument)="openReplacePicker()"
+                (deleteDocument)="confirmDeleteDocument()"
+                (retry)="retryDocumentUpload()"
+                (removeLocal)="removeLocalDocumentSelection()"
+              />
+              <input #cameraInput class="visually-hidden-file" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" capture="environment" (change)="onDocumentFileSelected($event, false)" />
+              <input #fileInput class="visually-hidden-file" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" (change)="onDocumentFileSelected($event, false)" />
+              <input #replaceInput class="visually-hidden-file" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" capture="environment" (change)="onDocumentFileSelected($event, true)" />
+            </div>
+          </section>
         </main>
+
+        <label class="concierge-note" for="selfCheckinConciergeNote">
+          <span>Special note to your concierge</span>
+          <textarea
+            id="selfCheckinConciergeNote"
+            [formControl]="guestForm.controls.procede"
+            rows="4"
+            placeholder="Let us know how we can make your stay more comfortable"
+            aria-describedby="conciergeNoteHelp"
+          ></textarea>
+          <small id="conciergeNoteHelp">Optional note for {{ selectedGuest?.title || 'this guest' }}.</small>
+        </label>
       </div>
+
+      <footer class="guest-footer">
+        <div class="guest-footer__summary" aria-live="polite">
+          <strong>{{ guests.length }} {{ guests.length === 1 ? 'guest' : 'guests' }}</strong>
+          <span>{{ selectedGuestIsExisting ? 'Information ready to update' : (allCompleted ? 'All guests registered' : 'Information ' + (guestForm.valid ? 'ready to save' : 'incomplete')) }}</span>
+        </div>
+        <button type="submit" form="selfCheckinGuestForm" class="primary-action" [disabled]="isSaveDisabled">
+          @if (effectiveSaving) { <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> }
+          <span>{{ saveButtonLabel }}</span>
+          @if (!effectiveSaving) { <span class="material-icons" aria-hidden="true">{{ allCompleted ? 'check_circle' : 'arrow_forward' }}</span> }
+        </button>
+      </footer>
+
+      @if (documentViewerUrl) {
+        <div class="document-viewer" role="dialog" aria-modal="true" aria-labelledby="identityDocumentViewerTitle">
+          <section class="document-viewer__panel">
+            <header>
+              <h2 id="identityDocumentViewerTitle">{{ documentViewerTitle }}</h2>
+              <button type="button" aria-label="Close identity document viewer" (click)="closeDocumentViewer()">
+                <span class="material-icons" aria-hidden="true">close</span>
+              </button>
+            </header>
+            <img [src]="documentViewerUrl" alt="Identity document" />
+          </section>
+        </div>
+      }
     }
   </section>
 </div>

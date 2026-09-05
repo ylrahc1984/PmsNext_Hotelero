@@ -1,0 +1,95 @@
+<article [class]="'document-card document-card--' + state" aria-label="Identity document">
+  @switch (state) {
+    @case ('empty') {
+      <div class="document-card__empty">
+        <span class="document-card__icon material-icons" aria-hidden="true">photo_camera</span>
+        <strong>Add identity document</strong>
+        <p>Take a photo or select an image</p>
+      </div>
+      <div class="document-card__actions">
+        <button type="button" [disabled]="actionsDisabled" (click)="takePhoto.emit()">
+          <span class="material-icons" aria-hidden="true">photo_camera</span>Take photo
+        </button>
+        <button type="button" [disabled]="actionsDisabled" (click)="chooseFile.emit()">
+          <span class="material-icons" aria-hidden="true">upload_file</span>Choose file
+        </button>
+      </div>
+      <p class="document-card__hint">JPG, PNG, WEBP · Max 10 MB</p>
+    }
+    @case ('stored') {
+      <div class="document-card__record">
+        <span class="document-card__icon material-icons" aria-hidden="true">badge</span>
+        <div>
+          <div class="document-card__record-title">
+            <strong>Identity document</strong>
+            <span><span class="material-icons" aria-hidden="true">check_circle</span>Document stored</span>
+          </div>
+          @if (documentLabel) { <p>{{ documentLabel }}</p> }
+          @if (fileName || fileSizeLabel) { <p>{{ fileName }}@if (fileSizeLabel) { · {{ fileSizeLabel }} }</p> }
+          @if (storedAtLabel) { <p>{{ storedAtLabel }}</p> }
+          @if (storedByLabel) { <p>{{ storedByLabel }}</p> }
+        </div>
+      </div>
+      <div class="document-card__actions">
+        <button type="button" [disabled]="actionsDisabled" (click)="viewDocument.emit()">View</button>
+        <button type="button" [disabled]="actionsDisabled" (click)="replaceDocument.emit()">Replace</button>
+        <button type="button" class="document-card__delete" [disabled]="actionsDisabled" (click)="deleteDocument.emit()">Delete</button>
+      </div>
+    }
+    @case ('ready') {
+      <div class="document-card__preview" aria-label="Temporary image preview">
+        @if (localPreviewUrl) {
+          <img [src]="localPreviewUrl" alt="Selected identity document preview" />
+        } @else {
+          <span class="material-icons" aria-hidden="true">image</span>
+          <span>Temporary preview</span>
+        }
+      </div>
+      <p class="document-card__status" role="status">Image ready to upload</p>
+      @if (fileName) { <p class="document-card__hint">{{ fileName }}@if (fileSizeLabel) { · {{ fileSizeLabel }} }</p> }
+      <div class="document-card__actions">
+        <button type="button" [disabled]="actionsDisabled" (click)="chooseFile.emit()">Replace</button>
+        <button type="button" class="document-card__delete" [disabled]="actionsDisabled" (click)="removeLocal.emit()">Remove</button>
+      </div>
+    }
+    @case ('preparing-rooming') {
+      <div class="document-card__empty" role="status">
+        <span class="document-card__icon material-icons" aria-hidden="true">person_add</span>
+        <strong>Preparing guest record...</strong>
+        <p>Please keep this window open.</p>
+      </div>
+    }
+    @case ('uploading') {
+      <div class="document-card__empty" role="status">
+        <span class="document-card__icon material-icons" aria-hidden="true">cloud_upload</span>
+        <strong>Uploading document...</strong>
+        <p>Please keep this window open.</p>
+      </div>
+    }
+    @case ('replacing') {
+      <div class="document-card__empty" role="status">
+        <span class="document-card__icon material-icons" aria-hidden="true">published_with_changes</span>
+        <strong>Replacing document...</strong>
+        <p>Please keep this window open.</p>
+      </div>
+    }
+    @case ('deleting') {
+      <div class="document-card__empty" role="status">
+        <span class="document-card__icon material-icons" aria-hidden="true">delete_outline</span>
+        <strong>Deleting document...</strong>
+        <p>Please keep this window open.</p>
+      </div>
+    }
+    @case ('error') {
+      <div class="document-card__empty" role="alert">
+        <span class="document-card__icon material-icons" aria-hidden="true">error_outline</span>
+        <strong>We couldn't save the document.</strong>
+        <p>{{ errorMessage || 'Your guest information is separate.' }}</p>
+      </div>
+      <div class="document-card__actions">
+        <button type="button" [disabled]="actionsDisabled" (click)="retry.emit()">Try again</button>
+        <button type="button" [disabled]="actionsDisabled" (click)="chooseFile.emit()">Choose another image</button>
+      </div>
+    }
+  }
+</article>
