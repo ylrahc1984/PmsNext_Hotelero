@@ -12,6 +12,7 @@ import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { normalizePmsDateDDMMYYYY } from 'src/app/core/utils/pms-date.util';
 import { ReservationTagListComponent } from '../components/reservation-tags/reservation-tag-list.component';
 import { ReservationTagSelectorComponent } from '../components/reservation-tags/reservation-tag-selector.component';
+import { GuestPortalAdminCardComponent } from '../components/guest-portal-admin/guest-portal-admin-card.component';
 import {
   ApiResponse,
   ReservaTagAsignado,
@@ -31,34 +32,34 @@ import { ReservaHospedajeDetalleService } from './reserva-hospedaje-detalle.serv
 @Component({
   selector: 'app-reserva-hospedaje-detalle',
   standalone: true,
-  imports: [CommonModule, RouterModule, SharedModule, ReservationTagListComponent, ReservationTagSelectorComponent],
+  imports: [CommonModule, RouterModule, SharedModule, ReservationTagListComponent, ReservationTagSelectorComponent, GuestPortalAdminCardComponent],
   templateUrl: './reserva-hospedaje-detalle.component.html',
   styleUrls: ['./reserva-hospedaje-detalle.component.scss']
 })
 export class ReservaHospedajeDetalleComponent implements OnInit {
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
-  private readonly service = inject(ReservaHospedajeDetalleService);
-  private readonly tagsService = inject(ReservaTagsService);
-  private readonly toastService = inject(ToastService);
-  private readonly operationalPolicy = inject(OperationalPolicyService);
-  private readonly destroyRef = inject(DestroyRef);
-  private reservationRequestId = 0;
-  private assignedTagsRequestId = 0;
-  private assignedTagsReservationCode = '';
+  private readonly route                = inject(ActivatedRoute);
+  private readonly router               = inject(Router);
+  private readonly service              = inject(ReservaHospedajeDetalleService);
+  private readonly tagsService          = inject(ReservaTagsService);
+  private readonly toastService         = inject(ToastService);
+  private readonly operationalPolicy    = inject(OperationalPolicyService);
+  private readonly destroyRef           = inject(DestroyRef);
+  private reservationRequestId          = 0;
+  private assignedTagsRequestId         = 0;
+  private assignedTagsReservationCode   = '';
 
-  readonly codReserva = signal('');
-  readonly reserva = signal<ReservaHospedajeDetalle | null>(null);
-  readonly loading = signal(false);
-  readonly errorMessage = signal('');
-  readonly assignedReservationTags = signal<ReservaTagAsignado[]>([]);
-  readonly isAssignedTagsLoading = signal(false);
-  readonly assignedTagsError = signal('');
-  readonly showReservationTagsModal = signal(false);
-  readonly reservationTagsDetailsOnly = signal(false);
-  readonly isSavingReservationTags = signal(false);
-  readonly reservationTagsSaveError = signal('');
-  readonly removingReservationTagIds = signal<ReadonlySet<number>>(new Set<number>());
+  readonly codReserva                     = signal('');
+  readonly reserva                        = signal<ReservaHospedajeDetalle | null>(null);
+  readonly loading                        = signal(false);
+  readonly errorMessage                   = signal('');
+  readonly assignedReservationTags        = signal<ReservaTagAsignado[]>([]);
+  readonly isAssignedTagsLoading          = signal(false);
+  readonly assignedTagsError              = signal('');
+  readonly showReservationTagsModal       = signal(false);
+  readonly reservationTagsDetailsOnly     = signal(false);
+  readonly isSavingReservationTags        = signal(false);
+  readonly reservationTagsSaveError       = signal('');
+  readonly removingReservationTagIds      = signal<ReadonlySet<number>>(new Set<number>());
 
   readonly habitaciones = computed(() => this.reserva()?.habitaciones ?? []);
   readonly inclusiones = computed(() => this.reserva()?.inclusiones ?? []);

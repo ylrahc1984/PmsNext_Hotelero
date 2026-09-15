@@ -1,0 +1,62 @@
+<section class="detail-card guest-portal-card" aria-labelledby="guest-portal-title">
+  <div class="section-header">
+    <div><h3 id="guest-portal-title">Guest Portal</h3><span>Pre check-in digital para el huésped</span></div>
+    <span class="portal-badge" [class.portal-badge--enabled]="hasPortal()">
+      {{ loading() ? 'Consultando' : hasPortal() ? portalStatusLabel(portal()?.estado) : 'No habilitado' }}
+    </span>
+  </div>
+
+  <div class="portal-feedback" *ngIf="loading()"><span class="spinner" aria-hidden="true"></span> Consultando Guest Portal…</div>
+  <div class="portal-error" *ngIf="!loading() && loadError()" role="alert">
+    <span>{{ loadError() }}</span><button type="button" (click)="retry()">Reintentar</button>
+  </div>
+
+  <ng-container *ngIf="!loading() && !loadError()">
+    <div class="portal-disabled" *ngIf="!hasPortal()">
+      <button type="button" class="enable-button" [disabled]="enabling() || regenerating() || isCancelling()" (click)="enablePortal()">
+        {{ enabling() ? (hasPortal() && portal()?.estado === 'CAN' ? 'Generando…' : 'Habilitando…') : 'Habilitar Guest Portal' }}
+      </button>
+    </div>
+
+    <ng-container *ngIf="hasPortal() && portal() as currentPortal">
+      <div class="portal-grid">
+        <div><span>Habilitado</span><strong>{{ formatDate(currentPortal.fechaHabilitacion) }}</strong></div>
+        <div><span>Válido hasta</span><strong>{{ formatDate(currentPortal.fechaExpiracion) }}</strong></div>
+        <div><span>Primer acceso</span><strong>{{ formatDateTime(currentPortal.fechaPrimerAcceso) }}</strong></div>
+        <div><span>Último acceso</span><strong>{{ formatDateTime(currentPortal.fechaUltimoAcceso) }}</strong></div>
+        <div><span>Accesos</span><strong>{{ currentPortal.cantidadAccesos ?? 0 }}</strong></div>
+      </div>
+      <div class="portal-disabled" *ngIf="currentPortal.estado === 'CAN'">
+        <button type="button" class="enable-button" [disabled]="enabling() || regenerating() || isCancelling()" (click)="enablePortal()">
+          {{ enabling() ? 'Generando…' : 'Generar nuevo Guest Portal' }}
+        </button>
+      </div>
+      <div class="regenerate-action" *ngIf="currentPortal.estado === 'ACT'">
+        <button type="button" class="enable-button" [disabled]="enabling() || regenerating() || isCancelling()" (click)="regenerateAccessUrl()">
+          {{ regenerating() ? 'Regenerando…' : 'Regenerar enlace' }}
+        </button>
+        <span class="regenerate-loading" *ngIf="regenerating()" role="status"><span class="spinner" aria-hidden="true"></span> Regenerando enlace…</span>
+      </div>
+      <div class="access-url" *ngIf="currentPortal.estado === 'ACT' && accessUrl()">
+        <span>Enlace listo para compartir con el huésped</span>
+        <button type="button" (click)="copyAccessUrl()"><i class="feather icon-copy" aria-hidden="true"></i> Copiar enlace</button>
+      </div>
+      <div class="cancel-action" *ngIf="currentPortal.estado === 'ACT'">
+        <button type="button" class="cancel-button" [disabled]="enabling() || isCancelling() || regenerating()" (click)="cancelPortal()">
+          {{ isCancelling() ? 'Cancelando…' : 'Cancelar Guest Portal' }}
+        </button>
+      </div>
+      <div class="stay-list" *ngIf="stays().length">
+        <h4>Estancias de pre check-in</h4>
+        <article class="stay-row" *ngFor="let stay of stays()">
+          <div class="stay-main"><strong>{{ stay.categoriaHabitacion || 'Estancia' }}<ng-container *ngIf="stay.tipoHabitacion"> / {{ stay.tipoHabitacion }}</ng-container></strong><span class="stay-status">{{ stayStatusLabel(stay.estado) }}</span></div>
+          <div class="stay-meta">
+            <span>Llegada: {{ formatDate(stay.fechaIngreso) }}</span><span>Salida: {{ formatDate(stay.fechaSalida) }}</span>
+            <span>Adultos: {{ stay.numPax }}</span><span *ngIf="stay.numChild">Niños: {{ stay.numChild }}</span>
+          </div>
+        </article>
+      </div>
+      <p class="empty-stays" *ngIf="!stays().length">No hay pre check-ins asociados.</p>
+    </ng-container>
+  </ng-container>
+</section>
