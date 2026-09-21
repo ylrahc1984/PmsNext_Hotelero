@@ -5,9 +5,13 @@ import { Observable, map } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import {
   SolicitudHuesped,
+  SolicitudHuespedCrearApiResponse,
+  SolicitudHuespedCrearRequest,
   SolicitudHuespedOperacionRequest,
   SolicitudesHuespedApiResponse,
-  SolicitudesHuespedFiltros
+  SolicitudesHuespedFiltros,
+  SolicitudHuespedTipo,
+  SolicitudesHuespedTiposApiResponse
 } from './solicitudes-huespedes.models';
 
 @Injectable({ providedIn: 'root' })
@@ -27,6 +31,18 @@ export class SolicitudHuespedService {
   consultarPorId(idSolicitud: number): Observable<SolicitudHuesped> {
     return this.http.get<SolicitudesHuespedApiResponse>(`${this.apiUrl}/${encodeURIComponent(String(idSolicitud))}`).pipe(
       map((response) => response.data[0])
+    );
+  }
+
+  consultarTipos(): Observable<SolicitudHuespedTipo[]> {
+    return this.http.get<SolicitudesHuespedTiposApiResponse>(`${this.apiUrl}/tipos`).pipe(
+      map((response) => Array.isArray(response.data) ? response.data : [])
+    );
+  }
+
+  crear(request: SolicitudHuespedCrearRequest): Observable<SolicitudHuesped> {
+    return this.http.post<SolicitudHuespedCrearApiResponse>(this.apiUrl, request).pipe(
+      map((response) => response.data)
     );
   }
 

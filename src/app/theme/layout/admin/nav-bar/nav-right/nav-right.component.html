@@ -3,39 +3,38 @@
     <app-operational-date-indicator />
   </li>
   <li class="topbar-notifications-entry">
-    <div class="dropdown" ngbDropdown placement="auto">
-      <a ngbDropdownToggle href="javascript:" class="topbar-action" data-toggle="dropdown" aria-label="Notificaciones">
+    <div class="dropdown topbar-notifications-dropdown" ngbDropdown placement="bottom-end">
+      <button type="button" ngbDropdownToggle class="topbar-action" data-toggle="dropdown" [attr.aria-label]="notificationAriaLabel()">
         <i class="icon feather icon-bell"></i>
-        <span class="topbar-action__pulse"></span>
-      </a>
+        @if (pendingGuestRequestCount() > 0) { <span class="topbar-action__badge">{{ notificationBadgeLabel() }}</span> }
+      </button>
       <div ngbDropdownMenu class="dropdown-menu dropdown-menu-end notification">
         <div class="notification-head">
           <div>
-            <h6 class="m-b-0">Notificaciones</h6>
-            <span>Actividad operativa del hotel</span>
+            <h6 class="m-b-0">Solicitudes pendientes <span class="notification-count">{{ pendingGuestRequestCount() }}</span></h6>
+            <span>Solicitudes de huéspedes PEN</span>
           </div>
-          <a href="javascript:" class="text-decoration-none">Ver todas</a>
+          <a [routerLink]="['/clientes-huespedes/solicitudes-huespedes']" class="notification-head__link">Ver todas</a>
         </div>
-        <ul class="notification-body">
-          <li class="notification">
-            <div class="notification-item">
-              <span class="notification-icon notification-icon--cyan"><i class="feather icon-calendar"></i></span>
-              <div class="flex-grow-1">
-                <p><strong>Reservas</strong><span class="n-time">Ahora</span></p>
-                <p>Sin alertas criticas pendientes</p>
-              </div>
-            </div>
-          </li>
-          <li class="notification">
-            <div class="notification-item">
-              <span class="notification-icon notification-icon--blue"><i class="feather icon-home"></i></span>
-              <div class="flex-grow-1">
-                <p><strong>Operaciones</strong><span class="n-time">Hoy</span></p>
-                <p>Panel listo para seguimiento del turno</p>
-              </div>
-            </div>
-          </li>
-        </ul>
+        @if (pendingGuestRequestCount() > 0) {
+          <ul class="notification-body">
+            @for (request of pendingGuestRequests(); track trackRequest($index, request)) {
+              <li class="notification">
+                <a [routerLink]="['/clientes-huespedes/solicitudes-huespedes']" class="notification-item notification-item--link">
+                  <span class="notification-icon notification-icon--cyan"><i class="feather icon-bell"></i></span>
+                  <span class="flex-grow-1 notification-item__content">
+                    <span class="notification-item__title"><strong>Hab. {{ request.numHabitacion || '—' }}</strong><span class="n-time">{{ requestElapsedLabel(request) }}</span></span>
+                    <span class="notification-item__request">{{ request.cantidad ? request.cantidad + ' × ' : '' }}{{ request.tipoSolicitud || 'Solicitud de huésped' }}</span>
+                    <span class="notification-item__area">{{ request.area || 'Área no asignada' }}</span>
+                  </span>
+                </a>
+              </li>
+            }
+          </ul>
+        } @else {
+          <div class="notification-empty"><i class="feather icon-check-circle" aria-hidden="true"></i><span>Sin solicitudes pendientes</span></div>
+        }
+        <div class="notification-footer"><a [routerLink]="['/clientes-huespedes/solicitudes-huespedes']">Ver todas las solicitudes</a></div>
       </div>
     </div>
   </li>

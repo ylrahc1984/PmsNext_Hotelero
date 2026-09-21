@@ -59,7 +59,8 @@ describe('InHouseGuestsComponent', () => {
         numChild: 0,
         varios: '',
         codReserva: 'RSV-1',
-        nomAgencia: 'Directos'
+        nomAgencia: 'Directos',
+        idDesglose: 540
       }],
       totalHabitaciones: 1,
       totalAdultos: 1,

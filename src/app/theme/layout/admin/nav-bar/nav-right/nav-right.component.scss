@@ -29,9 +29,11 @@ $next-muted: rgba(255, 255, 255, 0.72);
   justify-content: center;
   width: 42px;
   height: 42px;
+  padding: 0;
   background: rgba($next-white, 0.06);
   border: 1px solid rgba($next-white, 0.1);
   border-radius: 14px;
+  cursor: pointer;
 }
 
 .topbar-action:hover,
@@ -42,16 +44,29 @@ $next-muted: rgba(255, 255, 255, 0.72);
   transform: translateY(-1px);
 }
 
-.topbar-action__pulse {
+.topbar-action__badge {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 8px;
-  height: 8px;
-  background: $next-burgundy;
+  top: -5px;
+  right: -7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  color: $next-white;
+  background: #d43a4d;
   border: 2px solid $next-surface;
   border-radius: 999px;
-  box-shadow: 0 0 0 4px rgba($next-burgundy, 0.16);
+  box-shadow: 0 0 0 3px rgba(#d43a4d, 0.16);
+  font-size: .62rem;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.topbar-notifications-entry,
+.topbar-notifications-dropdown {
+  position: relative;
 }
 
 .user-trigger {
@@ -129,6 +144,13 @@ $next-muted: rgba(255, 255, 255, 0.72);
   box-shadow: 0 24px 55px rgba(0, 0, 0, 0.3);
 }
 
+.topbar-notifications-dropdown .notification {
+  width: min(360px, calc(100vw - 24px));
+  max-height: min(520px, calc(100vh - 88px));
+  margin-top: 8px;
+  overflow-x: hidden;
+}
+
 .notification-head {
   display: flex;
   align-items: center;
@@ -145,18 +167,58 @@ $next-muted: rgba(255, 255, 255, 0.72);
   font-weight: 800;
 }
 
-.notification-head span,
+.notification-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: 4px;
+  padding: 0 5px;
+  color: $next-white;
+  background: rgba($next-cyan, .22);
+  border-radius: 999px;
+  font-size: .65rem;
+  vertical-align: middle;
+}
+
+.notification-head > div > span,
 .notification-head a {
   color: $next-muted;
   font-size: 0.74rem;
 }
 
-.notification-head a:hover {
+.notification-head__link:hover {
   color: $next-cyan;
 }
 
 .notification-body {
+  max-height: min(338px, calc(100vh - 270px));
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: 8px;
+  scrollbar-color: rgba($next-cyan, 0.55) transparent;
+  scrollbar-width: thin;
+}
+
+.notification-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.notification-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.notification-body::-webkit-scrollbar-thumb {
+  background: rgba($next-cyan, 0.45);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+.notification-body::-webkit-scrollbar-thumb:hover {
+  background: rgba($next-cyan, 0.72);
+  background-clip: padding-box;
 }
 
 .notification-body .notification {
@@ -171,6 +233,8 @@ $next-muted: rgba(255, 255, 255, 0.72);
   gap: 12px;
   padding: 12px;
   border-radius: 14px;
+  color: inherit;
+  text-decoration: none;
 }
 
 .notification-item:hover {
@@ -197,24 +261,85 @@ $next-muted: rgba(255, 255, 255, 0.72);
   background: rgba($next-blue, 0.12);
 }
 
-.notification-item p {
+.notification-item__content,
+.notification-item__title,
+.notification-item__request,
+.notification-item__area {
+  min-width: 0;
+  display: block;
+}
+
+.notification-item__title {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  color: $next-muted;
   font-size: 0.78rem;
   line-height: 1.35;
-  margin: 0;
 }
 
 .notification-item strong {
+  min-width: 0;
+  overflow: hidden;
   color: $next-white;
   font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notification-item__request {
+  margin-top: 4px;
+  overflow: hidden;
+  color: $next-white;
+  font-size: .78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notification-item__area {
+  margin-top: 3px;
+  color: $next-muted;
+  font-size: .68rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
 }
 
 .n-time {
+  flex: 0 0 auto;
   color: rgba($next-white, 0.44);
   font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.notification-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 104px;
+  padding: 18px;
+  color: $next-muted;
+  font-size: .78rem;
+}
+
+.notification-empty i {
+  color: #53c28a;
+}
+
+.notification-footer {
+  padding: 10px 16px 13px;
+  border-top: 1px solid rgba($next-white, .08);
+  text-align: center;
+}
+
+.notification-footer a {
+  color: $next-cyan;
+  font-size: .75rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.notification-footer a:hover {
+  color: $next-white;
 }
 
 .profile-notification .pro-head {
@@ -275,10 +400,6 @@ $next-muted: rgba(255, 255, 255, 0.72);
     gap: 6px;
   }
 
-  .topbar-notifications-entry {
-    display: none;
-  }
-
   .topbar-operational-date {
     display: none;
   }
@@ -305,7 +426,12 @@ $next-muted: rgba(255, 255, 255, 0.72);
 
   .notification,
   .profile-notification {
-    min-width: 290px;
+    min-width: min(290px, calc(100vw - 20px));
+    max-width: calc(100vw - 20px);
+  }
+
+  .topbar-notifications-dropdown .notification {
+    width: calc(100vw - 20px);
   }
 }
 

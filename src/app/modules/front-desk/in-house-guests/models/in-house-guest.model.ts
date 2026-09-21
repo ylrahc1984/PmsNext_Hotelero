@@ -12,6 +12,7 @@ export interface InHouseGuest {
   varios: string;
   codReserva: string;
   nomAgencia: string;
+  idDesglose: number;
 }
 
 export interface InHouseResponse {

@@ -38,6 +38,37 @@ export interface SolicitudHuespedOperacionRequest {
   observacionInterna?: string;
 }
 
+export interface SolicitudHuespedTipo {
+  idTipoSolicitud: number;
+  nombre: string;
+  descripcion: string | null;
+  area: string;
+  icono: string | null;
+  orden: number;
+  permiteCantidad: boolean;
+  requiereComentario: boolean;
+}
+
+export interface SolicitudHuespedCrearRequest {
+  idDesglose: number;
+  idRooming: number | null;
+  idTipoSolicitud: number;
+  cantidad: number | null;
+  comentario: string | null;
+}
+
+export interface SolicitudesHuespedTiposApiResponse {
+  success: boolean;
+  message: string;
+  data: SolicitudHuespedTipo[];
+}
+
+export interface SolicitudHuespedCrearApiResponse {
+  success: boolean;
+  message: string;
+  data: SolicitudHuesped;
+}
+
 export type AccionSolicitudHuesped = 'atender' | 'completar' | 'cancelar';
 
 export interface SolicitudHuespedKpis {

@@ -6,11 +6,18 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs';
 
 import { ToastService } from 'src/app/core/services/toast.service';
+import { normalizePmsDateDDMMYYYY, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
+import { RoomingListGuest } from 'src/app/modules/front-desk/check-in-arrivals/models/check-in-arrival.model';
+import { CheckInArrivalsService } from 'src/app/modules/front-desk/check-in-arrivals/services/check-in-arrivals.service';
+import { InHouseGuest } from 'src/app/modules/front-desk/in-house-guests/models/in-house-guest.model';
+import { InHouseGuestsService } from 'src/app/modules/front-desk/in-house-guests/services/in-house-guests.service';
 import {
   AccionSolicitudHuesped,
   EstadoSolicitudHuesped,
   SolicitudHuesped,
-  SolicitudHuespedKpis
+  SolicitudHuespedCrearRequest,
+  SolicitudHuespedKpis,
+  SolicitudHuespedTipo
 } from './solicitudes-huespedes.models';
 import { SolicitudHuespedService } from './solicitudes-huespedes.service';
 
@@ -29,6 +36,8 @@ interface EstadoOption {
 })
 export class SolicitudesHuespedesComponent implements OnInit {
   private readonly service = inject(SolicitudHuespedService);
+  private readonly inHouseService = inject(InHouseGuestsService);
+  private readonly roomingService = inject(CheckInArrivalsService);
   private readonly toast = inject(ToastService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
@@ -46,6 +55,13 @@ export class SolicitudesHuespedesComponent implements OnInit {
   });
 
   readonly filterForm = this.fb.nonNullable.group({ estado: '', area: '' });
+  readonly createForm = this.fb.group({
+    idDesglose: this.fb.control<number | null>(null, [Validators.required, Validators.min(1)]),
+    idRooming: this.fb.control<number | null>(null),
+    idTipoSolicitud: this.fb.control<number | null>(null, [Validators.required, Validators.min(1)]),
+    cantidad: this.fb.control<number | null>(null),
+    comentario: this.fb.control<string | null>('')
+  });
   solicitudes: SolicitudHuesped[] = [];
   filteredSolicitudes: SolicitudHuesped[] = [];
   areas: string[] = [];
@@ -58,10 +74,133 @@ export class SolicitudesHuespedesComponent implements OnInit {
   operationBusy = false;
   selectedSolicitud: SolicitudHuesped | null = null;
   selectedAction: AccionSolicitudHuesped | null = null;
+  createOpen = false;
+  createBusy = false;
+  createSubmitted = false;
+  inHouseGuests: InHouseGuest[] = [];
+  selectedInHouseGuest: InHouseGuest | null = null;
+  inHouseLoading = false;
+  inHouseError = '';
+  requestTypes: SolicitudHuespedTipo[] = [];
+  typesLoading = false;
+  typesError = '';
+  roomingGuests: RoomingListGuest[] = [];
+  roomingLoading = false;
+  roomingError = '';
+  private roomingLoadId = 0;
 
   ngOnInit(): void {
     this.filterForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.applyFilters());
+    this.createForm.controls.idTipoSolicitud.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((idTipoSolicitud) => this.updateTypeValidators(idTipoSolicitud));
     this.consultar();
+  }
+
+  openCreate(): void {
+    if (this.createBusy) return;
+    this.resetCreateState();
+    this.createOpen = true;
+    this.loadInHouseGuests();
+    if (!this.requestTypes.length) this.loadRequestTypes();
+    queueMicrotask(() => document.querySelector<HTMLElement>('#new-request-room')?.focus());
+  }
+
+  closeCreate(): void {
+    if (this.createBusy) return;
+    this.createOpen = false;
+    this.resetCreateState();
+  }
+
+  onRoomChange(idDesglose: number | null): void {
+    const selected = this.inHouseGuests.find((guest) => guest.idDesglose === Number(idDesglose)) ?? null;
+    this.createForm.controls.idDesglose.setValue(selected?.idDesglose ?? null);
+    this.selectedInHouseGuest = selected;
+    this.createForm.controls.idRooming.reset(null);
+    this.roomingGuests = [];
+    this.roomingError = '';
+    this.loadRoomingList(selected);
+  }
+
+  onTypeChange(idTipoSolicitud: number | null): void {
+    this.updateTypeValidators(idTipoSolicitud);
+  }
+
+  changeQuantity(delta: number): void {
+    const current = Number(this.createForm.controls.cantidad.value) || 1;
+    this.createForm.controls.cantidad.setValue(Math.max(1, Math.floor(current) + delta));
+    this.createForm.controls.cantidad.markAsDirty();
+  }
+
+  submitCreate(): void {
+    this.createSubmitted = true;
+    this.createForm.markAllAsTouched();
+    if (this.createForm.invalid || this.createBusy) return;
+
+    const guest = this.selectedInHouseGuest;
+    const selectedType = this.selectedType;
+    const idDesglose = Number(this.createForm.controls.idDesglose.value);
+    const idTipoSolicitud = Number(this.createForm.controls.idTipoSolicitud.value);
+    if (!guest || !Number.isInteger(idDesglose) || idDesglose <= 0 || !selectedType || !Number.isInteger(idTipoSolicitud) || idTipoSolicitud <= 0) {
+      this.toast.error('Seleccione una habitación y un tipo de solicitud válidos.');
+      return;
+    }
+
+    const roomingValue = Number(this.createForm.controls.idRooming.value);
+    const idRooming = Number.isInteger(roomingValue) && roomingValue > 0 ? roomingValue : null;
+    const quantityValue = Number(this.createForm.controls.cantidad.value);
+    const cantidad = selectedType.permiteCantidad && Number.isInteger(quantityValue) && quantityValue > 0 ? quantityValue : null;
+    const comentarioValue = this.createForm.controls.comentario.value?.trim() ?? '';
+    const request: SolicitudHuespedCrearRequest = {
+      idDesglose,
+      idRooming,
+      idTipoSolicitud,
+      cantidad,
+      comentario: comentarioValue || null
+    };
+
+    this.createBusy = true;
+    this.service.crear(request).pipe(
+      finalize(() => {
+        this.createBusy = false;
+        this.cdr.markForCheck();
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: () => {
+        this.toast.success('Solicitud registrada correctamente.');
+        this.createBusy = false;
+        this.closeCreate();
+        this.consultar();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.toast.error(this.backendMessage(error) || 'No fue posible registrar la solicitud.');
+      }
+    });
+  }
+
+  isCreateFieldInvalid(field: 'idDesglose' | 'idTipoSolicitud' | 'cantidad' | 'comentario'): boolean {
+    const control = this.createForm.controls[field];
+    return control.invalid && (control.touched || this.createSubmitted);
+  }
+
+  get selectedType(): SolicitudHuespedTipo | null {
+    const id = Number(this.createForm.controls.idTipoSolicitud.value);
+    return this.requestTypes.find((type) => type.idTipoSolicitud === id) ?? null;
+  }
+
+  formatStayDate(value: string): string {
+    return normalizePmsDateDDMMYYYY(value) || '—';
+  }
+
+  roomingGuestLabel(guest: RoomingListGuest): string {
+    const name = `${guest.nombre || ''} ${guest.apellidos || ''}`.trim();
+    return name || `Huésped ${guest.numInterno}`;
+  }
+
+  roomingGuestId(value: string): number | null {
+    const id = Number(value);
+    return Number.isInteger(id) && id > 0 ? id : null;
   }
 
   consultar(): void {
@@ -183,6 +322,114 @@ export class SolicitudesHuespedesComponent implements OnInit {
 
   private buildAreaOptions(): void {
     this.areas = [...new Set(this.solicitudes.map((item) => item.area?.trim()).filter((area): area is string => Boolean(area)))].sort((a, b) => a.localeCompare(b, 'es'));
+  }
+
+  private loadInHouseGuests(): void {
+    if (this.inHouseLoading) return;
+    this.inHouseLoading = true;
+    this.inHouseError = '';
+    const today = toPmsDateInputValue(new Date());
+    this.inHouseService.getInHouseGuests(normalizePmsDateDDMMYYYY(today), normalizePmsDateDDMMYYYY(today), 'carga').pipe(
+      finalize(() => {
+        this.inHouseLoading = false;
+        this.cdr.markForCheck();
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (response) => {
+        this.inHouseGuests = response.pax ?? [];
+        this.cdr.markForCheck();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.inHouseError = this.backendMessage(error) || 'No fue posible cargar las habitaciones actualmente en casa.';
+        this.toast.error(this.inHouseError);
+      }
+    });
+  }
+
+  private loadRequestTypes(): void {
+    if (this.typesLoading) return;
+    this.typesLoading = true;
+    this.typesError = '';
+    this.service.consultarTipos().pipe(
+      finalize(() => {
+        this.typesLoading = false;
+        this.cdr.markForCheck();
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (types) => {
+        this.requestTypes = [...types].sort((left, right) => left.orden - right.orden);
+        this.cdr.markForCheck();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.typesError = this.backendMessage(error) || 'No fue posible cargar los tipos de solicitud.';
+        this.toast.error(this.typesError);
+      }
+    });
+  }
+
+  private loadRoomingList(guest: InHouseGuest | null): void {
+    const loadId = ++this.roomingLoadId;
+    if (!guest?.codReserva || !guest.numHabita) {
+      this.roomingLoading = false;
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.roomingLoading = true;
+    this.roomingError = '';
+    this.roomingService.getRoomingList(guest.codReserva, guest.numHabita).pipe(
+      finalize(() => {
+        if (loadId === this.roomingLoadId) {
+          this.roomingLoading = false;
+          this.cdr.markForCheck();
+        }
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (guests) => {
+        if (loadId !== this.roomingLoadId) return;
+        this.roomingGuests = guests;
+        this.cdr.markForCheck();
+      },
+      error: (error: HttpErrorResponse) => {
+        if (loadId !== this.roomingLoadId) return;
+        this.roomingError = this.backendMessage(error) || 'No fue posible cargar los huéspedes de la habitación.';
+        this.toast.error(this.roomingError);
+      }
+    });
+  }
+
+  private updateTypeValidators(idTipoSolicitud: number | null): void {
+    const type = this.requestTypes.find((item) => item.idTipoSolicitud === Number(idTipoSolicitud));
+    const quantity = this.createForm.controls.cantidad;
+    const comment = this.createForm.controls.comentario;
+
+    if (type?.permiteCantidad) {
+      quantity.setValidators([Validators.required, Validators.min(1), Validators.pattern(/^\d+$/)]);
+    } else {
+      quantity.clearValidators();
+      quantity.reset(null, { emitEvent: false });
+    }
+    if (type?.requiereComentario) {
+      comment.setValidators([Validators.required, Validators.pattern(/\S/)]);
+    } else {
+      comment.clearValidators();
+    }
+    quantity.updateValueAndValidity({ emitEvent: false });
+    comment.updateValueAndValidity({ emitEvent: false });
+    this.cdr.markForCheck();
+  }
+
+  private resetCreateState(): void {
+    this.createSubmitted = false;
+    this.createForm.reset({ idDesglose: null, idRooming: null, idTipoSolicitud: null, cantidad: null, comentario: '' });
+    this.selectedInHouseGuest = null;
+    this.roomingGuests = [];
+    this.roomingError = '';
+    this.roomingLoadId++;
+    this.updateTypeValidators(null);
   }
 
   private backendMessage(error: HttpErrorResponse): string {

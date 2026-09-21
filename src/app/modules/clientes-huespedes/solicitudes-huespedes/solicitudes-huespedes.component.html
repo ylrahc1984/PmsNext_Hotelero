@@ -1,3 +1,4 @@
+@if (!createOpen) {
 <section class="guest-requests-page" aria-labelledby="guest-requests-title">
   <header class="page-header">
     <div>
@@ -6,10 +7,15 @@
       <p>Gestión y seguimiento de solicitudes realizadas por los huéspedes durante su estadía.</p>
       @if (lastUpdated) { <small>Última actualización: {{ exactDate(lastUpdated.toISOString()) }}</small> }
     </div>
-    <button type="button" class="btn btn-outline-primary refresh-button" (click)="consultar()" [disabled]="loading">
-      @if (loading) { <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> } @else { <i class="feather icon-refresh-cw" aria-hidden="true"></i> }
-      {{ loading ? 'Actualizando…' : 'Actualizar' }}
-    </button>
+    <div class="header-actions">
+      <button type="button" class="btn btn-primary" (click)="openCreate()" [disabled]="createBusy">
+        <i class="feather icon-plus" aria-hidden="true"></i> Nueva solicitud
+      </button>
+      <button type="button" class="btn btn-outline-primary refresh-button" (click)="consultar()" [disabled]="loading">
+        @if (loading) { <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> } @else { <i class="feather icon-refresh-cw" aria-hidden="true"></i> }
+        {{ loading ? 'Actualizando…' : 'Actualizar' }}
+      </button>
+    </div>
   </header>
 
   <div class="kpi-grid" aria-label="Resumen de solicitudes cargadas">
@@ -79,6 +85,7 @@
     </section>
   }
 </section>
+}
 
 @if (operationOpen && selectedSolicitud && selectedAction) {
   <div class="modal-backdrop-custom" role="presentation" (click)="closeOperation()"></div>
@@ -92,5 +99,92 @@
       @if (selectedAction === 'cancelar') { <p class="warning-note"><i class="feather icon-alert-triangle" aria-hidden="true"></i> La solicitud se marcará como cancelada.</p> }
     </div>
     <div class="modal-footer"><button type="button" class="btn btn-light" (click)="closeOperation()" [disabled]="operationBusy">Cancelar</button><button type="button" class="btn" [ngClass]="selectedAction === 'cancelar' ? 'btn-danger' : 'btn-primary'" (click)="confirmOperation()" [disabled]="operationBusy || operationForm.invalid">@if (operationBusy) { <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Procesando… } @else { {{ actionLabel(selectedAction) }} }</button></div>
+  </section>
+}
+
+@if (createOpen) {
+  <section class="new-request-page" aria-labelledby="new-request-title">
+    <div class="new-request-toolbar">
+      <div class="breadcrumb-line"><span>Inicio</span><i class="feather icon-chevron-right" aria-hidden="true"></i><span>Solicitudes de Huéspedes</span><i class="feather icon-chevron-right" aria-hidden="true"></i><strong>Nueva solicitud</strong></div>
+      <button type="button" class="btn btn-outline-primary back-button" (click)="closeCreate()" [disabled]="createBusy"><i class="feather icon-arrow-left" aria-hidden="true"></i> Volver a solicitudes</button>
+    </div>
+    <header class="new-request-heading"><div class="heading-icon"><i class="feather icon-bell" aria-hidden="true"></i></div><div><h1 id="new-request-title">Nueva solicitud de huésped</h1><p>Registra una nueva solicitud para atención del equipo del hotel.</p></div></header>
+
+    <form class="new-request-form" [formGroup]="createForm" (ngSubmit)="submitCreate()" novalidate>
+      <div class="new-request-grid">
+        <section class="create-form-section" aria-labelledby="request-info-title">
+          <div class="form-section-heading"><h2 id="request-info-title"><span>1.</span> Información de la solicitud</h2><small>Los campos marcados con <b>*</b> son obligatorios</small></div>
+          <div class="request-fields-grid">
+            <div class="form-field">
+              <label for="new-request-type">Tipo de solicitud <span class="required-mark">*</span></label>
+              <select id="new-request-type" class="form-select" formControlName="idTipoSolicitud" (change)="onTypeChange(createForm.controls.idTipoSolicitud.value)" [class.is-invalid]="isCreateFieldInvalid('idTipoSolicitud')" [disabled]="createBusy || typesLoading">
+                <option [ngValue]="null">{{ typesLoading ? 'Cargando tipos…' : 'Seleccione un tipo' }}</option>
+                @for (type of requestTypes; track type.idTipoSolicitud) { <option [ngValue]="type.idTipoSolicitud">{{ type.nombre }} · {{ type.area }}</option> }
+              </select>
+              @if (isCreateFieldInvalid('idTipoSolicitud')) { <small class="invalid-message">Seleccione el tipo de solicitud.</small> }
+              @if (typesError) { <small class="field-error">{{ typesError }}</small> }
+            </div>
+            @if (selectedType?.permiteCantidad) {
+              <div class="form-field quantity-field">
+                <label for="new-request-quantity">Cantidad <span class="required-mark">*</span></label>
+                <div class="quantity-control"><button type="button" aria-label="Disminuir cantidad" (click)="changeQuantity(-1)" [disabled]="createBusy || (createForm.controls.cantidad.value || 1) <= 1">−</button><input id="new-request-quantity" type="number" min="1" step="1" formControlName="cantidad" [class.is-invalid]="isCreateFieldInvalid('cantidad')" [disabled]="createBusy"><button type="button" aria-label="Aumentar cantidad" (click)="changeQuantity(1)" [disabled]="createBusy">+</button></div>
+                @if (isCreateFieldInvalid('cantidad')) { <small class="invalid-message">Indique una cantidad entera mayor que cero.</small> } @else { <small class="field-hint">Indica la cantidad solicitada</small> }
+              </div>
+            }
+            <div class="form-field">
+              <label>Habitación <span class="required-mark">*</span></label>
+              <div class="readonly-field"><i class="feather icon-home" aria-hidden="true"></i><span>{{ selectedInHouseGuest?.numHabita || 'Seleccione una habitación' }}</span></div>
+              @if (isCreateFieldInvalid('idDesglose')) { <small class="invalid-message">Seleccione una habitación en la lista.</small> }
+            </div>
+            <div class="form-field">
+              <label>Código de reserva</label>
+              <div class="readonly-field"><i class="feather icon-bookmark" aria-hidden="true"></i><span>{{ selectedInHouseGuest?.codReserva || '—' }}</span></div>
+            </div>
+            <div class="form-field full-field">
+              <label for="new-request-guest">Huésped <span>(opcional)</span></label>
+              <select id="new-request-guest" class="form-select" formControlName="idRooming" [disabled]="createBusy || !selectedInHouseGuest || roomingLoading">
+                <option [ngValue]="null">{{ roomingLoading ? 'Cargando huéspedes…' : 'Sin huésped específico' }}</option>
+                @for (guest of roomingGuests; track guest.numInterno) { <option [ngValue]="roomingGuestId(guest.numInterno)">{{ roomingGuestLabel(guest) }}</option> }
+              </select>
+              @if (roomingError) { <small class="field-error">{{ roomingError }}</small> }
+              @if (!roomingLoading && selectedInHouseGuest && !roomingError && !roomingGuests.length) { <small class="field-hint">Sin huéspedes disponibles. Puede registrar la solicitud sin huésped específico.</small> }
+            </div>
+            <div class="form-field full-field">
+              <label for="new-request-comment">Comentario @if (selectedType?.requiereComentario) { <span class="required-mark">*</span> } @else { <span>(opcional)</span> }</label>
+              <textarea id="new-request-comment" class="form-control comment-field" rows="5" formControlName="comentario" [class.is-invalid]="isCreateFieldInvalid('comentario')" [disabled]="createBusy" placeholder="Agregue un detalle para el equipo del hotel…"></textarea>
+              @if (isCreateFieldInvalid('comentario')) { <small class="invalid-message">Ingrese un comentario válido.</small> }
+            </div>
+          </div>
+        </section>
+
+        <aside class="create-sidebar" aria-label="Habitaciones y estadía">
+          <section class="room-picker-card" aria-labelledby="room-picker-title">
+            <div class="sidebar-card-heading"><i class="feather icon-home" aria-hidden="true"></i><div><h2 id="room-picker-title">Habitaciones en casa</h2><small>{{ inHouseGuests.length }} disponibles para seleccionar</small></div></div>
+            @if (inHouseLoading) { <div class="sidebar-loading"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Cargando habitaciones…</div> }
+            @else if (inHouseError) { <div class="sidebar-empty sidebar-empty--error"><i class="feather icon-alert-circle" aria-hidden="true"></i>{{ inHouseError }}</div> }
+            @else if (!inHouseGuests.length) { <div class="sidebar-empty"><i class="feather icon-inbox" aria-hidden="true"></i>No hay habitaciones actualmente en casa.</div> }
+            @else {
+              <div class="room-list" role="listbox" aria-label="Habitaciones actualmente en casa">
+                @for (guest of inHouseGuests; track guest.idDesglose) {
+                  <button type="button" class="room-list-item" [class.room-list-item--selected]="selectedInHouseGuest?.idDesglose === guest.idDesglose" (click)="onRoomChange(guest.idDesglose)" [disabled]="createBusy || !guest.idDesglose" [attr.aria-selected]="selectedInHouseGuest?.idDesglose === guest.idDesglose">
+                    <span class="room-number">{{ guest.numHabita }}</span><span class="room-summary"><strong>{{ guest.paxIn || 'Sin huésped principal' }}</strong><small>{{ guest.codReserva || 'Sin reserva' }} · {{ guest.noches || 0 }} noches</small></span><i class="feather icon-chevron-right" aria-hidden="true"></i>
+                  </button>
+                }
+              </div>
+            }
+          </section>
+
+          <section class="stay-panel" aria-label="Información de la estadía">
+            <div class="sidebar-card-heading sidebar-card-heading--blue"><i class="feather icon-user" aria-hidden="true"></i><div><h2>Información del huésped</h2><small>Datos de la habitación seleccionada</small></div></div>
+            @if (selectedInHouseGuest) {
+              <dl class="stay-details">
+                <div><dt>Habitación</dt><dd>{{ selectedInHouseGuest.numHabita }}</dd></div><div><dt>Huésped</dt><dd>{{ selectedInHouseGuest.paxIn || '—' }}</dd></div><div><dt>Código de reserva</dt><dd>{{ selectedInHouseGuest.codReserva || '—' }}</dd></div><div><dt>Agencia</dt><dd>{{ selectedInHouseGuest.nomAgencia || '—' }}</dd></div><div><dt>Check-in</dt><dd>{{ formatStayDate(selectedInHouseGuest.fechaIng) }}</dd></div><div><dt>Check-out</dt><dd>{{ formatStayDate(selectedInHouseGuest.fechaSal) }}</dd></div><div><dt>Noches</dt><dd>{{ selectedInHouseGuest.noches || 0 }}</dd></div><div><dt>Adultos / Niños</dt><dd>{{ selectedInHouseGuest.numPax || 0 }} / {{ selectedInHouseGuest.numChild || 0 }}</dd></div>
+              </dl>
+            } @else { <div class="stay-empty"><i class="feather icon-info" aria-hidden="true"></i><span>Seleccione una habitación para consultar la estadía.</span></div> }
+          </section>
+        </aside>
+      </div>
+      <div class="new-request-actions"><button type="button" class="btn btn-light cancel-request-button" (click)="closeCreate()" [disabled]="createBusy"><i class="feather icon-x" aria-hidden="true"></i> Cancelar</button><button type="submit" class="btn btn-primary register-request-button" [disabled]="createBusy || inHouseLoading || typesLoading">@if (createBusy) { <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Registrando… } @else { <i class="feather icon-save" aria-hidden="true"></i> Registrar solicitud }</button></div>
+    </form>
   </section>
 }

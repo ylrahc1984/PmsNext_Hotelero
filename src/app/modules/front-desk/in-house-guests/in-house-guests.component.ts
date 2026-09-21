@@ -630,7 +630,8 @@ export class InHouseGuestsComponent implements OnInit, OnDestroy {
       numChild: Number(guest.numChild) || 0,
       varios: this.toStringValue(guest.varios),
       codReserva: this.toStringValue(guest.codReserva),
-      nomAgencia: this.toStringValue(guest.nomAgencia)
+      nomAgencia: this.toStringValue(guest.nomAgencia),
+      idDesglose: Number(guest.idDesglose) || 0
     };
   }
 
