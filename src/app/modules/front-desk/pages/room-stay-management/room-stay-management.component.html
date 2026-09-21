@@ -444,8 +444,8 @@
                 class="action-button"
                 [class.danger]="action.tone === 'danger'"
                 [class.primary]="action.tone === 'primary'"
-                [disabled]="action.id === 'register-prepayment' || action.id === 'transfer-charges'"
-                [attr.title]="action.id === 'transfer-charges' ? 'No disponible: requiere soporte del backend' : null"
+                [disabled]="action.id === 'register-prepayment' || action.id === 'transfer-charges' || (action.id === 'guest-portal' && !room().reservationNumber)"
+                [attr.title]="action.id === 'transfer-charges' ? 'No disponible: requiere soporte del backend' : action.id === 'guest-portal' && !room().reservationNumber ? 'La estancia no tiene una reserva asociada' : null"
                 (click)="openActionModal(action)"
               >
                 <span class="material-icons" aria-hidden="true">{{ action.icon }}</span>
@@ -477,8 +477,8 @@
               class="action-button"
               [class.danger]="action.tone === 'danger'"
               [class.primary]="action.tone === 'primary'"
-              [disabled]="action.id === 'register-prepayment' || action.id === 'transfer-charges'"
-              [attr.title]="action.id === 'transfer-charges' ? 'No disponible: requiere soporte del backend' : null"
+              [disabled]="action.id === 'register-prepayment' || action.id === 'transfer-charges' || (action.id === 'guest-portal' && !room().reservationNumber)"
+              [attr.title]="action.id === 'transfer-charges' ? 'No disponible: requiere soporte del backend' : action.id === 'guest-portal' && !room().reservationNumber ? 'La estancia no tiene una reserva asociada' : null"
               (click)="openActionModal(action)"
             >
               <span class="material-icons" aria-hidden="true">{{ action.icon }}</span>
@@ -514,6 +514,7 @@
         [attr.aria-label]="action.label"
         [class.action-modal--invoice]="isActionSelected('invoice-room')"
         [class.action-modal--room-charge]="isActionSelected('new-charge')"
+        [class.action-modal--guest-portal]="isActionSelected('guest-portal')"
         (click)="$event.stopPropagation()"
       >
         @if (isActionSelected('invoice-room')) {
@@ -987,6 +988,25 @@
               <span class="material-icons" aria-hidden="true">{{ isRoomChargeSubmitting() ? 'hourglass_top' : 'save' }}</span>
               <span>{{ isRoomChargeSubmitting() ? 'Registrando...' : 'Registrar cargo' }}</span>
             </button>
+          </footer>
+        } @else if (isActionSelected('guest-portal')) {
+          <header class="action-modal__header">
+            <div>
+              <span class="action-modal__eyebrow">Servicio al huésped</span>
+              <h2>Guest Portal</h2>
+              <p>Administra el pre check-in digital de la reserva {{ room().reservationNumber }}.</p>
+            </div>
+            <button type="button" class="action-modal__close" aria-label="Cerrar" (click)="closeActionModal()">
+              <span class="material-icons" aria-hidden="true">close</span>
+            </button>
+          </header>
+
+          <div class="action-modal__body action-modal__body--guest-portal">
+            <app-guest-portal-admin-card [codReserva]="room().reservationNumber" />
+          </div>
+
+          <footer class="action-modal__footer">
+            <button type="button" class="action-modal__secondary" (click)="closeActionModal()">Cerrar</button>
           </footer>
         } @else {
         <header class="action-modal__header">

@@ -26,6 +26,7 @@ import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { ReservationTagListComponent } from 'src/app/modules/Reservas/components/reservation-tags/reservation-tag-list.component';
 import { ReservationTagSelectorComponent } from 'src/app/modules/Reservas/components/reservation-tags/reservation-tag-selector.component';
+import { GuestPortalAdminCardComponent } from 'src/app/modules/Reservas/components/guest-portal-admin/guest-portal-admin-card.component';
 import {
   ApiResponse,
   ReservaTagAsignado,
@@ -77,6 +78,7 @@ type DocumentFormat = 'pdf' | 'print';
 type StayActionId   =
   | 'change-room'
   | 'change-departure'
+  | 'guest-portal'
   | 'register-prepayment'
   | 'new-charge'
   | 'transfer-charges'
@@ -314,7 +316,8 @@ const emptyRoomStay: RoomStay = {
     SharedModule,
     CdkScrollable,
     ReservationTagListComponent,
-    ReservationTagSelectorComponent
+    ReservationTagSelectorComponent,
+    GuestPortalAdminCardComponent
   ],
   templateUrl: './room-stay-management.component.html',
   styleUrls: ['./room-stay-management.component.scss'],
@@ -518,6 +521,14 @@ export class RoomStayManagementComponent implements OnInit {
           kind            : 'workflow',
           description     : 'Permite extender o ajustar la salida de la reserva con una vista previa del impacto.',
           confirmText     : 'Actualizar salida'
+        },
+        {
+          id              : 'guest-portal',
+          label           : 'Guest Portal',
+          icon            : 'language',
+          kind            : 'workflow',
+          description     : 'Administra el acceso de pre check-in digital de la reserva.',
+          confirmText     : 'Cerrar'
         },
         {             
           id              : 'register-prepayment',
