@@ -330,15 +330,28 @@ $line: rgba(15, 33, 51, 0.1);
 }
 
 .arrivals-table .col-numHabita { min-width: 130px; }
-.arrivals-table .col-catHabita { min-width: 110px; }
-.arrivals-table .col-tipHabita {
-  width: 78px;
-  min-width: 78px;
-  max-width: 78px;
+.arrivals-table .col-catHabita { min-width: 145px; }
+.category-cell {
+  white-space: normal;
+  line-height: 1.25;
 }
-.arrivals-table .col-tipHabita .sort-button {
-  gap: 4px;
-  padding-inline: 8px;
+
+.category-value,
+.category-type {
+  display: block;
+}
+
+.category-value {
+  color: $ink;
+  font-weight: 800;
+}
+
+.category-type {
+  margin-top: 3px;
+  color: rgba($ink, 0.48);
+  font-size: 0.69rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
 }
 .arrivals-table .col-codReserva {
   min-width: 190px;
@@ -454,6 +467,24 @@ $line: rgba(15, 33, 51, 0.1);
   font-size: 0.84rem;
   font-weight: 880;
   white-space: nowrap;
+}
+
+.reservation-link {
+  display: block;
+  width: fit-content;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.reservation-link:hover .reservation-code,
+.reservation-link:focus-visible .reservation-code {
+  color: $blue;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .reservation-tags-state {

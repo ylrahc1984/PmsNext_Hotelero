@@ -47,6 +47,7 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
   private reservationRequestId          = 0;
   private assignedTagsRequestId         = 0;
   private assignedTagsReservationCode   = '';
+  private returnRoute                   = '/reservas/consulta-reservas';
 
   readonly codReserva                     = signal('');
   readonly reserva                        = signal<ReservaHospedajeDetalle | null>(null);
@@ -91,6 +92,16 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.route.queryParamMap.pipe(
+      map((params) => params.get('returnTo')),
+      distinctUntilChanged(),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe((returnTo) => {
+      this.returnRoute = returnTo === 'arribos-dia'
+        ? '/front-desk/arribos-dia'
+        : '/reservas/consulta-reservas';
+    });
+
     this.route.paramMap.pipe(
       map((params) => params.get('codReserva')?.trim() ?? ''),
       distinctUntilChanged(),
@@ -237,7 +248,7 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
   }
 
   volver(): void {
-    void this.router.navigate(['/reservas/consulta-reservas']);
+    void this.router.navigate([this.returnRoute]);
   }
 
   formatDate(value: string | null | undefined): string {

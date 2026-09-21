@@ -133,10 +133,23 @@
                     </div>
                     <span class="badge d-block mt-1" [ngClass]="getHabitacionBadgeClass(arrival)">{{ getHabitacionBadgeLabel(arrival) }}</span>
                   </td>
-                  <td class="col-catHabita">{{ arrival.catHabita || '-' }}</td>
-                  <td class="col-tipHabita">{{ arrival.tipHabita || '-' }}</td>
+                  <td class="col-catHabita category-cell">
+                    <strong class="category-value">{{ arrival.catHabita || '-' }}</strong>
+                    <span class="category-type">{{ arrival.tipHabita || '-' }}</span>
+                  </td>
                   <td class="col-codReserva">
-                    <strong class="reservation-code">{{ arrival.codReserva || '-' }}</strong>
+                    @if (arrival.codReserva) {
+                      <button
+                        type="button"
+                        class="reservation-link"
+                        [attr.aria-label]="'Ver detalle de la reserva ' + arrival.codReserva"
+                        (click)="verReserva(arrival); $event.stopPropagation()"
+                      >
+                        <strong class="reservation-code">{{ arrival.codReserva }}</strong>
+                      </button>
+                    } @else {
+                      <strong class="reservation-code">-</strong>
+                    }
                     @if (isReservationTagsLoading(arrival)) {
                       <span class="reservation-tags-state" aria-label="Cargando etiquetas de la reserva">
                         <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>

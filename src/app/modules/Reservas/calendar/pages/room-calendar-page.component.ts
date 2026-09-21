@@ -1106,34 +1106,6 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
     }
 
     const reservationCode = reservation.reservationCode || this.extractReservationCode(reservation.id);
-    const sourceCategory = this.normalizeCode(
-      reservation.categoryCode || this.rooms.find((room) => room.roomNumber === reservation.roomNumber)?.type
-    );
-    const targetCategory = this.normalizeCode(
-      drop.toCategoryCode || this.rooms.find((room) => room.roomNumber === drop.toRoomNumber)?.type
-    );
-
-    if (!sourceCategory || !targetCategory) {
-      await Swal.fire({
-        title: 'Categoría requerida',
-        text: 'No fue posible validar la categoría de la habitación actual o de la habitación destino.',
-        icon: 'warning',
-        confirmButtonText: 'Aceptar',
-        confirmButtonColor: '#2f5f8d'
-      });
-      return;
-    }
-
-    if (sourceCategory !== targetCategory) {
-      await Swal.fire({
-        title: 'Categoría diferente',
-        text: `La habitación ${drop.toRoomNumber} no pertenece a la categoría ${sourceCategory} de la estancia.`,
-        icon: 'warning',
-        confirmButtonText: 'Aceptar',
-        confirmButtonColor: '#2f5f8d'
-      });
-      return;
-    }
 
     if (!this.isRoomPlacementValid(drop.toRoomNumber, reservation.startDate, reservation.endDate, reservation.id)) {
       await Swal.fire({

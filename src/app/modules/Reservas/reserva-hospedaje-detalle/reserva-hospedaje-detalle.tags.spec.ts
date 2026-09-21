@@ -48,7 +48,13 @@ describe('ReservaHospedajeDetalleComponent reservation tags', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         provideRouter([]),
-        { provide: ActivatedRoute, useValue: { paramMap: routeParams.asObservable() } },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            paramMap: routeParams.asObservable(),
+            queryParamMap: of(convertToParamMap({}))
+          }
+        },
         { provide: ReservaHospedajeDetalleService, useValue: detailService },
         { provide: OperationalPolicyService, useValue: policy },
         { provide: ToastService, useValue: toast }

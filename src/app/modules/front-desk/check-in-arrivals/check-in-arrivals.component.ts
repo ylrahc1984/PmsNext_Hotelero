@@ -77,7 +77,6 @@ export class CheckInArrivalsComponent implements OnInit {
   readonly columns: { label: string; key: CheckInArrivalSortColumn }[] = [
     { label: 'Habitacion', key: 'numHabita' },
     { label: 'Categoria', key: 'catHabita' },
-    { label: 'Tipo', key: 'tipHabita' },
     { label: 'Reserva', key: 'codReserva' },
     { label: 'Agencia', key: 'nomAgencia' },
     { label: 'Descripcion', key: 'descripcion' },
@@ -466,7 +465,11 @@ export class CheckInArrivalsComponent implements OnInit {
   }
 
   verReserva(reserva: CheckInArrival): void {
-    console.log('Ver Reserva', reserva);
+    const codReserva = reserva.codReserva.trim();
+    if (!codReserva) return;
+    void this.router.navigate(['/reservas/detalle-hospedaje', codReserva], {
+      queryParams: { returnTo: 'arribos-dia' }
+    });
   }
 
   roomingList(reserva: CheckInArrival): void {
