@@ -816,6 +816,20 @@ const routes: Routes = [
             { title: 'Análisis de Huéspedes' }
           ]
         }
+      },
+      {
+        path: 'solicitudes-huespedes',
+        loadComponent: () =>
+          import('./modules/clientes-huespedes/solicitudes-huespedes/solicitudes-huespedes.component').then(
+            (component) => component.SolicitudesHuespedesComponent
+          ),
+        data: {
+          breadcrumbTrail: [
+            { title: 'Inicio', url: '/dashboard' },
+            { title: 'Clientes y Huéspedes' },
+            { title: 'Solicitudes de Huéspedes' }
+          ]
+        }
       }
     ]
   },

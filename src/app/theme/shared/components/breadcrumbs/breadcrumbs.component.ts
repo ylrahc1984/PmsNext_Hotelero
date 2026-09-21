@@ -103,12 +103,12 @@ export class BreadcrumbsComponent {
     let currentRoute: ActivatedRoute | null = this.activatedRoute.root;
     let breadcrumbs: RouteBreadcrumb[] = [];
 
-    while (currentRoute) {
-      const routeBreadcrumbs = currentRoute.snapshot.data['breadcrumbTrail'];
+    while (currentRoute?.snapshot) {
+      const routeBreadcrumbs = currentRoute.snapshot.data?.['breadcrumbTrail'];
       if (Array.isArray(routeBreadcrumbs)) {
         breadcrumbs = routeBreadcrumbs as RouteBreadcrumb[];
       }
-      currentRoute = currentRoute.firstChild;
+      currentRoute = currentRoute.firstChild ?? null;
     }
 
     return breadcrumbs;

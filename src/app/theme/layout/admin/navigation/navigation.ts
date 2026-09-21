@@ -205,6 +205,14 @@ export const NavigationItems: NavigationItem[] = [
             url: '/clientes-huespedes/analisis-huespedes',
             icon: 'feather icon-bar-chart-2',
             classes: 'nav-item'
+          },
+          {
+            id: 'huespedes-solicitudes',
+            title: 'Solicitudes de Huéspedes',
+            type: 'item',
+            url: '/clientes-huespedes/solicitudes-huespedes',
+            icon: 'feather icon-inbox',
+            classes: 'nav-item'
           }
         ]
       },

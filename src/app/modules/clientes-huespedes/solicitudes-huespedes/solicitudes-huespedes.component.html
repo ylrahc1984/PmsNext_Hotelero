@@ -1,0 +1,96 @@
+<section class="guest-requests-page" aria-labelledby="guest-requests-title">
+  <header class="page-header">
+    <div>
+      <span class="eyebrow">Clientes y Huéspedes</span>
+      <h1 id="guest-requests-title">Solicitudes de Huéspedes</h1>
+      <p>Gestión y seguimiento de solicitudes realizadas por los huéspedes durante su estadía.</p>
+      @if (lastUpdated) { <small>Última actualización: {{ exactDate(lastUpdated.toISOString()) }}</small> }
+    </div>
+    <button type="button" class="btn btn-outline-primary refresh-button" (click)="consultar()" [disabled]="loading">
+      @if (loading) { <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> } @else { <i class="feather icon-refresh-cw" aria-hidden="true"></i> }
+      {{ loading ? 'Actualizando…' : 'Actualizar' }}
+    </button>
+  </header>
+
+  <div class="kpi-grid" aria-label="Resumen de solicitudes cargadas">
+    @for (item of [{ key: 'PEN', label: 'Pendientes', icon: 'icon-clock', tone: 'pending' }, { key: 'ATE', label: 'En atención', icon: 'icon-play-circle', tone: 'attention' }, { key: 'COM', label: 'Completadas', icon: 'icon-check-circle', tone: 'completed' }, { key: 'CAN', label: 'Canceladas', icon: 'icon-x-circle', tone: 'cancelled' }]; track item.key) {
+      <article class="kpi-card" [ngClass]="'kpi-card--' + item.tone">
+        <div><span>{{ item.label }}</span><strong>{{ kpis[item.key] }}</strong></div>
+        <i class="feather" [ngClass]="item.icon" aria-hidden="true"></i>
+      </article>
+    }
+  </div>
+  <p class="kpi-note">Los contadores corresponden al resultado cargado y a los filtros seleccionados.</p>
+
+  <form class="filters-card" [formGroup]="filterForm" novalidate>
+    <div class="filter-field">
+      <label for="request-status">Estado</label>
+      <select id="request-status" class="form-select" formControlName="estado">
+        @for (option of estadoOptions; track option.value) { <option [value]="option.value">{{ option.label }}</option> }
+      </select>
+    </div>
+    <div class="filter-field">
+      <label for="request-area">Área</label>
+      <select id="request-area" class="form-select" formControlName="area">
+        <option value="">Todas</option>
+        @for (area of areas; track area) { <option [value]="area">{{ area }}</option> }
+      </select>
+    </div>
+    <button type="button" class="btn btn-light clear-button" (click)="clearFilters()" [disabled]="loading">
+      <i class="feather icon-x" aria-hidden="true"></i> Limpiar filtros
+    </button>
+  </form>
+
+  @if (loading && !loadedOnce) {
+    <div class="feedback-state" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Cargando solicitudes…</div>
+  } @else if (errorMessage) {
+    <div class="feedback-state feedback-state--error" role="alert"><i class="feather icon-alert-circle" aria-hidden="true"></i><span>{{ errorMessage }}</span><button type="button" class="btn btn-outline-danger btn-sm" (click)="consultar()">Reintentar</button></div>
+  } @else if (loadedOnce && !filteredSolicitudes.length) {
+    <div class="feedback-state"><i class="feather icon-inbox" aria-hidden="true"></i>{{ filterForm.value.estado || filterForm.value.area ? 'No hay solicitudes que coincidan con los filtros seleccionados.' : 'No hay solicitudes para mostrar.' }}</div>
+  } @else {
+    <section class="table-card" aria-label="Listado de solicitudes">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Solicitud</th><th>Habitación / Reserva</th><th>Tipo de solicitud</th><th>Área</th><th>Detalle</th><th>Estado</th><th>Tiempo</th><th>Acciones</th></tr></thead>
+          <tbody>
+            @for (solicitud of filteredSolicitudes; track trackById($index, solicitud)) {
+              <tr>
+                <td data-label="Solicitud"><strong>#{{ solicitud.idSolicitud }}</strong><small>{{ exactDate(solicitud.fechaSolicitud) }}</small></td>
+                <td data-label="Habitación / Reserva"><strong>Hab. {{ solicitud.numHabitacion || '—' }}</strong><small>{{ solicitud.codReserva || 'Sin reserva' }}</small></td>
+                <td data-label="Tipo de solicitud">{{ solicitud.tipoSolicitud || 'Solicitud general' }}</td>
+                <td data-label="Área"><span class="area-tag">{{ solicitud.area || 'Sin área' }}</span></td>
+                <td data-label="Detalle" class="detail-cell">
+                  @if (solicitud.cantidad !== null) { <span>Cantidad: {{ solicitud.cantidad }}</span> }
+                  @if (solicitud.comentario) { <span>{{ solicitud.comentario }}</span> }
+                  @if (solicitud.cantidad === null && !solicitud.comentario) { <span class="muted">Sin detalle adicional</span> }
+                </td>
+                <td data-label="Estado"><span [class]="statusClass(solicitud.estado)">{{ statusLabel(solicitud.estado) }}</span></td>
+                <td data-label="Tiempo"><strong>{{ elapsedLabel(solicitud) }}</strong><small>{{ exactDate(solicitud.fechaSolicitud) }}</small></td>
+                <td data-label="Acciones" class="actions-cell">
+                  @if (solicitud.estado === 'PEN') { <button type="button" class="btn btn-sm btn-outline-primary" (click)="openOperation(solicitud, 'atender')">Poner en atención</button><button type="button" class="btn btn-sm btn-outline-danger" (click)="openOperation(solicitud, 'cancelar')">Cancelar</button> }
+                  @if (solicitud.estado === 'ATE') { <button type="button" class="btn btn-sm btn-primary" (click)="openOperation(solicitud, 'completar')">Completar</button><button type="button" class="btn btn-sm btn-outline-danger" (click)="openOperation(solicitud, 'cancelar')">Cancelar</button> }
+                  @if (solicitud.estado === 'COM' || solicitud.estado === 'CAN') { <span class="muted">Sin acciones</span> }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</section>
+
+@if (operationOpen && selectedSolicitud && selectedAction) {
+  <div class="modal-backdrop-custom" role="presentation" (click)="closeOperation()"></div>
+  <section class="request-modal" role="dialog" aria-modal="true" aria-labelledby="operation-title">
+    <div class="modal-header"><div><span class="eyebrow">Operación de solicitud</span><h2 id="operation-title">{{ actionLabel(selectedAction) }}</h2></div><button type="button" class="btn-close" aria-label="Cerrar" (click)="closeOperation()" [disabled]="operationBusy"></button></div>
+    <div class="modal-body">
+      <div class="request-summary"><strong>Solicitud #{{ selectedSolicitud.idSolicitud }}</strong><span>{{ selectedSolicitud.tipoSolicitud }} · Hab. {{ selectedSolicitud.numHabitacion || '—' }}</span><span>Reserva {{ selectedSolicitud.codReserva || 'sin reserva' }}</span></div>
+      <label for="internal-note">Observación interna <span>(opcional)</span></label>
+      <textarea id="internal-note" class="form-control" rows="4" maxlength="1000" formControlName="observacionInterna" [formGroup]="operationForm" placeholder="Agregue una nota para el equipo del hotel…"></textarea>
+      <small class="character-count">{{ operationForm.controls.observacionInterna.value.length }}/1000</small>
+      @if (selectedAction === 'cancelar') { <p class="warning-note"><i class="feather icon-alert-triangle" aria-hidden="true"></i> La solicitud se marcará como cancelada.</p> }
+    </div>
+    <div class="modal-footer"><button type="button" class="btn btn-light" (click)="closeOperation()" [disabled]="operationBusy">Cancelar</button><button type="button" class="btn" [ngClass]="selectedAction === 'cancelar' ? 'btn-danger' : 'btn-primary'" (click)="confirmOperation()" [disabled]="operationBusy || operationForm.invalid">@if (operationBusy) { <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Procesando… } @else { {{ actionLabel(selectedAction) }} }</button></div>
+  </section>
+}
