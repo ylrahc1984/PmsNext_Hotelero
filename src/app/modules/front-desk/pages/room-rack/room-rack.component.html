@@ -13,20 +13,86 @@
     </div>
   </header>
 
-  <section class="status-kpis" aria-label="Filtros de estado">
-    <button
-      type="button"
-      class="status-kpi"
-      *ngFor="let kpi of kpis; trackBy: trackByEstado"
-      [ngClass]="[kpi.className, estadoKpiSeleccionado === kpi.estado ? 'is-active' : '']"
-      [attr.aria-pressed]="estadoKpiSeleccionado === kpi.estado"
-      [attr.aria-label]="'Filtrar por ' + kpi.label + ': ' + kpi.cantidad + ' habitaciones'"
-      (click)="seleccionarKpi(kpi)"
-    >
-      <span>{{ kpi.label }}</span>
-      <strong>{{ kpi.cantidad }}</strong>
-    </button>
+  <section class="rack-toolbar" aria-label="Filtros de habitaciones">
+    <div class="rack-field rack-field--search">
+      <label for="rack-search">Buscar habitación</label>
+      <div class="rack-search">
+        <input id="rack-search" type="search" placeholder="Buscar habitación..." autocomplete="off"
+          [(ngModel)]="busqueda" (ngModelChange)="aplicarFiltros()" />
+        <button *ngIf="busqueda" type="button" class="rack-search__clear" aria-label="Limpiar búsqueda"
+          (click)="busqueda = ''; aplicarFiltros()">
+          <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+      </div>
+    </div>
+    <div class="rack-field">
+      <label for="rack-group">Grupo</label>
+      <select id="rack-group" [(ngModel)]="grupoSeleccionado" (ngModelChange)="aplicarFiltros()"
+        [disabled]="gruposLoading || !!gruposError" [attr.aria-describedby]="gruposError ? 'rack-group-error' : null">
+        <option value="">{{ gruposLoading ? 'Cargando...' : 'Todos' }}</option>
+        <option *ngFor="let grupo of grupos" [value]="grupo.CR04_CodGrp">{{ grupo.CR04_Descripcion || grupo.CR04_CodGrp }}</option>
+      </select>
+    </div>
+    <div class="rack-field">
+      <label for="rack-category">Categoría</label>
+      <select id="rack-category" [(ngModel)]="categoriaSeleccionada" (ngModelChange)="aplicarFiltros()">
+        <option value="">Todas</option>
+        <option *ngFor="let categoria of categorias" [value]="categoria">{{ categoria }}</option>
+        <option *ngIf="categoriaSeleccionada && !categorias.includes(categoriaSeleccionada)" [value]="categoriaSeleccionada">
+          {{ categoriaSeleccionada }} (sin habitaciones)
+        </option>
+      </select>
+    </div>
+    <div class="rack-field">
+      <label for="rack-type">Tipo</label>
+      <select id="rack-type" [(ngModel)]="tipoSeleccionado" (ngModelChange)="aplicarFiltros()">
+        <option value="">Todos</option>
+        <option *ngFor="let tipo of tipos" [value]="tipo">{{ tipo }}</option>
+        <option *ngIf="tipoSeleccionado && !tipos.includes(tipoSeleccionado)" [value]="tipoSeleccionado">
+          {{ tipoSeleccionado }} (sin habitaciones)
+        </option>
+      </select>
+    </div>
+    <div class="rack-field rack-field--density">
+      <span id="rack-density-label">Vista</span>
+      <div class="rack-density" role="group" aria-labelledby="rack-density-label">
+        <button type="button" [class.is-active]="densidad === 'comfortable'" [attr.aria-pressed]="densidad === 'comfortable'"
+          (click)="densidad = 'comfortable'">Cómoda</button>
+        <button type="button" [class.is-active]="densidad === 'compact'" [attr.aria-pressed]="densidad === 'compact'"
+          (click)="densidad = 'compact'">Compacta</button>
+      </div>
+    </div>
+    <button type="button" class="rack-reset" [disabled]="!hayFiltrosActivos && !busqueda" (click)="limpiarFiltros()">Limpiar filtros</button>
+    <p *ngIf="gruposError" id="rack-group-error" class="rack-toolbar__message" role="status">{{ gruposError }}</p>
   </section>
+
+  <div class="rack-status-row">
+    <section class="rack-status-group" aria-labelledby="rack-operational-label">
+      <h2 id="rack-operational-label">Estado operacional</h2>
+      <div class="status-kpis">
+        <button type="button" class="status-kpi" *ngFor="let kpi of kpis; trackBy: trackByEstado"
+          [ngClass]="kpi.className" [class.is-active]="estadoOperacionalSeleccionado === kpi.estado"
+          [attr.aria-pressed]="estadoOperacionalSeleccionado === kpi.estado"
+          [attr.aria-label]="'Filtrar por ' + kpi.label + ': ' + kpi.cantidad + ' habitaciones'"
+          (click)="seleccionarKpi(kpi)">
+          <span>{{ kpi.label }}</span><strong>{{ kpi.cantidad }}</strong>
+        </button>
+      </div>
+    </section>
+
+    <section class="rack-status-group" aria-labelledby="rack-clean-label">
+      <h2 id="rack-clean-label">Estado de limpieza</h2>
+      <div class="status-kpis status-kpis--clean">
+        <button type="button" class="status-kpi" *ngFor="let kpi of kpisLimpieza; trackBy: trackByEstado"
+          [ngClass]="kpi.className" [class.is-active]="estadoLimpiezaSeleccionado === kpi.estado"
+          [attr.aria-pressed]="estadoLimpiezaSeleccionado === kpi.estado"
+          [attr.aria-label]="'Filtrar limpieza por ' + kpi.label + ': ' + kpi.cantidad + ' habitaciones'"
+          (click)="seleccionarLimpieza(kpi)">
+          <span>{{ kpi.label }}</span><strong>{{ kpi.cantidad }}</strong>
+        </button>
+      </div>
+    </section>
+  </div>
 
   <section class="room-rack-workspace">
     <div class="rooms-column">
@@ -40,32 +106,43 @@
           {{ errorMessage }}
         </div>
 
-        <div class="rooms-grid">
+        <div class="rack-results">
+          <span role="status" aria-live="polite">
+            Mostrando {{ habitacionesVisibles.length }} de {{ habitaciones.length }} habitaciones
+          </span>
+          <label class="rack-order" for="rack-order">Ordenar por
+            <select id="rack-order" [(ngModel)]="ordenSeleccionado" (ngModelChange)="aplicarFiltros()">
+              <option value="room-number">Número de habitación</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="rooms-grid" [class.rooms-grid--compact]="densidad === 'compact'">
           <article
             class="room-card"
-            *ngFor="let habitacion of habitacionesFiltradas; trackBy: trackByHabitacion"
-            [ngClass]="getRoomCardClasses(habitacion)"
+            *ngFor="let habitacion of habitacionesVisibles; trackBy: trackByHabitacion"
+            [ngClass]="habitacion.cardClass"
             (click)="seleccionarHabitacion(habitacion)"
             (keydown)="onRoomCardKeydown($event, habitacion)"
             role="button"
             tabindex="0"
-            [attr.aria-label]="getRoomAriaLabel(habitacion)"
+            [attr.aria-label]="habitacion.ariaLabel"
           >
             <span
               class="room-card__clean-indicator"
-              [ngStyle]="getCleanIndicatorStyle(habitacion)"
-              [attr.title]="getCleanLabel(habitacion)"
-              [attr.aria-label]="getCleanLabel(habitacion)"
+              [class.room-card__clean-indicator--dirty]="habitacion.cleanCode === 'S'"
+              [attr.title]="habitacion.cleanLabel"
+              [attr.aria-label]="habitacion.cleanLabel"
             ></span>
             <div class="room-card__content">
               <strong class="room-card__number">{{ habitacion.numero }}</strong>
               <span class="room-card__category">{{ habitacion.categoria }}</span>
-              <div class="room-card__statuses" *ngIf="isTurnoverToday(habitacion); else singleRoomStatus">
+              <div class="room-card__statuses" *ngIf="habitacion.turnoverToday; else singleRoomStatus">
                 <span class="room-card__status state-checkout-today">Sale hoy</span>
                 <span class="room-card__status state-arrival-today">Entra hoy</span>
               </div>
               <ng-template #singleRoomStatus>
-                <span class="room-card__status" [ngClass]="getEstadoClass(habitacion.estado)">
+                <span class="room-card__status" [ngClass]="habitacion.stateClass">
                   {{ habitacion.estado }}
                 </span>
               </ng-template>
@@ -110,11 +187,12 @@
         </div>
 
         <div
-          *ngIf="!isLoading && !errorMessage && habitacionesFiltradas.length === 0"
-          class="d-inline-flex align-items-center gap-2 mt-2 text-muted fw-semibold small"
+          *ngIf="!isLoading && !errorMessage && habitacionesVisibles.length === 0"
+          class="rack-empty"
           role="status"
         >
-          {{ getMensajeFiltroVacio() }}
+          <p>No hay habitaciones que coincidan con los filtros seleccionados.</p>
+          <button type="button" class="rack-reset" (click)="limpiarFiltros()">Limpiar filtros</button>
         </div>
       </main>
     </div>

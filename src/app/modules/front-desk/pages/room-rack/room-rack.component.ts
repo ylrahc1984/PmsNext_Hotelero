@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { Router, NavigationExtras } from '@angular/router';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
@@ -26,6 +27,8 @@ import {
   RoomOperationalVisualState
 } from 'src/app/shared/models/room-operational-visual-state';
 import { RoomRackNavigationState, RoomRackRoom } from './models/room-rack-room.model';
+import { RoomGroup } from '../../settings/room-groups/models/room-group.model';
+import { RoomGroupsService } from '../../settings/room-groups/services/room-groups.service';
 import { GuestRegistrationSheetPdfService } from './printing/guest-registration-sheet-pdf.service';
 import { RoomBlockRequest, RoomRackService } from './services/room-rack.service';
 
@@ -40,6 +43,11 @@ type EstadoHabitacion =
   | 'Limpia'
   | 'Requiere atención';
 
+type EstadoOperacional = Exclude<EstadoHabitacion, 'Limpia' | 'Sucia'>;
+type EstadoLimpieza = 'Limpia' | 'Sucia';
+type RoomRackDensity = 'comfortable' | 'compact';
+type RoomRackOrder = 'room-number';
+
 interface HabitacionRack {
   numero       : string;
   categoria    : string;
@@ -47,6 +55,13 @@ interface HabitacionRack {
   entraHoy     : boolean;
   saleHoy      : boolean;
   data          : RoomRackRoom;
+  // Presentation values only; the original DTO stays in data.
+  cardClass     : string;
+  stateClass    : string;
+  ariaLabel     : string;
+  turnoverToday : boolean;
+  cleanCode     : string;
+  cleanLabel    : string;
 }
 
 interface RoomRackSnapshot {
@@ -54,9 +69,9 @@ interface RoomRackSnapshot {
   arrivals : CheckInArrival[];
 }
 
-interface EstadoKpi {
+interface EstadoKpi<T extends EstadoHabitacion = EstadoHabitacion> {
   label       : string;
-  estado      : EstadoHabitacion | 'Todas';
+  estado      : T | 'Todas';
   cantidad    : number;
   className   : string;
 }
@@ -77,7 +92,7 @@ interface BloqueoHabitacionForm {
 @Component({
   selector: 'app-room-rack',
   standalone: true,
-  imports: [CommonModule, SharedModule],
+  imports: [CommonModule, FormsModule, SharedModule],
   templateUrl: './room-rack.component.html',
   styleUrls: ['./room-rack.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -86,6 +101,8 @@ export class RoomRackComponent implements OnInit {
   private static readonly automaticRefreshIntervalMs = 30_000;
   private readonly router               = inject(Router);
   private readonly roomRackService      = inject(RoomRackService);
+  private readonly roomGroupsService    = inject(RoomGroupsService);
+  private readonly roomNumberCollator   = new Intl.Collator('es', { numeric: true, sensitivity: 'base' });
   private readonly checkInArrivalsService = inject(CheckInArrivalsService);
   private readonly tipoCambioService    = inject(TipoCambioService);
   private readonly authService          = inject(AuthService);
@@ -103,22 +120,37 @@ export class RoomRackComponent implements OnInit {
   readonly ultimaActualizacion          = new Date();
   fechaOperacion                        = '';
 
-  readonly estados: EstadoHabitacion[]  = [
+  readonly estadosOperacionales: EstadoOperacional[] = [
     'Disponible',
     'Entrada hoy',
     'Ocupada',
     'Salida Hoy',
     'Salida Mañana',
     'Bloqueada',
-    'Sucia',
-    'Limpia',
     'Requiere atención'
   ];
+  readonly estadosLimpieza: EstadoLimpieza[] = ['Limpia', 'Sucia'];
+  readonly estados: EstadoHabitacion[] = [...this.estadosOperacionales, ...this.estadosLimpieza];
 
   habitaciones          : HabitacionRack[] = [];
-  kpis                  : EstadoKpi[] = this.generarKpis();
+  habitacionesVisibles: HabitacionRack[] = [];
+  kpis = this.generarKpis(this.estadosOperacionales);
+  kpisLimpieza = this.generarKpis(this.estadosLimpieza);
   resumen               = this.generarResumen();
-  estadoKpiSeleccionado : EstadoHabitacion | 'Todas' = 'Todas';
+  busqueda = '';
+  grupoSeleccionado = '';
+  categoriaSeleccionada = '';
+  tipoSeleccionado = '';
+  estadoOperacionalSeleccionado: EstadoOperacional | 'Todas' = 'Todas';
+  estadoLimpiezaSeleccionado: EstadoLimpieza | 'Todas' = 'Todas';
+  ordenSeleccionado: RoomRackOrder = 'room-number';
+  densidad: RoomRackDensity = 'comfortable';
+  hayFiltrosActivos = false;
+  grupos: RoomGroup[] = [];
+  gruposLoading = true;
+  gruposError = '';
+  categorias: string[] = [];
+  tipos: string[] = [];
   isLoading             = false;
   errorMessage          = '';
   cleanActionMessage    = '';
@@ -147,6 +179,7 @@ export class RoomRackComponent implements OnInit {
         : 'Check Out completado. Inventario actualizado.';
     }
 
+    this.cargarGrupos();
     this.bindOperationalDate();
     this.bindAutomaticRefresh();
   }
@@ -457,47 +490,84 @@ export class RoomRackComponent implements OnInit {
     return this.tipoCambio?.venta ?? 0;
   }
 
-  get habitacionesFiltradas(): HabitacionRack[] {
-    if (this.estadoKpiSeleccionado === 'Todas') {
-      return this.habitaciones;
+  aplicarFiltros(): void {
+    const busqueda = this.busqueda.trim().toLocaleLowerCase('es');
+    this.hayFiltrosActivos = Boolean(
+      busqueda || this.grupoSeleccionado || this.categoriaSeleccionada || this.tipoSeleccionado ||
+      this.estadoOperacionalSeleccionado !== 'Todas' || this.estadoLimpiezaSeleccionado !== 'Todas'
+    );
+    // filter creates a new array: sorting never changes the source inventory.
+    this.habitacionesVisibles = this.habitaciones.filter((habitacion) =>
+      (!busqueda || habitacion.numero.toLocaleLowerCase('es').includes(busqueda)) &&
+      (!this.grupoSeleccionado || this.normalizeText(habitacion.data.CR05_CodGrp) === this.grupoSeleccionado) &&
+      (!this.categoriaSeleccionada || this.normalizeText(habitacion.data.CR05_CateHab) === this.categoriaSeleccionada) &&
+      (!this.tipoSeleccionado || this.normalizeText(habitacion.data.CR05_TipoHab) === this.tipoSeleccionado) &&
+      this.coincideEstado(habitacion, this.estadoOperacionalSeleccionado) &&
+      this.coincideEstado(habitacion, this.estadoLimpiezaSeleccionado)
+    );
+    if (this.ordenSeleccionado === 'room-number') {
+      this.habitacionesVisibles.sort((a, b) => {
+        const numeroA = Number(a.numero);
+        const numeroB = Number(b.numero);
+        const numericoA = a.numero.trim() !== '' && Number.isFinite(numeroA);
+        const numericoB = b.numero.trim() !== '' && Number.isFinite(numeroB);
+        if (numericoA && numericoB) return numeroA - numeroB;
+        if (numericoA !== numericoB) return numericoA ? -1 : 1;
+        return this.roomNumberCollator.compare(a.numero, b.numero);
+      });
     }
-
-    if (this.estadoKpiSeleccionado === 'Sucia') {
-      return this.habitaciones.filter(
-        (habitacion) => this.normalizeText(habitacion.data.CR05_Clean).toUpperCase() === 'S'
-      );
-    }
-
-    if (this.estadoKpiSeleccionado === 'Limpia') {
-      return this.habitaciones.filter(
-        (habitacion) => this.normalizeText(habitacion.data.CR05_Clean).toUpperCase() === 'L'
-      );
-    }
-
-    if (this.estadoKpiSeleccionado === 'Entrada hoy') {
-      return this.habitaciones.filter((habitacion) => habitacion.entraHoy);
-    }
-
-    if (this.estadoKpiSeleccionado === 'Salida Hoy') {
-      return this.habitaciones.filter((habitacion) => habitacion.saleHoy);
-    }
-
-    return this.habitaciones.filter((habitacion) => habitacion.estado === this.estadoKpiSeleccionado);
   }
 
-  seleccionarKpi(kpi: EstadoKpi): void {
-    this.estadoKpiSeleccionado =
-      this.estadoKpiSeleccionado === kpi.estado && kpi.estado !== 'Todas'
-        ? 'Todas'
-        : kpi.estado;
+  limpiarFiltros(): void {
+    this.busqueda = '';
+    this.grupoSeleccionado = '';
+    this.categoriaSeleccionada = '';
+    this.tipoSeleccionado = '';
+    this.estadoOperacionalSeleccionado = 'Todas';
+    this.estadoLimpiezaSeleccionado = 'Todas';
+    this.aplicarFiltros();
   }
 
-  getMensajeFiltroVacio(): string {
-    if (this.estadoKpiSeleccionado === 'Todas') {
-      return 'No existen habitaciones para la fecha seleccionada.';
-    }
+  seleccionarKpi(kpi: EstadoKpi<EstadoOperacional>): void {
+    this.estadoOperacionalSeleccionado = this.estadoOperacionalSeleccionado === kpi.estado ? 'Todas' : kpi.estado;
+    this.aplicarFiltros();
+  }
 
-    return `No existen habitaciones en el filtro "${this.estadoKpiSeleccionado}".`;
+  seleccionarLimpieza(kpi: EstadoKpi<EstadoLimpieza>): void {
+    this.estadoLimpiezaSeleccionado = this.estadoLimpiezaSeleccionado === kpi.estado ? 'Todas' : kpi.estado;
+    this.aplicarFiltros();
+  }
+
+  private cargarGrupos(): void {
+    this.roomGroupsService.getRoomGroups()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (grupos) => {
+          const porCodigo = new Map<string, RoomGroup>();
+          for (const grupo of grupos) {
+            const codigo = this.normalizeText(grupo.CR04_CodGrp);
+            if (codigo) porCodigo.set(codigo, { ...grupo, CR04_CodGrp: codigo });
+          }
+          this.grupos = [...porCodigo.values()].sort((a, b) =>
+            this.roomNumberCollator.compare(a.CR04_Descripcion, b.CR04_Descripcion)
+          );
+          this.gruposLoading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.gruposLoading = false;
+          this.gruposError = 'No se pudo cargar el catálogo de grupos.';
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  private actualizarOpciones(): void {
+    const valoresUnicos = (campo: 'CR05_CateHab' | 'CR05_TipoHab'): string[] =>
+      [...new Set(this.habitaciones.map((room) => this.normalizeText(room.data[campo])).filter(Boolean))]
+        .sort(this.roomNumberCollator.compare);
+    this.categorias = valoresUnicos('CR05_CateHab');
+    this.tipos = valoresUnicos('CR05_TipoHab');
   }
 
   getEstadoClass(estado: EstadoHabitacion | 'Todas'): string {
@@ -517,43 +587,18 @@ export class RoomRackComponent implements OnInit {
     return `state-${stateByLabel[estado]}`;
   }
 
-  getRoomCardClasses(habitacion: HabitacionRack): string[] {
-    return this.isTurnoverToday(habitacion)
-      ? ['state-turnover-today']
-      : [this.getEstadoClass(habitacion.estado)];
-  }
-
-  getRoomAriaLabel(habitacion: HabitacionRack): string {
-    const state = this.isTurnoverToday(habitacion)
-      ? 'Salida hoy y entrada hoy'
-      : habitacion.estado;
-    return `Habitacion ${habitacion.numero} ${habitacion.categoria}. ${state}.`;
-  }
-
-  isTurnoverToday(habitacion: HabitacionRack): boolean {
+  private isTurnoverToday(habitacion: HabitacionRack): boolean {
     return habitacion.saleHoy && habitacion.entraHoy;
   }
 
-  getCleanLabel(habitacion: HabitacionRack): string {
-    return this.normalizeText(habitacion.data.CR05_Clean).toUpperCase() === 'S' ? 'Habitación sucia' : 'Habitación limpia';
-  }
-
-  getCleanIndicatorStyle(habitacion: HabitacionRack): Record<string, string> {
-    const isDirty = this.normalizeText(habitacion.data.CR05_Clean).toUpperCase() === 'S';
-
-    return {
-      position        : 'absolute',
-      top             : '7px',
-      right           : '8px',
-      width           : '12px',
-      height          : '12px',
-      border          : '1.5px solid #0f172a',
-      borderRadius    : '3px',
-      background      : isDirty ? 'linear-gradient(135deg, #6f4428, #b7794b)' : '#ffffff',
-      boxShadow       : '0 2px 5px rgba(15, 23, 42, 0.18)',
-      pointerEvents   : 'none',
-      transform       : 'rotate(45deg)'
-    };
+  private actualizarPresentacion(habitacion: HabitacionRack): void {
+    habitacion.turnoverToday = this.isTurnoverToday(habitacion);
+    habitacion.stateClass = this.getEstadoClass(habitacion.estado);
+    habitacion.cardClass = habitacion.turnoverToday ? 'state-turnover-today' : habitacion.stateClass;
+    const state = habitacion.turnoverToday ? 'Salida hoy y entrada hoy' : habitacion.estado;
+    habitacion.ariaLabel = 'Habitacion ' + habitacion.numero + ' ' + habitacion.categoria + '. ' + state + '.';
+    habitacion.cleanCode = this.normalizeText(habitacion.data.CR05_Clean).toUpperCase();
+    habitacion.cleanLabel = habitacion.cleanCode === 'S' ? 'Habitación sucia' : 'Habitación limpia';
   }
 
   trackByHabitacion(_: number, habitacion: HabitacionRack): string {
@@ -694,8 +739,11 @@ export class RoomRackComponent implements OnInit {
     this.habitaciones = rooms
       .filter((room) => this.normalizeText(room.CR05_Activo).toUpperCase() !== 'N')
       .map((room) => this.mapRoomRackRoom(room, arrivalRoomNumbers));
-    this.kpis = this.generarKpis();
+    this.kpis = this.generarKpis(this.estadosOperacionales);
+    this.kpisLimpieza = this.generarKpis(this.estadosLimpieza);
     this.resumen = this.generarResumen();
+    this.actualizarOpciones();
+    this.aplicarFiltros();
     this.cdr.markForCheck();
   }
 
@@ -722,9 +770,16 @@ export class RoomRackComponent implements OnInit {
       )
       .subscribe({
         next: () => {
-          room.data.CR05_Clean = clean;
-          this.kpis = this.generarKpis();
+          // A silent refresh may have replaced the card while this request was in flight.
+          const currentRoom = this.habitaciones.find((habitacion) => habitacion.numero === roomKey);
+          if (currentRoom) {
+            currentRoom.data.CR05_Clean = clean;
+            this.actualizarPresentacion(currentRoom);
+          }
+          this.kpis = this.generarKpis(this.estadosOperacionales);
+          this.kpisLimpieza = this.generarKpis(this.estadosLimpieza);
           this.resumen = this.generarResumen();
+          this.aplicarFiltros();
           this.cleanActionMessage = clean === 'L' ? 'Habitacion marcada como limpia.' : 'Habitacion marcada para repaso.';
           this.cdr.markForCheck();
         },
@@ -845,18 +900,26 @@ export class RoomRackComponent implements OnInit {
   private mapRoomRackRoom(room: RoomRackRoom, arrivalRoomNumbers: ReadonlySet<string>): HabitacionRack {
     const estado = this.mapEstadoHabitacion(room);
 
-    return {
+    const habitacion: HabitacionRack = {
       numero: String(room.CR05_NumHab),
       categoria: room.CR05_Descripcion || room.CR05_TipoHab || room.CR05_CateHab,
       estado,
       entraHoy: estado === 'Entrada hoy' || arrivalRoomNumbers.has(this.normalizeRoomNumber(room.CR05_NumHab)),
       saleHoy: estado === 'Salida Hoy',
-      data: room
+      data: room,
+      cardClass: '',
+      stateClass: '',
+      ariaLabel: '',
+      turnoverToday: false,
+      cleanCode: '',
+      cleanLabel: ''
     };
+    this.actualizarPresentacion(habitacion);
+    return habitacion;
   }
 
-  private generarKpis(): EstadoKpi[] {
-    const todos: EstadoKpi = {
+  private generarKpis<T extends EstadoHabitacion>(estados: readonly T[]): EstadoKpi<T>[] {
+    const todos: EstadoKpi<T> = {
       label       : 'Todas',
       estado      : 'Todas',
       cantidad    : this.habitaciones.length,
@@ -865,7 +928,7 @@ export class RoomRackComponent implements OnInit {
 
     return [
       todos,
-      ...this.estados.map((estado) => ({
+      ...estados.map((estado) => ({
         label: estado,
         estado,
         cantidad: this.contarPorEstado(estado),
@@ -887,23 +950,19 @@ export class RoomRackComponent implements OnInit {
   }
 
   private contarPorEstado(estado: EstadoHabitacion): number {
-    if (estado === 'Sucia') {
-      return this.habitaciones.filter((habitacion) => this.normalizeText(habitacion.data.CR05_Clean).toUpperCase() === 'S').length;
-    }
+    return this.habitaciones.filter((habitacion) => this.coincideEstado(habitacion, estado)).length;
+  }
 
-    if (estado === 'Limpia') {
-      return this.habitaciones.filter((habitacion) => this.normalizeText(habitacion.data.CR05_Clean).toUpperCase() === 'L').length;
+  // Shared by counters and filters, including overlapping arrival/departure states.
+  private coincideEstado(habitacion: HabitacionRack, estado: EstadoHabitacion | 'Todas'): boolean {
+    switch (estado) {
+      case 'Todas': return true;
+      case 'Sucia': return habitacion.cleanCode === 'S';
+      case 'Limpia': return habitacion.cleanCode === 'L';
+      case 'Entrada hoy': return habitacion.entraHoy;
+      case 'Salida Hoy': return habitacion.saleHoy;
+      default: return habitacion.estado === estado;
     }
-
-    if (estado === 'Entrada hoy') {
-      return this.habitaciones.filter((habitacion) => habitacion.entraHoy).length;
-    }
-
-    if (estado === 'Salida Hoy') {
-      return this.habitaciones.filter((habitacion) => habitacion.saleHoy).length;
-    }
-
-    return this.habitaciones.filter((habitacion) => habitacion.estado === estado).length;
   }
 
   private mapEstadoHabitacion(room: RoomRackRoom): EstadoHabitacion {
@@ -963,7 +1022,10 @@ export class RoomRackComponent implements OnInit {
   private handleOperationalDateError(): void {
     this.fechaOperacion = '';
     this.habitaciones = [];
-    this.kpis = this.generarKpis();
+    this.actualizarOpciones();
+    this.aplicarFiltros();
+    this.kpis = this.generarKpis(this.estadosOperacionales);
+    this.kpisLimpieza = this.generarKpis(this.estadosLimpieza);
     this.resumen = this.generarResumen();
     this.isLoading = false;
     this.errorMessage = 'No se pudo obtener la fecha operativa para cargar el estado de habitaciones.';
