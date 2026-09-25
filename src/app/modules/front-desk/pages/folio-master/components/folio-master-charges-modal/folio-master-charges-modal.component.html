@@ -74,7 +74,7 @@
 
     <footer class="charges-footer">
       <span><i class="feather icon-info"></i>Seleccione un documento para revisar y preparar cambios en sus partidas.</span>
-      <div><button type="button" class="button-secondary" (click)="closeModal.emit()">Cerrar</button><button type="button" class="button-checkout" [disabled]="checkoutLoading" (click)="checkout.emit(folio)"><i class="feather icon-log-out"></i>{{ checkoutLoading ? 'Procesando...' : 'Check Out' }}</button><button type="button" class="button-primary" [disabled]="checkoutLoading" (click)="invoice.emit(folio)"><i class="feather icon-file-text"></i>Facturar cargos</button></div>
+      <div><button type="button" class="button-secondary" (click)="closeModal.emit()">Cerrar</button><button type="button" class="button-checkout" [disabled]="checkoutLoading" (click)="checkout.emit(folio)"><i class="feather icon-log-out"></i>{{ checkoutLoading ? 'Procesando...' : 'Check Out' }}</button><button type="button" class="button-primary" [disabled]="checkoutLoading || getStatus(folio.PRV09_Estado).value === 2" (click)="invoice.emit(folio)"><i class="feather icon-file-text"></i>Facturar cargos</button></div>
     </footer>
   </section>
 </div>

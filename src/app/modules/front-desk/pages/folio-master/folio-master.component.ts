@@ -117,7 +117,7 @@ export class FolioMasterComponent implements OnInit {
       { label: 'Folios pendientes', value: this.folios.length, helper: 'Resultado del período', icon: 'layers', accent: 'primary' },
       { label: 'Creados', value: this.countByStatus(0), helper: 'Reservas sin check-in', icon: 'file-text', accent: 'neutral' },
       { label: 'In House', value: this.countByStatus(1), helper: 'Huéspedes alojados', icon: 'log-in', accent: 'success' },
-      { label: 'Check-out', value: this.countByStatus(2), helper: 'Listos para facturar', icon: 'log-out', accent: 'warning' }
+      { label: 'Check-out', value: this.countByStatus(2), helper: 'Salida realizada', icon: 'log-out', accent: 'warning' }
     ];
   }
 
@@ -319,6 +319,10 @@ export class FolioMasterComponent implements OnInit {
   }
 
   invoiceFolio(folio: FolioMaster): void {
+    if (this.isFolioClosed(folio)) {
+      return;
+    }
+
     const codReserva = (folio.PRV09_CodReserva || folio.PRV01_CodReserva || '').trim();
     const numFolio = (folio.PRV09_NumFolio || folio.PRV01_Folio || '').trim();
 
