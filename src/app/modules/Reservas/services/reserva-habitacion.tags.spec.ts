@@ -21,6 +21,26 @@ describe('ReservaHabitacionService embedded reservation tags', () => {
 
   afterEach(() => httpMock.verify());
 
+  it('consulta por creación con proceso 93 y conserva fechas, filtros y paginación', () => {
+    let creacion: string | undefined;
+    service.consultarReservas({
+      tipoFecha: 'creacion', fecIngreso: '2026-09-28', fecSalida: '2026-09-28',
+      pagina: 2, tamanoPagina: 15, agencia: ' AG01 ', estado: 'CCR'
+    }).subscribe((page) => creacion = page.reservas[0].creacion);
+
+    const request = httpMock.expectOne((candidate) => candidate.url === `${listUrl}/por-fecha-creacion`);
+    expect(request.request.method).toBe('GET');
+    expect(request.request.params.get('Proceso')).toBe('93');
+    expect(request.request.params.get('FecIngreso')).toBe('28/09/2026');
+    expect(request.request.params.get('FecSalida')).toBe('28/09/2026');
+    expect(request.request.params.get('Pagina')).toBe('2');
+    expect(request.request.params.get('TamanoPagina')).toBe('15');
+    expect(request.request.params.get('CodAgencia')).toBe('AG01');
+    expect(request.request.params.get('Estado')).toBe('CCR');
+    request.flush({ reservas: [{ codReserva: 'RS26000001', fecCreacion: '2026-09-28' }] });
+    expect(creacion).toBe('28/09/2026');
+  });
+
   it('normalizes embedded tags and alert metadata from the single paginated response', () => {
     let resultTags: ReservaTagResumen[] = [];
     let hasAlerts = false;
@@ -36,6 +56,7 @@ describe('ReservaHabitacionService embedded reservation tags', () => {
 
     const request = httpMock.expectOne((candidate) => candidate.url === listUrl);
     expect(request.request.method).toBe('GET');
+    expect(request.request.params.get('Proceso')).toBe('90');
     request.flush({
       reservas: [{
         codReserva: 'EE260000357',

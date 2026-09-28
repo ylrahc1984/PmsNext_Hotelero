@@ -158,8 +158,10 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
   }
 
   consultarReservas(params: ReservaConsultaParams): Observable<ReservaConsultaPage> {
+    const porCreacion = params.tipoFecha === 'creacion';
+    const url = porCreacion ? `${this.apiUrl}/por-fecha-creacion` : this.apiUrl;
     let query = new HttpParams()
-      .set('Proceso', '90')
+      .set('Proceso', porCreacion ? '93' : '90')
       .set('FecIngreso', normalizePmsDateDDMMYYYY(params.fecIngreso))
       .set('FecSalida', normalizePmsDateDDMMYYYY(params.fecSalida))
       .set('Pagina', String(params.pagina))
@@ -174,6 +176,7 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
     }
 
     const descripcion = params.busqueda?.trim() ?? '';
+    
     if (descripcion) {
       query = query.set('Descripcion', descripcion);
       if (/^[a-zA-Z]{2}\d{6,}$/.test(descripcion)) {
@@ -182,8 +185,9 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
     }
 
     return this.http
-      .get<ReservaConsultaApiResponse>(this.apiUrl, { params: query })
+      .get<ReservaConsultaApiResponse>(url, { params: query })
       .pipe(map((response) => this.normalizeConsultaResponse(response, params.pagina, params.tamanoPagina)));
+
   }
 
   buscarReservas(descripcion: string, pagina: number, tamanoPagina: number): Observable<ReservaConsultaPage> {
@@ -247,6 +251,7 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
         ''
       ).trim(),
       ingreso: normalizePmsDateDDMMYYYY(item.fecIngresa ?? item.prV01_FecIngresa ?? ''),
+      creacion: normalizePmsDateDDMMYYYY(item.fecCreacion ?? ''),
       salida: normalizePmsDateDDMMYYYY(item.fecSalida ?? item.prV01_FecSalida ?? ''),
       noches: Number(item.totNoches ?? item.prV01_TotNoches ?? 0),
       habitaciones: Number(item.nHab ?? item.nhab ?? 0),

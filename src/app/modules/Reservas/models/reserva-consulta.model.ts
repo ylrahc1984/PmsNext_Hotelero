@@ -1,5 +1,7 @@
 import { ReservaTagResumen } from './reserva-tag.model';
 
+export type ReservaTipoFecha = 'ingreso' | 'creacion';
+
 export interface ReservaConsulta {
   reserva: string;
   codAgencia: string;
@@ -10,6 +12,7 @@ export interface ReservaConsulta {
   agencia: string;
   descripcion: string;
   ingreso: string;
+  creacion?: string;
   salida: string;
   noches: number;
   habitaciones: number;
@@ -27,6 +30,7 @@ export interface ReservaConsulta {
 }
 
 export interface ReservaFiltro {
+  tipoFecha: ReservaTipoFecha;
   fechaInicio: string;
   fechaFinal: string;
   agencia: string;
@@ -118,6 +122,7 @@ export interface ReservaConsultaPage {
 }
 
 export interface ReservaConsultaParams {
+  tipoFecha?: ReservaTipoFecha;
   fecIngreso: string;
   fecSalida: string;
   pagina: number;

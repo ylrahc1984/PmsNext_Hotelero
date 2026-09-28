@@ -45,6 +45,15 @@
 
 .reserva-filters {
   margin-bottom: 1rem;
+
+  .card-body {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .form-label {
+    margin-bottom: 0.25rem;
+  }
 }
 
 .filter-actions {
@@ -125,6 +134,28 @@
 .reserva-count {
   font-weight: 600;
   color: #607080;
+}
+
+.reserva-total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  margin-top: 0.35rem;
+  padding: 0.4rem 0.65rem;
+  border-radius: 6px;
+  background: #f0f6ff;
+  color: #172f55;
+
+  strong {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.reserva-total__label {
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .reserva-table {

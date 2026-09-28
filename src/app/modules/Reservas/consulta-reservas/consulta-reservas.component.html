@@ -22,13 +22,24 @@
 
   <form class="card reserva-filters" [formGroup]="filterForm" (ngSubmit)="buscar()">
     <div class="card-body">
-      <div class="row g-3 align-items-end">
+      <fieldset class="mb-2">
+        <legend class="form-label fs-6">Buscar por</legend>
+        <div class="form-check form-check-inline">
+          <input id="tipoFechaIngreso" type="radio" class="form-check-input" formControlName="tipoFecha" value="ingreso">
+          <label class="form-check-label" for="tipoFechaIngreso">Fecha de ingreso</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input id="tipoFechaCreacion" type="radio" class="form-check-input" formControlName="tipoFecha" value="creacion">
+          <label class="form-check-label" for="tipoFechaCreacion">Fecha de creación</label>
+        </div>
+      </fieldset>
+      <div class="row gx-3 gy-2 align-items-end">
         <div class="col-xl-2 col-lg-2 col-md-6">
-          <label class="form-label" for="fechaInicio">Fecha Inicio</label>
+          <label class="form-label" for="fechaInicio">Desde</label>
           <input id="fechaInicio" type="date" class="form-control" formControlName="fechaInicio">
         </div>
         <div class="col-xl-2 col-lg-2 col-md-6">
-          <label class="form-label" for="fechaFinal">Fecha Final</label>
+          <label class="form-label" for="fechaFinal">Hasta</label>
           <input id="fechaFinal" type="date" class="form-control" formControlName="fechaFinal">
         </div>
         <div class="col-xl-4 col-lg-4 col-md-6">
@@ -90,8 +101,19 @@
         <div class="reserva-count">
           <span *ngIf="loading()">Cargando reservas...</span>
           <span *ngIf="!loading()">{{ totalRecords() }} reservas</span>
+          <div class="reserva-total" *ngIf="!loading() && !errorMessage()" aria-live="polite">
+            <span class="reserva-total__label">Total de esta página · sin anuladas</span>
+            <strong *ngFor="let importe of totalesPagina()">{{ importe.moneda }} {{ importe.total | number: '1.2-2' }}</strong>
+            <strong *ngIf="!totalesPagina().length">0.00</strong>
+          </div>
         </div>
       </div>
+
+      <p class="small text-muted" aria-live="polite">
+        <ng-container *ngIf="filtro().busqueda.trim();">
+          Búsqueda por reserva o descripción; no se aplican los filtros de fecha, agencia y estado.
+        </ng-container>
+      </p>
 
       <div class="alert alert-danger py-2 mb-3" *ngIf="errorMessage()">
         {{ errorMessage() }}
@@ -104,6 +126,7 @@
               <th class="reservation-column">Reserva</th>
               <th class="description-column">Descripción</th>
               <th class="agency-column">Agencia</th>
+              <th class="date-column" *ngIf="!filtro().busqueda.trim() && filtro().tipoFecha === 'creacion'">Creación</th>
               <th class="date-column">Ingreso</th>
               <th class="date-column">Salida</th>
               <th class="text-center nights-column">Noches</th>
@@ -132,6 +155,7 @@
                 {{ reserva.descripcion || 'Sin descripción' }}
               </td>
               <td>{{ reserva.agencia }}</td>
+              <td *ngIf="!filtro().busqueda.trim() && filtro().tipoFecha === 'creacion'">{{ formatDate(reserva.creacion) }}</td>
               <td>{{ formatDate(reserva.ingreso) }}</td>
               <td>{{ formatDate(reserva.salida) }}</td>
               <td class="text-center">{{ reserva.noches }}</td>

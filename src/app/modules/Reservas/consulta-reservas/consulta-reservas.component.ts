@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -14,7 +14,7 @@ import { addPmsCalendarDays, normalizePmsDateDDMMYYYY, toPmsDateInputValue } fro
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { WalkInAgenciaOption } from 'src/app/modules/front-desk/walk-in/models/walk-in.model';
 import { WalkInService } from 'src/app/modules/front-desk/walk-in/services/walk-in.service';
-import { ReservaConsulta, ReservaConsultaPage, ReservaFiltro } from '../models/reserva-consulta.model';
+import { ReservaConsulta, ReservaConsultaPage, ReservaFiltro, ReservaTipoFecha } from '../models/reserva-consulta.model';
 import { ReservationTagDetailsComponent } from '../components/reservation-tags/reservation-tag-details.component';
 import { ReservationTagListComponent } from '../components/reservation-tags/reservation-tag-list.component';
 import { ReservationPrepaymentsComponent } from '../reservation-prepayments/reservation-prepayments.component';
@@ -23,6 +23,7 @@ import { ReservaHabitacionService } from '../services/reserva-habitacion.service
 import { ReservaTagsService } from '../services/reserva-tags.service';
 
 interface ConsultaReservasFilterForm {
+  tipoFecha: FormControl<ReservaTipoFecha>;
   fechaInicio: FormControl<string>;
   fechaFinal: FormControl<string>;
   agencia: FormControl<string>;
@@ -62,61 +63,75 @@ export class ConsultaReservasComponent implements OnInit {
     { valor: 'ANU', etiqueta: 'Cancelada' }
   ];
 
-  readonly pageSizeOptions = [10, 15, 20];
-  readonly pageSize = signal(10);
-  readonly currentPage = signal(1);
-  readonly totalRecords = signal(0);
-  readonly totalPages = signal(1);
-  readonly loading = signal(false);
-  readonly cancellingReserva = signal('');
-  readonly changingEstadoReserva = signal('');
-  readonly changingEstadoDestino = signal<EstadoCambioReserva | ''>('');
-  readonly printingReserva = signal('');
-  readonly prepaymentsOpen = signal(false);
-  readonly selectedPrepaymentReserva = signal<ReservationPrepaymentSummary | null>(null);
-  readonly errorMessage = signal('');
-  readonly filtro = signal<ReservaFiltro>({
-    fechaInicio: '',
-    fechaFinal: '',
-    agencia: '',
-    estado: '',
-    busqueda: ''
+  readonly pageSizeOptions                 = [10, 15, 20];
+  readonly pageSize                        = signal(10);
+  readonly currentPage                     = signal(1);
+  readonly totalRecords                    = signal(0);
+  readonly totalPages                      = signal(1);
+  readonly loading                         = signal(false);
+  readonly cancellingReserva               = signal('');
+  readonly changingEstadoReserva           = signal('');
+  readonly changingEstadoDestino           = signal<EstadoCambioReserva | ''>('');
+  readonly printingReserva                 = signal('');
+  readonly prepaymentsOpen                 = signal(false);
+  readonly selectedPrepaymentReserva       = signal<ReservationPrepaymentSummary | null>(null);
+  readonly errorMessage                    = signal('');
+  readonly filtro                          = signal<ReservaFiltro>({
+    tipoFecha     : 'ingreso',
+    fechaInicio   : '',
+    fechaFinal    : '',
+    agencia       : '',
+    estado        : '',
+    busqueda      : ''
   });
 
-  readonly filterForm: FormGroup<ConsultaReservasFilterForm>;
-  readonly agenciaSearchControl = this.fb.control('');
-  readonly quickSearchControl = this.fb.control('');
-  readonly reservas = signal<ReservaConsulta[]>([]);
-  readonly pagedReservas = this.reservas.asReadonly();
-  readonly selectedTagDetails = signal<ReservaConsulta | null>(null);
-  agenciaSuggestions: WalkInAgenciaOption[] = [];
-  agenciaSearchOpen = false;
+  readonly filterForm               : FormGroup<ConsultaReservasFilterForm>;
+  readonly agenciaSearchControl     = this.fb.control('');
+  readonly quickSearchControl       = this.fb.control('');
+  readonly reservas                 = signal<ReservaConsulta[]>([]);
+  readonly pagedReservas            = this.reservas.asReadonly();
+  readonly totalesPagina = computed(() => {
+    const totales = new Map<string, number>();
+    for (const reserva of this.reservas()) {
+      const moneda = reserva.moneda.trim().toUpperCase() || 'USD';
+      if (!totales.has(moneda)) totales.set(moneda, 0);
+      if (this.normalizeEstadoCode(reserva.estado) !== 'ANU' && Number.isFinite(reserva.total)) {
+        totales.set(moneda, totales.get(moneda)! + reserva.total);
+      }
+    }
+    return Array.from(totales, ([moneda, total]) => ({ moneda, total }));
+  });
+  readonly selectedTagDetails       = signal<ReservaConsulta | null>(null);
+  agenciaSuggestions                : WalkInAgenciaOption[] = [];
+  agenciaSearchOpen                 = false;
 
   constructor(
-    private readonly fb: NonNullableFormBuilder,
-    private readonly router: Router,
-    private readonly reservaService: ReservaHabitacionService,
-    private readonly reservaTagsService: ReservaTagsService,
-    private readonly catalogService: WalkInService,
-    private readonly auth: AuthService,
-    private readonly operationalDateService: OperationalDateService,
-    private readonly operationalPolicy: OperationalPolicyService,
-    private readonly destroyRef: DestroyRef
+    private readonly fb                       : NonNullableFormBuilder,
+    private readonly router                   : Router,
+    private readonly reservaService           : ReservaHabitacionService,
+    private readonly reservaTagsService       : ReservaTagsService,
+    private readonly catalogService           : WalkInService,
+    private readonly auth                     : AuthService,
+    private readonly operationalDateService   : OperationalDateService,
+    private readonly operationalPolicy        : OperationalPolicyService,
+    private readonly destroyRef               : DestroyRef
   ) {
     const { inicio, salida } = this.defaultDateRange(this.operationalDateService.operationalDate());
     this.filterForm = this.fb.group({
-      fechaInicio: this.fb.control(inicio),
-      fechaFinal: this.fb.control(salida),
-      agencia: this.fb.control(''),
-      estado: this.fb.control('')
+      tipoFecha     : this.fb.control<ReservaTipoFecha>('ingreso'),
+      fechaInicio   : this.fb.control(inicio),
+      fechaFinal    : this.fb.control(salida),
+      agencia       : this.fb.control(''),
+      estado        : this.fb.control('')
     });
 
     this.filtro.set({
-      fechaInicio: inicio,
-      fechaFinal: salida,
-      agencia: '',
-      estado: '',
-      busqueda: ''
+      tipoFecha     : 'ingreso',
+      fechaInicio   : inicio,
+      fechaFinal    : salida,
+      agencia       : '',
+      estado        : '',
+      busqueda      : ''
     });
   }
 
@@ -486,12 +501,13 @@ export class ConsultaReservasComponent implements OnInit {
       return;
     }
 
-    this.filterForm.reset({ fechaInicio: inicio, fechaFinal: salida, agencia: '', estado: '' });
+    this.filterForm.reset({ tipoFecha: 'ingreso', fechaInicio: inicio, fechaFinal: salida, agencia: '', estado: '' });
     this.agenciaSearchControl.setValue('', { emitEvent: false });
     this.agenciaSuggestions = [];
     this.agenciaSearchOpen = false;
     this.quickSearchControl.setValue('', { emitEvent: false });
     this.filtro.set({
+      tipoFecha: 'ingreso',
       fechaInicio: inicio,
       fechaFinal: salida,
       agencia: '',
@@ -620,6 +636,7 @@ export class ConsultaReservasComponent implements OnInit {
     const request$ = busqueda
       ? this.reservaService.buscarReservas(busqueda, this.currentPage(), this.pageSize())
       : this.reservaService.consultarReservas({
+          tipoFecha: filtro.tipoFecha,
           fecIngreso: fechaInicio,
           fecSalida: fechaFinal,
           pagina: this.currentPage(),

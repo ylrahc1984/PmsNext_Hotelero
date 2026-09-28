@@ -111,6 +111,38 @@ describe('ConsultaReservasComponent', () => {
     expect(component.puedeAdministrarPrepagos(buildReserva('ANU'))).toBeFalse();
   });
 
+  it('aplica creación al buscar y conserva el criterio aplicado al paginar y actualizar', async () => {
+    component.filterForm.controls.tipoFecha.setValue('creacion');
+    expect(component.filtro().tipoFecha).toBe('ingreso');
+    await component.buscar();
+    expect(reservaService.consultarReservas).toHaveBeenCalledWith(jasmine.objectContaining({ tipoFecha: 'creacion', pagina: 1 }));
+    component.filterForm.controls.tipoFecha.setValue('ingreso');
+    component.totalPages.set(3);
+    component.goToPage(2);
+    expect(reservaService.consultarReservas.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({ tipoFecha: 'creacion', pagina: 2 }));
+    await component.actualizar();
+    expect(reservaService.consultarReservas.calls.mostRecent().args[0].tipoFecha).toBe('creacion');
+    window.dispatchEvent(new Event('focus'));
+    expect(reservaService.consultarReservas.calls.mostRecent().args[0].tipoFecha).toBe('creacion');
+    component.limpiar();
+    expect(component.filterForm.controls.tipoFecha.value).toBe('ingreso');
+    expect(reservaService.consultarReservas.calls.mostRecent().args[0].tipoFecha).toBe('ingreso');
+  });
+
+  it('muestra la creación solo cuando se aplica ese criterio', async () => {
+    component.filterForm.controls.tipoFecha.setValue('creacion');
+    await component.buscar();
+    component.reservas.set([{ ...buildReserva('CCR'), creacion: '28/09/2026' }]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.reserva-table').textContent).toContain('28/09/2026');
+    component.quickSearchControl.setValue('mario', { emitEvent: false });
+    await component.buscar();
+    fixture.detectChanges();
+    expect(reservaService.buscarReservas).toHaveBeenCalledWith('mario', 1, 10);
+    expect(fixture.nativeElement.textContent).toContain('no se aplican los filtros de fecha, agencia y estado');
+    expect(fixture.nativeElement.querySelector('thead').textContent).not.toContain('Creación');
+  });
+
   it('no abre el modal de prepagos cuando el estado está restringido', async () => {
     await component.abrirPrepagos(buildReserva('CHK'));
 
@@ -229,6 +261,24 @@ describe('ConsultaReservasComponent', () => {
     expect(csv).toContain('Etiquetas,Tiene alerta');
     expect(csv).toContain('VIP | Alergia,Sí');
     expect(csv).not.toContain('#DBEAFE');
+  });
+
+  it('suma por moneda excluyendo anuladas y recalcula al cambiar las reservas', () => {
+    component.reservas.set([
+      { ...buildReserva('CCR'), total: 150.25 },
+      { ...buildReserva('ABI'), total: 49.75 },
+      { ...buildReserva('ANU'), total: 900 },
+      { ...buildReserva('Anulada'), total: 500 },
+      { ...buildReserva('Cancelada'), total: 600 },
+      { ...buildReserva('CHK'), moneda: 'CRC', total: 25000 }
+    ]);
+    expect(component.totalesPagina()).toEqual([{ moneda: 'USD', total: 200 }, { moneda: 'CRC', total: 25000 }]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.reserva-total').textContent).toContain('Total de esta página · sin anuladas');
+    component.reservas.set([buildReserva('ANU')]);
+    expect(component.totalesPagina()).toEqual([{ moneda: 'USD', total: 0 }]);
+    component.reservas.set([]);
+    expect(component.totalesPagina()).toEqual([]);
   });
 });
 
