@@ -14,11 +14,12 @@ import {
   Validators
 } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { Subject, catchError, debounceTime, distinctUntilChanged, finalize, firstValueFrom, forkJoin, map, merge, of, startWith, switchMap } from 'rxjs';
+import { Subject, catchError, debounceTime, distinctUntilChanged, finalize, firstValueFrom, forkJoin, from, map, merge, of, startWith, switchMap } from 'rxjs';
 import Swal from 'sweetalert2';
 
 import { AuthService } from 'src/app/core/services/auth.service';
 import { OperationalDateService } from 'src/app/core/services/operational-date.service';
+import { ImpuestoGrupoService } from 'src/app/core/services/impuesto-grupo.service';
 import { ToastService } from 'src/app/core/services/toast.service';
 import { normalizePmsDateDDMMYYYY, parsePmsDate, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 import { TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
@@ -56,6 +57,7 @@ import {
   ReservaTarifaAlimento
 } from '../services/reserva-habitacion.service';
 import { ReservaContactoService } from '../services/reserva-contacto.service';
+import { combinedTaxRate, roomPriceWithTax, storedRoomAmounts, taxWithinGrossAmount } from './reserva-hospedaje-tax.util';
 import { ReservaTagsService } from '../services/reserva-tags.service';
 
 function trimmedRequiredValidator(control: AbstractControl<string>): ValidationErrors | null {
@@ -103,6 +105,8 @@ interface HabitacionForm {
   cantidadNinos       : FormControl<number>;
   precioNino          : FormControl<number>;
   total               : FormControl<number>;
+  impuesto            : FormControl<number>;
+  cCosto              : FormControl<string>;
 }
 
 interface InclusionForm {
@@ -123,6 +127,7 @@ interface ServicioForm {
   impuesto        : FormControl<number>;
   tipPax          : FormControl<string>;
   total           : FormControl<number>;
+  cCosto          : FormControl<string>;
 }
 
 interface CategoriaHabitacionApiDto {
@@ -206,6 +211,7 @@ export class ReservaHospedajeComponent implements OnInit {
   private readonly operationalDateService      = inject(OperationalDateService);
   private readonly tipoCambioService           = inject(TipoCambioService);
   private readonly detalleTarifaService        = inject(DetalleTarifaService);
+  private readonly impuestoGrupoService        = inject(ImpuestoGrupoService);
   private readonly reservaContactoService      = inject(ReservaContactoService);
   private readonly reservaTagsService          = inject(ReservaTagsService);
   private readonly router                      = inject(Router);
@@ -234,6 +240,9 @@ export class ReservaHospedajeComponent implements OnInit {
   readonly exchangeRateError                  = signal('');
   readonly roomRateLoading                    = signal(false);
   readonly roomRateError                      = signal('');
+  readonly roomRatesInvalid                   = signal(false);
+  readonly roomTaxLoading                     = signal(false);
+  readonly roomTaxError                       = signal('');
   readonly reservationLocked                  = signal(false);
   readonly cplInconsistent                    = signal(false);
   readonly operationalDate                    = this.operationalDateService.operationalDate;
@@ -241,10 +250,10 @@ export class ReservaHospedajeComponent implements OnInit {
   readonly tarifaSearchControl                = this.fb.control('');
   readonly agencyModalSearchControl           = this.fb.control('');
   readonly tarifaModalSearchControl           = this.fb.control('');
-  readonly tagSearchControl                    = this.fb.control('');
-  readonly showTagsModal                       = signal(false);
-  readonly showAllTags                         = signal(false);
-  readonly loadingTagCatalog                   = signal(false);
+  readonly tagSearchControl                   = this.fb.control('');
+  readonly showTagsModal                      = signal(false);
+  readonly showAllTags                        = signal(false);
+  readonly loadingTagCatalog                  = signal(false);
   readonly loadingAssignedTags                = signal(false);
   readonly savingTags                         = signal(false);
   readonly tagCatalogError                    = signal('');
@@ -310,46 +319,51 @@ export class ReservaHospedajeComponent implements OnInit {
   tarifaModalTarifas      : WalkInTarifaOption[]          = [];
   private allTarifas      : WalkInTarifaOption[]          = [];
 
-  isCatalogLoading                    = false;
-  isRoomTypesLoading                  = false;
-  agenciaSearchOpen                   = false;
-  tarifaSearchOpen                    = false;
-  showAgencyModal                     = false;
-  showTarifaModal                     = false;
-  isMealPlanLoading                   = false;
-  mealPlanError                       = '';
-  agencyModalLoading                  = false;
-  agencyModalError                    = '';
-  agencyModalPage                     = 1;
-  agencyModalPageSize                 = 10;
-  agencyModalTotalRecords             = 0;
-  agencyModalTotalPages               = 0;
-  tarifaModalLoading                  = false;
-  tarifaModalError                    = '';
-  tarifaModalPage                     = 1;
-  tarifaModalPageSize                 = 10;
-  tarifaModalTotalRecords             = 0;
-  tarifaModalTotalPages               = 0;
-  private mealPlanDetails             : ReservaTarifaAlimento[] = [];
-  private mealPlanRequestKey          = '';
-  private mealPlanRequestId           = 0;
-  private draftRestorePending         = true;
-  private editCodReserva              = '';
-  private originalInventorySnapshot   : ReservationInventorySnapshot | null = null;
-  private originalServerFingerprint   = '';
-  private originalTarifa              = '';
-  private originalMoneda              = '';
-  private exchangeRateRequestId       = 0;
-  private roomRateRequestId           = 0;
-  private contactLoadRequestId        = 0;
-  private resolvedRoomRateKey         = '';
-  private returnUrl                   = '/reservas/consulta-reservas';
-  tagCatalog                          : ReservaTagCatalogo[] = [];
-  persistedTags                      : ReservaTagAsignado[] = [];
-  newTags                            : ReservaTagSeleccionado[] = [];
-  modalTagSelection                  : ReservaTagSeleccionado[] = [];
-  removingTagIds                     = new Set<number>();
-  private readonly tagSearchRetry    = new Subject<string>();
+  isCatalogLoading                      = false;
+  isRoomTypesLoading                    = false;
+  agenciaSearchOpen                     = false;
+  tarifaSearchOpen                      = false;
+  showAgencyModal                       = false;
+  showTarifaModal                       = false;
+  isMealPlanLoading                     = false;
+  mealPlanError                         = '';
+  agencyModalLoading                    = false;
+  agencyModalError                      = '';
+  agencyModalPage                       = 1;
+  agencyModalPageSize                   = 10;
+  agencyModalTotalRecords               = 0;
+  agencyModalTotalPages                 = 0;
+  tarifaModalLoading                    = false;
+  tarifaModalError                      = '';
+  tarifaModalPage                       = 1;
+  tarifaModalPageSize                   = 10;
+  tarifaModalTotalRecords               = 0;
+  tarifaModalTotalPages                 = 0;
+  private mealPlanDetails               : ReservaTarifaAlimento[] = [];
+  private mealPlanRequestKey            = '';
+  private mealPlanRequestId             = 0;
+  private draftRestorePending           = true;
+  private editCodReserva                = '';
+  private originalInventorySnapshot     : ReservationInventorySnapshot | null = null;
+  private originalServerFingerprint     = '';
+  private originalTarifa                = '';
+  private originalMoneda                = '';
+  private exchangeRateRequestId         = 0;
+  private roomRateRequestId             = 0;
+  private draftRoomTaxIncluded          : number | null = null;
+  private roomTaxRate                   : number | null = null;
+  private roomTaxRequest                : Promise<number> | null = null;
+  private readonly taxRatesByCostCenter = new Map<string, Promise<number>>();
+  private readonly resolvedTaxRatesByCostCenter = new Map<string, number>();
+  private contactLoadRequestId          = 0;
+  private resolvedRoomRateKey           = '';
+  private returnUrl                     = '/reservas/consulta-reservas';
+  tagCatalog                            : ReservaTagCatalogo[] = [];
+  persistedTags                         : ReservaTagAsignado[] = [];
+  newTags                               : ReservaTagSeleccionado[] = [];
+  modalTagSelection                     : ReservaTagSeleccionado[] = [];
+  removingTagIds                        = new Set<number>();
+  private readonly tagSearchRetry       = new Subject<string>();
 
   ngOnInit(): void {
     this.returnUrl        = this.resolveReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'));
@@ -363,6 +377,7 @@ export class ReservaHospedajeComponent implements OnInit {
     }
 
     this.loadCatalogs();
+    void this.loadRoomTaxRate().catch(() => undefined);
     this.loadOperationalDate();
     this.bindCatalogSearch();
     this.bindTagSearch();
@@ -422,11 +437,20 @@ export class ReservaHospedajeComponent implements OnInit {
       return;
     }
 
+    let taxRate: number;
+    try {
+      taxRate = await this.loadRoomTaxRate();
+    } catch {
+      return;
+    }
+
     this.updateHabitacionDraftPax();
     this.updateHabitacionDraftTotal();
-    const index = this.editingRoomIndex();
-    const roomDraft = this.habitacionForm.getRawValue();
-    const requestedRooms = this.getRequestedCategoryRooms(roomDraft.categoria, roomDraft.cantidad, index);
+    const index           = this.editingRoomIndex();
+    const roomDraft       = this.habitacionForm.getRawValue();
+    const taxIncluded     = this.draftRoomTaxIncluded;
+    const rateRequestId   = this.roomRateRequestId;
+    const requestedRooms  = this.getRequestedCategoryRooms(roomDraft.categoria, roomDraft.cantidad, index);
 
     this.checkingRoomAvailability.set(true);
     try {
@@ -456,7 +480,29 @@ export class ReservaHospedajeComponent implements OnInit {
       this.checkingRoomAvailability.set(false);
     }
 
-    const nextGroup = this.createHabitacionGroup(roomDraft);
+    if (rateRequestId !== this.roomRateRequestId) {
+      return;
+    }
+
+    if (taxIncluded === null) {
+      this.roomRateError.set('No se pudo determinar si la tarifa incluye impuestos.');
+      return;
+    }
+    const amounts = storedRoomAmounts(
+      roomDraft.precio,
+      taxIncluded,
+      taxRate,
+      roomDraft.cantidad,
+      this.reservaForm.controls.totNoches.value,
+      roomDraft.cantidadNinos,
+      roomDraft.precioNino
+    );
+    const nextGroup = this.createHabitacionGroup({
+      ...roomDraft,
+      precio: amounts.price,
+      total: amounts.total,
+      impuesto: amounts.tax
+    });
 
     if (index === null) {
       this.habitaciones.push(nextGroup);
@@ -465,6 +511,7 @@ export class ReservaHospedajeComponent implements OnInit {
       this.editingRoomIndex.set(null);
     }
 
+    this.draftRoomTaxIncluded = null;
     this.habitacionForm.reset(this.defaultHabitacion());
     this.refreshMealPlanForCurrentSelection();
   }
@@ -558,14 +605,11 @@ export class ReservaHospedajeComponent implements OnInit {
   editarHabitacion(index: number): void {
     this.editingRoomIndex.set(index);
     const room = this.habitaciones.at(index).getRawValue();
-    this.habitacionForm.reset(room, { emitEvent: false });
-    this.resolvedRoomRateKey = this.buildRoomRateKey(
-      this.reservaForm.controls.codTarifa.value,
-      room.categoria,
-      room.tipo
-    );
+    this.draftRoomTaxIncluded = null;
+    this.habitacionForm.reset({ ...room, precio: 0, total: 0, impuesto: 0 }, { emitEvent: false });
+    this.resolvedRoomRateKey = '';
     this.roomRateError.set('');
-    this.loadRoomTypesForCategory(room.categoria, true);
+    this.loadRoomTypesForCategory(room.categoria);
   }
 
   eliminarHabitacion(index: number): void {
@@ -933,6 +977,8 @@ export class ReservaHospedajeComponent implements OnInit {
     this.roomRateError.set('');
     this.roomRateLoading.set(false);
     this.roomRateRequestId++;
+    this.roomRatesInvalid.set(false);
+    this.draftRoomTaxIncluded = null;
     this.resolvedRoomRateKey = '';
     this.cplInconsistent.set(false);
     this.inclusionForm.reset(this.defaultInclusion());
@@ -975,6 +1021,7 @@ export class ReservaHospedajeComponent implements OnInit {
     this.service
       .getReservaDetalle(codReserva)
       .pipe(
+        switchMap((detalle) => from(this.preloadRoomTaxRates(detalle)).pipe(map(() => detalle))),
         finalize(() => this.loadingDetalle.set(false)),
         takeUntilDestroyed(this.destroyRef)
       )
@@ -1027,10 +1074,21 @@ export class ReservaHospedajeComponent implements OnInit {
     this.mealPlanDetails = [];
     this.mealPlanRequestKey = '';
     this.mealPlanError = '';
-    this.recalculateStay();
+    this.recalculateTaxesFromStoredTotals();
     this.refreshMealPlanForCurrentSelection(true);
     this.syncTotal();
     this.reservaForm.updateValueAndValidity({ emitEvent: false });
+  }
+
+  private async preloadRoomTaxRates(detalle: ReservaHabitacionDetalle): Promise<void> {
+    const costCenters = new Set(
+      (detalle.habitaciones ?? []).map((room) => String(room.cCosto ?? '').trim().toUpperCase() || 'HOSPED')
+    );
+    for (const service of detalle.servicios ?? []) {
+      const code = String(service.cCosto ?? '').trim().toUpperCase();
+      if (code) costCenters.add(code);
+    }
+    await Promise.all(Array.from(costCenters, (code) => this.loadCostCenterTaxRate(code)));
   }
 
   retryLoadContact(): void {
@@ -1784,6 +1842,14 @@ export class ReservaHospedajeComponent implements OnInit {
       return;
     }
 
+    try {
+      await this.loadRoomTaxRate();
+      this.recalculateRoomTotals();
+    } catch {
+      this.toast.error(this.roomTaxError(), 5500, 'Impuestos de hospedaje');
+      return;
+    }
+
     if (!this.canConfirmReserva()) {
       return;
     }
@@ -1841,6 +1907,14 @@ export class ReservaHospedajeComponent implements OnInit {
       return;
     }
 
+    try {
+      await this.loadRoomTaxRate();
+      this.recalculateRoomTotals();
+    } catch {
+      this.toast.error(this.roomTaxError(), 5500, 'Impuestos de hospedaje');
+      return;
+    }
+
     if (!this.canConfirmReserva()) {
       return;
     }
@@ -1854,12 +1928,12 @@ export class ReservaHospedajeComponent implements OnInit {
     }
 
     this.syncTotal();
-    const contactRequest = this.buildContactRequest();
-    const reservationFormValue = this.reservaForm.getRawValue();
-    reservationFormValue.descripcion = contactRequest.nombre;
-    const payload = ReservaHabitacionMapper.toRequest(
+    const contactRequest              = this.buildContactRequest();
+    const reservationFormValue        = this.reservaForm.getRawValue();
+    reservationFormValue.descripcion  = contactRequest.nombre;
+    const payload                     = ReservaHabitacionMapper.toRequest(
       reservationFormValue,
-      this.totalReserva(),
+      this.resumenTotalVisual(),
       0,
       (categoria, tipo) => this.getTipoHabitacionPax(categoria, tipo)
     );
@@ -2054,6 +2128,11 @@ export class ReservaHospedajeComponent implements OnInit {
 
     if (this.habitaciones.length === 0) {
       this.toast.warning('Agregue al menos una habitacion a la reserva antes de confirmar.', 5500, 'Reserva incompleta');
+      return false;
+    }
+
+    if (this.roomRatesInvalid()) {
+      this.toast.warning(this.roomRateError() || 'No se pudieron validar las tarifas de hospedaje.', 5500, 'Tarifa de hospedaje');
       return false;
     }
 
@@ -2473,7 +2552,7 @@ export class ReservaHospedajeComponent implements OnInit {
           </div>
           <div style="border:1px solid #dee2e6;border-radius:8px;padding:12px">
             <span style="display:block;color:#6c757d;font-size:12px;font-weight:700">Total reserva</span>
-            <strong>${moneda} ${this.totalReserva().toFixed(2)}</strong>
+            <strong>${moneda} ${this.resumenTotalVisual().toFixed(2)}</strong>
           </div>
         </div>
       </div>
@@ -2674,7 +2753,7 @@ export class ReservaHospedajeComponent implements OnInit {
       this.habitacionForm.controls.tipo.value
     );
 
-    if (expectedKey && this.resolvedRoomRateKey === expectedKey) {
+    if (expectedKey && this.resolvedRoomRateKey === expectedKey && this.draftRoomTaxIncluded !== null) {
       return true;
     }
 
@@ -2690,13 +2769,15 @@ export class ReservaHospedajeComponent implements OnInit {
   }
 
   private async refreshHabitacionDraftRate(): Promise<boolean> {
-    const codTarifa = this.reservaForm.controls.codTarifa.value.trim();
-    const categoria = this.habitacionForm.controls.categoria.value.trim();
-    const tipo = this.habitacionForm.controls.tipo.value.trim();
-    const requestKey = this.buildRoomRateKey(codTarifa, categoria, tipo);
-    const requestId = ++this.roomRateRequestId;
+
+    const codTarifa    = this.reservaForm.controls.codTarifa.value.trim();
+    const categoria    = this.habitacionForm.controls.categoria.value.trim();
+    const tipo         = this.habitacionForm.controls.tipo.value.trim();
+    const requestKey   = this.buildRoomRateKey(codTarifa, categoria, tipo);
+    const requestId    = ++this.roomRateRequestId;
 
     this.resolvedRoomRateKey = '';
+    this.draftRoomTaxIncluded = null;
     this.roomRateError.set('');
     this.habitacionForm.controls.precio.setValue(0, { emitEvent: false });
     this.updateHabitacionDraftTotal();
@@ -2719,13 +2800,14 @@ export class ReservaHospedajeComponent implements OnInit {
         return false;
       }
 
+      this.draftRoomTaxIncluded = this.readRoomTaxIncluded(rate);
       this.habitacionForm.controls.precio.setValue(this.toFiniteNumber(rate.MR04_Total), { emitEvent: false });
       this.resolvedRoomRateKey = requestKey;
       this.updateHabitacionDraftTotal();
       return true;
-    } catch {
+    } catch (error) {
       if (requestId === this.roomRateRequestId) {
-        this.roomRateError.set('No se pudo consultar el precio de hospedaje.');
+        this.roomRateError.set(error instanceof Error ? error.message : 'No se pudo consultar el precio de hospedaje.');
       }
       return false;
     } finally {
@@ -2748,7 +2830,9 @@ export class ReservaHospedajeComponent implements OnInit {
     const requestId = ++this.roomRateRequestId;
 
     this.resolvedRoomRateKey = '';
+    this.draftRoomTaxIncluded = null;
     this.roomRateError.set('');
+    this.roomRatesInvalid.set(this.habitaciones.length > 0);
     this.habitacionForm.controls.precio.setValue(0, { emitEvent: false });
     for (const group of this.habitaciones.controls) {
       group.controls.precio.setValue(0, { emitEvent: false });
@@ -2762,6 +2846,7 @@ export class ReservaHospedajeComponent implements OnInit {
 
     this.roomRateLoading.set(true);
     try {
+      const taxRate = await this.loadRoomTaxRate();
       const responses = await firstValueFrom(
         forkJoin(
           categories.map((categoria) =>
@@ -2782,7 +2867,7 @@ export class ReservaHospedajeComponent implements OnInit {
       for (const group of this.habitaciones.controls) {
         const room = group.getRawValue();
         const rate = this.findRoomRate(ratesByCategory.get(room.categoria.trim().toUpperCase()) ?? [], room.categoria, room.tipo);
-        group.controls.precio.setValue(rate ? this.toFiniteNumber(rate.MR04_Total) : 0, { emitEvent: false });
+        group.controls.precio.setValue(rate ? this.priceWithRoomTax(rate, taxRate) : 0, { emitEvent: false });
         if (!rate) {
           missingRates.add(`${room.categoria} / ${room.tipo}`);
         }
@@ -2792,6 +2877,7 @@ export class ReservaHospedajeComponent implements OnInit {
         const rate = this.findRoomRate(ratesByCategory.get(draft.categoria.trim().toUpperCase()) ?? [], draft.categoria, draft.tipo);
         this.habitacionForm.controls.precio.setValue(rate ? this.toFiniteNumber(rate.MR04_Total) : 0, { emitEvent: false });
         if (rate) {
+          this.draftRoomTaxIncluded = this.readRoomTaxIncluded(rate);
           this.resolvedRoomRateKey = this.buildRoomRateKey(codTarifa, draft.categoria, draft.tipo);
         } else {
           missingRates.add(`${draft.categoria} / ${draft.tipo}`);
@@ -2802,6 +2888,12 @@ export class ReservaHospedajeComponent implements OnInit {
       this.updateHabitacionDraftTotal();
       if (missingRates.size > 0) {
         this.roomRateError.set(`No existe tarifa configurada para: ${Array.from(missingRates).join(', ')}.`);
+      } else {
+        this.roomRatesInvalid.set(false);
+      }
+    } catch (error) {
+      if (requestId === this.roomRateRequestId) {
+        this.roomRateError.set(error instanceof Error ? error.message : 'No se pudo consultar la tarifa de hospedaje.');
       }
     } finally {
       if (requestId === this.roomRateRequestId) {
@@ -2818,6 +2910,78 @@ export class ReservaHospedajeComponent implements OnInit {
         String(detail.MR04_CatHabita ?? '').trim().toUpperCase() === normalizedCategory &&
         String(detail.MR04_TipHabita ?? '').trim().toUpperCase() === normalizedType
     );
+  }
+
+  private priceWithRoomTax(rate: DetalleTarifaResponse, taxRate: number): number {
+    return roomPriceWithTax(
+      this.toFiniteNumber(rate.MR04_Total),
+      this.readRoomTaxIncluded(rate),
+      taxRate
+    );
+  }
+
+  private readRoomTaxIncluded(rate: DetalleTarifaResponse): number {
+    const value: unknown = rate.MR04_ImpInc;
+    const included = Number(value);
+    if (value === null || value === undefined || value === '' || (included !== 0 && included !== 1)) {
+      throw new Error('La tarifa de hospedaje no indica si incluye impuestos.');
+    }
+    return included;
+  }
+
+  private loadRoomTaxRate(): Promise<number> {
+    if (this.roomTaxRate !== null) {
+      return Promise.resolve(this.roomTaxRate);
+    }
+    if (this.roomTaxRequest) {
+      return this.roomTaxRequest;
+    }
+
+    this.roomTaxLoading.set(true);
+    this.roomTaxError.set('');
+    this.roomTaxRequest = this.loadCostCenterTaxRate('HOSPED')
+      .then((rate) => {
+        this.roomTaxRate = rate;
+        return this.roomTaxRate;
+      })
+      .catch((error) => {
+        this.roomTaxRequest = null;
+        this.roomTaxError.set(error instanceof Error ? error.message : 'No se pudieron cargar los impuestos de hospedaje.');
+        throw error;
+      })
+      .finally(() => this.roomTaxLoading.set(false));
+    return this.roomTaxRequest;
+  }
+
+  private loadCostCenterTaxRate(centroCosto: string): Promise<number> {
+    const code = centroCosto.trim().toUpperCase();
+    if (!code) {
+      return Promise.reject(new Error('El centro de costo es obligatorio para consultar impuestos.'));
+    }
+    const cached = this.taxRatesByCostCenter.get(code);
+    if (cached) {
+      return cached;
+    }
+
+    const request = firstValueFrom(this.impuestoGrupoService.getByCentroCosto(code))
+      .then((taxes) => {
+        const rate = combinedTaxRate(taxes.map((tax) => Number(tax.porcentaje)));
+        this.resolvedTaxRatesByCostCenter.set(code, rate);
+        return rate;
+      })
+      .catch((error) => {
+        this.taxRatesByCostCenter.delete(code);
+        throw error;
+      });
+    this.taxRatesByCostCenter.set(code, request);
+    return request;
+  }
+
+  retryRoomTaxRate(): void {
+    void this.loadRoomTaxRate().then(() => {
+      this.recalculateRoomTotals();
+      this.updateHabitacionDraftTotal();
+    }).catch(() => undefined);
   }
 
   private buildRoomRateKey(codTarifa: string, categoria: string, tipo: string): string {
@@ -2844,6 +3008,7 @@ export class ReservaHospedajeComponent implements OnInit {
 
     for (const detail of this.mealPlanDetails) {
       const precio = this.toFiniteNumber(detail.precio);
+      const centroCosto = String(detail.area ?? '').trim();
       this.inclusiones.push(
         this.createInclusionGroup({
           codServ: String(detail.codServ ?? '').trim(),
@@ -2852,7 +3017,7 @@ export class ReservaHospedajeComponent implements OnInit {
           precio,
           cantidad: cantidadPax,
           totServ: cantidadPax * precio * noches,
-          cCosto: String(detail.area ?? '').trim()
+          cCosto: centroCosto
         })
       );
     }
@@ -2909,27 +3074,31 @@ export class ReservaHospedajeComponent implements OnInit {
   }
 
   serviciosSubtotal(): number {
-    return this.servicios.controls.reduce((sum, group) => sum + group.controls.cantidad.value * group.controls.precio.value, 0);
+    return this.servicios.controls.reduce((sum, group) => sum + group.controls.total.value - group.controls.impuesto.value, 0);
   }
 
   impuestos(): number {
     return this.servicios.controls.reduce((sum, group) => sum + group.controls.impuesto.value, 0);
   }
 
+  impuestosHospedaje(): number {
+    return this.habitaciones.controls.reduce((sum, group) => sum + group.controls.impuesto.value, 0);
+  }
+
   totalReserva(): number {
-    return this.habitacionesTotal() + this.inclusionesTotal() + this.serviciosSubtotal() + this.impuestos();
+    return this.habitacionesTotal() + this.inclusionesTotal() + this.servicios.controls.reduce((sum, group) => sum + group.controls.total.value, 0);
   }
 
   resumenSubtotalVisual(): number {
-    return this.totalReserva();
+    return Math.round((this.totalReserva() - this.resumenImpuestosVisual() + Number.EPSILON) * 100) / 100;
   }
 
-  resumenIvaVisual(): number {
-    return this.resumenSubtotalVisual() * 0.13;
+  resumenImpuestosVisual(): number {
+    return this.impuestosHospedaje() + this.impuestos();
   }
 
   resumenTotalVisual(): number {
-    return this.resumenSubtotalVisual() + this.resumenIvaVisual();
+    return this.totalReserva();
   }
 
   private loadCatalogs(): void {
@@ -3205,7 +3374,9 @@ export class ReservaHospedajeComponent implements OnInit {
       this.roomRateRequestId++;
       this.roomRateLoading.set(false);
       this.roomRateError.set('');
+      this.roomRatesInvalid.set(this.habitaciones.length > 0);
       this.resolvedRoomRateKey = '';
+      this.draftRoomTaxIncluded = null;
       this.habitacionForm.controls.precio.setValue(0, { emitEvent: false });
       for (const group of this.habitaciones.controls) {
         group.controls.precio.setValue(0, { emitEvent: false });
@@ -3239,7 +3410,9 @@ export class ReservaHospedajeComponent implements OnInit {
       precio: this.fb.control(value.precio ?? 0, { validators: [Validators.min(0)] }),
       cantidadNinos: this.fb.control(value.cantidadNinos ?? 0, { validators: [Validators.min(0)] }),
       precioNino: this.fb.control(value.precioNino ?? 0, { validators: [Validators.min(0)] }),
-      total: this.fb.control(value.total ?? 0)
+      total: this.fb.control(value.total ?? 0),
+      impuesto: this.fb.control(value.impuesto ?? 0),
+      cCosto: this.fb.control(value.cCosto ?? 'HOSPED')
     });
   }
 
@@ -3263,14 +3436,16 @@ export class ReservaHospedajeComponent implements OnInit {
       precio: this.fb.control(value.precio ?? 0, { validators: [Validators.min(0)] }),
       impuesto: this.fb.control(value.impuesto ?? 0, { validators: [Validators.min(0)] }),
       tipPax: this.fb.control(value.tipPax ?? 'Reserva'),
-      total: this.fb.control(value.total ?? 0)
+      total: this.fb.control(value.total ?? 0),
+      cCosto: this.fb.control(value.cCosto ?? '')
     });
   }
 
   private updateHabitacionDraftTotal(): void {
     const raw = this.habitacionForm.getRawValue();
-    const total = raw.cantidad * raw.precio * this.reservaForm.controls.totNoches.value + raw.cantidadNinos * raw.precioNino * this.reservaForm.controls.totNoches.value;
+    const total = this.calculateRoomTotal(raw);
     this.habitacionForm.controls.total.setValue(total, { emitEvent: false });
+    this.habitacionForm.controls.impuesto.setValue(0, { emitEvent: false });
   }
 
   private updateHabitacionDraftPax(): void {
@@ -3410,14 +3585,47 @@ export class ReservaHospedajeComponent implements OnInit {
   private recalculateRoomTotals(): void {
     for (const group of this.habitaciones.controls) {
       const raw = group.getRawValue();
-      const total = raw.cantidad * raw.precio * this.reservaForm.controls.totNoches.value + raw.cantidadNinos * raw.precioNino * this.reservaForm.controls.totNoches.value;
+      const total = this.calculateRoomTotal(raw);
       group.controls.total.setValue(total, { emitEvent: false });
+      group.controls.impuesto.setValue(this.calculateRoomTax(total, raw.total, raw.impuesto, raw.cCosto), { emitEvent: false });
     }
     this.syncTotal();
   }
 
+  private recalculateTaxesFromStoredTotals(): void {
+    for (const group of this.habitaciones.controls) {
+      const room = group.getRawValue();
+      group.controls.impuesto.setValue(
+        this.calculateRoomTax(room.total, room.total, room.impuesto, room.cCosto),
+        { emitEvent: false }
+      );
+    }
+    for (const group of this.servicios.controls) {
+      const service = group.getRawValue();
+      if (!service.cCosto.trim()) continue;
+      group.controls.impuesto.setValue(
+        this.calculateRoomTax(service.total, service.total, service.impuesto, service.cCosto),
+        { emitEvent: false }
+      );
+    }
+    this.syncTotal();
+  }
+
+  private calculateRoomTotal(room: ReservaHabitacionItem): number {
+    const nights = this.reservaForm.controls.totNoches.value;
+    return Math.round(((room.cantidad * room.precio + room.cantidadNinos * room.precioNino) * nights + Number.EPSILON) * 100) / 100;
+  }
+
+  private calculateRoomTax(total: number, previousTotal: number, previousTax: number, centroCosto: string): number {
+    const rate = this.resolvedTaxRatesByCostCenter.get(centroCosto.trim().toUpperCase() || 'HOSPED');
+    if (rate !== undefined) {
+      return taxWithinGrossAmount(total, rate);
+    }
+    return previousTotal > 0 ? Math.round((previousTax * total / previousTotal + Number.EPSILON) * 100) / 100 : 0;
+  }
+
   private syncTotal(): void {
-    this.reservaForm.controls.totalRsv.setValue(this.totalReserva(), { emitEvent: false });
+    this.reservaForm.controls.totalRsv.setValue(this.resumenTotalVisual(), { emitEvent: false });
   }
 
   private toFiniteNumber(value: unknown): number {
@@ -3434,7 +3642,9 @@ export class ReservaHospedajeComponent implements OnInit {
       precio: 0,
       cantidadNinos: 0,
       precioNino: 0,
-      total: 0
+      total: 0,
+      impuesto: 0,
+      cCosto: 'HOSPED'
     };
   }
 
@@ -3443,7 +3653,7 @@ export class ReservaHospedajeComponent implements OnInit {
   }
 
   private defaultServicio(): ReservaServicioItem {
-    return { codSrv: '', descripcion: '', cantidad: 1, precio: 0, impuesto: 0, tipPax: 'Reserva', total: 0 };
+    return { codSrv: '', descripcion: '', cantidad: 1, precio: 0, impuesto: 0, tipPax: 'Reserva', total: 0, cCosto: '' };
   }
 
   private defaultReservationDates(): Pick<

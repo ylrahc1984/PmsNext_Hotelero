@@ -53,6 +53,8 @@ export class ReservaHabitacionMapper {
         cantidadNinos,
         precioNino,
         total: Number(item.total ?? 0) || 0,
+        impuesto: Number(item.impuesto ?? 0) || 0,
+        cCosto: String(item.cCosto ?? '').trim() || 'HOSPED',
         cpl: this.normalizeCpl(item.cpl)
       };
     });
@@ -75,7 +77,8 @@ export class ReservaHabitacionMapper {
       precio: Number(item.precio ?? 0) || 0,
       impuesto: Number(item.impuesto ?? 0) || 0,
       tipPax: String(item.tipPax ?? '').trim(),
-      total: Number(item.total ?? item.totServ ?? 0) || 0
+      total: Number(item.total ?? item.totServ ?? 0) || 0,
+      cCosto: String(item.cCosto ?? '').trim()
     }));
 
     return {
@@ -146,11 +149,11 @@ export class ReservaHabitacionMapper {
         moneda,
         total: Number(item.total) || 0,
         cpl,
-        impuesto: 0,
+        impuesto: 1,
         numPax: resolveNumPax(item.categoria, item.tipo) || Number(item.pax) || 0,
         numChild: Number(item.cantidadNinos) || 0,
         totChild: (Number(item.cantidadNinos) || 0) * (Number(item.precioNino) || 0) * noches,
-        cCosto: 'HOSPED',
+        cCosto: (item.cCosto ?? '').trim() || 'HOSPED',
         orden: index + 1
       })),
       inclusiones: includeMealPlan
@@ -163,7 +166,7 @@ export class ReservaHabitacionMapper {
             totServ: Number(item.totServ) || 0,
             exonera: '0',
             cpl,
-            impInc: 0,
+            impInc: 1,
             cCosto: (item.cCosto ?? '').trim(),
             orden: index + 1
           }))
@@ -174,10 +177,10 @@ export class ReservaHabitacionMapper {
         moneda,
         cantidad: Number(item.cantidad) || 0,
         precio: Number(item.precio) || 0,
-        total: (Number(item.cantidad) || 0) * (Number(item.precio) || 0),
-        impuesto: Number(item.impuesto) || 0,
+        total: Number(item.total) || 0,
+        impuesto: 1,
         tipPax: item.tipPax.trim(),
-        cCosto: ''
+        cCosto: (item.cCosto ?? '').trim()
       }))
     };
   }

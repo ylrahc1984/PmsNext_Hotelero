@@ -356,7 +356,6 @@
           <div class="room-editor-section">
             <div class="room-editor-section__header">
               <h3>Selección de habitación</h3>
-              <p>Defina la categoría, el tipo y la cantidad a reservar.</p>
             </div>
             <div class="room-editor-fields room-editor-fields--three">
               <label class="field">
@@ -393,12 +392,10 @@
           <div class="room-editor-section room-editor-section--accent">
             <div class="room-editor-section__header">
               <h3>Tarifa y ocupación</h3>
-              <p>Capture el precio base y el costo adicional por niños, si aplica.</p>
             </div>
             <div class="room-editor-fields room-editor-fields--three">
               <label class="field">
                 <span class="room-price-label">
-                  Precio por habitación <b>*</b>
                   <em>Editable</em>
                 </span>
                 <input
@@ -432,10 +429,10 @@
               <strong>{{ reservaForm.controls.moneda.value || '---' }} {{ habitacionForm.controls.total.value | number: '1.2-2' }}</strong>
             </div>
             <div class="room-editor-actions__buttons">
-              <button type="button" class="btn btn-light" (click)="habitacionForm.reset({ categoria: roomCategories[0]?.codigo || '', tipo: roomTypes[0]?.codigo || '', cantidad: 1, pax: roomTypes[0]?.pax || 0, precio: 0, cantidadNinos: 0, precioNino: 0, total: 0 })">
+              <button type="button" class="btn btn-light" (click)="habitacionForm.reset({ categoria: roomCategories[0]?.codigo || '', tipo: roomTypes[0]?.codigo || '', cantidad: 1, pax: roomTypes[0]?.pax || 0, precio: 0, cantidadNinos: 0, precioNino: 0, total: 0, impuesto: 0, cCosto: 'HOSPED' })">
                 Cancelar
               </button>
-              <button type="button" class="btn btn-primary" (click)="agregarHabitacion()" [disabled]="checkingRoomAvailability() || roomRateLoading()">
+              <button type="button" class="btn btn-primary" (click)="agregarHabitacion()" [disabled]="checkingRoomAvailability() || roomRateLoading() || roomTaxLoading()">
                 <span class="spinner-border spinner-border-sm" *ngIf="checkingRoomAvailability() || roomRateLoading()"></span>
                 <i class="bi bi-plus-lg" *ngIf="!checkingRoomAvailability() && !roomRateLoading()"></i>
                 {{ roomRateLoading() ? 'Consultando tarifa...' : (checkingRoomAvailability() ? 'Verificando disponibilidad...' : (editingRoomIndex() === null ? 'Agregar a la reserva' : 'Actualizar habitación')) }}
@@ -455,7 +452,7 @@
                   <th>Categoría</th>
                   <th>Tipo habitación</th>
                   <th>Cant. Hab.</th>
-                  <th>Precio (por hab.)</th>
+                  <th>Precio (por hab., + iva)</th>
                   <th>Niños</th>
                   <th>Precio (por niño)</th>
                   <th>Total</th>
@@ -653,7 +650,11 @@
           </div>
           <hr>
           <div class="summary-line"><span>Subtotal</span><strong>{{ reservaForm.controls.moneda.value }} {{ resumenSubtotalVisual() | number: '1.2-2' }}</strong></div>
-          <div class="summary-line"><span>Impuestos (IVA 13%)</span><strong>{{ reservaForm.controls.moneda.value }} {{ resumenIvaVisual() | number: '1.2-2' }}</strong></div>
+          <div class="summary-line"><span>Impuestos incluidos</span><strong>{{ reservaForm.controls.moneda.value }} {{ resumenImpuestosVisual() | number: '1.2-2' }}</strong></div>
+          <div *ngIf="roomTaxError()" role="alert" class="text-danger">
+            {{ roomTaxError() }}
+            <button type="button" class="btn btn-link btn-sm" (click)="retryRoomTaxRate()" [disabled]="roomTaxLoading()">Reintentar</button>
+          </div>
           <div class="grand-total">
             <span>Total</span>
             <strong>{{ reservaForm.controls.moneda.value }} {{ resumenTotalVisual() | number: '1.2-2' }}</strong>

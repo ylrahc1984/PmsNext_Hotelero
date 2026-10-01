@@ -49,36 +49,36 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
   private assignedTagsReservationCode   = '';
   private returnRoute                   = '/reservas/consulta-reservas';
 
-  readonly codReserva                     = signal('');
-  readonly reserva                        = signal<ReservaHospedajeDetalle | null>(null);
-  readonly loading                        = signal(false);
-  readonly errorMessage                   = signal('');
-  readonly assignedReservationTags        = signal<ReservaTagAsignado[]>([]);
-  readonly isAssignedTagsLoading          = signal(false);
-  readonly assignedTagsError              = signal('');
-  readonly showReservationTagsModal       = signal(false);
-  readonly reservationTagsDetailsOnly     = signal(false);
-  readonly isSavingReservationTags        = signal(false);
-  readonly reservationTagsSaveError       = signal('');
-  readonly removingReservationTagIds      = signal<ReadonlySet<number>>(new Set<number>());
+  readonly codReserva                   = signal('');
+  readonly reserva                      = signal<ReservaHospedajeDetalle | null>(null);
+  readonly loading                      = signal(false);
+  readonly errorMessage                 = signal('');
+  readonly assignedReservationTags      = signal<ReservaTagAsignado[]>([]);
+  readonly isAssignedTagsLoading        = signal(false);
+  readonly assignedTagsError            = signal('');
+  readonly showReservationTagsModal     = signal(false);
+  readonly reservationTagsDetailsOnly   = signal(false);
+  readonly isSavingReservationTags      = signal(false);
+  readonly reservationTagsSaveError     = signal('');
+  readonly removingReservationTagIds    = signal<ReadonlySet<number>>(new Set<number>());
 
-  readonly habitaciones = computed(() => this.reserva()?.habitaciones ?? []);
-  readonly inclusiones = computed(() => this.reserva()?.inclusiones ?? []);
-  readonly servicios = computed(() => this.reserva()?.servicios ?? []);
-  readonly desgloseHabitaciones = computed(() => this.reserva()?.desgloseHabitaciones ?? []);
-  readonly moneda = computed(() => this.reserva()?.moneda?.trim() || 'USD');
+  readonly habitaciones                 = computed(() => this.reserva()?.habitaciones ?? []);
+  readonly inclusiones                  = computed(() => this.reserva()?.inclusiones ?? []);
+  readonly servicios                    = computed(() => this.reserva()?.servicios ?? []);
+  readonly desgloseHabitaciones         = computed(() => this.reserva()?.desgloseHabitaciones ?? []);
+  readonly moneda                       = computed(() => this.reserva()?.moneda?.trim() || 'USD');
 
-  readonly cantidadHabitaciones = computed(() => this.habitaciones().reduce((total, item) => total + this.toNumber(item.cantHab), 0));
-  readonly totalHabitaciones = computed(() => this.habitaciones().reduce((total, item) => total + this.toNumber(item.total), 0));
-  readonly totalInclusiones = computed(() => this.inclusiones().reduce((total, item) => total + this.toNumber(item.totServ), 0));
-  readonly totalServicios = computed(() => this.servicios().reduce((total, item) => total + this.serviceTotal(item), 0));
-  readonly totalImpuestos = computed(() => this.servicios().reduce((total, item) => total + this.toNumber(item.impuesto), 0));
-  readonly totalPax = computed(() =>
+  readonly cantidadHabitaciones         = computed(() => this.habitaciones().reduce((total, item) => total + this.toNumber(item.cantHab), 0));
+  readonly totalHabitaciones            = computed(() => this.habitaciones().reduce((total, item) => total + this.toNumber(item.total), 0));
+  readonly totalInclusiones             = computed(() => this.inclusiones().reduce((total, item) => total + this.toNumber(item.totServ), 0));
+  readonly totalServicios               = computed(() => this.servicios().reduce((total, item) => total + this.serviceTotal(item), 0));
+  readonly totalImpuestos               = computed(() => this.servicios().reduce((total, item) => total + this.toNumber(item.impuesto), 0));
+  readonly totalPax                     = computed(() =>
     this.habitaciones().reduce((total, item) => total + this.toNumber(item.numPax) * this.toNumber(item.cantHab), 0)
   );
-  readonly totalNinos = computed(() => this.habitaciones().reduce((total, item) => total + this.toNumber(item.numChild), 0));
-  readonly accionesBloqueadas = computed(() => this.esEstadoBloqueado(this.reserva()?.estado));
-  readonly puedeGestionarTags = computed(() =>
+  readonly totalNinos                   = computed(() => this.habitaciones().reduce((total, item) => total + this.toNumber(item.numChild), 0));
+  readonly accionesBloqueadas           = computed(() => this.esEstadoBloqueado(this.reserva()?.estado));
+  readonly puedeGestionarTags           = computed(() =>
     Boolean(this.codReserva() && this.reserva())
     && !this.accionesBloqueadas()
     && this.operationalPolicy.can(OperationalAction.UpdateOperation)
@@ -92,6 +92,7 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
   });
 
   ngOnInit(): void {
+
     this.route.queryParamMap.pipe(
       map((params) => params.get('returnTo')),
       distinctUntilChanged(),
@@ -107,6 +108,7 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
       distinctUntilChanged(),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe((codReserva) => this.activateReservation(codReserva));
+
   }
 
   reload(): void {
@@ -269,15 +271,15 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
   estadoLabel(estado: string | undefined): string {
     const normalized = (estado ?? '').trim().toUpperCase();
     const labels: Record<string, string> = {
-      ABI: 'Abierta',
-      CON: 'Confirmada',
-      CCR: 'Confirmada',
-      CHK: 'Check In',
-      IN: 'Check In',
-      OUT: 'Check Out',
-      ANU: 'Cancelada',
-      WLI: 'Lista interna',
-      WLT: 'Lista de espera'
+      ABI   : 'Abierta',
+      CON   : 'Confirmada',
+      CCR   : 'Confirmada',
+      CHK   : 'Check In',
+      IN    : 'Check In',
+      OUT   : 'Check Out',
+      ANU   : 'Cancelada',
+      WLI   : 'Lista interna',
+      WLT   : 'Lista de espera'
     };
 
     return labels[normalized] ?? (normalized || 'Sin estado');
@@ -286,15 +288,15 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
   estadoClass(estado: string | undefined): string {
     const normalized = (estado ?? '').trim().toUpperCase();
     const classes: Record<string, string> = {
-      ABI: 'status-badge status-badge--primary',
-      CON: 'status-badge status-badge--success',
-      CCR: 'status-badge status-badge--success',
-      CHK: 'status-badge status-badge--info',
-      IN: 'status-badge status-badge--info',
-      OUT: 'status-badge status-badge--muted',
-      ANU: 'status-badge status-badge--danger',
-      WLI: 'status-badge status-badge--warning',
-      WLT: 'status-badge status-badge--warning'
+      ABI   : 'status-badge status-badge--primary',
+      CON   : 'status-badge status-badge--success',
+      CCR   : 'status-badge status-badge--success',
+      CHK   : 'status-badge status-badge--info',
+      IN    : 'status-badge status-badge--info',
+      OUT   : 'status-badge status-badge--muted',
+      ANU   : 'status-badge status-badge--danger',
+      WLI   : 'status-badge status-badge--warning',
+      WLT   : 'status-badge status-badge--warning'
     };
 
     return classes[normalized] ?? 'status-badge status-badge--muted';

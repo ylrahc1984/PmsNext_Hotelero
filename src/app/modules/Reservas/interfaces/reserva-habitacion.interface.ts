@@ -9,6 +9,8 @@ export interface ReservaHabitacionItem {
   cantidadNinos: number;
   precioNino: number;
   total: number;
+  impuesto?: number;
+  cCosto?: string;
   cpl?: number;
 }
 
@@ -31,6 +33,7 @@ export interface ReservaServicioItem {
   impuesto: number;
   tipPax: string;
   total: number;
+  cCosto?: string;
 }
 
 export interface ReservaHabitacionRequestItem {

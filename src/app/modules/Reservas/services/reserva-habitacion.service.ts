@@ -60,12 +60,13 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
   createReserva(request: ReservaHabitacionRequest): Observable<ReservaHabitacionResponse> {
     const normalizedRequest        = this.normalizeReservationRequest(request);
     const requestSnapshot          = JSON.parse(JSON.stringify(normalizedRequest)) as ReservaHabitacionRequest;
+    
     console.groupCollapsed('[Reservas] POST confirmar reserva');
     console.log('method', 'POST');
     console.log('url', this.apiUrl);
     console.log('body', requestSnapshot);
     console.groupEnd();
-
+    
     return this.http
       .post<ReservaHabitacionResponse>(this.apiUrl, normalizedRequest)
       .pipe(map((response) => this.normalizeReservationResponse(response)));
@@ -158,6 +159,7 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
   }
 
   consultarReservas(params: ReservaConsultaParams): Observable<ReservaConsultaPage> {
+    
     const porCreacion = params.tipoFecha === 'creacion';
     const url = porCreacion ? `${this.apiUrl}/por-fecha-creacion` : this.apiUrl;
     let query = new HttpParams()
