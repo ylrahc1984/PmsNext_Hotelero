@@ -7,6 +7,8 @@ import type {
 } from 'pdfmake/interfaces';
 
 import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
+import { HotelLogoService } from 'src/app/core/services/hotel-logo.service';
+import { PoliticaHojaRegistro, RegistrationSheetLanguage } from '../../../models/politica-hoja-registro.model';
 
 type PdfMakeBrowser = {
   addVirtualFileSystem(vfs: Record<string, string>): void;
@@ -15,25 +17,59 @@ type PdfMakeBrowser = {
 
 export type GuestRegistrationSheetOpenResult = 'opened' | 'downloaded';
 
+export interface RegistrationSheetGuest {
+  fullName?: string;
+  document?: string;
+  signature?: string;
+}
+
+export interface GuestRegistrationSheetData {
+  operationalDate: string;
+  reservationHolder?: string;
+  reservationNumber?: string;
+  room?: string;
+  plan?: string;
+  arrival?: string;
+  departure?: string;
+  agency?: string;
+  address?: string;
+  nationality?: string;
+  telephone?: string;
+  email?: string;
+  adults?: string | number;
+  children?: string | number;
+  creditCard?: string;
+  expirationDate?: string;
+  licensePlate?: string;
+  allergies?: string;
+  comments?: string;
+  guests?: RegistrationSheetGuest[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class GuestRegistrationSheetPdfService {
   private readonly empresaContext = inject(EmpresaContextService);
+  private readonly hotelLogoService = inject(HotelLogoService);
   private pdfMakePromise?: Promise<PdfMakeBrowser>;
-  private lamiaLogoPromise?: Promise<string>;
+  private hotelLogoPromise?: Promise<string>;
 
-  async open(operationalDate: string): Promise<GuestRegistrationSheetOpenResult> {
+  async open(
+    language: RegistrationSheetLanguage,
+    data: GuestRegistrationSheetData,
+    policies: PoliticaHojaRegistro[]
+  ): Promise<GuestRegistrationSheetOpenResult> {
     const previewWindow = this.reservePreviewWindow();
 
     try {
-      const [pdfMake, lamiaLogo] = await Promise.all([
+      const [pdfMake, hotelLogo] = await Promise.all([
         this.getPdfMake(),
-        this.getLamiaLogo()
+        this.getHotelLogo()
       ]);
       const blob = await pdfMake
-        .createPdf(this.buildDocumentDefinition(operationalDate, lamiaLogo))
+        .createPdf(this.buildDocumentDefinition(language, data, policies, hotelLogo))
         .getBlob();
       const validatedBlob = await this.validatePdfBlob(blob);
-      const filename = this.filename(operationalDate);
+      const filename = this.filename(data.operationalDate);
 
       if (previewWindow && !previewWindow.closed) {
         this.renderPreview(previewWindow, validatedBlob, filename);
@@ -71,32 +107,183 @@ export class GuestRegistrationSheetPdfService {
     return this.pdfMakePromise;
   }
 
-  private async getLamiaLogo(): Promise<string> {
-    if (!this.lamiaLogoPromise) {
-      const logoUrl = new URL('assets/images/logo_lamia.jpeg', document.baseURI).toString();
-      this.lamiaLogoPromise = fetch(logoUrl)
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`No se pudo cargar el logo de Lamia (${response.status}).`);
-          }
-          return response.blob();
-        })
-        .then((blob) => this.blobToDataUrl(blob));
+  private getHotelLogo(): Promise<string> {
+    if (!this.hotelLogoPromise) {
+      this.hotelLogoPromise = this.hotelLogoService.getLogoDataUrl(
+        this.empresaContext.getSnapshot(),
+        this.hotelLogoService.defaultPdfLogo
+      );
     }
 
-    return this.lamiaLogoPromise;
+    return this.hotelLogoPromise;
   }
 
-  private blobToDataUrl(blob: Blob): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(reader.error ?? new Error('No se pudo leer el logo de Lamia.'));
-      reader.readAsDataURL(blob);
-    });
+  private buildDocumentDefinition(
+    language: RegistrationSheetLanguage,
+    data: GuestRegistrationSheetData,
+    policies: PoliticaHojaRegistro[],
+    hotelLogo: string
+  ): TDocumentDefinitions {
+    const company = this.empresaContext.empresa();
+    const companyName = (company?.MA04_Nombre || company?.MA04_RazonSocial || 'HOTEL').trim();
+    const legalName = (company?.MA04_RazonSocial || '').trim();
+    const contact = [
+      company?.MA04_Direccion,
+      [company?.MA04_Ciudad, company?.MA04_Pais].filter(Boolean).join(', '),
+      company?.MA04_Telefono1 ? `Tel. ${company.MA04_Telefono1}` : '',
+      company?.MA04_Email
+    ].filter(Boolean).join('  |  ');
+    const labels = this.labels(language);
+    const guests = data.guests ?? [];
+    const totalRows = Math.max(4, guests.length);
+    const policyRows = policies.map((policy, index) => ({
+      text: `${index + 1}. ${policy.texto}`,
+      noWrap: false,
+      style: 'policyBody',
+      margin: [0, index ? 4 : 0, 0, 0]
+    } as Content));
+
+    return {
+      pageSize: 'LETTER',
+      pageOrientation: 'portrait',
+      pageMargins: [36, 22, 36, 30],
+      info: { title: labels.title, author: companyName, subject: labels.title },
+      defaultStyle: { font: 'Roboto', fontSize: 8.2, color: '#26364A', lineHeight: 1.08 },
+      footer: (currentPage: number, pageCount: number): Content => ({
+        margin: [36, 8, 36, 0],
+        columns: [
+          { text: labels.footer, color: '#718096', fontSize: 7 },
+          { text: `Page ${currentPage} of ${pageCount}`, alignment: 'right', color: '#718096', fontSize: 7 }
+        ]
+      }),
+      content: [
+        {
+          columns: [
+            { width: 82, image: hotelLogo, fit: [76, 58], alignment: 'left', margin: [0, -2, 0, 0] },
+            {
+              width: '*',
+              stack: [
+                { text: companyName, style: 'companyName' },
+                ...(legalName && legalName.toUpperCase() !== companyName.toUpperCase()
+                  ? [{ text: legalName, style: 'legalName' } as Content] : []),
+                ...(contact ? [{ text: contact, style: 'companyMeta' } as Content] : [])
+              ]
+            },
+            { width: 190, text: labels.title.toUpperCase(), style: 'documentTitle', alignment: 'right', margin: [12, 4, 0, 0] }
+          ]
+        },
+        {
+          canvas: [{ type: 'line', x1: 0, y1: 0, x2: 540, y2: 0, lineWidth: 1.8, lineColor: '#167D8D' }],
+          margin: [0, 6, 0, 7]
+        },
+        {
+          table: {
+            widths: [85, '*', 85, '*'],
+            body: [
+              this.wideInfoRow(labels.reservationHolder, data.reservationHolder || ''),
+              this.stayInfoRow(labels.reservationNumber, data.reservationNumber || '', labels.room, data.room || ''),
+              this.stayInfoRow(labels.plan, data.plan || '', labels.arrival, data.arrival || data.operationalDate || ''),
+              this.stayInfoRow(labels.departure, data.departure || '', labels.agency, data.agency || '')
+            ]
+          },
+          layout: this.infoLayout(),
+          margin: [0, 0, 0, 6]
+        },
+        {
+          columns: [
+            { text: labels.guests, bold: true, fontSize: 9, color: '#167D8D', characterSpacing: 0.65 },
+            { text: labels.guestHint, alignment: 'right', fontSize: 7.5, color: '#66758A' }
+          ],
+          margin: [0, 0, 0, 3]
+        },
+        {
+          table: {
+            headerRows: 1,
+            keepWithHeaderRows: 1,
+            widths: [24, '*', 112, 150],
+            heights: (rowIndex: number) => rowIndex === 0 ? 19 : 24,
+            body: [
+              [this.tableHeader('#', 'center'), this.tableHeader(labels.name, 'left'), this.tableHeader(labels.document, 'left'), this.tableHeader(labels.signature, 'center')],
+              ...Array.from({ length: totalRows }, (_, index) => this.guestRow(index + 1, guests[index]))
+            ]
+          },
+          layout: {
+            fillColor: (rowIndex: number) => rowIndex > 0 && rowIndex % 2 === 0 ? '#F7FAFC' : null,
+            hLineWidth: () => 0.65, vLineWidth: () => 0.65,
+            hLineColor: () => '#BFCBD7', vLineColor: () => '#BFCBD7',
+            paddingTop: (rowIndex: number) => rowIndex === 0 ? 3 : 2,
+            paddingBottom: (rowIndex: number) => rowIndex === 0 ? 3 : 2,
+            paddingLeft: () => 3, paddingRight: () => 3
+          }
+        },
+        {
+          table: {
+            widths: [540],
+            body: [[{
+              stack: [
+                { text: labels.contactDetails, style: 'acknowledgementTitle' },
+                {
+                  table: {
+                    widths: [85, '*', 85, '*'],
+                    body: [
+                      this.stayInfoRow(labels.address, data.address || '', labels.nationality, data.nationality || ''),
+                      this.stayInfoRow(labels.telephone, data.telephone || '', labels.email, data.email || ''),
+                      this.stayInfoRow(labels.adults, String(data.adults ?? ''), labels.children, String(data.children ?? '')),
+                      this.stayInfoRow(labels.creditCard, data.creditCard || '', labels.expirationDate, data.expirationDate || ''),
+                      this.stayInfoRow(labels.licensePlate, data.licensePlate || '', labels.allergies, data.allergies || ''),
+                      this.wideInfoRow(labels.comments, data.comments || '')
+                    ]
+                  },
+                  layout: this.infoLayout(),
+                  margin: [0, 4, 0, 6]
+                },
+                { text: labels.policies, style: 'importantTitle' },
+                {
+                  table: {
+                    widths: [520],
+                    body: policyRows.map((policy) => [policy])
+                  },
+                  layout: {
+                    hLineWidth: () => 0,
+                    vLineWidth: () => 0,
+                    paddingTop: () => 0,
+                    paddingBottom: () => 0,
+                    paddingLeft: () => 0,
+                    paddingRight: () => 0
+                  },
+                  margin: [0, 0, 0, 0]
+                },
+                { text: labels.acceptance, style: 'acknowledgementBody', margin: [0, 6, 0, 0] },
+                {
+                  columns: [
+                    this.signatureLine(labels.guestSignature, 220), { width: 14, text: '' },
+                    this.signatureLine(labels.date, 82), { width: 14, text: '' },
+                    this.signatureLine(labels.receptionist, 50)
+                  ],
+                  margin: [0, 8, 0, 0]
+                }
+              ],
+              fillColor: '#F4F8FA', margin: [10, 9, 10, 9]
+            }]]
+          },
+          layout: { hLineWidth: () => 0.7, vLineWidth: () => 0.7, hLineColor: () => '#C7D5DE', vLineColor: () => '#C7D5DE', paddingTop: () => 0, paddingBottom: () => 0, paddingLeft: () => 0, paddingRight: () => 0 },
+          margin: [0, 6, 0, 0]
+        }
+      ],
+      styles: {
+        companyName: { bold: true, fontSize: 13, color: '#17364F' },
+        legalName: { fontSize: 8.2, color: '#4C5F73', margin: [0, 2, 0, 0] },
+        companyMeta: { fontSize: 6.8, color: '#66758A', margin: [0, 3, 0, 0] },
+        documentTitle: { bold: true, fontSize: 13, color: '#17364F', characterSpacing: 0.7 },
+        acknowledgementTitle: { bold: true, fontSize: 9.2, color: '#17364F', characterSpacing: 0.65 },
+        acknowledgementBody: { fontSize: 7.7, color: '#405469', lineHeight: 1.1 },
+        importantTitle: { bold: true, fontSize: 8.7, color: '#167D8D', characterSpacing: 0.55, margin: [0, 0, 0, 3] },
+        policyBody: { fontSize: 7.4, color: '#405469', lineHeight: 1.08 }
+      }
+    };
   }
 
-  private buildDocumentDefinition(operationalDate: string, lamiaLogo: string): TDocumentDefinitions {
+  private buildLegacyDocumentDefinition(operationalDate: string, hotelLogo: string): TDocumentDefinitions {
     const company = this.empresaContext.empresa();
     const companyName = (company?.MA04_Nombre || company?.MA04_RazonSocial || 'HOTEL').trim();
     const legalName = (company?.MA04_RazonSocial || '').trim();
@@ -144,7 +331,7 @@ export class GuestRegistrationSheetPdfService {
           columns: [
             {
               width: 82,
-              image: lamiaLogo,
+              image: hotelLogo,
               fit: [76, 66],
               alignment: 'left',
               margin: [0, -2, 0, 0]
@@ -414,6 +601,45 @@ export class GuestRegistrationSheetPdfService {
     ];
   }
 
+  private labels(language: RegistrationSheetLanguage) {
+    return language === 'ES' ? {
+      title: 'Tarjeta de Registro', footer: 'Solo para uso del hotel',
+      reservationHolder: 'Titular de la Reserva', reservationNumber: 'N° Reserva', room: 'Habitación',
+      plan: 'Plan', arrival: 'Ingreso', departure: 'Salida', agency: 'Agencia', guests: 'HUÉSPEDES',
+      guestHint: 'Complete una fila por huésped. Escriba claramente.', name: 'Nombre completo', document: 'Documento', signature: 'Firma',
+      contactDetails: 'INFORMACIÓN DEL HUÉSPED', address: 'Dirección', nationality: 'Nacionalidad', telephone: 'Teléfono', email: 'Email',
+      adults: 'Adultos', children: 'Niños', creditCard: 'Tarjeta de crédito', expirationDate: 'Fecha de expiración', licensePlate: 'Placa', allergies: 'Alergias', comments: 'Comentarios',
+      policies: 'POLÍTICAS DEL HOTEL', acceptance: 'Al firmar, el huésped declara haber leído y aceptado las políticas del hotel.',
+      guestSignature: 'Firma del huésped', date: 'Fecha', receptionist: 'Recepcionista'
+    } : {
+      title: 'Registration Card', footer: 'For hotel use only',
+      reservationHolder: 'Reservation Holder', reservationNumber: 'Reservation No.', room: 'Room',
+      plan: 'Meal Plan', arrival: 'Check-in', departure: 'Check-out', agency: 'Agency', guests: 'GUESTS',
+      guestHint: 'Complete one row per guest. Please print clearly.', name: 'Full Name', document: 'Document', signature: 'Signature',
+      contactDetails: 'GUEST INFORMATION', address: 'Address', nationality: 'Nationality', telephone: 'Telephone', email: 'Email',
+      adults: 'Adults', children: 'Children', creditCard: 'Credit Card', expirationDate: 'Expiration Date', licensePlate: 'License Plate', allergies: 'Allergies', comments: 'Guest Comments',
+      policies: 'HOTEL POLICIES', acceptance: 'By signing, the guest confirms having read and accepted the hotel policies.',
+      guestSignature: 'Guest Signature', date: 'Date', receptionist: 'Receptionist'
+    };
+  }
+
+  private infoLayout() {
+    return {
+      hLineWidth: () => 0.55, vLineWidth: () => 0.55,
+      hLineColor: () => '#CCD7E2', vLineColor: () => '#CCD7E2',
+      paddingTop: () => 3, paddingBottom: () => 3, paddingLeft: () => 4, paddingRight: () => 4
+    };
+  }
+
+  private signatureLine(label: string, width: number): Content {
+    return {
+      stack: [
+        { text: `${label}:`, bold: true, fontSize: 7.2, color: '#405469' },
+        { canvas: [{ type: 'line', x1: 0, y1: 0, x2: width, y2: 0, lineWidth: 0.7, lineColor: '#6B7D90' }], margin: [0, 11, 0, 0] }
+      ]
+    };
+  }
+
   private wideInfoRow(label: string, value: string): TableCell[] {
     return [
       this.infoLabel(label),
@@ -457,15 +683,12 @@ export class GuestRegistrationSheetPdfService {
     };
   }
 
-  private guestRow(index: number): TableCell[] {
+  private guestRow(index: number, guest?: RegistrationSheetGuest): TableCell[] {
     return [
       { text: String(index), alignment: 'center', bold: true, color: '#718096', margin: [0, 6, 0, 0] },
-      { text: '' },
-      { text: '' },
-      { text: '' },
-      { text: '' },
-      { text: '' },
-      { text: '' }
+      { text: guest?.fullName || '' },
+      { text: guest?.document || '' },
+      { text: guest?.signature || '' }
     ];
   }
 

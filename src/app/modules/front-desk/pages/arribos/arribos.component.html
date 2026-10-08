@@ -1,0 +1,268 @@
+<section class="arribos-page" aria-label="Arribos">
+  <header class="arribos-header">
+    <div>
+      <span class="section-eyebrow">Front Desk</span>
+      <h1>Arribos</h1>
+      <p>Reservas programadas para llegar al hotel en el período seleccionado.</p>
+    </div>
+    <div class="arribos-header__actions">
+      <div class="arribos-header__status" *ngIf="loading">
+        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+        Consultando
+      </div>
+      <button type="button" class="btn btn-outline-primary btn-sm" (click)="exportarPdf()" [disabled]="loading || exportingPdf || resumenVisible.reservas === 0" title="Exportar arribos visibles a PDF">
+        <span class="spinner-border spinner-border-sm me-1" *ngIf="exportingPdf" aria-hidden="true"></span>
+        <i class="feather icon-file-text me-1" *ngIf="!exportingPdf" aria-hidden="true"></i>
+        Exportar PDF
+      </button>
+    </div>
+  </header>
+
+  <section class="arribos-kpis" aria-label="Indicadores de arribos">
+    <article class="arribo-kpi" *ngFor="let kpi of kpis" [class]="'arribo-kpi arribo-kpi--' + kpi.tone">
+      <span class="arribo-kpi__icon"><span class="material-icons" aria-hidden="true">{{ kpi.icon }}</span></span>
+      <div>
+        <strong>{{ kpi.value | number:'1.0-0' }}</strong>
+        <span>{{ kpi.label }}</span>
+      </div>
+    </article>
+  </section>
+
+  <form class="arribos-filters" [formGroup]="filtersForm" (ngSubmit)="buscar()" aria-label="Filtros de arribos">
+    <div class="filter-field">
+      <label for="arribosDesde">Desde</label>
+      <input id="arribosDesde" type="date" class="form-control" formControlName="fechaDesde" [class.is-invalid]="submitted && filtersForm.controls.fechaDesde.invalid">
+    </div>
+
+    <div class="filter-field">
+      <label for="arribosHasta">Hasta</label>
+      <input id="arribosHasta" type="date" class="form-control" formControlName="fechaHasta" [class.is-invalid]="submitted && filtersForm.controls.fechaHasta.invalid">
+    </div>
+
+    <div class="filter-field agency-field">
+      <label for="arribosAgencia">Agencia</label>
+      <div class="agency-control agency-input-group">
+        <input
+          id="arribosAgencia"
+          type="text"
+          class="form-control"
+          [formControl]="agenciaSearchControl"
+          placeholder="Todas las agencias"
+          readonly
+        >
+        <button type="button" class="btn btn-outline-secondary agency-picker-button" (click)="abrirAgenciaModal()" aria-label="Buscar agencia">
+          <i class="feather icon-search" aria-hidden="true"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="filter-field">
+      <label for="arribosEstado">Estado</label>
+      <select id="arribosEstado" class="form-select" formControlName="estado">
+        <option *ngFor="let estado of estados" [value]="estado.codigo">{{ estado.etiqueta }}</option>
+      </select>
+    </div>
+
+    <div class="filter-field filter-field--search">
+      <label for="arribosBusqueda">Búsqueda rápida</label>
+      <div class="input-group">
+        <span class="input-group-text"><i class="feather icon-search" aria-hidden="true"></i></span>
+        <input id="arribosBusqueda" type="search" class="form-control" formControlName="busqueda" placeholder="Reserva, huésped, habitación o agencia...">
+      </div>
+    </div>
+
+    <div class="filter-actions">
+      <button type="submit" class="btn btn-primary" [disabled]="loading">
+        <span class="spinner-border spinner-border-sm me-1" *ngIf="loading" aria-hidden="true"></span>
+        <i class="feather icon-search me-1" *ngIf="!loading" aria-hidden="true"></i>
+        Buscar
+      </button>
+      <button type="button" class="btn btn-light" (click)="limpiar()" [disabled]="loading">
+        <i class="feather icon-refresh-cw me-1" aria-hidden="true"></i>
+        Limpiar
+      </button>
+    </div>
+  </form>
+
+  <div class="arribos-date-error alert alert-warning" *ngIf="submitted && errorMessage && !loading">
+    <i class="feather icon-alert-triangle me-1" aria-hidden="true"></i>
+    {{ errorMessage }}
+  </div>
+
+  <section class="arribos-workspace" aria-label="Listado jerárquico de arribos">
+    <div class="arribos-toolbar">
+      <div>
+        <span class="section-eyebrow">Operación de recepción</span>
+        <h2>Reservas por llegada</h2>
+      </div>
+      <div class="arribos-toolbar__actions">
+        <span class="arribos-toolbar__count">{{ resumenVisible.reservas }} reservas visibles</span>
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="expandirTodo()" [disabled]="!reservas.length">Expandir todo</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="contraerTodo()" [disabled]="!expandedReservations.size">Contraer todo</button>
+      </div>
+    </div>
+
+    <div class="arribos-state" *ngIf="loading">
+      <span class="spinner-border" aria-hidden="true"></span>
+      <strong>Cargando arribos...</strong>
+    </div>
+
+    <div class="arribos-state arribos-state--error" *ngIf="!loading && errorMessage && !submitted">
+      <i class="feather icon-alert-circle" aria-hidden="true"></i>
+      <strong>{{ errorMessage }}</strong>
+    </div>
+
+    <div class="arribos-state" *ngIf="!loading && !errorMessage && reservas.length === 0">
+      <span class="material-icons arribos-state__icon" aria-hidden="true">event_available</span>
+      <strong>No se encontraron arribos para los filtros seleccionados.</strong>
+    </div>
+
+    <div class="arribos-state" *ngIf="!loading && !errorMessage && reservas.length > 0 && grupos.length === 0">
+      <span class="material-icons arribos-state__icon" aria-hidden="true">search_off</span>
+      <strong>No se encontraron arribos para la búsqueda o estado seleccionado.</strong>
+    </div>
+
+    <div class="arribos-groups" *ngIf="!loading && !errorMessage && grupos.length > 0">
+      <section class="arrival-date-group" *ngFor="let fecha of grupos; trackBy: trackByFecha">
+        <header class="arrival-date-group__header">
+          <div>
+            <span class="section-eyebrow">Fecha de llegada</span>
+            <h3>{{ fecha.label }}</h3>
+          </div>
+          <div class="arrival-date-group__summary">
+            <span>{{ fecha.reservas }} reservas</span>
+            <span>{{ fecha.habitaciones }} habitaciones</span>
+            <span>{{ fecha.adultos }} adultos</span>
+            <span>{{ fecha.ninos }} niños</span>
+          </div>
+        </header>
+
+        <div class="arrival-agencies">
+          <section class="arrival-agency" *ngFor="let agencia of fecha.agencias; trackBy: trackByAgencia">
+            <header class="arrival-agency__header">
+              <div>
+                <strong>{{ agencia.nombre }}</strong>
+                <small *ngIf="agencia.codigo !== 'SIN-AGENCIA'">{{ agencia.codigo }}</small>
+              </div>
+              <span>{{ agencia.reservas }} reservas · {{ agencia.habitaciones }} habitaciones</span>
+            </header>
+
+            <div class="arrival-reservations">
+              <article class="arrival-reservation" *ngFor="let reserva of agencia.reservasItems; trackBy: trackByReserva" [class.arrival-reservation--expanded]="estaExpandida(reserva.codReserva)">
+                <button type="button" class="arrival-reservation__main" (click)="toggleReserva(reserva.codReserva)" [attr.aria-expanded]="estaExpandida(reserva.codReserva)">
+                  <span class="arrival-reservation__toggle material-icons" aria-hidden="true">{{ estaExpandida(reserva.codReserva) ? 'expand_less' : 'expand_more' }}</span>
+                  <span class="arrival-reservation__identity">
+                    <strong>{{ reserva.codReserva || 'Sin código' }}</strong>
+                    <span>{{ reserva.descripcion || 'Sin huésped o grupo' }}</span>
+                  </span>
+                  <span class="arrival-reservation__meta"><small>Check in</small><strong>{{ formatDate(reserva.fechaIngreso) }}</strong></span>
+                  <span class="arrival-reservation__meta"><small>Check out</small><strong>{{ formatDate(reserva.fechaSalida) }}</strong></span>
+                  <span class="arrival-reservation__meta"><small>Noches</small><strong>{{ reserva.noches }}</strong></span>
+                  <span class="arrival-reservation__meta"><small>Plan</small><strong>{{ reserva.codPlan || 'N/D' }}</strong></span>
+                  <span class="arrival-reservation__meta"><small>Habitaciones</small><strong>{{ reserva.resumen.habitacionesReservadas }}</strong></span>
+                  <span class="status-badge" [ngClass]="estadoClass(reserva.estado)">{{ estadoLabel(reserva.estado) }}</span>
+                </button>
+
+                <div class="arrival-reservation__detail" *ngIf="estaExpandida(reserva.codReserva)">
+                  <div class="reservation-detail-grid">
+                    <section class="reservation-detail-block" *ngIf="tieneObservacion(reserva)">
+                      <h4><i class="feather icon-file-text" aria-hidden="true"></i> Observaciones</h4>
+                      <p class="reservation-observation">{{ reserva.observacion }}</p>
+                    </section>
+
+                    <section class="reservation-detail-block">
+                      <h4><i class="feather icon-bar-chart-2" aria-hidden="true"></i> Resumen de reserva</h4>
+                      <div class="reservation-summary">
+                        <span>Reservadas <strong>{{ reserva.resumen.habitacionesReservadas }}</strong></span>
+                        <span [class.reservation-summary__difference]="diferenciaHabitaciones(reserva)">Desglosadas <strong>{{ reserva.resumen.habitacionesDesglosadas }}</strong></span>
+                        <span>Adultos <strong>{{ reserva.resumen.adultos }}</strong></span>
+                        <span>Niños <strong>{{ reserva.resumen.ninos }}</strong></span>
+                      </div>
+                    </section>
+                  </div>
+
+                  <section class="reservation-detail-block reservation-rooms">
+                    <div class="reservation-detail-heading">
+                      <h4><i class="feather icon-home" aria-hidden="true"></i> Habitaciones</h4>
+                      <span>{{ reserva.habitaciones.length }} desglosadas</span>
+                    </div>
+                    <div class="rooms-table-wrap" *ngIf="reserva.habitaciones.length > 0; else noRooms">
+                      <table class="rooms-table">
+                        <thead>
+                          <tr><th>Habitación</th><th>Categoría</th><th>Tipo</th><th>Adultos</th><th>Niños</th><th>Huéspedes</th></tr>
+                        </thead>
+                        <tbody>
+                          <tr *ngFor="let habitacion of reserva.habitaciones; trackBy: trackByHabitacion">
+                            <td><strong>{{ habitacion.numero || 'N/D' }}</strong></td>
+                            <td>{{ habitacion.categoria || 'N/D' }}</td>
+                            <td>{{ habitacion.tipo || 'N/D' }}</td>
+                            <td>{{ habitacion.adultos }}</td>
+                            <td>{{ habitacion.ninos }}</td>
+                            <td>
+                              <div class="guest-list" *ngIf="habitacion.huespedes.length > 0; else noRooming">
+                                <span *ngFor="let huesped of habitacion.huespedes">{{ nombreHuesped(huesped) }}</span>
+                              </div>
+                              <ng-template #noRooming><span class="no-rooming">Sin rooming</span></ng-template>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <ng-template #noRooms><div class="no-rooming">Sin habitaciones desglosadas.</div></ng-template>
+                  </section>
+                </div>
+              </article>
+            </div>
+          </section>
+        </div>
+      </section>
+    </div>
+  </section>
+</section>
+
+<div class="arribos-modal-backdrop" *ngIf="agenciaModalOpen" (click)="cerrarAgenciaModal()">
+  <section class="arribos-modal" role="dialog" aria-modal="true" aria-labelledby="agenciaModalTitle" (click)="$event.stopPropagation()">
+    <header class="arribos-modal__header">
+      <div>
+        <span class="section-eyebrow">Catálogo</span>
+        <h2 id="agenciaModalTitle">Seleccionar agencia</h2>
+      </div>
+      <button type="button" class="btn btn-sm btn-light" (click)="cerrarAgenciaModal()" aria-label="Cerrar selección de agencia">
+        <i class="feather icon-x" aria-hidden="true"></i>
+      </button>
+    </header>
+
+    <div class="arribos-modal__body">
+      <div class="input-group agency-modal-search">
+        <span class="input-group-text"><i class="feather icon-search" aria-hidden="true"></i></span>
+        <input type="search" class="form-control" [formControl]="agenciaModalSearchControl" placeholder="Buscar por código o nombre..." autocomplete="off">
+      </div>
+
+      <div class="agency-modal-state" *ngIf="agenciasModalLoading">
+        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+        Cargando agencias...
+      </div>
+
+      <div class="agency-modal-state agency-modal-state--error" *ngIf="!agenciasModalLoading && agenciasModalError">
+        <i class="feather icon-alert-circle" aria-hidden="true"></i>
+        {{ agenciasModalError }}
+      </div>
+
+      <div class="agency-modal-list" *ngIf="!agenciasModalLoading && agenciasModal.length > 0">
+        <button type="button" class="agency-modal-item" *ngFor="let agencia of agenciasModal" (click)="seleccionarAgencia(agencia)">
+          <span class="agency-modal-item__icon"><i class="feather icon-briefcase" aria-hidden="true"></i></span>
+          <span class="agency-modal-item__content">
+            <strong>{{ agencia.descripcion }}</strong>
+            <small>{{ agencia.codigo }}<span *ngIf="agencia.ciudad"> · {{ agencia.ciudad }}</span></small>
+          </span>
+          <i class="feather icon-chevron-right" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="agency-modal-state" *ngIf="!agenciasModalLoading && !agenciasModalError && agenciasModal.length === 0">
+        <i class="feather icon-search" aria-hidden="true"></i>
+        No se encontraron agencias.
+      </div>
+    </div>
+  </section>
+</div>

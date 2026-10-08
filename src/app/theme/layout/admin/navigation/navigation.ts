@@ -77,6 +77,22 @@ export const NavigationItems: NavigationItem[] = [
             classes: 'nav-item'
           },
           {
+            id: 'front-desk-arribos',
+            title: 'Arribos',
+            type: 'item',
+            url: '/front-desk/arribos',
+            icon: 'feather icon-log-in',
+            classes: 'nav-item'
+          },
+          {
+            id: 'front-desk-ocupacion-diaria',
+            title: 'Ocupación Diaria',
+            type: 'item',
+            url: '/front-desk/ocupacion-diaria',
+            icon: 'feather icon-home',
+            classes: 'nav-item'
+          },
+          {
             id: 'front-desk-habitaciones-bloqueadas',
             title: 'Habitaciones Bloqueadas',
             type: 'item',
@@ -307,6 +323,7 @@ export const NavigationItems: NavigationItem[] = [
           { id: 'reporte-operaciones', title: 'Reportes Operativos', type: 'item', url: '/reportes/operaciones', icon: 'feather icon-activity', classes: 'nav-item' },
           { id: 'reporte-finanzas', title: 'Reportes Financieros', type: 'item', url: '/reportes/finanzas', icon: 'feather icon-trending-up', classes: 'nav-item' },
           { id: 'reporte-comercial', title: 'Reportes Comerciales', type: 'item', url: '/reportes/comercial', icon: 'feather icon-target', classes: 'nav-item' },
+          { id: 'reporte-produccion-agencia', title: 'Producción por Agencia', type: 'item', url: '/reportes/produccion-agencia', icon: 'feather icon-bar-chart-2', classes: 'nav-item' },
           { id: 'reporte-restaurante', title: 'Reportes Restaurante', type: 'item', url: '/reportes/restaurante', icon: 'feather icon-shopping-cart', classes: 'nav-item' },
           { id: 'reporte-ocupacion', title: 'Reportes de Ocupación', type: 'item', url: '/reportes/ocupacion', icon: 'feather icon-home', classes: 'nav-item', hidden: true },
           { id: 'reporte-housekeeping', title: 'Reportes de Housekeeping', type: 'item', url: '/reportes/housekeeping', icon: 'feather icon-check-square', classes: 'nav-item', hidden: true },

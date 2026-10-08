@@ -84,6 +84,14 @@ export interface RoomStayApiData {
   cargosExtras            : RoomStayApiCharge[];
 }
 
+export interface RoomCreditPayload {
+  numHabitacion : string;
+  lCredito      : number;
+  mtoCredito    : number;
+  numTarjeta    : string;
+  vence         : string;
+}
+
 export interface RoomAvailabilityApiRoom {
   numHab                : number;
   cateHab               : string;
@@ -362,12 +370,13 @@ export class RoomStayManagementService {
   private readonly precheckingUrl                  = `${this.baseApiUrl}/prechecking`;
   private readonly roomChangeUrl                   = `${this.baseApiUrl}/roomchange`;
   private readonly departureDateChangeUrl          = `${this.baseApiUrl}/cambio-fecha-salida`;
-  private readonly roomCheckoutUrl                  = `${this.baseApiUrl}/checkout/habitacion`;
-  private readonly checkInUrl                       = `${this.baseApiUrl}/checkin`;
+  private readonly roomCheckoutUrl                 = `${this.baseApiUrl}/checkout/habitacion`;
+  private readonly checkInUrl                      = `${this.baseApiUrl}/checkin`;
   private readonly pointOfSalePaymentMethodsUrl    = `${this.baseApiUrl}/forma-pago-punto-venta`;
   private readonly pointOfSaleDocumentsUrl         = `${this.baseApiUrl}/documento-puntoventa`;
   private readonly roomChargeLookupUrl             = `${this.baseApiUrl}/consultar-cargos-habitacion/numero`;
   private readonly roomInvoiceUrl                  = `${this.baseApiUrl}/facturacion-fdesk`;
+  private readonly roomCreditUrl                   = `${this.baseApiUrl}/walkin/credito`;
   private readonly roomingListUpdateUrl            = `${this.baseApiUrl}/rooming-list/con-actualizacion`;
   private readonly pointOfSaleDetailUrl            = `${this.baseApiUrl}/puntoventa/detalleprincipal`;
   private readonly priceListDetailUrl              = `${this.baseApiUrl}/detalle-lista-precio`;
@@ -379,6 +388,10 @@ export class RoomStayManagementService {
         map((response) => this.normalizeResponse(response)),
         switchMap((baseStay) => this.getRoomStayDetail(baseStay, codReserva))
       );
+  }
+
+  updateRoomCredit(payload: RoomCreditPayload): Observable<unknown> {
+    return this.http.put<unknown>(this.roomCreditUrl, payload);
   }
 
   getAvailableRooms(fechaIng: string, fechaSal: string, categoria: string): Observable<RoomAvailabilityApiRoom[]> {
@@ -503,10 +516,10 @@ export class RoomStayManagementService {
   invoiceRoom(payload: RoomInvoicePayload): Observable<unknown> {
     return this.http.post<unknown>(this.roomInvoiceUrl, {
       ...payload,
-      fechaDocu: normalizePmsDateDDMMYYYY(payload.fechaDocu),
-      fechaPago: normalizePmsDateDDMMYYYY(payload.fechaPago),
-      fechaVen: normalizePmsDateDDMMYYYY(payload.fechaVen),
-      detDocumento: payload.detDocumento.map((item) => ({
+      fechaDocu     : normalizePmsDateDDMMYYYY(payload.fechaDocu),
+      fechaPago     : normalizePmsDateDDMMYYYY(payload.fechaPago),
+      fechaVen      : normalizePmsDateDDMMYYYY(payload.fechaVen),
+      detDocumento  : payload.detDocumento.map((item) => ({
         ...item,
         fecha: normalizePmsDateDDMMYYYY(item.fecha)
       }))

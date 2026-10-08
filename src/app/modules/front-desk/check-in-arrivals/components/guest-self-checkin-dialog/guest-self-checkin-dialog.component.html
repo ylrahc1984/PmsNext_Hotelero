@@ -11,7 +11,7 @@
       </div>
     } @else {
       <header class="guest-header">
-        <img class="guest-header__logo" [src]="hotelLogoUrl" [alt]="hotelName + ' logo'" />
+        <img class="guest-header__logo" [src]="hotelLogoUrl" (error)="hotelLogoError.emit()" [alt]="hotelName + ' logo'" />
         <div class="guest-header__identity">
           <h1 id="selfCheckinTitle">{{ hotelName }}</h1>
           <span>Guest registration</span>

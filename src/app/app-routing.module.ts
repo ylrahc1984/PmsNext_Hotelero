@@ -1427,6 +1427,10 @@ const routes: Routes = [
         loadComponent: () => import('./demo/reportes/comercial/comercial.component').then((c) => c.ComercialComponent)
       },
       {
+        path: 'produccion-agencia',
+        loadComponent: () => import('./demo/reportes/produccion-agencia/produccion-agencia.component').then((c) => c.ProduccionAgenciaComponent)
+      },
+      {
         path: 'ventas',
         loadComponent: () => import('./demo/reportes/ventas/ventas.component').then((c) => c.VentasComponent)
       },

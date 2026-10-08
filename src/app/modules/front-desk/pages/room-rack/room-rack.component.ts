@@ -30,6 +30,8 @@ import { RoomRackNavigationState, RoomRackRoom } from './models/room-rack-room.m
 import { RoomGroup } from '../../settings/room-groups/models/room-group.model';
 import { RoomGroupsService } from '../../settings/room-groups/services/room-groups.service';
 import { GuestRegistrationSheetPdfService } from './printing/guest-registration-sheet-pdf.service';
+import { PoliticasHojaRegistroService } from '../../services/politicas-hoja-registro.service';
+import { RegistrationSheetLanguage } from '../../models/politica-hoja-registro.model';
 import { RoomBlockRequest, RoomRackService } from './services/room-rack.service';
 
 type EstadoHabitacion =
@@ -109,6 +111,7 @@ export class RoomRackComponent implements OnInit {
   private readonly operationalDateService = inject(OperationalDateService);
   private readonly operationalPolicy    = inject(OperationalPolicyService);
   private readonly guestRegistrationPdf = inject(GuestRegistrationSheetPdfService);
+  private readonly politicasHojaRegistroService = inject(PoliticasHojaRegistroService);
   private readonly destroyRef           = inject(DestroyRef);
   private readonly cdr                  = inject(ChangeDetectorRef);
   private readonly operationalDate$     = toObservable(this.operationalDateService.operationalDate);
@@ -132,37 +135,37 @@ export class RoomRackComponent implements OnInit {
   readonly estadosLimpieza: EstadoLimpieza[] = ['Limpia', 'Sucia'];
   readonly estados: EstadoHabitacion[] = [...this.estadosOperacionales, ...this.estadosLimpieza];
 
-  habitaciones          : HabitacionRack[] = [];
-  habitacionesVisibles: HabitacionRack[] = [];
-  kpis = this.generarKpis(this.estadosOperacionales);
-  kpisLimpieza = this.generarKpis(this.estadosLimpieza);
-  resumen               = this.generarResumen();
-  busqueda = '';
-  grupoSeleccionado = '';
-  categoriaSeleccionada = '';
-  tipoSeleccionado = '';
-  estadoOperacionalSeleccionado: EstadoOperacional | 'Todas' = 'Todas';
-  estadoLimpiezaSeleccionado: EstadoLimpieza | 'Todas' = 'Todas';
-  ordenSeleccionado: RoomRackOrder = 'room-number';
-  densidad: RoomRackDensity = 'comfortable';
-  hayFiltrosActivos = false;
-  grupos: RoomGroup[] = [];
-  gruposLoading = true;
-  gruposError = '';
-  categorias: string[] = [];
-  tipos: string[] = [];
-  isLoading             = false;
-  errorMessage          = '';
-  cleanActionMessage    = '';
-  tipoCambio            : TipoCambio | null = null;
-  tipoCambioLoading     = false;
-  tipoCambioError       = '';
-  updatingCleanRooms    = new Set<string>();
-  bloqueandoHabitacion  = false;
-  bloqueoModalRoom      : HabitacionRack | null = null;
-  bloqueoErrorMessage   = '';
-  isRegistrationSheetGenerating = false;
-  bloqueoForm           : BloqueoHabitacionForm = this.createDefaultBloqueoForm();
+  habitaciones                    : HabitacionRack[] = [];
+  habitacionesVisibles            : HabitacionRack[] = [];
+  kpis                            = this.generarKpis(this.estadosOperacionales);
+  kpisLimpieza                    = this.generarKpis(this.estadosLimpieza);
+  resumen                         = this.generarResumen();
+  busqueda                        = '';
+  grupoSeleccionado               = '';
+  categoriaSeleccionada           = '';
+  tipoSeleccionado                = '';
+  estadoOperacionalSeleccionado   : EstadoOperacional | 'Todas' = 'Todas';
+  estadoLimpiezaSeleccionado      : EstadoLimpieza | 'Todas' = 'Todas';
+  ordenSeleccionado               : RoomRackOrder = 'room-number';
+  densidad                        : RoomRackDensity = 'compact';
+  hayFiltrosActivos               = false;
+  grupos                          : RoomGroup[] = [];
+  gruposLoading                   = true;
+  gruposError                     = '';
+  categorias                      : string[] = [];
+  tipos                           : string[] = [];
+  isLoading                       = false;
+  errorMessage                    = '';
+  cleanActionMessage              = '';
+  tipoCambio                      : TipoCambio | null = null;
+  tipoCambioLoading               = false;
+  tipoCambioError                 = '';
+  updatingCleanRooms              = new Set<string>();
+  bloqueandoHabitacion            = false;
+  bloqueoModalRoom                : HabitacionRack | null = null;
+  bloqueoErrorMessage             = '';
+  isRegistrationSheetGenerating   = false;
+  bloqueoForm                     : BloqueoHabitacionForm = this.createDefaultBloqueoForm();
 
   readonly acciones: AccionOperativa[] = [
     { label: 'Asignar Habitacion', icon: 'home', accent: 'primary' },
@@ -446,11 +449,36 @@ export class RoomRackComponent implements OnInit {
     }
 
     if (accion.label === 'Imprimir Hoja Registro') {
-      await this.imprimirHojaRegistro();
+      await this.seleccionarIdiomaHojaRegistro();
     }
   }
 
-  private async imprimirHojaRegistro(): Promise<void> {
+  private async seleccionarIdiomaHojaRegistro(): Promise<void> {
+    if (this.isRegistrationSheetGenerating) return;
+
+    const result = await Swal.fire({
+      title: 'Idioma de la hoja de registro',
+      text: 'Seleccione el idioma del documento que desea generar.',
+      icon: 'question',
+      showDenyButton: true,
+      showCancelButton: true,
+      confirmButtonText: 'Español',
+      denyButtonText: 'English',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#0d6efd',
+      denyButtonColor: '#64748b',
+      cancelButtonColor: '#94a3b8',
+      reverseButtons: true
+    });
+
+    if (result.isConfirmed) {
+      await this.imprimirHojaRegistro('ES');
+    } else if (result.isDenied) {
+      await this.imprimirHojaRegistro('EN');
+    }
+  }
+
+  private async imprimirHojaRegistro(language: RegistrationSheetLanguage): Promise<void> {
     if (this.isRegistrationSheetGenerating) {
       return;
     }
@@ -459,7 +487,11 @@ export class RoomRackComponent implements OnInit {
     this.cdr.markForCheck();
 
     try {
-      const result = await this.guestRegistrationPdf.open(this.fechaOperacion);
+      const policies = await firstValueFrom(this.politicasHojaRegistroService.getActive(language));
+      const result = await this.guestRegistrationPdf.open(language, {
+        operationalDate: this.fechaOperacion,
+        arrival: this.fechaOperacion
+      }, policies);
       if (result === 'downloaded') {
         await Swal.fire({
           title: 'Hoja de registro descargada',
@@ -471,8 +503,10 @@ export class RoomRackComponent implements OnInit {
     } catch (error) {
       console.error('No se pudo generar la hoja de registro de huespedes.', error);
       await Swal.fire({
-        title: 'No se pudo generar el PDF',
-        text: 'Intente nuevamente. Si el problema continúa, revise la configuración del navegador.',
+        title: 'No se pudo generar la hoja de registro',
+        text: error instanceof Error && error.message
+          ? error.message
+          : 'Intente nuevamente. Si el problema continúa, revise la configuración del navegador.',
         icon: 'error',
         confirmButtonText: 'Aceptar'
       });

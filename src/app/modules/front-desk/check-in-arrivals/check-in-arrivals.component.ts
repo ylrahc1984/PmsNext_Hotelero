@@ -10,6 +10,7 @@ import Swal from 'sweetalert2';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { OperationalDateService } from 'src/app/core/services/operational-date.service';
 import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
+import { HotelLogoService } from 'src/app/core/services/hotel-logo.service';
 import { normalizePmsDateDDMMYYYY, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 import { ReservaTagAsignado } from 'src/app/modules/Reservas/models/reserva-tag.model';
 import { ReservaTagsService } from 'src/app/modules/Reservas/services/reserva-tags.service';
@@ -24,6 +25,8 @@ import {
 } from './models/check-in-arrival.model';
 import { CheckInArrivalsService } from './services/check-in-arrivals.service';
 import { GuestRegistrationPdfService } from './services/guest-registration-pdf.service';
+import { PoliticasHojaRegistroService } from '../services/politicas-hoja-registro.service';
+import { RegistrationSheetLanguage } from '../models/politica-hoja-registro.model';
 import { Nationality } from '../settings/nationalities/models/nationality.model';
 import { WalkInOption } from '../walk-in/models/walk-in.model';
 import { WalkInService } from '../walk-in/services/walk-in.service';
@@ -64,7 +67,11 @@ export class CheckInArrivalsComponent implements OnInit {
   private readonly walkInService = inject(WalkInService);
   private readonly operationalDateService = inject(OperationalDateService);
   private readonly empresaContext = inject(EmpresaContextService);
+  private readonly hotelLogoService = inject(HotelLogoService);
+  private hotelLogoAttempt = 0;
+  private hotelLogoKey = '';
   private readonly guestRegistrationPdf = inject(GuestRegistrationPdfService);
+  private readonly politicasHojaRegistroService = inject(PoliticasHojaRegistroService);
   private readonly reservaTagsService = inject(ReservaTagsService);
   private operationalDateInput = '';
 
@@ -154,6 +161,28 @@ export class CheckInArrivalsComponent implements OnInit {
   selfCheckinError = '';
   private selfCheckinSavedAny = false;
   registrationPrintingKey: string | null = null;
+
+  get hotelLogoUrl(): string {
+    const candidates = this.hotelLogoService.getLogoAssetCandidates(
+      this.empresaContext.empresa(),
+      this.hotelLogoService.defaultSelfCheckinLogo
+    );
+    if (candidates[0] !== this.hotelLogoKey) {
+      this.hotelLogoKey = candidates[0];
+      this.hotelLogoAttempt = 0;
+    }
+    return candidates[Math.min(this.hotelLogoAttempt, candidates.length - 1)];
+  }
+
+  onHotelLogoError(): void {
+    const candidates = this.hotelLogoService.getLogoAssetCandidates(
+      this.empresaContext.empresa(),
+      this.hotelLogoService.defaultSelfCheckinLogo
+    );
+    if (this.hotelLogoAttempt < candidates.length - 1) {
+      this.hotelLogoAttempt++;
+    }
+  }
 
   ngOnInit(): void {
     this.loadRoomingCatalogs();
@@ -872,6 +901,39 @@ export class CheckInArrivalsComponent implements OnInit {
 
   async generarHojaRegistro(reserva: CheckInArrival): Promise<void> {
     this.closeActionsMenu();
+    if (this.registrationPrintingKey === this.getArrivalKey(reserva)) return;
+
+    const language = await this.seleccionarIdiomaHojaRegistro();
+    if (!language) return;
+
+    await this.generarHojaRegistroIdioma(reserva, language);
+  }
+
+  private async seleccionarIdiomaHojaRegistro(): Promise<RegistrationSheetLanguage | null> {
+    const result = await Swal.fire({
+      title: 'Idioma de la hoja de registro',
+      text: 'Seleccione el idioma del documento que desea generar.',
+      icon: 'question',
+      showDenyButton: true,
+      showCancelButton: true,
+      confirmButtonText: 'Español',
+      denyButtonText: 'English',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#0d6efd',
+      denyButtonColor: '#64748b',
+      cancelButtonColor: '#94a3b8',
+      reverseButtons: true
+    });
+
+    if (result.isConfirmed) return 'ES';
+    if (result.isDenied) return 'EN';
+    return null;
+  }
+
+  private async generarHojaRegistroIdioma(
+    reserva: CheckInArrival,
+    language: RegistrationSheetLanguage
+  ): Promise<void> {
     const arrivalKey = this.getArrivalKey(reserva);
     if (this.registrationPrintingKey === arrivalKey) return;
 
@@ -882,15 +944,19 @@ export class CheckInArrivalsComponent implements OnInit {
     try {
       const roomKey = this.getRoomingKey(reserva);
       const cachedGuests = this.roomingGuestsByRoom.get(roomKey);
-      const guests = cachedGuests
-        ?? await firstValueFrom(
-          this.arrivalsService.getRoomingList(reserva.codReserva, reserva.numHabita).pipe(
-            takeUntilDestroyed(this.destroyRef)
-          )
-        );
+      const [guests, policies] = await Promise.all([
+        cachedGuests
+          ? Promise.resolve(cachedGuests)
+          : firstValueFrom(
+            this.arrivalsService.getRoomingList(reserva.codReserva, reserva.numHabita).pipe(
+              takeUntilDestroyed(this.destroyRef)
+            )
+          ),
+        firstValueFrom(this.politicasHojaRegistroService.getActive(language))
+      ]);
       if (!cachedGuests) this.roomingGuestsByRoom.set(roomKey, guests);
 
-      await this.guestRegistrationPdf.printRegistrationForm(reserva, guests, { printWindow });
+      await this.guestRegistrationPdf.printRegistrationForm(language, reserva, guests, policies, { printWindow });
     } catch (error) {
       console.error('No se pudo imprimir la hoja de registro.', error);
       if (printWindow && !printWindow.closed) printWindow.close();

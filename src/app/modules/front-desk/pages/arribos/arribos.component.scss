@@ -1,0 +1,155 @@
+:host { display: block; }
+
+$ink: #1f2a44;
+$muted: #64748b;
+$line: #e6edf5;
+$blue: #2563eb;
+$cyan: #0891b2;
+$paper: #fff;
+
+.arribos-page { display: grid; gap: 14px; color: $ink; }
+.arribos-header, .arribos-toolbar, .arrival-date-group__header, .arrival-agency__header, .reservation-detail-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.arribos-header { padding: 2px 2px 0; }
+.arribos-header__actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+.arribos-header__actions .btn { min-height: 34px; font-size: .73rem; font-weight: 800; }
+.arribos-header h1, .arribos-toolbar h2, .arrival-date-group h3 { margin: 2px 0 0; color: #17212b; font-weight: 850; }
+.arribos-header h1 { font-size: 1.5rem; }
+.arribos-header p { margin: 4px 0 0; color: $muted; font-size: .82rem; }
+.section-eyebrow { color: #0d6efd; font-size: .64rem; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+.arribos-header__status { display: inline-flex; align-items: center; gap: 7px; color: $blue; font-size: .74rem; font-weight: 800; }
+
+.arribos-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.arribo-kpi { display: flex; align-items: center; gap: 10px; min-height: 74px; padding: 12px; border: 1px solid $line; border-radius: 12px; background: $paper; box-shadow: 0 8px 22px rgba(15, 35, 68, .05); }
+.arribo-kpi__icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 11px; font-size: 1.15rem; }
+.arribo-kpi strong, .arribo-kpi span { display: block; }
+.arribo-kpi strong { color: #17212b; font-size: 1.16rem; }
+.arribo-kpi div span { color: $muted; font-size: .7rem; font-weight: 750; }
+.arribo-kpi--primary .arribo-kpi__icon { color: #1d4ed8; background: #eef4ff; }
+.arribo-kpi--blue .arribo-kpi__icon { color: #0284c7; background: #eaf7ff; }
+.arribo-kpi--green .arribo-kpi__icon { color: #15803d; background: #f0fdf4; }
+.arribo-kpi--amber .arribo-kpi__icon { color: #b45309; background: #fffbeb; }
+
+.arribos-filters { display: grid; grid-template-columns: 145px 145px minmax(220px, 1fr) 160px minmax(250px, 1.35fr) auto; align-items: end; gap: 10px; padding: 12px; border: 1px solid $line; border-radius: 12px; background: #f8fafc; }
+.filter-field { min-width: 0; }
+.filter-field label { display: block; margin-bottom: 4px; color: #53627d; font-size: .68rem; font-weight: 800; }
+.filter-field .form-control, .filter-field .form-select { min-height: 36px; border-color: #d8e2ef; border-radius: 8px; font-size: .75rem; }
+.filter-actions { display: flex; gap: 7px; }
+.filter-actions .btn { min-height: 36px; white-space: nowrap; font-size: .74rem; font-weight: 800; }
+.agency-field, .agency-control { position: relative; }
+.agency-input-group { display: flex; align-items: stretch; }
+.agency-input-group .form-control { min-width: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.agency-picker-button { display: grid; place-items: center; width: 38px; padding: 0; border-color: #d8e2ef; border-left: 0; border-radius: 0 8px 8px 0; color: #53627d; background: #fff; }
+.agency-picker-button:hover { color: $blue; background: #f4f8ff; }
+.agency-suggestions { position: absolute; z-index: 20; top: calc(100% + 4px); right: 0; left: 0; max-height: 230px; overflow: auto; border: 1px solid #d8e2ef; border-radius: 9px; background: #fff; box-shadow: 0 14px 30px rgba(15, 35, 68, .16); }
+.agency-suggestion { display: grid; gap: 1px; width: 100%; padding: 8px 10px; border: 0; border-bottom: 1px solid #edf2f7; color: $ink; background: #fff; text-align: left; }
+.agency-suggestion:hover { background: #f4f8ff; }
+.agency-suggestion strong { color: $blue; font-size: .69rem; }
+.agency-suggestion span { color: $muted; font-size: .72rem; }
+.arribos-date-error { margin: 0; padding: 8px 11px; font-size: .75rem; }
+
+.arribos-workspace { overflow: hidden; border: 1px solid $line; border-radius: 14px; background: #f7f9fc; box-shadow: 0 10px 28px rgba(15, 35, 68, .055); }
+.arribos-toolbar { padding: 14px 16px; border-bottom: 1px solid $line; background: #fff; }
+.arribos-toolbar h2 { font-size: 1rem; }
+.arribos-toolbar__actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
+.arribos-toolbar__count { color: $muted; font-size: .72rem; font-weight: 750; }
+.arribos-state { display: grid; place-items: center; gap: 9px; min-height: 230px; padding: 24px; color: $muted; font-size: .8rem; text-align: center; }
+.arribos-state .spinner-border { color: $blue; }
+.arribos-state--error { color: #b42318; }
+.arribos-state__icon { color: $blue; font-size: 2rem; }
+.arribos-groups { display: grid; gap: 12px; padding: 12px; }
+.arrival-date-group { overflow: hidden; border: 1px solid $line; border-radius: 12px; background: #fff; }
+.arrival-date-group__header { align-items: flex-end; padding: 11px 14px; border-bottom: 1px solid $line; background: linear-gradient(110deg, #f3f7ff, #fff); }
+.arrival-date-group h3 { font-size: .94rem; text-transform: capitalize; }
+.arrival-date-group__summary { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
+.arrival-date-group__summary span { padding: 4px 7px; border: 1px solid #e2eaf4; border-radius: 999px; color: #53627d; background: #fff; font-size: .65rem; font-weight: 750; }
+.arrival-agencies { display: grid; gap: 8px; padding: 9px; }
+.arrival-agency { overflow: hidden; border: 1px solid #edf2f7; border-radius: 10px; }
+.arrival-agency__header { padding: 8px 10px; background: #fbfcfe; }
+.arrival-agency__header div { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+.arrival-agency__header strong { overflow: hidden; color: #26364c; font-size: .76rem; text-overflow: ellipsis; white-space: nowrap; }
+.arrival-agency__header small, .arrival-agency__header > span { color: $muted; font-size: .65rem; font-weight: 700; }
+.arrival-agency__header > span { white-space: nowrap; }
+.arrival-reservations { display: grid; }
+.arrival-reservation { border-top: 1px solid #edf2f7; }
+.arrival-reservation__main { display: grid; grid-template-columns: 28px minmax(190px, 1.6fr) repeat(6, minmax(66px, .62fr)) auto; align-items: center; gap: 8px; width: 100%; padding: 10px; border: 0; color: $ink; background: #fff; text-align: left; }
+.arrival-reservation__main:hover, .arrival-reservation--expanded .arrival-reservation__main { background: #f8fbff; }
+.arrival-reservation__toggle { color: $blue; font-size: 1.1rem; }
+.arrival-reservation__identity, .arrival-reservation__meta { display: grid; gap: 2px; min-width: 0; }
+.arrival-reservation__identity strong { overflow: hidden; color: #15385f; font-size: .77rem; text-overflow: ellipsis; white-space: nowrap; }
+.arrival-reservation__identity span { overflow: hidden; color: $muted; font-size: .68rem; text-overflow: ellipsis; white-space: nowrap; }
+.arrival-reservation__meta small { color: $muted; font-size: .58rem; font-weight: 750; text-transform: uppercase; }
+.arrival-reservation__meta strong { color: #26364c; font-size: .7rem; }
+.status-badge { display: inline-flex; justify-content: center; padding: 4px 7px; border-radius: 999px; font-size: .62rem; font-weight: 850; white-space: nowrap; }
+.status-badge--abi { color: #166534; background: #dcfce7; }
+.status-badge--wlt { color: #92400e; background: #fef3c7; }
+.status-badge--ccr { color: #1d4ed8; background: #dbeafe; }
+.status-badge--default { color: #475569; background: #f1f5f9; }
+.arrival-reservation__detail { display: grid; gap: 12px; padding: 11px 14px 14px 46px; border-top: 1px solid #e1edf9; background: linear-gradient(180deg, #f8fbff, #fff); }
+.reservation-detail-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr); gap: 12px; }
+.reservation-detail-block { min-width: 0; }
+.reservation-detail-block h4 { display: flex; align-items: center; gap: 6px; margin: 0 0 7px; color: #253a55; font-size: .72rem; font-weight: 850; }
+.reservation-detail-block h4 i { color: $blue; }
+.reservation-observation { margin: 0; padding: 8px 10px; border-left: 3px solid $cyan; border-radius: 7px; color: #53627d; background: #effaff; font-size: .72rem; line-height: 1.45; white-space: pre-line; }
+.reservation-summary { display: flex; flex-wrap: wrap; gap: 6px; }
+.reservation-summary span { padding: 6px 8px; border: 1px solid #e5ecf4; border-radius: 7px; color: $muted; background: #fff; font-size: .68rem; }
+.reservation-summary strong { margin-left: 4px; color: #17212b; }
+.reservation-summary__difference { color: #9a5c12 !important; border-color: #fde68a !important; background: #fffbeb !important; }
+.reservation-detail-heading span { color: $muted; font-size: .66rem; font-weight: 750; }
+.rooms-table-wrap { overflow-x: auto; border: 1px solid #e7edf4; border-radius: 8px; }
+.rooms-table { width: 100%; margin: 0; border-collapse: collapse; font-size: .7rem; }
+.rooms-table th { padding: 7px 8px; color: $muted; background: #f8fafc; font-size: .61rem; text-align: left; text-transform: uppercase; }
+.rooms-table td { padding: 8px; border-top: 1px solid #eef2f6; color: #53627d; vertical-align: top; }
+.rooms-table td strong { color: #17212b; }
+.guest-list { display: grid; gap: 3px; }
+.guest-list span { color: #26364c; font-size: .68rem; }
+.no-rooming { color: #94a3b8; font-size: .68rem; font-style: italic; }
+
+.arribos-modal-backdrop { position: fixed; z-index: 1080; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(15, 23, 42, .48); }
+.arribos-modal { width: min(560px, 100%); max-height: min(680px, calc(100vh - 40px)); overflow: hidden; border: 1px solid #dce5f0; border-radius: 14px; background: #fff; box-shadow: 0 24px 70px rgba(15, 35, 68, .28); }
+.arribos-modal__header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 17px; border-bottom: 1px solid $line; }
+.arribos-modal__header h2 { margin: 3px 0 0; color: #17212b; font-size: 1rem; font-weight: 850; }
+.arribos-modal__header .btn { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; }
+.arribos-modal__body { display: grid; gap: 12px; padding: 15px 17px 17px; }
+.agency-modal-search .input-group-text { border-color: #d8e2ef; color: $muted; background: #f8fafc; }
+.agency-modal-search .form-control { border-color: #d8e2ef; font-size: .78rem; }
+.agency-modal-list { display: grid; max-height: 430px; overflow: auto; border: 1px solid #e7edf4; border-radius: 9px; }
+.agency-modal-item { display: grid; grid-template-columns: 32px minmax(0, 1fr) 18px; align-items: center; gap: 10px; width: 100%; padding: 10px 11px; border: 0; border-bottom: 1px solid #edf2f7; color: $ink; background: #fff; text-align: left; }
+.agency-modal-item:last-child { border-bottom: 0; }
+.agency-modal-item:hover { background: #f4f8ff; }
+.agency-modal-item__icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; color: $blue; background: #eef4ff; }
+.agency-modal-item__content { display: grid; gap: 2px; min-width: 0; }
+.agency-modal-item__content strong { overflow: hidden; color: #26364c; font-size: .76rem; text-overflow: ellipsis; white-space: nowrap; }
+.agency-modal-item__content small { color: $muted; font-size: .66rem; }
+.agency-modal-item > .feather { color: #94a3b8; font-size: .9rem; }
+.agency-modal-state { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 90px; color: $muted; font-size: .75rem; text-align: center; }
+.agency-modal-state .feather { color: #94a3b8; font-size: 1.25rem; }
+
+@media (max-width: 1199.98px) {
+  .arribos-filters { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .filter-field--search, .filter-actions { grid-column: span 2; }
+  .arrival-reservation__main { grid-template-columns: 28px minmax(180px, 1.4fr) repeat(4, minmax(64px, .65fr)) auto; }
+  .arrival-reservation__meta:nth-of-type(5), .arrival-reservation__meta:nth-of-type(6) { display: none; }
+}
+
+@media (max-width: 767.98px) {
+  .arribos-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .arribos-filters { grid-template-columns: 1fr 1fr; }
+  .filter-field--search, .filter-actions { grid-column: 1 / -1; }
+  .arribos-header, .arribos-toolbar, .arrival-date-group__header, .arrival-agency__header { align-items: flex-start; flex-direction: column; }
+  .arribos-header__actions { width: 100%; justify-content: space-between; }
+  .arribos-toolbar__actions, .arrival-date-group__summary { justify-content: flex-start; }
+  .arrival-reservation__main { grid-template-columns: 24px minmax(0, 1fr) auto; }
+  .arrival-reservation__meta { display: none; }
+  .arrival-reservation__detail { padding-left: 14px; }
+  .reservation-detail-grid { grid-template-columns: 1fr; }
+  .arrival-agency__header > span { white-space: normal; }
+}
+
+@media (max-width: 575.98px) {
+  .arribos-kpis, .arribos-filters { grid-template-columns: 1fr; }
+  .filter-field--search, .filter-actions { grid-column: auto; }
+  .filter-actions { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+  .arribo-kpi { min-height: 62px; }
+  .arribos-modal-backdrop { padding: 10px; }
+  .arribos-modal__header, .arribos-modal__body { padding-left: 13px; padding-right: 13px; }
+}

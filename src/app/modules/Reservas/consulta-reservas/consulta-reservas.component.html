@@ -154,7 +154,7 @@
               <td class="reservation-description" [title]="reserva.descripcion || 'Sin descripción'">
                 {{ reserva.descripcion || 'Sin descripción' }}
               </td>
-              <td>{{ reserva.agencia }}</td>
+              <td class="agency-column" [title]="reserva.agencia">{{ reserva.agencia }}</td>
               <td *ngIf="!filtro().busqueda.trim() && filtro().tipoFecha === 'creacion'">{{ formatDate(reserva.creacion) }}</td>
               <td>{{ formatDate(reserva.ingreso) }}</td>
               <td>{{ formatDate(reserva.salida) }}</td>

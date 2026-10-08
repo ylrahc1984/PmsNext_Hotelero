@@ -63,6 +63,7 @@ import {
   RoomStayCommentsPayload,
   RoomStayApiCharge,
   RoomStayApiData,
+  RoomCreditPayload,
   RoomStayManagementService
 } from './services/room-stay-management.service';
 
@@ -257,6 +258,10 @@ interface RoomStay {
   lodgingCharges        : Charge[];
   extraCharges          : Charge[];
   prepaid               : number;
+  creditEnabled         : boolean;
+  creditLimit           : number;
+  creditCardNumber      : string;
+  creditExpiration      : string;
   operator              ?: string;
 }
 
@@ -303,7 +308,11 @@ const emptyRoomStay: RoomStay = {
   guests                : [],
   lodgingCharges        : [],
   extraCharges          : [],
-  prepaid               : 0
+  prepaid               : 0,
+  creditEnabled         : false,
+  creditLimit           : 0,
+  creditCardNumber      : '',
+  creditExpiration      : ''
 };
 
 @Component({
@@ -329,24 +338,24 @@ export class RoomStayManagementComponent implements OnInit {
   private readonly authService                    = inject(AuthService);
   private readonly operationalDateService         = inject(OperationalDateService);
   private readonly roomStayManagementService      = inject(RoomStayManagementService);
-  private readonly roomChargePdfService            = inject(RoomChargePdfService);
-  private readonly roomChargePosPrintService       = inject(RoomChargePosPrintService);
-  private readonly roomStatementPdfService         = inject(RoomStatementPdfService);
-  private readonly roomStatementPosService         = inject(RoomStatementPosService);
+  private readonly roomChargePdfService           = inject(RoomChargePdfService);
+  private readonly roomChargePosPrintService      = inject(RoomChargePosPrintService);
+  private readonly roomStatementPdfService        = inject(RoomStatementPdfService);
+  private readonly roomStatementPosService        = inject(RoomStatementPosService);
   private readonly clienteService                 = inject(ClienteService);
   private readonly nationalitiesService           = inject(NationalitiesService);
   private readonly paxTypesService                = inject(PaxTypesService);
   private readonly monedaService                  = inject(MonedaService);
   private readonly tipoCambioService              = inject(TipoCambioService);
-  private readonly reservaTagsService              = inject(ReservaTagsService);
+  private readonly reservaTagsService             = inject(ReservaTagsService);
   private readonly invoiceBaseCurrency            = 'USD';
   private readonly roomChargeCatalogPageSize      = 8;
   private readonly invoiceClientSearchChanges     = new Subject<string>();
   private requestedRoomNumber                     = '';
   private requestedReservationNumber              = '';
-  private invoiceExchangeRateRequestId             = 0;
-  private assignedTagsRequestId                    = 0;
-  private assignedTagsReservationCode              = '';
+  private invoiceExchangeRateRequestId            = 0;
+  private assignedTagsRequestId                   = 0;
+  private assignedTagsReservationCode             = '';
 
   private readonly invoiceConsumerFinal: InvoiceClient = {
     code          : '000000000',
@@ -359,6 +368,12 @@ export class RoomStayManagementComponent implements OnInit {
 
   readonly activeTab                             = signal<ActiveTab>('stay');
   readonly room                                  = signal<RoomStay>({ ...emptyRoomStay });
+  readonly creditLimitDraft                      = signal('');
+  readonly creditCardNumberDraft                 = signal('');
+  readonly creditExpirationDraft                 = signal('');
+  readonly creditSaving                          = signal(false);
+  readonly creditErrorMessage                    = signal('');
+  readonly creditSuccessMessage                  = signal('');
   readonly isStayLoading                         = signal(false);
   readonly stayErrorMessage                      = signal('');
   readonly isCommentsEditing                     = signal(false);
@@ -404,9 +419,9 @@ export class RoomStayManagementComponent implements OnInit {
   readonly activeAction                          = signal<StayOperation | null>(null);
   readonly actionDraft                           = signal<ActionModalDraft>(this.buildActionDraft());
   // Keep date object references stable: NgModel schedules another render when its model changes.
-  readonly departureCalendarSelection = computed(() => this.departureCalendarDate(this.actionDraft().newCheckOut));
-  readonly departureCalendarMinimum = computed(() => this.departureCalendarDate(this.todayDisplayDate()));
-  readonly departureCalendarStart = computed(() => this.departureCalendarSelection() || this.departureCalendarMinimum());
+  readonly departureCalendarSelection            = computed(() => this.departureCalendarDate(this.actionDraft().newCheckOut));
+  readonly departureCalendarMinimum              = computed(() => this.departureCalendarDate(this.todayDisplayDate()));
+  readonly departureCalendarStart                = computed(() => this.departureCalendarSelection() || this.departureCalendarMinimum());
   readonly roomChargeDraft                       = signal<RoomChargeDraft>(this.buildRoomChargeDraft());
   readonly roomChargePointOfSales                = signal<RoomChargePointOfSale[]>([]);
   readonly roomChargeItems                       = signal<RoomChargePriceListApiItem[]>([]);
@@ -428,8 +443,8 @@ export class RoomStayManagementComponent implements OnInit {
     vencimiento     : '00/00',
     tCambio         : 1
   });
-  readonly isInvoicePaymentAmountEditing         = signal(false);
-  readonly invoicePaymentAmountText              = signal('');
+  readonly isInvoicePaymentAmountEditing    = signal(false);
+  readonly invoicePaymentAmountText         = signal('');
   readonly invoiceValidationMessage         = signal('');
   readonly invoiceCurrencies                = signal<MonedaUI[]>([]);
   readonly invoiceUsdExchangeRate           = signal<TipoCambio | null>(null);
@@ -450,13 +465,13 @@ export class RoomStayManagementComponent implements OnInit {
       ? this.invoiceCurrencies()
       : [
           {
-            codMoneda: this.invoiceBaseCurrency,
-            moneda: 'DOLAR',
-            simbolo: '$',
-            activo: 1,
-            primario: 0,
-            secundario: 1,
-            orden: 1
+            codMoneda     : this.invoiceBaseCurrency,
+            moneda        : 'DOLAR',
+            simbolo       : '$',
+            activo        : 1,
+            primario      : 0,
+            secundario    : 1,
+            orden         : 1
           }
         ]
   );
@@ -800,6 +815,128 @@ export class RoomStayManagementComponent implements OnInit {
     this.loadOperationalDate();
     this.setupInvoiceClientSearch();
     this.loadRoomStay();
+  }
+
+  updateCreditLimitDraft(value: string): void {
+    this.creditLimitDraft.set(value);
+    this.clearCreditMessages();
+  }
+
+  updateCreditCardNumberDraft(value: string): void {
+    this.creditCardNumberDraft.set(value);
+    this.clearCreditMessages();
+  }
+
+  updateCreditExpirationDraft(value: string): void {
+    this.creditExpirationDraft.set(value);
+    this.clearCreditMessages();
+  }
+
+  saveRoomCredit(): void {
+    const amount = this.parseCreditAmount(this.creditLimitDraft());
+    const cardNumber = this.cleanText(this.creditCardNumberDraft());
+    const expiration = this.cleanText(this.creditExpirationDraft());
+
+    if (!amount || amount <= 0) {
+      this.creditErrorMessage.set('Indica un monto de crédito mayor que cero.');
+      this.creditSuccessMessage.set('');
+      return;
+    }
+
+    if (!cardNumber) {
+      this.creditErrorMessage.set('Indica el número de tarjeta asociado al crédito.');
+      this.creditSuccessMessage.set('');
+      return;
+    }
+
+    if (!this.isValidCreditExpiration(expiration)) {
+      this.creditErrorMessage.set('El vencimiento debe tener el formato MM/AA.');
+      this.creditSuccessMessage.set('');
+      return;
+    }
+
+    this.submitRoomCredit({
+      numHabitacion: this.cleanText(this.room().roomNumber),
+      lCredito: 1,
+      mtoCredito: amount,
+      numTarjeta: cardNumber,
+      vence: expiration
+    }, 'La línea de crédito fue activada correctamente.', true);
+  }
+
+  disableRoomCredit(): void {
+    const roomNumber = this.cleanText(this.room().roomNumber);
+    const amount = this.parseCreditAmount(this.creditLimitDraft()) || this.room().creditLimit;
+
+    if (!roomNumber) {
+      this.creditErrorMessage.set('No se pudo identificar la habitación.');
+      return;
+    }
+
+    this.submitRoomCredit({
+      numHabitacion: roomNumber,
+      lCredito: 0,
+      mtoCredito: amount > 0 ? amount : 0,
+      numTarjeta: this.cleanText(this.creditCardNumberDraft()),
+      vence: this.cleanText(this.creditExpirationDraft())
+    }, 'La línea de crédito fue desactivada correctamente.', false);
+  }
+
+  private submitRoomCredit(payload: RoomCreditPayload, successMessage: string, enabled: boolean): void {
+    if (this.creditSaving()) {
+      return;
+    }
+
+    if (!payload.numHabitacion) {
+      this.creditErrorMessage.set('No se pudo identificar la habitación.');
+      return;
+    }
+
+    this.creditSaving.set(true);
+    this.clearCreditMessages();
+
+    this.roomStayManagementService
+      .updateRoomCredit(payload)
+      .pipe(
+        finalize(() => this.creditSaving.set(false)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (response) => {
+          if (this.isFailedApiResponse(response)) {
+            this.creditErrorMessage.set(response.message || 'El servidor no confirmó el cambio de la línea de crédito.');
+            return;
+          }
+
+          this.room.update((currentRoom) => ({
+            ...currentRoom,
+            creditEnabled: enabled,
+            creditLimit: payload.mtoCredito,
+            creditCardNumber: payload.numTarjeta,
+            creditExpiration: payload.vence
+          }));
+          this.creditSuccessMessage.set(successMessage);
+          this.toastService.success(successMessage, 4000, 'Línea de crédito');
+        },
+        error: (error) => {
+          console.error('No se pudo actualizar la línea de crédito de la habitación.', error);
+          this.creditErrorMessage.set('No se pudo actualizar la línea de crédito. Intenta nuevamente.');
+        }
+      });
+  }
+
+  private clearCreditMessages(): void {
+    this.creditErrorMessage.set('');
+    this.creditSuccessMessage.set('');
+  }
+
+  private parseCreditAmount(value: string): number {
+    const amount = Number(this.cleanText(value).replace(/,/g, ''));
+    return Number.isFinite(amount) ? Math.round((amount + Number.EPSILON) * 100) / 100 : 0;
+  }
+
+  private isValidCreditExpiration(value: string): boolean {
+    return /^(0[1-9]|1[0-2])\/\d{2}$/.test(value);
   }
 
   setActiveTab(tab: ActiveTab): void {
@@ -2655,6 +2792,7 @@ export class RoomStayManagementComponent implements OnInit {
         }
 
         this.room.set(this.mapApiStayToRoomStay(stay));
+        this.syncCreditDraftFromRoom(this.room());
         this.requestedReservationNumber = stay.codReserva;
         this.loadAssignedReservationTags(stay.codReserva);
       });
@@ -2738,6 +2876,10 @@ export class RoomStayManagementComponent implements OnInit {
       lodgingCharges        : this.mapApiCharges(stay.cargosFolioMaster),
       extraCharges          : this.mapApiCharges(stay.cargosExtras),
       prepaid               : 0,
+      creditEnabled         : Number(stay.credito ?? 0) === 1,
+      creditLimit           : Number(stay.limiteCre ?? 0) > 0 ? Number(stay.limiteCre) : 0,
+      creditCardNumber      : this.cleanText(stay.tarjeta),
+      creditExpiration      : this.cleanText(stay.vence),
       operator              :
         this.cleanText(stay.roomingList?.[0]?.operador) ||
         this.cleanText(stay.cargosFolioMaster?.[0]?.operador) ||
@@ -2777,6 +2919,13 @@ export class RoomStayManagementComponent implements OnInit {
         invoiceSelected   : true
       };
     });
+  }
+
+  private syncCreditDraftFromRoom(room: RoomStay): void {
+    this.creditLimitDraft.set(room.creditLimit ? String(room.creditLimit) : '');
+    this.creditCardNumberDraft.set(room.creditCardNumber);
+    this.creditExpirationDraft.set(room.creditExpiration);
+    this.clearCreditMessages();
   }
 
   private formatApiTime(value: string | null | undefined): string {
@@ -2977,6 +3126,7 @@ export class RoomStayManagementComponent implements OnInit {
       );
 
       this.room.set(refreshedRoom);
+      this.syncCreditDraftFromRoom(refreshedRoom);
       this.requestedRoomNumber = refreshedRoom.roomNumber;
       this.requestedReservationNumber = refreshedReservation;
       this.stayErrorMessage.set('');

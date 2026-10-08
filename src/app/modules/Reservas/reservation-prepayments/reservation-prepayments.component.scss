@@ -227,6 +227,10 @@
   display: block;
 }
 
+.prepay-table td strong + span {
+  margin-top: 0.12rem;
+}
+
 .prepay-table td span {
   color: #64748b;
   font-size: 0.68rem;

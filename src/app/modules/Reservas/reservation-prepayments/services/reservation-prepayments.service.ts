@@ -84,8 +84,8 @@ export class ReservationPrepaymentsService {
       fechaDepo: normalizePmsDateDDMMYYYY(payload.fechaDepo),
       fechaReg: normalizePmsDateDDMMYYYY(payload.fechaReg),
       cCosto: 'PREPA',
-      codBanco: '',
-      ctaBanco: ''
+      codBanco: payload.codBanco?.trim() || '',
+      ctaBanco: payload.ctaBanco?.trim() || ''
     };
   }
 

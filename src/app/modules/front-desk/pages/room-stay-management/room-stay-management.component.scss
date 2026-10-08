@@ -799,6 +799,64 @@ label {
   min-height: 150px;
 }
 
+.room-credit-card__header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 16px; border-bottom: 1px solid rgba($cyan, 0.14); }
+.room-credit-card__body { display: grid; gap: 7px; padding: 8px 16px 9px; }
+
+.room-credit-form {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.75fr) minmax(190px, 1.25fr) minmax(105px, 0.55fr);
+  gap: 7px;
+}
+
+.room-credit-form label {
+  display: grid;
+  gap: 2px;
+}
+
+.room-credit-form input {
+  width: 100%;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid $line;
+  border-radius: 8px;
+  color: $ink;
+  background: $paper;
+  font-size: 0.78rem;
+  font-weight: 750;
+  outline: none;
+}
+
+.room-credit-message { margin: 0; padding: 5px 10px; border-radius: 8px; font-size: 0.72rem; font-weight: 800; }
+.room-credit-message--error { color: #991b1b; background: #fef2f2; }
+.room-credit-message--success { color: #17653b; background: #e7f7ec; }
+
+.room-credit-card__footer { justify-content: space-between; gap: 10px; }
+
+.room-credit-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.room-credit-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.room-credit-button--primary {
+  color: $paper;
+  background: linear-gradient(135deg, $cyan-dark, $cyan);
+  box-shadow: 0 8px 16px rgba($cyan-dark, 0.16);
+}
+
 .table-tools {
   display: flex;
   gap: 6px;
@@ -1948,6 +2006,15 @@ label {
   }
 
   .reservation-tags-card__empty button {
+    width: 100%;
+  }
+
+  .room-credit-form {
+    grid-template-columns: 1fr;
+  }
+
+  .room-credit-actions,
+  .room-credit-button {
     width: 100%;
   }
 

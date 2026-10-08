@@ -175,10 +175,15 @@
 
 .reservation-column { width: 150px; }
 .description-column { width: 215px; }
-.agency-column { width: 110px; }
+.agency-column {
+  width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .date-column { width: 92px; }
-.nights-column { width: 58px; }
-.rooms-column { width: 58px; }
+.nights-column { width: 52px; }
+.rooms-column { width: 50px; }
 .status-column { width: 86px; }
 .total-column { width: 98px; }
 .operator-column { width: 92px; }
@@ -228,7 +233,7 @@ td.reservation-column > strong {
 }
 
 .prepago-column {
-  width: 76px;
+  width: 62px;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }

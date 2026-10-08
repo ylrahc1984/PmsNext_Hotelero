@@ -100,6 +100,16 @@ export const FRONT_DESK_ROUTES: Routes = [
         loadComponent: () => import('./check-in-arrivals/check-in-arrivals.component').then((c) => c.CheckInArrivalsComponent)
       },
       {
+        path: 'arribos',
+        data: frontDeskData('Arribos'),
+        loadComponent: () => import('./pages/arribos/arribos.component').then((c) => c.ArribosComponent)
+      },
+      {
+        path: 'ocupacion-diaria',
+        data: frontDeskData('Ocupación Diaria'),
+        loadComponent: () => import('./pages/ocupacion-diaria/ocupacion-diaria.component').then((c) => c.OcupacionDiariaComponent)
+      },
+      {
         path: 'huespedes-in-house',
         data: frontDeskData('Huéspedes In House', 'Habitaciones'),
         loadComponent: () => import('./in-house-guests/in-house-guests.component').then((c) => c.InHouseGuestsComponent)

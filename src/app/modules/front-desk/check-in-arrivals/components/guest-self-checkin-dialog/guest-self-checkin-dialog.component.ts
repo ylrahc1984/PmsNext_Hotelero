@@ -119,6 +119,7 @@ export class GuestSelfCheckinDialogComponent implements OnChanges, OnInit, OnDes
   @Input() errorMessage = '';
 
   @Output() guestSaved = new EventEmitter<SelfCheckInGuestSave>();
+  @Output() hotelLogoError = new EventEmitter<void>();
   @Output() registrationFinished = new EventEmitter<void>();
   @Output() cancelled = new EventEmitter<void>();
 

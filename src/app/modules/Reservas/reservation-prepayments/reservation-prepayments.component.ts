@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { catchError, distinctUntilChanged, finalize, forkJoin, of } from 'rxjs';
+import { catchError, distinctUntilChanged, finalize, firstValueFrom, forkJoin, of } from 'rxjs';
 import Swal from 'sweetalert2';
 
 import { OperationalAction } from 'src/app/core/models/operational-context.model';
@@ -14,6 +14,10 @@ import { FormaPago } from 'src/app/demo/administracion/forma-pago/forma-pago.mod
 import { FormaPagoService } from 'src/app/demo/administracion/forma-pago/forma-pago.service';
 import { MonedaService, MonedaUI } from 'src/app/demo/administracion/monedas/moneda.service';
 import { TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
+import { Banco } from 'src/app/finanzas/bancos/banco.model';
+import { BancosService } from 'src/app/finanzas/bancos/bancos.service';
+import { CuentaBanco } from 'src/app/finanzas/cuenta-banco/cuenta-banco.model';
+import { CuentaBancoService } from 'src/app/finanzas/cuenta-banco/cuenta-banco.service';
 import {
   ReservationPrepayment,
   ReservationPrepaymentMode,
@@ -26,6 +30,8 @@ interface ReservationPrepaymentForm {
   fechaReg: FormControl<string>;
   concepto: FormControl<string>;
   frmPago: FormControl<string>;
+  codBanco: FormControl<string>;
+  ctaBanco: FormControl<string>;
   moneda: FormControl<string>;
   tCambio: FormControl<number>;
   totalPrepa: FormControl<number>;
@@ -35,6 +41,12 @@ interface ReservationPrepaymentForm {
   codSeguridad: FormControl<string>;
   tipTarjeta: FormControl<string>;
   cCosto: FormControl<string>;
+}
+
+interface CuentaBancoOption {
+  value: string;
+  label: string;
+  moneda: string;
 }
 
 interface MoneyCard {
@@ -58,6 +70,8 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
   private readonly monedaService = inject(MonedaService);
   private readonly tipoCambioService = inject(TipoCambioService);
   private readonly formaPagoService = inject(FormaPagoService);
+  private readonly bancosService = inject(BancosService);
+  private readonly cuentaBancoService = inject(CuentaBancoService);
   private readonly auth = inject(AuthService);
   private readonly operationalDateService = inject(OperationalDateService);
   private readonly operationalPolicy = inject(OperationalPolicyService);
@@ -74,6 +88,8 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
     fechaReg: this.fb.control(this.todayIso(), { validators: [Validators.required] }),
     concepto: this.fb.control('', { validators: [Validators.required, Validators.maxLength(160)] }),
     frmPago: this.fb.control('', { validators: [Validators.required] }),
+    codBanco: this.fb.control(''),
+    ctaBanco: this.fb.control(''),
     moneda: this.fb.control('', { validators: [Validators.required] }),
     tCambio: this.fb.control(1, { validators: [Validators.required, Validators.min(0.0001)] }),
     totalPrepa: this.fb.control(0, { validators: [Validators.required, Validators.min(0.01)] }),
@@ -92,6 +108,9 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
   readonly prepayments = signal<ReservationPrepayment[]>([]);
   readonly monedas = signal<MonedaUI[]>([]);
   readonly formasPago = signal<FormaPago[]>([]);
+  readonly bancos = signal<Banco[]>([]);
+  readonly cuentasBanco = signal<CuentaBancoOption[]>([]);
+  readonly cuentasBancoLoading = signal(false);
   readonly submitted = signal(false);
   readonly conversionAmount = signal(0);
   readonly projectedBalance = signal(0);
@@ -100,7 +119,6 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
   readonly isViewing = computed(() => this.mode() === 'view');
   readonly modalTitle = computed(() => (this.isEditing() ? 'Editar Prepago' : this.isViewing() ? 'Consultar Prepago' : 'Administración de Prepagos'));
   readonly submitLabel = computed(() => (this.isEditing() ? 'Actualizar Prepago' : 'Guardar Prepago'));
-  readonly conversionVisible = computed(() => this.normalizeCurrency(this.form.controls.moneda.value) !== this.reservationCurrency());
   readonly reservationCurrency = computed(() => this.normalizeCurrency(this.reserva?.moneda || 'USD'));
   readonly totalPrepaid = computed(() => this.roundMoney(this.prepayments().reduce((sum, item) => sum + this.toReservationCurrency(item), 0)));
   readonly pendingBalance = computed(() => this.roundMoney(Math.max(this.totalReservation() - this.totalPrepaid(), 0)));
@@ -120,6 +138,10 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
     });
     this.form.controls.moneda.valueChanges.pipe(distinctUntilChanged(), takeUntilDestroyed(this.destroyRef)).subscribe(() => this.syncExchangeRate());
     this.form.controls.fechaDepo.valueChanges.pipe(distinctUntilChanged(), takeUntilDestroyed(this.destroyRef)).subscribe(() => this.syncExchangeRate());
+    this.form.controls.codBanco.valueChanges.pipe(distinctUntilChanged(), takeUntilDestroyed(this.destroyRef)).subscribe((value) => {
+      void this.onBancoChange(value);
+    });
+    this.form.controls.ctaBanco.valueChanges.pipe(distinctUntilChanged(), takeUntilDestroyed(this.destroyRef)).subscribe((value) => this.onCuentaBancoChange(value));
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -160,7 +182,10 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
       confirmButtonText: this.isEditing() ? 'Sí, actualizar' : 'Sí, guardar',
       cancelButtonText: 'No, volver',
       confirmButtonColor: '#0d6efd',
-      cancelButtonColor: '#6c757d'
+      cancelButtonColor: '#6c757d',
+      customClass: {
+        container: 'next-confirm-container'
+      }
     });
 
     if (!confirmation.isConfirmed) {
@@ -185,7 +210,10 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
             text: response?.respuesta || response?.mensaje || 'El prepago fue procesado correctamente.',
             icon: 'success',
             timer: 1400,
-            showConfirmButton: false
+            showConfirmButton: false,
+            customClass: {
+              container: 'next-confirm-container'
+            }
           });
           this.changed.emit();
           this.resetForm();
@@ -235,7 +263,10 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
       confirmButtonText: 'Sí, eliminar',
       cancelButtonText: 'No, volver',
       confirmButtonColor: '#dc3545',
-      cancelButtonColor: '#6c757d'
+      cancelButtonColor: '#6c757d',
+      customClass: {
+        container: 'next-confirm-container'
+      }
     });
 
     if (!result.isConfirmed) {
@@ -268,6 +299,8 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
     return this.monedas().find((item) => this.normalizeCurrency(item.codMoneda) === normalized)?.simbolo || (normalized === 'CRC' || normalized === 'COL' ? '₡' : '$');
   }
 
+  readonly conversionVisible = computed(() => this.normalizeCurrency(this.form.controls.moneda.value) !== this.reservationCurrency());
+
   formaPagoLabel(code: string): string {
     const item = this.formasPago().find((entry) => entry.codigo === code);
     return item ? item.descripcion : code || 'N/D';
@@ -297,12 +330,14 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
   private loadCatalogs(): void {
     forkJoin({
       monedas: this.monedaService.getAll().pipe(catchError(() => of([] as MonedaUI[]))),
-      formasPago: this.formaPagoService.getAll().pipe(catchError(() => of([] as FormaPago[])))
+      formasPago: this.formaPagoService.getAll().pipe(catchError(() => of([] as FormaPago[]))),
+      bancos: this.bancosService.getBancos().pipe(catchError(() => of([] as Banco[])))
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(({ monedas, formasPago }) => {
-        this.monedas.set(monedas);
+      .subscribe(({ monedas, formasPago, bancos }) => {
+        this.monedas.set(this.ensureColonCurrencyOptions(monedas));
         this.formasPago.set(formasPago.filter((item) => item.tipoFrm === 'A' || item.tipoFrm === 'V'));
+        this.bancos.set(bancos);
         this.applyDefaults();
       });
   }
@@ -342,9 +377,11 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
       fechaReg: today,
       concepto: '',
       frmPago: this.formasPago()[0]?.codigo ?? '',
+      codBanco: '',
+      ctaBanco: '',
       moneda: this.reservationCurrency(),
       tCambio: this.reserva?.tCambio || 1,
-      totalPrepa: 0,
+      totalPrepa: this.totalReservation(),
       nOperacion: '',
       numTarjeta: '',
       venTarjeta: '',
@@ -374,6 +411,8 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
       fechaReg: this.normalizeDateForInput(prepayment.fechaReg),
       concepto: prepayment.concepto,
       frmPago: prepayment.frmPago,
+      codBanco: prepayment.codBanco || '',
+      ctaBanco: prepayment.ctaBanco || '',
       moneda: this.normalizeCurrency(prepayment.moneda),
       tCambio: Number(prepayment.tCambio || 1),
       totalPrepa: Number(prepayment.totalPrepa || 0),
@@ -383,10 +422,14 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
       codSeguridad: prepayment.codSeguridad,
       tipTarjeta: prepayment.tipTarjeta,
       cCosto: prepayment.cCosto || 'PREPA'
-    });
+    }, { emitEvent: false });
 
     if (readonly) {
       this.form.disable({ emitEvent: false });
+    }
+
+    if (prepayment.codBanco) {
+      void this.onBancoChange(prepayment.codBanco, prepayment.ctaBanco);
     }
 
     this.updateMoneyPreview();
@@ -399,17 +442,72 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
       nOperacion.addValidators([Validators.required]);
     }
     nOperacion.updateValueAndValidity({ emitEvent: false });
+
+    const codBanco = this.form.controls.codBanco;
+    const ctaBanco = this.form.controls.ctaBanco;
+    const validators = [Validators.required];
+    codBanco.setValidators(validators);
+    ctaBanco.setValidators(validators);
+    codBanco.updateValueAndValidity({ emitEvent: false });
+    ctaBanco.updateValueAndValidity({ emitEvent: false });
+  }
+
+  private async onBancoChange(codBanco: string, preferredCtaBanco = ''): Promise<void> {
+    const normalized = codBanco.trim();
+    this.form.controls.ctaBanco.setValue('', { emitEvent: false });
+    this.cuentasBanco.set([]);
+
+    if (!normalized) {
+      return;
+    }
+
+    this.cuentasBancoLoading.set(true);
+    try {
+      const cuentas = await firstValueFrom(this.cuentaBancoService.getCuentas(normalized));
+      this.cuentasBanco.set(cuentas.map((cuenta: CuentaBanco) => ({
+        value: cuenta.ctaBanco,
+        label: `${cuenta.nombreCta} (${cuenta.ctaBanco})`,
+        // Las cuentas existentes pueden usar COL o CRC para representar colones.
+        moneda: this.normalizeAccountCurrency(cuenta.moneda)
+      })));
+      const account = this.cuentasBanco().find((item) => item.value === preferredCtaBanco);
+      this.form.controls.ctaBanco.setValue(account?.value || '', { emitEvent: false });
+      if (account?.moneda) {
+        this.form.controls.moneda.setValue(account.moneda, { emitEvent: false });
+        this.syncExchangeRate();
+        this.syncAmountWithReservationCurrency();
+        this.updateMoneyPreview();
+      }
+    } catch (error) {
+      console.error('No se pudieron cargar las cuentas del banco.', error);
+      this.errorMessage = this.getApiErrorMessage(error);
+    } finally {
+      this.cuentasBancoLoading.set(false);
+    }
+  }
+
+  private onCuentaBancoChange(ctaBanco: string): void {
+    const selected = this.cuentasBanco().find((cuenta) => cuenta.value === ctaBanco);
+    if (!selected?.moneda) {
+      return;
+    }
+
+    this.form.controls.moneda.setValue(selected.moneda);
   }
 
   private syncExchangeRate(): void {
     const monedaPrepago = this.normalizeCurrency(this.form.controls.moneda.value);
     if (!monedaPrepago || monedaPrepago === this.reservationCurrency()) {
       this.form.controls.tCambio.setValue(1, { emitEvent: false });
+      this.syncAmountWithReservationCurrency();
+      this.updateMoneyPreview();
       return;
     }
 
     const existing = Number(this.form.controls.tCambio.value || this.reserva?.tCambio || 0);
     if (existing > 1) {
+      this.syncAmountWithReservationCurrency();
+      this.updateMoneyPreview();
       return;
     }
 
@@ -419,6 +517,7 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
       .subscribe((items) => {
         const rate = Number(items[0]?.venta ?? this.reserva?.tCambio ?? 0) || 1;
         this.form.controls.tCambio.setValue(rate, { emitEvent: false });
+        this.syncAmountWithReservationCurrency();
         this.updateMoneyPreview();
       });
   }
@@ -435,6 +534,21 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
     if (this.normalizeCurrency(this.form.controls.moneda.value) === this.reservationCurrency() && this.form.controls.tCambio.value !== 1) {
       this.form.controls.tCambio.setValue(1, { emitEvent: false });
     }
+  }
+
+  private syncAmountWithReservationCurrency(): void {
+    if (this.isEditing() || this.isViewing()) {
+      return;
+    }
+
+    const reservationAmount = this.totalReservation();
+    const paymentCurrency = this.normalizeCurrency(this.form.controls.moneda.value);
+    const rate = Number(this.form.controls.tCambio.value || 1) || 1;
+    const amount = paymentCurrency === 'CRC' || paymentCurrency === 'COL'
+      ? reservationAmount * rate
+      : reservationAmount;
+
+    this.form.controls.totalPrepa.setValue(this.roundMoney(amount), { emitEvent: false });
   }
 
   private getSubmitValidationMessage(): string {
@@ -476,6 +590,8 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
       moneda: this.normalizeCurrency(raw.moneda),
       tCambio: Number(raw.tCambio || 1),
       frmPago: raw.frmPago.trim(),
+      codBanco: raw.codBanco.trim(),
+      ctaBanco: raw.ctaBanco.trim(),
       numTarjeta: raw.numTarjeta.trim(),
       venTarjeta: raw.venTarjeta.trim(),
       codSeguridad: raw.codSeguridad.trim(),
@@ -528,6 +644,26 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
   private normalizeCurrency(value: string | null | undefined): string {
     const currency = (value ?? '').trim().toUpperCase();
     return currency === 'COL' ? 'CRC' : currency;
+  }
+
+  private normalizeAccountCurrency(value: string | null | undefined): string {
+    const currency = (value ?? '').trim().toUpperCase();
+    return currency;
+  }
+
+  private ensureColonCurrencyOptions(monedas: MonedaUI[]): MonedaUI[] {
+    const options = [...monedas];
+    const crc = options.find((item) => this.normalizeCurrency(item.codMoneda) === 'CRC');
+    const col = options.find((item) => this.normalizeCurrency(item.codMoneda) === 'CRC' && item.codMoneda.trim().toUpperCase() === 'COL');
+
+    if (crc && !options.some((item) => item.codMoneda.trim().toUpperCase() === 'COL')) {
+      options.push({ ...crc, codMoneda: 'COL', moneda: `${crc.moneda} (COL)` });
+    }
+    if (col && !options.some((item) => item.codMoneda.trim().toUpperCase() === 'CRC')) {
+      options.push({ ...col, codMoneda: 'CRC', moneda: `${col.moneda} (CRC)` });
+    }
+
+    return options;
   }
 
   private normalizeDateForInput(value: string): string {

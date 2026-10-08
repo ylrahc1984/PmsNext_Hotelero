@@ -499,6 +499,8 @@
     [documentTypes]="documentTypes"
     [nationalities]="selfCheckinNationalities"
     [hotelName]="selfCheckInHotelName"
+    [hotelLogoUrl]="hotelLogoUrl"
+    (hotelLogoError)="onHotelLogoError()"
     [saving]="selfCheckinSaving"
     [errorMessage]="selfCheckinError"
     (guestSaved)="saveSelfCheckInGuest($event)"

@@ -1,0 +1,175 @@
+<section class="production-report" aria-label="Producción por agencia">
+  <header class="production-header">
+    <div>
+      <span class="eyebrow">Reportes · Ejecutivo</span>
+      <h1>Producción por Agencia</h1>
+      <p>Análisis ejecutivo de reservas, habitaciones y room nights por agencia.</p>
+    </div>
+    <div class="period-context">
+      <span>Período analizado</span>
+      <strong>{{ periodLabel }}</strong>
+      <small *ngIf="periodDays">{{ periodDays }} días · Fecha de ingreso</small>
+    </div>
+  </header>
+
+  <form class="period-filters" (ngSubmit)="consultar()" aria-label="Filtros de producción por agencia">
+    <div class="filter-control">
+      <label for="produccionFechaInicio">Fecha inicio</label>
+      <input id="produccionFechaInicio" name="fechaInicio" type="date" [(ngModel)]="filters.fechaInicio" required>
+    </div>
+    <div class="filter-control">
+      <label for="produccionFechaFin">Fecha fin</label>
+      <input id="produccionFechaFin" name="fechaFin" type="date" [(ngModel)]="filters.fechaFin" required>
+    </div>
+    <div class="quick-ranges" aria-label="Rangos rápidos">
+      <button type="button" (click)="aplicarRango('hoy')">Hoy</button>
+      <button type="button" (click)="aplicarRango('ultimos7')">Últimos 7 días</button>
+      <button type="button" (click)="aplicarRango('ultimos30')">Últimos 30 días</button>
+      <button type="button" (click)="aplicarRango('mes')">Mes actual</button>
+    </div>
+    <div class="filter-actions">
+      <button type="submit" class="btn btn-primary" [disabled]="loading">
+        <span class="spinner-border spinner-border-sm me-1" *ngIf="loading" aria-hidden="true"></span>
+        <i class="feather icon-search me-1" *ngIf="!loading" aria-hidden="true"></i>
+        Consultar
+      </button>
+      <button type="button" class="btn btn-light" (click)="limpiar()" [disabled]="loading">
+        <i class="feather icon-refresh-cw me-1" aria-hidden="true"></i>Limpiar
+      </button>
+    </div>
+  </form>
+
+  <div class="report-feedback report-feedback--loading" *ngIf="loading">
+    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+    Consultando producción por agencia...
+  </div>
+  <div class="report-feedback report-feedback--error" *ngIf="!loading && errorMessage">
+    <span><i class="feather icon-alert-triangle me-1" aria-hidden="true"></i>{{ errorMessage }}</span>
+    <button type="button" class="btn btn-sm btn-outline-danger" (click)="consultar()">Reintentar</button>
+  </div>
+
+  <ng-container *ngIf="!loading && !errorMessage && resumen as summary">
+    <section class="report-section" aria-labelledby="summaryTitle">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">Resumen general del período</span>
+          <h2 id="summaryTitle">Lectura ejecutiva</h2>
+        </div>
+        <span class="section-note">Período por fecha de ingreso</span>
+      </div>
+
+      <div class="kpi-grid">
+        <article class="kpi-card kpi-card--blue">
+          <div class="kpi-icon"><i class="feather icon-calendar" aria-hidden="true"></i></div>
+          <div><span>Reservas</span><strong>{{ formatNumber(summary.reservasBrutas) }}</strong></div>
+          <p>{{ formatNumber(summary.reservasVigentes) }} vigentes · {{ formatNumber(summary.reservasCanceladas) }} canceladas</p>
+          <em [ngClass]="cancellationTone(summary.porcentajeCancelacionReservas)">Cancelación {{ formatPercent(summary.porcentajeCancelacionReservas) }}</em>
+        </article>
+        <article class="kpi-card kpi-card--teal">
+          <div class="kpi-icon"><i class="feather icon-home" aria-hidden="true"></i></div>
+          <div><span>Habitaciones</span><strong>{{ formatNumber(summary.habitacionesBrutas) }}</strong></div>
+          <p>{{ formatNumber(summary.habitacionesVigentes) }} vigentes · {{ formatNumber(summary.habitacionesCanceladas) }} canceladas</p>
+          <em [ngClass]="cancellationTone(summary.porcentajeCancelacionHabitaciones)">Cancelación {{ formatPercent(summary.porcentajeCancelacionHabitaciones) }}</em>
+        </article>
+        <article class="kpi-card kpi-card--amber">
+          <div class="kpi-icon"><i class="feather icon-moon" aria-hidden="true"></i></div>
+          <div><span>Room Nights</span><strong>{{ formatNumber(summary.roomNightsBrutos) }}</strong></div>
+          <p>{{ formatNumber(summary.roomNightsVigentes) }} vigentes · {{ formatNumber(summary.roomNightsCancelados) }} cancelados</p>
+          <em [ngClass]="cancellationTone(summary.porcentajeCancelacionRoomNights)">Cancelación {{ formatPercent(summary.porcentajeCancelacionRoomNights) }}</em>
+        </article>
+        <article class="kpi-card kpi-card--violet">
+          <div class="kpi-icon"><i class="feather icon-users" aria-hidden="true"></i></div>
+          <div><span>Huéspedes</span><strong>{{ formatNumber(summary.totalHuespedes) }}</strong></div>
+          <p>{{ formatNumber(summary.totalAdultos) }} adultos · {{ formatNumber(summary.totalNinos) }} niños</p>
+          <em class="risk-low">Producción del período</em>
+        </article>
+      </div>
+    </section>
+
+    <section class="analytics-grid analytics-grid--first" aria-label="Composición de producción">
+      <article class="analysis-panel">
+        <div class="panel-heading"><div><span class="eyebrow">Estados de producción</span><h2>Room Nights por estado</h2></div><small>Sobre {{ formatNumber(summary.roomNightsBrutos) }} brutos</small></div>
+        <div class="state-bars">
+          <div class="state-bar" *ngFor="let item of stateBars">
+            <div class="state-bar__label"><strong>{{ item.label }}</strong><span>{{ formatNumber(item.value) }} · {{ formatPercent(item.percent) }}</span></div>
+            <div class="bar-track"><i [ngClass]="'bar-fill bar-fill--' + item.tone" [style.width.%]="progressWidth(item.percent)"></i></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="analysis-panel composition-panel">
+        <div class="panel-heading"><div><span class="eyebrow">Composición</span><h2>Room Nights vigentes vs cancelados</h2></div><small>Total {{ formatNumber(summary.roomNightsBrutos) }}</small></div>
+        <div class="composition-track" aria-label="Composición de room nights">
+          <i class="composition-track__valid" [style.width.%]="compositionVigentesPercent"></i>
+          <i class="composition-track__cancelled" [style.width.%]="compositionCanceladosPercent"></i>
+        </div>
+        <div class="composition-legend">
+          <span><i class="legend-dot legend-dot--valid"></i>Vigentes <strong>{{ formatNumber(summary.roomNightsVigentes) }}</strong> · {{ formatPercent(compositionVigentesPercent) }}</span>
+          <span><i class="legend-dot legend-dot--cancelled"></i>Cancelados <strong>{{ formatNumber(summary.roomNightsCancelados) }}</strong> · {{ formatPercent(summary.porcentajeCancelacionRoomNights) }}</span>
+        </div>
+      </article>
+    </section>
+
+    <section class="analytics-grid analytics-grid--three" aria-label="Análisis ejecutivo">
+      <article class="analysis-panel participation-panel">
+        <div class="panel-heading"><div><span class="eyebrow">Mix comercial</span><h2>Participación de agencias</h2><p>Sobre Room Nights vigentes</p></div></div>
+        <div class="donut-layout">
+          <div class="donut" [style.background]="donutGradient"><div><strong>{{ formatNumber(summary.roomNightsVigentes) }}</strong><span>Room Nights<br>vigentes</span></div></div>
+          <div class="donut-list"><div *ngFor="let item of participationSegments"><i [style.background]="item.color"></i><span>{{ item.label }}</span><strong>{{ formatPercent(item.value) }}</strong></div></div>
+        </div>
+      </article>
+
+      <article class="analysis-panel cancellation-panel">
+        <div class="panel-heading"><div><span class="eyebrow">Riesgo comercial</span><h2>Cancelaciones por métrica</h2><p>El impacto cambia según la unidad analizada.</p></div></div>
+        <div class="metric-list">
+          <div><div><span>Reservas</span><strong>{{ formatPercent(summary.porcentajeCancelacionReservas) }}</strong></div><div class="bar-track"><i class="bar-fill bar-fill--reservas" [style.width.%]="progressWidth(summary.porcentajeCancelacionReservas)"></i></div><small>{{ formatNumber(summary.reservasCanceladas) }} / {{ formatNumber(summary.reservasBrutas) }}</small></div>
+          <div><div><span>Habitaciones</span><strong>{{ formatPercent(summary.porcentajeCancelacionHabitaciones) }}</strong></div><div class="bar-track"><i class="bar-fill bar-fill--habitaciones" [style.width.%]="progressWidth(summary.porcentajeCancelacionHabitaciones)"></i></div><small>{{ formatNumber(summary.habitacionesCanceladas) }} / {{ formatNumber(summary.habitacionesBrutas) }}</small></div>
+          <div><div><span>Room Nights</span><strong>{{ formatPercent(summary.porcentajeCancelacionRoomNights) }}</strong></div><div class="bar-track"><i class="bar-fill bar-fill--roomnights" [style.width.%]="progressWidth(summary.porcentajeCancelacionRoomNights)"></i></div><small>{{ formatNumber(summary.roomNightsCancelados) }} / {{ formatNumber(summary.roomNightsBrutos) }}</small></div>
+        </div>
+      </article>
+
+      <article class="analysis-panel reading-panel">
+        <div class="panel-heading"><div><span class="eyebrow">Indicadores</span><h2>Lectura del período</h2></div></div>
+        <div class="reading-item"><span>Vigencia de room nights</span><strong>{{ formatPercent(compositionVigentesPercent) }}</strong></div>
+        <div class="reading-item"><span>Agencias con producción</span><strong>{{ formatNumber(agenciasTotal) }}</strong></div>
+        <div class="reading-item"><span>Ocupación promedio por habitación</span><strong>{{ summary.habitacionesVigentes ? formatNumber(summary.totalHuespedes / summary.habitacionesVigentes, 2) : '0.00' }}</strong></div>
+        <div class="reading-note"><i class="feather icon-info" aria-hidden="true"></i>Las métricas se muestran según la consulta de fecha de ingreso.</div>
+      </article>
+    </section>
+
+    <section class="agency-section" aria-labelledby="agencyTitle">
+      <div class="section-heading agency-heading">
+        <div><span class="eyebrow">Detalle ejecutivo</span><h2 id="agencyTitle">Detalle por agencia</h2><p>{{ agenciasTotal }} agencias · Ordenado por participación en Room Nights vigentes</p></div>
+        <div class="agency-tools"><label class="search-control"><i class="feather icon-search" aria-hidden="true"></i><input type="search" [ngModel]="searchTerm" (ngModelChange)="onSearchChange($event)" placeholder="Buscar agencia..." aria-label="Buscar agencia"></label><select [(ngModel)]="pageSize" (ngModelChange)="currentPage = 1; refreshAgencyView()" aria-label="Registros por página"><option [ngValue]="10">10</option><option [ngValue]="25">25</option><option [ngValue]="50">50</option></select></div>
+      </div>
+
+      <div class="agency-table-wrap" *ngIf="agenciasFiltradas.length; else agencyEmpty">
+        <table class="agency-table">
+          <thead>
+            <tr><th rowspan="2">#</th><th rowspan="2">Código</th><th rowspan="2" class="agency-name-head"><button type="button" (click)="ordenarPor('nomAgencia')">Agencia <i class="feather icon-chevron-down" aria-hidden="true"></i></button></th><th colspan="4">Reservas</th><th colspan="4">Habitaciones</th><th colspan="4">Room Nights</th><th colspan="3">Indicadores</th><th rowspan="2">Participación</th></tr>
+            <tr><th><button type="button" (click)="ordenarPor('reservasBrutas')">Brutas</button></th><th><button type="button" (click)="ordenarPor('reservasVigentes')">Vigentes</button></th><th><button type="button" (click)="ordenarPor('reservasCanceladas')">Canceladas</button></th><th><button type="button" (click)="ordenarPor('reservasCanceladas')">% Canc.</button></th><th><button type="button" (click)="ordenarPor('habitacionesBrutas')">Brutas</button></th><th><button type="button" (click)="ordenarPor('habitacionesVigentes')">Vigentes</button></th><th><button type="button" (click)="ordenarPor('habitacionesCanceladas')">Canceladas</button></th><th><button type="button" (click)="ordenarPor('habitacionesCanceladas')">% Canc.</button></th><th><button type="button" (click)="ordenarPor('roomNightsBrutos')">Brutos</button></th><th><button type="button" (click)="ordenarPor('roomNightsVigentes')">Vigentes</button></th><th><button type="button" (click)="ordenarPor('roomNightsCancelados')">Cancelados</button></th><th><button type="button" (click)="ordenarPor('porcentajeCancelacionRoomNights')">% Canc.</button></th><th><button type="button" (click)="ordenarPor('estanciaPromedio')">Est. Prom.</button></th><th>Hab. x Res.</th><th>Pax x Hab.</th></tr>
+          </thead>
+          <tbody>
+            <ng-container *ngFor="let agencia of agenciasPagina; let index = index; trackBy: trackByAgency">
+              <tr class="agency-row" [class.agency-row--expanded]="isExpanded(agencia.codAgencia)">
+                <td>{{ rangeStart + index }}</td><td>{{ agencia.codAgencia }}</td><td class="agency-name" [title]="displayAgencia(agencia.nomAgencia)"><button type="button" class="agency-expand" (click)="toggleDetalle(agencia.codAgencia)" [attr.aria-expanded]="isExpanded(agencia.codAgencia)"><i class="feather" [ngClass]="isExpanded(agencia.codAgencia) ? 'icon-chevron-down' : 'icon-chevron-right'" aria-hidden="true"></i>{{ displayAgencia(agencia.nomAgencia) }}</button></td>
+                <td>{{ formatNumber(agencia.reservasBrutas) }}</td><td>{{ formatNumber(agencia.reservasVigentes) }}</td><td>{{ formatNumber(agencia.reservasCanceladas) }}</td><td><span class="risk-value" [ngClass]="cancellationTone(agencia.porcentajeCancelacionReservas)">{{ formatPercent(agencia.porcentajeCancelacionReservas) }}</span></td>
+                <td>{{ formatNumber(agencia.habitacionesBrutas) }}</td><td>{{ formatNumber(agencia.habitacionesVigentes) }}</td><td>{{ formatNumber(agencia.habitacionesCanceladas) }}</td><td><span class="risk-value" [ngClass]="cancellationTone(agencia.porcentajeCancelacionHabitaciones)">{{ formatPercent(agencia.porcentajeCancelacionHabitaciones) }}</span></td>
+                <td>{{ formatNumber(agencia.roomNightsBrutos) }}</td><td>{{ formatNumber(agencia.roomNightsVigentes) }}</td><td>{{ formatNumber(agencia.roomNightsCancelados) }}</td><td><span class="risk-value" [ngClass]="cancellationTone(agencia.porcentajeCancelacionRoomNights)">{{ formatPercent(agencia.porcentajeCancelacionRoomNights) }}</span></td>
+                <td>{{ formatNumber(agencia.estanciaPromedio, 2) }}</td><td>{{ formatNumber(agencia.habitacionesPorReserva, 2) }}</td><td>{{ formatNumber(agencia.paxPorHabitacion, 2) }}</td><td class="participation-cell"><div class="mini-progress"><i [style.width.%]="progressWidth(agencia.porcentajeParticipacion)"></i></div><strong>{{ formatPercent(agencia.porcentajeParticipacion) }}</strong></td>
+              </tr>
+              <tr class="agency-detail-row" *ngIf="isExpanded(agencia.codAgencia)"><td colspan="19"><div class="agency-detail"><div><span>Estados RN</span><strong>CHK {{ formatNumber(agencia.roomNightsCHK) }} · CCR {{ formatNumber(agencia.roomNightsCCR) }} · ABI {{ formatNumber(agencia.roomNightsABI) }} · WLT {{ formatNumber(agencia.roomNightsWLT) }} · ANU {{ formatNumber(agencia.roomNightsANU) }}</strong></div><div><span>Huéspedes</span><strong>{{ formatNumber(agencia.totalAdultos) }} adultos · {{ formatNumber(agencia.totalNinos) }} niños · {{ formatNumber(agencia.totalHuespedes) }} total</strong></div><div><span>Participación</span><strong>{{ formatPercent(agencia.porcentajeParticipacion) }}</strong></div></div></td></tr>
+            </ng-container>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #agencyEmpty><div class="empty-state"><i class="feather icon-search" aria-hidden="true"></i><strong>{{ agenciasTotal ? 'No hay agencias que coincidan con la búsqueda.' : 'No hay producción por agencia para el período seleccionado.' }}</strong><span>{{ agenciasTotal ? 'Pruebe con otro código o nombre.' : 'Seleccione otro rango de fechas para consultar información.' }}</span></div></ng-template>
+
+      <footer class="agency-footer" *ngIf="agenciasFiltradas.length"><span>Mostrando {{ rangeStart }}–{{ rangeEnd }} de {{ agenciasFiltradas.length }} agencias</span><div class="pagination"><button type="button" [disabled]="currentPage === 1" (click)="cambiarPagina(currentPage - 1)"><i class="feather icon-chevron-left" aria-hidden="true"></i></button><button type="button" *ngFor="let page of pageNumbers" [class.active]="page === currentPage" (click)="cambiarPagina(page)">{{ page }}</button><button type="button" [disabled]="currentPage === pageCount" (click)="cambiarPagina(currentPage + 1)"><i class="feather icon-chevron-right" aria-hidden="true"></i></button></div></footer>
+    </section>
+  </ng-container>
+
+  <div class="empty-state empty-state--page" *ngIf="!loading && !errorMessage && submitted && !report">
+    <i class="feather icon-bar-chart-2" aria-hidden="true"></i><strong>No fue posible cargar el reporte.</strong><span>Seleccione un rango de fechas e intente nuevamente.</span>
+  </div>
+</section>

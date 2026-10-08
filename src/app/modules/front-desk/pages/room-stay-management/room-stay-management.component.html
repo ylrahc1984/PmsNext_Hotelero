@@ -430,6 +430,92 @@
             </div>
             <div class="ledger-total"><span>Total Extras</span><strong>{{ extrasSubtotal() | currency:'USD':'symbol':'1.2-2' }}</strong></div>
           </article>
+
+          <article class="card room-credit-card" aria-labelledby="room-credit-title">
+            <header class="room-credit-card__header">
+              <div class="room-credit-card__title">
+                <span class="material-icons" aria-hidden="true">credit_score</span>
+                <div>
+                  <span class="room-credit-card__eyebrow">Control financiero</span>
+                  <h2 id="room-credit-title">Línea de crédito de la habitación</h2>
+                </div>
+              </div>
+              <span class="room-credit-status" [class.room-credit-status--active]="room().creditEnabled">
+                <span class="room-credit-status__dot" aria-hidden="true"></span>
+                {{ room().creditEnabled ? 'Activa' : 'Inactiva' }}
+              </span>
+            </header>
+
+            <div class="room-credit-card__body">
+              <p class="room-credit-card__description">
+                Define el límite y la tarjeta autorizada para cargar consumos a esta habitación.
+              </p>
+
+              <div class="room-credit-form">
+                <label>
+                  <span>Monto autorizado (USD)</span>
+                  <input
+                    type="text"
+                    inputmode="decimal"
+                    [value]="creditLimitDraft()"
+                    [disabled]="creditSaving()"
+                    placeholder="Ej. 200.00"
+                    (input)="updateCreditLimitDraft($any($event.target).value)"
+                  />
+                </label>
+                <label>
+                  <span>Número de tarjeta</span>
+                  <input
+                    type="text"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    [value]="creditCardNumberDraft()"
+                    [disabled]="creditSaving()"
+                    placeholder="Número autorizado"
+                    (input)="updateCreditCardNumberDraft($any($event.target).value)"
+                  />
+                </label>
+                <label>
+                  <span>Vencimiento</span>
+                  <input
+                    type="text"
+                    inputmode="numeric"
+                    maxlength="5"
+                    [value]="creditExpirationDraft()"
+                    [disabled]="creditSaving()"
+                    placeholder="MM/AA"
+                    (input)="updateCreditExpirationDraft($any($event.target).value)"
+                  />
+                </label>
+              </div>
+
+              @if (creditErrorMessage()) {
+                <p class="room-credit-message room-credit-message--error" role="alert">{{ creditErrorMessage() }}</p>
+              } @else if (creditSuccessMessage()) {
+                <p class="room-credit-message room-credit-message--success" role="status">{{ creditSuccessMessage() }}</p>
+              }
+
+              <footer class="room-credit-card__footer">
+                <div class="room-credit-actions">
+                  @if (room().creditEnabled) {
+                    <button type="button" class="room-credit-button room-credit-button--secondary" [disabled]="creditSaving()" (click)="disableRoomCredit()">
+                      @if (creditSaving()) { <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> }
+                      Desactivar crédito
+                    </button>
+                    <button type="button" class="room-credit-button room-credit-button--primary" [disabled]="creditSaving()" (click)="saveRoomCredit()">
+                      @if (creditSaving()) { <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> }
+                      Guardar cambios
+                    </button>
+                  } @else {
+                    <button type="button" class="room-credit-button room-credit-button--primary" [disabled]="creditSaving()" (click)="saveRoomCredit()">
+                      @if (creditSaving()) { <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> }
+                      Activar línea de crédito
+                    </button>
+                  }
+                </div>
+              </footer>
+            </div>
+          </article>
         </section>
       </section>
 

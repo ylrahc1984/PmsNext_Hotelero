@@ -54,6 +54,7 @@
                     <th>Fecha</th>
                     <th>Concepto</th>
                     <th>Forma Pago</th>
+                    <th>Banco / Cuenta</th>
                     <th>Operación</th>
                     <th>Moneda</th>
                     <th class="text-end">Monto</th>
@@ -68,6 +69,10 @@
                       <strong>{{ item.concepto || 'Prepago' }}</strong>
                     </td>
                     <td>{{ formaPagoLabel(item.frmPago) }}</td>
+                    <td>
+                      <strong>{{ item.codBanco || 'N/D' }}</strong>
+                      <span>{{ item.ctaBanco || 'Sin cuenta' }}</span>
+                    </td>
                     <td>{{ item.nOperacion || 'N/D' }}</td>
                     <td><span class="prepay-currency">{{ item.moneda }}</span></td>
                     <td class="text-end fw-semibold">{{ moneySymbol(item.moneda) }} {{ item.totalPrepa | number:'1.2-2' }}</td>
@@ -81,7 +86,7 @@
                     </td>
                   </tr>
                   <tr *ngIf="prepayments().length === 0 && !loading()">
-                    <td colspan="8" class="text-center text-muted py-4">
+                    <td colspan="9" class="text-center text-muted py-4">
                       <i class="bi bi-inbox me-1"></i>
                       No hay prepagos registrados para esta reserva.
                     </td>
@@ -121,6 +126,20 @@
                   </select>
                 </div>
                 <div class="col-md-6">
+                  <label class="form-label">Banco <span class="text-danger">*</span></label>
+                  <select class="form-select" formControlName="codBanco" [disabled]="isViewing() || cuentasBancoLoading()" [class.is-invalid]="isInvalid('codBanco')">
+                    <option value="">Seleccione</option>
+                    <option *ngFor="let banco of bancos()" [value]="banco.codBanco">{{ banco.descripcion }} ({{ banco.codBanco }})</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Cuenta bancaria <span class="text-danger">*</span></label>
+                  <select class="form-select" formControlName="ctaBanco" [disabled]="isViewing() || cuentasBancoLoading() || !form.controls.codBanco.value" [class.is-invalid]="isInvalid('ctaBanco')">
+                    <option value="">{{ cuentasBancoLoading() ? 'Cargando cuentas...' : 'Seleccione' }}</option>
+                    <option *ngFor="let cuenta of cuentasBanco()" [value]="cuenta.value">{{ cuenta.label }} · {{ cuenta.moneda }}</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
                   <label class="form-label">Moneda</label>
                   <select class="form-select" formControlName="moneda" [class.is-invalid]="isInvalid('moneda')">
                     <option value="">Seleccione</option>
@@ -132,7 +151,7 @@
                   <input type="number" class="form-control text-end" formControlName="tCambio" min="0" step="0.0001" [class.is-invalid]="isInvalid('tCambio')">
                 </div>
                 <div class="col-md-6">
-                  <label class="form-label">Monto Prepago</label>
+                  <label class="form-label">Monto Prepago ({{ form.controls.moneda.value || reservationCurrency() }})</label>
                   <input type="number" class="form-control text-end" formControlName="totalPrepa" min="0" step="0.01" [class.is-invalid]="isInvalid('totalPrepa')">
                 </div>
                 <div class="col-12">

@@ -3,9 +3,11 @@ import type { Content, TableCell, TCreatedPdf, TDocumentDefinitions } from 'pdfm
 
 import { AuthService } from 'src/app/core/services/auth.service';
 import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
+import { HotelLogoService } from 'src/app/core/services/hotel-logo.service';
 import { environment } from 'src/environments/environment';
 
 import { CheckInArrival, RoomingListGuest } from '../models/check-in-arrival.model';
+import { PoliticaHojaRegistro, RegistrationSheetLanguage } from '../../models/politica-hoja-registro.model';
 
 type PdfMakeBrowser = {
   addVirtualFileSystem(vfs: Record<string, string>): void;
@@ -21,6 +23,7 @@ export interface GuestRegistrationPdfOptions {
 @Injectable({ providedIn: 'root' })
 export class GuestRegistrationPdfService {
   private readonly empresaContext = inject(EmpresaContextService);
+  private readonly hotelLogoService = inject(HotelLogoService);
   private readonly authService = inject(AuthService);
   private pdfMakePromise?: Promise<PdfMakeBrowser>;
   private readonly assetPromises = new Map<string, Promise<string>>();
@@ -37,8 +40,10 @@ export class GuestRegistrationPdfService {
   }
 
   async printRegistrationForm(
+    language: RegistrationSheetLanguage,
     reservation: CheckInArrival,
     guests: RoomingListGuest[],
+    policies: PoliticaHojaRegistro[],
     options: GuestRegistrationPdfOptions = {}
   ): Promise<void> {
     const printWindow = options.printWindow ?? null;
@@ -46,16 +51,21 @@ export class GuestRegistrationPdfService {
     try {
       const [pdfMake, hotelLogo, pmsNextLogo] = await Promise.all([
         this.getPdfMake(),
-        this.getAssetDataUrl('assets/images/logo_lamia.jpeg'),
+        this.hotelLogoService.getLogoDataUrl(
+          this.empresaContext.getSnapshot(),
+          this.hotelLogoService.defaultPdfLogo
+        ),
         this.getAssetDataUrl('assets/images/next_logo_web_exact_icon.png')
       ]);
       const generationDate = options.generationDate ?? new Date();
       const operator = options.operator?.trim()
         || this.authService.getCurrentUser()?.usuario?.trim()
         || 'PMSNext User';
-      const definition = this.buildDocumentDefinition(
+      const definition = this.buildLocalizedDocumentDefinition(
+        language,
         reservation,
         guests,
+        policies,
         hotelLogo,
         pmsNextLogo,
         generationDate,
@@ -119,7 +129,260 @@ export class GuestRegistrationPdfService {
     });
   }
 
-  private buildDocumentDefinition(
+  private buildLocalizedDocumentDefinition(
+    language: RegistrationSheetLanguage,
+    reservation: CheckInArrival,
+    guests: RoomingListGuest[],
+    policies: PoliticaHojaRegistro[],
+    hotelLogo: string,
+    pmsNextLogo: string,
+    generationDate: Date,
+    operator: string
+  ): TDocumentDefinitions {
+    const company = this.empresaContext.empresa();
+    const hotelName = (company?.MA04_Nombre || company?.MA04_RazonSocial || 'HOTEL').trim();
+    const legalName = (company?.MA04_RazonSocial || '').trim();
+    const contact = [
+      company?.MA04_Direccion,
+      [company?.MA04_Ciudad, company?.MA04_Pais].filter(Boolean).join(', '),
+      company?.MA04_Telefono1 ? `Tel. ${company.MA04_Telefono1}` : '',
+      company?.MA04_Email
+    ].filter(Boolean).join('  |  ');
+    const labels = this.localizedLabels(language);
+    const primaryGuest = guests[0];
+    const totalRows = Math.max(4, guests.length);
+    const policyRows = policies.map((policy, index) => ({
+      text: `${index + 1}. ${policy.texto}`,
+      noWrap: false,
+      style: 'policyBody',
+      margin: [0, index ? 3 : 0, 0, 0]
+    } as Content));
+
+    return {
+      pageSize: 'LETTER',
+      pageOrientation: 'portrait',
+      pageMargins: [36, 22, 36, 30],
+      info: { title: labels.title, author: hotelName, subject: labels.title },
+      defaultStyle: { font: 'Roboto', fontSize: 8, color: '#26364A', lineHeight: 1.08 },
+      footer: (currentPage: number, pageCount: number): Content => ({
+        margin: [36, 6, 36, 0],
+        columns: [
+          {
+            columns: [
+              { image: pmsNextLogo, fit: [42, 14], margin: [0, 1, 4, 0] },
+              { text: `${labels.generatedBy} | ${this.formatDateTime(generationDate)} | ${labels.operator}: ${operator}`, fontSize: 5.8, color: '#7A889A', margin: [0, 3, 0, 0] }
+            ]
+          },
+          { text: `${labels.page} ${currentPage} ${labels.of} ${pageCount}`, alignment: 'right', fontSize: 6.2, color: '#7A889A', margin: [0, 4, 0, 0] }
+        ]
+      }),
+      content: [
+        {
+          columns: [
+            { width: 76, image: hotelLogo, fit: [70, 56], margin: [0, -2, 0, 0] },
+            {
+              width: '*',
+              stack: [
+                { text: hotelName, style: 'companyName' },
+                ...(legalName && legalName.toUpperCase() !== hotelName.toUpperCase() ? [{ text: legalName, style: 'legalName' } as Content] : []),
+                ...(contact ? [{ text: contact, style: 'companyMeta' } as Content] : [])
+              ]
+            },
+            { width: 190, text: labels.title.toUpperCase(), style: 'documentTitle', alignment: 'right', margin: [8, 3, 0, 0] }
+          ]
+        },
+        { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 540, y2: 0, lineWidth: 1.8, lineColor: '#167D8D' }], margin: [0, 6, 0, 7] },
+        {
+          table: {
+            widths: [540],
+            body: [[{
+              stack: [
+                this.localizedWideInfoContent(labels.reservationHolder, reservation.descripcion || ''),
+                {
+                  table: {
+                    widths: [85, '*', 85, '*'],
+                    body: [
+                      this.localizedInfoRow(labels.reservationNumber, reservation.codReserva, labels.room, reservation.numHabita),
+                      this.localizedInfoRow(labels.plan, reservation.codPlan, labels.arrival, reservation.fechaIng),
+                      this.localizedInfoRow(labels.departure, reservation.fechaSal, labels.agency, reservation.nomAgencia || reservation.codAgencia)
+                    ]
+                  },
+                  layout: this.localizedInfoLayout(),
+                  margin: [0, 3, 0, 0]
+                }
+              ]
+            }]]
+          },
+          layout: this.localizedInfoLayout(),
+          margin: [0, 0, 0, 6]
+        },
+        {
+          columns: [
+            { text: labels.guests, style: 'sectionTitle' },
+            { text: labels.guestHint, alignment: 'right', style: 'sectionHint' }
+          ],
+          margin: [0, 0, 0, 3]
+        },
+        {
+          table: {
+            headerRows: 1,
+            keepWithHeaderRows: 1,
+            widths: [24, '*', 112, 150],
+            heights: (rowIndex: number) => rowIndex === 0 ? 19 : 24,
+            body: [
+              [this.localizedHeader('#', 'center'), this.localizedHeader(labels.name, 'left'), this.localizedHeader(labels.document, 'left'), this.localizedHeader(labels.signature, 'center')],
+              ...Array.from({ length: totalRows }, (_, index) => this.localizedGuestRow(index + 1, guests[index]))
+            ]
+          },
+          layout: {
+            fillColor: (rowIndex: number) => rowIndex > 0 && rowIndex % 2 === 0 ? '#F7FAFC' : null,
+            hLineWidth: () => 0.65, vLineWidth: () => 0.65,
+            hLineColor: () => '#BFCBD7', vLineColor: () => '#BFCBD7',
+            paddingTop: (rowIndex: number) => rowIndex === 0 ? 3 : 2,
+            paddingBottom: (rowIndex: number) => rowIndex === 0 ? 3 : 2,
+            paddingLeft: () => 3, paddingRight: () => 3
+          }
+        },
+        {
+          table: {
+            widths: [540],
+            body: [[{
+              stack: [
+                { text: labels.guestInformation, style: 'acknowledgementTitle' },
+                {
+                  table: {
+                    widths: [85, '*', 85, '*'],
+                    body: [
+                      this.localizedInfoRow(labels.address, primaryGuest?.direccion || '', labels.nationality, primaryGuest?.nacionalidad || ''),
+                      this.localizedInfoRow(labels.telephone, primaryGuest?.motivo || '', labels.email, this.printableGuestEmail(primaryGuest?.email)),
+                      this.localizedInfoRow(labels.adults, String(reservation.numPax ?? ''), labels.children, String(reservation.numChild ?? '')),
+                      this.localizedInfoRow(labels.creditCard, '', labels.expirationDate, ''),
+                      this.localizedInfoRow(labels.licensePlate, '', labels.allergies, ''),
+                      this.localizedWideInfoRow(labels.comments, '')
+                    ]
+                  },
+                  layout: this.localizedInfoLayout(),
+                  margin: [0, 4, 0, 6]
+                },
+                { text: labels.policies, style: 'importantTitle' },
+                {
+                  table: { widths: [520], body: policyRows.map((policy) => [policy]) },
+                  layout: { hLineWidth: () => 0, vLineWidth: () => 0, paddingTop: () => 0, paddingBottom: () => 0, paddingLeft: () => 0, paddingRight: () => 0 }
+                },
+                { text: labels.acceptance, style: 'acknowledgementBody', margin: [0, 6, 0, 0] },
+                {
+                  columns: [
+                    this.localizedSignatureLine(labels.guestSignature, 220), { width: 14, text: '' },
+                    this.localizedSignatureLine(labels.date, 82), { width: 14, text: '' },
+                    this.localizedSignatureLine(labels.receptionist, 50)
+                  ],
+                  margin: [0, 8, 0, 0]
+                }
+              ],
+              fillColor: '#F4F8FA', margin: [10, 8, 10, 8]
+            }]]
+          },
+          layout: { hLineWidth: () => 0.7, vLineWidth: () => 0.7, hLineColor: () => '#C7D5DE', vLineColor: () => '#C7D5DE', paddingTop: () => 0, paddingBottom: () => 0, paddingLeft: () => 0, paddingRight: () => 0 },
+          margin: [0, 6, 0, 0]
+        }
+      ],
+      styles: {
+        companyName: { bold: true, fontSize: 13, color: '#17364F' },
+        legalName: { fontSize: 8, color: '#4C5F73', margin: [0, 2, 0, 0] },
+        companyMeta: { fontSize: 6.5, color: '#66758A', margin: [0, 2, 0, 0] },
+        documentTitle: { bold: true, fontSize: 13, color: '#17364F', characterSpacing: 0.7 },
+        sectionTitle: { bold: true, fontSize: 9, color: '#167D8D', characterSpacing: 0.65 },
+        sectionHint: { fontSize: 7.2, color: '#66758A' },
+        acknowledgementTitle: { bold: true, fontSize: 9.2, color: '#17364F', characterSpacing: 0.65 },
+        acknowledgementBody: { fontSize: 7.7, color: '#405469', lineHeight: 1.1 },
+        importantTitle: { bold: true, fontSize: 8.7, color: '#167D8D', characterSpacing: 0.55, margin: [0, 0, 0, 3] },
+        policyBody: { fontSize: 7.4, color: '#405469', lineHeight: 1.08 }
+      }
+    };
+  }
+
+  private localizedLabels(language: RegistrationSheetLanguage) {
+    return language === 'ES' ? {
+      title: 'Tarjeta de Registro', generatedBy: 'Generado automáticamente por PMSNext', operator: 'Operador', page: 'Página', of: 'de',
+      reservationHolder: 'Titular de la Reserva', reservationNumber: 'N° Reserva', room: 'Habitación', plan: 'Plan', arrival: 'Ingreso', departure: 'Salida', agency: 'Agencia',
+      guests: 'HUÉSPEDES', guestHint: 'Complete una fila por huésped. Escriba claramente.', name: 'Nombre completo', document: 'Documento', signature: 'Firma',
+      guestInformation: 'INFORMACIÓN DEL HUÉSPED', address: 'Dirección', nationality: 'Nacionalidad', telephone: 'Teléfono', email: 'Email', adults: 'Adultos', children: 'Niños',
+      creditCard: 'Tarjeta de crédito', expirationDate: 'Fecha de expiración', licensePlate: 'Placa', allergies: 'Alergias', comments: 'Comentarios', policies: 'POLÍTICAS DEL HOTEL',
+      acceptance: 'Al firmar, el huésped declara haber leído y aceptado las políticas del hotel.', guestSignature: 'Firma del huésped', date: 'Fecha', receptionist: 'Recepcionista'
+    } : {
+      title: 'Registration Card', generatedBy: 'Generated automatically by PMSNext', operator: 'Operator', page: 'Page', of: 'of',
+      reservationHolder: 'Reservation Holder', reservationNumber: 'Reservation No.', room: 'Room', plan: 'Meal Plan', arrival: 'Check-in', departure: 'Check-out', agency: 'Agency',
+      guests: 'GUESTS', guestHint: 'Complete one row per guest. Please print clearly.', name: 'Full Name', document: 'Document', signature: 'Signature',
+      guestInformation: 'GUEST INFORMATION', address: 'Address', nationality: 'Nationality', telephone: 'Telephone', email: 'Email', adults: 'Adults', children: 'Children',
+      creditCard: 'Credit Card', expirationDate: 'Expiration Date', licensePlate: 'License Plate', allergies: 'Allergies', comments: 'Guest Comments', policies: 'HOTEL POLICIES',
+      acceptance: 'By signing, the guest confirms having read and accepted the hotel policies.', guestSignature: 'Guest Signature', date: 'Date', receptionist: 'Receptionist'
+    };
+  }
+
+  private localizedInfoRow(labelA: string, valueA: string, labelB: string, valueB: string): TableCell[] {
+    return [this.localizedInfoLabel(labelA), this.localizedInfoValue(valueA), this.localizedInfoLabel(labelB), this.localizedInfoValue(valueB)];
+  }
+
+  private localizedWideInfoContent(label: string, value: string): Content {
+    return {
+      table: { widths: [85, '*'], body: [[this.localizedInfoLabel(label), this.localizedInfoValue(value)]] },
+      layout: this.localizedInfoLayout()
+    };
+  }
+
+  private localizedWideInfoRow(label: string, value: string): TableCell[] {
+    return [
+      this.localizedInfoLabel(label),
+      { text: value || ' ', bold: Boolean(value), color: '#26364A', colSpan: 3 },
+      { text: '' },
+      { text: '' }
+    ];
+  }
+
+  private localizedInfoLabel(text: string): TableCell {
+    return { text, bold: true, fontSize: 7.2, color: '#52677A', fillColor: '#EDF3F6' };
+  }
+
+  private localizedInfoValue(text: string): TableCell {
+    return { text: text || ' ', bold: Boolean(text), color: '#26364A' };
+  }
+
+  private printableGuestEmail(email: string | null | undefined): string {
+    const value = email?.trim() || '';
+    if (!value || value.toLowerCase().includes('mail')) return '';
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? value : '';
+  }
+
+  private localizedInfoLayout() {
+    return {
+      hLineWidth: () => 0.55, vLineWidth: () => 0.55, hLineColor: () => '#CCD7E2', vLineColor: () => '#CCD7E2',
+      paddingTop: () => 3, paddingBottom: () => 3, paddingLeft: () => 4, paddingRight: () => 4
+    };
+  }
+
+  private localizedHeader(text: string, alignment: 'left' | 'center'): TableCell {
+    return { text, alignment, bold: true, fontSize: 6.6, color: '#FFFFFF', fillColor: '#173A56' };
+  }
+
+  private localizedGuestRow(index: number, guest?: RoomingListGuest): TableCell[] {
+    return [
+      { text: String(index), alignment: 'center', bold: true, color: '#718096', margin: [0, 4, 0, 0] },
+      { text: guest ? `${guest.nombre} ${guest.apellidos}`.trim() : '' },
+      { text: guest ? [guest.tipDocu, guest.numDocu].filter(Boolean).join(' ') : '' },
+      { text: '' }
+    ];
+  }
+
+  private localizedSignatureLine(label: string, width: number): Content {
+    return {
+      stack: [
+        { text: `${label}:`, bold: true, fontSize: 7.2, color: '#405469' },
+        { canvas: [{ type: 'line', x1: 0, y1: 0, x2: width, y2: 0, lineWidth: 0.7, lineColor: '#6B7D90' }], margin: [0, 11, 0, 0] }
+      ]
+    };
+  }
+
+  private buildLegacyDocumentDefinition(
     reservation: CheckInArrival,
     guests: RoomingListGuest[],
     hotelLogo: string,

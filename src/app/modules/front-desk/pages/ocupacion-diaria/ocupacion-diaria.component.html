@@ -1,0 +1,182 @@
+<section class="ocupacion-page" aria-label="Ocupación diaria">
+  <header class="ocupacion-header">
+    <div>
+      <span class="section-eyebrow">Front Desk</span>
+      <h1>Ocupación diaria</h1>
+      <p>Estado general de habitaciones para una fecha determinada.</p>
+    </div>
+    <div class="ocupacion-header__actions">
+      <div class="ocupacion-header__status" *ngIf="loading">
+        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+        Consultando
+      </div>
+      <button type="button" class="btn btn-outline-primary btn-sm" (click)="exportarPdf()" [disabled]="loading || exportingPdf || !resumen || habitaciones.length === 0" title="Exportar reporte completo de ocupación diaria">
+        <span class="spinner-border spinner-border-sm me-1" *ngIf="exportingPdf" aria-hidden="true"></span>
+        <i class="feather icon-file-text me-1" *ngIf="!exportingPdf" aria-hidden="true"></i>
+        Exportar PDF
+      </button>
+    </div>
+  </header>
+
+  <form class="ocupacion-filters" [formGroup]="filtersForm" (ngSubmit)="consultar()" aria-label="Filtros de ocupación diaria">
+    <div class="filter-field filter-field--date">
+      <label for="ocupacionFecha">Fecha</label>
+      <input id="ocupacionFecha" type="date" class="form-control" formControlName="fecha" [class.is-invalid]="submitted && filtersForm.controls.fecha.invalid">
+    </div>
+
+    <div class="filter-field">
+      <label for="ocupacionCategoria">Categoría</label>
+      <select id="ocupacionCategoria" class="form-select" formControlName="cateHab">
+        <option value="">Todas las categorías</option>
+        <option *ngFor="let categoria of categorias" [value]="categoria.CR01_CodCate">
+          {{ categoria.CR01_CodCate }} - {{ categoria.CR01_Categoria }}
+        </option>
+      </select>
+    </div>
+
+    <div class="filter-field">
+      <label for="ocupacionGrupo">Grupo</label>
+      <select id="ocupacionGrupo" class="form-select" formControlName="codGrp">
+        <option value="">Todos los grupos</option>
+        <option *ngFor="let grupo of gruposHabitaciones" [value]="grupo.CR04_CodGrp">
+          {{ grupo.CR04_CodGrp }} - {{ grupo.CR04_Descripcion }}
+        </option>
+      </select>
+    </div>
+
+    <label class="active-filter" for="ocupacionSoloActivas">
+      <input id="ocupacionSoloActivas" type="checkbox" formControlName="soloActivas">
+      <span>Solo activas</span>
+    </label>
+
+    <div class="filter-actions">
+      <button type="submit" class="btn btn-primary" [disabled]="loading">
+        <span class="spinner-border spinner-border-sm me-1" *ngIf="loading" aria-hidden="true"></span>
+        <i class="feather icon-search me-1" *ngIf="!loading" aria-hidden="true"></i>
+        Consultar
+      </button>
+      <button type="button" class="btn btn-light" (click)="limpiar()" [disabled]="loading">
+        <i class="feather icon-refresh-cw me-1" aria-hidden="true"></i>
+        Limpiar
+      </button>
+    </div>
+  </form>
+
+  <div class="ocupacion-error alert alert-warning" *ngIf="submitted && errorMessage && !loading">
+    <i class="feather icon-alert-triangle me-1" aria-hidden="true"></i>
+    {{ errorMessage }}
+  </div>
+
+  <section class="ocupacion-kpis" aria-label="Resumen de ocupación" *ngIf="resumen as resumenActual">
+    <article class="ocupacion-kpi ocupacion-kpi--primary"><strong>{{ resumenActual.habitaciones }}</strong><span>Habitaciones</span></article>
+    <article class="ocupacion-kpi ocupacion-kpi--available"><strong>{{ resumenActual.disponibles }}</strong><span>Disponibles</span></article>
+    <article class="ocupacion-kpi ocupacion-kpi--reserved"><strong>{{ resumenActual.reservadas }}</strong><span>Reservadas</span></article>
+    <article class="ocupacion-kpi ocupacion-kpi--occupied"><strong>{{ resumenActual.ocupadas }}</strong><span>Ocupadas</span></article>
+    <article class="ocupacion-kpi ocupacion-kpi--blocked"><strong>{{ resumenActual.bloqueadas }}</strong><span>Bloqueadas</span></article>
+    <article class="ocupacion-kpi ocupacion-kpi--people"><strong>{{ resumenActual.adultos }}</strong><span>Adultos</span></article>
+    <article class="ocupacion-kpi ocupacion-kpi--children"><strong>{{ resumenActual.ninos }}</strong><span>Niños</span></article>
+  </section>
+
+  <section class="ocupacion-workspace" aria-label="Inventario de habitaciones">
+    <header class="ocupacion-toolbar">
+      <div>
+        <span class="section-eyebrow">Inventario operacional</span>
+        <h2>Habitaciones</h2>
+      </div>
+      <span class="occupacion-count" *ngIf="resumen as resumenActual">Mostrando {{ habitacionesVisibles.length }} de {{ resumenActual.habitaciones }} habitaciones</span>
+      <div class="view-switch" role="group" aria-label="Vista del inventario">
+        <button type="button" [class.view-switch__button--active]="vistaInventario === 'DISTRIBUCION'" (click)="seleccionarVista('DISTRIBUCION')" aria-label="Mostrar distribución de habitaciones"><i class="feather icon-grid" aria-hidden="true"></i> Distribución</button>
+        <button type="button" [class.view-switch__button--active]="vistaInventario === 'LISTA'" (click)="seleccionarVista('LISTA')" aria-label="Mostrar lista de habitaciones"><i class="feather icon-list" aria-hidden="true"></i> Lista</button>
+      </div>
+    </header>
+
+    <div class="ocupacion-local-filters" *ngIf="consultada && !loading">
+      <div class="occupacion-state-filters" role="group" aria-label="Filtrar por estado">
+        <button type="button" *ngFor="let estado of estados" class="state-filter" [class.state-filter--active]="estadoLocal === estado.codigo" (click)="seleccionarEstado(estado.codigo)">
+          {{ estado.etiqueta }}
+          <strong *ngIf="resumen as resumenActual">{{ estadoCount(estado.codigo, resumenActual) }}</strong>
+        </button>
+      </div>
+      <div class="ocupacion-legend" aria-label="Leyenda de estados">
+        <span class="legend-item legend-item--disponible"><i aria-hidden="true"></i>Disponible</span>
+        <span class="legend-item legend-item--reservada"><i aria-hidden="true"></i>Reservada</span>
+        <span class="legend-item legend-item--ocupada"><i aria-hidden="true"></i>Ocupada</span>
+        <span class="legend-item legend-item--bloqueada"><i aria-hidden="true"></i>Bloqueada</span>
+      </div>
+      <div class="occupacion-search input-group">
+        <span class="input-group-text"><i class="feather icon-search" aria-hidden="true"></i></span>
+        <input type="search" class="form-control" [formControl]="busquedaControl" placeholder="Buscar habitación, reserva, agencia o plan..." aria-label="Buscar en habitaciones">
+      </div>
+    </div>
+
+    <div class="ocupacion-state" *ngIf="loading">
+      <span class="spinner-border" aria-hidden="true"></span>
+      <strong>Cargando ocupación diaria...</strong>
+    </div>
+
+    <div class="ocupacion-state ocupacion-state--error" *ngIf="!loading && errorMessage && !resumen">
+      <i class="feather icon-alert-circle" aria-hidden="true"></i>
+      <strong>{{ errorMessage }}</strong>
+    </div>
+
+    <div class="ocupacion-state" *ngIf="!loading && !errorMessage && consultada && habitaciones.length === 0">
+      <i class="feather icon-home" aria-hidden="true"></i>
+      <strong>No se encontraron habitaciones para los filtros seleccionados.</strong>
+    </div>
+
+    <div class="ocupacion-state" *ngIf="!loading && !errorMessage && habitaciones.length > 0 && habitacionesVisibles.length === 0">
+      <i class="feather icon-search" aria-hidden="true"></i>
+      <strong>No hay habitaciones que coincidan con la búsqueda o estado seleccionado.</strong>
+    </div>
+
+    <div class="ocupacion-content" *ngIf="!loading && !errorMessage && habitacionesVisibles.length > 0">
+    <div class="ocupacion-distribucion" *ngIf="vistaInventario === 'DISTRIBUCION'">
+      <section class="distribution-group" *ngFor="let grupo of gruposVisibles; trackBy: trackByGrupo">
+        <header class="distribution-group__header">
+          <div><strong>{{ grupo.etiqueta }}</strong><span>{{ grupo.rango }}</span></div>
+          <small>{{ grupo.habitaciones.length }} habitaciones</small>
+        </header>
+        <div class="distribution-group__rooms">
+          <article class="distribution-room" *ngFor="let habitacion of grupo.habitaciones; trackBy: trackByHabitacion" [ngClass]="estadoClass(habitacion.estado)" [attr.aria-label]="'Habitación ' + habitacion.numeroHabitacion + ', ' + estadoLabel(habitacion.estado)" [title]="'Habitación ' + habitacion.numeroHabitacion + ' · ' + estadoLabel(habitacion.estado)">
+            <div class="distribution-room__top">
+              <strong>{{ habitacion.numeroHabitacion }}</strong>
+              <span class="distribution-room__status"><i aria-hidden="true"></i>{{ estadoLabel(habitacion.estado) }}</span>
+            </div>
+            <ng-container *ngIf="normalizeEstado(habitacion.estado) !== 'DISPONIBLE'">
+              <div class="distribution-room__description" *ngIf="habitacion.reservaDescripcion?.trim()" [title]="habitacion.reservaDescripcion">{{ habitacion.reservaDescripcion }}</div>
+              <div class="distribution-room__meta">
+                <span *ngIf="habitacion.agencia">{{ habitacion.agencia }}</span>
+                <span *ngIf="habitacion.tipoPlan">{{ habitacion.tipoPlan }}</span>
+                <span *ngIf="habitacion.cantidadPax > 0">{{ habitacion.cantidadPax }} Pax</span>
+                <span *ngIf="habitacion.cantidadNinos > 0">{{ habitacion.cantidadNinos }} Niños</span>
+              </div>
+            </ng-container>
+          </article>
+        </div>
+      </section>
+    </div>
+
+    <div class="table-responsive ocupacion-table-wrap" *ngIf="!loading && vistaInventario === 'LISTA' && habitacionesVisibles.length > 0">
+      <table class="table ocupacion-table">
+        <thead>
+          <tr><th>Habitación</th><th>Reserva / Descripción</th><th>Pax</th><th>Niños</th><th>Agencia</th><th>Plan</th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let habitacion of habitacionesVisibles; trackBy: trackByHabitacion" [class]="'occupancy-row occupancy-row--' + normalizeEstado(habitacion.estado).toLowerCase()">
+            <td class="room-number"><strong>{{ habitacion.numeroHabitacion }}</strong></td>
+            <td class="room-description" [title]="displayText(habitacion.reservaDescripcion)">
+              <span>{{ displayText(habitacion.reservaDescripcion) }}</span>
+              <small class="occupancy-status" [ngClass]="estadoClass(habitacion.estado)"><i aria-hidden="true"></i>{{ estadoLabel(habitacion.estado) }}</small>
+            </td>
+            <td>{{ habitacion.cantidadPax }}</td>
+            <td>{{ habitacion.cantidadNinos }}</td>
+            <td [title]="displayText(habitacion.agencia)">{{ displayText(habitacion.agencia) }}</td>
+            <td>{{ displayText(habitacion.tipoPlan) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    </div>
+  </section>
+</section>

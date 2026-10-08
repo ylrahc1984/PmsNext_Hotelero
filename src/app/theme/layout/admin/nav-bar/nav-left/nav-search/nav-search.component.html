@@ -1,6 +1,6 @@
 <div class="hotel-identity" role="status" aria-label="Hotel activo">
   <span class="hotel-identity__logo" aria-hidden="true">
-    <img src="assets/images/logo_lamia_head.png" alt="" loading="eager" decoding="async" />
+    <img [src]="hotelLogoUrl" (error)="onHotelLogoError()" alt="" loading="eager" decoding="async" />
   </span>
   <div class="hotel-identity__content">
     <strong class="hotel-identity__name">{{ hotelNombre }}</strong>
