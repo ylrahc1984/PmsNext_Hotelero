@@ -109,24 +109,9 @@ export class GuestRegistrationPdfService {
     const existing = this.assetPromises.get(path);
     if (existing) return existing;
 
-    const assetUrl = new URL(path, document.baseURI).toString();
-    const request = fetch(assetUrl)
-      .then((response) => {
-        if (!response.ok) throw new Error(`Could not load PDF asset (${response.status}).`);
-        return response.blob();
-      })
-      .then((blob) => this.blobToDataUrl(blob));
+    const request = this.hotelLogoService.getImageDataUrl(path);
     this.assetPromises.set(path, request);
     return request;
-  }
-
-  private blobToDataUrl(blob: Blob): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(reader.error ?? new Error('Could not read PDF asset.'));
-      reader.readAsDataURL(blob);
-    });
   }
 
   private buildLocalizedDocumentDefinition(
