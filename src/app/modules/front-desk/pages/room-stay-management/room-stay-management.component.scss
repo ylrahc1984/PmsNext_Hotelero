@@ -1066,12 +1066,8 @@ label {
   box-shadow: 0 32px 80px rgba(9, 23, 47, 0.22);
 }
 
-.action-modal--invoice {
-  display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
-  width: min(90vw, 1400px);
-  height: min(820px, 86dvh);
-  max-height: 86dvh;
+.action-modal--invoice,
+.action-modal.action-modal--room-charge {
   padding: 0;
   overflow: hidden;
   border-radius: 22px;
@@ -1079,15 +1075,18 @@ label {
   box-shadow: 0 28px 80px rgba(8, 24, 39, 0.34);
 }
 
+.action-modal--invoice {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  width: min(90vw, 1400px);
+  height: min(820px, 86dvh);
+  max-height: 86dvh;
+}
+
 .action-modal.action-modal--room-charge {
   width: calc(100vw - 24px);
   max-width: 1720px;
   max-height: calc(100vh - 24px);
-  padding: 0;
-  overflow: hidden;
-  border-radius: 22px;
-  background: #f5f8fb;
-  box-shadow: 0 28px 80px rgba(8, 24, 39, 0.34);
 }
 
 .action-modal.action-modal--guest-portal {
@@ -2022,11 +2021,6 @@ label {
   .room-title,
   .card-head {
     align-items: flex-start;
-  }
-
-  .stay-header,
-  .room-title,
-  .card-head {
     display: grid;
   }
 
