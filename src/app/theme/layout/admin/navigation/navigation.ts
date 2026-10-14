@@ -152,6 +152,23 @@ export const NavigationItems: NavigationItem[] = [
         ]
       },
       {
+        id: 'tours-actividades',
+        title: 'Tours y Actividades',
+        type: 'collapse',
+        icon: 'feather icon-compass',
+        activeUrls: ['/tours-actividades'],
+        children: [
+          {
+            id: 'operacion-tours',
+            title: 'Operación de Tours',
+            type: 'item',
+            url: '/tours-actividades/operacion',
+            icon: 'feather icon-calendar',
+            classes: 'nav-item'
+          }
+        ]
+      },
+      {
         id: 'restaurante',
         title: 'Restaurante',
         type: 'collapse',

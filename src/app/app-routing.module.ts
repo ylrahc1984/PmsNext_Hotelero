@@ -523,6 +523,30 @@ const routes: Routes = [
       }
     ]
   },
+  {
+    path: 'tours-actividades',
+    component: AdminComponent,
+    canActivate: [AuthGuard],
+    canActivateChild: [AuthGuard],
+    data: {
+      breadcrumbTrail: [{ title: 'Tours y Actividades' }]
+    },
+    children: [
+      {
+        path: '',
+        redirectTo: 'operacion',
+        pathMatch: 'full'
+      },
+      {
+        path: 'operacion',
+        data: {
+          breadcrumbTrail: [{ title: 'Tours y Actividades', url: '/tours-actividades/operacion' }, { title: 'Operación de Tours' }]
+        },
+        loadComponent: () =>
+          import('./modules/tours-actividades/tours-actividades.component').then((c) => c.ToursActividadesComponent)
+      }
+    ]
+  },
   pmsPlaceholderSection('huespedes', 'Clientes / Huéspedes', [
     ['historial-estadias', 'Historial de Estadías'],
     ['preferencias', 'Preferencias'],
