@@ -1,0 +1,23 @@
+{
+  "name": "PMSNext Hotelero",
+  "short_name": "PMSNext",
+  "description": "Plataforma PMS hotelera para gestión de reservas, operación, restaurante, finanzas y reportes.",
+  "lang": "es",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0b1724",
+  "theme_color": "#0b1724",
+  "icons": [
+    {
+      "src": "assets/images/logo_next_ui_256.png",
+      "sizes": "256x256",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/images/logo_next_ui_512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

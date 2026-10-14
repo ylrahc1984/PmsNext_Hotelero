@@ -73,6 +73,37 @@
                 Bloquear pantalla
               </a>
             </li>
+            <li class="push-notification-option">
+              @if (pushState().status === 'restoring') {
+                <span class="dropdown-item push-notification-option__status">
+                  <i class="feather icon-loader"></i>
+                  Verificando notificaciones…
+                </span>
+              } @else if (pushState().status === 'activating') {
+                <span class="dropdown-item push-notification-option__status">
+                  <i class="feather icon-loader"></i>
+                  Activando notificaciones…
+                </span>
+              } @else if (pushState().status === 'deactivating') {
+                <span class="dropdown-item push-notification-option__status">
+                  <i class="feather icon-loader"></i>
+                  Desactivando notificaciones…
+                </span>
+              } @else if (pushState().status === 'activated' || pushState().status === 'remote-revoked') {
+                <button type="button" class="dropdown-item push-notification-option__button push-notification-option__status--active"
+                  (click)="deactivatePushNotifications()" [disabled]="pushState().status === 'deactivating'">
+                  <i class="feather icon-bell"></i>
+                  Notificaciones activadas
+                </button>
+              } @else {
+                <button type="button" class="dropdown-item push-notification-option__button" (click)="activatePushNotifications()"
+                  [disabled]="pushState().status === 'unsupported' || pushState().status === 'permission-denied' || pushState().status === 'disabled'">
+                  <i class="feather icon-bell"></i>
+                  Activar notificaciones
+                </button>
+              }
+              <small class="push-notification-option__message">{{ pushState().message }}</small>
+            </li>
           </ul>
         </div>
       } @else {

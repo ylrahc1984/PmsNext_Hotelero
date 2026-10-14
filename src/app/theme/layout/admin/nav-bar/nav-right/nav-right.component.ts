@@ -13,6 +13,7 @@ import { LockScreenService } from 'src/app/core/services/lock-screen.service';
 import { APP_BRANDING } from 'src/app/core/config/app-branding';
 import { SolicitudHuesped } from 'src/app/modules/clientes-huespedes/solicitudes-huespedes/solicitudes-huespedes.models';
 import { GuestRequestNotificationService } from 'src/app/modules/clientes-huespedes/solicitudes-huespedes/guest-request-notification.service';
+import { PUSH_DIAG_VERSION, PushNotificationService } from 'src/app/core/services/push-notification.service';
 import { OperationalDateIndicatorComponent } from '../operational-date-indicator/operational-date-indicator.component';
 
 @Component({
@@ -26,8 +27,10 @@ export class NavRightComponent {
   user$ = inject(AuthService).currentUser$;
   readonly branding = APP_BRANDING;
   private readonly guestRequestNotifications = inject(GuestRequestNotificationService);
+  private readonly pushNotifications = inject(PushNotificationService);
   readonly pendingGuestRequests = this.guestRequestNotifications.pendientesRecientes;
   readonly pendingGuestRequestCount = this.guestRequestNotifications.cantidadPendientes;
+  readonly pushState = this.pushNotifications.state;
 
   private authService = inject(AuthService);
   private lockScreenService = inject(LockScreenService);
@@ -36,6 +39,8 @@ export class NavRightComponent {
     const config = inject(NgbDropdownConfig);
     config.placement = 'bottom-right';
     this.guestRequestNotifications.start();
+    this.pushNotifications.refreshAvailability();
+    console.info(`[PUSH-DIAG] VERSION: ${PUSH_DIAG_VERSION}`);
   }
 
   onLogout(): void {
@@ -44,6 +49,15 @@ export class NavRightComponent {
 
   onLockScreen(): void {
     this.lockScreenService.requestLock();
+  }
+
+  activatePushNotifications(): void {
+    void this.pushNotifications.activate();
+  }
+
+  deactivatePushNotifications(): void {
+    console.info('[PUSH-DIAG] COMPONENT_DEACTIVATE_START');
+    void this.pushNotifications.deactivate();
   }
 
   notificationBadgeLabel(): string {
