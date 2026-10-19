@@ -19,6 +19,8 @@ import {
   toPmsDateInputValue
 } from 'src/app/core/utils/pms-date.util';
 import { RoomStatus, RoomType } from '../../interfaces/room-status.interface';
+import { RoomGroup } from '../../../front-desk/settings/room-groups/models/room-group.model';
+import { RoomGroupsService } from '../../../front-desk/settings/room-groups/services/room-groups.service';
 import {
   RoomChangePayload,
   RoomStayManagementService
@@ -75,6 +77,7 @@ interface PendingRoomMoveVerification {
 })
 export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCreate {
   private readonly calendarService = inject(CalendarService);
+  private readonly roomGroupsService = inject(RoomGroupsService);
   private readonly roomStayManagementService = inject(RoomStayManagementService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -101,12 +104,14 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
     { label: 'Bloqueada', value: 'blocked' },
     { label: 'Requiere atención', value: 'attention' }
   ];
+  groupOptions: Array<{ code: string; description: string }> = [];
 
   operationalDate                    = toPmsDateInputValue(this.operationalDateService.operationalDate()) || toPmsDateInputValue(new Date());
   startDate                           = this.operationalDate;
   endDate                             = this.shiftDate(this.startDate, 29);
   search                              = '';
   type                                : RoomType | null = null;
+  groupCode                           : string | null = null;
   status                              : CalendarFilterStatus = null;
   headerScrollLeft                    = 0;
   sidebarViewportHeight               : number | null = null;
@@ -134,6 +139,7 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
   );
 
   ngOnInit(): void {
+    this.loadRoomGroups();
     this.bindOperationalDate();
     this.operationalDateService.ensureLoaded().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       error: (error) => {
@@ -173,6 +179,11 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
 
   onTypeChange(value: RoomType | null): void {
     this.type = value;
+    this.reloadCalendar();
+  }
+
+  onGroupChange(value: string | null): void {
+    this.groupCode = value;
     this.reloadCalendar();
   }
 
@@ -1704,8 +1715,40 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
       endDate: this.endDate,
       search: this.search,
       type: this.type,
+      groupCode: this.groupCode,
       status: this.status
     };
+  }
+
+  private loadRoomGroups(): void {
+    this.roomGroupsService
+      .getRoomGroups()
+      .pipe(
+        map((groups) => {
+          const byCode = new Map<string, RoomGroup>();
+          for (const group of groups) {
+            const code = (group.CR04_CodGrp ?? '').trim().toUpperCase();
+            if (code) {
+              byCode.set(code, { ...group, CR04_CodGrp: code });
+            }
+          }
+          return [...byCode.values()]
+            .sort((left, right) => left.CR04_Descripcion.localeCompare(right.CR04_Descripcion, 'es'))
+            .map((group) => ({
+              code: group.CR04_CodGrp,
+              description: (group.CR04_Descripcion ?? '').trim()
+            }));
+        }),
+        catchError((error) => {
+          console.error('No se pudo cargar el catálogo de grupos de habitaciones.', error);
+          return of([] as Array<{ code: string; description: string }>);
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((groups) => {
+        this.groupOptions = groups;
+        this.cdr.markForCheck();
+      });
   }
 
   private get rangeLength(): number {

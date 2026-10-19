@@ -38,6 +38,16 @@
     </label>
 
     <label class="toolbar-field">
+      <span>Grupo</span>
+      <select class="form-control" [ngModel]="groupCode ?? ''" (ngModelChange)="onGroupModelChange($event)">
+        <option value="">Todos</option>
+        <option *ngFor="let option of groupOptions" [value]="option.code">
+          {{ option.code }} - {{ option.description || option.code }}
+        </option>
+      </select>
+    </label>
+
+    <label class="toolbar-field">
       <span>Estado</span>
       <select class="form-control" [ngModel]="status ?? ''" (ngModelChange)="onStatusModelChange($event)">
         <option *ngFor="let option of statusOptions" [value]="option.value ?? ''">{{ option.label }}</option>

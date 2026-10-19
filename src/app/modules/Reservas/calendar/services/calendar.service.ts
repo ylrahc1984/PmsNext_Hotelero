@@ -218,6 +218,7 @@ export class CalendarService {
 
     return {
       roomNumber,
+      groupCode: this.cleanText(room.codGrp || todayEvent?.codGrp),
       type: this.cleanText(room.cateHab || room.descripcion || room.tipoHab || todayEvent?.categoria || 'SIN CATEGORIA'),
       status: this.mapRoomStatus(todayEvent?.estado || room.estHab),
       housekeepingStatus: this.mapHousekeepingStatus(room.clean),
@@ -307,6 +308,7 @@ export class CalendarService {
 
   private filterRooms(rooms: RoomStatus[], query: CalendarQuery): RoomStatus[] {
     const search = query.search.trim().toLowerCase();
+    const groupCode = query.groupCode?.trim().toUpperCase() || '';
 
     return rooms.filter((room) => {
       const matchesSearch =
@@ -315,7 +317,8 @@ export class CalendarService {
         room.type.toLowerCase().includes(search) ||
         (room.guestName ?? '').toLowerCase().includes(search);
       const matchesType = !query.type || room.type === query.type;
-      return matchesSearch && matchesType;
+      const matchesGroup = !groupCode || (room.groupCode ?? '').trim().toUpperCase() === groupCode;
+      return matchesSearch && matchesType && matchesGroup;
     });
   }
 

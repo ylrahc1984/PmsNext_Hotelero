@@ -299,7 +299,7 @@ export class ReservaHospedajeComponent implements OnInit {
     observaciones         : this.fb.control(''),
     procesa               : this.fb.control('WEB'),
     directo               : this.fb.control(false),
-    esCpl                 : this.fb.control({ value: false, disabled: true }),
+    esCpl                 : this.fb.control(false),
     operador              : this.fb.control(this.auth.getCurrentUser()?.usuario ?? 'admin'),
     habitaciones          : this.fb.array<FormGroup<HabitacionForm>>([]),
     inclusiones           : this.fb.array<FormGroup<InclusionForm>>([]),
@@ -1930,6 +1930,14 @@ export class ReservaHospedajeComponent implements OnInit {
     this.syncTotal();
     const contactRequest              = this.buildContactRequest();
     const reservationFormValue        = this.reservaForm.getRawValue();
+    const usuarioActual               = this.auth.getCurrentUser()?.usuario?.trim() ?? '';
+    if (this.isEditMode() && !usuarioActual) {
+      this.toast.error('No se pudo identificar el usuario autenticado para actualizar la reserva.', 5500, 'Usuario requerido');
+      return;
+    }
+    if (usuarioActual) {
+      reservationFormValue.operador = usuarioActual;
+    }
     reservationFormValue.descripcion  = contactRequest.nombre;
     const payload                     = ReservaHabitacionMapper.toRequest(
       reservationFormValue,

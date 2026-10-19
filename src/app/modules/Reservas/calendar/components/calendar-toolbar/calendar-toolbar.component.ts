@@ -18,8 +18,10 @@ export class CalendarToolbarComponent {
   @Input({ required: true }) endDate!: string;
   @Input({ required: true }) search!: string;
   @Input() type: RoomType | null = null;
+  @Input() groupCode: string | null = null;
   @Input() status: CalendarFilterStatus = null;
   @Input({ required: true }) typeOptions!: RoomType[];
+  @Input({ required: true }) groupOptions!: Array<{ code: string; description: string }>;
   @Input({ required: true }) statusOptions!: Array<{ label: string; value: CalendarFilterStatus }>;
   @Input({ required: true }) visibleRooms = 0;
   @Input({ required: true }) visibleReservations = 0;
@@ -30,6 +32,7 @@ export class CalendarToolbarComponent {
   @Output() endDateChange = new EventEmitter<string>();
   @Output() searchChange = new EventEmitter<string>();
   @Output() typeChange = new EventEmitter<RoomType | null>();
+  @Output() groupChange = new EventEmitter<string | null>();
   @Output() statusChange = new EventEmitter<CalendarFilterStatus>();
   @Output() previous = new EventEmitter<void>();
   @Output() next = new EventEmitter<void>();
@@ -38,6 +41,10 @@ export class CalendarToolbarComponent {
 
   onTypeModelChange(value: string): void {
     this.typeChange.emit((value || null) as RoomType | null);
+  }
+
+  onGroupModelChange(value: string): void {
+    this.groupChange.emit(value || null);
   }
 
   onStatusModelChange(value: string): void {

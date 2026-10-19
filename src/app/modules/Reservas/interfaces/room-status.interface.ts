@@ -5,6 +5,7 @@ export type RoomOperationalStatus = 'DISPONIBLE' | 'OCUPADA' | 'RESERVADA' | 'BL
 export interface RoomStatus {
   roomNumber: string;
   type: RoomType;
+  groupCode?: string;
   status: RoomOperationalStatus;
   housekeepingStatus: RoomHousekeepingStatus;
   floor: number;

@@ -74,6 +74,7 @@ export interface CalendarQuery {
   endDate: string;
   search: string;
   type: RoomType | null;
+  groupCode: string | null;
   status: CalendarFilterStatus;
 }
 
