@@ -41,14 +41,19 @@ export class ReservaHabitacionMapper {
     const noches = Number(detalle.totNoches ?? 0) || 0;
     const cplState = this.resolveCplState(detalle);
     const habitaciones: ReservaHabitacionItem[] = (detalle.habitaciones ?? []).map((item) => {
+      const cantidadHabitaciones = Number(item.cantHab ?? 0) || 0;
+      const numPaxTotal = Number(item.numPax ?? 0) || 0;
       const cantidadNinos = Number(item.numChild ?? 0) || 0;
       const precioNino = cantidadNinos > 0 && noches > 0 ? (Number(item.totChild ?? 0) || 0) / cantidadNinos / noches : 0;
 
       return {
         categoria: String(item.catHabita ?? '').trim(),
         tipo: String(item.tipHabita ?? '').trim(),
-        cantidad: Number(item.cantHab ?? 0) || 0,
-        pax: Number(item.numPax ?? 0) || 0,
+        cantidad: cantidadHabitaciones,
+        // El API persiste numPax como el total de pax de la línea. El
+        // formulario trabaja con pax por habitación para poder multiplicar
+        // correctamente por cantHab al recalcular el plan de alimentos.
+        pax: cantidadHabitaciones > 0 ? numPaxTotal / cantidadHabitaciones : numPaxTotal,
         precio: Number(item.precio ?? 0) || 0,
         cantidadNinos,
         precioNino,

@@ -1075,7 +1075,7 @@ export class ReservaHospedajeComponent implements OnInit {
     this.mealPlanRequestKey = '';
     this.mealPlanError = '';
     this.recalculateTaxesFromStoredTotals();
-    this.refreshMealPlanForCurrentSelection(true);
+    this.refreshMealPlanForCurrentSelection(true, true);
     this.syncTotal();
     this.reservaForm.updateValueAndValidity({ emitEvent: false });
   }
@@ -2689,7 +2689,7 @@ export class ReservaHospedajeComponent implements OnInit {
     return this.roomTypes.find((item) => item.categoria === categoria && item.codigo === tipo)?.pax ?? 0;
   }
 
-  private refreshMealPlanForCurrentSelection(forceReload = false): void {
+  private refreshMealPlanForCurrentSelection(forceReload = false, preserveCurrentInclusions = false): void {
     const codPlan = this.reservaForm.controls.codPlan.value.trim();
     const codTarifa = this.reservaForm.controls.codTarifa.value.trim();
     const requestId = ++this.mealPlanRequestId;
@@ -2739,6 +2739,10 @@ export class ReservaHospedajeComponent implements OnInit {
           }
           this.mealPlanRequestKey = requestKey;
           this.mealPlanDetails = items;
+          if (preserveCurrentInclusions) {
+            this.syncTotal();
+            return;
+          }
           this.recalculateMealPlanInclusions();
         },
         error: () => {
@@ -2747,7 +2751,9 @@ export class ReservaHospedajeComponent implements OnInit {
           }
           this.mealPlanDetails = [];
           this.mealPlanRequestKey = '';
-          this.inclusiones.clear();
+          if (!preserveCurrentInclusions) {
+            this.inclusiones.clear();
+          }
           this.mealPlanError = 'No se pudo cargar el detalle del plan de alimentos.';
           this.syncTotal();
         }
