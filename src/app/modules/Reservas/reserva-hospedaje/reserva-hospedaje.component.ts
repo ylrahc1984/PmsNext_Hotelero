@@ -54,6 +54,7 @@ import {
 import {
   ReservaDisponibilidadCategoriaFecha,
   ReservaHabitacionService,
+  ReservaServicioExtraCatalogo,
   ReservaTarifaAlimento
 } from '../services/reserva-habitacion.service';
 import { ReservaContactoService } from '../services/reserva-contacto.service';
@@ -250,6 +251,7 @@ export class ReservaHospedajeComponent implements OnInit {
   readonly tarifaSearchControl                = this.fb.control('');
   readonly agencyModalSearchControl           = this.fb.control('');
   readonly tarifaModalSearchControl           = this.fb.control('');
+  readonly servicioCatalogSearchControl       = this.fb.control('');
   readonly tagSearchControl                   = this.fb.control('');
   readonly showTagsModal                      = signal(false);
   readonly showAllTags                        = signal(false);
@@ -267,6 +269,12 @@ export class ReservaHospedajeComponent implements OnInit {
   readonly contactLoadError                   = signal('');
   readonly reservationPendingContact          = signal(false);
   readonly contactSaveError                   = signal<string | null>(null);
+  readonly servicioCatalogResults             = signal<ReservaServicioExtraCatalogo[]>([]);
+  readonly selectedServicioCatalog            = signal<ReservaServicioExtraCatalogo | null>(null);
+  readonly servicioCatalogLoading             = signal(false);
+  readonly servicioCatalogError               = signal('');
+  readonly servicioTaxLoading                  = signal(false);
+  readonly servicioTaxError                    = signal('');
 
   readonly reservaForm: FormGroup<ReservaHeaderForm> = this.fb.group({
     codReserva            : this.fb.control('AUTO'),
@@ -364,6 +372,7 @@ export class ReservaHospedajeComponent implements OnInit {
   modalTagSelection                     : ReservaTagSeleccionado[] = [];
   removingTagIds                        = new Set<number>();
   private readonly tagSearchRetry       = new Subject<string>();
+  private servicioCatalogRequestId      = 0;
 
   ngOnInit(): void {
     this.returnUrl        = this.resolveReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'));
@@ -405,6 +414,9 @@ export class ReservaHospedajeComponent implements OnInit {
     });
     this.inclusionForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.updateInclusionDraftTotal());
     this.servicioForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.updateServicioDraftTotal());
+    this.servicioCatalogSearchControl.valueChanges
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
+      .subscribe((term) => this.searchServicioCatalog(term));
   }
 
   get habitaciones(): FormArray<FormGroup<HabitacionForm>> {
@@ -636,11 +648,67 @@ export class ReservaHospedajeComponent implements OnInit {
 
   abrirServicioModal(index: number | null = null): void {
     this.editingServiceIndex.set(index);
-    this.servicioForm.reset(index === null ? this.defaultServicio() : this.servicios.at(index).getRawValue());
+    const value = index === null ? this.defaultServicio() : this.servicios.at(index).getRawValue();
+    this.servicioForm.reset(value);
+    this.servicioCatalogSearchControl.setValue('', { emitEvent: false });
+    this.servicioCatalogResults.set([]);
+    this.servicioCatalogError.set('');
+    this.servicioTaxError.set('');
+    this.selectedServicioCatalog.set(index === null
+      ? null
+      : {
+          codigo: value.codSrv,
+          descripcion: value.descripcion,
+          cCosto: value.cCosto,
+          precio: value.precio,
+          impInclu: 1,
+          moneda: this.reservaForm.controls.moneda.value,
+          orden: 0,
+          operador: ''
+        });
     this.showServiceModal.set(true);
+    if (value.cCosto.trim()) {
+      void this.refreshServicioTaxRate(value.cCosto);
+    }
   }
 
-  guardarServicio(): void {
+  async seleccionarServicioCatalogo(service: ReservaServicioExtraCatalogo): Promise<void> {
+    this.selectedServicioCatalog.set(service);
+    this.servicioForm.patchValue({
+      codSrv: service.codigo,
+      descripcion: service.descripcion,
+      precio: service.precio,
+      cCosto: service.cCosto
+    }, { emitEvent: false });
+    this.updateServicioDraftTotal();
+    await this.refreshServicioTaxRate(service.cCosto);
+    this.updateServicioDraftTotal();
+  }
+
+  limpiarBusquedaServicioCatalogo(): void {
+    this.servicioCatalogSearchControl.setValue('', { emitEvent: false });
+    this.servicioCatalogResults.set([]);
+    this.servicioCatalogError.set('');
+  }
+
+  async guardarServicio(): Promise<void> {
+    const raw = this.servicioForm.getRawValue();
+
+    if (!raw.codSrv.trim() || !raw.descripcion.trim() || !raw.cCosto.trim()) {
+      this.servicioForm.markAllAsTouched();
+      this.servicioCatalogError.set('Selecciona un servicio válido del catálogo.');
+      return;
+    }
+
+    if (raw.cantidad < 1 || raw.precio < 0) {
+      this.servicioCatalogError.set('La cantidad debe ser mayor que cero y el precio no puede ser negativo.');
+      return;
+    }
+
+    if (!(await this.refreshServicioTaxRate(raw.cCosto))) {
+      return;
+    }
+
     this.updateServicioDraftTotal();
     const index = this.editingServiceIndex();
     const group = this.createServicioGroup(this.servicioForm.getRawValue());
@@ -655,6 +723,66 @@ export class ReservaHospedajeComponent implements OnInit {
     this.syncTotal();
   }
 
+  private searchServicioCatalog(term: string): void {
+    const query = term.trim();
+    const requestId = ++this.servicioCatalogRequestId;
+
+    if (query.length < 2) {
+      this.servicioCatalogResults.set([]);
+      this.servicioCatalogError.set('');
+      this.servicioCatalogLoading.set(false);
+      return;
+    }
+
+    this.servicioCatalogLoading.set(true);
+    this.servicioCatalogError.set('');
+
+    this.service.buscarServiciosExtras(query)
+      .pipe(
+        finalize(() => {
+          if (requestId === this.servicioCatalogRequestId) {
+            this.servicioCatalogLoading.set(false);
+          }
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (items) => {
+          if (requestId === this.servicioCatalogRequestId) {
+            this.servicioCatalogResults.set(items);
+          }
+        },
+        error: (error) => {
+          if (requestId !== this.servicioCatalogRequestId) return;
+          console.error('No se pudo consultar el catálogo de servicios extras.', error);
+          this.servicioCatalogResults.set([]);
+          this.servicioCatalogError.set('No se pudo consultar el catálogo de servicios.');
+        }
+      });
+  }
+
+  private async refreshServicioTaxRate(cCosto: string): Promise<boolean> {
+    const code = cCosto.trim().toUpperCase();
+    if (!code) {
+      this.servicioTaxError.set('El servicio no tiene centro de costo.');
+      return false;
+    }
+
+    this.servicioTaxLoading.set(true);
+    this.servicioTaxError.set('');
+
+    try {
+      await this.loadCostCenterTaxRate(code);
+      return true;
+    } catch (error) {
+      console.error(`No se pudieron cargar los impuestos del centro ${code}.`, error);
+      this.servicioTaxError.set(`No se pudieron cargar los impuestos para ${code}.`);
+      return false;
+    } finally {
+      this.servicioTaxLoading.set(false);
+    }
+  }
+
   eliminarServicio(index: number): void {
     this.servicios.removeAt(index);
     this.syncTotal();
@@ -663,6 +791,11 @@ export class ReservaHospedajeComponent implements OnInit {
   cerrarServicioModal(): void {
     this.showServiceModal.set(false);
     this.editingServiceIndex.set(null);
+    this.servicioCatalogSearchControl.setValue('', { emitEvent: false });
+    this.servicioCatalogResults.set([]);
+    this.selectedServicioCatalog.set(null);
+    this.servicioCatalogError.set('');
+    this.servicioTaxError.set('');
   }
 
   togglePlan(): void {
@@ -3477,7 +3610,12 @@ export class ReservaHospedajeComponent implements OnInit {
 
   private updateServicioDraftTotal(): void {
     const raw = this.servicioForm.getRawValue();
-    this.servicioForm.controls.total.setValue(raw.cantidad * raw.precio + raw.impuesto, { emitEvent: false });
+    const grossTotal = this.roundMoney(raw.cantidad * raw.precio);
+    const rate = this.resolvedTaxRatesByCostCenter.get(raw.cCosto.trim().toUpperCase());
+    const tax = rate === undefined ? raw.impuesto : taxWithinGrossAmount(grossTotal, rate);
+
+    this.servicioForm.controls.total.setValue(grossTotal, { emitEvent: false });
+    this.servicioForm.controls.impuesto.setValue(this.roundMoney(tax), { emitEvent: false });
   }
 
   private recalculateStay(): void {
@@ -3645,6 +3783,10 @@ export class ReservaHospedajeComponent implements OnInit {
   private toFiniteNumber(value: unknown): number {
     const numberValue = Number(value ?? 0);
     return Number.isFinite(numberValue) ? numberValue : 0;
+  }
+
+  private roundMoney(value: number): number {
+    return Math.round((value + Number.EPSILON) * 100) / 100;
   }
 
   private defaultHabitacion(): ReservaHabitacionItem {

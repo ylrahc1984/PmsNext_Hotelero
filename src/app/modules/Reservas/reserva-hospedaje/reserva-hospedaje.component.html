@@ -1088,13 +1088,88 @@
         <button type="button" class="btn-close" (click)="cerrarServicioModal()"></button>
       </div>
       <div class="modal-body modal-grid">
-        <label>Código<input type="text" class="form-control" formControlName="codSrv"></label>
-        <label>Descripción<input type="text" class="form-control" formControlName="descripcion"></label>
-        <label>Cantidad<input type="number" class="form-control" formControlName="cantidad" min="1"></label>
-        <label>Precio<input type="number" class="form-control" formControlName="precio" min="0" step="0.01"></label>
-        <label>Impuesto<input type="number" class="form-control" formControlName="impuesto" min="0" step="0.01"></label>
+        <div class="service-catalog-search service-catalog-search--wide">
+          <div class="service-catalog-search__heading">
+            <label for="servicio-catalog-search">Selecciona un servicio del catálogo</label>
+            <span>Busca por código o descripción</span>
+          </div>
+          <div class="service-catalog-search__input">
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <input
+              id="servicio-catalog-search"
+              type="search"
+              [formControl]="servicioCatalogSearchControl"
+              placeholder="Ej. cena, traslado, spa..."
+              autocomplete="off"
+            >
+            <button
+              type="button"
+              class="service-catalog-search__clear"
+              *ngIf="servicioCatalogSearchControl.value"
+              aria-label="Limpiar búsqueda"
+              (click)="limpiarBusquedaServicioCatalogo()"
+            >
+              <i class="bi bi-x-circle-fill" aria-hidden="true"></i>
+            </button>
+          </div>
+          <small class="service-catalog-search__hint">Escribe al menos 2 caracteres para consultar el catálogo.</small>
+        </div>
+
+        <div class="service-catalog-results service-catalog-results--wide" *ngIf="servicioCatalogSearchControl.value.trim().length >= 2">
+          <div class="service-catalog-results__header" *ngIf="!servicioCatalogLoading() && !servicioCatalogError() && servicioCatalogResults().length">
+            <span><strong>{{ servicioCatalogResults().length }}</strong> servicios encontrados</span>
+            <small>Selecciona una opción para continuar</small>
+          </div>
+          <div class="service-catalog-state" *ngIf="servicioCatalogLoading()">
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+            <span>Buscando en el catálogo...</span>
+          </div>
+          <div class="service-catalog-state service-catalog-state--error" *ngIf="!servicioCatalogLoading() && servicioCatalogError()">{{ servicioCatalogError() }}</div>
+          <button
+            type="button"
+            class="service-catalog-option"
+            *ngFor="let service of servicioCatalogResults()"
+            [class.service-catalog-option--selected]="selectedServicioCatalog()?.codigo === service.codigo"
+            (click)="seleccionarServicioCatalogo(service)"
+          >
+            <span class="service-catalog-option__icon"><i class="bi bi-bag-check" aria-hidden="true"></i></span>
+            <span class="service-catalog-option__main">
+              <span class="service-catalog-option__code">{{ service.codigo }}</span>
+              <strong>{{ service.descripcion }}</strong>
+              <small><span>{{ service.cCosto || 'Sin centro de costo' }}</span><span class="service-catalog-option__dot">·</span><span>{{ service.moneda || 'Sin moneda' }}</span></small>
+            </span>
+            <span class="service-catalog-option__price">
+              <small>Precio sugerido</small>
+              <strong *ngIf="service.precio > 0">{{ service.precio | currency:service.moneda:'symbol':'1.2-2' }}</strong>
+              <strong class="service-catalog-option__price--undefined" *ngIf="service.precio <= 0">Por definir</strong>
+            </span>
+            <i class="bi bi-arrow-right-short service-catalog-option__arrow" aria-hidden="true"></i>
+          </button>
+          <div class="service-catalog-state" *ngIf="!servicioCatalogLoading() && !servicioCatalogError() && !servicioCatalogResults().length">No se encontraron servicios.</div>
+        </div>
+
+        <div class="service-selected-indicator service-selected-indicator--wide" *ngIf="selectedServicioCatalog() as selected">
+          <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+          <span><small>Servicio seleccionado</small><strong>{{ selected.codigo }} · {{ selected.descripcion }}</strong></span>
+          <em>{{ selected.cCosto }}</em>
+        </div>
+
+        <label>Código<input type="text" class="form-control" formControlName="codSrv" readonly></label>
+        <label>Descripción<input type="text" class="form-control" formControlName="descripcion" readonly></label>
+        <label>Centro de costo<input type="text" class="form-control" formControlName="cCosto" readonly></label>
+        <label>Cantidad<input type="number" class="form-control" formControlName="cantidad" min="1" step="1"></label>
+        <label>Precio unitario <span class="service-tax-badge">IVA incluido</span><input type="number" class="form-control" formControlName="precio" min="0" step="0.01"></label>
         <label>Tipo Pax<input type="text" class="form-control" formControlName="tipPax"></label>
-        <div class="modal-total"><span>Total</span><strong>{{ servicioForm.controls.total.value | number: '1.2-2' }}</strong></div>
+
+        <div class="service-tax-breakdown service-tax-breakdown--wide">
+          <div><span>Subtotal sin IVA</span><strong>{{ (servicioForm.controls.total.value - servicioForm.controls.impuesto.value) | number:'1.2-2' }}</strong></div>
+          <div><span>IVA incluido</span><strong>{{ servicioForm.controls.impuesto.value | number:'1.2-2' }}</strong></div>
+          <div><span>Total bruto</span><strong>{{ servicioForm.controls.total.value | number:'1.2-2' }}</strong></div>
+          <small *ngIf="servicioTaxLoading()">Consultando impuestos del centro de costo...</small>
+          <small class="service-tax-error" *ngIf="servicioTaxError()">{{ servicioTaxError() }}</small>
+        </div>
+
+        <div class="modal-service-error" *ngIf="servicioCatalogError() && servicioCatalogSearchControl.value.trim().length < 2">{{ servicioCatalogError() }}</div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-light" (click)="cerrarServicioModal()">Cancelar</button>

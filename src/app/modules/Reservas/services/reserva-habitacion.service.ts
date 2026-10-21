@@ -29,6 +29,24 @@ export interface ReservaTarifaAlimento {
   impInclu: number;
 }
 
+export interface ReservaServicioExtraCatalogo {
+  codigo: string;
+  descripcion: string;
+  cCosto: string;
+  precio: number;
+  impInclu: number;
+  moneda: string;
+  orden: number;
+  operador: string;
+}
+
+interface ReservaServicioExtraCatalogoResponse {
+  respuesta?: string;
+  exito?: boolean;
+  codigoHttp?: number;
+  datos?: ReservaServicioExtraCatalogo[] | null;
+}
+
 export interface ReservaDisponibilidadCategoriaRequest {
   proceso: number;
   fechaIni: string;
@@ -56,6 +74,7 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
   private readonly apiUrl                    = `${this.baseApiUrl}/reservas-habitacion`;
   private readonly reservationSearchUrl      = `${this.baseApiUrl}/buscar-reservas`;
   private readonly categoryAvailabilityUrl   = `${this.baseApiUrl}/reservas/disponibilidad-categoria`;
+  private readonly extraServicesUrl           = `${this.baseApiUrl}/reservas/tarifas-alimentos`;
 
   createReserva(request: ReservaHabitacionRequest): Observable<ReservaHabitacionResponse> {
     const normalizedRequest        = this.normalizeReservationRequest(request);
@@ -156,6 +175,33 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
     return this.http
       .get<ReservaTarifaAlimento[] | { datos?: ReservaTarifaAlimento[]; data?: ReservaTarifaAlimento[] }>(`${this.apiUrl}/tarifa-alimentos`, { params })
       .pipe(map((response) => this.normalizeTarifaAlimentosResponse(response)));
+  }
+
+  buscarServiciosExtras(descripcion: string): Observable<ReservaServicioExtraCatalogo[]> {
+    const params = new HttpParams().set('descripcion', descripcion.trim());
+
+    return this.http
+      .get<ReservaServicioExtraCatalogoResponse | ReservaServicioExtraCatalogo[]>(this.extraServicesUrl, { params })
+      .pipe(
+        map((response) => {
+          const items = Array.isArray(response) ? response : response?.datos ?? [];
+
+          return items
+            .map((item) => ({
+              ...item,
+              codigo: String(item.codigo ?? '').trim(),
+              descripcion: String(item.descripcion ?? '').replace(/\s+/g, ' ').trim(),
+              cCosto: String(item.cCosto ?? '').trim(),
+              precio: Number(item.precio ?? 0) || 0,
+              impInclu: Number(item.impInclu ?? 0) || 0,
+              moneda: String(item.moneda ?? '').trim().toUpperCase(),
+              orden: Number(item.orden ?? 0) || 0,
+              operador: String(item.operador ?? '').trim()
+            }))
+            .filter((item) => item.codigo && item.descripcion)
+            .sort((left, right) => left.orden - right.orden || left.descripcion.localeCompare(right.descripcion, 'es'));
+        })
+      );
   }
 
   consultarReservas(params: ReservaConsultaParams): Observable<ReservaConsultaPage> {
