@@ -411,14 +411,14 @@
               <label class="field">
                 <span>Cantidad niños</span>
                 <div class="stepper">
-                  <button type="button" disabled aria-label="Disminuir cantidad de niños (deshabilitado)"><i class="bi bi-dash"></i></button>
-                  <input type="number" formControlName="cantidadNinos" min="0" readonly aria-readonly="true">
-                  <button type="button" disabled aria-label="Aumentar cantidad de niños (deshabilitado)"><i class="bi bi-plus"></i></button>
+                  <button type="button" (click)="ajustarHabitacionDraft('cantidadNinos', -1)" aria-label="Disminuir cantidad de niños"><i class="bi bi-dash"></i></button>
+                  <input type="number" formControlName="cantidadNinos" min="0" step="1">
+                  <button type="button" (click)="ajustarHabitacionDraft('cantidadNinos', 1)" aria-label="Aumentar cantidad de niños"><i class="bi bi-plus"></i></button>
                 </div>
               </label>
               <label class="field">
                 <span>Precio por niño</span>
-                <input type="number" class="form-control" formControlName="precioNino" min="0" step="0.01" readonly aria-readonly="true">
+                <input type="number" class="form-control" formControlName="precioNino" min="0" step="0.01">
               </label>
             </div>
           </div>

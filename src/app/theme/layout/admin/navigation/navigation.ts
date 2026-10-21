@@ -121,6 +121,7 @@ export const NavigationItems: NavigationItem[] = [
             classes: 'nav-item'
           },
           { id: 'front-desk-notas-credito', title: 'Notas de Crédito', type: 'item', url: '/front-desk/notas-credito', icon: 'feather icon-file-minus', classes: 'nav-item' },
+          { id: 'front-desk-clientes', title: 'Clientes / Facturación', type: 'item', url: '/front-desk/clientes', activeUrls: ['/front-desk/clientes'], icon: 'feather icon-users', classes: 'nav-item' },
           { id: 'front-desk-configuraciones', title: 'Configuraciones', type: 'item', url: '/front-desk/configuraciones', icon: 'feather icon-settings', classes: 'nav-item' }
         ]
       },

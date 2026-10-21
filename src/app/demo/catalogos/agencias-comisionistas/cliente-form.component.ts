@@ -51,6 +51,9 @@ export class ClienteFormComponent implements OnInit {
     if (this.router.url.startsWith('/reservas/clientes')) {
       return '/reservas/clientes';
     }
+    if (this.router.url.startsWith('/front-desk/clientes')) {
+      return '/front-desk/clientes';
+    }
     return '/catalogos/clientes';
   }
 
@@ -61,11 +64,16 @@ export class ClienteFormComponent implements OnInit {
     if (this.router.url.startsWith('/reservas/clientes')) {
       return 'Reservas';
     }
+    if (this.router.url.startsWith('/front-desk/clientes')) {
+      return 'Front Desk';
+    }
     return 'Catálogos';
   }
 
   get contextListLabel(): string {
-    return this.router.url.startsWith('/reservas/clientes') ? 'Clientes / Facturación' : 'Agencias';
+    return this.router.url.startsWith('/reservas/clientes') || this.router.url.startsWith('/front-desk/clientes')
+      ? 'Clientes / Facturación'
+      : 'Agencias';
   }
 
   form!: FormGroup;

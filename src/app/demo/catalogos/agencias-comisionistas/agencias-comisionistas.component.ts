@@ -24,6 +24,9 @@ export class AgenciasComisionistasComponent implements OnInit {
     if (this.router.url.startsWith('/reservas/clientes')) {
       return '/reservas/clientes';
     }
+    if (this.router.url.startsWith('/front-desk/clientes')) {
+      return '/front-desk/clientes';
+    }
     return '/catalogos/clientes';
   }
 

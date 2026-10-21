@@ -9,6 +9,7 @@ const frontDeskSectionUrls: Record<string, string> = {
   Habitaciones: '/front-desk/room-rack',
   'Cierre de Caja': '/front-desk/cierre-caja',
   'Consulta de Documentos': '/front-desk/consulta-documentos',
+  'Clientes / Facturación': '/front-desk/clientes',
   'Notas de Crédito': '/front-desk/notas-credito',
   'Recibos Comerciales': '/front-desk/recibos-comerciales',
   Configuraciones: '/front-desk/configuraciones'
@@ -223,6 +224,27 @@ export const FRONT_DESK_ROUTES: Routes = [
           import('src/app/demo/orden-pedido/pages/orden-pedido-detalle/orden-pedido-detalle.component').then(
             (c) => c.OrdenPedidoDetalleComponent
           )
+      },
+      {
+        path: 'clientes',
+        data: frontDeskData('Clientes / Facturación'),
+        loadComponent: () =>
+          import('src/app/demo/catalogos/agencias-comisionistas/agencias-comisionistas.component').then((c) => c.AgenciasComisionistasComponent)
+      },
+      {
+        path: 'clientes/nuevo',
+        data: frontDeskData('Nuevo Cliente', 'Clientes / Facturación'),
+        loadComponent: () => import('src/app/demo/catalogos/agencias-comisionistas/cliente-form.component').then((c) => c.ClienteFormComponent)
+      },
+      {
+        path: 'clientes/:codigo/editar',
+        data: frontDeskData('Editar Cliente', 'Clientes / Facturación'),
+        loadComponent: () => import('src/app/demo/catalogos/agencias-comisionistas/cliente-form.component').then((c) => c.ClienteFormComponent)
+      },
+      {
+        path: 'clientes/:codigo/detalle',
+        data: frontDeskData('Detalle del Cliente', 'Clientes / Facturación', { readOnly: true }),
+        loadComponent: () => import('src/app/demo/catalogos/agencias-comisionistas/cliente-form.component').then((c) => c.ClienteFormComponent)
       },
       {
         path: 'configuraciones',

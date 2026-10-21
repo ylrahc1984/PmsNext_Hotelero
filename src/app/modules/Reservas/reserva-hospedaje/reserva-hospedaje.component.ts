@@ -1917,6 +1917,28 @@ export class ReservaHospedajeComponent implements OnInit {
 
   onCplChange(): void {
     this.cplInconsistent.set(false);
+    if (this.reservaForm.controls.esCpl.value) {
+      this.zeroCplIncludedAmounts();
+      return;
+    }
+
+    void this.refreshAllRoomRatesForSelectedTarifa();
+    this.recalculateMealPlanInclusions();
+  }
+
+  private zeroCplIncludedAmounts(): void {
+    const roomGroups = [...this.habitaciones.controls];
+    for (const room of roomGroups) {
+      room.patchValue({ precio: 0, precioNino: 0, total: 0, impuesto: 0 }, { emitEvent: false });
+    }
+
+    this.habitacionForm.patchValue({ precio: 0, precioNino: 0, total: 0, impuesto: 0 }, { emitEvent: false });
+
+    for (const inclusion of this.inclusiones.controls) {
+      inclusion.patchValue({ precio: 0, totServ: 0 }, { emitEvent: false });
+    }
+
+    this.syncTotal();
   }
 
   private buildDetalleLabel(codigo: string, descripcion: string | undefined): string {
@@ -2948,7 +2970,10 @@ export class ReservaHospedajeComponent implements OnInit {
       }
 
       this.draftRoomTaxIncluded = this.readRoomTaxIncluded(rate);
-      this.habitacionForm.controls.precio.setValue(this.toFiniteNumber(rate.MR04_Total), { emitEvent: false });
+      this.habitacionForm.controls.precio.setValue(
+        this.reservaForm.controls.esCpl.value ? 0 : this.toFiniteNumber(rate.MR04_Total),
+        { emitEvent: false }
+      );
       this.resolvedRoomRateKey = requestKey;
       this.updateHabitacionDraftTotal();
       return true;
@@ -3014,7 +3039,10 @@ export class ReservaHospedajeComponent implements OnInit {
       for (const group of this.habitaciones.controls) {
         const room = group.getRawValue();
         const rate = this.findRoomRate(ratesByCategory.get(room.categoria.trim().toUpperCase()) ?? [], room.categoria, room.tipo);
-        group.controls.precio.setValue(rate ? this.priceWithRoomTax(rate, taxRate) : 0, { emitEvent: false });
+        group.controls.precio.setValue(
+          rate && !this.reservaForm.controls.esCpl.value ? this.priceWithRoomTax(rate, taxRate) : 0,
+          { emitEvent: false }
+        );
         if (!rate) {
           missingRates.add(`${room.categoria} / ${room.tipo}`);
         }
@@ -3022,7 +3050,10 @@ export class ReservaHospedajeComponent implements OnInit {
 
       if (draft.categoria && draft.tipo) {
         const rate = this.findRoomRate(ratesByCategory.get(draft.categoria.trim().toUpperCase()) ?? [], draft.categoria, draft.tipo);
-        this.habitacionForm.controls.precio.setValue(rate ? this.toFiniteNumber(rate.MR04_Total) : 0, { emitEvent: false });
+        this.habitacionForm.controls.precio.setValue(
+          rate && !this.reservaForm.controls.esCpl.value ? this.toFiniteNumber(rate.MR04_Total) : 0,
+          { emitEvent: false }
+        );
         if (rate) {
           this.draftRoomTaxIncluded = this.readRoomTaxIncluded(rate);
           this.resolvedRoomRateKey = this.buildRoomRateKey(codTarifa, draft.categoria, draft.tipo);
@@ -3154,7 +3185,7 @@ export class ReservaHospedajeComponent implements OnInit {
     this.inclusiones.clear();
 
     for (const detail of this.mealPlanDetails) {
-      const precio = this.toFiniteNumber(detail.precio);
+      const precio = this.reservaForm.controls.esCpl.value ? 0 : this.toFiniteNumber(detail.precio);
       const centroCosto = String(detail.area ?? '').trim();
       this.inclusiones.push(
         this.createInclusionGroup({
