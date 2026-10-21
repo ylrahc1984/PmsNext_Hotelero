@@ -11,7 +11,7 @@ export interface ReservaHabitacionItem {
   total: number;
   impuesto?: number;
   cCosto?: string;
-  cpl?: number;
+  cpl?: boolean;
 }
 
 export interface ReservaInclusionItem {
@@ -22,7 +22,7 @@ export interface ReservaInclusionItem {
   cantidad: number;
   totServ: number;
   cCosto?: string;
-  cpl?: number;
+  cpl?: boolean;
 }
 
 export interface ReservaServicioItem {

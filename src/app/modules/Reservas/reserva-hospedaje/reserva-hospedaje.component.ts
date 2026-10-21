@@ -108,6 +108,7 @@ interface HabitacionForm {
   total               : FormControl<number>;
   impuesto            : FormControl<number>;
   cCosto              : FormControl<string>;
+  cpl                 : FormControl<boolean>;
 }
 
 interface InclusionForm {
@@ -118,6 +119,7 @@ interface InclusionForm {
   cantidad    : FormControl<number>;
   totServ     : FormControl<number>;
   cCosto      : FormControl<string>;
+  cpl         : FormControl<boolean>;
 }
 
 interface ServicioForm {
@@ -523,6 +525,7 @@ export class ReservaHospedajeComponent implements OnInit {
       this.editingRoomIndex.set(null);
     }
 
+    this.syncCplSummary();
     this.draftRoomTaxIncluded = null;
     this.habitacionForm.reset(this.defaultHabitacion());
     this.refreshMealPlanForCurrentSelection();
@@ -626,6 +629,7 @@ export class ReservaHospedajeComponent implements OnInit {
 
   eliminarHabitacion(index: number): void {
     this.habitaciones.removeAt(index);
+    this.syncCplSummary();
     this.refreshMealPlanForCurrentSelection();
   }
 
@@ -1190,6 +1194,7 @@ export class ReservaHospedajeComponent implements OnInit {
     for (const habitacion of formValue.habitaciones) {
       this.habitaciones.push(this.createHabitacionGroup(habitacion));
     }
+    this.syncCplSummary();
 
     for (const inclusion of formValue.inclusiones) {
       this.inclusiones.push(this.createInclusionGroup(inclusion));
@@ -1917,16 +1922,32 @@ export class ReservaHospedajeComponent implements OnInit {
 
   onCplChange(): void {
     this.cplInconsistent.set(false);
-    if (this.reservaForm.controls.esCpl.value) {
-      this.zeroCplIncludedAmounts();
-      return;
+    const enabled = this.reservaForm.controls.esCpl.value;
+    for (const room of this.habitaciones.controls) {
+      room.controls.cpl.setValue(enabled, { emitEvent: false });
     }
+    this.habitacionForm.controls.cpl.setValue(enabled, { emitEvent: false });
 
-    void this.refreshAllRoomRatesForSelectedTarifa();
+    if (enabled) {
+      this.zeroCplRoomAmounts();
+    } else {
+      void this.refreshAllRoomRatesForSelectedTarifa();
+    }
     this.recalculateMealPlanInclusions();
   }
 
-  private zeroCplIncludedAmounts(): void {
+  onHabitacionDraftCplChange(): void {
+    const isCpl = this.habitacionForm.controls.cpl.value;
+    if (isCpl) {
+      this.habitacionForm.patchValue({ precio: 0, precioNino: 0, total: 0, impuesto: 0 }, { emitEvent: false });
+    } else {
+      void this.refreshHabitacionDraftRate();
+    }
+    this.recalculateMealPlanInclusions();
+    this.syncCplSummary();
+  }
+
+  private zeroCplRoomAmounts(): void {
     const roomGroups = [...this.habitaciones.controls];
     for (const room of roomGroups) {
       room.patchValue({ precio: 0, precioNino: 0, total: 0, impuesto: 0 }, { emitEvent: false });
@@ -1934,11 +1955,17 @@ export class ReservaHospedajeComponent implements OnInit {
 
     this.habitacionForm.patchValue({ precio: 0, precioNino: 0, total: 0, impuesto: 0 }, { emitEvent: false });
 
-    for (const inclusion of this.inclusiones.controls) {
-      inclusion.patchValue({ precio: 0, totServ: 0 }, { emitEvent: false });
-    }
-
     this.syncTotal();
+  }
+
+  private syncCplSummary(): void {
+    const roomFlags = this.habitaciones.controls.map((room) => room.controls.cpl.value);
+    const flags = roomFlags.length ? roomFlags : [this.habitacionForm.controls.cpl.value];
+    const hasCpl = flags.some(Boolean);
+    const hasStandard = flags.some((value) => !value);
+    const mixed = hasCpl && hasStandard;
+    this.cplInconsistent.set(mixed);
+    this.reservaForm.controls.esCpl.setValue(hasCpl && !mixed, { emitEvent: false });
   }
 
   private buildDetalleLabel(codigo: string, descripcion: string | undefined): string {
@@ -2260,15 +2287,6 @@ export class ReservaHospedajeComponent implements OnInit {
         `La reserva se encuentra en estado ${this.reservaForm.controls.estado.value} y no admite modificaciones.`,
         5500,
         'Reserva protegida'
-      );
-      return false;
-    }
-
-    if (this.cplInconsistent()) {
-      this.toast.warning(
-        'La reserva contiene valores CPL diferentes entre habitaciones e inclusiones. Seleccione explícitamente una modalidad antes de continuar.',
-        6000,
-        'Configuración CPL pendiente'
       );
       return false;
     }
@@ -2971,7 +2989,7 @@ export class ReservaHospedajeComponent implements OnInit {
 
       this.draftRoomTaxIncluded = this.readRoomTaxIncluded(rate);
       this.habitacionForm.controls.precio.setValue(
-        this.reservaForm.controls.esCpl.value ? 0 : this.toFiniteNumber(rate.MR04_Total),
+        this.habitacionForm.controls.cpl.value ? 0 : this.toFiniteNumber(rate.MR04_Total),
         { emitEvent: false }
       );
       this.resolvedRoomRateKey = requestKey;
@@ -3040,7 +3058,7 @@ export class ReservaHospedajeComponent implements OnInit {
         const room = group.getRawValue();
         const rate = this.findRoomRate(ratesByCategory.get(room.categoria.trim().toUpperCase()) ?? [], room.categoria, room.tipo);
         group.controls.precio.setValue(
-          rate && !this.reservaForm.controls.esCpl.value ? this.priceWithRoomTax(rate, taxRate) : 0,
+          rate && !room.cpl ? this.priceWithRoomTax(rate, taxRate) : 0,
           { emitEvent: false }
         );
         if (!rate) {
@@ -3051,7 +3069,7 @@ export class ReservaHospedajeComponent implements OnInit {
       if (draft.categoria && draft.tipo) {
         const rate = this.findRoomRate(ratesByCategory.get(draft.categoria.trim().toUpperCase()) ?? [], draft.categoria, draft.tipo);
         this.habitacionForm.controls.precio.setValue(
-          rate && !this.reservaForm.controls.esCpl.value ? this.toFiniteNumber(rate.MR04_Total) : 0,
+          rate && !draft.cpl ? this.toFiniteNumber(rate.MR04_Total) : 0,
           { emitEvent: false }
         );
         if (rate) {
@@ -3180,41 +3198,52 @@ export class ReservaHospedajeComponent implements OnInit {
       return;
     }
 
-    const cantidadPax = this.getMealPlanPaxQuantity();
+    const paxByBillingMode = this.getMealPlanPaxQuantities();
     const noches = Math.max(0, Number(this.reservaForm.controls.totNoches.value) || 0);
     this.inclusiones.clear();
 
     for (const detail of this.mealPlanDetails) {
-      const precio = this.reservaForm.controls.esCpl.value ? 0 : this.toFiniteNumber(detail.precio);
+      const precio = this.toFiniteNumber(detail.precio);
       const centroCosto = String(detail.area ?? '').trim();
-      this.inclusiones.push(
-        this.createInclusionGroup({
-          codServ: String(detail.codServ ?? '').trim(),
-          desServ: String(detail.descSrv ?? '').trim(),
-          tipPax: String(detail.tipPax ?? '').trim(),
+      const inclusion = {
+        codServ: String(detail.codServ ?? '').trim(),
+        desServ: String(detail.descSrv ?? '').trim(),
+        tipPax: String(detail.tipPax ?? '').trim(),
+        cCosto: centroCosto
+      };
+      if (paxByBillingMode.standard > 0) {
+        this.inclusiones.push(this.createInclusionGroup({
+          ...inclusion,
+          cpl: false,
           precio,
-          cantidad: cantidadPax,
-          totServ: cantidadPax * precio * noches,
-          cCosto: centroCosto
-        })
-      );
+          cantidad: paxByBillingMode.standard,
+          totServ: paxByBillingMode.standard * precio * noches
+        }));
+      }
+      if (paxByBillingMode.cpl > 0) {
+        this.inclusiones.push(this.createInclusionGroup({
+          ...inclusion,
+          cpl: true,
+          precio: 0,
+          cantidad: paxByBillingMode.cpl,
+          totServ: 0
+        }));
+      }
     }
 
     this.syncTotal();
   }
 
-  private getMealPlanPaxQuantity(): number {
-    if (this.habitaciones.length > 0) {
-      return this.habitaciones.controls.reduce((total, group) => {
-        const raw = group.getRawValue();
-        const pax = raw.pax || this.getTipoHabitacionPax(raw.categoria, raw.tipo);
-        return total + pax * (Number(raw.cantidad) || 0);
-      }, 0);
-    }
-
-    const raw = this.habitacionForm.getRawValue();
-    const pax = raw.pax || this.getTipoHabitacionPax(raw.categoria, raw.tipo);
-    return pax * (Number(raw.cantidad) || 0);
+  private getMealPlanPaxQuantities(): { standard: number; cpl: number } {
+    const groups = this.habitaciones.length > 0 ? this.habitaciones.controls : [this.habitacionForm];
+    return groups.reduce((totals, group) => {
+      const raw = group.getRawValue();
+      const paxPerRoom = raw.pax || this.getTipoHabitacionPax(raw.categoria, raw.tipo);
+      const pax = Math.max(0, paxPerRoom * (Number(raw.cantidad) || 0));
+      if (raw.cpl) totals.cpl += pax;
+      else totals.standard += pax;
+      return totals;
+    }, { standard: 0, cpl: 0 });
   }
 
   trackByIndex(index: number): number {
@@ -3580,6 +3609,7 @@ export class ReservaHospedajeComponent implements OnInit {
   private createHabitacionGroup(value: Partial<ReservaHabitacionItem> = this.defaultHabitacion()): FormGroup<HabitacionForm> {
     const categoria = value.categoria ?? '';
     const tipo = value.tipo ?? '';
+    const cpl = value.cpl === undefined ? this.reservaForm.controls.esCpl.value : value.cpl === true || Number(value.cpl) === 1;
     return this.fb.group({
       categoria: this.fb.control(categoria, { validators: [Validators.required] }),
       tipo: this.fb.control(tipo, { validators: [Validators.required] }),
@@ -3590,7 +3620,8 @@ export class ReservaHospedajeComponent implements OnInit {
       precioNino: this.fb.control(value.precioNino ?? 0, { validators: [Validators.min(0)] }),
       total: this.fb.control(value.total ?? 0),
       impuesto: this.fb.control(value.impuesto ?? 0),
-      cCosto: this.fb.control(value.cCosto ?? 'HOSPED')
+      cCosto: this.fb.control(value.cCosto ?? 'HOSPED'),
+      cpl: this.fb.control(cpl)
     });
   }
 
@@ -3602,7 +3633,8 @@ export class ReservaHospedajeComponent implements OnInit {
       precio: this.fb.control(value.precio ?? 0, { validators: [Validators.min(0)] }),
       cantidad: this.fb.control(value.cantidad ?? 1, { validators: [Validators.min(1)] }),
       totServ: this.fb.control(value.totServ ?? 0),
-      cCosto: this.fb.control(value.cCosto ?? '')
+      cCosto: this.fb.control(value.cCosto ?? ''),
+      cpl: this.fb.control(value.cpl === true || Number(value.cpl) === 1)
     });
   }
 
@@ -3795,6 +3827,7 @@ export class ReservaHospedajeComponent implements OnInit {
   }
 
   private calculateRoomTotal(room: ReservaHabitacionItem): number {
+    if (room.cpl === true || Number(room.cpl) === 1) return 0;
     const nights = this.reservaForm.controls.totNoches.value;
     return Math.round(((room.cantidad * room.precio + room.cantidadNinos * room.precioNino) * nights + Number.EPSILON) * 100) / 100;
   }
@@ -3831,7 +3864,8 @@ export class ReservaHospedajeComponent implements OnInit {
       precioNino: 0,
       total: 0,
       impuesto: 0,
-      cCosto: 'HOSPED'
+      cCosto: 'HOSPED',
+      cpl: this.reservaForm.controls.esCpl.value
     };
   }
 

@@ -44,6 +44,7 @@ export class ReservaHabitacionMapper {
       const cantidadHabitaciones = Number(item.cantHab ?? 0) || 0;
       const numPaxTotal = Number(item.numPax ?? 0) || 0;
       const cantidadNinos = Number(item.numChild ?? 0) || 0;
+      const cpl = this.normalizeCpl(item.cpl);
       const precioNino = cantidadNinos > 0 && noches > 0 ? (Number(item.totChild ?? 0) || 0) / cantidadNinos / noches : 0;
 
       return {
@@ -54,26 +55,29 @@ export class ReservaHabitacionMapper {
         // formulario trabaja con pax por habitación para poder multiplicar
         // correctamente por cantHab al recalcular el plan de alimentos.
         pax: cantidadHabitaciones > 0 ? numPaxTotal / cantidadHabitaciones : numPaxTotal,
-        precio: Number(item.precio ?? 0) || 0,
+        precio: cpl ? 0 : Number(item.precio ?? 0) || 0,
         cantidadNinos,
-        precioNino,
-        total: Number(item.total ?? 0) || 0,
-        impuesto: Number(item.impuesto ?? 0) || 0,
+        precioNino: cpl ? 0 : precioNino,
+        total: cpl ? 0 : Number(item.total ?? 0) || 0,
+        impuesto: cpl ? 0 : Number(item.impuesto ?? 0) || 0,
         cCosto: String(item.cCosto ?? '').trim() || 'HOSPED',
-        cpl: this.normalizeCpl(item.cpl)
+        cpl: cpl === 1
       };
     });
 
-    const inclusiones: ReservaInclusionItem[] = (detalle.inclusiones ?? []).map((item) => ({
-      codServ: String(item.codServ ?? '').trim(),
-      desServ: String(item.desServ ?? '').trim(),
-      tipPax: String(item.tipPax ?? '').trim(),
-      precio: Number(item.precio ?? 0) || 0,
-      cantidad: Number(item.cantidad ?? 0) || 0,
-      totServ: Number(item.totServ ?? 0) || 0,
-      cCosto: String(item.cCosto ?? '').trim(),
-      cpl: this.normalizeCpl(item.cpl)
-    }));
+    const inclusiones: ReservaInclusionItem[] = (detalle.inclusiones ?? []).map((item) => {
+      const cpl = this.normalizeCpl(item.cpl);
+      return {
+        codServ: String(item.codServ ?? '').trim(),
+        desServ: String(item.desServ ?? '').trim(),
+        tipPax: String(item.tipPax ?? '').trim(),
+        precio: cpl ? 0 : Number(item.precio ?? 0) || 0,
+        cantidad: Number(item.cantidad ?? 0) || 0,
+        totServ: cpl ? 0 : Number(item.totServ ?? 0) || 0,
+        cCosto: String(item.cCosto ?? '').trim(),
+        cpl: cpl === 1
+      };
+    });
 
     const servicios: ReservaServicioItem[] = (detalle.servicios ?? []).map((item) => ({
       codSrv: String(item.codSrv ?? item.codServ ?? '').trim(),
@@ -120,7 +124,7 @@ export class ReservaHabitacionMapper {
     const moneda = value.moneda.trim();
     const noches = Number(value.totNoches) || 0;
     const includeMealPlan = !this.isNoMealPlan(value.codPlan);
-    const cpl = value.esCpl ? 1 : 0;
+    const defaultCpl = value.esCpl ? 1 : 0;
 
     return {
       proceso,
@@ -146,35 +150,39 @@ export class ReservaHabitacionMapper {
       procesa: Number(value.procesa) || 0,
       directo: 'N',
       operador: value.operador.trim(),
-      habitaciones: value.habitaciones.map((item, index) => ({
+      habitaciones: value.habitaciones.map((item, index) => {
+        const cpl = this.normalizeCpl(item.cpl ?? defaultCpl);
+        return ({
         catHabita: item.categoria.trim(),
         tipHabita: item.tipo.trim(),
         cantHab: Number(item.cantidad) || 0,
-        precio: Number(item.precio) || 0,
+        precio: cpl ? 0 : Number(item.precio) || 0,
         moneda,
-        total: Number(item.total) || 0,
+        total: cpl ? 0 : Number(item.total) || 0,
         cpl,
         impuesto: 1,
         numPax: resolveNumPax(item.categoria, item.tipo) || Number(item.pax) || 0,
         numChild: Number(item.cantidadNinos) || 0,
-        totChild: (Number(item.cantidadNinos) || 0) * (Number(item.precioNino) || 0) * noches,
+        totChild: cpl ? 0 : (Number(item.cantidadNinos) || 0) * (Number(item.precioNino) || 0) * noches,
         cCosto: (item.cCosto ?? '').trim() || 'HOSPED',
         orden: index + 1
-      })),
+      }); }),
       inclusiones: includeMealPlan
-        ? value.inclusiones.map((item, index) => ({
+        ? value.inclusiones.map((item, index) => {
+            const cpl = this.normalizeCpl(item.cpl ?? defaultCpl);
+            return ({
             codServ: item.codServ.trim(),
             desServ: item.desServ.trim(),
             tipPax: item.tipPax.trim(),
-            precio: Number(item.precio) || 0,
+            precio: cpl ? 0 : Number(item.precio) || 0,
             cantidad: Number(item.cantidad) || 0,
-            totServ: Number(item.totServ) || 0,
+            totServ: cpl ? 0 : Number(item.totServ) || 0,
             exonera: '0',
             cpl,
             impInc: 1,
             cCosto: (item.cCosto ?? '').trim(),
             orden: index + 1
-          }))
+          }); })
         : [],
       servicios: value.servicios.map((item) => ({
         codSrv: item.codSrv.trim(),
@@ -191,7 +199,10 @@ export class ReservaHabitacionMapper {
   }
 
   static resolveCplState(detalle: ReservaHabitacionDetalle): { esCpl: boolean; inconsistent: boolean } {
-    const values = [...(detalle.habitaciones ?? []), ...(detalle.inclusiones ?? [])].map((item) => this.normalizeCpl(item.cpl));
+    const roomValues = (detalle.habitaciones ?? []).map((item) => this.normalizeCpl(item.cpl));
+    const values = roomValues.length
+      ? roomValues
+      : (detalle.inclusiones ?? []).map((item) => this.normalizeCpl(item.cpl));
     const uniqueValues = new Set(values);
     return {
       esCpl: values.length > 0 && values.every((value) => value === 1),

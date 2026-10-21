@@ -315,7 +315,7 @@
                   <small>{{ cplInconsistent() ? 'Valores mixtos' : (reservaForm.controls.esCpl.value ? 'CPL activa' : 'Estándar') }}</small>
                 </span>
                 <small class="cpl-option__warning" *ngIf="cplInconsistent()">
-                  Esta reserva tiene valores CPL mezclados. Elija una modalidad antes de actualizar.
+                  CPL está activo solo para algunos grupos de habitaciones.
                 </small>
               </div>
             </div>
@@ -354,8 +354,13 @@
 
         <div class="room-editor" [formGroup]="habitacionForm">
           <div class="room-editor-section">
-            <div class="room-editor-section__header">
+            <div class="room-editor-section__header room-editor-section__header--with-cpl">
               <h3>Selección de habitación</h3>
+              <label class="room-cpl-check" [class.room-cpl-check--active]="habitacionForm.controls.cpl.value">
+                <input type="checkbox" formControlName="cpl" aria-label="Marcar este grupo de habitaciones como CPL" (change)="onHabitacionDraftCplChange()">
+                <span>CPL</span>
+                <small>Sin cargo</small>
+              </label>
             </div>
             <div class="room-editor-fields room-editor-fields--three">
               <label class="field">
@@ -429,7 +434,7 @@
               <strong>{{ reservaForm.controls.moneda.value || '---' }} {{ habitacionForm.controls.total.value | number: '1.2-2' }}</strong>
             </div>
             <div class="room-editor-actions__buttons">
-              <button type="button" class="btn btn-light" (click)="habitacionForm.reset({ categoria: roomCategories[0]?.codigo || '', tipo: roomTypes[0]?.codigo || '', cantidad: 1, pax: roomTypes[0]?.pax || 0, precio: 0, cantidadNinos: 0, precioNino: 0, total: 0, impuesto: 0, cCosto: 'HOSPED' })">
+              <button type="button" class="btn btn-light" (click)="habitacionForm.reset({ categoria: roomCategories[0]?.codigo || '', tipo: roomTypes[0]?.codigo || '', cantidad: 1, pax: roomTypes[0]?.pax || 0, precio: 0, cantidadNinos: 0, precioNino: 0, total: 0, impuesto: 0, cpl: reservaForm.controls.esCpl.value, cCosto: 'HOSPED' })">
                 Cancelar
               </button>
               <button type="button" class="btn btn-primary" (click)="agregarHabitacion()" [disabled]="checkingRoomAvailability() || roomRateLoading() || roomTaxLoading()">
@@ -451,7 +456,7 @@
                   <th>#</th>
                   <th>Categoría</th>
                   <th>Tipo habitación</th>
-                  <th>Cant. Hab.</th>
+                  <th>Habitaciones</th>
                   <th>Precio (por hab., + iva)</th>
                   <th>Niños</th>
                   <th>Precio (por niño)</th>
@@ -473,7 +478,11 @@
                   <td>{{ i + 1 }}</td>
                   <td>{{ getCategoriaLabel(room.controls.categoria.value) }}</td>
                   <td>{{ getTipoHabitacionLabel(room.controls.tipo.value) }}</td>
-                  <td>{{ room.controls.cantidad.value }}</td>
+                  <td>
+                    <span>{{ room.controls.cantidad.value }}</span>
+                    <small class="room-pax-count">{{ room.controls.pax.value * room.controls.cantidad.value }} pax</small>
+                    <small class="room-cpl-badge" *ngIf="room.controls.cpl.value">CPL</small>
+                  </td>
                   <td>{{ reservaForm.controls.moneda.value }} {{ room.controls.precio.value | number: '1.2-2' }}</td>
                   <td>{{ room.controls.cantidadNinos.value }}</td>
                   <td>{{ reservaForm.controls.moneda.value }} {{ room.controls.precioNino.value | number: '1.2-2' }}</td>
@@ -536,6 +545,7 @@
             <div>
               <strong>{{ item.controls.desServ.value || 'Plan incluido' }}</strong>
               <span>{{ item.controls.cantidad.value }} {{ item.controls.tipPax.value }} x {{ reservaForm.controls.totNoches.value }} noches</span>
+              <small class="included-cpl-badge" *ngIf="item.controls.cpl.value">CPL · sin cargo</small>
             </div>
             <div class="included-total">
               <span>Total incluido</span>
