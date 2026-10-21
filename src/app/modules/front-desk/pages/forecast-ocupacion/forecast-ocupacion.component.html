@@ -193,14 +193,71 @@
     </div>
   </section>
 
+  <section class="forecast-print-report" aria-label="Reporte impreso de Forecast de Ocupación">
+    <header class="forecast-print-report__header">
+      <div>
+        <p>REPORTE OPERATIVO</p>
+        <h1>Forecast de Ocupación</h1>
+        <span>{{ chartTitle }}</span>
+      </div>
+      <div class="forecast-print-report__meta">
+        <span><strong>Hotel:</strong> {{ hotelNombreSeleccionado }}</span>
+        <span><strong>Período:</strong> {{ periodoSeleccionado }}</span>
+        <span><strong>Categorías:</strong> {{ selectedCategoriesLabel }}</span>
+        <span><strong>Registros:</strong> {{ filteredRows.length }}</span>
+      </div>
+    </header>
+
+    <section class="forecast-print-report__kpis" aria-label="Indicadores del forecast">
+      <article *ngFor="let kpi of kpis; trackBy: trackByTitulo">
+        <span>{{ kpi.titulo }}</span>
+        <strong>{{ kpi.valor }}</strong>
+        <small>{{ kpi.subtitulo }}</small>
+      </article>
+    </section>
+
+    <h2>Detalle por Fecha</h2>
+    <table class="forecast-print-report__table">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Total Hab.</th>
+          <th>Bloq.</th>
+          <th>{{ viewQuantityLabel }}</th>
+          <th>{{ viewPercentageLabel }}</th>
+          <th>N° Pax</th>
+          <th>Total C/LL</th>
+          <th *ngFor="let categoria of selectedCategories; trackBy: trackByCategoriaFiltro">{{ categoria.descripcion }}</th>
+          <th>{{ viewSummaryLabel }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of filteredRows; trackBy: trackByFecha">
+          <td>{{ row.fecha }}</td>
+          <td>{{ row.totalHabitaciones }}</td>
+          <td>{{ row.bloqueadas }}</td>
+          <td>{{ getViewQuantity(row) }}</td>
+          <td>{{ getViewPercentage(row) | number:'1.0-1' }}%</td>
+          <td>{{ row.pax }}</td>
+          <td>{{ row.totalCLL }}</td>
+          <td *ngFor="let categoria of selectedCategories; trackBy: trackByCategoriaFiltro"
+              [class.category-cell--unavailable]="isCategoryUnavailable(row, categoria.codigo)">
+            {{ getCategoryValue(row, categoria.codigo) }}
+          </td>
+          <td>{{ getViewPercentage(row) | number:'1.0-1' }}%</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
   <footer class="forecast-actions" aria-label="Acciones">
-    <button type="button" class="action-button action-button--primary" (click)="imprimir()">
+    <button type="button" class="action-button action-button--primary" (click)="imprimir()" [disabled]="isLoading || filteredRows.length === 0">
       <span class="material-icons" aria-hidden="true">print</span>
       <span>Imprimir</span>
     </button>
-    <button type="button" class="action-button action-button--success" (click)="exportarExcel()">
-      <span class="material-icons" aria-hidden="true">file_download</span>
-      <span>Exportar Excel</span>
+    <button type="button" class="action-button action-button--success" (click)="exportarExcel()" [disabled]="isLoading || isExportingExcel || filteredRows.length === 0">
+      <span class="material-icons" aria-hidden="true">{{ isExportingExcel ? 'hourglass_top' : 'file_download' }}</span>
+      <span>{{ isExportingExcel ? 'Preparando Excel...' : 'Exportar Excel' }}</span>
     </button>
   </footer>
 </section>

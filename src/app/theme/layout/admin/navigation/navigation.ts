@@ -137,6 +137,7 @@ export const NavigationItems: NavigationItem[] = [
           { id: 'reservas-calendario', title: 'Calendario de Reservas', type: 'item', url: '/reservas/calendario', icon: 'feather icon-calendar', classes: 'nav-item' },
           { id: 'reservas-forecast', title: 'Forecast de Ocupación', type: 'item', url: '/front-desk/forecast-ocupacion', icon: 'feather icon-trending-up', classes: 'nav-item' },
           { id: 'reservas-tarifas', title: 'Tarifas y Planes', type: 'item', url: '/reservas/tarifas-planes', icon: 'feather icon-tag', classes: 'nav-item' },
+          { id: 'reservas-servicios', title: 'Servicios de Reservas', type: 'item', url: '/reservas/servicios-reservas', icon: 'feather icon-list', classes: 'nav-item' },
           { id: 'reservas-agencias-canales', title: 'Agencias / Canales', type: 'item', url: '/reservas/configuracion/agencias', icon: 'feather icon-share-2', classes: 'nav-item' },
           { id: 'reservas-canales', title: 'Clientes / Facturación', type: 'item', url: '/reservas/clientes', icon: 'feather icon-share-2', classes: 'nav-item' }
         ]

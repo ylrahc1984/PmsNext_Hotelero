@@ -1848,3 +1848,8 @@ gmpx-place-autocomplete.places-autocomplete-themed {
     }
   }
 }
+@media print {
+  body.forecast-print-mode * { visibility: hidden !important; }
+  body.forecast-print-mode .forecast-print-report,
+  body.forecast-print-mode .forecast-print-report * { visibility: visible !important; }
+}

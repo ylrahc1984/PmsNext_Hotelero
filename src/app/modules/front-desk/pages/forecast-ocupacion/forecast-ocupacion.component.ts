@@ -4,6 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApexOptions, NgApexchartsModule } from 'ng-apexcharts';
 import { of } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
+import Swal from 'sweetalert2';
 
 import { Empresa } from 'src/app/core/models/empresa.model';
 import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
@@ -76,6 +77,7 @@ export class ForecastOcupacionComponent implements OnInit {
   pageSize = 10;
   currentPage = 1;
   isLoading = false;
+  isExportingExcel = false;
   errorMessage = '';
 
   categoriasSeleccionadas: Record<string, boolean> = {};
@@ -137,17 +139,195 @@ export class ForecastOcupacionComponent implements OnInit {
     return this.tipoVista === 'ocupacion' ? 'Ocupación Proyectada' : 'Disponibilidad Proyectada';
   }
 
+  get hotelNombreSeleccionado(): string {
+    const selected = this.hoteles.find((item) => item.MA04_Unidad === this.hotel);
+    return selected ? this.getHotelNombre(selected) : '—';
+  }
+
+  get selectedCategoriesLabel(): string {
+    return this.selectedCategories.map((categoria) => categoria.descripcion).join(', ') || 'Ninguna';
+  }
+
+  get periodoSeleccionado(): string {
+    return `${normalizePmsDateDDMMYYYY(this.fechaInicial)} al ${normalizePmsDateDDMMYYYY(this.fechaFinal)}`;
+  }
+
   procesar(): void {
     this.currentPage = 1;
     this.loadForecast();
   }
 
   imprimir(): void {
-    console.log('Imprimir forecast de ocupación');
+    if (this.isLoading || this.filteredRows.length === 0) return;
+
+    document.body.classList.add('forecast-print-mode');
+    const cleanup = (): void => {
+      document.body.classList.remove('forecast-print-mode');
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup, { once: true });
+    window.print();
+    window.setTimeout(cleanup, 1000);
   }
 
-  exportarExcel(): void {
-    console.log('Exportar Excel forecast de ocupación');
+  async exportarExcel(): Promise<void> {
+    const exportRows = this.filteredRows;
+    if (this.isLoading || this.isExportingExcel) return;
+    if (exportRows.length === 0) {
+      void Swal.fire({ icon: 'info', title: 'Sin información', text: 'No hay filas del forecast para exportar.' });
+      return;
+    }
+
+    this.isExportingExcel = true;
+    this.cdr.markForCheck();
+    try {
+      const XLSX = await import('xlsx-js-style');
+      const categoryHeaders = this.selectedCategories.map((category) => category.descripcion);
+      const headers = [
+        'Fecha', 'Total habitaciones', 'Habitaciones bloqueadas', this.viewQuantityLabel, this.viewPercentageLabel,
+        'Pax', 'Total C/LL', ...categoryHeaders, this.viewSummaryLabel
+      ];
+      const columnCount = headers.length;
+      const reportInfo = [
+        ['Forecast de Ocupación'],
+        [`Período: ${this.periodoSeleccionado}`],
+        [`Hotel: ${this.hotelNombreSeleccionado} (${this.hotel || '—'})`],
+        [`Vista: ${this.tipoVista === 'ocupacion' ? 'Ocupación' : 'Disponibilidad'} | Categorías: ${this.selectedCategoriesLabel}`],
+        [`Búsqueda aplicada: ${this.busqueda.trim() || 'Ninguna'} | Registros: ${exportRows.length}`],
+        []
+      ];
+      const kpiLabels = this.kpis.map((kpi) => kpi.titulo);
+      const kpiValues = this.kpis.map((kpi) => `${kpi.valor}${kpi.subtitulo ? ` — ${kpi.subtitulo}` : ''}`);
+      const rowData = exportRows.map((row) => [
+        row.fecha,
+        row.totalHabitaciones,
+        row.bloqueadas,
+        this.getViewQuantity(row),
+        this.getViewPercentage(row),
+        row.pax,
+        row.totalCLL,
+        ...this.selectedCategories.map((category) => this.getCategoryValue(row, category.codigo)),
+        this.getViewPercentage(row)
+      ]);
+      const kpiRow = (values: Array<string | number>): Array<string | number> => {
+        const result: Array<string | number> = Array(columnCount).fill('');
+        values.forEach((value, index) => {
+          result[Math.floor(index * columnCount / values.length)] = value;
+        });
+        return result;
+      };
+      const headerRow = reportInfo.length + 3;
+      const worksheet = XLSX.utils.aoa_to_sheet([
+        ...reportInfo,
+        kpiRow(kpiLabels),
+        kpiRow(kpiValues),
+        [],
+        headers,
+        ...rowData
+      ]);
+      const merges: import('xlsx-js-style').Range[] = Array.from({ length: reportInfo.length - 1 }, (_, row) => ({
+        s: { r: row, c: 0 }, e: { r: row, c: columnCount - 1 }
+      }));
+      const kpiRanges: Array<{ start: number; end: number }> = [];
+      for (let index = 0; index < this.kpis.length; index += 1) {
+        const start = Math.floor(index * columnCount / this.kpis.length);
+        const end = Math.floor((index + 1) * columnCount / this.kpis.length) - 1;
+        kpiRanges.push({ start, end });
+        if (end > start) {
+          for (const row of [reportInfo.length, reportInfo.length + 1]) {
+            merges.push({ s: { r: row, c: start }, e: { r: row, c: end } });
+          }
+        }
+      }
+      worksheet['!merges'] = merges;
+      worksheet['!autofilter'] = {
+        ref: XLSX.utils.encode_range({ s: { r: headerRow, c: 0 }, e: { r: headerRow + rowData.length, c: columnCount - 1 } })
+      };
+      worksheet['!cols'] = [18, 18, 22, 18, 17, 12, 14, ...categoryHeaders.map(() => 18), 18].map((wch) => ({ wch }));
+      worksheet['!rows'] = [
+        { hpt: 32 }, ...Array.from({ length: 4 }, () => ({ hpt: 21 })), { hpt: 10 },
+        { hpt: 23 }, { hpt: 38 }, { hpt: 10 }, { hpt: 34 }, ...rowData.map(() => ({ hpt: 23 }))
+      ];
+
+      const setStyle = (row: number, column: number, style: Record<string, unknown>): void => {
+        const address = XLSX.utils.encode_cell({ r: row, c: column });
+        const cell = worksheet[address] ?? { t: 's', v: '' };
+        cell.s = { ...cell.s, ...style };
+        worksheet[address] = cell;
+      };
+      for (let column = 0; column < columnCount; column += 1) {
+        setStyle(0, column, {
+          fill: { fgColor: { rgb: 'FF17365D' } },
+          font: { name: 'Aptos Display', sz: 16, bold: true, color: { rgb: 'FFFFFFFF' } },
+          alignment: { vertical: 'center', horizontal: 'left' }
+        });
+        for (let row = 1; row < reportInfo.length - 1; row += 1) {
+          setStyle(row, column, {
+            fill: { fgColor: { rgb: row % 2 ? 'FFF1F5F9' : 'FFE6EEF6' } },
+            font: { name: 'Aptos', sz: 10, color: { rgb: 'FF334155' }, bold: row === 1 },
+            alignment: { vertical: 'center', wrapText: true },
+            border: { bottom: { style: 'thin', color: { rgb: 'FFD8E1EA' } } }
+          });
+        }
+        setStyle(headerRow, column, {
+          fill: { fgColor: { rgb: 'FF245B8F' } },
+          font: { name: 'Aptos', sz: 10, bold: true, color: { rgb: 'FFFFFFFF' } },
+          alignment: { vertical: 'center', horizontal: 'center', wrapText: true },
+          border: { bottom: { style: 'medium', color: { rgb: 'FF17365D' } } }
+        });
+      }
+      kpiRanges.forEach(({ start, end }, index) => {
+        for (let column = start; column <= end; column += 1) {
+          setStyle(reportInfo.length, column, {
+            fill: { fgColor: { rgb: 'FFE6EEF6' } },
+            font: { name: 'Aptos', sz: 9, bold: true, color: { rgb: 'FF526579' } },
+            alignment: { vertical: 'center', horizontal: 'center', wrapText: true },
+            border: { top: { style: 'medium', color: { rgb: 'FF2563EB' } } }
+          });
+          setStyle(reportInfo.length + 1, column, {
+            fill: { fgColor: { rgb: 'FFF5F8FC' } },
+            font: { name: 'Aptos', sz: 10, bold: true, color: { rgb: 'FF17365D' } },
+            alignment: { vertical: 'center', horizontal: 'center', wrapText: true },
+            border: { bottom: { style: 'thin', color: { rgb: 'FFCBD5E1' } } }
+          });
+        }
+        const labelCell = worksheet[XLSX.utils.encode_cell({ r: reportInfo.length, c: start })];
+        const valueCell = worksheet[XLSX.utils.encode_cell({ r: reportInfo.length + 1, c: start })];
+        if (labelCell) labelCell.v = kpiLabels[index];
+        if (valueCell) valueCell.v = kpiValues[index];
+      });
+
+      for (let rowIndex = headerRow + 1; rowIndex <= headerRow + rowData.length; rowIndex += 1) {
+        for (let column = 0; column < columnCount; column += 1) {
+          setStyle(rowIndex, column, {
+            fill: { fgColor: { rgb: (rowIndex - headerRow) % 2 ? 'FFFFFFFF' : 'FFF3F7FB' } },
+            font: { name: 'Aptos', sz: 10, color: { rgb: 'FF243447' } },
+            alignment: { vertical: 'center', horizontal: column === 0 ? 'left' : 'center' },
+            border: { bottom: { style: 'thin', color: { rgb: 'FFD8E1EA' } } }
+          });
+          if (typeof worksheet[XLSX.utils.encode_cell({ r: rowIndex, c: column })]?.v === 'number') {
+            worksheet[XLSX.utils.encode_cell({ r: rowIndex, c: column })].z = '#,##0';
+          }
+        }
+        for (const percentColumn of [4, columnCount - 1]) {
+          worksheet[XLSX.utils.encode_cell({ r: rowIndex, c: percentColumn })].z = '0.0"%"';
+        }
+      }
+
+      const workbook = XLSX.utils.book_new();
+      workbook.Props = { Title: 'Forecast de Ocupación', Subject: this.periodoSeleccionado };
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Forecast');
+      const safeHotel = this.hotel.replace(/[^a-zA-Z0-9_-]/g, '') || 'hotel';
+      const safeDate = (value: string): string => normalizePmsDateDDMMYYYY(value).replace(/\//g, '-') || 'fecha';
+      XLSX.writeFile(workbook, `forecast-ocupacion_${safeHotel}_${safeDate(this.fechaInicial)}_${safeDate(this.fechaFinal)}.xlsx`, { compression: true });
+      void Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Archivo Excel descargado', showConfirmButton: false, timer: 2500 });
+    } catch (error) {
+      console.error('No se pudo exportar el Forecast de Ocupación.', error);
+      void Swal.fire({ icon: 'error', title: 'No se pudo exportar', text: 'No fue posible generar el archivo Excel. Intente nuevamente.' });
+    } finally {
+      this.isExportingExcel = false;
+      this.cdr.markForCheck();
+    }
   }
 
   onHotelChange(): void {

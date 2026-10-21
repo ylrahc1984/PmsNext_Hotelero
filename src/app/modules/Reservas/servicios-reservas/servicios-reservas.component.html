@@ -1,0 +1,208 @@
+<main class="services-report container-fluid">
+  <header class="report-header">
+    <div class="report-heading">
+      <span class="report-heading__icon" aria-hidden="true"><i class="feather icon-coffee"></i></span>
+      <div>
+        <h1>Servicios de Reservas</h1>
+        <p>Consulta de reservas con servicios contratados para una mejor coordinación operativa.</p>
+      </div>
+    </div>
+    <button type="button" class="btn btn-outline-secondary" (click)="exportar()" [disabled]="loading() || exporting() || filteredReservas().length === 0">
+      <span *ngIf="exporting()" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+      <i *ngIf="!exporting()" class="feather icon-download me-1" aria-hidden="true"></i>{{ exporting() ? 'Exportando...' : 'Exportar Excel' }}
+    </button>
+  </header>
+
+  <form class="card report-card filter-card" [formGroup]="filterForm" (ngSubmit)="buscar()">
+    <div class="card-body">
+      <div class="section-heading">
+        <div><h2>Filtros de búsqueda</h2><p>Seleccione el período de ingreso de las reservas.</p></div>
+      </div>
+      <div class="filter-grid">
+        <label class="filter-field" for="servicesArrivalDate">
+          <span>Fecha de ingreso <b>*</b></span>
+          <input id="servicesArrivalDate" type="date" class="form-control" formControlName="fechaIngreso" [class.is-invalid]="filterForm.controls.fechaIngreso.touched && filterForm.controls.fechaIngreso.invalid">
+          <small class="field-error" *ngIf="filterForm.controls.fechaIngreso.touched && filterForm.controls.fechaIngreso.invalid">La fecha de ingreso es obligatoria.</small>
+        </label>
+        <label class="filter-field" for="servicesDepartureDate">
+          <span>Fecha de salida <b>*</b></span>
+          <input id="servicesDepartureDate" type="date" class="form-control" formControlName="fechaSalida" [min]="filterForm.controls.fechaIngreso.value" [class.is-invalid]="filterForm.controls.fechaSalida.touched && filterForm.controls.fechaSalida.invalid">
+          <small class="field-error" *ngIf="filterForm.controls.fechaSalida.touched && filterForm.controls.fechaSalida.invalid">La fecha de salida es obligatoria.</small>
+        </label>
+        <div class="filter-field agency-multi-field">
+          <span id="servicesAgencyFilterLabel">Agencias</span>
+          <div class="agency-multi-select">
+            <button id="servicesAgencyFilter" type="button" class="form-select agency-multi-trigger" (click)="toggleFiltroAgencia()" [disabled]="!agencias().length" [attr.aria-expanded]="agenciaFiltroAbierto()" aria-haspopup="true" aria-controls="servicesAgencyFilterMenu" aria-labelledby="servicesAgencyFilterLabel">
+              <span>{{ agenciaFiltroLabel }}</span><span class="agency-selected-count" *ngIf="seleccionAgenciasActiva() && agenciasSeleccionadas().size < agencias().length">{{ agenciasSeleccionadas().size }}</span>
+            </button>
+            <div id="servicesAgencyFilterMenu" class="agency-multi-menu" *ngIf="agenciaFiltroAbierto()" role="group" aria-labelledby="servicesAgencyFilterLabel">
+              <div class="agency-multi-menu__header">
+                <strong>Filtrar agencias</strong>
+                <button type="button" class="agency-menu-close" (click)="setAgenciaFilterOpen(false)" aria-label="Cerrar filtro de agencias"><i class="feather icon-x"></i></button>
+              </div>
+              <div class="agency-multi-menu__actions">
+                <button type="button" (click)="seleccionarTodasAgencias()">Seleccionar todas</button>
+                <button type="button" (click)="limpiarAgencias()">Limpiar selección</button>
+              </div>
+              <div class="agency-multi-options">
+                <label class="agency-multi-option" *ngFor="let agencia of agencias()">
+                  <input type="checkbox" [checked]="isAgenciaSeleccionada(agencia.id)" (change)="toggleAgencia(agencia.id)">
+                  <span><strong>{{ agencia.nombre }}</strong><small>{{ agencia.id }}</small></span>
+                </label>
+              </div>
+              <button type="button" class="agency-menu-done" (click)="setAgenciaFilterOpen(false)">Listo</button>
+            </div>
+          </div>
+        </div>
+        <label class="filter-field" for="servicesCostCenterFilter">
+          <span>Centro de costo</span>
+          <select id="servicesCostCenterFilter" class="form-select" [value]="centroCostoSeleccionado()" (change)="setCentroCosto($any($event.target).value)" [disabled]="!reservas().length">
+            <option value="">Todos los centros</option>
+            <option *ngFor="let centro of centrosCosto()" [value]="centro">{{ centro }}</option>
+          </select>
+        </label>
+      </div>
+      <div class="filter-footer">
+        <small class="field-error" *ngIf="dateRangeError()" role="alert">{{ dateRangeError() }}</small>
+        <div class="filter-actions">
+          <button type="button" class="btn btn-light" (click)="limpiar()" [disabled]="loading()"><i class="feather icon-x me-1"></i>Limpiar</button>
+          <button type="submit" class="btn btn-primary" [disabled]="loading()">
+            <span *ngIf="loading()" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+            <i *ngIf="!loading()" class="feather icon-search me-1" aria-hidden="true"></i>
+            {{ loading() ? 'Consultando...' : 'Buscar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <section class="metrics-grid" aria-label="Indicadores operativos">
+    <article class="metric-card metric-card--reservations"><span class="metric-icon"><i class="feather icon-calendar"></i></span><div><span>Reservas</span><strong>{{ indicadores().reservas }}</strong></div></article>
+    <article class="metric-card metric-card--guests"><span class="metric-icon"><i class="feather icon-users"></i></span><div><span>Huéspedes</span><strong>{{ indicadores().huespedes | number }}</strong></div></article>
+    <article class="metric-card metric-card--services"><span class="metric-icon"><i class="feather icon-briefcase"></i></span><div><span>Reservas con servicios</span><strong>{{ indicadores().conServicios }}</strong></div></article>
+    <article class="metric-card metric-card--food"><span class="metric-icon"><i class="feather icon-coffee"></i></span><div><span>Reservas con alimentación</span><strong>{{ indicadores().conAlimentacion }}</strong></div></article>
+  </section>
+
+  <section class="card report-card list-card">
+    <div class="card-body">
+      <div class="section-heading section-heading--toolbar">
+        <div><h2>Listado de reservas</h2><p>{{ filteredReservas().length }} reservas en el resultado{{ hayFiltroLocalActivo ? ' filtrado' : '' }}.</p></div>
+        <div class="list-toolbar-actions">
+          <div class="expand-actions"><button type="button" class="btn btn-sm btn-outline-secondary" (click)="expandirTodo()" [disabled]="filteredReservas().length === 0">Expandir todo</button><button type="button" class="btn btn-sm btn-outline-secondary" (click)="contraerTodo()" [disabled]="expandedReservaIds().size === 0">Contraer todo</button></div>
+          <label class="page-size-control" for="servicesPageSize">Filas
+            <select id="servicesPageSize" class="form-select form-select-sm" [value]="pageSize()" (change)="cambiarTamanoPagina($any($event.target).value)">
+              <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div *ngIf="loading()" class="loading-state" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span>Consultando reservas y servicios...</div>
+      <div *ngIf="!loading() && hasSearched() && reservas().length === 0" class="empty-state">
+        <span class="empty-state__icon"><i class="feather icon-inbox"></i></span>
+        <strong>No se encontraron reservas para los filtros seleccionados.</strong>
+        <span>Pruebe con otro período de ingreso.</span>
+      </div>
+      <div *ngIf="!loading() && hasSearched() && reservas().length > 0 && filteredReservas().length === 0" class="empty-state empty-state--compact">
+        <strong>No hay reservas que coincidan con los filtros locales.</strong>
+        <span>Modifique la agencia o el centro de costo.</span>
+      </div>
+      <div *ngIf="!loading() && !hasSearched()" class="empty-state empty-state--compact">
+        <strong>Seleccione un período para consultar.</strong>
+        <span>Las reservas se cargarán al presionar Buscar.</span>
+      </div>
+
+      <div class="table-responsive" *ngIf="!loading() && pageReservas().length">
+        <table class="table align-middle reservation-table">
+          <thead><tr>
+            <th class="expand-column"><span class="visually-hidden">Detalle</span></th><th>Reserva</th><th>Descripción</th><th>Ingreso</th><th>Salida</th><th class="text-center">Noches</th><th>Agencia</th>
+            <th class="text-center">Huéspedes</th><th class="text-center">Servicios</th><th>Alimentación</th><th>Estado</th>
+          </tr></thead>
+          <tbody>
+            <ng-container *ngFor="let reserva of pageReservas(); trackBy: trackReserva">
+            <tr class="reservation-row" [class.is-expanded]="estaExpandida(reserva.reservaId)">
+              <td class="expand-column"><button type="button" class="expand-toggle" (click)="toggleReserva(reserva.reservaId)" [attr.aria-expanded]="estaExpandida(reserva.reservaId)" [attr.aria-controls]="'reservation-detail-' + reserva.reservaId" [attr.aria-label]="(estaExpandida(reserva.reservaId) ? 'Contraer' : 'Desplegar') + ' detalle de ' + reserva.reservaId"><i class="feather" [ngClass]="estaExpandida(reserva.reservaId) ? 'icon-chevron-up' : 'icon-chevron-down'"></i></button></td>
+              <td class="reservation-code"><strong>{{ reserva.reservaId }}</strong></td>
+              <td class="truncate-cell" [title]="reserva.reservaDescripcion || 'Sin descripción'">{{ reserva.reservaDescripcion || 'Sin descripción' }}</td>
+              <td>{{ formatDate(reserva.fechaIngreso) }}</td><td>{{ formatDate(reserva.fechaSalida) }}</td>
+              <td class="text-center">{{ displayNumber(reserva.totalNoches) }}</td>
+              <td class="truncate-cell" [title]="reserva.nombreAgencia || 'Sin agencia'">{{ reserva.nombreAgencia || 'Sin agencia' }}</td>
+              <td class="text-center guest-count"><span>{{ displayNumber(reserva.cantidadAdultos) }}</span><small> / {{ displayNumber(reserva.cantidadNinos) }}</small></td>
+              <td class="text-center">{{ reserva.servicios.length }}</td>
+              <td><span class="food-badge" *ngIf="hasAlimentacion(reserva)"><i class="feather icon-coffee" aria-hidden="true"></i> Sí</span><span class="text-muted" *ngIf="!hasAlimentacion(reserva)">No</span></td>
+              <td><span class="status-code" [attr.data-status]="normalizeCode(reserva.estadoReserva)">{{ reserva.estadoReserva || '—' }}</span></td>
+            </tr>
+            <tr class="expanded-detail-row" *ngIf="estaExpandida(reserva.reservaId)" [id]="'reservation-detail-' + reserva.reservaId">
+              <td colspan="11">
+                <div class="expanded-detail">
+                  <div class="detail-heading">
+                    <div><span class="summary-code-label">Detalle de reserva</span><h3>{{ reserva.reservaId }} <small>{{ reserva.reservaDescripcion || 'Sin descripción' }}</small></h3></div>
+                    <span class="detail-status">{{ reserva.estadoReserva || '—' }}</span>
+                  </div>
+
+                  <div class="detail-overview-grid">
+                    <section class="detail-block detail-block--general">
+                      <h4><i class="feather icon-clipboard"></i>Información general</h4>
+                      <dl class="detail-facts">
+                        <div><dt>Ingreso</dt><dd>{{ formatDate(reserva.fechaIngreso) }}</dd></div><div><dt>Salida</dt><dd>{{ formatDate(reserva.fechaSalida) }}</dd></div>
+                        <div><dt>Noches</dt><dd>{{ displayNumber(reserva.totalNoches) }}</dd></div><div><dt>Estado</dt><dd>{{ reserva.estadoReserva || '—' }}</dd></div>
+                        <div class="detail-facts__wide"><dt>Agencia</dt><dd>{{ reserva.nombreAgencia || '—' }}</dd></div>
+                      </dl>
+                    </section>
+                    <section class="detail-block detail-block--observations">
+                      <h4><i class="feather icon-file-text"></i>Observaciones</h4>
+                      <p class="reservation-observation">{{ reserva.observacionReserva || 'Sin observaciones registradas.' }}</p>
+                    </section>
+                    <section class="detail-block detail-block--additional">
+                      <h4><i class="feather icon-info"></i>Información adicional</h4>
+                      <dl class="detail-facts detail-facts--additional">
+                        <div><dt>Código de agencia</dt><dd>{{ reserva.agenciaId || '—' }}</dd></div><div><dt>Código de plan</dt><dd>{{ reserva.codigoPlan || '—' }}</dd></div>
+                        <div><dt>Adultos</dt><dd>{{ displayNumber(reserva.cantidadAdultos) }}</dd></div><div><dt>Niños</dt><dd>{{ displayNumber(reserva.cantidadNinos) }}</dd></div>
+                        <div><dt>Total huéspedes</dt><dd>{{ displayNumber(reserva.totalHuespedes) }}</dd></div><div><dt>Servicios registrados</dt><dd>{{ reserva.servicios.length }}</dd></div>
+                      </dl>
+                    </section>
+                  </div>
+
+                  <section class="detail-block detail-block--services">
+                    <div class="detail-block__heading"><h4><i class="feather icon-briefcase"></i>Servicios contratados <span class="service-count">{{ reserva.servicios.length }}</span></h4><small>Los servicios ALIMEN se resaltan para su identificación.</small></div>
+                    <div class="empty-services" *ngIf="reserva.servicios.length === 0">Esta reserva no tiene servicios adicionales registrados.</div>
+                    <div class="table-responsive" *ngIf="reserva.servicios.length > 0">
+                      <table class="table align-middle services-table mb-0">
+                        <thead><tr><th>Código</th><th>Descripción</th><th class="text-end">Cantidad</th><th>Moneda</th><th class="text-end">Precio</th><th class="text-end">Total</th><th>Tipo Pax</th><th>Centro de costo</th></tr></thead>
+                        <tbody><tr *ngFor="let servicio of reserva.servicios; trackBy: trackServicio" [class.food-service-row]="normalizeCode(servicio.centroCosto) === 'ALIMEN'">
+                          <td>{{ servicio.codigo || '—' }}</td><td class="service-description" [title]="servicio.descripcion || 'Sin descripción'">{{ servicio.descripcion || 'Sin descripción' }}</td>
+                          <td class="text-end">{{ displayNumber(servicio.cantidad) }}</td><td>{{ servicio.moneda || '—' }}</td>
+                          <td class="text-end">{{ displayMoney(servicio.precio, '') }}</td><td class="text-end fw-semibold">{{ displayMoney(servicio.total, servicio.moneda) }}</td>
+                          <td>{{ servicio.tipoPax || '—' }}</td><td><span class="cost-center" [class.cost-center--food]="normalizeCode(servicio.centroCosto) === 'ALIMEN'">{{ servicio.centroCosto || '—' }}</span></td>
+                        </tr></tbody>
+                      </table>
+                    </div>
+                    <div class="services-summary" *ngIf="reserva.servicios.length > 0">
+                      <span>Total de servicios: <strong>{{ reserva.servicios.length }} registros</strong></span>
+                      <div class="services-summary__amounts"><span>Total de servicios registrados</span>
+                        <ng-container *ngIf="resumenMonedas(reserva).length; else noMonetaryTotals">
+                          <strong *ngFor="let subtotal of resumenMonedas(reserva)">{{ subtotal.moneda }} {{ subtotal.total | number: '1.2-2' }}<small *ngIf="subtotal.registrosConTotal < reserva.servicios.length"> · {{ subtotal.registrosConTotal }} de {{ reserva.servicios.length }} importes</small></strong>
+                        </ng-container>
+                        <ng-template #noMonetaryTotals><strong>Importes no disponibles</strong></ng-template>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              </td>
+            </tr>
+            </ng-container>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination-bar" *ngIf="filteredReservas().length > 0">
+        <span>{{ (currentPage() - 1) * pageSize() + 1 }}–{{ (currentPage() - 1) * pageSize() + pageReservas().length }} de {{ filteredReservas().length }}</span>
+        <div class="pagination-controls">
+          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="cambiarPagina(currentPage() - 1)" [disabled]="currentPage() <= 1" aria-label="Página anterior"><i class="feather icon-chevron-left"></i></button>
+          <span>Página {{ currentPage() }} de {{ totalPages() }}</span>
+          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="cambiarPagina(currentPage() + 1)" [disabled]="currentPage() >= totalPages()" aria-label="Página siguiente"><i class="feather icon-chevron-right"></i></button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>

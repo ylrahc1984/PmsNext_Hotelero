@@ -14,6 +14,7 @@ const loadPmsPlaceholder = () => import('./pages/pms-placeholder/pms-placeholder
 const reservasSectionUrls: Record<string, string> = {
   'Consulta de Reservas': '/reservas/consulta-reservas',
   'Tarifas y Planes': '/reservas/tarifas-planes',
+  'Servicios de Reservas': '/reservas/servicios-reservas',
   'Clientes / Facturación': '/reservas/clientes'
 };
 
@@ -720,6 +721,12 @@ const routes: Routes = [
         data: reservasBreadcrumbData('Tarifas y Planes'),
         loadComponent: () =>
           import('./modules/Reservas/tarifas-planes/tarifas-planes.component').then((c) => c.TarifasPlanesComponent)
+      },
+      {
+        path: 'servicios-reservas',
+        data: reservasBreadcrumbData('Servicios de Reservas'),
+        loadComponent: () =>
+          import('./modules/Reservas/servicios-reservas/servicios-reservas.component').then((c) => c.ServiciosReservasComponent)
       },
       {
         path: 'tarifas-planes/:codigo/detalle',
