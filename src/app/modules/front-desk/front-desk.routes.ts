@@ -265,6 +265,16 @@ export const FRONT_DESK_ROUTES: Routes = [
         loadComponent: () => import('./settings/meal-plans/meal-plans.component').then((c) => c.MealPlansComponent)
       },
       {
+        path: 'configuraciones/categorias-tags',
+        data: frontDeskData('Categorías de Tags', 'Configuraciones'),
+        loadComponent: () => import('./settings/tag-categories/tag-categories.component').then((c) => c.TagCategoriesComponent)
+      },
+      {
+        path: 'configuraciones/tags',
+        data: frontDeskData('Mantenimiento de Tags', 'Configuraciones'),
+        loadComponent: () => import('./settings/tags/tags.component').then((c) => c.TagsComponent)
+      },
+      {
         path: 'configuraciones/lista-habitaciones',
         data: frontDeskData('Lista de Habitaciones', 'Configuraciones'),
         loadComponent: () => import('./settings/rooms/rooms.component').then((c) => c.RoomsComponent)

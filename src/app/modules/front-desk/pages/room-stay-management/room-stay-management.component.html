@@ -9,6 +9,19 @@
         <div class="title-line">
           <h1>Habitacion {{ room().roomNumber }}</h1>
           <span class="status-badge">Ocupada</span>
+          <span class="exchange-compact" aria-label="Tipo de cambio de compra y venta">
+            <span class="material-icons exchange-compact__icon" aria-hidden="true">currency_exchange</span>
+            @if (isRoomStayExchangeRateLoading()) {
+              <span class="exchange-compact__loading">Consultando tipo de cambio...</span>
+            } @else if (roomStayExchangeRate()) {
+              <span class="exchange-compact__values">
+                <span><small>Compra</small><strong>{{ roomStayExchangeRate()!.compra | number:'1.2-4' }}</strong></span>
+                <span><small>Venta</small><strong>{{ roomStayExchangeRate()!.venta | number:'1.2-4' }}</strong></span>
+              </span>
+            } @else {
+              <span class="exchange-compact__loading">{{ roomStayExchangeRateError() || 'Sin tipo de cambio' }}</span>
+            }
+          </span>
         </div>
         <p>{{ room().roomType }}</p>
       </div>
@@ -37,7 +50,13 @@
       </article>
       <article class="mini-kpi balance-kpi">
         <span class="material-icons" aria-hidden="true">attach_money</span>
-        <div><small>Saldo Actual</small><strong>{{ headerBalance() | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+        <div>
+          <small>Saldo Actual</small>
+          <strong class="dual-currency-value">
+            <span>{{ headerBalance() | currency:'USD':'symbol':'1.2-2' }}</span>
+            <small>{{ formatColonesEquivalent(headerBalance()) }}</small>
+          </strong>
+        </div>
       </article>
     </div>
   </header>
@@ -258,7 +277,10 @@
               <span>Folio operativo</span>
               <h2>Cargos de la Estancia</h2>
             </div>
-            <strong>{{ totalToCharge() | currency:'USD':'symbol':'1.2-2' }}</strong>
+            <strong class="dual-currency-value">
+              <span>{{ totalToCharge() | currency:'USD':'symbol':'1.2-2' }}</span>
+              <small>{{ formatColonesEquivalent(totalToCharge()) }}</small>
+            </strong>
           </div>
 
           <article class="ledger-card">
@@ -343,7 +365,13 @@
                 </div>
               }
             </div>
-            <div class="ledger-total"><span>Total Hospedaje y Alimentos</span><strong>{{ lodgingSubtotal() | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+            <div class="ledger-total">
+              <span>Total Hospedaje y Alimentos</span>
+              <strong class="dual-currency-value">
+                <span>{{ lodgingSubtotal() | currency:'USD':'symbol':'1.2-2' }}</span>
+                <small>{{ formatColonesEquivalent(lodgingSubtotal()) }}</small>
+              </strong>
+            </div>
           </article>
 
           <article class="ledger-card ledger-card--extras">
@@ -428,7 +456,13 @@
                 </div>
               }
             </div>
-            <div class="ledger-total"><span>Total Extras</span><strong>{{ extrasSubtotal() | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+            <div class="ledger-total">
+              <span>Total Extras</span>
+              <strong class="dual-currency-value">
+                <span>{{ extrasSubtotal() | currency:'USD':'symbol':'1.2-2' }}</span>
+                <small>{{ formatColonesEquivalent(extrasSubtotal()) }}</small>
+              </strong>
+            </div>
           </article>
 
           <article class="card room-credit-card" aria-labelledby="room-credit-title">
@@ -545,9 +579,119 @@
   }
 
   @if (activeTab() === 'account') {
-    <main class="single-card card">
-      <h2>Cuenta</h2>
-      <p>Vista financiera detallada disponible en el panel principal de Estancia.</p>
+    <main class="account-view card">
+      <header class="account-view__header">
+        <div>
+          <span class="account-view__eyebrow">REVISION FINANCIERA</span>
+          <h2>Cuenta de la estancia</h2>
+          <p>Detalle de cargos y consumos registrados en el folio.</p>
+        </div>
+        <button
+          type="button"
+          class="account-view__refresh"
+          aria-label="Actualizar cuenta"
+          [disabled]="isAccountStatementLoading()"
+          (click)="refreshAccountStatement()"
+        >
+          <span class="material-icons" [class.spin]="isAccountStatementLoading()" aria-hidden="true">refresh</span>
+          <span>Actualizar</span>
+        </button>
+      </header>
+
+      @if (isAccountStatementLoading()) {
+        <div class="account-state account-state--loading">
+          <span class="material-icons spin" aria-hidden="true">sync</span>
+          <strong>Consultando cargos y consumos...</strong>
+        </div>
+      } @else if (accountStatementError()) {
+        <div class="account-state account-state--error">
+          <span class="material-icons" aria-hidden="true">error_outline</span>
+          <div>
+            <strong>{{ accountStatementError() }}</strong>
+            <button type="button" (click)="refreshAccountStatement()">Intentar nuevamente</button>
+          </div>
+        </div>
+      } @else {
+        @if (accountStatement(); as statement) {
+        <section class="account-summary" aria-label="Resumen de cuenta">
+          <article><span>Habitacion</span><strong>{{ statement.roomNumber || '-' }}</strong></article>
+          <article><span>Reserva</span><strong>{{ statement.reservationNumber || '-' }}</strong></article>
+          <article><span>Folio master</span><strong>{{ statement.masterFolio || '-' }}</strong></article>
+          <article><span>Moneda base</span><strong>{{ statement.currency }}</strong></article>
+          <article class="account-summary__total"><span>Total visible</span><strong>{{ accountVisibleTotals().total | currency:accountVisibleCurrency():'symbol':'1.2-2' }}</strong><small>{{ formatColonesEquivalent(accountVisibleTotals().total) }}</small></article>
+        </section>
+
+        <div class="account-toolbar">
+          <div class="account-filters" role="group" aria-label="Filtrar cargos">
+            <button type="button" [class.active]="accountFilter() === 'all'" (click)="setAccountFilter('all')">Todos</button>
+            <button type="button" [class.active]="accountFilter() === 'lodging'" (click)="setAccountFilter('lodging')">Hospedaje</button>
+            <button type="button" [class.active]="accountFilter() === 'extras'" (click)="setAccountFilter('extras')">Extras</button>
+          </div>
+          <span class="account-toolbar__count">{{ accountVisibleCharges().length }} cargo(s)</span>
+        </div>
+
+        @if (accountVisibleCharges().length) {
+          <section class="account-charge-list" aria-label="Cargos de la cuenta">
+            @for (charge of accountVisibleCharges(); track charge.type + charge.number) {
+              <article class="account-charge" [class.account-charge--expanded]="isAccountChargeExpanded(charge)">
+                <button type="button" class="account-charge__head" (click)="toggleAccountCharge(charge)" [attr.aria-expanded]="isAccountChargeExpanded(charge)">
+                  <span class="account-charge__toggle material-icons" aria-hidden="true">{{ isAccountChargeExpanded(charge) ? 'expand_less' : 'expand_more' }}</span>
+                  <span class="account-charge__main">
+                    <strong>{{ charge.pointOfSale || 'Cargo operativo' }}</strong>
+                    <span>{{ charge.date }} · {{ charge.time || '--:--' }} · {{ charge.number }}</span>
+                    <small>{{ charge.guestName || 'Huesped no identificado' }} · {{ charge.lines.length }} consumo(s)</small>
+                  </span>
+                  <span class="account-charge__amount"><strong>{{ charge.total | currency:charge.currency:'symbol':'1.2-2' }}</strong><small>{{ formatColonesEquivalent(charge.total) }}</small></span>
+                </button>
+
+                @if (isAccountChargeExpanded(charge)) {
+                  <div class="account-charge__body">
+                    <div class="account-charge__meta">
+                      <span><b>Tipo:</b> {{ charge.type || '-' }}</span>
+                      <span><b>Categoria:</b> {{ charge.bucket === 'lodging' ? 'Hospedaje y alimentos' : 'Extras' }}</span>
+                    </div>
+                    <div class="account-lines-wrap">
+                      <table class="account-lines-table">
+                        <thead>
+                          <tr><th>Consumo</th><th class="text-center">Cant.</th><th class="text-end">Precio</th><th class="text-end">Descuento</th><th class="text-end">Impuestos</th><th class="text-end">Total</th></tr>
+                        </thead>
+                        <tbody>
+                          @for (line of charge.lines; track line.order + line.code) {
+                            <tr>
+                              <td><strong>{{ line.description }}</strong><small>{{ line.code || '-' }}{{ line.comment ? ' · ' + line.comment : '' }}</small></td>
+                              <td class="text-center">{{ line.quantity | number:'1.0-2' }}</td>
+                              <td class="text-end">{{ line.price | number:'1.2-2' }}</td>
+                              <td class="text-end">{{ line.discount | number:'1.2-2' }}</td>
+                              <td class="text-end">{{ line.taxes | number:'1.2-2' }}</td>
+                              <td class="text-end fw-strong">{{ line.total | currency:line.currency:'symbol':'1.2-2' }}</td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                    <div class="account-charge__actions">
+                      <button type="button" (click)="openAccountChargeDetail(charge)"><span class="material-icons" aria-hidden="true">visibility</span> Ver detalle completo</button>
+                    </div>
+                  </div>
+                }
+              </article>
+            }
+          </section>
+        } @else {
+          <div class="account-state account-state--empty">
+            <span class="material-icons" aria-hidden="true">receipt_long</span>
+            <strong>No hay cargos para el filtro seleccionado.</strong>
+          </div>
+        }
+
+        <footer class="account-totals">
+          <div><span>Subtotal</span><strong>{{ accountVisibleTotals().subtotal | currency:accountVisibleCurrency():'symbol':'1.2-2' }}</strong></div>
+          <div><span>Descuentos</span><strong>{{ accountVisibleTotals().discount | currency:accountVisibleCurrency():'symbol':'1.2-2' }}</strong></div>
+          <div><span>Impuestos</span><strong>{{ accountVisibleTotals().taxes | currency:accountVisibleCurrency():'symbol':'1.2-2' }}</strong></div>
+          <div class="account-totals__grand"><span>Total</span><strong>{{ accountVisibleTotals().total | currency:accountVisibleCurrency():'symbol':'1.2-2' }}</strong><small>{{ formatColonesEquivalent(accountVisibleTotals().total) }}</small></div>
+        </footer>
+        }
+      }
     </main>
   }
 
@@ -818,13 +962,13 @@
             <aside class="room-invoice-card room-invoice-card--summary">
               <h3>Resumen de la cuenta</h3>
               <div class="room-invoice-summary-list">
-                <div><span>Subtotal</span><strong>{{ invoiceSubtotal() | currency:'USD':'symbol':'1.2-2' }}</strong></div>
-                <div><span>Impuestos</span><strong>{{ invoiceTaxes() | currency:'USD':'symbol':'1.2-2' }}</strong></div>
-                <div><span>Propina</span><strong>{{ invoiceTip() | currency:'USD':'symbol':'1.2-2' }}</strong></div>
-                <div class="room-invoice-summary-total"><span>Total cuenta</span><strong>{{ invoiceTotal() | currency:'USD':'symbol':'1.2-2' }}</strong></div>
-                <div class="room-invoice-summary-paid"><span>Total pagado</span><strong>{{ invoicePaid() | currency:'USD':'symbol':'1.2-2' }}</strong></div>
-                <div class="room-invoice-summary-pending"><span>Pendiente</span><strong>{{ invoicePending() | currency:'USD':'symbol':'1.2-2' }}</strong></div>
-                <div class="room-invoice-summary-change"><span>Cambio</span><strong>{{ invoiceChange() | currency:'USD':'symbol':'1.2-2' }}</strong></div>
+                <div><span>Subtotal</span><strong class="dual-currency-value"><span>{{ invoiceSubtotal() | currency:'USD':'symbol':'1.2-2' }}</span><small>{{ formatColonesEquivalent(invoiceSubtotal()) }}</small></strong></div>
+                <div><span>Impuestos</span><strong class="dual-currency-value"><span>{{ invoiceTaxes() | currency:'USD':'symbol':'1.2-2' }}</span><small>{{ formatColonesEquivalent(invoiceTaxes()) }}</small></strong></div>
+                <div><span>Propina</span><strong class="dual-currency-value"><span>{{ invoiceTip() | currency:'USD':'symbol':'1.2-2' }}</span><small>{{ formatColonesEquivalent(invoiceTip()) }}</small></strong></div>
+                <div class="room-invoice-summary-total"><span>Total cuenta</span><strong class="dual-currency-value"><span>{{ invoiceTotal() | currency:'USD':'symbol':'1.2-2' }}</span><small>{{ formatColonesEquivalent(invoiceTotal()) }}</small></strong></div>
+                <div class="room-invoice-summary-paid"><span>Total pagado</span><strong class="dual-currency-value"><span>{{ invoicePaid() | currency:'USD':'symbol':'1.2-2' }}</span><small>{{ formatColonesEquivalent(invoicePaid()) }}</small></strong></div>
+                <div class="room-invoice-summary-pending"><span>Pendiente</span><strong class="dual-currency-value"><span>{{ invoicePending() | currency:'USD':'symbol':'1.2-2' }}</span><small>{{ formatColonesEquivalent(invoicePending()) }}</small></strong></div>
+                <div class="room-invoice-summary-change"><span>Cambio</span><strong class="dual-currency-value"><span>{{ invoiceChange() | currency:'USD':'symbol':'1.2-2' }}</span><small>{{ formatColonesEquivalent(invoiceChange()) }}</small></strong></div>
               </div>
               <button type="button" class="room-invoice-detail-button" (click)="viewInvoiceChargeDetail()">
                 <span class="material-icons" aria-hidden="true">list</span>

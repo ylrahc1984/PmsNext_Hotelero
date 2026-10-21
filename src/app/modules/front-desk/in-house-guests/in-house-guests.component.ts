@@ -19,6 +19,7 @@ import {
   InHouseSortDirection
 } from './models/in-house-guest.model';
 import { InHouseGuestsService } from './services/in-house-guests.service';
+import { InHouseGuestsPdfService } from './printing/in-house-guests-pdf.service';
 
 interface InHouseFilterForm {
   fechaIni: string;
@@ -65,6 +66,7 @@ interface InHouseGuestPassportRow {
 })
 export class InHouseGuestsComponent implements OnInit, OnDestroy {
   private readonly inHouseService = inject(InHouseGuestsService);
+  private readonly inHousePdfService = inject(InHouseGuestsPdfService);
   private readonly roomingService = inject(CheckInArrivalsService);
   private readonly documentService = inject(GuestIdentityDocumentService);
   private readonly toast = inject(ToastService);
@@ -125,6 +127,7 @@ export class InHouseGuestsComponent implements OnInit, OnDestroy {
 
   loading = false;
   reloading = false;
+  exportingPdf = false;
   errorMessage = '';
   page = 1;
   pageSize = 10;
@@ -194,6 +197,38 @@ export class InHouseGuestsComponent implements OnInit, OnDestroy {
   aplicarBusqueda(): void {
     this.page = 1;
     this.refreshView();
+  }
+
+  async exportarPdf(): Promise<void> {
+    if (!this.filteredGuests.length || this.exportingPdf) {
+      return;
+    }
+
+    this.exportingPdf = true;
+    const filters = this.filtersForm.getRawValue();
+
+    try {
+      const result = await this.inHousePdfService.open(
+        {
+          fechaIni: filters.fechaIni,
+          fechaFin: filters.fechaFin,
+          agencia: filters.agencia,
+          plan: filters.plan
+        },
+        this.filteredGuests
+      );
+      this.toast.addToast({
+        title: 'PDF generado',
+        message: result === 'opened' ? 'El reporte se abrió en una nueva pestaña.' : 'El reporte fue descargado correctamente.',
+        type: 'success'
+      });
+    } catch (error) {
+      console.error('No se pudo generar el PDF de huéspedes In House.', error);
+      this.toast.addToast({ title: 'Error', message: 'No se pudo generar el PDF de huéspedes In House.', type: 'error' });
+    } finally {
+      this.exportingPdf = false;
+      this.cdr.markForCheck();
+    }
   }
 
   seleccionarGuest(guest: InHouseGuest): void {
@@ -306,6 +341,11 @@ export class InHouseGuestsComponent implements OnInit, OnDestroy {
     };
 
     return classes[this.getPlanCode(guest)];
+  }
+
+  getPlanLabel(guest: InHouseGuest | null): string {
+    const labels = { AI: 'Todo incluido', MAP: 'Media pensión', CP: 'Desayuno', RO: 'Solo alojamiento' };
+    return labels[this.getPlanCode(guest)];
   }
 
   getAgenciaOptions(): string[] {

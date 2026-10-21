@@ -119,6 +119,54 @@ h1 {
   text-transform: uppercase;
 }
 
+.exchange-compact {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 30px;
+  padding: 4px 9px;
+  border: 1px solid #dce8f2;
+  border-radius: 8px;
+  color: #52677a;
+  background: #f7fafc;
+  font-size: .7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.exchange-compact__icon {
+  color: $cyan-dark;
+  font-size: 1rem;
+}
+
+.exchange-compact__values {
+  display: inline-flex;
+  gap: 9px;
+}
+
+.exchange-compact__values span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+}
+
+.exchange-compact__values small {
+  color: $muted;
+  font-size: .62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.exchange-compact__values strong {
+  color: $ink;
+  font-size: .72rem;
+}
+
+.exchange-compact__loading {
+  color: $muted;
+  font-size: .68rem;
+}
+
 .header-kpis {
   display: grid;
   grid-template-columns: repeat(5, minmax(112px, 1fr)) minmax(210px, 1.35fr);
@@ -167,6 +215,24 @@ h1 {
   font-weight: 850;
   line-height: 1.1;
   white-space: nowrap;
+}
+
+.dual-currency-value {
+  display: inline-flex !important;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.dual-currency-value small {
+  color: $muted;
+  font-size: 0.68em;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.balance-kpi .dual-currency-value small {
+  color: rgba($paper, 0.82);
 }
 
 .balance-kpi {
@@ -885,6 +951,18 @@ label {
   font-weight: 950;
 }
 
+.ledger-total .dual-currency-value {
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 0;
+}
+
+.ledger-total .dual-currency-value small {
+  color: $muted;
+  font-size: 0.54em;
+  line-height: 1.1;
+}
+
 .actions-card {
   display: flex;
   flex-direction: column;
@@ -977,6 +1055,359 @@ label {
   padding: 20px;
   color: $muted;
   font-weight: 750;
+}
+
+.account-view {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+}
+
+.account-view__header,
+.account-toolbar,
+.account-charge__head,
+.account-charge__meta,
+.account-totals {
+  display: flex;
+  align-items: center;
+}
+
+.account-view__header,
+.account-toolbar {
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.account-view__eyebrow {
+  color: $cyan;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.account-view__header h2 {
+  margin-top: 3px;
+  color: #16233b;
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+
+.account-view__header p {
+  margin-top: 4px;
+  color: $muted;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.account-view__refresh,
+.account-charge__actions button,
+.account-state button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #d8e4ee;
+  border-radius: 8px;
+  padding: 7px 10px;
+  color: $blue;
+  background: $paper;
+  font-size: 0.76rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.account-view__refresh:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.account-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr)) minmax(170px, 1.2fr);
+  gap: 8px;
+}
+
+.account-summary article {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid $line;
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
+.account-summary span,
+.account-summary small {
+  display: block;
+  color: $muted;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.account-summary strong {
+  display: block;
+  margin-top: 4px;
+  overflow: hidden;
+  color: $ink;
+  font-size: 0.86rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-summary__total {
+  border-color: rgba($cyan, 0.28) !important;
+  background: linear-gradient(135deg, #effbfd, #f8fbff) !important;
+}
+
+.account-summary__total strong,
+.account-totals__grand strong {
+  color: $cyan-dark;
+  font-size: 1.08rem;
+}
+
+.account-summary__total small,
+.account-totals__grand small {
+  margin-top: 2px;
+  color: $muted;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.account-filters {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid $line;
+  border-radius: 9px;
+  background: #f5f8fb;
+}
+
+.account-filters button {
+  padding: 6px 10px;
+  border-radius: 6px;
+  color: $muted;
+  font-size: 0.74rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.account-filters button.active {
+  color: $paper;
+  background: $cyan-dark;
+}
+
+.account-toolbar__count {
+  color: $muted;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.account-charge-list {
+  display: grid;
+  gap: 8px;
+}
+
+.account-charge {
+  overflow: hidden;
+  border: 1px solid $line;
+  border-radius: 11px;
+  background: $paper;
+}
+
+.account-charge--expanded {
+  border-color: rgba($cyan, 0.36);
+  box-shadow: 0 8px 22px rgba(29, 42, 68, 0.06);
+}
+
+.account-charge__head {
+  width: 100%;
+  gap: 10px;
+  padding: 11px 13px;
+  color: $ink;
+  text-align: left;
+  cursor: pointer;
+}
+
+.account-charge__toggle {
+  flex: 0 0 22px;
+  color: $cyan-dark;
+}
+
+.account-charge__main {
+  display: grid;
+  min-width: 0;
+  flex: 1 1 auto;
+  gap: 2px;
+}
+
+.account-charge__main strong {
+  overflow: hidden;
+  font-size: 0.84rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-charge__main span,
+.account-charge__main small {
+  overflow: hidden;
+  color: $muted;
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-charge__amount {
+  display: grid;
+  flex: 0 0 auto;
+  justify-items: end;
+  gap: 2px;
+}
+
+.account-charge__amount strong {
+  color: $cyan-dark;
+  font-size: 0.94rem;
+}
+
+.account-charge__amount small {
+  color: $muted;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.account-charge__body {
+  padding: 0 13px 12px 45px;
+  border-top: 1px solid #edf1f5;
+  background: #fbfdff;
+}
+
+.account-charge__meta {
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 9px 0;
+  color: $muted;
+  font-size: 0.7rem;
+}
+
+.account-lines-wrap {
+  overflow-x: auto;
+  border: 1px solid $line;
+  border-radius: 8px;
+}
+
+.account-lines-table {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: collapse;
+  font-size: 0.73rem;
+}
+
+.account-lines-table th,
+.account-lines-table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid #edf1f5;
+  white-space: nowrap;
+}
+
+.account-lines-table th {
+  color: $muted;
+  background: #f4f8fb;
+  font-size: 0.66rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.account-lines-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.account-lines-table td:first-child {
+  white-space: normal;
+}
+
+.account-lines-table td:first-child strong,
+.account-lines-table td:first-child small {
+  display: block;
+}
+
+.account-lines-table td:first-child small {
+  margin-top: 2px;
+  color: $muted;
+  font-size: 0.67rem;
+}
+
+.account-charge__actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 9px;
+}
+
+.account-charge__actions button {
+  padding: 5px 8px;
+  border: 0;
+  background: #eef7fa;
+}
+
+.account-totals {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding-top: 12px;
+  border-top: 1px solid $line;
+}
+
+.account-totals > div {
+  display: grid;
+  gap: 2px;
+  text-align: right;
+}
+
+.account-totals span {
+  color: $muted;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.account-totals strong {
+  color: $ink;
+  font-size: 0.86rem;
+}
+
+.account-totals__grand {
+  min-width: 125px;
+  padding-left: 18px;
+  border-left: 1px solid $line;
+}
+
+.account-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 170px;
+  color: $muted;
+  text-align: center;
+}
+
+.account-state--error {
+  color: #b4233d;
+}
+
+.account-state--error div {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+}
+
+.account-state--empty {
+  border: 1px dashed #cbd9e5;
+  border-radius: 10px;
+  background: #fbfdff;
+}
+
+.spin {
+  animation: account-spin 0.9s linear infinite;
+}
+
+@keyframes account-spin {
+  to { transform: rotate(360deg); }
 }
 
 .actions-only {
@@ -1948,6 +2379,14 @@ label {
   .middle-stack {
     order: 2;
   }
+
+  .account-summary {
+    grid-template-columns: repeat(3, minmax(120px, 1fr));
+  }
+
+  .account-summary__total {
+    grid-column: span 1;
+  }
 }
 
 @media (max-width: 991.98px) {
@@ -1994,6 +2433,14 @@ label {
   }
 
   .room-invoice-card--payments {
+    grid-column: 1 / -1;
+  }
+
+  .account-summary {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+
+  .account-summary__total {
     grid-column: 1 / -1;
   }
 
@@ -2106,6 +2553,55 @@ label {
   .room-invoice-body {
     padding-left: 14px;
     padding-right: 14px;
+  }
+
+  .account-view {
+    padding: 14px;
+  }
+
+  .account-view__header,
+  .account-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .account-view__refresh {
+    align-self: stretch;
+    justify-content: center;
+  }
+
+  .account-summary {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .account-summary__total {
+    grid-column: 1 / -1;
+  }
+
+  .account-filters {
+    width: 100%;
+  }
+
+  .account-filters button {
+    flex: 1 1 0;
+  }
+
+  .account-toolbar__count {
+    align-self: flex-end;
+  }
+
+  .account-charge__body {
+    padding-left: 13px;
+  }
+
+  .account-totals {
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .account-totals__grand {
+    padding-left: 0;
+    border-left: 0;
   }
 
   .room-invoice-stepper,

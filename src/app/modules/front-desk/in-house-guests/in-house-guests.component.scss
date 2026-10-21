@@ -1026,3 +1026,10 @@ $line: #e3e9f2;
     gap: 10px;
   }
 }
+.plan-cell { min-width: 170px; }
+.plan-cell__title { display: flex; align-items: center; gap: .4rem; white-space: nowrap; }
+.plan-cell__title > span:last-child { font-size: .76rem; color: #52606d; }
+.mobile-plan { display: flex; flex-direction: column; align-items: flex-end; gap: .2rem; }
+.mobile-plan small { color: #697586; font-size: .7rem; }
+.detail-plan-value { display: flex; flex-direction: column; align-items: flex-end; gap: .2rem; }
+.detail-plan-value small { color: #52606d; font-size: .72rem; font-weight: 600; }

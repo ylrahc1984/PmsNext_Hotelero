@@ -77,6 +77,14 @@
         <i class="feather icon-refresh-cw" aria-hidden="true"></i>
         Limpiar
       </button>
+      <button type="button" class="btn btn-outline-primary" (click)="exportarPdf()" [disabled]="loading || reloading || exportingPdf || !filteredGuests.length" title="Generar reporte PDF de huéspedes In House">
+        @if (exportingPdf) {
+          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+        } @else {
+          <i class="feather icon-file-text" aria-hidden="true"></i>
+        }
+        PDF
+      </button>
     </div>
   </form>
 
@@ -163,7 +171,12 @@
                   <td>{{ guest.noches }}</td>
                   <td>{{ guest.numPax }}</td>
                   <td>{{ guest.numChild }}</td>
-                  <td><span class="badge" [ngClass]="getPlanBadgeClass(guest)">{{ getPlanCode(guest) }}</span></td>
+                  <td class="plan-cell">
+                    <div class="plan-cell__title">
+                      <span class="badge" [ngClass]="getPlanBadgeClass(guest)">{{ getPlanCode(guest) }}</span>
+                      <span>{{ getPlanLabel(guest) }}</span>
+                    </div>
+                  </td>
                   <td><span class="status-pill">Hospedado</span></td>
                   <td><strong>{{ guest.codReserva || '-' }}</strong></td>
                 </tr>
@@ -180,7 +193,10 @@
                   <strong>{{ guest.numHabita || '-' }}</strong>
                   <span>{{ guest.codReserva }} · {{ guest.nomAgencia || '-' }}</span>
                 </div>
-                <span class="badge" [ngClass]="getPlanBadgeClass(guest)">{{ getPlanCode(guest) }}</span>
+                <div class="mobile-plan">
+                  <span class="badge" [ngClass]="getPlanBadgeClass(guest)">{{ getPlanCode(guest) }}</span>
+                  <small>{{ getPlanLabel(guest) }}</small>
+                </div>
               </div>
               <div class="guest-names">
                 @for (name of getVisibleGuestNames(guest); track trackByName($index, name)) {
@@ -263,7 +279,10 @@
             </div>
             <div>
               <span>Plan</span>
-              <strong><span class="badge" [ngClass]="getPlanBadgeClass(selectedGuest)">{{ getPlanCode(selectedGuest) }}</span></strong>
+              <strong class="detail-plan-value">
+                <span class="badge" [ngClass]="getPlanBadgeClass(selectedGuest)">{{ getPlanCode(selectedGuest) }}</span>
+                <small>{{ getPlanLabel(selectedGuest) }}</small>
+              </strong>
             </div>
           </div>
 

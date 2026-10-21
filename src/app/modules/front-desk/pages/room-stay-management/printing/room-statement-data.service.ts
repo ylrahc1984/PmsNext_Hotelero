@@ -186,6 +186,7 @@ export class RoomStatementDataService {
     return {
       order: this.number(line.orden) || index + 1,
       quantity: this.number(line.cantidad),
+      price: this.round(this.number(line.precio)),
       code: this.text(line.codConsumo),
       description: this.text(line.nomConsumo || line.codConsumo) || `Cargo ${index + 1}`,
       subtotal,

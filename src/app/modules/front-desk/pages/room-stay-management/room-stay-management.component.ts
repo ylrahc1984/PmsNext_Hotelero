@@ -44,6 +44,8 @@ import { RoomChargePdfService } from './printing/room-charge-pdf.service';
 import { RoomChargePosPrintService } from './printing/room-charge-pos-print.service';
 import { RoomStatementPdfService } from './printing/room-statement-pdf.service';
 import { RoomStatementPosService } from './printing/room-statement-pos.service';
+import { RoomStatementDataService } from './printing/room-statement-data.service';
+import { RoomStatementCharge, RoomStatementData, RoomStatementTotals } from './printing/room-statement.model';
 import {
   DepartureDateChangePayload,
   PointOfSaleDocumentApi,
@@ -73,6 +75,7 @@ function pmsDateInputValidator(control: AbstractControl<string>): ValidationErro
 }
 
 type ActiveTab      = 'stay' | 'account' | 'operations' | 'timeline';
+type AccountFilter  = 'all' | 'lodging' | 'extras';
 type OperationKind  = 'workflow' | 'financial' | 'document' | 'critical';
 type ChargeBucket   = 'lodging' | 'extras';
 type DocumentFormat = 'pdf' | 'print';
@@ -342,6 +345,7 @@ export class RoomStayManagementComponent implements OnInit {
   private readonly roomChargePosPrintService      = inject(RoomChargePosPrintService);
   private readonly roomStatementPdfService        = inject(RoomStatementPdfService);
   private readonly roomStatementPosService        = inject(RoomStatementPosService);
+  private readonly roomStatementDataService       = inject(RoomStatementDataService);
   private readonly clienteService                 = inject(ClienteService);
   private readonly nationalitiesService           = inject(NationalitiesService);
   private readonly paxTypesService                = inject(PaxTypesService);
@@ -355,6 +359,7 @@ export class RoomStayManagementComponent implements OnInit {
   private requestedReservationNumber              = '';
   private invoiceExchangeRateRequestId            = 0;
   private assignedTagsRequestId                   = 0;
+  private accountStatementRequestId               = 0;
   private assignedTagsReservationCode             = '';
 
   private readonly invoiceConsumerFinal: InvoiceClient = {
@@ -395,6 +400,11 @@ export class RoomStayManagementComponent implements OnInit {
   readonly isCheckoutSubmitting                  = signal(false);
   readonly isCriticalStayRefreshing              = signal(false);
   readonly isStatementGenerating                 = signal(false);
+  readonly accountStatement                     = signal<RoomStatementData | null>(null);
+  readonly isAccountStatementLoading            = signal(false);
+  readonly accountStatementError                = signal('');
+  readonly accountFilter                        = signal<AccountFilter>('all');
+  readonly expandedAccountCharges               = signal<ReadonlySet<string>>(new Set<string>());
   readonly isRoomChargeCatalogLoading            = signal(false);
   readonly isRoomChargeItemsLoading              = signal(false);
   readonly isRoomChargeSubmitting                = signal(false);
@@ -448,6 +458,9 @@ export class RoomStayManagementComponent implements OnInit {
   readonly invoiceValidationMessage         = signal('');
   readonly invoiceCurrencies                = signal<MonedaUI[]>([]);
   readonly invoiceUsdExchangeRate           = signal<TipoCambio | null>(null);
+  readonly roomStayExchangeRate             = signal<TipoCambio | null>(null);
+  readonly isRoomStayExchangeRateLoading    = signal(false);
+  readonly roomStayExchangeRateError        = signal('');
   readonly invoiceSelectedExchangeRate      = signal<TipoCambio | null>(null);
   readonly invoicePointOfSaleDocuments      = signal<PointOfSaleDocumentApi[]>([]);
   readonly isInvoiceDocumentsLoading        = signal(false);
@@ -641,6 +654,14 @@ export class RoomStayManagementComponent implements OnInit {
   readonly totalToInvoice           = computed(() => this.lodgingInvoiceSubtotal() + this.extrasInvoiceSubtotal());
   readonly currentBalance           = computed(() => this.totalToCharge() - this.room().prepaid);
   readonly headerBalance            = computed(() => this.currentBalance());
+  readonly accountVisibleCharges    = computed(() => {
+    const statement = this.accountStatement();
+    const filter = this.accountFilter();
+
+    return (statement?.charges ?? []).filter((charge) => filter === 'all' || charge.bucket === filter);
+  });
+  readonly accountVisibleTotals     = computed(() => this.calculateAccountTotals(this.accountVisibleCharges()));
+  readonly accountVisibleCurrency   = computed(() => this.accountStatement()?.currency || 'USD');
   readonly modalHighlights          = computed(() => {
     const room = this.room();
 
@@ -941,6 +962,100 @@ export class RoomStayManagementComponent implements OnInit {
 
   setActiveTab(tab: ActiveTab): void {
     this.activeTab.set(tab);
+
+    if (tab === 'account' && !this.accountStatement()) {
+      this.loadAccountStatement();
+    }
+  }
+
+  refreshAccountStatement(): void {
+    this.loadAccountStatement(true);
+  }
+
+  setAccountFilter(filter: AccountFilter): void {
+    this.accountFilter.set(filter);
+  }
+
+  toggleAccountCharge(charge: RoomStatementCharge): void {
+    const key = `${charge.type}|${charge.number}`;
+
+    this.expandedAccountCharges.update((current) => {
+      const next = new Set(current);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }
+
+  isAccountChargeExpanded(charge: RoomStatementCharge): boolean {
+    return this.expandedAccountCharges().has(`${charge.type}|${charge.number}`);
+  }
+
+  openAccountChargeDetail(charge: RoomStatementCharge): void {
+    const sourceCharges = charge.bucket === 'lodging' ? this.room().lodgingCharges : this.room().extraCharges;
+    const source = sourceCharges.find((item) => this.cleanText(item.numCrgHab || item.reference) === charge.number);
+
+    if (!source) {
+      this.toastService.warning('No se encontró el cargo original para abrir su detalle.', 4000, 'Cuenta');
+      return;
+    }
+
+    this.viewChargeDetail(charge.bucket, source);
+  }
+
+  private async loadAccountStatement(force = false): Promise<void> {
+    const roomNumber = this.cleanText(this.room().roomNumber || this.requestedRoomNumber);
+    const reservationNumber = this.cleanText(this.room().reservationNumber || this.requestedReservationNumber);
+
+    if (!roomNumber) {
+      this.accountStatementError.set('No se pudo identificar la habitación para consultar la cuenta.');
+      return;
+    }
+
+    if (this.isAccountStatementLoading() || (!force && this.accountStatement())) {
+      return;
+    }
+
+    const requestId = ++this.accountStatementRequestId;
+    this.isAccountStatementLoading.set(true);
+    this.accountStatementError.set('');
+
+    try {
+      const statement = await this.roomStatementDataService.load(roomNumber, reservationNumber);
+
+      if (requestId !== this.accountStatementRequestId) {
+        return;
+      }
+
+      this.accountStatement.set(statement);
+      this.expandedAccountCharges.set(new Set<string>());
+    } catch (error) {
+      if (requestId !== this.accountStatementRequestId) {
+        return;
+      }
+
+      console.error('No se pudo cargar el detalle de la cuenta.', error);
+      this.accountStatementError.set('No se pudo cargar el detalle de la cuenta. Revise la conexión con el API.');
+    } finally {
+      if (requestId === this.accountStatementRequestId) {
+        this.isAccountStatementLoading.set(false);
+      }
+    }
+  }
+
+  private calculateAccountTotals(charges: RoomStatementCharge[]): RoomStatementTotals {
+    const lines = charges.flatMap((charge) => charge.lines);
+
+    return {
+      subtotal: this.roundCurrency(lines.reduce((sum, line) => sum + line.subtotal, 0)),
+      discount: this.roundCurrency(lines.reduce((sum, line) => sum + line.discount, 0)),
+      net: this.roundCurrency(lines.reduce((sum, line) => sum + line.net, 0)),
+      taxes: this.roundCurrency(lines.reduce((sum, line) => sum + line.taxes, 0)),
+      total: this.roundCurrency(charges.reduce((sum, charge) => sum + charge.total, 0))
+    };
   }
 
   startCommentsEditing(): void {
@@ -1502,7 +1617,7 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   viewInvoiceChargeDetail(): void {
-    this.activeTab.set('account');
+    this.setActiveTab('account');
     this.toastService.info('Se abrio el detalle financiero de la estancia.', 3000, 'Facturacion');
   }
 
@@ -2792,9 +2907,15 @@ export class RoomStayManagementComponent implements OnInit {
         }
 
         this.room.set(this.mapApiStayToRoomStay(stay));
+        this.accountStatement.set(null);
+        this.accountStatementError.set('');
+        this.expandedAccountCharges.set(new Set<string>());
         this.syncCreditDraftFromRoom(this.room());
         this.requestedReservationNumber = stay.codReserva;
         this.loadAssignedReservationTags(stay.codReserva);
+        if (this.activeTab() === 'account') {
+          this.loadAccountStatement(true);
+        }
       });
   }
 
@@ -3567,6 +3688,25 @@ export class RoomStayManagementComponent implements OnInit {
       : 0;
   }
 
+  /**
+   * Presenta el equivalente en colones de un importe expresado en USD.
+   * Se utiliza la misma tasa de venta aplicada por el flujo de facturación.
+   */
+  formatColonesEquivalent(amountUsd: number): string {
+    const exchangeRate = this.getInvoiceSellingExchangeRate(this.roomStayExchangeRate() ?? this.invoiceUsdExchangeRate());
+
+    if (!Number.isFinite(amountUsd) || exchangeRate <= 0) {
+      return '₡—';
+    }
+
+    const amountColones = this.roundCurrency(amountUsd * exchangeRate);
+
+    return `≈ ₡${new Intl.NumberFormat('es-CR', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amountColones)}`;
+  }
+
   private getDefaultInvoiceCurrency(): string {
     const currencies = this.invoiceCurrencyOptions();
     const usdCurrency = currencies.find((currency) => this.cleanText(currency.codMoneda).toUpperCase() === this.invoiceBaseCurrency);
@@ -4306,6 +4446,7 @@ export class RoomStayManagementComponent implements OnInit {
       .ensureLoaded()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
+        next: () => this.loadRoomStayExchangeRate(),
         error: (error) => {
           console.error('No se pudo cargar la fecha operativa para gestionar la estancia.', error);
           this.toastService.warning(
@@ -4314,6 +4455,31 @@ export class RoomStayManagementComponent implements OnInit {
             'Fecha operativa'
           );
         }
+      });
+  }
+
+  private loadRoomStayExchangeRate(): void {
+    const operationalDate = this.todayDisplayDate();
+    if (!operationalDate) {
+      return;
+    }
+
+    this.isRoomStayExchangeRateLoading.set(true);
+    this.roomStayExchangeRateError.set('');
+
+    this.tipoCambioService
+      .fetchTipoCambio(operationalDate, this.invoiceBaseCurrency.toLowerCase())
+      .pipe(
+        catchError((error) => {
+          console.error('No se pudo cargar el tipo de cambio para la estancia.', error);
+          this.roomStayExchangeRateError.set('No disponible');
+          return of([] as TipoCambio[]);
+        }),
+        finalize(() => this.isRoomStayExchangeRateLoading.set(false)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((items) => {
+        this.roomStayExchangeRate.set(items[0] ?? this.tipoCambioService.getActual() ?? null);
       });
   }
 

@@ -6,6 +6,10 @@
 @import 'scss/fonts/fontawesome/scss/fontawesome';
 @import 'scss/fonts/feather/iconfont';
 
+.swal-front-container {
+  z-index: 2000 !important;
+}
+
 @import 'scss/general';
 @import 'scss/generic';
 @import 'scss/mixins/function';

@@ -3,6 +3,7 @@ export type RoomStatementBucket = 'lodging' | 'extras';
 export interface RoomStatementLine {
   order: number;
   quantity: number;
+  price: number;
   code: string;
   description: string;
   subtotal: number;

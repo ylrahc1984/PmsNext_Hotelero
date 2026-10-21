@@ -78,6 +78,20 @@ export class FrontDeskSettingsComponent {
       icon: 'restaurant',
       route: '/front-desk/configuraciones/planes-alimentacion',
       tone: 'blue'
+    },
+    {
+      title: 'Categorías de Tags',
+      description: 'Organización de etiquetas para clasificar reservas y huéspedes.',
+      icon: 'label',
+      route: '/front-desk/configuraciones/categorias-tags',
+      tone: 'cyan'
+    },
+    {
+      title: 'Mantenimiento de Tags',
+      description: 'Catálogo de etiquetas, colores, prioridades y alertas operativas.',
+      icon: 'sell',
+      route: '/front-desk/configuraciones/tags',
+      tone: 'green'
     }
   ];
 

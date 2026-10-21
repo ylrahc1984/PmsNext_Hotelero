@@ -1,0 +1,7 @@
+.table td, .table th { vertical-align: middle; }
+.tag-color { display: inline-block; width: .8rem; height: .8rem; border-radius: 50%; margin-right: .45rem; vertical-align: middle; border: 1px solid rgba(0,0,0,.15); }
+.icon-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: .5rem; max-height: 220px; overflow-y: auto; padding: .5rem; border: 1px solid #dee2e6; border-radius: .375rem; background: #f8f9fa; }
+.icon-option { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .25rem; min-height: 68px; padding: .4rem .25rem; border: 1px solid #dee2e6; border-radius: .375rem; background: #fff; color: #495057; font-size: .72rem; text-align: center; transition: border-color .15s ease, background-color .15s ease, color .15s ease; }
+.icon-option i { font-size: 1.25rem; }
+.icon-option:hover, .icon-option.is-selected { border-color: #0d6efd; background: #e7f1ff; color: #0d6efd; }
+.icon-option.is-selected { box-shadow: 0 0 0 2px rgba(13, 110, 253, .15); }
