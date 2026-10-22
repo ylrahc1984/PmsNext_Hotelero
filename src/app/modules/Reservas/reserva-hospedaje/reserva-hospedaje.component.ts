@@ -2113,13 +2113,12 @@ export class ReservaHospedajeComponent implements OnInit {
     const contactRequest              = this.buildContactRequest();
     const reservationFormValue        = this.reservaForm.getRawValue();
     const usuarioActual               = this.auth.getCurrentUser()?.usuario?.trim() ?? '';
-    if (this.isEditMode() && !usuarioActual) {
-      this.toast.error('No se pudo identificar el usuario autenticado para actualizar la reserva.', 5500, 'Usuario requerido');
+    if (!usuarioActual) {
+      this.toast.error('No se pudo identificar el usuario autenticado para guardar la reserva.', 5500, 'Usuario requerido');
       return;
     }
-    if (usuarioActual) {
-      reservationFormValue.operador = usuarioActual;
-    }
+    // El usuario de sesión es la fuente de auditoría para crear y actualizar reservas.
+    reservationFormValue.operador = usuarioActual;
     reservationFormValue.descripcion  = contactRequest.nombre;
     const payload                     = ReservaHabitacionMapper.toRequest(
       reservationFormValue,
@@ -3645,7 +3644,7 @@ export class ReservaHospedajeComponent implements OnInit {
       cantidad: this.fb.control(value.cantidad ?? 1, { validators: [Validators.min(1)] }),
       precio: this.fb.control(value.precio ?? 0, { validators: [Validators.min(0)] }),
       impuesto: this.fb.control(value.impuesto ?? 0, { validators: [Validators.min(0)] }),
-      tipPax: this.fb.control(value.tipPax ?? 'Reserva'),
+      tipPax: 'PAX',
       total: this.fb.control(value.total ?? 0),
       cCosto: this.fb.control(value.cCosto ?? '')
     });
@@ -3874,7 +3873,7 @@ export class ReservaHospedajeComponent implements OnInit {
   }
 
   private defaultServicio(): ReservaServicioItem {
-    return { codSrv: '', descripcion: '', cantidad: 1, precio: 0, impuesto: 0, tipPax: 'Reserva', total: 0, cCosto: '' };
+    return { codSrv: '', descripcion: '', cantidad: 1, precio: 0, impuesto: 0, tipPax: 'PAX', total: 0, cCosto: '' };
   }
 
   private defaultReservationDates(): Pick<
