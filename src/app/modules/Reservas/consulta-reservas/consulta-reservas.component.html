@@ -36,11 +36,11 @@
       <div class="row gx-3 gy-2 align-items-end">
         <div class="col-xl-2 col-lg-2 col-md-6">
           <label class="form-label" for="fechaInicio">Desde</label>
-          <input id="fechaInicio" type="date" class="form-control" formControlName="fechaInicio">
+          <input id="fechaInicio" type="date" class="form-control" formControlName="fechaInicio" max="9999-12-31">
         </div>
         <div class="col-xl-2 col-lg-2 col-md-6">
           <label class="form-label" for="fechaFinal">Hasta</label>
-          <input id="fechaFinal" type="date" class="form-control" formControlName="fechaFinal">
+          <input id="fechaFinal" type="date" class="form-control" formControlName="fechaFinal" max="9999-12-31">
         </div>
         <div class="col-xl-4 col-lg-4 col-md-6">
           <label class="form-label" for="agencia">Agencia</label>
@@ -53,17 +53,10 @@
                 [formControl]="agenciaSearchControl"
                 placeholder="Todas"
                 autocomplete="off"
-                (focus)="openAgenciaSuggestions()"
+                readonly
               >
-              <button type="button" class="lookup-button" aria-label="Buscar agencia" (click)="openAgenciaSuggestions()">
+              <button type="button" class="lookup-button" aria-label="Buscar agencia" (click)="openAgencyModal()">
                 <i class="feather icon-search"></i>
-              </button>
-            </div>
-            <div class="autocomplete-menu" *ngIf="agenciaSearchOpen">
-              <button type="button" class="autocomplete-item" *ngFor="let agencia of agenciaSuggestions; trackBy: trackByCode" (mousedown)="selectAgencia(agencia)">
-                <strong>{{ agencia.codigo }}</strong>
-                <span>{{ agencia.descripcion }}</span>
-                <small *ngIf="agencia.contacto || agencia.telefono">{{ agencia.contacto || 'Sin contacto' }} · {{ agencia.telefono || 'Sin teléfono' }}</small>
               </button>
             </div>
           </div>
@@ -341,3 +334,38 @@
     (closed)="closeTagDetails()"
   />
 </div>
+
+<div class="agency-picker-backdrop" *ngIf="showAgencyModal" (click)="closeAgencyModal()"></div>
+<section class="agency-picker-modal" *ngIf="showAgencyModal" role="dialog" aria-modal="true" aria-labelledby="agency-picker-title" (click)="$event.stopPropagation()">
+  <header class="agency-picker-modal__header">
+    <div>
+      <h2 id="agency-picker-title">Seleccionar agencia</h2>
+      <p>Busque por nombre y elija una agencia para filtrar las reservas.</p>
+    </div>
+    <button type="button" class="btn-close" aria-label="Cerrar" (click)="closeAgencyModal()"></button>
+  </header>
+  <div class="agency-picker-modal__search">
+    <i class="feather icon-search" aria-hidden="true"></i>
+    <input type="search" class="form-control" [formControl]="agencyModalSearchControl" placeholder="Buscar agencia por nombre" autocomplete="off">
+  </div>
+  <div class="agency-picker-modal__meta" *ngIf="!agencyModalLoading && !agencyModalError">
+    {{ agencyModalTotalRecords }} agencias · Página {{ agencyModalPage }} de {{ agencyModalTotalPages || 1 }}
+  </div>
+  <div class="agency-picker-modal__state" *ngIf="agencyModalLoading" role="status">
+    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Cargando agencias...
+  </div>
+  <div class="alert alert-danger" *ngIf="agencyModalError" role="alert">{{ agencyModalError }}</div>
+  <div class="agency-picker-modal__list" *ngIf="!agencyModalLoading && !agencyModalError">
+    <button type="button" class="agency-picker-modal__item" *ngFor="let agencia of agencyModalAgencies; trackBy: trackByCode" (click)="selectAgencia(agencia)">
+      <strong>{{ agencia.codigo }}</strong>
+      <span>{{ agencia.descripcion }}</span>
+      <small *ngIf="agencia.contacto || agencia.telefono">{{ agencia.contacto || 'Sin contacto' }} · {{ agencia.telefono || 'Sin teléfono' }}</small>
+    </button>
+    <p class="agency-picker-modal__empty" *ngIf="agencyModalAgencies.length === 0">No se encontraron agencias.</p>
+  </div>
+  <footer class="agency-picker-modal__footer">
+    <button type="button" class="btn btn-light me-auto" (click)="selectAgencia({ codigo: '', descripcion: '', email: '' })">Todas las agencias</button>
+    <button type="button" class="btn btn-outline-secondary" (click)="goToAgencyModalPage(agencyModalPage - 1)" [disabled]="agencyModalLoading || agencyModalPage <= 1">Anterior</button>
+    <button type="button" class="btn btn-outline-secondary" (click)="goToAgencyModalPage(agencyModalPage + 1)" [disabled]="agencyModalLoading || agencyModalPage >= agencyModalTotalPages">Siguiente</button>
+  </footer>
+</section>

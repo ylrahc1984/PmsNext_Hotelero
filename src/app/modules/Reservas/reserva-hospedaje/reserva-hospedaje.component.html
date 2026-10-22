@@ -148,6 +148,7 @@
                 class="form-control date-input--compact"
                 formControlName="fecIngreso"
                 [min]="minimumEntryDate()"
+                max="9999-12-31"
                 [class.is-invalid]="reservaForm.controls.fecIngreso.touched && (reservaForm.controls.fecIngreso.invalid || reservaForm.hasError('entryBeforeOperationalDate'))"
               >
             </div>
@@ -163,6 +164,7 @@
                 class="form-control date-input--compact"
                 formControlName="fecSalida"
                 [min]="minimumDepartureDate()"
+                max="9999-12-31"
                 [class.is-invalid]="reservaForm.controls.fecSalida.touched && (reservaForm.controls.fecSalida.invalid || reservaForm.hasError('invalidStayDateRange'))"
               >
             </div>

@@ -470,6 +470,141 @@ td.prepago-column--active {
   width: 150px;
 }
 
+.agency-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  background: rgba(8, 20, 43, 0.52);
+}
+
+.agency-picker-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 1051;
+  display: flex;
+  width: min(640px, calc(100vw - 2rem));
+  max-height: min(720px, calc(100vh - 2rem));
+  flex-direction: column;
+  padding: 1.25rem;
+  transform: translate(-50%, -50%);
+  border: 1px solid #dce3ed;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(8, 20, 43, 0.24);
+}
+
+.agency-picker-modal__header,
+.agency-picker-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.agency-picker-modal__header {
+  margin-bottom: 1rem;
+}
+
+.agency-picker-modal__header h2 {
+  margin: 0;
+  color: #102342;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.agency-picker-modal__header p {
+  margin: 0.25rem 0 0;
+  color: #66758b;
+  font-size: 0.85rem;
+}
+
+.agency-picker-modal__search {
+  position: relative;
+}
+
+.agency-picker-modal__search i {
+  position: absolute;
+  top: 50%;
+  left: 0.8rem;
+  z-index: 1;
+  color: #718096;
+  transform: translateY(-50%);
+}
+
+.agency-picker-modal__search input {
+  padding-left: 2.35rem;
+}
+
+.agency-picker-modal__meta {
+  padding: 0.75rem 0 0.45rem;
+  color: #66758b;
+  font-size: 0.78rem;
+}
+
+.agency-picker-modal__list {
+  min-height: 120px;
+  overflow-y: auto;
+  border-top: 1px solid #e8edf3;
+}
+
+.agency-picker-modal__item {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(80px, 0.3fr) 1fr;
+  gap: 0.15rem 0.75rem;
+  padding: 0.75rem 0.35rem;
+  border: 0;
+  border-bottom: 1px solid #e8edf3;
+  background: #fff;
+  color: #26364d;
+  text-align: left;
+}
+
+.agency-picker-modal__item:hover,
+.agency-picker-modal__item:focus-visible {
+  background: #f3f7fc;
+}
+
+.agency-picker-modal__item strong {
+  grid-row: span 2;
+  color: #155fa8;
+}
+
+.agency-picker-modal__item small {
+  color: #718096;
+}
+
+.agency-picker-modal__empty,
+.agency-picker-modal__state {
+  display: flex;
+  min-height: 120px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  margin: 0;
+  color: #66758b;
+}
+
+.agency-picker-modal__footer {
+  justify-content: flex-end;
+  padding-top: 1rem;
+}
+
+@media (max-width: 576px) {
+  .agency-picker-modal {
+    padding: 1rem;
+  }
+
+  .agency-picker-modal__item {
+    grid-template-columns: 1fr;
+  }
+
+  .agency-picker-modal__item strong {
+    grid-row: auto;
+  }
+}
+
 @media (max-width: 992px) {
   .reserva-header,
   .reserva-list__toolbar,

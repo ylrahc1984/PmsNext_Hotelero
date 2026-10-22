@@ -12,7 +12,7 @@ import { OperationalDateService } from 'src/app/core/services/operational-date.s
 import { OperationalPolicyService } from 'src/app/core/services/operational-policy.service';
 import { addPmsCalendarDays, normalizePmsDateDDMMYYYY, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
-import { WalkInAgenciaOption } from 'src/app/modules/front-desk/walk-in/models/walk-in.model';
+import { WalkInAgenciaOption, WalkInAgenciaPage } from 'src/app/modules/front-desk/walk-in/models/walk-in.model';
 import { WalkInService } from 'src/app/modules/front-desk/walk-in/services/walk-in.service';
 import { ReservaConsulta, ReservaConsultaPage, ReservaFiltro, ReservaTipoFecha } from '../models/reserva-consulta.model';
 import { ReservationTagDetailsComponent } from '../components/reservation-tags/reservation-tag-details.component';
@@ -54,6 +54,7 @@ type EstadoCambioReserva = 'WLT' | 'CCR';
 })
 export class ConsultaReservasComponent implements OnInit {
   private readonly quickSearchMinLength = 4;
+  private agencyModalRequestId = 0;
 
   readonly estados: EstadoReservaOption[] = [
     { valor: 'ABI', etiqueta: 'Abierta' },
@@ -87,6 +88,7 @@ export class ConsultaReservasComponent implements OnInit {
 
   readonly filterForm               : FormGroup<ConsultaReservasFilterForm>;
   readonly agenciaSearchControl     = this.fb.control('');
+  readonly agencyModalSearchControl = this.fb.control('');
   readonly quickSearchControl       = this.fb.control('');
   readonly reservas                 = signal<ReservaConsulta[]>([]);
   readonly pagedReservas            = this.reservas.asReadonly();
@@ -102,8 +104,13 @@ export class ConsultaReservasComponent implements OnInit {
     return Array.from(totales, ([moneda, total]) => ({ moneda, total }));
   });
   readonly selectedTagDetails       = signal<ReservaConsulta | null>(null);
-  agenciaSuggestions                : WalkInAgenciaOption[] = [];
-  agenciaSearchOpen                 = false;
+  agencyModalAgencies               : WalkInAgenciaOption[] = [];
+  showAgencyModal                   = false;
+  agencyModalLoading                = false;
+  agencyModalError                  = '';
+  agencyModalPage                   = 1;
+  agencyModalTotalPages             = 0;
+  agencyModalTotalRecords           = 0;
 
   constructor(
     private readonly fb                       : NonNullableFormBuilder,
@@ -137,7 +144,7 @@ export class ConsultaReservasComponent implements OnInit {
 
   ngOnInit(): void {
     this.quickSearchControl.valueChanges.pipe(debounceTime(700), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef)).subscribe(() => this.buscarDesdeBusquedaRapida());
-    this.bindAgenciaSearch();
+    this.bindAgencyModalSearch();
     this.bindFocusRefresh();
     this.initializeOperationalDate();
   }
@@ -503,8 +510,7 @@ export class ConsultaReservasComponent implements OnInit {
 
     this.filterForm.reset({ tipoFecha: 'ingreso', fechaInicio: inicio, fechaFinal: salida, agencia: '', estado: '' });
     this.agenciaSearchControl.setValue('', { emitEvent: false });
-    this.agenciaSuggestions = [];
-    this.agenciaSearchOpen = false;
+    this.closeAgencyModal();
     this.quickSearchControl.setValue('', { emitEvent: false });
     this.filtro.set({
       tipoFecha: 'ingreso',
@@ -582,21 +588,66 @@ export class ConsultaReservasComponent implements OnInit {
     return this.estados.find((item) => item.valor === normalizedEstado)?.etiqueta ?? estado;
   }
 
-  openAgenciaSuggestions(): void {
-    this.catalogService
-      .searchAgencias(this.getCurrentAgencySearchTerm())
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((items) => {
-        this.agenciaSuggestions = items;
-        this.agenciaSearchOpen = items.length > 0;
-      });
+  openAgencyModal(): void {
+    this.showAgencyModal = true;
+    this.agencyModalSearchControl.setValue('', { emitEvent: false });
+    this.loadAgencyModalPage(1);
+  }
+
+  closeAgencyModal(): void {
+    this.showAgencyModal = false;
+    this.agencyModalError = '';
+  }
+
+  loadAgencyModalPage(page: number): void {
+    const normalizedPage = Math.max(1, page);
+    const term = this.agencyModalSearchControl.value.trim();
+    const pageSize = term.length >= 2 ? 50 : 10;
+    const requestId = ++this.agencyModalRequestId;
+    this.agencyModalLoading = true;
+    this.agencyModalError = '';
+
+    const request = term.length >= 2
+      ? this.catalogService.buscarAgenciasPorNombre(term, normalizedPage, pageSize)
+      : this.catalogService.buscarAgenciasPorNombre('', normalizedPage, pageSize).pipe(
+          switchMap((response) => response.datos.length
+            ? of(response)
+            : this.catalogService.getAgenciasPaginadas(normalizedPage, pageSize)),
+          catchError(() => this.catalogService.getAgenciasPaginadas(normalizedPage, pageSize))
+        );
+
+    request.pipe(
+      finalize(() => {
+        if (requestId === this.agencyModalRequestId) this.agencyModalLoading = false;
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (response: WalkInAgenciaPage) => {
+        if (requestId !== this.agencyModalRequestId) return;
+        this.agencyModalAgencies = response.datos;
+        this.agencyModalPage = response.paginaActual || normalizedPage;
+        this.agencyModalTotalRecords = response.totalRegistros || response.datos.length;
+        this.agencyModalTotalPages = response.totalPaginas || (response.datos.length ? 1 : 0);
+      },
+      error: () => {
+        if (requestId !== this.agencyModalRequestId) return;
+        this.agencyModalAgencies = [];
+        this.agencyModalTotalRecords = 0;
+        this.agencyModalTotalPages = 0;
+        this.agencyModalError = 'No se pudo cargar la lista de agencias.';
+      }
+    });
+  }
+
+  goToAgencyModalPage(page: number): void {
+    if (this.agencyModalLoading || page < 1 || page > this.agencyModalTotalPages) return;
+    this.loadAgencyModalPage(page);
   }
 
   selectAgencia(agencia: WalkInAgenciaOption): void {
     this.filterForm.controls.agencia.setValue(agencia.codigo, { emitEvent: false });
     this.agenciaSearchControl.setValue(this.buildAgenciaLabel(agencia), { emitEvent: false });
-    this.agenciaSuggestions = [];
-    this.agenciaSearchOpen = false;
+    this.closeAgencyModal();
   }
 
   trackByReserva(_: number, reserva: ReservaConsulta): string {
@@ -866,33 +917,12 @@ export class ConsultaReservasComponent implements OnInit {
       .replace(/'/g, '&#39;');
   }
 
-  private bindAgenciaSearch(): void {
-    this.agenciaSearchControl.valueChanges
-      .pipe(
-        debounceTime(300),
-        distinctUntilChanged(),
-        switchMap((term) => this.catalogService.searchAgencias(term)),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe((items) => {
-        this.clearAgencyCodeIfTypedManually();
-        this.agenciaSuggestions = items;
-        this.agenciaSearchOpen = items.length > 0;
+  private bindAgencyModalSearch(): void {
+    this.agencyModalSearchControl.valueChanges
+      .pipe(debounceTime(350), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (this.showAgencyModal) this.loadAgencyModalPage(1);
       });
-  }
-
-  private clearAgencyCodeIfTypedManually(): void {
-    const codigo = this.filterForm.controls.agencia.value.trim();
-    const label = this.agenciaSearchControl.value.trim();
-    if (codigo && !label.startsWith(`${codigo} -`)) {
-      this.filterForm.controls.agencia.setValue('', { emitEvent: false });
-    }
-  }
-
-  private getCurrentAgencySearchTerm(): string {
-    const value = this.agenciaSearchControl.value.trim();
-    const code = this.filterForm.controls.agencia.value.trim();
-    return code && value.startsWith(`${code} -`) ? value.slice(`${code} -`.length).trim() : value;
   }
 
   private getAgenciaFilterCode(): string {
