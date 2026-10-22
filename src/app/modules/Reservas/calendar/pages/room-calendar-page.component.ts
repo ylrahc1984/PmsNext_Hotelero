@@ -109,6 +109,8 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
   operationalDate                    = toPmsDateInputValue(this.operationalDateService.operationalDate()) || toPmsDateInputValue(new Date());
   startDate                           = this.operationalDate;
   endDate                             = this.shiftDate(this.startDate, 29);
+  pendingStartDate                    = this.startDate;
+  pendingEndDate                      = this.pendingStartDate;
   search                              = '';
   type                                : RoomType | null = null;
   groupCode                           : string | null = null;
@@ -131,6 +133,7 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
   private rooms                       : RoomStatus[] = [];
   private workingReservations         : CalendarReservation[] = [];
   private pendingRoomMoveVerification : PendingRoomMoveVerification | null = null;
+  private pendingDateRangeInitialized = false;
   calendarData                        : CalendarData = this.calendarService.getCalendarData(
     this.buildQuery(),
     this.rooms,
@@ -1705,6 +1708,11 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
         this.operationalDate = operationalDate;
         this.startDate = operationalDate;
         this.endDate = this.shiftDate(operationalDate, range - 1);
+        if (!this.pendingDateRangeInitialized) {
+          this.pendingStartDate = operationalDate;
+          this.pendingEndDate = operationalDate;
+          this.pendingDateRangeInitialized = true;
+        }
         this.loadCalendar(true);
       });
   }

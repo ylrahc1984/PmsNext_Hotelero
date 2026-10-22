@@ -18,10 +18,10 @@ import { CalendarService } from '../../services/calendar.service';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ReservationAssignmentPanelComponent implements OnChanges {
-  private readonly calendarService = inject(CalendarService);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly cdr = inject(ChangeDetectorRef);
-  private loadSequence = 0;
+  private readonly calendarService  = inject(CalendarService);
+  private readonly destroyRef       = inject(DestroyRef);
+  private readonly cdr              = inject(ChangeDetectorRef);
+  private loadSequence              = 0;
 
   @Input({ required: true }) startDate!: string;
   @Input({ required: true }) endDate!: string;
@@ -33,14 +33,14 @@ export class ReservationAssignmentPanelComponent implements OnChanges {
   @Output() dragStart = new EventEmitter<{ reservation: CalendarAssignableReservation; event: PointerEvent }>();
   @Output() refresh = new EventEmitter<void>();
 
-  search = '';
-  status = '';
-  isLoading = false;
-  errorMessage = '';
-  showDateSettings = false;
-  filterStartDate = '';
-  filterEndDate = '';
-  reservations: CalendarAssignableReservation[] = [];
+  search               = '';
+  status               = '';
+  isLoading            = false;
+  errorMessage         = '';
+  showDateSettings     = false;
+  filterStartDate      = '';
+  filterEndDate        = '';
+  reservations         : CalendarAssignableReservation[] = [];
 
   readonly statusOptions = [
     { label: 'Todas', value: '' },
