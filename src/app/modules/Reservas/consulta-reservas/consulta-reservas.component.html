@@ -364,7 +364,6 @@
     <p class="agency-picker-modal__empty" *ngIf="agencyModalAgencies.length === 0">No se encontraron agencias.</p>
   </div>
   <footer class="agency-picker-modal__footer">
-    <button type="button" class="btn btn-light me-auto" (click)="selectAgencia({ codigo: '', descripcion: '', email: '' })">Todas las agencias</button>
     <button type="button" class="btn btn-outline-secondary" (click)="goToAgencyModalPage(agencyModalPage - 1)" [disabled]="agencyModalLoading || agencyModalPage <= 1">Anterior</button>
     <button type="button" class="btn btn-outline-secondary" (click)="goToAgencyModalPage(agencyModalPage + 1)" [disabled]="agencyModalLoading || agencyModalPage >= agencyModalTotalPages">Siguiente</button>
   </footer>

@@ -152,6 +152,12 @@ export class ForecastOcupacionComponent implements OnInit {
     return `${normalizePmsDateDDMMYYYY(this.fechaInicial)} al ${normalizePmsDateDDMMYYYY(this.fechaFinal)}`;
   }
 
+  onFechaInicialChange(value: string): void {
+    this.fechaInicial = value;
+    const fechaFinal = addPmsCalendarDays(value, 15);
+    this.fechaFinal = fechaFinal ? toPmsDateInputValue(fechaFinal) : '';
+  }
+
   procesar(): void {
     this.currentPage = 1;
     this.loadForecast();

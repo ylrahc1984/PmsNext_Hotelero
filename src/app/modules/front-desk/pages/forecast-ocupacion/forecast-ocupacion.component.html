@@ -27,7 +27,7 @@
 
     <div class="field-group">
       <label for="fechaInicialForecast">Fecha Inicial</label>
-      <input id="fechaInicialForecast" type="date" [(ngModel)]="fechaInicial" />
+      <input id="fechaInicialForecast" type="date" [(ngModel)]="fechaInicial" (ngModelChange)="onFechaInicialChange($event)" />
     </div>
 
     <div class="field-group">

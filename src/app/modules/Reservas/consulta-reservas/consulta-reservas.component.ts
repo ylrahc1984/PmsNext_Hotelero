@@ -54,6 +54,7 @@ type EstadoCambioReserva = 'WLT' | 'CCR';
 })
 export class ConsultaReservasComponent implements OnInit {
   private readonly quickSearchMinLength = 4;
+  private readonly selectedAgencyStorageKey = 'consulta-reservas.selected-agency';
   private agencyModalRequestId = 0;
 
   readonly estados: EstadoReservaOption[] = [
@@ -146,6 +147,7 @@ export class ConsultaReservasComponent implements OnInit {
     this.quickSearchControl.valueChanges.pipe(debounceTime(700), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef)).subscribe(() => this.buscarDesdeBusquedaRapida());
     this.bindAgencyModalSearch();
     this.bindFocusRefresh();
+    this.restoreSelectedAgency();
     this.initializeOperationalDate();
   }
 
@@ -510,6 +512,7 @@ export class ConsultaReservasComponent implements OnInit {
 
     this.filterForm.reset({ tipoFecha: 'ingreso', fechaInicio: inicio, fechaFinal: salida, agencia: '', estado: '' });
     this.agenciaSearchControl.setValue('', { emitEvent: false });
+    sessionStorage.removeItem(this.selectedAgencyStorageKey);
     this.closeAgencyModal();
     this.quickSearchControl.setValue('', { emitEvent: false });
     this.filtro.set({
@@ -647,6 +650,10 @@ export class ConsultaReservasComponent implements OnInit {
   selectAgencia(agencia: WalkInAgenciaOption): void {
     this.filterForm.controls.agencia.setValue(agencia.codigo, { emitEvent: false });
     this.agenciaSearchControl.setValue(this.buildAgenciaLabel(agencia), { emitEvent: false });
+    this.filtro.update((current) => ({ ...current, agencia: agencia.codigo }));
+    if (agencia.codigo) {
+      sessionStorage.setItem(this.selectedAgencyStorageKey, JSON.stringify({ codigo: agencia.codigo, etiqueta: this.buildAgenciaLabel(agencia) }));
+    }
     this.closeAgencyModal();
   }
 
@@ -925,15 +932,27 @@ export class ConsultaReservasComponent implements OnInit {
       });
   }
 
+  private restoreSelectedAgency(): void {
+    const storedValue = sessionStorage.getItem(this.selectedAgencyStorageKey);
+    if (!storedValue) return;
+
+    try {
+      const stored = JSON.parse(storedValue) as { codigo?: string; etiqueta?: string };
+      const codigo = stored.codigo?.trim() ?? '';
+      if (!codigo) return;
+
+      const etiqueta = stored.etiqueta?.trim() || codigo;
+      this.filterForm.controls.agencia.setValue(codigo, { emitEvent: false });
+      this.agenciaSearchControl.setValue(etiqueta, { emitEvent: false });
+      this.filtro.update((current) => ({ ...current, agencia: codigo }));
+    } catch {
+      sessionStorage.removeItem(this.selectedAgencyStorageKey);
+    }
+  }
+
   private getAgenciaFilterCode(): string {
     const selectedCode = this.filterForm.controls.agencia.value.trim();
-    if (selectedCode) {
-      return selectedCode;
-    }
-
-    const typedValue = this.agenciaSearchControl.value.trim();
-    const codeCandidate = typedValue.split(' - ')[0]?.trim() ?? '';
-    return /^[a-zA-Z0-9_-]+$/.test(codeCandidate) ? codeCandidate : '';
+    return selectedCode || this.filtro().agencia.trim();
   }
 
   private buildAgenciaLabel(agencia: WalkInAgenciaOption): string {
