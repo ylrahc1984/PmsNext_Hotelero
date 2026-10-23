@@ -108,6 +108,15 @@ const routes: Routes = [
           )
       },
       {
+        path: 'declaracion-iva/compras',
+        data: { breadcrumbTrail: [
+          { title: 'Finanzas', url: '/finanzas' },
+          { title: 'Declaración de IVA' },
+          { title: 'Compras' }
+        ] },
+        loadComponent: () => import('./declaracion-iva/compras/pages/compras-iva.page').then((c) => c.ComprasIvaPage)
+      },
+      {
         path: 'reporte-ventas-iva',
         loadComponent: () =>
           import('./reporte-ventas-iva/reporte-ventas-iva.component').then((c) => c.ReporteVentasIvaComponent)

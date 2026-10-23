@@ -1,0 +1,30 @@
+<section class="summary-grid" aria-label="Resumen de compras">
+  <article class="summary-card summary-card--total">
+    <span>Total compras</span>
+    <strong>{{ formatMoney(totalGeneral().totalCompra) }}</strong>
+    <small>Según consolidado del período</small>
+  </article>
+  <article class="summary-card summary-card--goods">
+    <span>Total bienes</span>
+    <strong>{{ formatMoney(bienes().totalCompra) }}</strong>
+    <small>Base {{ formatMoney(bienes().totalBase) }} · IVA {{ formatMoney(bienes().totalIVA) }}</small>
+  </article>
+  <article class="summary-card summary-card--services">
+    <span>Total servicios</span>
+    <strong>{{ formatMoney(servicios().totalCompra) }}</strong>
+    <small>Base {{ formatMoney(servicios().totalBase) }} · IVA {{ formatMoney(servicios().totalIVA) }}</small>
+  </article>
+  @if (hasUnclassified()) {
+    <article class="summary-card summary-card--unknown">
+      <span>Sin clasificar</span>
+      <strong>{{ formatMoney(totalSinClasificar().totalCompra) }}</strong>
+      <small>{{ sinClasificar().length }} clasificación(es) requieren revisión</small>
+    </article>
+  }
+</section>
+
+@if (hasUnclassified()) {
+  <div class="classification-warning" role="status">
+    Hay compras sin clasificar. Se muestran por separado y no se suman a bienes ni servicios.
+  </div>
+}

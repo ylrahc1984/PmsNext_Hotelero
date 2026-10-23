@@ -1,0 +1,132 @@
+<main class="iva-page">
+  <header class="page-header">
+    <div class="breadcrumbs" aria-label="Ruta de navegación"><a routerLink="/finanzas">Finanzas</a><span>/</span><span>Declaración de IVA</span><span>/</span><strong>Compras</strong></div>
+    <div class="header-row">
+      <div>
+        <span class="eyebrow">Finanzas · Declaración de IVA</span>
+        <h1>Compras para Declaración de IVA</h1>
+        <p>Consulta el detalle, las facturas y el consolidado de las compras para la declaración de IVA.</p>
+      </div>
+      <button type="button" class="btn btn-outline-success export-button" (click)="exportarExcel()" [disabled]="exportDisabled() || state() === 'loading'">
+        <i class="bi bi-file-earmark-excel" aria-hidden="true"></i> Exportar a Excel
+      </button>
+    </div>
+  </header>
+
+  <form class="filter-panel" [formGroup]="filters" (ngSubmit)="consultar()" novalidate>
+    <label class="filter-field">
+      <span>Fecha inicio <b>*</b></span>
+      <input class="form-control" type="date" formControlName="fechaInicio" [attr.max]="filters.controls.fechaFin.value || null">
+      @if (filters.controls.fechaInicio.touched && filters.controls.fechaInicio.invalid) { <small class="field-error">La fecha inicial es obligatoria.</small> }
+    </label>
+    <label class="filter-field">
+      <span>Fecha fin <b>*</b></span>
+      <input class="form-control" type="date" formControlName="fechaFin" [attr.min]="filters.controls.fechaInicio.value || null">
+      @if (filters.controls.fechaFin.touched && filters.controls.fechaFin.invalid) { <small class="field-error">La fecha final es obligatoria.</small> }
+    </label>
+    <label class="filter-field filter-field--supplier">
+      <span>Proveedor</span>
+      <input class="form-control" type="search" formControlName="proveedor" maxlength="150" placeholder="Buscar proveedor por nombre...">
+      @if (filters.controls.proveedor.touched && filters.controls.proveedor.hasError('maxlength')) { <small class="field-error">El proveedor admite hasta 150 caracteres.</small> }
+    </label>
+    <div class="filter-actions">
+      <button class="btn btn-primary" type="submit" [disabled]="state() === 'loading'">
+        @if (state() === 'loading') { <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Consultando... }
+        @else { <i class="feather icon-search" aria-hidden="true"></i> Consultar }
+      </button>
+      <button class="btn btn-light" type="button" (click)="limpiar()" [disabled]="state() === 'loading'">Limpiar</button>
+    </div>
+  </form>
+
+  @if (errorMessage()) { <div class="alert alert-danger" role="alert">{{ errorMessage() }}</div> }
+  @if (state() === 'loading') { <div class="loading-state" role="status"><span class="spinner-border" aria-hidden="true"></span><span>Consultando compras...</span></div> }
+
+  @if (state() === 'success' || state() === 'empty') {
+    @if (appliedQuery(); as query) {
+      <div class="applied-query">Resultados consultados: {{ formatDate(query.fechaInicio) }} – {{ formatDate(query.fechaFin) }}@if (query.proveedor) { · Proveedor: {{ query.proveedor }} }@if (filtersChanged()) { <strong> · Los filtros cambiaron; consulte para actualizar los resultados.</strong> }</div>
+    }
+    <app-compras-iva-resumen [rows]="consolidation()" />
+
+    <section class="panel consolidated-panel" aria-labelledby="consolidated-title">
+      <div class="panel-heading"><div><span class="eyebrow">Bases e impuestos</span><h2 id="consolidated-title">Consolidado del período</h2></div><span class="currency-note">Importes en colones costarricenses (CRC)</span></div>
+      <div class="table-scroll">
+        <table class="data-table consolidated-table">
+          <thead><tr><th>Tipo de compra</th>@for (column of consolidatedColumns; track column.key) { <th class="number-cell">{{ column.label }}</th> }</tr></thead>
+          <tbody>
+            @for (row of consolidation(); track trackByType($index, row)) {
+              <tr [class.unclassified-row]="!['BIENES', 'SERVICIOS'].includes(row.tipoCompra.trim().toUpperCase())">
+                <th>{{ typeLabel(row.tipoCompra) }}</th>@for (column of consolidatedColumns; track column.key) { <td class="number-cell">{{ formatMoney(row[column.key]) }}</td> }
+              </tr>
+            }
+            @if (consolidation().length) {
+              <tr class="total-row"><th>TOTAL GENERAL</th>@for (column of consolidatedColumns; track column.key) { <td class="number-cell">{{ formatMoney(totalConsolidated()[column.key]) }}</td> }</tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (hasUnclassified()) { <p class="inline-warning">Las compras sin clasificar aparecen en su propia fila y no se agregan a bienes ni servicios.</p> }
+      @if (state() === 'empty') { <p class="empty-inline">No hay compras para el período y proveedor seleccionados.</p> }
+    </section>
+
+    <section class="panel results-panel">
+      <div class="tabs-bar" role="tablist" aria-label="Consultas de compras">
+        <button type="button" role="tab" [attr.aria-selected]="activeTab() === 'facturas'" [class.active]="activeTab() === 'facturas'" (click)="setTab('facturas')">Facturas <span>{{ invoices().length }}</span></button>
+        <button type="button" role="tab" [attr.aria-selected]="activeTab() === 'detalle'" [class.active]="activeTab() === 'detalle'" (click)="setTab('detalle')">Detalle de compras <span>{{ detailsLoaded ? details().length : '—' }}</span></button>
+        <button type="button" role="tab" [attr.aria-selected]="activeTab() === 'consolidado'" [class.active]="activeTab() === 'consolidado'" (click)="setTab('consolidado')">Consolidado</button>
+      </div>
+
+      @if (activeTab() === 'facturas') {
+        <div class="tab-toolbar"><label class="local-search"><i class="feather icon-search" aria-hidden="true"></i><input type="search" [value]="invoiceSearch()" (input)="invoiceSearch.set($any($event.target).value); invoicePage.set(1)" placeholder="Buscar documento, factura o proveedor" aria-label="Buscar en facturas"></label><span>{{ visibleInvoices().length }} facturas y clasificaciones</span></div>
+        @if (state() === 'empty' || !invoices().length) { <div class="empty-state">No hay facturas para mostrar.</div> }
+        @else {
+          <div class="table-scroll"><table class="data-table invoice-table"><thead><tr>
+            <th><button (click)="sortInvoices('fechaFactura')" type="button">Fecha factura</button></th>
+            <th><button (click)="sortInvoices('numDocu')" type="button">Número documento</button></th>
+            <th><button (click)="sortInvoices('numFactura')" type="button">Número factura</button></th><th>Proveedor</th>
+            <th><button (click)="sortInvoices('tipoCompra')" type="button">Tipo compra</button></th>
+            <th class="number-cell">Base 0%</th><th class="number-cell">Base 1%</th><th class="number-cell">Base 2%</th><th class="number-cell">Base 4%</th><th class="number-cell">Base 13%</th>
+            <th class="number-cell">Total base</th><th class="number-cell">Total IVA</th><th class="number-cell">Total compra</th>
+          </tr></thead><tbody>
+            @for (row of pagedInvoices(); track trackByDocument($index, row)) {
+              <tr><td>{{ formatDate(row.fechaFactura) }}</td><td>{{ row.numDocu }}</td><td><button type="button" class="document-link" (click)="selectInvoice(row)" [attr.aria-label]="'Ver detalle de la factura ' + row.numFactura">{{ row.numFactura || row.claveFactura || row.numDocu }}</button></td>
+                <td><strong>{{ row.proveedor }}</strong><small class="subline">{{ row.cedulaProveedor }}</small></td><td><span class="type-badge" [ngClass]="typeClass(row.tipoCompra)">{{ typeLabel(row.tipoCompra) }}</span></td>
+                <td class="number-cell">{{ formatMoney(row.base0) }}</td><td class="number-cell">{{ formatMoney(row.base1) }}</td><td class="number-cell">{{ formatMoney(row.base2) }}</td><td class="number-cell">{{ formatMoney(row.base4) }}</td><td class="number-cell">{{ formatMoney(row.base13) }}</td>
+                <td class="number-cell">{{ formatMoney(row.totalBase) }}</td><td class="number-cell">{{ formatMoney(row.totalIVA) }}</td><td class="number-cell amount-emphasis">{{ formatMoney(row.totalCompra) }}</td></tr>
+            }
+          </tbody></table></div>
+          <div class="pagination"><span>Página {{ invoicePage() }} de {{ invoicePageCount() }}</span><div><button type="button" class="btn btn-sm btn-outline-secondary" (click)="movePage('invoice', -1)" [disabled]="invoicePage() <= 1">Anterior</button><button type="button" class="btn btn-sm btn-outline-secondary" (click)="movePage('invoice', 1)" [disabled]="invoicePage() >= invoicePageCount()">Siguiente</button></div></div>
+        }
+      }
+
+      @if (activeTab() === 'detalle') {
+        <div class="tab-toolbar detail-filters">
+          @if (selectedDocument()) { <div class="selected-document">Documento {{ selectedDocument() }} <button type="button" (click)="showAllDetails()">Ver todas</button></div> }
+          <label class="local-search"><i class="feather icon-search" aria-hidden="true"></i><input type="search" [value]="detailSearch()" (input)="detailSearch.set($any($event.target).value); detailPage.set(1)" placeholder="Buscar producto, CABYS o proveedor" aria-label="Buscar en detalle"></label>
+          <select class="form-select form-select-sm" [value]="detailType()" (change)="detailType.set($any($event.target).value); detailPage.set(1)" aria-label="Filtrar por clasificación"><option value="">Todas las clasificaciones</option><option value="BIENES">Bienes</option><option value="SERVICIOS">Servicios</option><option value="SIN CLASIFICAR">Sin clasificar</option></select>
+          <select class="form-select form-select-sm" [value]="detailRate()" (change)="detailRate.set($any($event.target).value); detailPage.set(1)" aria-label="Filtrar por tarifa de IVA"><option value="">Todas las tarifas</option><option value="0">0%</option><option value="1">1%</option><option value="2">2%</option><option value="4">4%</option><option value="13">13%</option></select>
+          <span>{{ visibleDetails().length }} productos</span>
+        </div>
+        @if (detailState() === 'loading') { <div class="loading-state compact" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Cargando detalle de compras...</div> }
+        @if (detailError()) { <div class="alert alert-danger" role="alert">{{ detailError() }} <button type="button" class="btn btn-sm btn-outline-danger" (click)="loadDetails()">Reintentar</button></div> }
+        @if (detailState() === 'empty') { <div class="empty-state">No hay productos para el período y proveedor seleccionados.</div> }
+        @if (detailState() === 'success') {
+          @if (!visibleDetails().length) { <div class="empty-state">No hay productos que coincidan con los filtros.</div> }
+          @else {
+            <div class="table-scroll"><table class="data-table detail-table"><thead><tr><th>Fecha factura</th><th>Número documento</th><th>Proveedor</th><th>Producto</th><th>CABYS</th><th>Tipo compra</th><th class="number-cell">IVA %</th><th class="number-cell">Base CRC</th><th class="number-cell">Impuesto CRC</th><th class="number-cell">Exoneración CRC</th><th class="number-cell">Total CRC</th></tr></thead><tbody>
+              @for (row of pagedDetails(); track trackByDetail($index, row)) { <tr [class.unclassified-row]="!['BIENES', 'SERVICIOS'].includes(row.tipoCompra.trim().toUpperCase())"><td>{{ formatDate(row.fechaFactura) }}</td><td>{{ row.numDocu }}</td><td>{{ row.proveedor }}</td><td><strong>{{ row.producto }}</strong><small class="subline">{{ row.codProducto }}</small></td><td>{{ row.cabys }}</td><td><span class="type-badge" [ngClass]="typeClass(row.tipoCompra)">{{ typeLabel(row.tipoCompra) }}</span></td><td class="number-cell">{{ row.porcentajeIVA }}%</td><td class="number-cell">{{ formatMoney(row.baseCRC) }}</td><td class="number-cell">{{ formatMoney(row.impuestoCRC) }}</td><td class="number-cell">{{ formatMoney(row.exoneracionCRC) }}</td><td class="number-cell amount-emphasis">{{ formatMoney(row.totalCRC) }}</td></tr> }
+            </tbody></table></div>
+            <div class="pagination"><span>Página {{ detailPage() }} de {{ detailPageCount() }}</span><div><button type="button" class="btn btn-sm btn-outline-secondary" (click)="movePage('detail', -1)" [disabled]="detailPage() <= 1">Anterior</button><button type="button" class="btn btn-sm btn-outline-secondary" (click)="movePage('detail', 1)" [disabled]="detailPage() >= detailPageCount()">Siguiente</button></div></div>
+          }
+        }
+      }
+
+      @if (activeTab() === 'consolidado') {
+        <div class="tab-toolbar"><div><strong>Distribución consolidada por clasificación</strong><small class="subline">El resumen reutiliza la respuesta cargada para este período.</small></div><span>{{ consolidation().length }} clasificaciones</span></div>
+        @if (!consolidation().length) { <div class="empty-state">No hay datos consolidados para mostrar.</div> }
+        @else { <div class="table-scroll"><table class="data-table consolidated-table"><thead><tr><th>Tipo de compra</th>@for (column of consolidatedColumns; track column.key) { <th class="number-cell">{{ column.label }}</th> }</tr></thead><tbody>@for (row of consolidation(); track trackByType($index, row)) { <tr [class.unclassified-row]="!['BIENES', 'SERVICIOS'].includes(row.tipoCompra.trim().toUpperCase())"><th>{{ typeLabel(row.tipoCompra) }}</th>@for (column of consolidatedColumns; track column.key) { <td class="number-cell">{{ formatMoney(row[column.key]) }}</td> }</tr> }<tr class="total-row"><th>TOTAL GENERAL</th>@for (column of consolidatedColumns; track column.key) { <td class="number-cell">{{ formatMoney(totalConsolidated()[column.key]) }}</td> }</tr></tbody></table></div> }
+      }
+    </section>
+  }
+
+  @if (state() === 'idle') { <section class="idle-state"><i class="feather icon-file-text" aria-hidden="true"></i><strong>Consulta de compras para IVA</strong><span>Seleccione un período y consulte los datos registrados.</span></section> }
+</main>

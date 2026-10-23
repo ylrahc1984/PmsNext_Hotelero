@@ -2,9 +2,9 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnIn
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormControl, FormGroup, NonNullableFormBuilder, Validators } from '@angular/forms';
-import { BehaviorSubject, Subscription } from 'rxjs';
+import { BehaviorSubject, Subscription, from } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { finalize } from 'rxjs/operators';
+import { concatMap, finalize, toArray } from 'rxjs/operators';
 
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { AuthService } from 'src/app/core/services/auth.service';
@@ -69,6 +69,8 @@ export class ConsultaDocumentosComponent implements OnInit {
   puntosVenta                                 : PuntoVentaUI[] = [];
   puntosVentaLoading                         = false;
   puntosVentaError                           = '';
+  exportingExcel                             = false;
+  exportError                                = '';
 
   readonly filtrosForm: FormGroup<ConsultaDocumentosForm> = this.fb.group({
     fechaDesde: this.fb.control(this.defaultDateRange.fechaDesde, { validators: [Validators.required] }),
@@ -121,6 +123,7 @@ export class ConsultaDocumentosComponent implements OnInit {
     }
 
     this.dateRangeError = '';
+    this.exportError = '';
 
     this.updateFiltrosBase();
     const { pageSize } = this.vmSubject.getValue();
@@ -136,6 +139,7 @@ export class ConsultaDocumentosComponent implements OnInit {
       busqueda: ''
     });
     this.dateRangeError = '';
+    this.exportError = '';
     this.activeRequest?.unsubscribe();
     this.vmSubject.next({
       documentos: [],
@@ -179,6 +183,36 @@ export class ConsultaDocumentosComponent implements OnInit {
       return;
     }
     this.cargarDocumentos(1, pageSize);
+  }
+
+  exportarExcel(vm: ConsultaDocumentosViewModel): void {
+    if (this.exportingExcel || vm.loading || !vm.hasSearched || vm.totalRegistros < 1 || !this.filtrosBase) return;
+
+    const pageSize = 100;
+    const totalPages = Math.ceil(vm.totalRegistros / pageSize);
+    const filters = { ...this.filtrosBase };
+    this.exportingExcel = true;
+    this.exportError = '';
+    this.cdr.markForCheck();
+
+    from(Array.from({ length: totalPages }, (_, index) => index + 1))
+      .pipe(
+        concatMap((pageNumber) => this.consultaService.buscarDocumentos({ ...filters, pageNumber, pageSize })),
+        toArray(),
+        concatMap((responses) => from(this.buildExcel(responses.flatMap((response) => response.documentos), filters))),
+        finalize(() => {
+          this.exportingExcel = false;
+          this.cdr.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: () => undefined,
+        error: (error: unknown) => {
+          this.exportError = `No se pudo completar la exportación. ${this.getErrorMessage(error)}`;
+          this.cdr.markForCheck();
+        }
+      });
   }
 
   verDocumento(documento: Documento): void {
@@ -328,6 +362,105 @@ export class ConsultaDocumentosComponent implements OnInit {
     if (normalized === 'RECHAZADO') return 'estado-elec estado-elec--rechazado';
     if (normalized === 'PENDIENTE') return 'estado-elec estado-elec--pendiente';
     return 'estado-elec';
+  }
+
+  private async buildExcel(
+    documentos: Documento[],
+    filtros: Omit<ConsultaDocumentosFiltros, 'pageNumber' | 'pageSize'>
+  ): Promise<void> {
+    const XLSX = await import('xlsx-js-style');
+    const headers = [
+      'Tipo', 'Número documento', 'Consecutivo', 'Fecha', 'Cliente', 'Identificación', 'Punto de venta',
+      'Reserva', 'Habitación', 'Forma de pago', 'Neto', 'Impuesto', 'Propina', 'Total', 'Moneda',
+      'Estado', 'Operador'
+    ];
+    const detailRows = documentos.map((documento) => [
+      documento.tipoDocu ?? '',
+      documento.numDocu ?? '',
+      documento.numeroConsecutivo ?? '',
+      this.formatDateForExcel(documento.fechaDocu),
+      documento.nomCliente ?? '',
+      documento.rucCliente || documento.codCliente || '',
+      documento.pntVenta ?? '',
+      documento.codReserva ?? '',
+      documento.habitacion ?? '',
+      documento.frmPago ?? '',
+      Number(documento.neto ?? 0),
+      Number(documento.impuesto ?? 0),
+      Number(documento.propinas ?? 0),
+      Number(documento.totalDocu ?? 0),
+      documento.moneda ?? '',
+      documento.estDocu ?? '',
+      documento.operador ?? ''
+    ]);
+    const totals = documentos.reduce((result, documento) => ({
+      neto: result.neto + (Number(documento.neto) || 0),
+      impuesto: result.impuesto + (Number(documento.impuesto) || 0),
+      propinas: result.propinas + (Number(documento.propinas) || 0),
+      total: result.total + (Number(documento.totalDocu) || 0)
+    }), { neto: 0, impuesto: 0, propinas: 0, total: 0 });
+    const totalRow = [
+      'TOTAL GENERAL', `${documentos.length} documentos`, '', '', '', '', '', '', '', '',
+      totals.neto, totals.impuesto, totals.propinas, totals.total, '', '', ''
+    ];
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      ['Consulta de documentos'],
+      [`Período: ${filtros.fechaDocu} al ${filtros.fechaPago}`],
+      [`Punto de venta: ${filtros.pntVenta || 'Todos'}`],
+      [`Búsqueda: ${filtros.nomClie || 'Todos los clientes'}`],
+      [],
+      headers,
+      ...detailRows,
+      totalRow
+    ]);
+
+    const lastColumn = headers.length - 1;
+    const headerRow = 5;
+    const firstDetailRow = headerRow + 1;
+    const lastDetailRow = firstDetailRow + detailRows.length - 1;
+    const totalRowIndex = firstDetailRow + detailRows.length;
+    worksheet['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: lastColumn } }];
+    worksheet['!autofilter'] = {
+      ref: XLSX.utils.encode_range({ s: { r: headerRow, c: 0 }, e: { r: lastDetailRow, c: lastColumn } })
+    };
+    worksheet['!cols'] = [
+      { wch: 13 }, { wch: 18 }, { wch: 24 }, { wch: 13 }, { wch: 34 }, { wch: 20 }, { wch: 16 },
+      { wch: 18 }, { wch: 13 }, { wch: 20 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 17 },
+      { wch: 12 }, { wch: 16 }, { wch: 20 }
+    ];
+
+    const titleCell = worksheet['A1'];
+    if (titleCell) titleCell.s = { font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 16 }, fill: { fgColor: { rgb: '173B61' } }, alignment: { vertical: 'center' } };
+    worksheet['!rows'] = [{ hpt: 28 }, { hpt: 20 }, { hpt: 20 }, { hpt: 20 }, { hpt: 8 }];
+    for (let columnIndex = 0; columnIndex <= lastColumn; columnIndex += 1) {
+      const cell = worksheet[XLSX.utils.encode_cell({ r: headerRow, c: columnIndex })];
+      if (cell) cell.s = { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '27577F' } }, alignment: { horizontal: columnIndex >= 10 && columnIndex <= 13 ? 'right' : 'left', vertical: 'center', wrapText: true } };
+      const totalCell = worksheet[XLSX.utils.encode_cell({ r: totalRowIndex, c: columnIndex })];
+      if (totalCell) totalCell.s = { font: { bold: true, color: { rgb: '173B61' } }, fill: { fgColor: { rgb: 'E7F0F8' } } };
+    }
+    for (let rowIndex = firstDetailRow; rowIndex <= totalRowIndex; rowIndex += 1) {
+      for (let columnIndex = 10; columnIndex <= 13; columnIndex += 1) {
+        const cell = worksheet[XLSX.utils.encode_cell({ r: rowIndex, c: columnIndex })];
+        if (cell?.t === 'n') cell.z = '#,##0.00';
+      }
+    }
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Documentos');
+    const filename = `consulta-documentos-${this.toFilenameDate(filtros.fechaDocu)}-${this.toFilenameDate(filtros.fechaPago)}.xlsx`;
+    XLSX.writeFile(workbook, filename, { compression: true });
+  }
+
+  private formatDateForExcel(value: string): string {
+    const text = String(value ?? '').trim();
+    const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(text);
+    if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+    const local = /^(\d{2})\/(\d{2})\/(\d{4})/.exec(text);
+    return local ? `${local[1]}/${local[2]}/${local[3]}` : text;
+  }
+
+  private toFilenameDate(value: string): string {
+    return value.replace(/[^\d-]/g, '-');
   }
 
   private cargarDocumentos(pageNumber: number, pageSize: number): void {

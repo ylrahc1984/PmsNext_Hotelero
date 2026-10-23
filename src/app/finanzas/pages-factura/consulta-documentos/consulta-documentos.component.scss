@@ -29,6 +29,42 @@
   padding-bottom: 0.45rem;
 }
 
+:host .app-action-btn--export {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-color: #a7d9bf;
+  background: linear-gradient(180deg, #ffffff, #f4fbf7);
+  color: #167447;
+  font-weight: 700;
+  box-shadow: 0 5px 14px rgba(22, 116, 71, 0.08);
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+
+:host .app-action-btn--export:hover:not(:disabled),
+:host .app-action-btn--export:focus-visible {
+  border-color: #56ae7d;
+  background: #effaf3;
+  color: #0f6039;
+  box-shadow: 0 8px 18px rgba(22, 116, 71, 0.14);
+  transform: translateY(-1px);
+}
+
+:host .app-action-btn--export .app-action-btn__icon {
+  display: inline-grid;
+  width: 1.8rem;
+  height: 1.8rem;
+  place-items: center;
+  border-radius: 0.5rem;
+  background: rgba(22, 116, 71, 0.1);
+  font-size: 1rem;
+}
+
+:host .app-action-btn--export:disabled {
+  opacity: 0.55;
+  box-shadow: none;
+}
+
 :host .doc-action-menu {
   display: inline-flex;
   justify-content: center;

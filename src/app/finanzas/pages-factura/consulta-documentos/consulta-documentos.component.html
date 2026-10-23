@@ -9,6 +9,19 @@
           </div>
           <div class="card-header-right d-flex flex-wrap align-items-center gap-2">
             <button
+              class="btn btn-outline-success app-action-btn app-action-btn--export"
+              type="button"
+              (click)="exportarExcel(vm)"
+              [disabled]="vm.loading || exportingExcel || !vm.hasSearched || vm.totalRegistros === 0"
+              title="Exporta todos los documentos del resultado, incluyendo las demás páginas"
+            >
+              <span class="app-action-btn__icon" aria-hidden="true">
+                <i *ngIf="!exportingExcel" class="bi bi-file-earmark-excel"></i>
+                <span *ngIf="exportingExcel" class="spinner-border spinner-border-sm"></span>
+              </span>
+              <span>{{ exportingExcel ? 'Preparando Excel...' : 'Exportar a Excel' }}</span>
+            </button>
+            <button
               class="btn btn-primary app-action-btn app-action-btn--primary"
               type="button"
               [routerLink]="nuevaFacturaRoute"
@@ -33,11 +46,11 @@
                 <h6 class="mb-0">Filtros</h6>
               </div>
               <div class="d-flex align-items-center gap-2">
-                <button class="btn btn-sm btn-outline-secondary" type="button" (click)="onLimpiar()" [disabled]="vm.loading">
+                <button class="btn btn-sm btn-outline-secondary" type="button" (click)="onLimpiar()" [disabled]="vm.loading || exportingExcel">
                   <i class="feather icon-rotate-ccw me-1"></i>
                   Limpiar
                 </button>
-                <button class="btn btn-sm btn-primary" type="submit" [disabled]="vm.loading">
+                <button class="btn btn-sm btn-primary" type="submit" [disabled]="vm.loading || exportingExcel">
                   <i class="feather icon-search me-1"></i>
                   Buscar
                 </button>
@@ -90,6 +103,10 @@
         <div *ngIf="vm.error" class="alert alert-danger mb-3">
           <i class="feather icon-alert-triangle me-2"></i>
           {{ vm.error }}
+        </div>
+
+        <div *ngIf="exportError" class="alert alert-danger mb-3" role="alert">
+          <i class="feather icon-alert-triangle me-2"></i>{{ exportError }}
         </div>
 
         <div class="consulta-documentos__loading" *ngIf="vm.loading">

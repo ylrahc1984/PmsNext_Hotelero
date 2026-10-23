@@ -1,0 +1,11 @@
+:host { display: block; }
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.summary-card { min-width: 0; padding: 18px 20px; border: 1px solid #e1e7ef; border-radius: 16px; background: #fff; box-shadow: 0 8px 24px rgba(15, 33, 51, .055); display: grid; gap: 6px; }
+.summary-card span { color: #64748b; font-size: .8rem; font-weight: 750; text-transform: uppercase; letter-spacing: .045em; }
+.summary-card strong { color: #172b4d; font-size: clamp(1.2rem, 2vw, 1.65rem); font-variant-numeric: tabular-nums; }
+.summary-card small { color: #64748b; font-size: .78rem; }
+.summary-card--total { border-left: 4px solid #2474d2; }
+.summary-card--goods { border-left: 4px solid #16a36a; }
+.summary-card--services { border-left: 4px solid #7653c6; }
+.summary-card--unknown { border-left: 4px solid #d58a19; }
+.classification-warning { margin-top: 12px; padding: 11px 14px; border: 1px solid #f1d49d; border-radius: 10px; background: #fff9ec; color: #80540d; font-size: .88rem; }
