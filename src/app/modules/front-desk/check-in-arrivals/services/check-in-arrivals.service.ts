@@ -1,9 +1,10 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, map, throwError } from 'rxjs';
 
 import { normalizePmsDateDDMMYYYY } from 'src/app/core/utils/pms-date.util';
 import { environment } from 'src/environments/environment';
+import { SUPPRESS_CONNECTIVITY_TOAST } from 'src/app/core/interceptors/http-context.tokens';
 import { CheckInArrival, CheckInRequest, RoomingListGuest, RoomingListMutationResponse, RoomingListSaveRequest } from '../models/check-in-arrival.model';
 
 @Injectable({ providedIn: 'root' })
@@ -34,10 +35,13 @@ export class CheckInArrivalsService {
     });
   }
 
-  getRoomingList(codRsv: string, numHabita: string): Observable<RoomingListGuest[]> {
+  getRoomingList(codRsv: string, numHabita: string, background = false): Observable<RoomingListGuest[]> {
     const params = new HttpParams().set('codRsv', codRsv).set('numHabita', numHabita);
     return this.http
-      .get<{ success?: boolean; data?: RoomingListGuest[] } | RoomingListGuest[]>(this.roomingListUrl, { params })
+      .get<{ success?: boolean; data?: RoomingListGuest[] } | RoomingListGuest[]>(this.roomingListUrl, {
+        params,
+        context: new HttpContext().set(SUPPRESS_CONNECTIVITY_TOAST, background)
+      })
       .pipe(
         map((response) =>
           (Array.isArray(response) ? response : response?.data ?? []).map((guest) => ({

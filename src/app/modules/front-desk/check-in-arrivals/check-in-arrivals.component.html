@@ -28,6 +28,16 @@
       <input id="fechaIngreso" type="date" class="form-control" formControlName="fechaIngreso" />
     </div>
 
+    <div class="filter-field">
+      <label for="agencia">Agencia</label>
+      <select id="agencia" class="form-select" formControlName="agencia" (change)="aplicarBusqueda()">
+        <option value="">Todas las agencias</option>
+        @for (agencia of agenciasDisponibles; track agencia.codigo) {
+          <option [value]="agencia.codigo">{{ agencia.etiqueta }}</option>
+        }
+      </select>
+    </div>
+
     <label class="pending-toggle">
       <input type="checkbox" class="form-check-input" formControlName="soloPendientes" />
       <span>Mostrar unicamente pendientes</span>

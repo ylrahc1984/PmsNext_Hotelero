@@ -11,6 +11,7 @@ import { catchError } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 import { ToastService } from '../services/toast.service';
+import { SUPPRESS_CONNECTIVITY_TOAST } from './http-context.tokens';
 
 @Injectable()
 export class ErrorInterceptor implements HttpInterceptor {
@@ -22,13 +23,13 @@ export class ErrorInterceptor implements HttpInterceptor {
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     return next.handle(req).pipe(
       catchError((error: HttpErrorResponse) => {
-        this.handleError(error);
+        this.handleError(error, req.context.get(SUPPRESS_CONNECTIVITY_TOAST));
         return throwError(() => error);
       })
     );
   }
 
-  private handleError(error: HttpErrorResponse): void {
+  private handleError(error: HttpErrorResponse, suppressConnectivityToast: boolean): void {
     // Evitar múltiples logout simultaneos
     if (this.isLogoutInProgress) {
       return;
@@ -39,7 +40,7 @@ export class ErrorInterceptor implements HttpInterceptor {
         this.handleForbidden();
         break;
       case 0: // Error de conexión
-        this.handleConnectionError();
+        if (!suppressConnectivityToast) this.handleConnectionError();
         break;
       default:
         this.handleGenericError(error);

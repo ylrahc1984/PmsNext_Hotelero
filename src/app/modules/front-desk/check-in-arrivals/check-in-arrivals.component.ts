@@ -38,6 +38,7 @@ import {
 
 interface CheckInArrivalFilterForm {
   fechaIngreso      : string;
+  agencia           : string;
   soloPendientes    : boolean;
   busqueda          : string;
 }
@@ -58,6 +59,7 @@ type RoomingListStatus = 'LOADING' | 'COMPLETE' | 'MISSING' | 'ERROR';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CheckInArrivalsComponent implements OnInit {
+  private readonly pageStorageKey = 'check-in-arrivals.current-page';
   private readonly arrivalsService = inject(CheckInArrivalsService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(FormBuilder);
@@ -98,6 +100,7 @@ export class CheckInArrivalsComponent implements OnInit {
 
   readonly filtersForm = this.fb.nonNullable.group<CheckInArrivalFilterForm>({
     fechaIngreso      : this.getOperationalDateInput(),
+    agencia           : '',
     soloPendientes    : true,
     busqueda          : ''
   });
@@ -185,12 +188,13 @@ export class CheckInArrivalsComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.restorePage();
     this.loadRoomingCatalogs();
     this.bindFocusRefresh();
     this.initializeOperationalDate();
   }
 
-  buscar(): void {
+  buscar(preservePage = false): void {
     const filters = this.filtersForm.getRawValue();
     const fechaApi = this.formatDateApi(filters.fechaIngreso);
 
@@ -215,11 +219,10 @@ export class CheckInArrivalsComponent implements OnInit {
       )
       .subscribe((arrivals) => {
         this.arrivals = arrivals.map((arrival) => this.normalizeArrival(arrival));
-        this.loadRoomingStatuses(this.arrivals);
         this.loadReservationTags(this.arrivals);
         this.selectedArrival = this.arrivals[0] ?? null;
         this.activeDetailKey = null;
-        this.page = 1;
+        if (!preservePage) this.page = 1;
         this.refreshView();
       });
   }
@@ -233,15 +236,29 @@ export class CheckInArrivalsComponent implements OnInit {
 
     this.filtersForm.setValue({
       fechaIngreso: operationalDate,
+      agencia: '',
       soloPendientes: true,
       busqueda: ''
     });
+    this.page = 1;
     this.buscar();
   }
 
   aplicarBusqueda(): void {
     this.page = 1;
     this.refreshView();
+  }
+
+  get agenciasDisponibles(): Array<{ codigo: string; etiqueta: string }> {
+    const agencies = new Map<string, string>();
+    for (const arrival of this.arrivals) {
+      const codigo = arrival.codAgencia.trim();
+      const nombre = arrival.nomAgencia.trim();
+      const key = codigo || nombre;
+      if (key && !agencies.has(key)) agencies.set(key, nombre ? `${codigo ? `${codigo} - ` : ''}${nombre}` : codigo);
+    }
+    return [...agencies].map(([codigo, etiqueta]) => ({ codigo, etiqueta }))
+      .sort((left, right) => left.etiqueta.localeCompare(right.etiqueta, undefined, { sensitivity: 'base' }));
   }
 
   seleccionarArrival(arrival: CheckInArrival): void {
@@ -301,6 +318,7 @@ export class CheckInArrivalsComponent implements OnInit {
     }
 
     this.page -= 1;
+    this.persistPage();
     this.refreshPage();
   }
 
@@ -310,6 +328,7 @@ export class CheckInArrivalsComponent implements OnInit {
     }
 
     this.page += 1;
+    this.persistPage();
     this.refreshPage();
   }
 
@@ -484,7 +503,7 @@ export class CheckInArrivalsComponent implements OnInit {
     ).subscribe({
       next: () => {
         void Swal.fire({ title: 'Check-In realizado', text: `La reserva ${reserva.codReserva} fue procesada correctamente.`, icon: 'success', timer: 1800, showConfirmButton: false });
-        this.buscar();
+        this.buscar(true);
       },
       error: (error) => {
         console.error('No se pudo realizar el Check-In.', error);
@@ -496,6 +515,7 @@ export class CheckInArrivalsComponent implements OnInit {
   verReserva(reserva: CheckInArrival): void {
     const codReserva = reserva.codReserva.trim();
     if (!codReserva) return;
+    this.persistPage();
     void this.router.navigate(['/reservas/detalle-hospedaje', codReserva], {
       queryParams: { returnTo: 'arribos-dia' }
     });
@@ -816,7 +836,7 @@ export class CheckInArrivalsComponent implements OnInit {
       .pipe(
         mergeMap(
           (arrival) =>
-            this.arrivalsService.getRoomingList(arrival.codReserva, arrival.numHabita).pipe(
+            this.arrivalsService.getRoomingList(arrival.codReserva, arrival.numHabita, true).pipe(
               map((guests) => ({ arrival, guests, status: guests.length > 0 ? 'COMPLETE' : 'MISSING' }) as const),
               catchError(() => of({ arrival, guests: null, status: 'ERROR' } as const))
             ),
@@ -1006,6 +1026,7 @@ export class CheckInArrivalsComponent implements OnInit {
     this.kpis = this.buildKpis(this.filteredArrivals);
     this.totalPages = Math.max(1, Math.ceil(this.filteredArrivals.length / this.pageSize));
     this.page = Math.min(this.page, this.totalPages);
+    this.persistPage();
     this.refreshPage();
     this.syncSelectedArrival();
   }
@@ -1013,6 +1034,16 @@ export class CheckInArrivalsComponent implements OnInit {
   private refreshPage(): void {
     const start = (this.page - 1) * this.pageSize;
     this.pagedArrivals = this.filteredArrivals.slice(start, start + this.pageSize);
+    this.loadRoomingStatuses(this.pagedArrivals);
+  }
+
+  private restorePage(): void {
+    const storedPage = Number(sessionStorage.getItem(this.pageStorageKey));
+    if (Number.isInteger(storedPage) && storedPage > 0) this.page = storedPage;
+  }
+
+  private persistPage(): void {
+    sessionStorage.setItem(this.pageStorageKey, String(this.page));
   }
 
   private syncSelectedArrival(): void {
@@ -1051,12 +1082,17 @@ export class CheckInArrivalsComponent implements OnInit {
 
   private filterArrivals(arrivals: CheckInArrival[]): CheckInArrival[] {
     const term = this.normalizeText(this.filtersForm.controls.busqueda.value);
+    const selectedAgency = this.filtersForm.controls.agencia.value.trim();
 
-    if (!term) {
+    if (!term && !selectedAgency) {
       return arrivals;
     }
 
     return arrivals.filter((arrival) => {
+      const arrivalAgency = arrival.codAgencia.trim() || arrival.nomAgencia.trim();
+      if (selectedAgency && arrivalAgency !== selectedAgency) return false;
+      if (!term) return true;
+
       const searchable = [
         arrival.numHabita,
         arrival.codReserva,
@@ -1175,7 +1211,7 @@ export class CheckInArrivalsComponent implements OnInit {
 
           this.operationalDateInput = inputDate;
           this.filtersForm.controls.fechaIngreso.setValue(inputDate, { emitEvent: false });
-          this.buscar();
+          this.buscar(true);
         },
         error: () => this.handleOperationalDateError()
       });
@@ -1207,7 +1243,7 @@ export class CheckInArrivalsComponent implements OnInit {
           this.filtersForm.controls.fechaIngreso.setValue(refreshedInputDate, { emitEvent: false });
         }
         this.operationalDateInput = refreshedInputDate;
-        this.buscar();
+        this.buscar(true);
       });
   }
 

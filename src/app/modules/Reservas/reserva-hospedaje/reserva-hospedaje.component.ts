@@ -660,10 +660,10 @@ export class ReservaHospedajeComponent implements OnInit {
     this.servicioTaxError.set('');
     this.selectedServicioCatalog.set(index === null
       ? null
-      : {
+      : {     
           codigo: value.codSrv,
           descripcion: value.descripcion,
-          cCosto: value.cCosto,
+          cCosto: value.cCosto ?? '',
           precio: value.precio,
           impInclu: 1,
           moneda: this.reservaForm.controls.moneda.value,
@@ -671,7 +671,7 @@ export class ReservaHospedajeComponent implements OnInit {
           operador: ''
         });
     this.showServiceModal.set(true);
-    if (value.cCosto.trim()) {
+    if (value.cCosto?.trim()) {
       void this.refreshServicioTaxRate(value.cCosto);
     }
   }

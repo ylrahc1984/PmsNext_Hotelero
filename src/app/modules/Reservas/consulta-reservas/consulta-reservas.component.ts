@@ -55,6 +55,7 @@ type EstadoCambioReserva = 'WLT' | 'CCR';
 export class ConsultaReservasComponent implements OnInit {
   private readonly quickSearchMinLength = 4;
   private readonly selectedAgencyStorageKey = 'consulta-reservas.selected-agency';
+  private readonly selectedDatesStorageKey = 'consulta-reservas.selected-dates';
   private agencyModalRequestId = 0;
 
   readonly estados: EstadoReservaOption[] = [
@@ -148,6 +149,8 @@ export class ConsultaReservasComponent implements OnInit {
     this.bindAgencyModalSearch();
     this.bindFocusRefresh();
     this.restoreSelectedAgency();
+    this.restoreSelectedDates();
+    this.filterForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.persistSelectedDates());
     this.initializeOperationalDate();
   }
 
@@ -513,6 +516,7 @@ export class ConsultaReservasComponent implements OnInit {
     this.filterForm.reset({ tipoFecha: 'ingreso', fechaInicio: inicio, fechaFinal: salida, agencia: '', estado: '' });
     this.agenciaSearchControl.setValue('', { emitEvent: false });
     sessionStorage.removeItem(this.selectedAgencyStorageKey);
+    sessionStorage.removeItem(this.selectedDatesStorageKey);
     this.closeAgencyModal();
     this.quickSearchControl.setValue('', { emitEvent: false });
     this.filtro.set({
@@ -793,6 +797,7 @@ export class ConsultaReservasComponent implements OnInit {
           }
 
           this.applyDefaultDateRange(inicio, salida);
+          this.restoreSelectedDates();
           if (!this.operationalPolicy.can(OperationalAction.View)) {
             this.errorMessage.set('El contexto operativo actual no permite consultar reservas.');
             return;
@@ -948,6 +953,29 @@ export class ConsultaReservasComponent implements OnInit {
     } catch {
       sessionStorage.removeItem(this.selectedAgencyStorageKey);
     }
+  }
+
+  private restoreSelectedDates(): void {
+    const storedValue = sessionStorage.getItem(this.selectedDatesStorageKey);
+    if (!storedValue) return;
+
+    try {
+      const stored = JSON.parse(storedValue) as { tipoFecha?: string; fechaInicio?: string; fechaFinal?: string };
+      const tipoFecha = stored.tipoFecha === 'creacion' ? 'creacion' : stored.tipoFecha === 'ingreso' ? 'ingreso' : null;
+      const fechaInicio = stored.fechaInicio ?? '';
+      const fechaFinal = stored.fechaFinal ?? '';
+      if (!tipoFecha || !/^\d{4}-\d{2}-\d{2}$/.test(fechaInicio) || !/^\d{4}-\d{2}-\d{2}$/.test(fechaFinal)) return;
+
+      this.filterForm.patchValue({ tipoFecha, fechaInicio, fechaFinal }, { emitEvent: false });
+      this.filtro.update((current) => ({ ...current, tipoFecha, fechaInicio, fechaFinal }));
+    } catch {
+      sessionStorage.removeItem(this.selectedDatesStorageKey);
+    }
+  }
+
+  private persistSelectedDates(): void {
+    const { tipoFecha, fechaInicio, fechaFinal } = this.filterForm.getRawValue();
+    sessionStorage.setItem(this.selectedDatesStorageKey, JSON.stringify({ tipoFecha, fechaInicio, fechaFinal }));
   }
 
   private getAgenciaFilterCode(): string {

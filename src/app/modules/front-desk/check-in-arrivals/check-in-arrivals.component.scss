@@ -86,7 +86,7 @@ $line: rgba(15, 33, 51, 0.1);
 
 .filters-card {
   display: grid;
-  grid-template-columns: 170px 230px minmax(260px, 1fr) auto;
+  grid-template-columns: 170px minmax(160px, 0.8fr) 230px minmax(260px, 1fr) auto;
   align-items: end;
   gap: 12px;
   padding: 10px 12px;
@@ -102,6 +102,7 @@ $line: rgba(15, 33, 51, 0.1);
 }
 
 .filter-field .form-control,
+.filter-field .form-select,
 .filter-field .input-group-text {
   min-height: 36px;
   padding-top: 6px;
