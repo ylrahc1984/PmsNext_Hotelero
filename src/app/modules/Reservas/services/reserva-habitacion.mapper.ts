@@ -161,7 +161,9 @@ export class ReservaHabitacionMapper {
         total: cpl ? 0 : Number(item.total) || 0,
         cpl,
         impuesto: 1,
-        numPax: resolveNumPax(item.categoria, item.tipo) || Number(item.pax) || 0,
+        // El API recibe numPax como nullable int. Una reserva editada puede
+        // producir un valor decimal al repartir pax entre varias habitaciones.
+        numPax: this.toInteger(resolveNumPax(item.categoria, item.tipo) || Number(item.pax)),
         numChild: Number(item.cantidadNinos) || 0,
         totChild: cpl ? 0 : (Number(item.cantidadNinos) || 0) * (Number(item.precioNino) || 0) * noches,
         cCosto: (item.cCosto ?? '').trim() || 'HOSPED',
@@ -259,5 +261,10 @@ export class ReservaHabitacionMapper {
       return '';
     }
     return toPmsDateInputValue(text);
+  }
+
+  private static toInteger(value: unknown): number {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? Math.round(numericValue) : 0;
   }
 }
