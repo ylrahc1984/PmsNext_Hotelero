@@ -152,18 +152,25 @@ export class ReservaHabitacionMapper {
       operador: value.operador.trim(),
       habitaciones: value.habitaciones.map((item, index) => {
         const cpl = this.normalizeCpl(item.cpl ?? defaultCpl);
+        const cantidadHabitaciones = this.toInteger(item.cantidad);
+        const paxInformadosEnFormulario = Number(item.pax);
+        const paxPorHabitacion = this.toInteger(
+          Number.isFinite(paxInformadosEnFormulario) && paxInformadosEnFormulario > 0
+            ? paxInformadosEnFormulario
+            : resolveNumPax(item.categoria, item.tipo)
+        );
         return ({
         catHabita: item.categoria.trim(),
         tipHabita: item.tipo.trim(),
-        cantHab: Number(item.cantidad) || 0,
+        cantHab: cantidadHabitaciones,
         precio: cpl ? 0 : Number(item.precio) || 0,
         moneda,
         total: cpl ? 0 : Number(item.total) || 0,
         cpl,
         impuesto: 1,
-        // El API recibe numPax como nullable int. Una reserva editada puede
-        // producir un valor decimal al repartir pax entre varias habitaciones.
-        numPax: this.toInteger(resolveNumPax(item.categoria, item.tipo) || Number(item.pax)),
+        // La tabla muestra pax por habitación × cantidad de habitaciones;
+        // el API espera ese total entero en numPax.
+        numPax: paxPorHabitacion * cantidadHabitaciones,
         numChild: Number(item.cantidadNinos) || 0,
         totChild: cpl ? 0 : (Number(item.cantidadNinos) || 0) * (Number(item.precioNino) || 0) * noches,
         cCosto: (item.cCosto ?? '').trim() || 'HOSPED',
