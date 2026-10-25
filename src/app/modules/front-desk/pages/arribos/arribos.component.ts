@@ -19,6 +19,7 @@ import {
 } from './models/arribo.model';
 import { ArribosService } from './services/arribos.service';
 import { ArribosPdfService } from './printing/arribos-pdf.service';
+import { compareArriboFechas, compareArriboReservas } from './arribo-order.util';
 
 interface ArribosFilterForm {
   fechaDesde: FormControl<string>;
@@ -379,7 +380,7 @@ export class ArribosComponent implements OnInit {
         ])
       ].join(' ').toLowerCase();
       return matchesEstado && (!term || searchable.includes(term));
-    });
+    }).sort(compareArriboReservas);
   }
 
   private rebuildView(): void {
@@ -393,7 +394,7 @@ export class ArribosComponent implements OnInit {
       byDate.set(date, items);
     });
 
-    this.grupos = Array.from(byDate.entries()).sort(([left], [right]) => left.localeCompare(right)).map(([fecha, reservas]) => {
+    this.grupos = Array.from(byDate.entries()).sort(([left], [right]) => compareArriboFechas(left, right)).map(([fecha, reservas]) => {
       const byAgency = new Map<string, ArriboReserva[]>();
       reservas.forEach((reserva) => {
         const codigo = reserva.agencia?.codigo || 'SIN-AGENCIA';
@@ -402,12 +403,12 @@ export class ArribosComponent implements OnInit {
         byAgency.set(codigo, items);
       });
 
-      const agencias = Array.from(byAgency.entries()).map(([codigo, items]) => ({
+      const agencias = Array.from(byAgency.entries()).sort(([left], [right]) => left.localeCompare(right)).map(([codigo, items]) => ({
         codigo,
         nombre: items[0]?.agencia?.nombre || 'Sin agencia',
         reservas: items.length,
         habitaciones: items.reduce((total, item) => total + this.reservaHabitaciones(item), 0),
-        reservasItems: items
+        reservasItems: items.sort((left, right) => left.codReserva.trim().localeCompare(right.codReserva.trim()))
       }));
 
       return {

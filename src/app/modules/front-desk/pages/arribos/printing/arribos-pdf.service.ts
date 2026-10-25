@@ -4,6 +4,7 @@ import type { Content, TableCell, TCreatedPdf, TDocumentDefinitions } from 'pdfm
 import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
 import { HotelLogoService } from 'src/app/core/services/hotel-logo.service';
 import { normalizePmsDateDDMMYYYY } from 'src/app/core/utils/pms-date.util';
+import { compareArriboFechas, compareArriboReservas } from '../arribo-order.util';
 import { ArriboHabitacion, ArriboReserva } from '../models/arribo.model';
 
 type PdfMakeBrowser = {
@@ -185,7 +186,7 @@ export class ArribosPdfService {
 
   private buildGroupedContent(reservas: ArriboReserva[]): Content[] {
     const byDate = new Map<string, ArriboReserva[]>();
-    reservas.forEach((reserva) => {
+    [...reservas].sort(compareArriboReservas).forEach((reserva) => {
       const date = normalizePmsDateDDMMYYYY(reserva.fechaIngreso) || reserva.fechaIngreso || 'N/D';
       const items = byDate.get(date) ?? [];
       items.push(reserva);
@@ -193,7 +194,7 @@ export class ArribosPdfService {
     });
 
     const content: Content[] = [];
-    Array.from(byDate.entries()).sort(([a], [b]) => a.localeCompare(b)).forEach(([date, dateReservations]) => {
+    Array.from(byDate.entries()).sort(([a], [b]) => compareArriboFechas(a, b)).forEach(([date, dateReservations]) => {
       const dateTotals = this.calculateTotals(dateReservations);
       content.push({
         stack: [
@@ -211,12 +212,14 @@ export class ArribosPdfService {
         byAgency.set(code, items);
       });
 
-      Array.from(byAgency.entries()).forEach(([code, agencyReservations]) => {
+      Array.from(byAgency.entries()).sort(([left], [right]) => left.localeCompare(right)).forEach(([code, agencyReservations]) => {
         const agencyName = agencyReservations[0]?.agencia?.nombre || 'Sin agencia';
         const agencyRooms = agencyReservations.reduce((total, item) => total + this.roomCount(item), 0);
         content.push({ text: agencyName.toUpperCase(), style: 'agencyHeader', margin: [0, 5, 0, 1] });
         content.push({ text: `${agencyReservations.length} ${agencyReservations.length === 1 ? 'reserva' : 'reservas'} · ${agencyRooms} habitaciones${code !== 'SIN-AGENCIA' ? ` · ${code}` : ''}`, color: '#718096', fontSize: 6.8, margin: [0, 0, 0, 4] });
-        agencyReservations.forEach((reserva) => content.push(...this.buildReservation(reserva)));
+        agencyReservations
+          .sort((left, right) => left.codReserva.trim().localeCompare(right.codReserva.trim()))
+          .forEach((reserva) => content.push(...this.buildReservation(reserva)));
       });
     });
     return content;
