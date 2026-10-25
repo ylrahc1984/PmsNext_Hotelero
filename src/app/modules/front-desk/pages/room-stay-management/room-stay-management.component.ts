@@ -334,7 +334,10 @@ const emptyRoomStay: RoomStay = {
     GuestPortalAdminCardComponent
   ],
   templateUrl: './room-stay-management.component.html',
-  styleUrls: ['./room-stay-management.component.scss'],
+  styleUrls: [
+    './room-stay-management.component.scss',
+    './room-stay-management-invoice.component.scss'
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RoomStayManagementComponent implements OnInit {

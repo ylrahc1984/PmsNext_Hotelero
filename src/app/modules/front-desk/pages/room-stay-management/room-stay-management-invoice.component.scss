@@ -1,0 +1,795 @@
+$ink: #1d2a44;
+$muted: #61708a;
+$line: #e4ebf3;
+$soft: #f7fafc;
+$cyan: #1798a9;
+$cyan-dark: #0e7a8e;
+$blue: #275da8;
+$green: #43a047;
+$red: #ff4d4f;
+$paper: #ffffff;
+.room-invoice-header,
+.room-invoice-footer,
+.room-invoice-stepper {
+  background: $paper;
+}
+
+.room-invoice-header,
+.room-invoice-footer {
+  display: flex;
+  gap: 12px;
+  padding: 12px 20px;
+}
+
+.room-invoice-header {
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid $line;
+}
+
+.room-invoice-header > div:first-child {
+  min-width: 0;
+}
+
+.room-invoice-eyebrow,
+.room-invoice-selected-head span,
+.room-invoice-title-row span {
+  color: #1f6bff;
+  font-size: 0.72rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.room-invoice-selected-head span,
+.room-invoice-title-row span {
+  color: #b98a34;
+}
+
+.room-invoice-header h2,
+.room-invoice-card h3,
+.room-invoice-selected-client strong,
+.room-invoice-result strong,
+.room-invoice-summary-list strong {
+  color: #10263b;
+}
+
+.room-invoice-header h2 {
+  margin: 3px 0;
+  font-size: 1.38rem;
+  font-weight: 860;
+}
+
+.room-invoice-header p {
+  margin: 0;
+  color: $muted;
+  font-size: 0.9rem;
+}
+
+.room-invoice-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+
+.room-invoice-exchange-rate {
+  display: grid;
+  gap: 4px;
+  min-width: 116px;
+}
+
+.room-invoice-exchange-rate span {
+  color: $muted;
+  font-size: 0.68rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.room-invoice-exchange-rate input {
+  width: 116px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid $line;
+  border-radius: 10px;
+  color: #10263b;
+  background: #eef3f8;
+  font-size: 0.84rem;
+  font-weight: 850;
+  text-align: right;
+}
+
+.room-invoice-close,
+.room-invoice-row-action,
+.room-invoice-add-payment {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.room-invoice-close {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  color: #10263b;
+  background: #eef3f8;
+  cursor: pointer;
+}
+
+.room-invoice-stepper {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 10px 20px;
+}
+
+.room-invoice-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid $line;
+  border-radius: 12px;
+  color: $muted;
+  background: #f8fafc;
+}
+
+.room-invoice-step span {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  border-radius: 50%;
+  color: $paper;
+  background: #9aa9ba;
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.room-invoice-step strong {
+  overflow: hidden;
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-invoice-step--active {
+  color: #10263b;
+  border-color: rgba($blue, 0.18);
+  background: linear-gradient(180deg, rgba(#17d4e0, 0.12), rgba($blue, 0.07));
+}
+
+.room-invoice-step--active span,
+.room-invoice-add-payment,
+.room-invoice-primary-btn {
+  background: linear-gradient(135deg, #17d4e0, $blue);
+}
+
+.room-invoice-body {
+  display: grid;
+  grid-template-columns: minmax(230px, 0.72fr) minmax(620px, 1.55fr) minmax(220px, 0.58fr);
+  gap: 12px;
+  min-height: 0;
+  padding: 12px 18px 14px;
+  overflow: auto;
+}
+
+.room-invoice-card {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid $line;
+  border-radius: 16px;
+  background: $paper;
+  box-shadow: 0 14px 32px rgba(24, 43, 61, 0.08);
+}
+
+.room-invoice-card--client {
+  padding: 7px 9px;
+}
+
+.room-invoice-card.room-invoice-card--client h3 {
+  margin-bottom: 5px;
+}
+
+.room-invoice-card--client .room-invoice-search {
+  min-height: 36px;
+  padding-right: 9px;
+  padding-left: 9px;
+}
+
+.room-invoice-card--client .room-invoice-results,
+.room-invoice-card--client .room-invoice-selected-client,
+.room-invoice-card--client .room-invoice-document-type,
+.room-invoice-card--client .room-invoice-document-loading {
+  margin-top: 6px;
+}
+
+.room-invoice-card--client .room-invoice-result {
+  padding: 6px 8px;
+}
+
+.room-invoice-card--client .room-invoice-selected-client {
+  padding: 6px 8px;
+}
+
+.room-invoice-card--client .room-invoice-selected-client dl {
+  gap: 4px;
+  margin-bottom: 0;
+}
+
+.room-invoice-card--client .room-invoice-document-type,
+.room-invoice-card--client .room-invoice-document-loading {
+  padding: 6px;
+}
+
+.room-invoice-client-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.room-invoice-client-heading h3 {
+  margin-bottom: 5px;
+}
+
+.room-invoice-client-search-button,
+.room-invoice-client-picker__select {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 31px;
+  padding: 0 9px;
+  border: 1px solid rgba($blue, 0.2);
+  border-radius: 9px;
+  color: $blue;
+  background: rgba($blue, 0.06);
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.room-invoice-client-search-button .material-icons {
+  font-size: 1rem;
+}
+
+.room-invoice-client-picker {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 10px;
+  align-content: start;
+  width: min(100%, 980px);
+  justify-self: center;
+  padding: 14px;
+  border: 1px solid $line;
+  border-radius: 18px;
+  background: $paper;
+  box-shadow: 0 14px 32px rgba(24, 43, 61, 0.08);
+}
+
+.room-invoice-client-picker__header,
+.room-invoice-client-picker__pagination,
+.room-invoice-client-picker__pagination > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.room-invoice-client-picker__header > div > span {
+  color: $blue;
+  font-size: 0.66rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.room-invoice-client-picker__header h3 {
+  margin: 2px 0;
+  color: #10263b;
+  font-size: 1.05rem;
+}
+
+.room-invoice-client-picker__header p,
+.room-invoice-client-picker__status,
+.room-invoice-client-picker__pagination {
+  margin: 0;
+  color: $muted;
+  font-size: 0.75rem;
+}
+
+.room-invoice-client-picker__search-label {
+  color: $muted;
+  font-size: 0.74rem;
+  font-weight: 760;
+}
+
+.room-invoice-client-picker__search {
+  min-height: 40px;
+}
+
+.room-invoice-client-picker__list {
+  display: grid;
+  gap: 6px;
+  max-height: min(42vh, 340px);
+  overflow: auto;
+  padding-right: 3px;
+}
+
+.room-invoice-client-picker__row,
+.room-invoice-client-picker__consumer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid $line;
+  border-radius: 12px;
+  color: #10263b;
+  background: #fbfdff;
+}
+
+.room-invoice-client-picker__consumer {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.room-invoice-client-picker__consumer > span:last-child {
+  margin-left: auto;
+  color: $blue;
+}
+
+.room-invoice-client-picker__avatar {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  place-items: center;
+  border-radius: 10px;
+  color: $blue;
+  background: rgba($blue, 0.09);
+}
+
+.room-invoice-client-picker__details,
+.room-invoice-client-picker__consumer > span:nth-child(2) {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+
+.room-invoice-client-picker__details strong,
+.room-invoice-client-picker__consumer strong {
+  overflow: hidden;
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-invoice-client-picker__details small,
+.room-invoice-client-picker__consumer small {
+  color: $muted;
+  font-size: 0.68rem;
+}
+
+.room-invoice-client-picker__details em {
+  color: #16815a;
+  font-size: 0.64rem;
+  font-style: normal;
+  font-weight: 760;
+}
+
+.room-invoice-client-picker__pagination {
+  padding-top: 5px;
+  border-top: 1px solid $line;
+}
+
+.room-invoice-client-picker__pagination button {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid $line;
+  border-radius: 8px;
+  color: #10263b;
+  background: $paper;
+  font-size: 0.7rem;
+  font-weight: 760;
+  cursor: pointer;
+}
+
+.room-invoice-client-picker__pagination button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.room-invoice-general-client-name {
+  display: grid;
+  gap: 4px;
+  margin: 6px 0;
+}
+
+.room-invoice-general-client-name > span,
+.room-invoice-general-client-name > small {
+  color: $muted;
+  font-size: 0.68rem;
+}
+
+.room-invoice-general-client-name input {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 9px;
+  border: 1px solid $line;
+  border-radius: 9px;
+  color: #10263b;
+  background: #fff;
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.room-invoice-card h3 {
+  margin: 0 0 8px;
+  font-size: 0.96rem;
+  font-weight: 850;
+}
+
+.room-invoice-reservation-fields {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid $line;
+}
+
+.room-invoice-reservation-fields .room-invoice-payment-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  padding: 6px;
+}
+
+.room-invoice-reservation-fields .room-invoice-payment-form textarea {
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 9px;
+  border: 1px solid $line;
+  border-radius: 10px;
+  color: #10263b;
+  background: #fbfdff;
+  font: inherit;
+  font-size: 0.78rem;
+  resize: vertical;
+}
+
+.room-invoice-reservation-observation {
+  grid-column: 1 / -1;
+}
+
+.room-invoice-label,
+.room-invoice-payment-form label span,
+.room-invoice-summary-list span,
+.room-invoice-selected-client dt,
+.room-invoice-selected-client dd,
+.room-invoice-result span,
+.room-invoice-payments-table td span {
+  color: $muted;
+  font-size: 0.74rem;
+}
+
+.room-invoice-search,
+.room-invoice-payment-form input,
+.room-invoice-payment-form select {
+  min-height: 34px;
+  border: 1px solid $line;
+  border-radius: 10px;
+  color: #10263b;
+  background: #fbfdff;
+}
+
+.room-invoice-search {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+.room-invoice-search .material-icons {
+  color: #425a73;
+  font-size: 1.1rem;
+}
+
+.room-invoice-search input,
+.room-invoice-payment-form input,
+.room-invoice-payment-form select {
+  width: 100%;
+  min-width: 0;
+  padding: 0 9px;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 760;
+}
+
+.room-invoice-search input {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.room-invoice-search input:focus,
+.room-invoice-payment-form input:focus,
+.room-invoice-payment-form select:focus {
+  outline: 2px solid rgba(#17d4e0, 0.38);
+  border-color: rgba($blue, 0.42);
+}
+
+.room-invoice-payment-form input:disabled,
+.room-invoice-payment-form select:disabled {
+  color: #6c7d8e;
+  background: #eef3f8;
+  cursor: not-allowed;
+}
+
+.room-invoice-results,
+.room-invoice-selected-client dl,
+.room-invoice-summary-list,
+.room-invoice-payment-form {
+  display: grid;
+  gap: 8px;
+}
+
+.room-invoice-results,
+.room-invoice-selected-client,
+.room-invoice-payments-table,
+.room-invoice-empty-state,
+.room-invoice-detail-button,
+.room-invoice-inline-error,
+.room-invoice-conversion-hint {
+  margin-top: 10px;
+}
+
+.room-invoice-result,
+.room-invoice-summary-list div,
+.room-invoice-selected-client,
+.room-invoice-payment-form,
+.room-invoice-empty-state,
+.room-invoice-inline-error {
+  border: 1px solid rgba($line, 0.9);
+  border-radius: 14px;
+  background: #f8fbff;
+}
+
+.room-invoice-result {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  padding: 10px 11px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.room-invoice-selected-client,
+.room-invoice-payment-form {
+  padding: 9px;
+}
+
+.room-invoice-selected-head,
+.room-invoice-title-row,
+.room-invoice-summary-list div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.room-invoice-selected-head button {
+  color: $blue;
+  cursor: pointer;
+}
+
+.room-invoice-selected-client dd {
+  margin: 2px 0 0;
+  color: #10263b;
+  overflow-wrap: anywhere;
+}
+
+.room-invoice-payment-form {
+  grid-template-columns: minmax(230px, 1.35fr) minmax(180px, 1fr) minmax(120px, 0.6fr) 38px;
+  align-items: end;
+  gap: 7px;
+}
+
+.room-invoice-payment-form label:nth-child(4) {
+  grid-column: 1 / span 2;
+}
+
+.room-invoice-payment-form label:nth-child(5) {
+  grid-column: 3;
+}
+
+.room-invoice-add-payment {
+  grid-column: 4;
+  grid-row: 2;
+}
+
+.room-invoice-conversion-hint {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  color: $muted;
+  font-size: 0.74rem;
+  font-weight: 780;
+}
+
+.room-invoice-conversion-hint strong {
+  color: $blue;
+}
+
+.room-invoice-add-payment {
+  width: 38px;
+  height: 34px;
+  border-radius: 10px;
+  color: $paper;
+  cursor: pointer;
+}
+
+.room-invoice-payments-table {
+  overflow: auto;
+  border: 1px solid $line;
+  border-radius: 14px;
+}
+
+.room-invoice-payments-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.room-invoice-payments-table th,
+.room-invoice-payments-table td {
+  padding: 8px 9px;
+  border-bottom: 1px solid $line;
+  color: #10263b;
+  font-size: 0.76rem;
+  text-align: left;
+}
+
+.room-invoice-payments-table th {
+  background: #f3f7fb;
+  color: $muted;
+  font-size: 0.68rem;
+  font-weight: 850;
+}
+
+.room-invoice-payments-table td strong,
+.room-invoice-payments-table td span {
+  display: block;
+}
+
+.text-end {
+  text-align: right;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.room-invoice-summary-total strong {
+  color: $blue;
+}
+
+.room-invoice-summary-paid strong,
+.room-invoice-summary-change strong {
+  color: #16815a;
+}
+
+.room-invoice-summary-pending strong,
+.room-invoice-row-action {
+  color: #b4233d;
+}
+
+.room-invoice-row-action {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: rgba(180, 35, 61, 0.08);
+  cursor: pointer;
+}
+
+.room-invoice-empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 18px 14px;
+  border-style: dashed;
+  color: $muted;
+  text-align: center;
+}
+
+.room-invoice-empty-state .material-icons {
+  color: #6c8298;
+}
+
+.room-invoice-detail-button,
+.room-invoice-secondary-btn,
+.room-invoice-primary-btn {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-size: 0.84rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.room-invoice-detail-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  border: 1px solid rgba(#b98a34, 0.24);
+  color: #7b5a20;
+  background: rgba(#b98a34, 0.1);
+}
+
+.room-invoice-footer {
+  align-items: center;
+  justify-content: flex-end;
+  border-top: 1px solid $line;
+}
+
+.room-invoice-secondary-btn {
+  border: 1px solid $line;
+  color: #10263b;
+  background: $paper;
+}
+
+.room-invoice-primary-btn {
+  border: 0;
+  color: $paper;
+}
+
+.room-invoice-inline-error {
+  padding: 9px 11px;
+  border-color: rgba(194, 71, 45, 0.2);
+  color: #b4233d;
+  background: rgba(194, 71, 45, 0.08);
+  font-size: 0.78rem;
+  font-weight: 760;
+}
+
+
+@media (max-width: 991.98px) {
+  .room-invoice-body {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .room-invoice-card--payments {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .room-invoice-header,
+  .room-invoice-footer,
+  .room-invoice-stepper,
+  .room-invoice-body {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .room-invoice-client-picker__header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .room-invoice-client-picker__row {
+    flex-wrap: wrap;
+  }
+
+  .room-invoice-client-picker__details {
+    flex-basis: calc(100% - 54px);
+  }
+
+  .room-invoice-client-picker__select {
+    margin-left: 44px;
+  }
+
+}
