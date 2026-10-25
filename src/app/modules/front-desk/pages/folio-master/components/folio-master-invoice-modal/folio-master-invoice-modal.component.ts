@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, Even
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Subject, firstValueFrom, of } from 'rxjs';
-import { catchError, debounceTime, distinctUntilChanged, finalize, switchMap } from 'rxjs/operators';
+import { catchError, debounceTime, finalize, switchMap } from 'rxjs/operators';
 
 import { AuthService } from 'src/app/core/services/auth.service';
 import { OperationalDateService } from 'src/app/core/services/operational-date.service';
@@ -13,6 +13,7 @@ import { MonedaService, MonedaUI } from 'src/app/demo/administracion/monedas/mon
 import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
 import { ClienteService } from 'src/app/demo/catalogos/agencias-comisionistas/cliente.service';
 import { ClienteUI } from 'src/app/demo/catalogos/agencias-comisionistas/cliente.models';
+import { ActividadComercialService } from 'src/app/demo/catalogos/agencias-comisionistas/actividad-comercial/actividad-comercial.service';
 import {
   PointOfSalePaymentMethodApi,
   PointOfSaleDocumentApi,
@@ -29,6 +30,7 @@ interface InvoiceClient {
   address: string;
   email?: string;
   enviarCorreo: boolean;
+  codigoActividad: string;
 }
 
 interface InvoicePaymentMethod {
@@ -78,13 +80,15 @@ export class FolioMasterInvoiceModalComponent implements OnInit {
   private readonly tipoCambioService = inject(TipoCambioService);
   private readonly operationalDateService = inject(OperationalDateService);
   private readonly clienteService = inject(ClienteService);
+  private readonly actividadComercialService = inject(ActividadComercialService);
   private readonly authService = inject(AuthService);
   private readonly toastService = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly invoiceBaseCurrency = 'USD';
-  private readonly clientSearchChanges = new Subject<string>();
+  private readonly clientSearchChanges = new Subject<{ page: number; query: string }>();
   private exchangeRateRequestId = 0;
+  private activityRequestId = 0;
 
   @Input({ required: true }) folio!: FolioMaster;
   @Input({ required: true }) charges: FolioMasterChargeHeader[] = [];
@@ -98,6 +102,16 @@ export class FolioMasterInvoiceModalComponent implements OnInit {
   currencies: MonedaUI[] = [];
   appliedPayments: InvoiceAppliedPayment[] = [];
   selectedClient: InvoiceClient | null = null;
+  generalClientName = '';
+  reservationVoucher = '';
+  reservationObservation = '';
+  reservationProvider = '';
+  reservationActivity = '0000.0';
+  isActivityLoading = false;
+  showClientPicker = false;
+  clientPage = 1;
+  clientTotalPages = 1;
+  clientTotalRecords = 0;
   clientSearch = '';
   clientSearchResults: InvoiceClient[] = [];
   clientSearchError = '';
@@ -116,6 +130,7 @@ export class FolioMasterInvoiceModalComponent implements OnInit {
   paymentDraft: InvoicePaymentDraft = this.createPaymentDraft();
 
   ngOnInit(): void {
+    this.generalClientName = this.getDefaultInvoicePaxName();
     this.selectableCharges = this.charges.map((charge) => ({ ...charge, invoiceSelected: true }));
     this.paymentDraft = this.createPaymentDraft(this.invoiceTotal);
     this.setupClientSearch();
@@ -125,11 +140,9 @@ export class FolioMasterInvoiceModalComponent implements OnInit {
 
   get consumerFinal(): InvoiceClient {
     const reservationGuestName = this.clean(this.folio?.PRV01_Descripcion);
-    const name = this.selectedDocumentIsTicket && reservationGuestName
-      ? reservationGuestName
-      : 'CLIENTE EN GENERAL';
+    const name = this.clean(this.generalClientName) || (this.selectedDocumentIsTicket ? reservationGuestName : '');
 
-    return { code: '0000000000', name, document: '00000000', address: 'S/D', email: '', enviarCorreo: false };
+    return { code: '0000000000', name, document: '00000000', address: 'S/D', email: '', enviarCorreo: false, codigoActividad: '' };
   }
 
   get invoiceClient(): InvoiceClient {
@@ -208,27 +221,63 @@ export class FolioMasterInvoiceModalComponent implements OnInit {
 
   selectClient(client: InvoiceClient): void {
     this.selectedClient = client;
+    this.loadClientActivity(client);
     this.clientSearch = client.name;
     this.clientSearchResults = [];
     this.clientSearchError = '';
+    this.showClientPicker = false;
     this.selectDocumentForClient();
+  }
+
+  openClientPicker(): void {
+    this.showClientPicker = true;
+    this.clientSearch = '';
+    this.clientPage = 1;
+    this.clientTotalPages = 1;
+    this.clientTotalRecords = 0;
+    this.clientSearchResults = [];
+    this.clientSearchError = '';
+    this.isClientSearchLoading = true;
+    this.clientSearchChanges.next({ page: 1, query: '' });
+  }
+
+  closeClientPicker(): void {
+    this.showClientPicker = false;
+    this.clientSearch = '';
+    this.clientSearchResults = [];
+  }
+
+  changeClientPage(page: number): void {
+    const nextPage = Math.max(1, Math.min(page, this.clientTotalPages));
+    if (nextPage === this.clientPage) return;
+    this.clientPage = nextPage;
+    this.isClientSearchLoading = true;
+    this.clientSearchChanges.next({ page: nextPage, query: this.clientSearch.trim() });
   }
 
   clearClient(): void {
     this.selectedClient = null;
+    this.generalClientName = this.getDefaultInvoicePaxName();
+    this.reservationActivity = '0000.0';
     this.clientSearch = '';
     this.clientSearchResults = [];
     this.clientSearchError = '';
+    this.showClientPicker = false;
     this.selectDocumentForClient();
+  }
+
+  private getDefaultInvoicePaxName(): string {
+    const chargePax = this.charges.map((charge) => this.clean(charge.nombrePax)).find(Boolean);
+    return chargePax || this.clean(this.folio?.PRV01_Descripcion);
   }
 
   onClientSearchChange(value: string): void {
     this.clientSearch = value;
-    if (this.selectedClient && this.selectedClient.name !== value) {
-      this.selectedClient = null;
-      this.selectDocumentForClient();
-    }
-    this.clientSearchChanges.next(value);
+    this.clientPage = 1;
+    this.clientSearchResults = [];
+    this.isClientSearchLoading = true;
+    this.clientSearchError = '';
+    this.clientSearchChanges.next({ page: 1, query: value.trim() });
   }
 
   updatePaymentDraft(patch: Partial<InvoicePaymentDraft>): void {
@@ -305,6 +354,12 @@ export class FolioMasterInvoiceModalComponent implements OnInit {
     if (!this.selectedCharges.length) return this.setValidation('Selecciona al menos un cargo para facturar.');
     if (this.selectedCharges.some((charge) => !this.clean(charge.numCrgHab))) return this.setValidation('Uno o más cargos seleccionados no tienen número de cargo de habitación.');
     if (!this.selectedDocument) return this.setValidation('No hay un tipo de documento configurado para el punto de venta PF.');
+    if (!this.selectedClient && !this.generalClientName.trim()) {
+      return this.setValidation('Ingresa el nombre de un huésped o un nombre personalizado para la factura.');
+    }
+    if (this.invoiceClient.enviarCorreo && (this.isActivityLoading || !this.reservationActivity.trim())) {
+      return this.setValidation('El cliente requiere factura electrónica y no tiene una actividad comercial principal disponible.');
+    }
     if (!this.invoiceCanConfirm) {
       return this.setValidation(this.appliedPayments.length ? 'El total pagado debe cubrir el total de la cuenta.' : 'Agrega al menos una forma de pago para confirmar la facturación.');
     }
@@ -380,13 +435,14 @@ export class FolioMasterInvoiceModalComponent implements OnInit {
   private setupClientSearch(): void {
     this.clientSearchChanges.pipe(
       debounceTime(300),
-      distinctUntilChanged(),
-      switchMap((value) => {
-        const query = this.clean(value);
+      switchMap(({ page, query: rawQuery }) => {
+        const query = this.clean(rawQuery);
         this.clientSearchError = '';
 
-        if (query.length < 2) {
+        if (query.length === 1) {
           this.clientSearchResults = [];
+          this.clientTotalRecords = 0;
+          this.clientTotalPages = 1;
           this.isClientSearchLoading = false;
           this.cdr.markForCheck();
           return of(null);
@@ -394,11 +450,11 @@ export class FolioMasterInvoiceModalComponent implements OnInit {
 
         this.isClientSearchLoading = true;
         this.cdr.markForCheck();
-        return this.clienteService.getClientes(1, 8, query).pipe(
+        return this.clienteService.getClientes(page, 10, query || undefined).pipe(
           catchError((error) => {
             console.error('No se pudieron buscar los clientes.', error);
             this.clientSearchError = 'No se pudieron consultar los clientes.';
-            return of({ data: [] as ClienteUI[], totalRegistros: 0, paginaActual: 1, pageSize: 8, totalPages: 1 });
+            return of({ data: [] as ClienteUI[], totalRegistros: 0, paginaActual: page, pageSize: 10, totalPages: 1 });
           }),
           finalize(() => {
             this.isClientSearchLoading = false;
@@ -409,6 +465,9 @@ export class FolioMasterInvoiceModalComponent implements OnInit {
       takeUntilDestroyed(this.destroyRef)
     ).subscribe((response) => {
       this.clientSearchResults = response?.data?.map((client) => this.mapClient(client)) ?? [];
+      this.clientPage = response?.paginaActual ?? this.clientPage;
+      this.clientTotalPages = response?.totalPages ?? 1;
+      this.clientTotalRecords = response?.totalRegistros ?? 0;
       this.cdr.markForCheck();
     });
   }
@@ -420,8 +479,37 @@ export class FolioMasterInvoiceModalComponent implements OnInit {
       document: this.clean(client.ruc),
       address: this.clean(client.direccion) || 'S/D',
       email: this.clean(client.email || client.emailPrincipal),
-      enviarCorreo: client.enviarCorreo === true
+      enviarCorreo: client.enviarCorreo === true,
+      codigoActividad: this.clean(client.codigoActividad)
     };
+  }
+
+  private loadClientActivity(client: InvoiceClient): void {
+    const requestId = ++this.activityRequestId;
+    if (!client.enviarCorreo || !client.document) {
+      this.reservationActivity = '0000.0';
+      this.isActivityLoading = false;
+      this.cdr.markForCheck();
+      return;
+    }
+    this.reservationActivity = '';
+    this.isActivityLoading = true;
+    this.actividadComercialService.getActividades(client.document).pipe(
+      catchError((error) => {
+        console.error('No se pudo cargar la actividad comercial del cliente.', error);
+        return of([]);
+      }),
+      finalize(() => {
+        if (requestId === this.activityRequestId) this.isActivityLoading = false;
+        this.cdr.markForCheck();
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe((activities) => {
+      if (requestId !== this.activityRequestId || this.selectedClient?.code !== client.code) return;
+      const primary = activities.find((item) => Number(item.MPV32_Principal) === 1) ?? activities[0];
+      this.reservationActivity = this.clean(primary?.MPV32_CodigoAMH) || client.codigoActividad;
+      this.cdr.markForCheck();
+    });
   }
 
   private loadCatalogs(): void {
@@ -632,7 +720,19 @@ export class FolioMasterInvoiceModalComponent implements OnInit {
         orden: index + 1, frmPago: this.clean(payment.frmPago), tipo: this.clean(payment.tipo), numTarjeta: this.clean(payment.numTarjeta),
         moneda: this.clean(payment.moneda), monto: this.round(payment.monto), vencimiento: this.clean(payment.vencimiento),
         mtoTotal: this.round(payment.mtoTotal), tCambio: this.round(payment.tCambio)
-      }))
+      })),
+      infoReserva: [{
+        ppV14_TipoDocu: '',
+        ppV14_Serie: '',
+        ppV14_NumDocu: '',
+        ppV14_CodReserva: this.reservationNumber,
+        ppV14_FechaIni: normalizePmsDateDDMMYYYY(this.folio.PRV09_FechaIng || this.folio.PRV01_FecIngresa),
+        ppV14_FechaFin: normalizePmsDateDDMMYYYY(this.folio.PRV09_FechaSal || this.folio.PRV01_FecSalida),
+        ppV14_VoucherRsv: this.clean(this.reservationVoucher),
+        ppV14_Observacion: this.clean(this.reservationObservation),
+        ppV14_NProveedor: this.clean(this.reservationProvider),
+        ppV14_CActividad: this.clean(this.reservationActivity) || '0000.0'
+      }]
     };
   }
 

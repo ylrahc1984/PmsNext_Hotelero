@@ -791,47 +791,67 @@
           </nav>
 
           <main class="room-invoice-body">
-            <section class="room-invoice-card room-invoice-card--client">
-              <h3>Cliente</h3>
-              <label class="room-invoice-label" for="invoice-client-search">Buscar por nombre, documento o reserva...</label>
-              <div class="room-invoice-search">
-                <span class="material-icons" aria-hidden="true">search</span>
-                <input
-                  id="invoice-client-search"
-                  type="search"
-                  [ngModel]="invoiceClientSearch()"
-                  (ngModelChange)="onInvoiceClientSearchChange($event)"
-                  placeholder="Buscar por nombre, documento o reserva..."
-                />
-              </div>
-
-              @if (isInvoiceClientSearchLoading()) {
-                <div class="room-invoice-label">Buscando clientes...</div>
-              } @else if (invoiceClientSearchError()) {
-                <div class="room-invoice-inline-error">{{ invoiceClientSearchError() }}</div>
-              } @else if (invoiceClientSearch().trim().length >= 2 && !filteredInvoiceClients().length) {
-                <div class="room-invoice-label">No se encontraron clientes.</div>
-              }
-
-              @if (!selectedInvoiceClient() && filteredInvoiceClients().length) {
-                <div class="room-invoice-results">
+            @if (showInvoiceClientPicker()) {
+              <section class="room-invoice-client-picker" aria-label="Buscar y seleccionar cliente">
+                <header class="room-invoice-client-picker__header">
+                  <div><span>FACTURACIÓN</span><h3>Seleccionar cliente</h3><p>Busca por nombre, código o identificación y selecciona el cliente de la factura.</p></div>
+                  <button type="button" class="room-invoice-secondary-btn" (click)="closeInvoiceClientPicker()">Volver a la factura</button>
+                </header>
+                <label class="room-invoice-client-picker__search-label" for="invoice-client-search">Buscar cliente</label>
+                <div class="room-invoice-search room-invoice-client-picker__search">
+                  <span class="material-icons" aria-hidden="true">search</span>
+                  <input id="invoice-client-search" type="search" [ngModel]="invoiceClientSearch()" (ngModelChange)="onInvoiceClientSearchChange($event)" placeholder="Nombre, código o identificación" autocomplete="off">
+                  @if (isInvoiceClientSearchLoading()) { <span class="spinner-border spinner-border-sm" aria-label="Buscando clientes"></span> }
+                </div>
+                @if (invoiceClientSearchError()) {
+                  <div class="room-invoice-inline-error">{{ invoiceClientSearchError() }}</div>
+                } @else if (isInvoiceClientSearchLoading()) {
+                  <div class="room-invoice-client-picker__status">Cargando clientes...</div>
+                } @else if (invoiceClientSearch().trim().length === 1) {
+                  <div class="room-invoice-client-picker__status">Escribe al menos 2 caracteres para buscar.</div>
+                } @else if (!filteredInvoiceClients().length) {
+                  <div class="room-invoice-client-picker__status">No hay clientes para mostrar con este criterio.</div>
+                }
+                <div class="room-invoice-client-picker__list">
+                  <button type="button" class="room-invoice-client-picker__consumer" (click)="clearInvoiceClient()">
+                    <span class="material-icons" aria-hidden="true">person_outline</span><span><strong>Consumidor final</strong><small>Usar cliente general</small></span><span class="material-icons" aria-hidden="true">arrow_forward</span>
+                  </button>
                   @for (client of filteredInvoiceClients(); track client.code) {
-                    <button type="button" class="room-invoice-result" (click)="selectInvoiceClient(client)">
-                      <strong>{{ client.name }}</strong>
-                      <span>{{ client.code }} · {{ client.document || 'Sin documento' }}</span>
-                    </button>
+                    <article class="room-invoice-client-picker__row">
+                      <span class="material-icons room-invoice-client-picker__avatar" aria-hidden="true">business</span>
+                      <span class="room-invoice-client-picker__details"><strong>{{ client.name }}</strong><small>{{ client.code }} · {{ client.document || 'Sin identificación' }}</small><em>{{ client.enviarCorreo ? 'Factura electrónica' : 'Tiquete electrónico' }}</em></span>
+                      <button type="button" class="room-invoice-client-picker__select" (click)="selectInvoiceClient(client)">Seleccionar</button>
+                    </article>
                   }
                 </div>
-              }
-
+                <footer class="room-invoice-client-picker__pagination">
+                  <span>{{ invoiceClientTotalRecords() }} clientes · Página {{ invoiceClientPage() }} de {{ invoiceClientTotalPages() }}</span>
+                  <div><button type="button" (click)="changeInvoiceClientPage(invoiceClientPage() - 1)" [disabled]="invoiceClientPage() <= 1 || isInvoiceClientSearchLoading()">Anterior</button><button type="button" (click)="changeInvoiceClientPage(invoiceClientPage() + 1)" [disabled]="invoiceClientPage() >= invoiceClientTotalPages() || isInvoiceClientSearchLoading()">Siguiente</button></div>
+                </footer>
+              </section>
+            }
+            @if (!showInvoiceClientPicker()) {
+            <section class="room-invoice-card room-invoice-card--client">
+              <div class="room-invoice-client-heading"><h3>Cliente</h3><button type="button" class="room-invoice-client-search-button" (click)="openInvoiceClientPicker()"><span class="material-icons" aria-hidden="true">search</span>Buscar cliente</button></div>
               <article class="room-invoice-selected-client">
                 <div class="room-invoice-selected-head">
                   <span>{{ selectedInvoiceClient() ? 'Cliente seleccionado' : 'Consumidor final' }}</span>
                   @if (selectedInvoiceClient()) {
-                    <button type="button" (click)="clearInvoiceClient()">Cambiar</button>
+                    <button type="button" (click)="openInvoiceClientPicker()">Cambiar</button>
                   }
                 </div>
-                <strong>{{ invoiceClient().name }}</strong>
+                @if (selectedInvoiceClient()) {
+                  <strong>{{ invoiceClient().name }}</strong>
+                } @else {
+                  <label class="room-invoice-general-client-name" for="room-invoice-general-client-name">
+                    <span>Nombre para la factura</span>
+                    <input id="room-invoice-general-client-name" type="text" maxlength="160" list="room-invoice-pax-names" [ngModel]="invoiceGeneralClientName()" (ngModelChange)="invoiceGeneralClientName.set($event)" placeholder="Seleccione un huésped o escriba un nombre">
+                    <datalist id="room-invoice-pax-names">
+                      @for (guest of room().guests; track guest.document) { <option [value]="guest.name"></option> }
+                    </datalist>
+                    <small>Puede usar el nombre de un pax de la casa o escribir uno personalizado.</small>
+                  </label>
+                }
                 <dl>
                   <div><dt>Codigo</dt><dd>{{ invoiceClient().code }}</dd></div>
                   <div><dt>Identificacion / Cedula</dt><dd>{{ invoiceClient().document || '0000000000' }}</dd></div>
@@ -841,6 +861,27 @@
                   <div><dt>Direccion</dt><dd>{{ invoiceClient().address || 'S/D' }}</dd></div>
                 </dl>
               </article>
+              <section class="room-invoice-reservation-fields">
+                <h3>Información de reserva</h3>
+                <div class="room-invoice-payment-form">
+                <label>
+                  <span>Voucher de reserva</span>
+                  <input type="text" maxlength="100" [ngModel]="invoiceReservationVoucher()" (ngModelChange)="invoiceReservationVoucher.set($event)" placeholder="Ingrese el voucher">
+                </label>
+                <label>
+                  <span>Proveedor</span>
+                  <input type="text" maxlength="100" [ngModel]="invoiceReservationProvider()" (ngModelChange)="invoiceReservationProvider.set($event)" placeholder="Ingrese el proveedor">
+                </label>
+                <label>
+                  <span>Código de actividad</span>
+                  <input type="text" [value]="isInvoiceActivityLoading() ? 'Consultando actividad...' : invoiceReservationActivity() || (invoiceClient().enviarCorreo ? 'Sin actividad registrada' : '0000.0')" readonly>
+                </label>
+                <label class="room-invoice-reservation-observation">
+                  <span>Observación de reserva</span>
+                  <textarea rows="2" maxlength="500" [ngModel]="invoiceReservationObservation()" (ngModelChange)="invoiceReservationObservation.set($event)" placeholder="Ingrese una observación"></textarea>
+                </label>
+                </div>
+              </section>
             </section>
 
             <section class="room-invoice-card room-invoice-card--payments">
@@ -975,6 +1016,7 @@
                 Ver detalle de consumos
               </button>
             </aside>
+            }
           </main>
 
           <footer class="room-invoice-footer">
@@ -1000,10 +1042,14 @@
                 <div class="room-invoice-inline-error">{{ invoiceDocumentSelectionError() }}</div>
               }
             </div>
-            <button type="button" class="room-invoice-secondary-btn" (click)="closeActionModal()">Cancelar</button>
-            <button type="button" class="room-invoice-primary-btn" [disabled]="isInvoiceSubmitting() || isInvoiceExchangeRateLoading()" (click)="executeActiveAction()">
-              {{ isInvoiceSubmitting() ? 'Facturando...' : isInvoiceExchangeRateLoading() ? 'Validando cambio...' : 'Confirmar Facturacion' }}
-            </button>
+            @if (showInvoiceClientPicker()) {
+              <button type="button" class="room-invoice-secondary-btn" (click)="closeActionModal()">Cancelar</button>
+            } @else {
+              <button type="button" class="room-invoice-secondary-btn" (click)="closeActionModal()">Cancelar</button>
+              <button type="button" class="room-invoice-primary-btn" [disabled]="isInvoiceSubmitting() || isInvoiceExchangeRateLoading()" (click)="executeActiveAction()">
+                {{ isInvoiceSubmitting() ? 'Facturando...' : isInvoiceExchangeRateLoading() ? 'Validando cambio...' : 'Confirmar Facturacion' }}
+              </button>
+            }
           </footer>
         } @else if (isActionSelected('new-charge')) {
           <header class="room-charge-header">

@@ -40,32 +40,54 @@
     </nav>
 
     <main class="room-invoice-body">
-      <section class="room-invoice-card room-invoice-card--client">
-        <h3>Cliente</h3>
-        <label class="room-invoice-label" for="folio-invoice-client-search">Buscar por nombre, código o identificación...</label>
-        <div class="room-invoice-search">
+      <section class="room-invoice-client-picker" *ngIf="showClientPicker" aria-label="Buscar y seleccionar cliente">
+        <header class="room-invoice-client-picker__header">
+          <div><span>FACTURACIÓN</span><h3>Seleccionar cliente</h3><p>Busca por nombre, código o identificación y selecciona el cliente de la factura.</p></div>
+          <button type="button" class="room-invoice-secondary-btn" (click)="closeClientPicker()">Volver a la factura</button>
+        </header>
+        <label class="room-invoice-client-picker__search-label" for="folio-invoice-client-search">Buscar cliente</label>
+        <div class="room-invoice-search room-invoice-client-picker__search">
           <span class="material-icons" aria-hidden="true">search</span>
-          <input id="folio-invoice-client-search" type="search" [ngModel]="clientSearch" (ngModelChange)="onClientSearchChange($event)" placeholder="Escribe al menos 2 caracteres..." autocomplete="off">
+          <input id="folio-invoice-client-search" type="search" [ngModel]="clientSearch" (ngModelChange)="onClientSearchChange($event)" placeholder="Nombre, código o identificación" autocomplete="off">
           <span class="spinner-border spinner-border-sm" *ngIf="isClientSearchLoading" aria-label="Buscando clientes"></span>
         </div>
-
-        <div class="room-invoice-results" *ngIf="clientSearchResults.length">
-          <button type="button" class="room-invoice-result" *ngFor="let client of clientSearchResults; trackBy: trackClient" (click)="selectClient(client)">
-            <strong>{{ client.name }}</strong>
-            <span>{{ client.code }} · {{ client.document || 'Sin documento' }}</span>
-          </button>
-        </div>
         <div class="room-invoice-inline-error" *ngIf="clientSearchError">{{ clientSearchError }}</div>
-        <div class="room-invoice-client-empty" *ngIf="!isClientSearchLoading && !clientSearchError && clientSearch.length >= 2 && !clientSearchResults.length && !selectedClient">
-          No se encontraron clientes para “{{ clientSearch }}”.
+        <div class="room-invoice-client-picker__status" *ngIf="!isClientSearchLoading && !clientSearchError && clientSearch.length === 1">Escribe al menos 2 caracteres para buscar.</div>
+        <div class="room-invoice-client-picker__status" *ngIf="!isClientSearchLoading && !clientSearchError && clientSearch.length !== 1 && !clientSearchResults.length">No hay clientes para mostrar con este criterio.</div>
+        <div class="room-invoice-client-picker__list">
+          <button type="button" class="room-invoice-client-picker__consumer" (click)="clearClient()">
+            <span class="material-icons" aria-hidden="true">person_outline</span><span><strong>Consumidor final</strong><small>Usar cliente general</small></span><span class="material-icons" aria-hidden="true">arrow_forward</span>
+          </button>
+          <article class="room-invoice-client-picker__row" *ngFor="let client of clientSearchResults; trackBy: trackClient">
+            <span class="material-icons room-invoice-client-picker__avatar" aria-hidden="true">business</span>
+            <span class="room-invoice-client-picker__details"><strong>{{ client.name }}</strong><small>{{ client.code }} · {{ client.document || 'Sin identificación' }}</small><em>{{ client.enviarCorreo ? 'Factura electrónica' : 'Tiquete electrónico' }}</em></span>
+            <button type="button" class="room-invoice-client-picker__select" (click)="selectClient(client)">Seleccionar</button>
+          </article>
         </div>
-
+        <footer class="room-invoice-client-picker__pagination">
+          <span>{{ clientTotalRecords }} clientes · Página {{ clientPage }} de {{ clientTotalPages }}</span>
+          <div><button type="button" (click)="changeClientPage(clientPage - 1)" [disabled]="clientPage <= 1 || isClientSearchLoading">Anterior</button><button type="button" (click)="changeClientPage(clientPage + 1)" [disabled]="clientPage >= clientTotalPages || isClientSearchLoading">Siguiente</button></div>
+        </footer>
+      </section>
+      <ng-container *ngIf="!showClientPicker">
+      <section class="room-invoice-card room-invoice-card--client">
+        <div class="room-invoice-client-heading"><h3>Cliente</h3><button type="button" class="room-invoice-client-search-button" (click)="openClientPicker()"><span class="material-icons" aria-hidden="true">search</span>Buscar cliente</button></div>
         <article class="room-invoice-selected-client">
           <div class="room-invoice-selected-head">
             <span>{{ selectedClient ? 'Cliente seleccionado' : 'Consumidor final' }}</span>
-            <button *ngIf="selectedClient" type="button" (click)="clearClient()">Cambiar</button>
+            <button *ngIf="selectedClient" type="button" (click)="openClientPicker()">Cambiar</button>
           </div>
-          <strong>{{ invoiceClient.name }}</strong>
+          <strong *ngIf="selectedClient; else editableGeneralClientName">{{ invoiceClient.name }}</strong>
+          <ng-template #editableGeneralClientName>
+            <label class="room-invoice-general-client-name" for="folio-invoice-general-client-name">
+              <span>Nombre para la factura</span>
+              <input id="folio-invoice-general-client-name" type="text" maxlength="160" list="folio-invoice-pax-names" [(ngModel)]="generalClientName" placeholder="Seleccione un huésped o escriba un nombre">
+              <datalist id="folio-invoice-pax-names">
+                <option *ngFor="let charge of charges" [value]="charge.nombrePax"></option>
+              </datalist>
+              <small>Puede usar el nombre de un pax de la casa o escribir uno personalizado.</small>
+            </label>
+          </ng-template>
           <dl>
             <div><dt>Código</dt><dd>{{ invoiceClient.code }}</dd></div>
             <div><dt>Identificación / RUC</dt><dd>{{ invoiceClient.document || '0000000000' }}</dd></div>
@@ -91,6 +113,27 @@
           <p class="room-invoice-document-message" *ngIf="documentSelectionMessage && !isDocumentsLoading">{{ documentSelectionMessage }}</p>
           <div class="room-invoice-inline-error" *ngIf="documentSelectionError">{{ documentSelectionError }}</div>
         </article>
+        <section class="room-invoice-reservation-fields">
+          <h3>Información de reserva</h3>
+          <div class="folio-invoice-reservation-form">
+            <label>
+              <span>Voucher de reserva</span>
+              <input type="text" maxlength="100" [(ngModel)]="reservationVoucher" placeholder="Ingrese el voucher">
+            </label>
+            <label>
+              <span>Proveedor</span>
+              <input type="text" maxlength="100" [(ngModel)]="reservationProvider" placeholder="Ingrese el proveedor">
+            </label>
+            <label>
+              <span>Código de actividad</span>
+                  <input type="text" [value]="isActivityLoading ? 'Consultando actividad...' : reservationActivity || (invoiceClient.enviarCorreo ? 'Sin actividad registrada' : '0000.0')" readonly>
+            </label>
+            <label class="folio-invoice-reservation-observation">
+              <span>Observación de reserva</span>
+              <textarea rows="2" maxlength="500" [(ngModel)]="reservationObservation" placeholder="Ingrese una observación"></textarea>
+            </label>
+          </div>
+        </section>
       </section>
 
       <section class="room-invoice-card room-invoice-card--payments">
@@ -178,6 +221,7 @@
           <span class="material-icons">list</span>Ver detalle de consumos
         </button>
       </aside>
+      </ng-container>
     </main>
 
     <section class="folio-invoice-charge-panel" *ngIf="showChargeSelection">
@@ -195,8 +239,13 @@
     </section>
 
     <footer class="room-invoice-footer">
-      <button type="button" class="room-invoice-secondary-btn" (click)="closeModal.emit()">Cancelar</button>
-      <button type="button" class="room-invoice-primary-btn" [disabled]="isSubmitting" (click)="submitInvoice()">{{ isSubmitting ? 'Facturando...' : 'Confirmar Facturación' }}</button>
+      <ng-container *ngIf="showClientPicker; else invoiceFooterActions">
+        <button type="button" class="room-invoice-secondary-btn" (click)="closeModal.emit()">Cancelar</button>
+      </ng-container>
+      <ng-template #invoiceFooterActions>
+        <button type="button" class="room-invoice-secondary-btn" (click)="closeModal.emit()">Cancelar</button>
+        <button type="button" class="room-invoice-primary-btn" [disabled]="isSubmitting" (click)="submitInvoice()">{{ isSubmitting ? 'Facturando...' : 'Confirmar Facturación' }}</button>
+      </ng-template>
     </footer>
   </section>
 </div>

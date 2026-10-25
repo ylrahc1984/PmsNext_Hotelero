@@ -306,6 +306,19 @@ export interface RoomInvoicePaymentPayload {
   tCambio         : number;
 }
 
+export interface RoomInvoiceReservationInfoPayload {
+  ppV14_TipoDocu       : string;
+  ppV14_Serie          : string;
+  ppV14_NumDocu        : string;
+  ppV14_CodReserva     : string;
+  ppV14_FechaIni       : string;
+  ppV14_FechaFin       : string;
+  ppV14_VoucherRsv     : string;
+  ppV14_Observacion    : string;
+  ppV14_NProveedor     : string;
+  ppV14_CActividad     : string;
+}
+
 export interface RoomInvoicePayload {
   proceso         : number;
   tipDocu         : string;
@@ -343,6 +356,7 @@ export interface RoomInvoicePayload {
   operador        : string;
   detDocumento    : RoomInvoiceDocumentDetailPayload[];
   frmPago         : RoomInvoicePaymentPayload[];
+  infoReserva     : RoomInvoiceReservationInfoPayload[];
 }
 
 interface RoomStayApiResponse {
@@ -522,6 +536,11 @@ export class RoomStayManagementService {
       detDocumento  : payload.detDocumento.map((item) => ({
         ...item,
         fecha: normalizePmsDateDDMMYYYY(item.fecha)
+      })),
+      infoReserva   : payload.infoReserva.map((item) => ({
+        ...item,
+        ppV14_FechaIni: normalizePmsDateDDMMYYYY(item.ppV14_FechaIni),
+        ppV14_FechaFin: normalizePmsDateDDMMYYYY(item.ppV14_FechaFin)
       }))
     });
   }

@@ -158,25 +158,6 @@
                   <label class="form-label">Número Operación</label>
                   <input type="text" class="form-control" formControlName="nOperacion" [class.is-invalid]="isInvalid('nOperacion')">
                 </div>
-
-                <ng-container *ngIf="isCardPayment()">
-                  <div class="col-md-6">
-                    <label class="form-label">Número Tarjeta</label>
-                    <input type="text" class="form-control" formControlName="numTarjeta">
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label">Vencimiento</label>
-                    <input type="text" class="form-control" formControlName="venTarjeta" placeholder="MM/AA">
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label">Código Seguridad</label>
-                    <input type="password" class="form-control" formControlName="codSeguridad">
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label">Tipo Tarjeta</label>
-                    <input type="text" class="form-control" formControlName="tipTarjeta">
-                  </div>
-                </ng-container>
  
               </div>
 

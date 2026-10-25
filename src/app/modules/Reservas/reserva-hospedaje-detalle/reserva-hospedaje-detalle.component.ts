@@ -74,7 +74,7 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
   readonly totalServicios               = computed(() => this.servicios().reduce((total, item) => total + this.serviceTotal(item), 0));
   readonly totalImpuestos               = computed(() => this.servicios().reduce((total, item) => total + this.toNumber(item.impuesto), 0));
   readonly totalPax                     = computed(() =>
-    this.habitaciones().reduce((total, item) => total + this.toNumber(item.numPax) * this.toNumber(item.cantHab), 0)
+    this.habitaciones().reduce((total, item) => total + this.toNumber(item.numPax), 0)
   );
   readonly totalNinos                   = computed(() => this.habitaciones().reduce((total, item) => total + this.toNumber(item.numChild), 0));
   readonly accionesBloqueadas           = computed(() => this.esEstadoBloqueado(this.reserva()?.estado));

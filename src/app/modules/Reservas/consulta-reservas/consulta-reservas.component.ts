@@ -21,6 +21,7 @@ import { ReservationPrepaymentsComponent } from '../reservation-prepayments/rese
 import { ReservationPrepaymentSummary, buildReservationPrepaymentSummary } from '../reservation-prepayments/models/reservation-prepayment.model';
 import { ReservaHabitacionService } from '../services/reserva-habitacion.service';
 import { ReservaTagsService } from '../services/reserva-tags.service';
+import { ConsultaReservasExportFilters, ConsultaReservasExportService } from './consulta-reservas-export.service';
 
 interface ConsultaReservasFilterForm {
   tipoFecha: FormControl<ReservaTipoFecha>;
@@ -76,6 +77,9 @@ export class ConsultaReservasComponent implements OnInit {
   readonly changingEstadoReserva           = signal('');
   readonly changingEstadoDestino           = signal<EstadoCambioReserva | ''>('');
   readonly printingReserva                 = signal('');
+  readonly exportingExcel                  = signal(false);
+  readonly exportingPdf                    = signal(false);
+  readonly exporting                       = computed(() => this.exportingExcel() || this.exportingPdf());
   readonly prepaymentsOpen                 = signal(false);
   readonly selectedPrepaymentReserva       = signal<ReservationPrepaymentSummary | null>(null);
   readonly errorMessage                    = signal('');
@@ -123,6 +127,7 @@ export class ConsultaReservasComponent implements OnInit {
     private readonly auth                     : AuthService,
     private readonly operationalDateService   : OperationalDateService,
     private readonly operationalPolicy        : OperationalPolicyService,
+    private readonly reservasExportService    : ConsultaReservasExportService,
     private readonly destroyRef               : DestroyRef
   ) {
     const { inicio, salida } = this.defaultDateRange(this.operationalDateService.operationalDate());
@@ -540,20 +545,46 @@ export class ConsultaReservasComponent implements OnInit {
     this.loadReservas();
   }
 
-  exportar(): void {
-    const header = 'Reserva,Agencia,Ingreso,Salida,Estado,Total,Etiquetas,Tiene alerta';
-    const rows = this.reservas().map((reserva) => [
-      reserva.reserva,
-      reserva.agencia,
-      reserva.ingreso,
-      reserva.salida,
-      reserva.estado,
-      reserva.total,
-      reserva.tags.map((tag) => tag.nombre).join(' | '),
-      reserva.tieneAlertas ? 'Sí' : 'No'
-    ].map((value) => this.escapeCsvValue(value)).join(','));
-    const csv = [header, ...rows].join('\n');
-    console.info('Export reservas\n' + csv);
+  async exportarExcel(): Promise<void> {
+    if (this.exporting() || this.loading() || !(await this.operationalPolicy.require(OperationalAction.View))) return;
+    this.exportingExcel.set(true);
+    try {
+      const filters = this.buildExportFilters(this.filtro());
+      const reservas = await this.cargarTodasLasReservas(filters);
+      if (!reservas.length) {
+        await Swal.fire({ title: 'Sin reservas', text: 'No hay resultados para exportar con los filtros actuales.', icon: 'info', confirmButtonText: 'Aceptar' });
+        return;
+      }
+      await this.reservasExportService.exportExcel(filters, reservas);
+      await Swal.fire({ title: 'Excel generado', text: `Se exportaron ${reservas.length} reservas.`, icon: 'success', timer: 1800, showConfirmButton: false });
+    } catch (error) {
+      console.error('No se pudo exportar la consulta de reservas a Excel.', error);
+      await Swal.fire({ title: 'No se pudo exportar', text: 'Ocurrió un error al generar el archivo Excel.', icon: 'error', confirmButtonText: 'Aceptar' });
+    } finally {
+      this.exportingExcel.set(false);
+    }
+  }
+
+  async imprimirPdf(): Promise<void> {
+    if (this.exporting() || this.loading() || !(await this.operationalPolicy.require(OperationalAction.View))) return;
+    this.exportingPdf.set(true);
+    try {
+      const filters = this.buildExportFilters(this.filtro());
+      const reservas = await this.cargarTodasLasReservas(filters);
+      if (!reservas.length) {
+        await Swal.fire({ title: 'Sin reservas', text: 'No hay resultados para imprimir con los filtros actuales.', icon: 'info', confirmButtonText: 'Aceptar' });
+        return;
+      }
+      const result = await this.reservasExportService.openPdf(filters, reservas);
+      if (result === 'downloaded') {
+        await Swal.fire({ title: 'PDF generado', text: `Se preparó el reporte de ${reservas.length} reservas para descarga.`, icon: 'success', timer: 1800, showConfirmButton: false });
+      }
+    } catch (error) {
+      console.error('No se pudo generar el PDF de la consulta de reservas.', error);
+      await Swal.fire({ title: 'No se pudo generar el PDF', text: 'Ocurrió un error al preparar el reporte.', icon: 'error', confirmButtonText: 'Aceptar' });
+    } finally {
+      this.exportingPdf.set(false);
+    }
   }
 
   setPageSize(value: string): void {
@@ -695,17 +726,7 @@ export class ConsultaReservasComponent implements OnInit {
     this.loading.set(true);
     this.errorMessage.set('');
 
-    const request$ = busqueda
-      ? this.reservaService.buscarReservas(busqueda, this.currentPage(), this.pageSize())
-      : this.reservaService.consultarReservas({
-          tipoFecha: filtro.tipoFecha,
-          fecIngreso: fechaInicio,
-          fecSalida: fechaFinal,
-          pagina: this.currentPage(),
-          tamanoPagina: this.pageSize(),
-          agencia: filtro.agencia,
-          estado: filtro.estado
-        });
+    const request$ = this.requestReservasPage(filtro, this.currentPage(), this.pageSize());
 
     request$
       .pipe(
@@ -727,6 +748,49 @@ export class ConsultaReservasComponent implements OnInit {
         this.pageSize.set(response.tamanoPagina || this.pageSize());
         this.totalPages.set(Math.max(response.totalPaginas || 1, 1));
       });
+  }
+
+  private requestReservasPage(filtro: ReservaFiltro, pagina: number, tamanoPagina: number): Observable<ReservaConsultaPage> {
+    const busqueda = filtro.busqueda.trim();
+    if (busqueda) return this.reservaService.buscarReservas(busqueda, pagina, tamanoPagina);
+
+    const fechaInicio = this.normalizeDateForApi(filtro.fechaInicio);
+    const fechaFinal = this.normalizeDateForApi(filtro.fechaFinal);
+    return this.reservaService.consultarReservas({
+      tipoFecha: filtro.tipoFecha,
+      fecIngreso: fechaInicio,
+      fecSalida: fechaFinal,
+      pagina,
+      tamanoPagina,
+      agencia: filtro.agencia,
+      estado: filtro.estado
+    });
+  }
+
+  private async cargarTodasLasReservas(filtro: ReservaFiltro): Promise<ReservaConsulta[]> {
+    const pageSize = 50;
+    const firstPage = await firstValueFrom(this.requestReservasPage(filtro, 1, pageSize));
+    const pageCount = Math.max(firstPage.totalPaginas || 1, 1);
+    const pages: ReservaConsultaPage[] = [firstPage];
+
+    for (let start = 2; start <= pageCount; start += 4) {
+      const pageNumbers = Array.from({ length: Math.min(4, pageCount - start + 1) }, (_, index) => start + index);
+      const responses = await firstValueFrom(forkJoin(pageNumbers.map((page) => this.requestReservasPage(filtro, page, pageSize))));
+      pages.push(...responses);
+    }
+
+    const enrichedPages: ReservaConsultaPage[] = [];
+    for (const page of pages) enrichedPages.push(await firstValueFrom(this.loadReservationTags(page)));
+    return enrichedPages.flatMap((page) => page.reservas);
+  }
+
+  private buildExportFilters(filtro: ReservaFiltro): ConsultaReservasExportFilters {
+    const estadoLabel = this.estados.find((item) => item.valor === this.normalizeEstadoCode(filtro.estado))?.etiqueta ?? filtro.estado;
+    return {
+      ...filtro,
+      agenciaDescripcion: this.agenciaSearchControl.value.trim() || filtro.agencia,
+      estadoDescripcion: estadoLabel
+    };
   }
 
   private loadReservationTags(response: ReservaConsultaPage): Observable<ReservaConsultaPage> {
@@ -763,11 +827,6 @@ export class ConsultaReservasComponent implements OnInit {
     return forkJoin(reservationsWithTags$).pipe(
       map((reservas) => ({ ...response, reservas }))
     );
-  }
-
-  private escapeCsvValue(value: string | number): string {
-    const text = String(value ?? '');
-    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
   }
 
   private defaultDateRange(operationalDate: string): { inicio: string; salida: string } {

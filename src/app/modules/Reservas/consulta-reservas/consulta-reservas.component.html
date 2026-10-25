@@ -13,9 +13,13 @@
         <i class="feather icon-refresh-cw me-1"></i>
         Actualizar
       </button>
-      <button type="button" class="btn btn-outline-secondary" (click)="exportar()">
-        <i class="feather icon-download me-1"></i>
-        Exportar
+      <button type="button" class="btn btn-outline-success" (click)="exportarExcel()" [disabled]="loading() || exporting() || totalRecords() === 0">
+        <i class="feather icon-file-text me-1"></i>
+        {{ exportingExcel() ? 'Generando Excel…' : 'Exportar Excel' }}
+      </button>
+      <button type="button" class="btn btn-outline-danger" (click)="imprimirPdf()" [disabled]="loading() || exporting() || totalRecords() === 0">
+        <i class="feather icon-printer me-1"></i>
+        {{ exportingPdf() ? 'Generando PDF…' : 'Imprimir PDF' }}
       </button>
     </div>
   </div>

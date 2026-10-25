@@ -6,7 +6,7 @@ import { CdkScrollable } from '@angular/cdk/scrolling';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Subject, firstValueFrom, forkJoin, of } from 'rxjs';
-import { catchError, debounceTime, distinctUntilChanged, finalize, switchMap } from 'rxjs/operators';
+import { catchError, debounceTime, finalize, switchMap } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
 import { AuthService } from 'src/app/core/services/auth.service';
@@ -21,6 +21,7 @@ import {
 } from 'src/app/core/utils/pms-date.util';
 import { ClienteService, SelectOption } from 'src/app/demo/catalogos/agencias-comisionistas/cliente.service';
 import { ClienteUI } from 'src/app/demo/catalogos/agencias-comisionistas/cliente.models';
+import { ActividadComercialService } from 'src/app/demo/catalogos/agencias-comisionistas/actividad-comercial/actividad-comercial.service';
 import { MonedaService, MonedaUI } from 'src/app/demo/administracion/monedas/moneda.service';
 import { TipoCambio, TipoCambioService } from 'src/app/demo/administracion/tipo-cambio/tipo-cambio.service';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
@@ -142,6 +143,7 @@ interface InvoiceClient {
   address         : string;
   email           ?: string;
   enviarCorreo    : boolean;
+  codigoActividad : string;
 }
 
 interface InvoicePaymentMethod {
@@ -347,6 +349,7 @@ export class RoomStayManagementComponent implements OnInit {
   private readonly roomStatementPosService        = inject(RoomStatementPosService);
   private readonly roomStatementDataService       = inject(RoomStatementDataService);
   private readonly clienteService                 = inject(ClienteService);
+  private readonly actividadComercialService      = inject(ActividadComercialService);
   private readonly nationalitiesService           = inject(NationalitiesService);
   private readonly paxTypesService                = inject(PaxTypesService);
   private readonly monedaService                  = inject(MonedaService);
@@ -354,10 +357,11 @@ export class RoomStayManagementComponent implements OnInit {
   private readonly reservaTagsService             = inject(ReservaTagsService);
   private readonly invoiceBaseCurrency            = 'USD';
   private readonly roomChargeCatalogPageSize      = 8;
-  private readonly invoiceClientSearchChanges     = new Subject<string>();
+  private readonly invoiceClientSearchChanges     = new Subject<{ page: number; query: string }>();
   private requestedRoomNumber                     = '';
   private requestedReservationNumber              = '';
   private invoiceExchangeRateRequestId            = 0;
+  private invoiceActivityRequestId                = 0;
   private assignedTagsRequestId                   = 0;
   private accountStatementRequestId               = 0;
   private assignedTagsReservationCode             = '';
@@ -368,7 +372,8 @@ export class RoomStayManagementComponent implements OnInit {
     document      : '0000000000',
     address       : 'S/D',
     email         : '',
-    enviarCorreo  : false
+    enviarCorreo  : false,
+    codigoActividad: ''
   };
 
   readonly activeTab                             = signal<ActiveTab>('stay');
@@ -444,6 +449,16 @@ export class RoomStayManagementComponent implements OnInit {
   readonly isInvoiceClientSearchLoading          = signal(false);
   readonly invoiceClientSearchError              = signal('');
   readonly selectedInvoiceClient                 = signal<InvoiceClient | null>(null);
+  readonly invoiceGeneralClientName              = signal('');
+  readonly showInvoiceClientPicker               = signal(false);
+  readonly invoiceClientPage                     = signal(1);
+  readonly invoiceClientTotalPages              = signal(1);
+  readonly invoiceClientTotalRecords            = signal(0);
+  readonly invoiceReservationVoucher              = signal('');
+  readonly invoiceReservationObservation          = signal('');
+  readonly invoiceReservationProvider             = signal('');
+  readonly invoiceReservationActivity             = signal('0000.0');
+  readonly isInvoiceActivityLoading               = signal(false);
   readonly invoiceAppliedPayments                = signal<InvoiceAppliedPayment[]>([]);
   readonly invoicePaymentDraft                   = signal<InvoicePaymentDraft>({
     methodCode      : '',
@@ -679,7 +694,8 @@ export class RoomStayManagementComponent implements OnInit {
       document    : guest.document,
       address     : `Habitacion ${this.room().roomNumber}`,
       email       : '',
-      enviarCorreo: false
+      enviarCorreo: false,
+      codigoActividad: ''
     }));
 
     return [
@@ -690,26 +706,26 @@ export class RoomStayManagementComponent implements OnInit {
         document    : this.room().reservationNumber,
         address     : `Reserva de habitacion ${this.room().roomNumber}`,
         email       : '',
-        enviarCorreo: false
+        enviarCorreo: false,
+        codigoActividad: ''
       },
       ...guestClients
     ];
   });
   readonly filteredInvoiceClients = computed(() => {
     const term = this.normalizeSearchTerm(this.invoiceClientSearch());
-    const localClients = this.invoiceClients();
-
-    if (!term) {
-      return localClients.slice(0, 4);
-    }
-
+    const localClients = this.invoiceClients().filter((client) => client.code !== this.invoiceConsumerFinal.code);
     const matches = [...localClients, ...this.invoiceCatalogClients()].filter((client) =>
+      !term ||
       [client.name, client.code, client.document].some((field) => this.normalizeSearchTerm(field).includes(term))
     );
 
-    return [...new Map(matches.map((client) => [client.code, client])).values()].slice(0, 8);
+    return [...new Map(matches.map((client) => [client.code, client])).values()];
   });
-  readonly invoiceClient       = computed(() => this.selectedInvoiceClient() ?? this.invoiceConsumerFinal);
+  readonly invoiceClient       = computed(() => {
+    const selected = this.selectedInvoiceClient();
+    return selected ?? { ...this.invoiceConsumerFinal, name: this.cleanText(this.invoiceGeneralClientName()) };
+  });
   readonly selectedInvoiceDocument = computed(() => {
     const documents = this.invoicePointOfSaleDocuments();
     const principal = documents.find((document) => document.MPV31_Principal === 1) ?? documents[0] ?? null;
@@ -1454,21 +1470,54 @@ export class RoomStayManagementComponent implements OnInit {
 
   onInvoiceClientSearchChange(value: string): void {
     this.invoiceClientSearch.set(value);
-    this.invoiceClientSearchChanges.next(value);
+    this.invoiceClientPage.set(1);
+    this.invoiceCatalogClients.set([]);
+    this.isInvoiceClientSearchLoading.set(true);
+    this.invoiceClientSearchError.set('');
+    this.invoiceClientSearchChanges.next({ page: 1, query: value.trim() });
+  }
 
-    if (this.selectedInvoiceClient()?.name !== value) {
-      this.selectedInvoiceClient.set(null);
-    }
+  openInvoiceClientPicker(): void {
+    this.showInvoiceClientPicker.set(true);
+    this.invoiceClientSearch.set('');
+    this.invoiceClientPage.set(1);
+    this.invoiceCatalogClients.set([]);
+    this.invoiceClientTotalRecords.set(0);
+    this.invoiceClientTotalPages.set(1);
+    this.invoiceClientSearchError.set('');
+    this.isInvoiceClientSearchLoading.set(true);
+    this.invoiceClientSearchChanges.next({ page: 1, query: '' });
+  }
+
+  closeInvoiceClientPicker(): void {
+    this.showInvoiceClientPicker.set(false);
+    this.invoiceClientSearch.set('');
+    this.invoiceValidationMessage.set('');
+  }
+
+  changeInvoiceClientPage(page: number): void {
+    const nextPage = Math.max(1, Math.min(page, this.invoiceClientTotalPages()));
+    if (nextPage === this.invoiceClientPage()) return;
+    this.invoiceClientPage.set(nextPage);
+    this.isInvoiceClientSearchLoading.set(true);
+    this.invoiceClientSearchChanges.next({ page: nextPage, query: this.invoiceClientSearch().trim() });
   }
 
   selectInvoiceClient(client: InvoiceClient): void {
     this.selectedInvoiceClient.set(client);
+    this.loadInvoiceClientActivity(client);
     this.invoiceClientSearch.set(client.name);
+    this.showInvoiceClientPicker.set(false);
+    this.invoiceValidationMessage.set('');
   }
 
   clearInvoiceClient(): void {
     this.selectedInvoiceClient.set(null);
+    this.invoiceGeneralClientName.set(this.getDefaultInvoicePaxName());
+    this.invoiceReservationActivity.set('0000.0');
     this.invoiceClientSearch.set('');
+    this.showInvoiceClientPicker.set(false);
+    this.invoiceValidationMessage.set('');
   }
 
   updateInvoicePaymentDraft(patch: Partial<InvoicePaymentDraft>): void {
@@ -3294,8 +3343,17 @@ export class RoomStayManagementComponent implements OnInit {
     const defaultCurrency = this.getDefaultInvoiceCurrency();
 
     this.selectedInvoiceClient.set(null);
+    this.invoiceGeneralClientName.set(this.getDefaultInvoicePaxName());
+    this.showInvoiceClientPicker.set(false);
+    this.invoiceClientPage.set(1);
+    this.invoiceClientTotalPages.set(1);
+    this.invoiceClientTotalRecords.set(0);
+    this.invoiceReservationVoucher.set('');
+    this.invoiceReservationObservation.set('');
+    this.invoiceReservationProvider.set('');
+    this.invoiceReservationActivity.set('0000.0');
+    this.isInvoiceActivityLoading.set(false);
     this.invoiceClientSearch.set('');
-    this.invoiceClientSearchChanges.next('');
     this.invoiceCatalogClients.set([]);
     this.invoiceClientSearchError.set('');
     this.isInvoiceClientSearchLoading.set(false);
@@ -3315,28 +3373,33 @@ export class RoomStayManagementComponent implements OnInit {
     this.loadInvoiceExchangeRateForCurrency(defaultCurrency);
   }
 
+  private getDefaultInvoicePaxName(): string {
+    return this.cleanText(this.room().guests.find((guest) => this.cleanText(guest.name))?.name);
+  }
+
   private setupInvoiceClientSearch(): void {
     this.invoiceClientSearchChanges
       .pipe(
         debounceTime(300),
-        distinctUntilChanged(),
-        switchMap((value) => {
-          const query = this.cleanText(value);
+        switchMap(({ page, query: rawQuery }) => {
+          const query = this.cleanText(rawQuery);
           this.invoiceClientSearchError.set('');
 
-          if (query.length < 2) {
+          if (query.length === 1) {
             this.invoiceCatalogClients.set([]);
+            this.invoiceClientTotalRecords.set(0);
+            this.invoiceClientTotalPages.set(1);
             this.isInvoiceClientSearchLoading.set(false);
             return of(null);
           }
 
           this.isInvoiceClientSearchLoading.set(true);
 
-          return this.clienteService.getClientes(1, 8, query).pipe(
+          return this.clienteService.getClientes(page, 10, query || undefined).pipe(
             catchError((error) => {
               console.error('No se pudieron buscar los clientes para facturación.', error);
               this.invoiceClientSearchError.set('No se pudieron consultar los clientes.');
-              return of({ data: [] as ClienteUI[], totalRegistros: 0, paginaActual: 1, pageSize: 8, totalPages: 1 });
+              return of({ data: [] as ClienteUI[], totalRegistros: 0, paginaActual: page, pageSize: 10, totalPages: 1 });
             }),
             finalize(() => this.isInvoiceClientSearchLoading.set(false))
           );
@@ -3345,6 +3408,9 @@ export class RoomStayManagementComponent implements OnInit {
       )
       .subscribe((response) => {
         this.invoiceCatalogClients.set(response?.data?.map((client) => this.mapInvoiceClient(client)) ?? []);
+        this.invoiceClientPage.set(response?.paginaActual ?? 1);
+        this.invoiceClientTotalPages.set(response?.totalPages ?? 1);
+        this.invoiceClientTotalRecords.set(response?.totalRegistros ?? 0);
       });
   }
 
@@ -3355,8 +3421,34 @@ export class RoomStayManagementComponent implements OnInit {
       document: this.cleanText(client.ruc),
       address: this.cleanText(client.direccion) || 'S/D',
       email: this.cleanText(client.email || client.emailPrincipal),
-      enviarCorreo: client.enviarCorreo === true
+      enviarCorreo: client.enviarCorreo === true,
+      codigoActividad: this.cleanText(client.codigoActividad)
     };
+  }
+
+  private loadInvoiceClientActivity(client: InvoiceClient): void {
+    const requestId = ++this.invoiceActivityRequestId;
+    if (!client.enviarCorreo || !client.document) {
+      this.invoiceReservationActivity.set('0000.0');
+      this.isInvoiceActivityLoading.set(false);
+      return;
+    }
+    this.invoiceReservationActivity.set('');
+    this.isInvoiceActivityLoading.set(true);
+    this.actividadComercialService.getActividades(client.document).pipe(
+      catchError((error) => {
+        console.error('No se pudo cargar la actividad comercial del cliente.', error);
+        return of([]);
+      }),
+      finalize(() => {
+        if (requestId === this.invoiceActivityRequestId) this.isInvoiceActivityLoading.set(false);
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe((activities) => {
+      if (requestId !== this.invoiceActivityRequestId || this.selectedInvoiceClient()?.code !== client.code) return;
+      const primary = activities.find((item) => Number(item.MPV32_Principal) === 1) ?? activities[0];
+      this.invoiceReservationActivity.set(this.cleanText(primary?.MPV32_CodigoAMH) || client.codigoActividad);
+    });
   }
 
   private loadInvoiceCatalogs(): void {
@@ -4164,6 +4256,16 @@ export class RoomStayManagementComponent implements OnInit {
       return;
     }
 
+    if (!this.selectedInvoiceClient() && !this.invoiceGeneralClientName().trim()) {
+      this.invoiceValidationMessage.set('Ingresa el nombre de un huésped o un nombre personalizado para la factura.');
+      return;
+    }
+
+    if (this.invoiceClient().enviarCorreo && (this.isInvoiceActivityLoading() || !this.invoiceReservationActivity().trim())) {
+      this.invoiceValidationMessage.set('El cliente requiere factura electrónica y no tiene una actividad comercial principal disponible.');
+      return;
+    }
+
     if (!this.invoiceCanConfirm()) {
       this.invoiceValidationMessage.set(
         this.invoiceAppliedPayments().length === 0
@@ -4308,7 +4410,19 @@ export class RoomStayManagementComponent implements OnInit {
         vencimiento : this.cleanText(payment.vencimiento),
         mtoTotal    : this.roundCurrency(payment.mtoTotal),
         tCambio     : this.roundExchangeRate(payment.tCambio)
-      }))
+      })),
+      infoReserva   : [{
+        ppV14_TipoDocu    : '',
+        ppV14_Serie       : '',
+        ppV14_NumDocu     : '',
+        ppV14_CodReserva  : this.cleanText(room.reservationNumber),
+        ppV14_FechaIni    : this.normalizeInvoiceDetailDate(room.checkIn, fecha),
+        ppV14_FechaFin    : this.normalizeInvoiceDetailDate(room.checkOut, fecha),
+        ppV14_VoucherRsv  : this.cleanText(this.invoiceReservationVoucher()),
+        ppV14_Observacion : this.cleanText(this.invoiceReservationObservation()),
+        ppV14_NProveedor  : this.cleanText(this.invoiceReservationProvider()),
+        ppV14_CActividad  : this.cleanText(this.invoiceReservationActivity()) || '0000.0'
+      }]
     };
   }
 
