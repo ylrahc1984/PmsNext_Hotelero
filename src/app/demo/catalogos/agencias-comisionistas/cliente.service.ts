@@ -388,6 +388,7 @@ export class ClienteService {
           return null;
         }
         const accion = (item.accion ?? '').trim().toUpperCase() || (Number(item.id) > 0 ? 'U' : 'I');
+        const fechaRegistro = item.fechaRegistro ?? (accion === 'I' ? new Date().toISOString() : null);
         return {
           id            : Number(item.id ?? 0),
           nomContacto   ,
@@ -402,7 +403,7 @@ export class ClienteService {
           observacion   : (item.observacion ?? '').trim(),
           accion        ,
           operador      : '',
-          fechaRegistro : item.fechaRegistro ?? null
+          fechaRegistro
         };
       })
       .filter((item): item is ClienteContactoPost => !!item);

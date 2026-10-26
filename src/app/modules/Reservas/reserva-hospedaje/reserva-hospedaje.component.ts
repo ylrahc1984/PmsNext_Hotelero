@@ -181,6 +181,26 @@ interface ReservaHospedajeDraft {
   servicio          : Partial<ReturnType<FormGroup<ServicioForm>['getRawValue']>>;
   agenciaSearch     : string;
   tarifaSearch      : string;
+  editingRoomIndex  : number | null;
+  editingPlanIndex  : number | null;
+  editingServiceIndex: number | null;
+  showPlanModal     : boolean;
+  showServiceModal  : boolean;
+  selectedServicioCatalog: ReservaServicioExtraCatalogo | null;
+  servicioCatalogSearch: string;
+  newTags           : ReservaTagSeleccionado[];
+  modalTagSelection : ReservaTagSeleccionado[];
+  showTagsModal     : boolean;
+  tagSearch         : string;
+  showAgencyModal   : boolean;
+  showTarifaModal   : boolean;
+  agencyModalSearch : string;
+  tarifaModalSearch : string;
+  agencyModalPage   : number;
+  tarifaModalPage   : number;
+  generalExpanded   : boolean;
+  planExpanded      : boolean;
+  servicesExpanded  : boolean;
 }
 
 interface ReservationInventorySnapshot {
@@ -383,6 +403,7 @@ export class ReservaHospedajeComponent implements OnInit {
     this.isEditMode.set(!!codReserva);
     if (codReserva) {
       this.draftRestorePending = false;
+      this.clearDraft();
       this.loadReservaForEdit(codReserva);
       this.loadAssignedTags(codReserva);
     }
@@ -393,9 +414,9 @@ export class ReservaHospedajeComponent implements OnInit {
     this.bindCatalogSearch();
     this.bindTagSearch();
     if (!this.isEditMode()) {
-      // Una reserva nueva siempre debe comenzar limpia, incluso si existe un
-      // borrador creado por una versión anterior de esta pantalla.
-      this.clearDraft();
+      this.bindDraftPersistence();
+      // El borrador anterior se guardaba en localStorage; ya no forma parte del flujo.
+      localStorage.removeItem(this.draftStorageKey);
     }
     this.recalculateStay();
     this.reservaForm.controls.fecIngreso.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.recalculateStay());
@@ -903,11 +924,13 @@ export class ReservaHospedajeComponent implements OnInit {
     this.agenciaSearchOpen = false;
     this.agencyModalSearchControl.setValue(this.getCurrentAgencySearchTerm(), { emitEvent: false });
     this.loadAgencyModalPage(1);
+    this.persistDraft();
   }
 
   closeAgencyModal(): void {
     this.showAgencyModal = false;
     this.agencyModalError = '';
+    this.persistDraft();
   }
 
   loadAgencyModalPage(page: number): void {
@@ -959,11 +982,13 @@ export class ReservaHospedajeComponent implements OnInit {
     this.tarifaSearchOpen = false;
     this.tarifaModalSearchControl.setValue(this.getCurrentTarifaSearchTerm(), { emitEvent: false });
     this.loadTarifasModal();
+    this.persistDraft();
   }
 
   closeTarifaModal(): void {
     this.showTarifaModal = false;
     this.tarifaModalError = '';
+    this.persistDraft();
   }
 
   loadTarifasModal(): void {
@@ -1310,6 +1335,7 @@ export class ReservaHospedajeComponent implements OnInit {
       : this.newTags.map((selection) => ({ ...selection }));
     this.tagSelectionMessage.set('');
     this.showTagsModal.set(true);
+    this.persistDraft();
   }
 
   closeTagsModal(): void {
@@ -1318,6 +1344,7 @@ export class ReservaHospedajeComponent implements OnInit {
     }
     this.showTagsModal.set(false);
     this.tagSelectionMessage.set('');
+    this.persistDraft();
   }
 
   @HostListener('document:keydown.escape')
@@ -1410,6 +1437,7 @@ export class ReservaHospedajeComponent implements OnInit {
     if (selectedIndex >= 0) {
       this.modalTagSelection = this.modalTagSelection.filter((selection) => selection.tag.idTag !== tag.idTag);
       this.tagSelectionMessage.set('');
+      this.persistDraft();
       return;
     }
 
@@ -1431,6 +1459,7 @@ export class ReservaHospedajeComponent implements OnInit {
     }
 
     this.modalTagSelection = [...this.modalTagSelection, { tag, observacion: null }];
+    this.persistDraft();
   }
 
   updateTagObservation(idTag: number, event: Event): void {
@@ -1438,6 +1467,7 @@ export class ReservaHospedajeComponent implements OnInit {
     this.modalTagSelection = this.modalTagSelection.map((selection) =>
       selection.tag.idTag === idTag ? { ...selection, observacion: value } : selection
     );
+    this.persistDraft();
   }
 
   tagObservation(idTag: number): string {
@@ -1451,6 +1481,7 @@ export class ReservaHospedajeComponent implements OnInit {
     if (!this.isEditMode()) {
       this.newTags = selections;
       this.showTagsModal.set(false);
+      this.persistDraft();
       return;
     }
 
@@ -1465,6 +1496,7 @@ export class ReservaHospedajeComponent implements OnInit {
   removeLocalTag(idTag: number): void {
     this.newTags = this.newTags.filter((selection) => selection.tag.idTag !== idTag);
     this.modalTagSelection = this.modalTagSelection.filter((selection) => selection.tag.idTag !== idTag);
+    this.persistDraft();
   }
 
   async removePersistedTag(tag: ReservaTagAsignado): Promise<void> {
@@ -2767,7 +2799,11 @@ export class ReservaHospedajeComponent implements OnInit {
       this.inclusionForm.valueChanges,
       this.servicioForm.valueChanges,
       this.agenciaSearchControl.valueChanges,
-      this.tarifaSearchControl.valueChanges
+      this.tarifaSearchControl.valueChanges,
+      this.servicioCatalogSearchControl.valueChanges,
+      this.tagSearchControl.valueChanges,
+      this.agencyModalSearchControl.valueChanges,
+      this.tarifaModalSearchControl.valueChanges
     )
       .pipe(debounceTime(500), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.persistDraft());
@@ -2789,38 +2825,170 @@ export class ReservaHospedajeComponent implements OnInit {
       inclusion         : this.inclusionForm.getRawValue(),
       servicio          : this.servicioForm.getRawValue(),
       agenciaSearch     : this.agenciaSearchControl.value,
-      tarifaSearch      : this.tarifaSearchControl.value
+      tarifaSearch      : this.tarifaSearchControl.value,
+      editingRoomIndex  : this.editingRoomIndex(),
+      editingPlanIndex  : this.editingPlanIndex(),
+      editingServiceIndex: this.editingServiceIndex(),
+      showPlanModal     : this.showPlanModal(),
+      showServiceModal  : this.showServiceModal(),
+      selectedServicioCatalog: this.selectedServicioCatalog(),
+      servicioCatalogSearch: this.servicioCatalogSearchControl.value,
+      newTags           : this.newTags,
+      modalTagSelection : this.modalTagSelection,
+      showTagsModal     : this.showTagsModal(),
+      tagSearch         : this.tagSearchControl.value,
+      showAgencyModal   : this.showAgencyModal,
+      showTarifaModal   : this.showTarifaModal,
+      agencyModalSearch : this.agencyModalSearchControl.value,
+      tarifaModalSearch : this.tarifaModalSearchControl.value,
+      agencyModalPage   : this.agencyModalPage,
+      tarifaModalPage   : this.tarifaModalPage,
+      generalExpanded   : this.generalExpanded(),
+      planExpanded      : this.planExpanded(),
+      servicesExpanded  : this.servicesExpanded()
     };
 
-    localStorage.setItem(this.draftStorageKey, JSON.stringify(draft));
-  }
-
-  private restoreDraft(): void {
-    const storedDraft = localStorage.getItem(this.draftStorageKey);
-    if (!storedDraft) {
-      this.draftRestorePending = false;
+    if (!this.isMeaningfulDraftData(draft)) {
+      sessionStorage.removeItem(this.draftStorageKey);
       return;
     }
 
-    try {
-      const draft = JSON.parse(storedDraft) as ReservaHospedajeDraft;
-      this.reservaForm.patchValue(this.normalizeDraftReservationDefaults(draft.reserva), { emitEvent: false });
-      this.restoreFormArray(this.habitaciones, draft.reserva.habitaciones, (item) => this.createHabitacionGroup(item));
-      this.restoreFormArray(this.inclusiones, draft.reserva.inclusiones, (item) => this.createInclusionGroup(item));
-      this.restoreFormArray(this.servicios, draft.reserva.servicios, (item) => this.createServicioGroup(item));
-      this.habitacionForm.reset({ ...this.defaultHabitacion(), ...draft.habitacion }, { emitEvent: false });
-      this.inclusionForm.reset({ ...this.defaultInclusion(), ...draft.inclusion }, { emitEvent: false });
-      this.servicioForm.reset({ ...this.defaultServicio(), ...draft.servicio }, { emitEvent: false });
-      this.agenciaSearchControl.setValue(draft.agenciaSearch || this.agenciaSearchControl.value, { emitEvent: false });
-      this.tarifaSearchControl.setValue(draft.tarifaSearch || this.tarifaSearchControl.value, { emitEvent: false });
-      this.syncTotal();
-      this.refreshMealPlanForCurrentSelection(true);
-    } catch (error) {
-      console.error('No se pudo restaurar el borrador de reserva.', error);
-      this.clearDraft();
-    } finally {
-      this.draftRestorePending = false;
+    sessionStorage.setItem(this.draftStorageKey, JSON.stringify(draft));
+  }
+
+  private async offerDraftRestore(): Promise<void> {
+    const storedDraft = sessionStorage.getItem(this.draftStorageKey);
+    if (!storedDraft) {
+      this.finishDraftRestore();
+      return;
     }
+
+    let draft: ReservaHospedajeDraft;
+    try {
+      draft = JSON.parse(storedDraft) as ReservaHospedajeDraft;
+    } catch (error) {
+      console.error('No se pudo leer el borrador de reserva.', error);
+      this.clearDraft();
+      this.finishDraftRestore();
+      return;
+    }
+
+    if (!this.isMeaningfulDraftData(draft)) {
+      this.clearDraft();
+      this.finishDraftRestore();
+      return;
+    }
+
+    const savedAt = draft.savedAt ? new Date(draft.savedAt) : null;
+    const ageText = savedAt && !Number.isNaN(savedAt.getTime())
+      ? `Guardado ${savedAt.toLocaleString()}. `
+      : '';
+    const result = await Swal.fire({
+      title: 'Borrador de reserva encontrado',
+      text: `${ageText}¿Desea restaurar la información que estaba ingresando?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Restaurar borrador',
+      cancelButtonText: 'Empezar una reserva nueva',
+      confirmButtonColor: '#0d6efd',
+      cancelButtonColor: '#6c757d',
+      allowOutsideClick: false
+    });
+
+    if (result.isConfirmed) {
+      this.restoreDraft(draft);
+    } else {
+      this.clearDraft();
+    }
+    this.finishDraftRestore();
+  }
+
+  private finishDraftRestore(): void {
+    this.draftRestorePending = false;
+    this.persistDraft();
+  }
+
+  private restoreDraft(draft: ReservaHospedajeDraft): void {
+    this.reservaForm.patchValue(this.normalizeDraftReservationDefaults(draft.reserva), { emitEvent: false });
+    this.restoreFormArray(this.habitaciones, draft.reserva?.habitaciones, (item) => this.createHabitacionGroup(item));
+    this.restoreFormArray(this.inclusiones, draft.reserva?.inclusiones, (item) => this.createInclusionGroup(item));
+    this.restoreFormArray(this.servicios, draft.reserva?.servicios, (item) => this.createServicioGroup(item));
+    this.habitacionForm.reset({ ...this.defaultHabitacion(), ...draft.habitacion }, { emitEvent: false });
+    this.inclusionForm.reset({ ...this.defaultInclusion(), ...draft.inclusion }, { emitEvent: false });
+    this.servicioForm.reset({ ...this.defaultServicio(), ...draft.servicio }, { emitEvent: false });
+    this.agenciaSearchControl.setValue(draft.agenciaSearch || this.agenciaSearchControl.value, { emitEvent: false });
+    this.tarifaSearchControl.setValue(draft.tarifaSearch || this.tarifaSearchControl.value, { emitEvent: false });
+    this.servicioCatalogSearchControl.setValue(draft.servicioCatalogSearch ?? '', { emitEvent: false });
+    this.tagSearchControl.setValue(draft.tagSearch ?? '', { emitEvent: false });
+    this.agencyModalSearchControl.setValue(draft.agencyModalSearch ?? '', { emitEvent: false });
+    this.tarifaModalSearchControl.setValue(draft.tarifaModalSearch ?? '', { emitEvent: false });
+    this.agencyModalPage = Math.max(1, Number(draft.agencyModalPage) || 1);
+    this.tarifaModalPage = Math.max(1, Number(draft.tarifaModalPage) || 1);
+    this.editingRoomIndex.set(this.validDraftIndex(draft.editingRoomIndex, this.habitaciones.length));
+    this.editingPlanIndex.set(this.validDraftIndex(draft.editingPlanIndex, this.inclusiones.length));
+    this.editingServiceIndex.set(this.validDraftIndex(draft.editingServiceIndex, this.servicios.length));
+    this.showPlanModal.set(!!draft.showPlanModal);
+    this.showServiceModal.set(!!draft.showServiceModal);
+    this.selectedServicioCatalog.set(draft.selectedServicioCatalog ?? null);
+    this.newTags = Array.isArray(draft.newTags) ? draft.newTags : [];
+    this.modalTagSelection = Array.isArray(draft.modalTagSelection) ? draft.modalTagSelection : [...this.newTags];
+    this.showTagsModal.set(!!draft.showTagsModal);
+    this.showAgencyModal = !!draft.showAgencyModal;
+    this.showTarifaModal = !!draft.showTarifaModal;
+    this.generalExpanded.set(draft.generalExpanded ?? true);
+    this.planExpanded.set(!!draft.planExpanded);
+    this.servicesExpanded.set(!!draft.servicesExpanded);
+    this.syncTotal();
+    this.refreshMealPlanForCurrentSelection(true, true);
+    const category = this.habitacionForm.controls.categoria.value;
+    if (category) {
+      this.loadRoomTypesForCategory(category, true);
+    }
+    if (this.showServiceModal() && this.servicioForm.controls.cCosto.value) {
+      void this.refreshServicioTaxRate(this.servicioForm.controls.cCosto.value);
+    }
+    if (this.showAgencyModal) {
+      this.loadAgencyModalPage(this.agencyModalPage);
+    }
+    if (this.showTarifaModal) {
+      this.loadTarifasModal();
+    }
+  }
+
+  private validDraftIndex(index: number | null | undefined, length: number): number | null {
+    return Number.isInteger(index) && index! >= 0 && index! < length ? index! : null;
+  }
+
+  private isMeaningfulDraftData(draft: ReservaHospedajeDraft): boolean {
+    const reserva = draft.reserva ?? {};
+    const habitacion = draft.habitacion ?? {};
+    const inclusion = draft.inclusion ?? {};
+    const servicio = draft.servicio ?? {};
+    const defaultHabitacion = this.defaultHabitacion();
+    const defaultServicio = this.defaultServicio();
+    const defaultEntryDate = reserva.fecCreacion || this.defaultReservationDates().fecCreacion;
+    const defaultExitDate = this.addDaysToInputDate(defaultEntryDate, 1);
+    return !!(
+      (reserva.codAgencia && reserva.codAgencia !== '02051') || reserva.codTarifa || reserva.codPlan || reserva.contactoNombre || reserva.contactoEmail || reserva.contactoTelefono ||
+      reserva.descripcion || reserva.observaciones || reserva.folio || reserva.moneda || reserva.directo || reserva.esCpl ||
+      (reserva.tCambio && reserva.tCambio !== 0) || (reserva.estado && reserva.estado !== 'ABI') ||
+      reserva.habitaciones?.length || reserva.inclusiones?.length || reserva.servicios?.length ||
+      (reserva.fecIngreso && reserva.fecIngreso !== defaultEntryDate) ||
+      (reserva.fecSalida && reserva.fecSalida !== defaultExitDate) ||
+      (habitacion.categoria && habitacion.categoria !== defaultHabitacion.categoria) ||
+      (habitacion.tipo && habitacion.tipo !== defaultHabitacion.tipo) ||
+      (habitacion.cantidad !== undefined && habitacion.cantidad !== defaultHabitacion.cantidad) ||
+      (habitacion.pax !== undefined && habitacion.pax !== defaultHabitacion.pax) ||
+      (habitacion.precio ?? 0) > 0 || (habitacion.cantidadNinos ?? 0) > 0 || (habitacion.precioNino ?? 0) > 0 ||
+      (habitacion.cCosto && habitacion.cCosto !== defaultHabitacion.cCosto) ||
+      (habitacion.cpl !== undefined && habitacion.cpl !== defaultHabitacion.cpl) ||
+      inclusion.codServ || inclusion.desServ || (inclusion.precio ?? 0) > 0 ||
+      (inclusion.cantidad !== undefined && inclusion.cantidad !== this.defaultInclusion().cantidad) || inclusion.tipPax || inclusion.cCosto || inclusion.cpl ||
+      servicio.codSrv || servicio.descripcion || (servicio.cantidad !== undefined && servicio.cantidad !== defaultServicio.cantidad) ||
+      (servicio.precio ?? 0) > 0 || (servicio.tipPax && servicio.tipPax !== defaultServicio.tipPax) ||
+      (servicio.cCosto && servicio.cCosto !== defaultServicio.cCosto) ||
+      draft.newTags?.length || draft.modalTagSelection?.length || draft.agencyModalSearch || draft.tarifaModalSearch || draft.servicioCatalogSearch
+    );
   }
 
   private restoreFormArray<T extends { [K in keyof T]: AbstractControl<any, any> }>(
@@ -2839,22 +3007,7 @@ export class ReservaHospedajeComponent implements OnInit {
   }
 
   private clearDraft(): void {
-    localStorage.removeItem(this.draftStorageKey);
-  }
-
-  private hasMeaningfulDraft(): boolean {
-    const raw = this.reservaForm.getRawValue();
-    return (
-      this.habitaciones.length > 0 ||
-      this.servicios.length > 0 ||
-      raw.contactoNombre.trim().length > 0 ||
-      raw.contactoEmail.trim().length > 0 ||
-      raw.contactoTelefono.trim().length > 0 ||
-      raw.descripcion.trim().length > 0 ||
-      raw.observaciones.trim().length > 0 ||
-      this.agenciaSearchControl.value.trim().length > 0 ||
-      this.tarifaSearchControl.value.trim().length > 0
-    );
+    sessionStorage.removeItem(this.draftStorageKey);
   }
 
   private getTipoHabitacionPax(categoria: string, tipo: string): number {
@@ -3320,6 +3473,9 @@ export class ReservaHospedajeComponent implements OnInit {
         this.applyPlanDefault();
         this.applyRoomCategoryDefault();
         this.isCatalogLoading = false;
+        if (!this.isEditMode()) {
+          void this.offerDraftRestore();
+        }
       });
   }
 
