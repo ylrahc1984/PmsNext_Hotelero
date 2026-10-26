@@ -65,6 +65,10 @@ export interface GuardarReservaTagsBatchRequest {
   tags: ReservaTagBatchItem[];
 }
 
+export interface ActualizarObservacionReservaTagRequest {
+  observacion: string | null;
+}
+
 export interface GuardarReservaTagsBatchResponse extends ApiResponse<ReservaTagAsignado[]> {
   tagsRecibidos: number;
   tagsInsertados: number;

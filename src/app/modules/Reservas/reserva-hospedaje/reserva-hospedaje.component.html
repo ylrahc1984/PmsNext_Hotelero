@@ -725,6 +725,16 @@
                 <i class="bi bi-gear-fill reservation-tag-auto" *ngIf="tagIsAutomatic(tag)" aria-hidden="true"></i>
                 <button
                   type="button"
+                  class="reservation-tag-edit"
+                  *ngIf="canEditTagObservation(tag)"
+                  (click)="editTagObservation(tag)"
+                  [attr.aria-label]="'Editar observación de ' + tag.nombre"
+                  title="Editar observación"
+                >
+                  <i class="bi bi-pencil" aria-hidden="true"></i>
+                </button>
+                <button
+                  type="button"
                   class="reservation-tag-remove"
                   *ngIf="canRemoveTag(tag)"
                   (click)="removeReservationTag(tag)"
@@ -734,6 +744,13 @@
                   <span class="spinner-border spinner-border-sm" *ngIf="isRemovingTag(tag.idTag)" aria-hidden="true"></span>
                   <i class="bi bi-x" *ngIf="!isRemovingTag(tag.idTag)" aria-hidden="true"></i>
                 </button>
+                <span
+                  class="reservation-tag-observation-preview"
+                  *ngIf="tagIsPersisted(tag) && tag.observacion"
+                  [title]="tag.observacion"
+                >
+                  {{ tag.observacion }}
+                </span>
               </span>
               <button
                 type="button"

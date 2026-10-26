@@ -24,8 +24,11 @@
             [tags]="assignedTags()"
             [detailed]="true"
             [showRemove]="canManage()"
+            [showEditObservation]="canManage()"
             [removingTagIds]="removingTagIds()"
+            [savingObservationIds]="savingObservationIds()"
             (removeTag)="removeTag.emit($event)"
+            (editObservation)="editObservation.emit($event)"
           />
         } @else {
           <p class="tag-modal__empty">Sin etiquetas asignadas.</p>

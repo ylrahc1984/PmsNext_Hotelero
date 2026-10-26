@@ -59,6 +59,7 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
   readonly showReservationTagsModal     = signal(false);
   readonly reservationTagsDetailsOnly   = signal(false);
   readonly isSavingReservationTags      = signal(false);
+  readonly savingObservationTagIds      = signal<ReadonlySet<number>>(new Set<number>());
   readonly reservationTagsSaveError     = signal('');
   readonly removingReservationTagIds    = signal<ReadonlySet<number>>(new Set<number>());
 
@@ -201,6 +202,81 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
 
   notifyReservationTagSelection(message: string): void {
     this.toastService.info(message, 3500, 'Etiquetas');
+  }
+
+  async editReservationTagObservation(tag: ReservaTagAsignado): Promise<void> {
+    const idAsignacion = Number(tag.idAsignacion);
+    if (tag.tipoAsignacion.toUpperCase() !== 'MANUAL' || !idAsignacion || !this.puedeGestionarTags()
+      || this.savingObservationTagIds().has(idAsignacion)) {
+      return;
+    }
+
+    let updated = false;
+    await Swal.fire({
+      title: 'Editar observación',
+      html: `<div class="tag-observation-editor"><strong>${this.escapeHtml(tag.nombre)}</strong><label for="swal-detail-tag-observation">Observación</label><small id="swal-detail-tag-observation-count">0 / 200 caracteres</small></div>`,
+      input: 'textarea',
+      inputValue: tag.observacion ?? '',
+      inputAttributes: {
+        id: 'swal-detail-tag-observation',
+        maxlength: '200',
+        rows: '4',
+        'aria-label': 'Observación del tag'
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Guardar cambios',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#0d6efd',
+      customClass: { container: 'next-confirm-container' },
+      showLoaderOnConfirm: true,
+      focusConfirm: false,
+      allowOutsideClick: () => !Swal.isLoading(),
+      didOpen: (popup) => {
+        const input = Swal.getInput();
+        const counter = popup.querySelector<HTMLElement>('#swal-detail-tag-observation-count');
+        const updateCounter = () => {
+          if (counter && input) counter.textContent = `${input.value.length} / 200 caracteres`;
+        };
+        input?.addEventListener('input', updateCounter);
+        updateCounter();
+      },
+      preConfirm: async (value) => {
+        const normalized = String(value ?? '').trim();
+        if (normalized.length > 200) {
+          Swal.showValidationMessage('La observación no puede superar los 200 caracteres.');
+          return false;
+        }
+        if (normalized === (tag.observacion ?? '').trim()) return true;
+        if (this.savingObservationTagIds().has(idAsignacion)) return false;
+
+        this.savingObservationTagIds.update((ids) => new Set([...ids, idAsignacion]));
+        try {
+          const response = await firstValueFrom(this.tagsService.actualizarObservacionTag(
+            this.cleanText(this.codReserva()), idAsignacion, normalized || null
+          ));
+          if (!this.isSuccessfulTagResponse(response)) {
+            Swal.showValidationMessage('El servidor no confirmó la actualización de la observación.');
+            return false;
+          }
+          this.assignedReservationTags.update((tags) => tags.map((assigned) => assigned.idAsignacion === idAsignacion
+            ? { ...assigned, observacion: normalized || null }
+            : assigned));
+          updated = true;
+          return true;
+        } catch (error) {
+          Swal.showValidationMessage(this.getTagObservationUpdateErrorMessage(error));
+          return false;
+        } finally {
+          this.savingObservationTagIds.update((ids) => {
+            const next = new Set(ids);
+            next.delete(idAsignacion);
+            return next;
+          });
+        }
+      }
+    });
+
+    if (updated) this.toastService.success(`Observación de “${tag.nombre}” actualizada.`, 4000, 'Etiquetas');
   }
 
   async removeReservationTag(tag: ReservaTagAsignado): Promise<void> {
@@ -507,6 +583,25 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
       if (typeof value === 'string' && value.trim()) return this.cleanTagApiMessage(value);
     }
     return fallback;
+  }
+
+  private getTagObservationUpdateErrorMessage(error: unknown): string {
+    const details = error && typeof error === 'object'
+      ? error as { status?: number; error?: { codigoHttp?: number } }
+      : {};
+    const status = Number(details.status ?? details.error?.codigoHttp ?? 0);
+    if (status === 401) return 'Tu sesión no está autenticada. Inicia sesión nuevamente.';
+    if (status === 403) return 'No tienes autorización para editar esta observación.';
+    if (status === 404) return 'La asignación ya no existe o fue retirada. Actualiza las etiquetas.';
+    if (status === 409) return 'Esta etiqueta ya no puede editarse manualmente.';
+    if (status === 0) return 'No se pudo conectar con el servidor. Intenta nuevamente.';
+    if (status >= 500) return 'El servidor no pudo actualizar la observación. Intenta nuevamente.';
+    return 'No se pudo actualizar la observación. Verifica el contenido e intenta nuevamente.';
+  }
+
+  private escapeHtml(value: string): string {
+    return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
   private cleanText(value: string | number | null | undefined): string {

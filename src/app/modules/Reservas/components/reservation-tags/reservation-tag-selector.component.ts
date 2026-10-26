@@ -47,12 +47,14 @@ export class ReservationTagSelectorComponent implements OnInit, AfterViewInit {
   readonly saving = input(false);
   readonly saveError = input('');
   readonly removingTagIds = input<ReadonlySet<number>>(new Set<number>());
+  readonly savingObservationIds = input<ReadonlySet<number>>(new Set<number>());
   readonly canManage = input(true);
   readonly catalogEnabled = input(true);
 
   readonly closed = output<void>();
   readonly save = output<ReservaTagSeleccionado[]>();
   readonly removeTag = output<ReservaTagAsignado>();
+  readonly editObservation = output<ReservaTagAsignado>();
   readonly selectionNotice = output<string>();
 
   readonly searchControl = new FormControl('', { nonNullable: true });

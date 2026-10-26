@@ -69,4 +69,24 @@ describe('ReservaTagsService', () => {
     expect(request.request.params.get('motivoRetiro')).toBe('Ya no se utilizará');
     request.flush({ datos: null, respuesta: 'OK|TAG RETIRADO CORRECTAMENTE', exito: true, codigoHttp: 200 });
   });
+
+  it('updates only the observation of an existing tag assignment', () => {
+    const payload = { observacion: 'Llegada estimada a las 11:30 p. m.' };
+
+    service.actualizarObservacionTag('EE260000290', 84, payload.observacion).subscribe();
+
+    const request = httpMock.expectOne(`${baseUrl}/EE260000290/tags/84/observacion`);
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual(payload);
+    request.flush({ datos: null, respuesta: 'OK|OBSERVACION ACTUALIZADA', exito: true, codigoHttp: 200 });
+  });
+
+  it('sends null when clearing an assigned tag observation', () => {
+    service.actualizarObservacionTag('EE260000290', 84, null).subscribe();
+
+    const request = httpMock.expectOne(`${baseUrl}/EE260000290/tags/84/observacion`);
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual({ observacion: null });
+    request.flush({ datos: null, respuesta: 'OK|OBSERVACION ACTUALIZADA', exito: true, codigoHttp: 200 });
+  });
 });

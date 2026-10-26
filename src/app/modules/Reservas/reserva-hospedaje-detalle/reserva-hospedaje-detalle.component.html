@@ -223,9 +223,12 @@
                 [tags]="assignedReservationTags()"
                 [maxVisible]="6"
                 [showRemove]="puedeGestionarTags()"
+                [showEditObservation]="puedeGestionarTags()"
                 [removingTagIds]="removingReservationTagIds()"
+                [savingObservationIds]="savingObservationTagIds()"
                 [readOnlyReason]="tagsReadOnlyReason()"
                 (removeTag)="removeReservationTag($event)"
+                (editObservation)="editReservationTagObservation($event)"
                 (showAll)="openReservationTagDetails()"
               />
 
@@ -496,9 +499,11 @@
     [removingTagIds]="removingReservationTagIds()"
     [canManage]="puedeGestionarTags()"
     [catalogEnabled]="!reservationTagsDetailsOnly()"
+    [savingObservationIds]="savingObservationTagIds()"
     (closed)="closeReservationTagsModal()"
     (save)="saveReservationTags($event)"
     (removeTag)="removeReservationTag($event)"
+    (editObservation)="editReservationTagObservation($event)"
     (selectionNotice)="notifyReservationTagSelection($event)"
   />
 </section>

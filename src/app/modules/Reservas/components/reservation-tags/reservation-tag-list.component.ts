@@ -18,10 +18,13 @@ export class ReservationTagListComponent {
   readonly expanded = input(false);
   readonly detailed = input(false);
   readonly showRemove = input(false);
+  readonly showEditObservation = input(false);
   readonly removingTagIds = input<ReadonlySet<number>>(new Set<number>());
+  readonly savingObservationIds = input<ReadonlySet<number>>(new Set<number>());
   readonly readOnlyReason = input('');
 
   readonly removeTag = output<ReservaTagAsignado>();
+  readonly editObservation = output<ReservaTagAsignado>();
   readonly showAll = output<void>();
 
   readonly orderedTags = computed(() => [...this.tags()].sort((left, right) => this.compareTags(left, right)));
@@ -32,6 +35,15 @@ export class ReservationTagListComponent {
 
   canRemove(tag: ReservaTagResumen): boolean {
     return this.showRemove() && !this.readOnlyReason() && (tag.tipoAsignacion ?? '').toUpperCase() === 'MANUAL';
+  }
+
+  canEditObservation(tag: ReservaTagResumen): boolean {
+    return this.showEditObservation() && !this.readOnlyReason() && (tag.tipoAsignacion ?? '').toUpperCase() === 'MANUAL'
+      && this.isAssignedTag(tag);
+  }
+
+  isSavingObservation(tag: ReservaTagResumen): boolean {
+    return typeof tag.idAsignacion === 'number' && this.savingObservationIds().has(tag.idAsignacion);
   }
 
   isAutomatic(tag: ReservaTagResumen): boolean {
@@ -81,6 +93,12 @@ export class ReservationTagListComponent {
   requestRemoval(tag: ReservaTagResumen): void {
     if (this.canRemove(tag) && !this.removingTagIds().has(tag.idTag) && this.isAssignedTag(tag)) {
       this.removeTag.emit(tag);
+    }
+  }
+
+  requestEditObservation(tag: ReservaTagResumen): void {
+    if (this.canEditObservation(tag) && this.isAssignedTag(tag) && !this.savingObservationIds().has(tag.idAsignacion)) {
+      this.editObservation.emit(tag);
     }
   }
 

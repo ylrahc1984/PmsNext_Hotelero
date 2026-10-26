@@ -280,6 +280,7 @@ export class ReservaHospedajeComponent implements OnInit {
   readonly loadingTagCatalog                  = signal(false);
   readonly loadingAssignedTags                = signal(false);
   readonly savingTags                         = signal(false);
+  readonly savingTagObservation              = signal(false);
   readonly tagCatalogError                    = signal('');
   readonly assignedTagsError                  = signal('');
   readonly tagSelectionMessage                = signal('');
@@ -1540,6 +1541,107 @@ export class ReservaHospedajeComponent implements OnInit {
       return true;
     }
     return tag.tipoAsignacion.toUpperCase() === 'MANUAL' && !this.reservationLocked();
+  }
+
+  canEditTagObservation(tag: ReservaTagCatalogo | ReservaTagAsignado): boolean {
+    return this.isEditMode() && this.tagIsPersisted(tag) && tag.tipoAsignacion.toUpperCase() === 'MANUAL'
+      && !this.reservationLocked() && !this.savingTags() && !this.savingTagObservation();
+  }
+
+  async editTagObservation(tag: ReservaTagCatalogo | ReservaTagAsignado): Promise<void> {
+    if (!this.tagIsPersisted(tag) || !this.canEditTagObservation(tag) || this.savingTagObservation()) {
+      return;
+    }
+
+    let shouldNotifySuccess = false;
+    await Swal.fire({
+      title: 'Editar observación',
+      html: `<div class="tag-observation-editor"><strong>${this.escapeHtml(tag.nombre)}</strong><label for="swal-tag-observation">Observación</label><small id="swal-tag-observation-count">0 / 200 caracteres</small></div>`,
+      input: 'textarea',
+      inputValue: tag.observacion ?? '',
+      inputAttributes: {
+        id: 'swal-tag-observation',
+        maxlength: '200',
+        rows: '4',
+        'aria-label': 'Observación del tag'
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Guardar cambios',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#0d6efd',
+      customClass: { container: 'next-confirm-container' },
+      showLoaderOnConfirm: true,
+      focusConfirm: false,
+      allowOutsideClick: () => !Swal.isLoading(),
+      didOpen: (popup) => {
+        const input = Swal.getInput();
+        const counter = popup.querySelector<HTMLElement>('#swal-tag-observation-count');
+        const updateCounter = () => {
+          if (counter && input) {
+            counter.textContent = `${input.value.length} / 200 caracteres`;
+          }
+        };
+        input?.addEventListener('input', updateCounter);
+        updateCounter();
+      },
+      preConfirm: async (value) => {
+        const normalized = String(value ?? '').trim();
+        if (normalized.length > 200) {
+          Swal.showValidationMessage('La observación no puede superar los 200 caracteres.');
+          return false;
+        }
+
+        const current = (tag.observacion ?? '').trim();
+        if (normalized === current) {
+          return true;
+        }
+        if (this.savingTagObservation()) {
+          return false;
+        }
+
+        this.savingTagObservation.set(true);
+        try {
+          const response = await firstValueFrom(this.reservaTagsService.actualizarObservacionTag(
+            this.editCodReserva,
+            tag.idAsignacion,
+            normalized || null
+          ));
+          if (!this.isSuccessfulTagResponse(response)) {
+            Swal.showValidationMessage(this.getTagObservationUpdateErrorMessage(response));
+            return false;
+          }
+
+          this.persistedTags = this.persistedTags.map((assigned) => assigned.idAsignacion === tag.idAsignacion
+            ? { ...assigned, observacion: normalized || null }
+            : assigned);
+          shouldNotifySuccess = true;
+          return true;
+        } catch (error) {
+          Swal.showValidationMessage(this.getTagObservationUpdateErrorMessage(error));
+          return false;
+        } finally {
+          this.savingTagObservation.set(false);
+        }
+      }
+    });
+
+    if (shouldNotifySuccess) {
+      this.toast.success(`Observación de “${tag.nombre}” actualizada.`, 4500, 'Etiquetas');
+    }
+  }
+
+  private getTagObservationUpdateErrorMessage(source: unknown): string {
+    const details = source && typeof source === 'object'
+      ? source as { status?: number; codigoHttp?: number }
+      : {};
+    const status = Number(details.status ?? details.codigoHttp ?? 0);
+    if (status === 401) return 'Tu sesión no está autenticada. Inicia sesión nuevamente.';
+    if (status === 403) return 'No tienes autorización para editar esta observación.';
+    if (status === 404) return 'La asignación ya no existe o fue retirada. Actualiza las etiquetas.';
+    if (status === 409) return 'Esta etiqueta ya no puede editarse manualmente.';
+    if (status === 0) return 'No se pudo conectar con el servidor. Intenta nuevamente.';
+    if (status >= 500) return 'El servidor no pudo actualizar la observación. Intenta nuevamente.';
+    return 'No se pudo actualizar la observación. Verifica el contenido e intenta nuevamente.';
   }
 
   tagIsPersisted(tag: ReservaTagCatalogo | ReservaTagAsignado): tag is ReservaTagAsignado {

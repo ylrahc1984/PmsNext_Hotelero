@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import {
   ApiResponse,
+  ActualizarObservacionReservaTagRequest,
   GuardarReservaTagsBatchRequest,
   GuardarReservaTagsBatchResponse,
   ReservaTagAsignado,
@@ -40,6 +41,16 @@ export class ReservaTagsService {
   retirarTag(codReserva: string, idTag: number, motivoRetiro: string): Observable<ApiResponse<null>> {
     const params = new HttpParams().set('motivoRetiro', motivoRetiro.trim());
     return this.http.delete<ApiResponse<null>>(`${this.reservaUrl(codReserva)}/tags/${encodeURIComponent(String(idTag))}`, { params });
+  }
+
+  actualizarObservacionTag(
+    codReserva: string,
+    idAsignacion: number,
+    observacion: string | null
+  ): Observable<ApiResponse<unknown>> {
+    const request: ActualizarObservacionReservaTagRequest = { observacion };
+    const url = `${this.reservaUrl(codReserva)}/tags/${encodeURIComponent(String(idAsignacion))}/observacion`;
+    return this.http.patch<ApiResponse<unknown>>(url, request);
   }
 
   private reservaUrl(codReserva: string): string {
