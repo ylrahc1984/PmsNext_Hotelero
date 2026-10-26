@@ -821,14 +821,14 @@
         </div>
 
         <div class="reservation-tags-groups" *ngIf="!tagCatalogError() && groupedTagCatalog.length > 0">
-          <section class="reservation-tags-group" *ngFor="let group of groupedTagCatalog">
+          <section class="reservation-tags-group" *ngFor="let group of groupedTagCatalog; trackBy: trackByTagGroup">
             <div class="reservation-tags-group-title" [attr.title]="group.descripcionCategoria">
               <strong>{{ group.categoria }}</strong>
               <span>{{ group.tags.length }}</span>
             </div>
 
             <div class="reservation-tags-results">
-              <div class="reservation-tag-result-wrap" *ngFor="let tag of group.tags">
+              <div class="reservation-tag-result-wrap" *ngFor="let tag of group.tags; trackBy: trackByTagId">
                 <button
                   type="button"
                   class="reservation-tag-result"

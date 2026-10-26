@@ -3414,6 +3414,14 @@ export class ReservaHospedajeComponent implements OnInit {
     return item.codigo;
   }
 
+  trackByTagGroup(_: number, group: ReservaTagGrupo): number {
+    return group.idCategoria;
+  }
+
+  trackByTagId(_: number, tag: ReservaTagCatalogo): number {
+    return tag.idTag;
+  }
+
   getCategoriaLabel(codigo: string): string {
     const categoria = this.roomCategories.find((item) => item.codigo === codigo);
     return categoria ? `${categoria.codigo} - ${categoria.descripcion}` : codigo;
