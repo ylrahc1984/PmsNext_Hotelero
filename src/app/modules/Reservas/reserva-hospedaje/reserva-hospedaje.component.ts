@@ -382,6 +382,7 @@ export class ReservaHospedajeComponent implements OnInit {
   private exchangeRateRequestId         = 0;
   private roomRateRequestId             = 0;
   private draftRoomTaxIncluded          : number | null = null;
+  private missingDraftRoomRateKey         = '';
   private roomTaxRate                   : number | null = null;
   private roomTaxRequest                : Promise<number> | null = null;
   private readonly taxRatesByCostCenter = new Map<string, Promise<number>>();
@@ -3194,6 +3195,17 @@ export class ReservaHospedajeComponent implements OnInit {
       this.habitacionForm.controls.tipo.value
     );
 
+    if (expectedKey && this.missingDraftRoomRateKey === expectedKey) {
+      this.toast.warning(
+        this.roomRateError() || 'No existe un precio configurado para la tarifa y habitación seleccionadas.',
+        5500,
+        'Tarifa de hospedaje'
+      );
+      // Sin detalle tarifario, el precio digitado se interpreta como monto final.
+      this.draftRoomTaxIncluded = 1;
+      return true;
+    }
+
     if (expectedKey && this.resolvedRoomRateKey === expectedKey && this.draftRoomTaxIncluded !== null) {
       return true;
     }
@@ -3219,6 +3231,7 @@ export class ReservaHospedajeComponent implements OnInit {
 
     this.resolvedRoomRateKey = '';
     this.draftRoomTaxIncluded = null;
+    this.missingDraftRoomRateKey = '';
     this.roomRateError.set('');
     this.habitacionForm.controls.precio.setValue(0, { emitEvent: false });
     this.updateHabitacionDraftTotal();
@@ -3237,6 +3250,7 @@ export class ReservaHospedajeComponent implements OnInit {
 
       const rate = this.findRoomRate(details, categoria, tipo);
       if (!rate) {
+        this.missingDraftRoomRateKey = requestKey;
         this.roomRateError.set(`No existe una tarifa configurada para ${categoria} / ${tipo}.`);
         return false;
       }
@@ -3275,6 +3289,7 @@ export class ReservaHospedajeComponent implements OnInit {
 
     this.resolvedRoomRateKey = '';
     this.draftRoomTaxIncluded = null;
+    this.missingDraftRoomRateKey = '';
     this.roomRateError.set('');
     this.roomRatesInvalid.set(this.habitaciones.length > 0);
     this.habitacionForm.controls.precio.setValue(0, { emitEvent: false });
@@ -3338,9 +3353,9 @@ export class ReservaHospedajeComponent implements OnInit {
       this.updateHabitacionDraftTotal();
       if (missingRates.size > 0) {
         this.roomRateError.set(`No existe tarifa configurada para: ${Array.from(missingRates).join(', ')}.`);
-      } else {
-        this.roomRatesInvalid.set(false);
       }
+      // Una combinación sin detalle tarifario puede guardarse con el precio manual (o cero).
+      this.roomRatesInvalid.set(false);
     } catch (error) {
       if (requestId === this.roomRateRequestId) {
         this.roomRateError.set(error instanceof Error ? error.message : 'No se pudo consultar la tarifa de hospedaje.');
