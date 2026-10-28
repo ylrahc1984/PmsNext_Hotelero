@@ -1,11 +1,11 @@
 <div class="charges-overlay" (click)="closeModal.emit()">
-  <section class="charges-dialog" role="dialog" aria-modal="true" aria-labelledby="folioChargesTitle" (click)="$event.stopPropagation()">
+  <section class="charges-dialog" [class.charges-dialog--new-charge]="addingCharge" role="dialog" aria-modal="true" aria-labelledby="folioChargesTitle" (click)="$event.stopPropagation()">
     <header class="charges-header">
       <div class="charges-heading">
         <span class="charges-heading__icon"><i class="feather icon-layers"></i></span>
         <div>
-          <small>Cargos del Folio Master</small>
-          <h2 id="folioChargesTitle">Folio {{ folio.PRV09_NumFolio || folio.PRV01_Folio }}</h2>
+          <small>{{ addingCharge ? 'Cargo directo · Folio Master' : 'Cargos del Folio Master' }}</small>
+          <h2 id="folioChargesTitle">{{ addingCharge ? 'Nuevo cargo de habitación' : 'Folio ' + (folio.PRV09_NumFolio || folio.PRV01_Folio) }}</h2>
           <p>Reserva {{ folio.PRV09_CodReserva || folio.PRV01_CodReserva }} · Agencia {{ folio.PRV09_CodAgen || folio.PRV01_CodAgencia }}</p>
         </div>
       </div>
@@ -17,7 +17,7 @@
     </header>
 
     <main class="charges-body">
-      <section class="folio-summary">
+      <section class="folio-summary" *ngIf="!addingCharge">
         <article><span>Agencia</span><strong>{{ folio.PRV09_DesAgen || 'N/D' }}</strong></article>
         <article><span>Tarifa / Plan</span><strong>{{ folio.PRV09_CodTarifa || 'N/D' }} / {{ folio.PRV09_CodPlan || 'N/D' }}</strong></article>
         <article><span>Check-in</span><strong>{{ formatDate(folio.PRV09_FechaIng) }}</strong></article>
@@ -26,10 +26,13 @@
         <article><span>Total cargos</span><strong>{{ folio.PRV09_MonedaTar || folio.PRV01_Moneda }} {{ total | number:'1.2-2' }}</strong></article>
       </section>
 
-      <section class="charges-card">
+      <section class="charges-card" *ngIf="!addingCharge">
         <div class="charges-card__title">
           <div><small>Documentos asociados</small><h3>Cargos de habitación</h3></div>
-          <span>{{ charges.length }} registro(s)</span>
+          <div class="charges-card__actions">
+            <span>{{ charges.length }} registro(s)</span>
+            <button type="button" class="button-primary" *ngIf="!addingCharge && getStatus(folio.PRV09_Estado).value !== 2" (click)="openNewCharge()">Nuevo cargo</button>
+          </div>
         </div>
 
         <div class="state-view" *ngIf="loading">
@@ -66,7 +69,55 @@
         </div>
       </section>
 
-      <section class="folio-notes">
+      <section class="direct-charge" *ngIf="addingCharge">
+        <header class="direct-charge__header">
+          <div><span class="direct-charge__eyebrow">DESTINO DEL CARGO</span><h3>Folio {{ folio.PRV09_NumFolio || folio.PRV01_Folio }} · Reserva {{ folio.PRV09_CodReserva || folio.PRV01_CodReserva }}</h3><p>Fecha operativa · {{ chargeDateLabel }}</p></div>
+          <button type="button" class="icon-button" (click)="closeNewCharge()" [disabled]="submittingCharge" aria-label="Cancelar cargo"><i class="feather icon-x"></i></button>
+        </header>
+
+        <section class="direct-charge__admin" aria-label="Datos administrativos del cargo">
+          <div class="direct-charge__guest"><span>Huésped</span><strong>{{ folio.PRV01_Descripcion || 'Folio Master' }}</strong><small>Documento · 00000000</small></div>
+          <label class="direct-charge__pos"><span>Punto de venta</span><select [(ngModel)]="selectedPointOfSale" (ngModelChange)="onPointOfSaleChange()" [disabled]="loadingCatalog || submittingCharge"><option *ngFor="let pos of pointOfSales" [value]="pos.code">{{ pos.code }} · {{ pos.name }}</option></select></label>
+          <div><span>Lista de precios</span><strong>{{ selectedPos?.priceList || 'Sin lista' }}</strong></div>
+          <div class="direct-charge__currency"><span>Moneda</span><strong>{{ selectedPos?.currency || 'USD' }}</strong></div>
+        </section>
+
+        <main class="direct-charge__workspace">
+          <section class="direct-charge__catalog-panel">
+            <div class="direct-charge__section-head"><div><h3>Consumos disponibles</h3><p>Busca por código o nombre, o filtra por categoría.</p></div><span>{{ filteredChargeItems.length }} resultados</span></div>
+            <label class="direct-charge__search"><i class="feather icon-search" aria-hidden="true"></i><input type="search" [ngModel]="itemSearch" (ngModelChange)="onSearchChange($event)" placeholder="Buscar consumo..." [disabled]="loadingItems || loadingCatalog || !selectedPos?.priceList"></label>
+            <div class="direct-charge__categories" *ngIf="chargeCategories.length"><button type="button" [class.is-active]="!categoryFilter" (click)="setCategoryFilter('')">Todos</button><button type="button" *ngFor="let category of chargeCategories" [class.is-active]="categoryFilter === category" (click)="setCategoryFilter(category)">{{ category }}</button></div>
+            <div class="direct-charge__catalog-state" *ngIf="loadingCatalog || loadingItems"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span><strong>Cargando punto de venta y lista de precios...</strong></div>
+            <div class="direct-charge__products" *ngIf="!loadingCatalog && !loadingItems && paginatedChargeItems.length">
+              <article class="direct-charge__product" *ngFor="let item of paginatedChargeItems">
+                <div><span>{{ item.MPV05_CodProducto }}</span><strong>{{ item.MPV05_DesProducto || item.MPV05_NomCorto }}</strong><small>{{ item.MPV00_NomCategoria || item.MPV01_CodCategoria || 'Sin categoría' }}</small></div>
+                <section><b>{{ item.MPV05_Moneda || selectedPos?.currency }} {{ item.MPV05_PrecioTotal | number:'1.2-2' }}</b><button type="button" (click)="addChargeItem(item)" [disabled]="submittingCharge" [attr.aria-label]="'Agregar ' + (item.MPV05_DesProducto || item.MPV05_NomCorto)"><i class="feather icon-plus" aria-hidden="true"></i></button></section>
+              </article>
+            </div>
+            <div class="direct-charge__catalog-empty" *ngIf="!loadingCatalog && !loadingItems && !paginatedChargeItems.length"><i class="feather icon-shopping-bag" aria-hidden="true"></i><strong>No hay consumos para mostrar.</strong><small>{{ chargeError || 'Prueba con otro término o categoría.' }}</small></div>
+            <div class="direct-charge__pager" *ngIf="!loadingItems && filteredChargeItems.length"><span>{{ filteredChargeItems.length }} consumos · Página {{ catalogPage }} de {{ catalogTotalPages }}</span><div><button type="button" aria-label="Página anterior" [disabled]="catalogPage <= 1" (click)="setCatalogPage(catalogPage - 1)"><i class="feather icon-chevron-left"></i></button><button type="button" aria-label="Página siguiente" [disabled]="catalogPage >= catalogTotalPages" (click)="setCatalogPage(catalogPage + 1)"><i class="feather icon-chevron-right"></i></button></div></div>
+          </section>
+
+          <aside class="direct-charge__cart" aria-label="Carrito de consumos">
+            <header><div><h3>Mi carrito</h3><p>{{ chargeLines.length }} producto{{ chargeLines.length === 1 ? '' : 's' }} · {{ totalLineCount }} unidad{{ totalLineCount === 1 ? '' : 'es' }}</p></div><button type="button" class="direct-charge__clear" (click)="clearCart()" [disabled]="!chargeLines.length">Vaciar carrito</button></header>
+            <div class="direct-charge__cart-lines" *ngIf="chargeLines.length; else emptyCart">
+              <article class="direct-charge__cart-line" *ngFor="let line of chargeLines; let i = index; trackBy: trackByChargeLine">
+                <div class="direct-charge__cart-title"><span>{{ line.item.MPV05_CodProducto }}</span><strong>{{ line.item.MPV05_DesProducto || line.item.MPV05_NomCorto }}</strong></div>
+                <label class="direct-charge__unit-price">Precio unitario<input type="text" inputmode="decimal" [ngModel]="line.priceDraft" (ngModelChange)="onPriceDraftChange(i, $event)" (blur)="commitPrice(i)" [disabled]="submittingCharge" aria-label="Precio unitario"></label>
+                <div class="direct-charge__cart-line-bottom"><div class="direct-charge__quantity"><button type="button" (click)="updateChargeLine(i, { quantity: line.quantity - 1 })" [disabled]="line.quantity <= 1" [attr.aria-label]="'Disminuir cantidad de ' + (line.item.MPV05_DesProducto || line.item.MPV05_NomCorto)">−</button><strong>{{ line.quantity }}</strong><button type="button" (click)="updateChargeLine(i, { quantity: line.quantity + 1 })" [attr.aria-label]="'Aumentar cantidad de ' + (line.item.MPV05_DesProducto || line.item.MPV05_NomCorto)">+</button></div><strong>{{ selectedPos?.currency || 'USD' }} {{ line.quantity * line.price | number:'1.2-2' }}</strong></div>
+                <button type="button" class="direct-charge__remove" (click)="removeChargeLine(i)"><i class="feather icon-trash-2" aria-hidden="true"></i>Eliminar</button>
+              </article>
+            </div>
+            <ng-template #emptyCart><div class="direct-charge__empty"><i class="feather icon-shopping-cart" aria-hidden="true"></i><strong>Todavía no has agregado consumos</strong><small>Selecciona productos de la lista para agregarlos al cargo.</small></div></ng-template>
+            <div class="direct-charge__total"><span>Total del cargo</span><strong>{{ selectedPos?.currency || 'USD' }} {{ chargeTotal | number:'1.2-2' }}</strong></div>
+            <p class="direct-charge__error" *ngIf="chargeError && (chargeLines.length || !loadingCatalog)">{{ chargeError }}</p>
+          </aside>
+        </main>
+
+        <footer class="direct-charge__footer"><button type="button" class="button-secondary" (click)="closeNewCharge()" [disabled]="submittingCharge">Cancelar</button><button type="button" class="button-primary" (click)="submitNewCharge()" [disabled]="submittingCharge || loadingCatalog || loadingItems || !chargeLines.length || chargeTotal <= 0"><i class="feather" [ngClass]="submittingCharge ? 'icon-loader' : 'icon-save'"></i>{{ submittingCharge ? 'Registrando...' : 'Registrar cargo' }}<strong *ngIf="!submittingCharge">· {{ selectedPos?.currency || 'USD' }} {{ chargeTotal | number:'1.2-2' }}</strong></button></footer>
+      </section>
+
+      <section class="folio-notes" *ngIf="!addingCharge">
         <div><span>Descripción de la reserva</span><p>{{ folio.PRV01_Descripcion || 'Sin descripción registrada.' }}</p></div>
         <div><span>Observaciones</span><p>{{ folio.PRV01_Observacion || 'Sin observaciones registradas.' }}</p></div>
       </section>

@@ -1582,6 +1582,126 @@ label {
   line-height: 1;
 }
 
+/* POS-style room charge modal */
+.action-modal.action-modal--room-charge {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  width: min(1120px, calc(100vw - 32px));
+  height: min(760px, calc(100dvh - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: hidden;
+  border-radius: 16px;
+  background: #f6f9fc;
+}
+
+.action-modal--room-charge .room-charge-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 15px 20px 13px;
+  color: #fff;
+  background: linear-gradient(110deg, #12334b, #18536a);
+}
+
+.room-charge-header .room-charge-eyebrow {
+  color: #a9e8e6;
+  font-size: 0.62rem;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+}
+
+.room-charge-header h2 { margin: 2px 0 3px; font-size: 1.13rem; font-weight: 850; }
+.room-charge-header p { margin: 0; color: #d6e5ed; font-size: 0.72rem; }
+.room-charge-close { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid rgba(255,255,255,.28); border-radius: 9px; color: #fff; background: rgba(255,255,255,.08); }
+.room-charge-close:hover { background: rgba(255,255,255,.18); }
+
+.room-charge-admin {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.55fr) minmax(185px, 1.3fr) minmax(140px, 1fr) minmax(90px, .55fr);
+  gap: 10px;
+  padding: 12px 20px;
+  border-bottom: 1px solid #e1e9f0;
+  background: #fff;
+}
+
+.room-charge-admin label { display: grid; min-width: 0; gap: 4px; color: #627589; font-size: .61rem; font-weight: 800; }
+.room-charge-admin label > span { text-transform: uppercase; letter-spacing: .04em; }
+.room-charge-admin select, .room-charge-admin input { width: 100%; min-width: 0; height: 34px; padding: 0 9px; border: 1px solid #dce5ed; border-radius: 7px; outline: none; color: #193449; background: #fff; font-size: .7rem; }
+.room-charge-admin select:focus, .room-charge-search:focus-within { border-color: $cyan; box-shadow: 0 0 0 3px rgba($cyan, .13); }
+.room-charge-admin input:disabled { color: #52677b; background: #f4f7fa; opacity: 1; }
+
+.room-charge-workspace { display: grid; min-height: 0; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 13px; padding: 13px 16px; overflow: hidden; }
+.room-charge-catalog, .room-charge-cart { display: flex; min-width: 0; min-height: 0; flex-direction: column; border: 1px solid #e0e8ef; border-radius: 12px; background: #fff; box-shadow: 0 4px 14px rgba(21, 49, 71, .045); }
+.room-charge-catalog { padding: 13px; }
+.room-charge-section-head, .room-charge-cart__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.room-charge-section-head h3, .room-charge-cart__head h3 { margin: 0; color: #18364c; font-size: .9rem; font-weight: 850; }
+.room-charge-section-head p, .room-charge-cart__head p { margin: 3px 0 0; color: #74869a; font-size: .65rem; }
+.room-charge-section-head > span { flex: 0 0 auto; color: #708296; font-size: .62rem; }
+.room-charge-search { display: flex; align-items: center; gap: 8px; height: 38px; margin-top: 11px; padding: 0 10px; border: 1px solid #dce5ed; border-radius: 8px; color: #698196; background: #fff; transition: box-shadow .15s ease, border-color .15s ease; }
+.room-charge-search .material-icons { font-size: 18px; }
+.room-charge-search input { width: 100%; height: 100%; border: 0; outline: 0; color: #193449; background: transparent; font-size: .72rem; }
+.room-charge-categories { display: flex; gap: 6px; margin: 9px 0 2px; padding: 0 0 3px; overflow-x: auto; }
+.room-charge-categories button { flex: 0 0 auto; padding: 5px 10px; border: 1px solid #e0e8ef; border-radius: 999px; color: #5e7186; background: #f7f9fb; font-size: .62rem; font-weight: 750; white-space: nowrap; }
+.room-charge-categories button:hover, .room-charge-categories button.is-active { border-color: $cyan-dark; color: #fff; background: $cyan-dark; }
+.room-charge-catalog-list { flex: 1 1 auto; min-height: 0; margin-top: 8px; overflow: auto; }
+.room-charge-products-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; gap: 8px; }
+.room-charge-product { display: flex; min-height: 105px; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 10px; border: 1px solid #e1e9f0; border-radius: 9px; background: #fff; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+.room-charge-product:hover { transform: translateY(-1px); border-color: #7bc9cb; box-shadow: 0 5px 14px rgba(17, 89, 108, .09); }
+.room-charge-product__copy { display: grid; min-width: 0; align-content: start; gap: 4px; }
+.room-charge-product__copy > span { color: #788ba0; font-size: .59rem; font-weight: 750; letter-spacing: .04em; }
+.room-charge-product__copy > strong { display: -webkit-box; overflow: hidden; color: #203c52; font-size: .71rem; font-weight: 800; line-height: 1.3; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.room-charge-product__copy > small { color: #718499; font-size: .6rem; }
+.room-charge-product__buy { display: flex; flex: 0 0 auto; align-items: flex-end; align-self: stretch; flex-direction: column; justify-content: space-between; }
+.room-charge-product__buy > b { color: #17374c; font-size: .67rem; white-space: nowrap; }
+.room-charge-product__buy > button { display: grid; width: 29px; height: 29px; place-items: center; border: 0; border-radius: 50%; color: #fff; background: $cyan-dark; box-shadow: 0 3px 8px rgba($cyan-dark, .2); }
+.room-charge-product__buy > button:hover { background: $cyan; }
+.room-charge-product__buy > button .material-icons { font-size: 18px; }
+.room-charge-catalog-state { display: flex; min-height: 140px; align-items: center; justify-content: center; flex-direction: column; gap: 7px; color: #708398; text-align: center; }
+.room-charge-catalog-state > .material-icons { color: #8aa2b5; font-size: 25px; }
+.room-charge-catalog-state > strong { color: #3b5368; font-size: .72rem; }
+.room-charge-catalog-state > small { font-size: .63rem; }
+.room-charge-catalog-state > .spinner-border { color: $cyan-dark; }
+.room-charge-catalog-pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 9px; color: #78899b; font-size: .61rem; }
+.room-charge-catalog-pager > div { display: flex; gap: 4px; }
+.room-charge-catalog-pager button { display: grid; width: 29px; height: 29px; place-items: center; border: 1px solid #dce5ed; border-radius: 7px; color: #37546b; background: #fff; }
+.room-charge-catalog-pager button:disabled { cursor: not-allowed; opacity: .4; }
+
+.room-charge-cart { padding: 13px; }
+.room-charge-cart__head { flex: 0 0 auto; padding-bottom: 11px; border-bottom: 1px solid #e9eef3; }
+.room-charge-cart__clear { padding: 4px 7px; border: 0; border-radius: 6px; color: #718398; background: transparent; font-size: .61rem; font-weight: 750; }
+.room-charge-cart__clear:not(:disabled):hover { color: #a43c3c; background: #fff1f0; }
+.room-charge-cart__clear:disabled { cursor: default; opacity: .4; }
+.room-charge-cart__lines { flex: 1 1 auto; min-height: 0; overflow: auto; }
+.room-charge-cart-line { position: relative; padding: 11px 1px 9px; border-bottom: 1px solid #edf1f5; }
+.room-charge-cart-line__title { display: grid; gap: 3px; }
+.room-charge-cart-line__title > span { color: #7a8da0; font-size: .57rem; font-weight: 750; }
+.room-charge-cart-line__title > strong { color: #1d3a50; font-size: .7rem; font-weight: 820; }
+.room-charge-cart-line__title > small { color: #708398; font-size: .61rem; }
+.room-charge-cart-line__price { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; color: #708398; font-size: .59rem; }
+.room-charge-cart-line__price input { width: 96px; height: 27px; padding: 0 6px; border: 1px solid #dce5ed; border-radius: 6px; color: #28485e; font-size: .63rem; text-align: right; }
+.room-charge-cart-line__bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.room-charge-quantity { display: inline-flex; height: 29px; align-items: center; border: 1px solid #dce5ed; border-radius: 7px; overflow: hidden; }
+.room-charge-quantity button { width: 30px; height: 100%; border: 0; color: #236476; background: #f5fafb; font-size: 1rem; font-weight: 800; }
+.room-charge-quantity button:hover:not(:disabled) { background: #e4f4f4; }
+.room-charge-quantity button:disabled { color: #b8c4cf; }
+.room-charge-quantity strong { min-width: 25px; color: #25445a; font-size: .68rem; text-align: center; }
+.room-charge-cart-line__total { color: #1c394f; font-size: .68rem; white-space: nowrap; }
+.room-charge-cart-line__remove { display: flex; align-items: center; gap: 3px; margin: 5px 0 0 auto; padding: 2px 4px; border: 0; color: #8291a0; background: transparent; font-size: .58rem; }
+.room-charge-cart-line__remove:hover { color: #aa3c3c; }
+.room-charge-cart-line__remove .material-icons { font-size: 15px; }
+.room-charge-cart__empty { display: flex; flex: 1 1 auto; min-height: 150px; align-items: center; justify-content: center; flex-direction: column; gap: 7px; padding: 18px; color: #7b8da0; text-align: center; }
+.room-charge-cart__empty .material-icons { display: grid; width: 43px; height: 43px; place-items: center; border-radius: 50%; color: $cyan-dark; background: #eaf7f7; font-size: 22px; }
+.room-charge-cart__empty strong { color: #3a5368; font-size: .71rem; }
+.room-charge-cart__empty small { max-width: 210px; font-size: .62rem; line-height: 1.45; }
+.room-charge-cart__summary { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 8px; margin-top: 9px; padding: 12px 0 1px; border-top: 1px solid #e5ecf2; color: #5e7388; font-size: .7rem; }
+.room-charge-cart__summary strong { color: #16374d; font-size: 1rem; font-weight: 900; }
+.room-charge-inline-error { flex: 0 0 auto; margin-top: 8px; padding: 8px; border-radius: 7px; color: #a13737; background: #fff1f0; font-size: .63rem; }
+.action-modal.action-modal--room-charge .room-charge-footer { display: flex; flex: 0 0 auto; align-items: center; justify-content: flex-end; gap: 9px; padding: 11px 17px; border-top: 1px solid #e0e8ef; background: #fff; }
+.action-modal.action-modal--room-charge .room-charge-secondary, .action-modal.action-modal--room-charge .room-charge-primary { min-width: 142px; min-height: 39px; border-radius: 8px; font-size: .72rem; }
+.action-modal.action-modal--room-charge .room-charge-primary { gap: 6px; }
+.room-charge-primary strong { font-size: .72rem; }
+
 .action-modal__header,
 .action-modal__footer,
 .action-modal__hero,
@@ -2133,4 +2253,35 @@ label {
   .room-invoice-primary-btn {
     width: 100%;
   }
+}
+
+@media (max-width: 900px) {
+  .action-modal.action-modal--room-charge {
+    width: min(760px, calc(100vw - 24px));
+    height: min(900px, calc(100dvh - 24px));
+    max-height: calc(100dvh - 24px);
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+  }
+  .room-charge-admin { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
+  .room-charge-workspace { grid-template-columns: minmax(0, 1fr); overflow: auto; }
+  .room-charge-catalog { min-height: 380px; }
+  .room-charge-cart { min-height: 260px; }
+  .action-modal.action-modal--room-charge .room-charge-footer { flex-direction: row; }
+  .action-modal.action-modal--room-charge .room-charge-secondary, .action-modal.action-modal--room-charge .room-charge-primary { width: auto; }
+}
+
+@media (max-width: 575px) {
+  .action-modal.action-modal--room-charge { width: calc(100vw - 12px); height: calc(100dvh - 12px); max-height: calc(100dvh - 12px); }
+  .action-modal--room-charge .room-charge-header { padding: 12px 13px; }
+  .room-charge-header h2 { font-size: 1rem; }
+  .room-charge-header p { font-size: .64rem; }
+  .room-charge-admin { grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 13px; }
+  .room-charge-admin__guest, .room-charge-admin__pos { grid-column: 1 / -1; }
+  .room-charge-workspace { gap: 9px; padding: 9px; }
+  .room-charge-catalog { min-height: 360px; padding: 10px; }
+  .room-charge-products-grid { grid-template-columns: 1fr; }
+  .room-charge-product { min-height: 80px; }
+  .room-charge-cart { min-height: 235px; padding: 10px; }
+  .action-modal.action-modal--room-charge .room-charge-footer { flex-direction: row; gap: 7px; padding: 9px; }
+  .action-modal.action-modal--room-charge .room-charge-secondary, .action-modal.action-modal--room-charge .room-charge-primary { width: auto; min-width: 0; flex: 1 1 0; padding: 0 8px; }
 }

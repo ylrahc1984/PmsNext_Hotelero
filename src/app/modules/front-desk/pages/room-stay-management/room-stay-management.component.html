@@ -1054,205 +1054,96 @@
         } @else if (isActionSelected('new-charge')) {
           <header class="room-charge-header">
             <div>
-              <span class="room-charge-eyebrow">Cargo de habitacion</span>
-              <h2>Nuevo cargo</h2>
-              <p>Habitacion {{ room().roomNumber }} · Reserva {{ room().reservationNumber }} · {{ todayDisplayDate() }}</p>
+              <span class="room-charge-eyebrow">PMSNEXT · CARGO DE HABITACIÓN</span>
+              <h2>Nuevo cargo de habitación</h2>
+              <p>Habitación {{ room().roomNumber }} · Reserva {{ room().reservationNumber }} · {{ todayDisplayDate() }}</p>
             </div>
             <button type="button" class="room-charge-close" aria-label="Cerrar" (click)="closeActionModal()">
               <span class="material-icons" aria-hidden="true">close</span>
             </button>
           </header>
 
-          <main class="room-charge-body">
-            <section class="room-charge-panel room-charge-panel--setup">
-              <div class="room-charge-panel-title">
-                <span class="material-icons" aria-hidden="true">person</span>
-                <div>
-                  <h3>Huesped y punto de venta</h3>
-                  <p>Selecciona quien realiza el consumo y desde que punto se cargara.</p>
-                </div>
-              </div>
-
-              <div class="room-charge-form-grid">
-                <label class="room-charge-field">
-                  <span>Huesped</span>
-                  <select [ngModel]="roomChargeDraft().guestDocument" (ngModelChange)="updateRoomChargeDraft({ guestDocument: $event })">
-                    @for (guest of roomChargeGuests(); track guest.document) {
-                      <option [value]="guest.document">{{ guest.name }} · {{ guest.document }}</option>
-                    }
-                  </select>
-                </label>
-
-                <label class="room-charge-field">
-                  <span>Punto de venta</span>
-                  <select
-                    [ngModel]="roomChargeDraft().pointOfSale"
-                    (ngModelChange)="onRoomChargePointOfSaleChange($event)"
-                    [disabled]="isRoomChargeCatalogLoading()"
-                  >
-                    @if (isRoomChargeCatalogLoading()) {
-                      <option value="">Cargando puntos de venta...</option>
-                    } @else if (!roomChargePointOfSales().length) {
-                      <option value="">Sin puntos de venta asignados</option>
-                    } @else {
-                      @for (pointOfSale of roomChargePointOfSales(); track pointOfSale.code) {
-                        <option [value]="pointOfSale.code">{{ pointOfSale.code }} · {{ pointOfSale.name }}</option>
-                      }
-                    }
-                  </select>
-                </label>
-
-                <label class="room-charge-field">
-                  <span>Lista de precios</span>
-                  <input type="text" [ngModel]="roomChargeDraft().priceList" disabled />
-                </label>
-
-                <label class="room-charge-field">
-                  <span>Moneda</span>
-                  <input type="text" [ngModel]="roomChargeDraft().currency" disabled />
-                </label>
-              </div>
-
-              @if (selectedRoomChargeGuest(); as guest) {
-                <article class="room-charge-guest-summary">
-                  <span class="material-icons" aria-hidden="true">badge</span>
-                  <div>
-                    <strong>{{ guest.name }}</strong>
-                    <span>{{ guest.documentType }} · {{ guest.document }}</span>
-                  </div>
-                </article>
-              }
+          @if (selectedRoomChargeGuest()) {
+            <section class="room-charge-admin" aria-label="Datos administrativos del cargo">
+              <label class="room-charge-admin__guest">
+                <span>Huésped</span>
+                <select [ngModel]="roomChargeDraft().guestDocument" (ngModelChange)="updateRoomChargeDraft({ guestDocument: $event })">
+                  @for (option of roomChargeGuests(); track option.document) {
+                    <option [value]="option.document">{{ option.name }} · {{ option.documentType }} {{ option.document }}</option>
+                  }
+                </select>
+              </label>
+              <label class="room-charge-admin__pos">
+                <span>Punto de venta</span>
+                <select [ngModel]="roomChargeDraft().pointOfSale" (ngModelChange)="onRoomChargePointOfSaleChange($event)" [disabled]="isRoomChargeCatalogLoading()">
+                  @if (isRoomChargeCatalogLoading()) { <option value="">Cargando puntos de venta...</option> }
+                  @else if (!roomChargePointOfSales().length) { <option value="">Sin puntos de venta asignados</option> }
+                  @else { @for (pointOfSale of roomChargePointOfSales(); track pointOfSale.code) { <option [value]="pointOfSale.code">{{ pointOfSale.code }} · {{ pointOfSale.name }}</option> } }
+                </select>
+              </label>
+              <label><span>Lista de precios</span><input type="text" [ngModel]="roomChargeDraft().priceList" disabled /></label>
+              <label class="room-charge-admin__currency"><span>Moneda</span><input type="text" [ngModel]="roomChargeDraft().currency" disabled /></label>
             </section>
+          }
 
-            <section class="room-charge-panel room-charge-panel--catalog">
-              <div class="room-charge-panel-title">
+          <main class="room-charge-workspace">
+            <section class="room-charge-catalog">
+              <div class="room-charge-section-head">
+                <div><h3>Consumos disponibles</h3><p>Busca por código o nombre, o filtra por categoría.</p></div>
+                <span>{{ filteredRoomChargeItems().length }} resultados</span>
+              </div>
+              <label class="room-charge-search">
                 <span class="material-icons" aria-hidden="true">search</span>
-                <div>
-                  <h3>Consumos disponibles</h3>
-                  <p>Busca por codigo, nombre, categoria o grupo.</p>
+                <input type="search" [ngModel]="roomChargeDraft().itemSearch" (ngModelChange)="updateRoomChargeDraft({ itemSearch: $event })" placeholder="Buscar consumo..." [disabled]="isRoomChargeItemsLoading() || !roomChargeDraft().priceList" />
+              </label>
+              @if (roomChargeCategories().length) {
+                <div class="room-charge-categories" aria-label="Filtrar por categoría">
+                  <button type="button" [class.is-active]="!selectedRoomChargeCategory()" (click)="setRoomChargeCategory('')">Todos</button>
+                  @for (category of roomChargeCategories(); track category) {
+                    <button type="button" [class.is-active]="selectedRoomChargeCategory() === category" (click)="setRoomChargeCategory(category)">{{ category }}</button>
+                  }
                 </div>
-              </div>
-
-              <div class="room-charge-search">
-                <span class="material-icons" aria-hidden="true">search</span>
-                <input
-                  type="search"
-                  [ngModel]="roomChargeDraft().itemSearch"
-                  (ngModelChange)="updateRoomChargeDraft({ itemSearch: $event })"
-                  placeholder="Buscar consumo..."
-                  [disabled]="isRoomChargeItemsLoading() || !roomChargeDraft().priceList"
-                />
-              </div>
-
+              }
               <div class="room-charge-catalog-list">
                 @if (isRoomChargeItemsLoading()) {
-                  <div class="room-charge-empty-state">
-                    <span class="material-icons" aria-hidden="true">hourglass_top</span>
-                    <strong>Cargando lista de precios...</strong>
+                  <div class="room-charge-catalog-state"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span><strong>Cargando lista de precios...</strong></div>
+                } @else if (paginatedRoomChargeItems().length) {
+                  <div class="room-charge-products-grid">
+                    @for (item of paginatedRoomChargeItems(); track item.MPV05_CodProducto) {
+                      <article class="room-charge-product">
+                        <div class="room-charge-product__copy"><span>{{ item.MPV05_CodProducto }}</span><strong>{{ item.MPV05_DesProducto || item.MPV05_NomCorto }}</strong><small>{{ item.MPV00_NomCategoria || item.MPV01_CodCategoria || 'Sin categoría' }}</small></div>
+                        <div class="room-charge-product__buy"><b>{{ roomChargeDraft().currency }} {{ item.MPV05_PrecioTotal | number:'1.2-2' }}</b><button type="button" (click)="addRoomChargeItem(item)" [attr.aria-label]="'Agregar ' + (item.MPV05_DesProducto || item.MPV05_NomCorto)"><span class="material-icons" aria-hidden="true">add</span></button></div>
+                      </article>
+                    }
                   </div>
-                } @else if (filteredRoomChargeItems().length) {
-                  @for (item of paginatedRoomChargeItems(); track item.MPV05_CodProducto) {
-                    <button type="button" class="room-charge-product" (click)="addRoomChargeItem(item)">
-                      <span class="room-charge-product-code">{{ item.MPV05_CodProducto }}</span>
-                      <span class="room-charge-product-name">{{ item.MPV05_DesProducto || item.MPV05_NomCorto }}</span>
-                      <span class="room-charge-product-meta">{{ item.MPV00_NomCategoria || item.MPV01_CodCategoria || 'Sin categoria' }}</span>
-                      <strong>{{ item.MPV05_PrecioTotal | number:'1.2-2' }}</strong>
-                    </button>
-                  }
                 } @else {
-                  <div class="room-charge-empty-state">
-                    <span class="material-icons" aria-hidden="true">inventory_2</span>
-                    <strong>No hay consumos para mostrar.</strong>
-                    <span>Selecciona un punto de venta con lista de precios activa.</span>
-                  </div>
+                  <div class="room-charge-catalog-state"><span class="material-icons" aria-hidden="true">inventory_2</span><strong>No hay consumos para mostrar.</strong><small>Revisa el punto de venta, la categoría o la búsqueda.</small></div>
                 }
               </div>
-
               @if (!isRoomChargeItemsLoading() && filteredRoomChargeItems().length) {
-                <div class="room-charge-catalog-pager">
-                  <span>
-                    {{ filteredRoomChargeItems().length }} item(s) · Pagina {{ roomChargeCatalogPage() }} de {{ roomChargeCatalogTotalPages() }}
-                  </span>
-                  <div>
-                    <button
-                      type="button"
-                      aria-label="Pagina anterior"
-                      [disabled]="roomChargeCatalogPage() <= 1"
-                      (click)="setRoomChargeCatalogPage(roomChargeCatalogPage() - 1)"
-                    >
-                      <span class="material-icons" aria-hidden="true">chevron_left</span>
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Pagina siguiente"
-                      [disabled]="roomChargeCatalogPage() >= roomChargeCatalogTotalPages()"
-                      (click)="setRoomChargeCatalogPage(roomChargeCatalogPage() + 1)"
-                    >
-                      <span class="material-icons" aria-hidden="true">chevron_right</span>
-                    </button>
-                  </div>
-                </div>
+                <div class="room-charge-catalog-pager"><span>{{ filteredRoomChargeItems().length }} consumos · Página {{ roomChargeCatalogPage() }} de {{ roomChargeCatalogTotalPages() }}</span><div><button type="button" aria-label="Página anterior" [disabled]="roomChargeCatalogPage() <= 1" (click)="setRoomChargeCatalogPage(roomChargeCatalogPage() - 1)"><span class="material-icons" aria-hidden="true">chevron_left</span></button><button type="button" aria-label="Página siguiente" [disabled]="roomChargeCatalogPage() >= roomChargeCatalogTotalPages()" (click)="setRoomChargeCatalogPage(roomChargeCatalogPage() + 1)"><span class="material-icons" aria-hidden="true">chevron_right</span></button></div></div>
               }
             </section>
 
-            <section class="room-charge-panel room-charge-panel--detail">
-              <div class="room-charge-panel-title room-charge-panel-title--between">
-                <div class="room-charge-panel-title">
-                  <span class="material-icons" aria-hidden="true">receipt_long</span>
-                  <div>
-                    <h3>Detalle del cargo</h3>
-                    <p>{{ roomChargeLines().length }} item(s) agregados</p>
-                  </div>
-                </div>
-                <strong>{{ roomChargeTotal() | currency:roomChargeDraft().currency:'symbol':'1.2-2' }}</strong>
-              </div>
-
+            <aside class="room-charge-cart" aria-label="Carrito de consumos">
+              <header class="room-charge-cart__head"><div><h3>Mi carrito</h3><p>{{ roomChargeLines().length }} producto{{ roomChargeLines().length === 1 ? '' : 's' }} agregado{{ roomChargeLines().length === 1 ? '' : 's' }}</p></div><button type="button" class="room-charge-cart__clear" (click)="removeAllRoomChargeLines()" [disabled]="!roomChargeLines().length">Vaciar carrito</button></header>
               @if (roomChargeLines().length) {
-                <div class="room-charge-detail-table">
-                  <div class="room-charge-detail-row room-charge-detail-head">
-                    <span>Item</span><span>Cant.</span><span>Precio</span><span>Total</span><span></span>
-                  </div>
+                <div class="room-charge-cart__lines">
                   @for (line of roomChargeLines(); track line.id) {
-                    <div class="room-charge-detail-row">
-                      <div class="room-charge-detail-name">
-                        <strong>{{ line.name }}</strong>
-                        <span> = {{ line.code }}</span>
-                      </div>
-                      <input
-                        class="room-charge-number-input"
-                        type="number"
-                        min="0"
-                        step="1"
-                        [ngModel]="line.quantity"
-                        (ngModelChange)="updateRoomChargeLine(line.id, { quantity: +$event })"
-                      />
-                      <input
-                        class="room-charge-number-input"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        [ngModel]="line.price"
-                        (ngModelChange)="updateRoomChargeLine(line.id, { price: +$event })"
-                      />
-                      <strong class="room-charge-line-total">{{ line.total | number:'1.2-2' }}</strong>
-                      <button type="button" class="room-charge-row-action" aria-label="Eliminar item" (click)="removeRoomChargeLine(line.id)">
-                        <span class="material-icons" aria-hidden="true">delete</span>
-                      </button>
-                    </div>
+                    <article class="room-charge-cart-line">
+                      <div class="room-charge-cart-line__title"><span>{{ line.code }}</span><strong>{{ line.name }}</strong></div>
+                      <label class="room-charge-cart-line__price">Precio unitario<input type="number" min="0" step="0.01" [ngModel]="line.price" (ngModelChange)="updateRoomChargeLine(line.id, { price: +$event })" /></label>
+                      <div class="room-charge-cart-line__bottom"><div class="room-charge-quantity"><button type="button" (click)="updateRoomChargeLine(line.id, { quantity: line.quantity - 1 })" [disabled]="line.quantity <= 1" [attr.aria-label]="'Disminuir cantidad de ' + line.name">−</button><strong>{{ line.quantity }}</strong><button type="button" (click)="updateRoomChargeLine(line.id, { quantity: line.quantity + 1 })" [attr.aria-label]="'Aumentar cantidad de ' + line.name">+</button></div><strong class="room-charge-cart-line__total">{{ roomChargeDraft().currency }} {{ line.total | number:'1.2-2' }}</strong></div>
+                      <button type="button" class="room-charge-cart-line__remove" (click)="removeRoomChargeLine(line.id)"><span class="material-icons" aria-hidden="true">delete_outline</span>Eliminar</button>
+                    </article>
                   }
                 </div>
+                <div class="room-charge-cart__summary"><span>Total del cargo</span><strong>{{ roomChargeTotal() | currency:roomChargeDraft().currency:'symbol':'1.2-2' }}</strong></div>
               } @else {
-                <div class="room-charge-empty-state room-charge-empty-state--detail">
-                  <span class="material-icons" aria-hidden="true">add_shopping_cart</span>
-                  <strong>Agrega consumos desde la lista.</strong>
-                  <span>El detalle se usara para construir el POST de cargo habitacion.</span>
-                </div>
+                <div class="room-charge-cart__empty"><span class="material-icons" aria-hidden="true">shopping_cart</span><strong>Todavía no has agregado consumos</strong><small>Selecciona productos de la lista para agregarlos al cargo.</small></div>
               }
-
-              @if (roomChargeValidationMessage()) {
-                <div class="room-charge-inline-error">{{ roomChargeValidationMessage() }}</div>
-              }
-            </section>
+              @if (roomChargeValidationMessage()) { <div class="room-charge-inline-error">{{ roomChargeValidationMessage() }}</div> }
+            </aside>
           </main>
 
           <footer class="room-charge-footer">
@@ -1263,6 +1154,7 @@
             <button type="button" class="room-charge-primary" [disabled]="!canExecuteActiveAction()" (click)="executeActiveAction()">
               <span class="material-icons" aria-hidden="true">{{ isRoomChargeSubmitting() ? 'hourglass_top' : 'save' }}</span>
               <span>{{ isRoomChargeSubmitting() ? 'Registrando...' : 'Registrar cargo' }}</span>
+              <strong *ngIf="!isRoomChargeSubmitting()">· {{ roomChargeTotal() | currency:roomChargeDraft().currency:'symbol':'1.2-2' }}</strong>
             </button>
           </footer>
         } @else if (isActionSelected('guest-portal')) {

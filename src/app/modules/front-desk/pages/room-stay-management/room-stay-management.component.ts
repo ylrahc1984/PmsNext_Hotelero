@@ -791,14 +791,13 @@ export class RoomStayManagementComponent implements OnInit {
   });
   readonly filteredRoomChargeItems = computed(() => {
     const term = this.normalizeSearchTerm(this.roomChargeDraft().itemSearch);
+    const category = this.selectedRoomChargeCategory();
     const items = this.roomChargeItems();
 
-    if (!term) {
-      return items;
-    }
-
-    return items.filter((item) =>
-        [
+    return items.filter((item) => {
+      const itemCategory = this.cleanText(item.MPV00_NomCategoria || item.MPV01_CodCategoria);
+      const matchesCategory = !category || itemCategory === category;
+      const matchesSearch = !term || [
           item.MPV05_CodProducto,
           item.MPV05_DesProducto,
           item.MPV05_NomCorto,
@@ -806,11 +805,19 @@ export class RoomStayManagementComponent implements OnInit {
           item.MPV01_CodGrupo
         ]
           .map((value) => this.normalizeSearchTerm(value))
-          .some((value) => value.includes(term))
-      );
+          .some((value) => value.includes(term));
+      return matchesCategory && matchesSearch;
+    });
   });
   readonly roomChargeCatalogTotalPages = computed(() =>
     Math.max(1, Math.ceil(this.filteredRoomChargeItems().length / this.roomChargeCatalogPageSize))
+  );
+  readonly selectedRoomChargeCategory = signal('');
+  readonly roomChargeCategories = computed(() =>
+    Array.from(new Set(this.roomChargeItems()
+      .map((item) => this.cleanText(item.MPV00_NomCategoria || item.MPV01_CodCategoria))
+      .filter(Boolean)))
+      .sort((left, right) => left.localeCompare(right, 'es'))
   );
   readonly paginatedRoomChargeItems = computed(() => {
     const totalPages  = this.roomChargeCatalogTotalPages();
@@ -2281,12 +2288,18 @@ export class RoomStayManagementComponent implements OnInit {
     this.roomChargeCatalogPage.set(nextPage);
   }
 
+  setRoomChargeCategory(category: string): void {
+    this.selectedRoomChargeCategory.set(category);
+    this.roomChargeCatalogPage.set(1);
+  }
+
   onRoomChargePointOfSaleChange(pointOfSaleCode: string): void {
     const selectedPointOfSale = this.roomChargePointOfSales().find((pointOfSale) => pointOfSale.code === pointOfSaleCode);
 
     this.roomChargeLines.set([]);
     this.roomChargeItems.set([]);
     this.roomChargeCatalogPage.set(1);
+    this.selectedRoomChargeCategory.set('');
     this.updateRoomChargeDraft({
       pointOfSale     : pointOfSaleCode,
       priceList       : selectedPointOfSale?.priceList ?? '',
@@ -2345,6 +2358,11 @@ export class RoomStayManagementComponent implements OnInit {
     this.roomChargeLines.update((lines) =>
       lines.filter((line) => line.id !== lineId).map((line, index) => ({ ...line, order: index + 1 }))
     );
+  }
+
+  removeAllRoomChargeLines(): void {
+    this.roomChargeLines.set([]);
+    this.roomChargeValidationMessage.set('');
   }
 
   openAddGuestModal(): void {
@@ -2491,6 +2509,7 @@ export class RoomStayManagementComponent implements OnInit {
     this.roomChargeItems.set([]);
     this.roomChargeLines.set([]);
     this.roomChargeCatalogPage.set(1);
+    this.selectedRoomChargeCategory.set('');
     this.roomChargeValidationMessage.set('');
   }
 
