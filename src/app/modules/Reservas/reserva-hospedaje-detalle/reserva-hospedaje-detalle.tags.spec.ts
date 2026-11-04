@@ -232,7 +232,7 @@ function makeReservation(codReserva: string, estado = 'CON'): ReservaHospedajeDe
     fecCreacion: '23/08/2026', fecConfirma: '', fecPrepago: '', fecAnulada: '', totNoches: 1, totDias: 2,
     descripcion: 'Reserva de prueba', tCambio: 1, folio: 'F-1', estado, moneda: 'USD', totalRsv: 100,
     observacion: 'Observación de prueba', observaciones: '', procesado: 0, directo: true, operador: 'CHARLY',
-    habitaciones: [], inclusiones: [], servicios: [], desgloseHabitaciones: []
+    habitaciones: [], inclusiones: [], servicios: [], desgloseHabitaciones: [], contactos: [], registrosPrepago: []
   };
 }
 

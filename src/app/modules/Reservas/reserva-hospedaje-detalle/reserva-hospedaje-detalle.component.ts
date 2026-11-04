@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -53,6 +54,8 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
   readonly reserva                      = signal<ReservaHospedajeDetalle | null>(null);
   readonly loading                      = signal(false);
   readonly errorMessage                 = signal('');
+  readonly notFound                     = signal(false);
+  readonly incompleteResponse            = signal(false);
   readonly assignedReservationTags      = signal<ReservaTagAsignado[]>([]);
   readonly isAssignedTagsLoading        = signal(false);
   readonly assignedTagsError            = signal('');
@@ -67,7 +70,9 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
   readonly inclusiones                  = computed(() => this.reserva()?.inclusiones ?? []);
   readonly servicios                    = computed(() => this.reserva()?.servicios ?? []);
   readonly desgloseHabitaciones         = computed(() => this.reserva()?.desgloseHabitaciones ?? []);
-  readonly moneda                       = computed(() => this.reserva()?.moneda?.trim() || 'USD');
+  readonly contactos                    = computed(() => this.reserva()?.contactos ?? []);
+  readonly registrosPrepago             = computed(() => this.reserva()?.registrosPrepago ?? []);
+  readonly moneda                       = computed(() => this.reserva()?.moneda?.trim() || '');
 
   readonly cantidadHabitaciones         = computed(() => this.habitaciones().reduce((total, item) => total + this.toNumber(item.cantHab), 0));
   readonly totalHabitaciones            = computed(() => this.habitaciones().reduce((total, item) => total + this.toNumber(item.total), 0));
@@ -78,6 +83,14 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
     this.habitaciones().reduce((total, item) => total + this.toNumber(item.numPax), 0)
   );
   readonly totalNinos                   = computed(() => this.habitaciones().reduce((total, item) => total + this.toNumber(item.numChild), 0));
+  readonly hayPax                       = computed(() => this.habitaciones().some((item) => item.numPax !== null));
+  readonly hayNinos                     = computed(() => this.habitaciones().some((item) => item.numChild !== null));
+  readonly financialSummary             = computed(() => [
+    { label: 'Habitaciones', value: this.summarizeAmounts(this.habitaciones().map((item) => ({ amount: item.total, currency: item.moneda }))) },
+    { label: 'Inclusiones', value: this.summarizeAmounts(this.inclusiones().map((item) => ({ amount: item.totServ, currency: item.moneda }))) },
+    { label: 'Servicios adicionales', value: this.summarizeAmounts(this.servicios().map((item) => ({ amount: item.total, currency: item.moneda }))) },
+    { label: 'Impuestos de servicios', value: this.summarizeAmounts(this.servicios().map((item) => ({ amount: item.impuesto, currency: item.moneda }))) }
+  ]);
   readonly accionesBloqueadas           = computed(() => this.esEstadoBloqueado(this.reserva()?.estado));
   readonly puedeGestionarTags           = computed(() =>
     Boolean(this.codReserva() && this.reserva())
@@ -330,7 +343,45 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
   }
 
   formatDate(value: string | null | undefined): string {
-    return normalizePmsDateDDMMYYYY(value) || 'N/D';
+    return normalizePmsDateDDMMYYYY(value) || '—';
+  }
+
+  formatMoney(value: number | null | undefined, currency: string | null | undefined): string {
+    if (value === null || value === undefined || !Number.isFinite(Number(value))) return 'No disponible';
+    const amount = Number(value).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return currency?.trim() ? `${currency.trim()} ${amount}` : `Moneda no disponible · ${amount}`;
+  }
+
+  contactEmailHref(email: string): string | null {
+    return email.trim() ? `mailto:${email.trim()}` : null;
+  }
+
+  contactPhoneHref(phone: string): string | null {
+    return phone.trim() ? `tel:${phone.trim()}` : null;
+  }
+
+  isCpl(value: number | null | undefined): boolean {
+    return value === 1;
+  }
+
+  private summarizeAmounts(lines: Array<{ amount: number | null; currency: string }>): string {
+    if (!lines.length) return 'Sin registros';
+    const totals = new Map<string, { total: number; incomplete: boolean }>();
+    const unknownCurrency: string[] = [];
+    for (const line of lines) {
+      if (!line.currency.trim()) {
+        unknownCurrency.push(line.amount === null ? 'Moneda no disponible · importe no disponible' : `Moneda no disponible · ${Number(line.amount).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+        continue;
+      }
+      const entry = totals.get(line.currency) ?? { total: 0, incomplete: false };
+      if (line.amount === null) entry.incomplete = true;
+      else entry.total += line.amount;
+      totals.set(line.currency, entry);
+    }
+    const formatted = [...totals].map(([currency, entry]) => entry.incomplete
+      ? `${currency} · importe incompleto`
+      : `${currency} ${entry.total.toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+    return [...formatted, ...unknownCurrency].join(' / ') || 'Importe no disponible';
   }
 
   editarReserva(): void {
@@ -404,7 +455,7 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
       return this.toNumber(item.totServ);
     }
 
-    return this.toNumber(item.cantidad) * this.toNumber(item.precio);
+    return 0;
   }
 
   breakdownRoomDescription(item: ReservaHospedajeDesgloseHabitacion): string {
@@ -417,6 +468,7 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
   }
 
   processedLabel(value: unknown): string {
+    if (value === null || value === undefined || value === '') return 'No disponible';
     return this.toNumber(value) === 1 ? 'Procesada' : 'Pendiente';
   }
 
@@ -439,6 +491,8 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
     this.codReserva.set(codReserva);
     this.reserva.set(null);
     this.errorMessage.set('');
+    this.notFound.set(false);
+    this.incompleteResponse.set(false);
     this.showReservationTagsModal.set(false);
     this.assignedReservationTags.set([]);
     this.assignedTagsError.set('');
@@ -452,6 +506,8 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
     const normalizedCode = codReserva.trim().toUpperCase();
     this.loading.set(true);
     this.errorMessage.set('');
+    this.notFound.set(false);
+    this.incompleteResponse.set(false);
 
     this.service
       .getByReservationCode(codReserva)
@@ -464,13 +520,20 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
       .subscribe({
         next: (detalle) => {
           if (requestId !== this.reservationRequestId || normalizedCode !== this.codReserva().trim().toUpperCase()) return;
+          if (!detalle.codReserva) {
+            this.incompleteResponse.set(true);
+            return;
+          }
+          this.incompleteResponse.set(false);
           this.reserva.set(detalle);
         },
         error: (error: unknown) => {
           if (requestId !== this.reservationRequestId) return;
-          console.error('No se pudo cargar el detalle de la reserva.', error);
+          const status = error instanceof HttpErrorResponse ? error.status : 0;
+          console.error('No se pudo cargar el detalle de la reserva.', { status });
           this.reserva.set(null);
-          this.errorMessage.set('No se pudo cargar el detalle de la reserva.');
+          this.notFound.set(status === 404);
+          this.errorMessage.set(status === 404 ? '' : 'No se pudo cargar el detalle de la reserva. Verifique la conexión e intente actualizar.');
         }
       });
   }
