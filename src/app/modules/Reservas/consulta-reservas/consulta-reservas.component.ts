@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, OnInit, computed, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -22,6 +22,8 @@ import { ReservationPrepaymentSummary, buildReservationPrepaymentSummary } from 
 import { ReservaHabitacionService } from '../services/reserva-habitacion.service';
 import { ReservaTagsService } from '../services/reserva-tags.service';
 import { ConsultaReservasExportFilters, ConsultaReservasExportService } from './consulta-reservas-export.service';
+import { RoomingListV2AdminDialogComponent } from '../rooming-list-v2/components/rooming-list-v2-admin-dialog/rooming-list-v2-admin-dialog.component';
+import { RoomingListV2DialogContext } from '../rooming-list-v2/models/rooming-list-v2.model';
 
 interface ConsultaReservasFilterForm {
   tipoFecha: FormControl<ReservaTipoFecha>;
@@ -48,7 +50,8 @@ type EstadoCambioReserva = 'WLT' | 'CCR';
     SharedModule,
     ReservationPrepaymentsComponent,
     ReservationTagListComponent,
-    ReservationTagDetailsComponent
+    ReservationTagDetailsComponent,
+    RoomingListV2AdminDialogComponent
   ],
   templateUrl: './consulta-reservas.component.html',
   styleUrls: ['./consulta-reservas.component.scss']
@@ -110,6 +113,8 @@ export class ConsultaReservasComponent implements OnInit {
     return Array.from(totales, ([moneda, total]) => ({ moneda, total }));
   });
   readonly selectedTagDetails       = signal<ReservaConsulta | null>(null);
+  readonly roomingDialogContext    = signal<RoomingListV2DialogContext | null>(null);
+  readonly roomingDetailsLoading   = signal('');
   agencyModalAgencies               : WalkInAgenciaOption[] = [];
   showAgencyModal                   = false;
   agencyModalLoading                = false;
@@ -184,6 +189,24 @@ export class ConsultaReservasComponent implements OnInit {
 
   puedeEditarReserva(reserva: ReservaConsulta): boolean {
     return !!reserva.reserva.trim() && this.normalizeEstadoCode(reserva.estado) !== 'CHK' && this.normalizeEstadoCode(reserva.estado) !== 'ANU';
+  }
+
+  async registrarHuespedes(reserva: ReservaConsulta): Promise<void> {
+    if (!this.puedeEditarReserva(reserva) || this.roomingDetailsLoading()) return;
+    const codReserva = reserva.reserva.trim();
+    if (!codReserva) return;
+
+    this.roomingDetailsLoading.set(codReserva);
+    try {
+      if (!(await this.operationalPolicy.require(OperationalAction.UpdateOperation))) return;
+      this.roomingDialogContext.set({ codReserva });
+    } finally {
+      this.roomingDetailsLoading.set('');
+    }
+  }
+
+  closeRoomingDialog(): void {
+    this.roomingDialogContext.set(null);
   }
 
   async consultarReserva(reserva: ReservaConsulta): Promise<void> {

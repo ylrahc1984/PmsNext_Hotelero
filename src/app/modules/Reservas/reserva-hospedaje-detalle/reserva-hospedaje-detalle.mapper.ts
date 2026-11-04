@@ -42,6 +42,7 @@ export function mapReservaCompletaToHospedajeDetalle(response: ReservaCompletaDt
     })),
     servicios: array(response?.serviciosAdicionales).map(mapServicioAdicional),
     desgloseHabitaciones: array(response?.desgloseHabitaciones).map((item) => ({
+      idDesglose: item.prV06_IDDesglose,
       numHabita: text(item.prV06_NumHabita), catHabita: text(item.prV06_CatHabita), tipHabita: text(item.prV06_TipHabita),
       fechaIngreso: date(item.prV06_FechaIng), fechaSalida: date(item.prV06_FechaSal),
       procesado: number(item.prV06_Procesado), numPax: number(item.prV06_NumPax), numChild: number(item.prV06_NumChild),

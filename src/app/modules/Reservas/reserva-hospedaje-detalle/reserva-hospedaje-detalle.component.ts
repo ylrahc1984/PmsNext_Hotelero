@@ -14,6 +14,8 @@ import { normalizePmsDateDDMMYYYY } from 'src/app/core/utils/pms-date.util';
 import { ReservationTagListComponent } from '../components/reservation-tags/reservation-tag-list.component';
 import { ReservationTagSelectorComponent } from '../components/reservation-tags/reservation-tag-selector.component';
 import { GuestPortalAdminCardComponent } from '../components/guest-portal-admin/guest-portal-admin-card.component';
+import { RoomingListV2AdminDialogComponent } from '../rooming-list-v2/components/rooming-list-v2-admin-dialog/rooming-list-v2-admin-dialog.component';
+import { RoomingListV2DialogContext } from '../rooming-list-v2/models/rooming-list-v2.model';
 import {
   ApiResponse,
   ReservaTagAsignado,
@@ -33,7 +35,7 @@ import { ReservaHospedajeDetalleService } from './reserva-hospedaje-detalle.serv
 @Component({
   selector: 'app-reserva-hospedaje-detalle',
   standalone: true,
-  imports: [CommonModule, RouterModule, SharedModule, ReservationTagListComponent, ReservationTagSelectorComponent, GuestPortalAdminCardComponent],
+  imports: [CommonModule, RouterModule, SharedModule, ReservationTagListComponent, ReservationTagSelectorComponent, GuestPortalAdminCardComponent, RoomingListV2AdminDialogComponent],
   templateUrl: './reserva-hospedaje-detalle.component.html',
   styleUrls: ['./reserva-hospedaje-detalle.component.scss']
 })
@@ -65,6 +67,7 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
   readonly savingObservationTagIds      = signal<ReadonlySet<number>>(new Set<number>());
   readonly reservationTagsSaveError     = signal('');
   readonly removingReservationTagIds    = signal<ReadonlySet<number>>(new Set<number>());
+  readonly roomingDialogContext         = signal<RoomingListV2DialogContext | null>(null);
 
   readonly habitaciones                 = computed(() => this.reserva()?.habitaciones ?? []);
   readonly inclusiones                  = computed(() => this.reserva()?.inclusiones ?? []);
@@ -93,6 +96,11 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
   ]);
   readonly accionesBloqueadas           = computed(() => this.esEstadoBloqueado(this.reserva()?.estado));
   readonly puedeGestionarTags           = computed(() =>
+    Boolean(this.codReserva() && this.reserva())
+    && !this.accionesBloqueadas()
+    && this.operationalPolicy.can(OperationalAction.UpdateOperation)
+  );
+  readonly puedeGestionarRooming        = computed(() =>
     Boolean(this.codReserva() && this.reserva())
     && !this.accionesBloqueadas()
     && this.operationalPolicy.can(OperationalAction.UpdateOperation)
@@ -144,6 +152,36 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
     this.reservationTagsDetailsOnly.set(false);
     this.reservationTagsSaveError.set('');
     this.showReservationTagsModal.set(true);
+  }
+
+  async openRoomingList(stay: ReservaHospedajeDesgloseHabitacion): Promise<void> {
+    if (this.accionesBloqueadas()) {
+      this.toastService.info('La reserva se encuentra en modo de solo lectura.', 4000, 'Rooming List');
+      return;
+    }
+    if (!(await this.operationalPolicy.require(OperationalAction.UpdateOperation))) return;
+    const codReserva = this.cleanText(this.codReserva());
+    const idDesglose = stay.idDesglose;
+    if (!codReserva || !idDesglose?.trim()) {
+      this.toastService.error('No se puede administrar la estancia porque falta su IdDesglose.', 5000, 'Rooming List');
+      return;
+    }
+
+    this.roomingDialogContext.set({
+      codReserva,
+      idDesglose,
+      numHabita: stay.numHabita,
+      categoria: stay.catHabita,
+      tipoHabita: stay.tipHabita,
+      fechaIngreso: stay.fechaIngreso,
+      fechaSalida: stay.fechaSalida,
+      numPax: stay.numPax ?? undefined,
+      numChild: stay.numChild ?? undefined
+    });
+  }
+
+  closeRoomingList(): void {
+    this.roomingDialogContext.set(null);
   }
 
   openReservationTagDetails(): void {

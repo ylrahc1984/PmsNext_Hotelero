@@ -1,0 +1,213 @@
+<div class="rooming-v2-backdrop" (click)="close()"></div>
+<section class="rooming-v2-dialog" role="dialog" aria-modal="true" aria-labelledby="rooming-v2-title" (click)="$event.stopPropagation()">
+  <header class="rooming-v2-header">
+    <div>
+      <div class="rooming-v2-eyebrow">Rooming List V2 · Reserva {{ context.codReserva }}</div>
+      <h2 id="rooming-v2-title">Administrar huéspedes</h2>
+      <ng-container *ngIf="selectedStay() as stay">
+        <p>
+          Habitación {{ stay.numHabita && stay.numHabita !== '0' ? stay.numHabita : 'Sin asignar' }}
+          <span *ngIf="stay.categoria"> · {{ stay.categoria }}</span>
+          <span *ngIf="stay.tipoHabita"> · {{ stay.tipoHabita }}</span>
+        </p>
+        <small>
+          {{ stay.fechaIngreso || '—' }} – {{ stay.fechaSalida || '—' }}
+          · {{ stay.numPax ?? '—' }} adultos · {{ stay.numChild ?? '—' }} niños
+        </small>
+      </ng-container>
+    </div>
+    <button type="button" class="btn-close" aria-label="Cerrar Rooming List" [disabled]="isBusy" (click)="close()"></button>
+  </header>
+
+  <div class="rooming-v2-content">
+    <div class="alert alert-warning" *ngIf="catalogError" role="alert">{{ catalogError }}</div>
+    <div class="alert alert-danger" *ngIf="errorMessage" role="alert">
+      {{ errorMessage }}
+      <button type="button" class="btn btn-sm btn-outline-danger ms-2" *ngIf="selectedStay() && !loading" (click)="retryStayResolution()">Reintentar</button>
+    </div>
+    <div class="alert alert-danger" *ngIf="stayResolutionError()" role="alert">
+      {{ stayResolutionError() }}
+      <button type="button" class="btn btn-sm btn-outline-danger ms-2" *ngIf="context.idDesglose === undefined" (click)="retryStayResolution()" [disabled]="resolvingStays()">Reintentar</button>
+    </div>
+    <div class="alert alert-info" *ngIf="noStays()" role="status">La reserva no tiene desgloses de habitación para administrar huéspedes.</div>
+    <div class="rooming-v2-state" *ngIf="resolvingStays()" role="status">
+      <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Consultando estancias de la reserva...
+    </div>
+    <div class="rooming-v2-catalog-loading" *ngIf="catalogsLoading" role="status">
+      <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Cargando catálogos...
+    </div>
+
+    <div class="rooming-v2-stay-picker" *ngIf="availableStays().length > 1">
+      <div class="rooming-v2-stay-picker__heading">
+        <strong>{{ selectionRequired() ? 'Seleccione una estancia' : 'Estancias de la reserva' }}</strong>
+        <small *ngIf="!selectionRequired()">Puede cambiar de estancia; se volverán a consultar sus huéspedes.</small>
+      </div>
+      <div class="rooming-v2-stay-picker__options">
+        <button
+          type="button"
+          class="rooming-v2-stay-option"
+          *ngFor="let stayOption of availableStays()"
+          [class.rooming-v2-stay-option--selected]="selectedStay()?.idDesglose === stayOption.idDesglose"
+          [disabled]="isBusy || resolvingStays()"
+          (click)="selectStay(stayOption)"
+        >
+          <strong>Habitación {{ stayOption.numHabita && stayOption.numHabita !== '0' ? stayOption.numHabita : 'Sin asignar' }}</strong>
+          <span>{{ stayOption.categoria || 'Categoría no indicada' }} · {{ stayOption.tipoHabita || 'Tipo no indicado' }}</span>
+          <small>{{ stayOption.fechaIngreso || '—' }} – {{ stayOption.fechaSalida || '—' }} · {{ stayOption.numPax ?? '—' }} adultos · {{ stayOption.numChild ?? '—' }} niños</small>
+        </button>
+      </div>
+    </div>
+
+    <div class="alert alert-warning" *ngIf="selectedStay() && (!selectedStay()?.numHabita || selectedStay()?.numHabita === '0')" role="status">
+      Esta estancia no tiene habitación física asignada. La solicitud usará IdDesglose; la aceptación de estancias sin asignación depende del backend.
+    </div>
+
+    <ng-container *ngIf="selectedStay() as stay">
+    <div class="rooming-v2-toolbar" *ngIf="!selectionRequired()">
+      <div>
+        <strong>{{ guests.length }} huésped{{ guests.length === 1 ? '' : 'es' }}</strong>
+        <span class="text-muted"> · Los cambios se aplican a esta estancia.</span>
+      </div>
+      <button type="button" class="btn btn-primary" (click)="startCreate()" [disabled]="!canEdit">
+        <i class="feather icon-user-plus me-1" aria-hidden="true"></i>Agregar huésped
+      </button>
+    </div>
+
+    <div class="rooming-v2-state" *ngIf="loading && !selectionRequired()" role="status">
+      <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Consultando huéspedes...
+    </div>
+    <div class="rooming-v2-empty" *ngIf="!selectionRequired() && !loading && !errorMessage && guests.length === 0">
+      <i class="feather icon-users" aria-hidden="true"></i>
+      <strong>No hay huéspedes registrados en esta estancia.</strong>
+      <span>Puede agregar los datos disponibles para cada huésped.</span>
+    </div>
+
+    <div class="table-responsive rooming-v2-table-wrap" *ngIf="!selectionRequired() && !loading && guests.length">
+      <table class="table align-middle rooming-v2-table">
+        <thead>
+          <tr>
+            <th>Huésped</th>
+            <th>Documento</th>
+            <th>Tipo</th>
+            <th>Contacto</th>
+            <th>Responsable</th>
+            <th class="text-end">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let guest of guests">
+            <td>
+              <strong>{{ fullName(guest) }}</strong>
+              <small class="d-block text-muted">{{ guest.nacionalidad || 'Nacionalidad no indicada' }}</small>
+              <span class="badge" [class.bg-success]="isActive(guest)" [class.bg-secondary]="!isActive(guest)">
+                {{ isActive(guest) ? 'Activo' : 'Inactivo' }}
+              </span>
+            </td>
+            <td>{{ guest.tipoDocumento }} · {{ guest.numeroDocumento }}</td>
+            <td>{{ guest.tipoPax === 'PAX' ? 'Adulto' : 'Niño' }}</td>
+            <td>
+              <span class="d-block">{{ guest.email || 'Sin correo' }}</span>
+            </td>
+            <td>
+              <span *ngIf="guest.esResponsable" class="rooming-v2-responsible"><i class="bi bi-star-fill" aria-hidden="true"></i> Responsable</span>
+              <span *ngIf="!guest.esResponsable" class="text-muted">—</span>
+            </td>
+            <td class="text-end rooming-v2-actions">
+              <button type="button" class="btn btn-sm btn-outline-primary" (click)="startEdit(guest)" [disabled]="!canEdit || !isActive(guest)" aria-label="Editar huésped">
+                <i class="feather icon-edit-2" aria-hidden="true"></i><span class="visually-hidden">Editar</span>
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-warning"
+                *ngIf="guest.tipoPax === 'PAX' && isActive(guest) && !guest.esResponsable"
+                (click)="assignResponsible(guest)"
+                [disabled]="isBusy || loading"
+                aria-label="Asignar como responsable"
+              >
+                <i class="bi bi-star" aria-hidden="true"></i><span class="visually-hidden">Asignar responsable</span>
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-danger" (click)="deactivate(guest)" [disabled]="isBusy || loading || !isActive(guest)" aria-label="Desactivar huésped">
+                <i class="feather icon-user-x" aria-hidden="true"></i><span class="visually-hidden">Desactivar</span>
+              </button>
+              <span class="spinner-border spinner-border-sm text-primary" *ngIf="busyGuestId === guest.idRooming" role="status" aria-label="Procesando"></span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <form *ngIf="formVisible && !selectionRequired()" class="rooming-v2-form" [formGroup]="guestForm" (ngSubmit)="saveGuest()" novalidate>
+      <div class="rooming-v2-form-heading">
+        <div>
+          <h3>{{ editingGuest ? 'Editar huésped' : 'Registrar huésped' }}</h3>
+          <p>{{ editingGuest ? 'Los datos complementarios existentes se conservarán.' : 'Complete la información disponible.' }}</p>
+        </div>
+        <button type="button" class="btn-close" aria-label="Cancelar edición" (click)="cancelForm()" [disabled]="isBusy"></button>
+      </div>
+
+      <div class="rooming-v2-form-grid">
+        <label>
+          <span>Nacionalidad <b>*</b></span>
+          <select class="form-select" formControlName="codNacion">
+            <option value="">Seleccione nacionalidad</option>
+            <option *ngFor="let item of nationalities" [value]="item.CR06_Codigo">{{ item.CR06_Descripcion }}</option>
+          </select>
+          <small class="field-error" *ngIf="isInvalid('codNacion')">Seleccione una nacionalidad.</small>
+        </label>
+        <label>
+          <span>Tipo de documento <b>*</b></span>
+          <select class="form-select" formControlName="tipoDocumento">
+            <option value="">Seleccione tipo de documento</option>
+            <option *ngFor="let item of documentTypes" [value]="item.codigo">{{ item.descripcion }}</option>
+          </select>
+          <small class="field-error" *ngIf="isInvalid('tipoDocumento')">Seleccione un tipo de documento.</small>
+        </label>
+        <label>
+          <span>Número de documento <b>*</b></span>
+          <input class="form-control" formControlName="numeroDocumento" autocomplete="off">
+          <small class="field-error" *ngIf="isInvalid('numeroDocumento')">Ingrese el número de documento.</small>
+        </label>
+        <label>
+          <span>Tipo de huésped <b>*</b></span>
+          <select class="form-select" formControlName="tipoPax">
+            <option *ngFor="let item of guestTypes" [value]="item.code">{{ item.label }}</option>
+          </select>
+          <small class="field-error" *ngIf="isInvalid('tipoPax')">Seleccione un tipo de huésped válido.</small>
+        </label>
+        <label>
+          <span>Nombre <b>*</b></span>
+          <input class="form-control" formControlName="nombre" autocomplete="given-name">
+          <small class="field-error" *ngIf="isInvalid('nombre')">Ingrese el nombre.</small>
+        </label>
+        <label>
+          <span>Apellidos <b>*</b></span>
+          <input class="form-control" formControlName="apellido" autocomplete="family-name">
+          <small class="field-error" *ngIf="isInvalid('apellido')">Ingrese los apellidos.</small>
+        </label>
+        <label>
+          <span>Correo electrónico</span>
+          <input type="email" class="form-control" formControlName="email" autocomplete="email">
+          <small class="field-error" *ngIf="isInvalid('email')">Ingrese un formato de correo electrónico válido.</small>
+        </label>
+        <label>
+          <span>Teléfono</span>
+          <input type="tel" class="form-control" formControlName="telefono" autocomplete="tel" [readonly]="!!editingGuest">
+          <small class="text-muted" *ngIf="editingGuest">No se puede identificar el contenido heredado de “motivo” como teléfono; el valor original se conservará.</small>
+        </label>
+      </div>
+
+      <footer class="rooming-v2-form-actions">
+        <button type="button" class="btn btn-outline-secondary" (click)="cancelForm()" [disabled]="isBusy">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isBusy || guestForm.invalid || catalogsLoading || !!catalogError">
+          <span class="spinner-border spinner-border-sm me-1" *ngIf="saving" aria-hidden="true"></span>
+          {{ saving ? 'Guardando...' : (editingGuest ? 'Guardar cambios' : 'Registrar huésped') }}
+        </button>
+      </footer>
+    </form>
+    </ng-container>
+  </div>
+
+  <footer class="rooming-v2-dialog-footer">
+    <button type="button" class="btn btn-outline-secondary" (click)="close()" [disabled]="isBusy">Cerrar</button>
+  </footer>
+</section>

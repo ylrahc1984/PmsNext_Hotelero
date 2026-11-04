@@ -67,6 +67,7 @@ export interface ReservaCompletaInclusionDto {
 export type ReservaCompletaServicioAdicionalDto = object;
 
 export interface ReservaCompletaDesgloseDto {
+  prV06_IDDesglose: string;
   prV06_NumHabita?: string | null;
   prV06_CatHabita?: string | null;
   prV06_TipHabita?: string | null;
@@ -128,6 +129,7 @@ export interface ReservaHospedajeServicioDetalle {
 }
 
 export interface ReservaHospedajeDesgloseHabitacion {
+  idDesglose: string;
   numHabita: string; catHabita: string; tipHabita: string; fechaIngreso: string; fechaSalida: string;
   procesado: number | null; numPax: number | null; numChild: number | null; cpl: number | null;
   orden: number | null; habOrigen: string; operador: string;

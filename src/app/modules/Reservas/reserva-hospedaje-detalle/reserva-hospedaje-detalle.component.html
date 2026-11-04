@@ -104,15 +104,16 @@
         <section class="detail-card">
           <div class="section-heading section-heading--split"><div class="section-icon"><i class="bi bi-door-open"></i></div><div><h3>Habitaciones asignadas</h3><p>Desglose operativo de habitaciones</p></div><span class="section-count">{{ desgloseHabitaciones().length }} registros</span></div>
           <div class="table-wrap">
-            <table class="detail-table">
-              <thead><tr><th>Habitación</th><th>Categoría / tipo</th><th>Ingreso</th><th>Salida</th><th>Pax</th><th>Niños</th><th>Procesamiento</th></tr></thead>
+            <table class="detail-table detail-table--breakdown">
+              <thead><tr><th>Habitación</th><th>Categoría / tipo</th><th>Ingreso</th><th>Salida</th><th>Pax</th><th>Niños</th><th>Procesamiento</th><th>Huéspedes</th></tr></thead>
               <tbody>
                 <tr *ngFor="let item of desgloseHabitaciones()">
                   <td data-label="Habitación"><strong class="assigned-room-number">{{ item.numHabita || 'Sin asignar' }}</strong><small *ngIf="item.habOrigen">Origen: {{ item.habOrigen }}</small></td>
                   <td data-label="Categoría / tipo">{{ breakdownRoomDescription(item) }}</td><td data-label="Ingreso">{{ formatDate(item.fechaIngreso) }}</td><td data-label="Salida">{{ formatDate(item.fechaSalida) }}</td>
                   <td data-label="Pax">{{ item.numPax ?? '—' }}</td><td data-label="Niños">{{ item.numChild ?? '—' }}</td><td data-label="Procesamiento"><span class="process-badge" [class.process-badge--done]="item.procesado === 1">{{ processedLabel(item.procesado) }}</span></td>
+                  <td data-label="Huéspedes" class="rooming-v2-action-cell"><div class="rooming-v2-row-action"><button type="button" class="small-action small-action--primary" (click)="openRoomingList(item)" [disabled]="!puedeGestionarRooming()" title="Administrar huéspedes asociados a esta estancia"><i class="bi bi-people"></i>Administrar huéspedes</button></div></td>
                 </tr>
-                <tr *ngIf="desgloseHabitaciones().length === 0"><td colspan="7" class="empty-state">No hay habitaciones asignadas registradas.</td></tr>
+                <tr *ngIf="desgloseHabitaciones().length === 0"><td colspan="8" class="empty-state">No hay habitaciones asignadas registradas.</td></tr>
               </tbody>
             </table>
           </div>
@@ -205,4 +206,10 @@
     [catalogEnabled]="!reservationTagsDetailsOnly()" [savingObservationIds]="savingObservationTagIds()"
     (closed)="closeReservationTagsModal()" (save)="saveReservationTags($event)" (removeTag)="removeReservationTag($event)"
     (editObservation)="editReservationTagObservation($event)" (selectionNotice)="notifyReservationTagSelection($event)" />
+
+  <app-rooming-list-v2-admin-dialog
+    *ngIf="roomingDialogContext() as context"
+    [context]="context"
+    (closed)="closeRoomingList()"
+  />
 </section>

@@ -1,0 +1,290 @@
+:host {
+  position: fixed;
+  inset: 0;
+  z-index: 1060;
+}
+
+.rooming-v2-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(12, 24, 43, 0.58);
+  backdrop-filter: blur(2px);
+}
+
+.rooming-v2-dialog {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(1120px, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  margin: 1rem auto;
+  overflow: hidden;
+  border: 1px solid #dce3ed;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(8, 20, 43, 0.28);
+}
+
+.rooming-v2-header,
+.rooming-v2-dialog-footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.15rem 1.4rem;
+  border-bottom: 1px solid #e8edf3;
+}
+
+.rooming-v2-header h2 {
+  margin: 0;
+  color: #142b4b;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.rooming-v2-header p,
+.rooming-v2-header small {
+  display: block;
+  margin: 0.25rem 0 0;
+  color: #66758b;
+}
+
+.rooming-v2-eyebrow {
+  margin-bottom: 0.2rem;
+  color: #2870bd;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.rooming-v2-content {
+  min-height: 180px;
+  padding: 1rem 1.4rem;
+  overflow-y: auto;
+}
+
+.rooming-v2-stay-picker {
+  margin: 0.25rem 0 1rem;
+  padding: 0.85rem;
+  border: 1px solid #dfe7f1;
+  border-radius: 12px;
+  background: #f8fafd;
+}
+
+.rooming-v2-stay-picker__heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+  color: #233a58;
+}
+
+.rooming-v2-stay-picker__heading small {
+  color: #718096;
+}
+
+.rooming-v2-stay-picker__options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.55rem;
+}
+
+.rooming-v2-stay-option {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border: 1px solid #dce4ef;
+  border-radius: 9px;
+  background: #fff;
+  color: #33455e;
+  text-align: left;
+}
+
+.rooming-v2-stay-option:hover:not(:disabled),
+.rooming-v2-stay-option--selected {
+  border-color: #3479c4;
+  background: #eff6ff;
+}
+
+.rooming-v2-stay-option strong {
+  color: #155fa8;
+}
+
+.rooming-v2-stay-option small {
+  color: #718096;
+}
+
+.rooming-v2-toolbar,
+.rooming-v2-catalog-loading,
+.rooming-v2-form-heading,
+.rooming-v2-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.rooming-v2-toolbar {
+  margin-bottom: 0.8rem;
+}
+
+.rooming-v2-catalog-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.8rem;
+  color: #66758b;
+  font-size: 0.85rem;
+}
+
+.rooming-v2-table-wrap {
+  border: 1px solid #e8edf3;
+  border-radius: 10px;
+}
+
+.rooming-v2-table {
+  min-width: 800px;
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.rooming-v2-table thead th {
+  padding: 0.75rem;
+  background: #f5f8fc;
+  color: #586980;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.rooming-v2-table tbody td {
+  padding: 0.75rem;
+}
+
+.rooming-v2-actions {
+  white-space: nowrap;
+}
+
+.rooming-v2-actions .btn {
+  margin-left: 0.25rem;
+}
+
+.rooming-v2-responsible {
+  color: #9a6b00;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.rooming-v2-state,
+.rooming-v2-empty {
+  display: flex;
+  min-height: 150px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  color: #66758b;
+  text-align: center;
+}
+
+.rooming-v2-empty {
+  flex-direction: column;
+}
+
+.rooming-v2-empty i {
+  color: #8ba0bb;
+  font-size: 1.6rem;
+}
+
+.rooming-v2-empty strong {
+  color: #33455e;
+}
+
+.rooming-v2-form {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid #dfe7f1;
+  border-radius: 12px;
+  background: #f9fbfe;
+}
+
+.rooming-v2-form-heading {
+  margin-bottom: 1rem;
+}
+
+.rooming-v2-form-heading h3 {
+  margin: 0;
+  color: #183253;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.rooming-v2-form-heading p {
+  margin: 0.2rem 0 0;
+  color: #718096;
+  font-size: 0.82rem;
+}
+
+.rooming-v2-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+}
+
+.rooming-v2-form-grid label {
+  display: grid;
+  gap: 0.3rem;
+  color: #33455e;
+  font-size: 0.83rem;
+  font-weight: 600;
+}
+
+.rooming-v2-form-grid label b {
+  color: #d03939;
+}
+
+.field-error {
+  color: #c22d36;
+  font-weight: 500;
+}
+
+.rooming-v2-form-actions {
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.rooming-v2-dialog-footer {
+  justify-content: flex-end;
+  border-top: 1px solid #e8edf3;
+  border-bottom: 0;
+}
+
+@media (max-width: 700px) {
+  .rooming-v2-dialog {
+    width: calc(100vw - 1rem);
+    max-height: calc(100dvh - 1rem);
+    margin: 0.5rem auto;
+    border-radius: 12px;
+  }
+
+  .rooming-v2-header,
+  .rooming-v2-content,
+  .rooming-v2-dialog-footer {
+    padding-right: 0.85rem;
+    padding-left: 0.85rem;
+  }
+
+  .rooming-v2-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .rooming-v2-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rooming-v2-stay-picker__heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

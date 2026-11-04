@@ -90,6 +90,13 @@ h1 { display: flex; align-items: center; flex-wrap: wrap; gap: .55rem; margin: .
 .detail-table td strong.assigned-room-number { color: #1746aa; font-size: 1rem; font-weight: 850; letter-spacing: .01em; }
 .detail-table td small { margin-top: .12rem; color: var(--rd-muted); font-size: .65rem; }
 .detail-table tbody tr:hover { background: #f9fbff; }
+.rooming-v2-row-action { display: flex; justify-content: flex-end; }
+.rooming-v2-row-action .small-action { max-width: 100%; white-space: normal; }
+@media (min-width: 601px) {
+  .detail-table--breakdown th:nth-child(n+3):nth-child(-n+7),
+  .detail-table--breakdown td:nth-child(n+3):nth-child(-n+7) { text-align: center; }
+  .detail-table--breakdown th:last-child { text-align: right; }
+}
 .detail-table--compact { font-size: .7rem; }
 .detail-table--compact td, .detail-table--compact th { padding: .48rem .42rem; }
 .empty-state { padding: 1rem !important; color: var(--rd-muted); text-align: center; }
