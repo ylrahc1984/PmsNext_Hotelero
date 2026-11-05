@@ -144,7 +144,7 @@ export class RoomingListV2AdminDialogComponent implements OnInit {
       apellido: guest.apellidos ?? '',
       tipoPax: guest.tipoPax,
       email: guest.email ?? '',
-      telefono: ''
+      telefono: guest.motivo ?? ''
     });
     this.formVisible = true;
   }
@@ -524,9 +524,9 @@ export class RoomingListV2AdminDialogComponent implements OnInit {
         estadoCivil: original.estadoCivil,
         direccion: original.direccion,
         procede: original.procede,
-        medioArribo: original.medioArribo,
-        motivo: original.motivo
-      } : (form.telefono.trim() ? { motivo: form.telefono.trim() } : {}))
+        medioArribo: original.medioArribo
+      } : {}),
+      motivo: form.telefono.trim() || null
     };
   }
 

@@ -191,8 +191,7 @@
         </label>
         <label>
           <span>Teléfono</span>
-          <input type="tel" class="form-control" formControlName="telefono" autocomplete="tel" [readonly]="!!editingGuest">
-          <small class="text-muted" *ngIf="editingGuest">No se puede identificar el contenido heredado de “motivo” como teléfono; el valor original se conservará.</small>
+          <input type="tel" class="form-control" formControlName="telefono" autocomplete="tel">
         </label>
       </div>
 
