@@ -1317,7 +1317,13 @@ const routes: Routes = [
       },
       {
         path: 'configuracion-general/concierge',
-        loadComponent: () => import('./modules/clientes-huespedes/concierge-catalogo/concierge-catalogo-list.component').then((c) => c.ConciergeCatalogoListComponent)
+        loadComponent: () => import('./modules/clientes-huespedes/concierge-catalogo/concierge-catalogo-list.component').then((c) => c.ConciergeCatalogoListComponent),
+        data: {
+          breadcrumbTrail: [
+            { title: 'Configuración General', url: '/administracion/configuracion' },
+            { title: 'Catálogo Concierge' }
+          ]
+        }
       },
       {
         path: 'configuracion/migraciones/reservas',
