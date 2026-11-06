@@ -1308,6 +1308,18 @@ const routes: Routes = [
     data: { requiredModules: ['CONFI'] },
     children: [
       {
+        path: 'configuracion-general/concierge/nuevo',
+        loadComponent: () => import('./modules/clientes-huespedes/concierge-catalogo/concierge-catalogo-form.component').then((c) => c.ConciergeCatalogoFormComponent)
+      },
+      {
+        path: 'configuracion-general/concierge/editar/:id',
+        loadComponent: () => import('./modules/clientes-huespedes/concierge-catalogo/concierge-catalogo-form.component').then((c) => c.ConciergeCatalogoFormComponent)
+      },
+      {
+        path: 'configuracion-general/concierge',
+        loadComponent: () => import('./modules/clientes-huespedes/concierge-catalogo/concierge-catalogo-list.component').then((c) => c.ConciergeCatalogoListComponent)
+      },
+      {
         path: 'configuracion/migraciones/reservas',
         canDeactivate: [CanDeactivateReservaCreateGuard],
         loadComponent: () =>

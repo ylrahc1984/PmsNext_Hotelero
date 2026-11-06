@@ -152,6 +152,14 @@ export class ConfiguracionSistemaComponent implements OnInit {
             iconColor: 'text-c-purple'
           },
           {
+            id: 'catalogo-concierge',
+            title: 'Catálogo Concierge',
+            description: 'Administrar los servicios disponibles para huéspedes',
+            icon: 'icon-inbox',
+            route: '/administracion/configuracion-general/concierge',
+            iconColor: 'text-c-blue'
+          },
+          {
             id: 'seguridad',
             title: 'Seguridad (Usuarios y Perfiles)',
             description: 'Gestionar usuarios, roles y permisos',
