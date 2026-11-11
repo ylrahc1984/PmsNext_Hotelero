@@ -18,6 +18,10 @@ export class GuestPortalAdminService {
     return this.http.post<GuestPortalEnableResponse>(`${this.reservaUrl(codReserva)}/enable`, undefined);
   }
 
+  startNewCycle(codReserva: string): Observable<GuestPortalEnableResponse> {
+    return this.http.post<GuestPortalEnableResponse>(`${this.reservaUrl(codReserva)}/new-cycle`, undefined);
+  }
+
   regenerate(codReserva: string): Observable<GuestPortalRegenerateResponse> {
     return this.http.post<GuestPortalRegenerateResponse>(`${this.reservaUrl(codReserva)}/regenerate`, undefined);
   }

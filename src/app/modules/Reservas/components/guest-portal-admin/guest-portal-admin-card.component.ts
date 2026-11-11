@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, effect, inject, input, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize, firstValueFrom } from 'rxjs';
@@ -22,6 +23,7 @@ export class GuestPortalAdminCardComponent {
   readonly enabling = signal(false);
   readonly regenerating = signal(false);
   readonly isCancelling = signal(false);
+  readonly startingNewCycle = signal(false);
   readonly loadError = signal('');
   readonly hasPortal = signal(false);
   readonly portal = signal<GuestPortal | null>(null);
@@ -50,15 +52,16 @@ export class GuestPortalAdminCardComponent {
 
   async enablePortal(): Promise<void> {
     const code = this.codReserva().trim();
-    if (!code || this.enabling() || this.regenerating() || this.isCancelling()) return;
-    const newCycle = this.hasPortal() && this.portal()?.estado === 'CAN';
-    const confirmation = await Swal.fire(newCycle ? {
-      title: '¿Generar un nuevo Guest Portal?',
-      text: 'Se creará un nuevo acceso para esta reserva. El portal cancelado se mantendrá como histórico y se generará un nuevo proceso de pre check-in.',
+    if (!code || this.isBusy()) return;
+    const isReactivation = this.hasPortal() && this.portal()?.estado === 'CAN';
+    if (this.hasPortal() && !isReactivation) return;
+    const confirmation = await Swal.fire(isReactivation ? {
+      title: '¿Reactivar Guest Portal?',
+      text: 'Se recuperará el portal existente y se generará un nuevo enlace de acceso. Los Pre Check-in completados y sus firmas se conservarán.',
       icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'Sí, generar nuevo portal',
-      cancelButtonText: 'Volver'
+      confirmButtonText: 'Reactivar Guest Portal',
+      cancelButtonText: 'Cancelar'
     } : {
       title: 'Habilitar Guest Portal',
       text: '¿Desea habilitar el pre check-in digital para esta reserva?',
@@ -67,23 +70,78 @@ export class GuestPortalAdminCardComponent {
       confirmButtonText: 'Habilitar',
       cancelButtonText: 'Cancelar'
     });
-    if (!confirmation.isConfirmed || this.enabling() || this.regenerating() || this.isCancelling()) return;
+    if (!confirmation.isConfirmed || this.isBusy()) return;
 
     this.enabling.set(true);
     try {
       const response = await firstValueFrom(this.service.enable(code).pipe(takeUntilDestroyed(this.destroyRef)));
       if (code !== this.codReserva().trim()) return;
-      if (!response?.success || !response.data?.portal) throw new Error(this.safeMessage(response) || 'No se pudo habilitar Guest Portal.');
+      const url = response?.data?.access?.url;
+      if (!response?.success || !response.data?.portal || typeof url !== 'string' || !url.trim()) {
+        throw new Error(this.safeMessage(response) || (isReactivation ? 'No se pudo reactivar Guest Portal.' : 'No se pudo habilitar Guest Portal.'));
+      }
       this.hasPortal.set(true);
       this.portal.set(response.data.portal);
-      this.accessUrl.set(response.data.access.url);
-      this.toast.success(this.safeMessage(response) || (newCycle ? 'Nuevo Guest Portal generado correctamente.' : 'Guest Portal habilitado correctamente.'), 4000, 'Guest Portal');
+      this.accessUrl.set(url);
+      this.toast.success(this.safeMessage(response) || (isReactivation ? 'Guest Portal reactivado correctamente.' : 'Guest Portal habilitado correctamente.'), 4000, 'Guest Portal');
       this.loadStatus(code);
     } catch (error: unknown) {
       this.toast.error(this.errorMessage(error, 'No se pudo habilitar Guest Portal.'), 5000, 'Guest Portal');
     } finally {
       this.enabling.set(false);
     }
+  }
+
+  async startNewPreCheckIn(): Promise<void> {
+    const code = this.codReserva().trim();
+    const status = this.portal()?.estado;
+    if (!code || !this.hasPortal() || status === 'ACT' || this.isBusy()) return;
+
+    const confirmation = await Swal.fire({
+      title: '¿Desea iniciar un nuevo Pre Check-in?',
+      text: 'Se generará un nuevo enlace de acceso para el huésped. Los registros de Pre Check-in anteriores, las firmas y los documentos históricos se conservarán. Esta operación no modifica ni elimina la información previamente registrada.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Generar nuevo ciclo',
+      cancelButtonText: 'Cancelar'
+    });
+    if (!confirmation.isConfirmed || this.isBusy() || this.portal()?.estado === 'ACT') return;
+
+    this.startingNewCycle.set(true);
+    try {
+      const response = await firstValueFrom(this.service.startNewCycle(code).pipe(takeUntilDestroyed(this.destroyRef)));
+      if (code !== this.codReserva().trim()) return;
+      const url = response?.data?.access?.url;
+      if (!response?.success || !response.data?.portal || typeof url !== 'string' || !url.trim()) {
+        throw new Error('No se pudo iniciar un nuevo Pre Check-in.');
+      }
+      this.hasPortal.set(true);
+      this.portal.set(response.data.portal);
+      this.accessUrl.set(url);
+      this.toast.success(this.safeMessage(response) || 'Nuevo Pre Check-in iniciado correctamente.', 4500, 'Guest Portal');
+      this.loadStatus(code);
+    } catch (error: unknown) {
+      const status = error instanceof HttpErrorResponse ? error.status : 0;
+      if (status === 409) {
+        this.toast.error('Existe un Guest Portal activo para esta reserva. Se actualizará su estado.', 5000, 'Guest Portal');
+        this.accessUrl.set(null);
+        this.loadStatus(code);
+      } else if (status === 403) {
+        this.toast.error('No tiene autorización para administrar el Guest Portal.', 5000, 'Guest Portal');
+      } else if (status === 400) {
+        this.toast.error(this.validationMessage(error) || 'Los datos no permiten iniciar un nuevo Pre Check-in.', 5000, 'Guest Portal');
+      } else if (status === 500 || status >= 500 || status === 0) {
+        this.toast.error('No se pudo completar la operación. Intente nuevamente más tarde.', 5000, 'Guest Portal');
+      } else {
+        this.toast.error(this.errorMessage(error, 'No se pudo iniciar un nuevo Pre Check-in.'), 5000, 'Guest Portal');
+      }
+    } finally {
+      this.startingNewCycle.set(false);
+    }
+  }
+
+  isBusy(): boolean {
+    return this.enabling() || this.regenerating() || this.isCancelling() || this.startingNewCycle();
   }
 
   async copyAccessUrl(): Promise<void> {
@@ -99,7 +157,7 @@ export class GuestPortalAdminCardComponent {
 
   async regenerateAccessUrl(): Promise<void> {
     const code = this.codReserva().trim();
-    if (!code || this.enabling() || this.regenerating() || this.isCancelling() || this.portal()?.estado !== 'ACT') return;
+    if (!code || this.isBusy() || this.portal()?.estado !== 'ACT') return;
     const confirmation = await Swal.fire({
       title: '¿Regenerar enlace de acceso?',
       text: 'El enlace anterior dejará de funcionar y las sesiones de acceso existentes del huésped serán cerradas.',
@@ -108,7 +166,7 @@ export class GuestPortalAdminCardComponent {
       confirmButtonText: 'Sí, regenerar',
       cancelButtonText: 'Cancelar'
     });
-    if (!confirmation.isConfirmed || this.enabling() || this.regenerating() || this.isCancelling()) return;
+    if (!confirmation.isConfirmed || this.isBusy()) return;
 
     this.regenerating.set(true);
     try {
@@ -129,7 +187,7 @@ export class GuestPortalAdminCardComponent {
 
   async cancelPortal(): Promise<void> {
     const code = this.codReserva().trim();
-    if (!code || this.enabling() || this.isCancelling() || this.regenerating() || this.portal()?.estado !== 'ACT') return;
+    if (!code || this.isBusy() || this.portal()?.estado !== 'ACT') return;
     const confirmation = await Swal.fire({
       title: '¿Cancelar Guest Portal?',
       text: 'El huésped perderá el acceso al portal y las sesiones activas serán cerradas. Los pre check-ins que aún estén pendientes o en proceso también serán cancelados.',
@@ -139,7 +197,7 @@ export class GuestPortalAdminCardComponent {
       cancelButtonText: 'Volver',
       confirmButtonColor: '#b42318'
     });
-    if (!confirmation.isConfirmed || this.enabling() || this.isCancelling() || this.regenerating()) return;
+    if (!confirmation.isConfirmed || this.isBusy()) return;
 
     this.isCancelling.set(true);
     try {
@@ -216,10 +274,21 @@ export class GuestPortalAdminCardComponent {
   private errorMessage(error: unknown, fallback: string): string {
     if (typeof error === 'object' && error !== null) {
       const value = error as { error?: { message?: unknown; respuesta?: unknown }; message?: unknown };
-      const message = value.error?.message ?? value.error?.respuesta;
+      const status = (error as { status?: number }).status;
+      if (status === 401) return 'La sesión requiere autenticación. Inicie sesión nuevamente.';
+      const message = status === 403 ? null : status >= 500 ? null : value.error?.message ?? value.error?.respuesta;
       if (typeof message === 'string' && message.trim()) return message.trim();
     }
     return fallback;
+  }
+
+  private validationMessage(error: unknown): string {
+    if (error instanceof HttpErrorResponse) {
+      const body = error.error as { message?: unknown; title?: unknown } | null;
+      const value = body?.message ?? body?.title;
+      if (typeof value === 'string' && value.trim() && !/stack|exception| at [\w.]+\(/i.test(value)) return value.trim();
+    }
+    return '';
   }
 
   private safeMessage(response: GuestPortalEnableResponse): string {
