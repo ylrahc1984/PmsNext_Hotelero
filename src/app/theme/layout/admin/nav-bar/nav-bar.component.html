@@ -12,7 +12,7 @@
   <app-operational-date-indicator class="mobile-operational-date" [compact]="true" />
   <div class="collapse navbar-collapse topbar-shell px-4" [style.display]="this.collapseStyle">
     <app-nav-left class="me-auto" [style.display]="this.headerStyle" />
-    <app-nav-right class="ms-auto" />
+    <app-nav-right class="ms-auto" (quickOccupancyRequested)="quickOccupancyRequested.emit()" />
   </div>
 </header>
 <div class="pc-menu-overlay" (click)="closeMenu()" (keydown)="handleKeyDown($event)" tabindex="0"></div>

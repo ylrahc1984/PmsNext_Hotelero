@@ -1,0 +1,50 @@
+<div class="pms-date-input" [class.pms-date-input--disabled]="disabled" [class.pms-date-input--invalid]="hasError">
+  <label class="pms-date-input__label" *ngIf="label" [for]="id">{{ label }}</label>
+  <div class="pms-date-input__control">
+    <input
+      #dateInput
+      [id]="id"
+      type="text"
+      inputmode="numeric"
+      autocomplete="off"
+      placeholder="dd/MM/yyyy"
+      [value]="displayValue"
+      [disabled]="disabled"
+      [attr.aria-label]="label || 'Fecha en formato día, mes y año'"
+      [attr.aria-invalid]="hasError"
+      [attr.aria-describedby]="ariaDescribedBy"
+      (input)="onInput(dateInput.value)"
+      (blur)="onBlur()"
+      (pointerdown)="onPointerDown()"
+      (focus)="onFocus()"
+    />
+    <button
+      type="button"
+      class="pms-date-input__calendar-button"
+      [disabled]="disabled"
+      [attr.aria-label]="'Abrir calendario' + (label ? ' para ' + label : '')"
+      aria-haspopup="dialog"
+      (click)="openCalendar()"
+    >
+      <i class="bi bi-calendar3" aria-hidden="true"></i>
+    </button>
+    <input
+      #calendarInput
+      type="date"
+      class="pms-date-input__native-picker"
+      [class.pms-date-input__native-picker--fallback]="fallbackCalendarVisible"
+      [attr.tabindex]="fallbackCalendarVisible ? 0 : -1"
+      [attr.aria-hidden]="!fallbackCalendarVisible"
+      [attr.aria-label]="'Selector de fecha' + (label ? ' para ' + label : '')"
+      [min]="minIso"
+      [max]="maxIso"
+      [disabled]="disabled"
+      (change)="onCalendarChange(calendarInput.value)"
+      (keydown.escape)="onEscape($event)"
+    />
+  </div>
+  <small class="pms-date-input__error" *ngIf="hasError" [id]="errorId" role="alert">{{ validationMessage }}</small>
+  <small class="pms-date-input__calendar-fallback" *ngIf="fallbackCalendarVisible">
+    Seleccione una fecha y vuelva al campo para continuar.
+  </small>
+</div>

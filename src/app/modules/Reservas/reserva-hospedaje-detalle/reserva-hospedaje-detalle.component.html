@@ -13,6 +13,10 @@
       </nav>
     </div>
     <div class="topbar-actions">
+      <button type="button" class="detail-action detail-action--icon" (click)="openReservationLog()" [disabled]="!reserva() || loading()"
+        aria-label="Ver historial de la reserva" title="Ver historial de la reserva">
+        <i class="bi bi-clock-history" aria-hidden="true"></i><span>Historial</span>
+      </button>
       <button type="button" class="detail-action" (click)="volver()"><i class="bi bi-arrow-left"></i>Volver</button>
       <button type="button" class="detail-action" (click)="reload()" [disabled]="loading() || isAssignedTagsLoading()">
         <span class="spinner-border spinner-border-sm" *ngIf="loading()" aria-hidden="true"></span>
@@ -199,6 +203,48 @@
         </details>
       </aside>
     </div>
+  </ng-container>
+
+  <ng-container *ngIf="showReservationLogModal()">
+    <div class="reservation-log-backdrop" (click)="closeReservationLog()" aria-hidden="true"></div>
+    <section class="reservation-log-modal" role="dialog" aria-modal="true" aria-labelledby="reservation-log-title"
+      (click)="$event.stopPropagation()">
+      <header class="reservation-log-modal__header">
+        <div>
+          <span class="page-eyebrow">Actividad de reserva</span>
+          <h2 id="reservation-log-title">Historial <span class="code-pill">#{{ codReserva() }}</span></h2>
+          <p *ngIf="!isReservationLogLoading() && !reservationLogError()">{{ reservationLogTotal() }} registros</p>
+        </div>
+        <button type="button" class="reservation-log-close" (click)="closeReservationLog()" aria-label="Cerrar historial">
+          <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+      </header>
+      <div class="reservation-log-modal__body" aria-live="polite">
+        <div class="reservation-log-state" *ngIf="isReservationLogLoading()" role="status">
+          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>Consultando historial…
+        </div>
+        <div class="reservation-log-error" *ngIf="!isReservationLogLoading() && reservationLogError()" role="alert">
+          <i class="bi bi-exclamation-circle" aria-hidden="true"></i><span>{{ reservationLogError() }}</span>
+          <button type="button" class="detail-action" (click)="retryReservationLog()">Reintentar</button>
+        </div>
+        <p class="reservation-log-empty" *ngIf="!isReservationLogLoading() && !reservationLogError() && reservationLogEntries().length === 0">
+          No hay movimientos registrados para esta reserva.
+        </p>
+        <ol class="reservation-log-list" *ngIf="!isReservationLogLoading() && !reservationLogError() && reservationLogEntries().length">
+          <li class="reservation-log-item" *ngFor="let entry of reservationLogEntries(); trackBy: trackByReservationLogId">
+            <span class="reservation-log-item__marker" aria-hidden="true"><i class="bi bi-clock-history"></i></span>
+            <article>
+              <div class="reservation-log-item__meta">
+                <time [attr.datetime]="entry.fecha">{{ entry.fecha | date:'dd/MM/yyyy' }} · {{ entry.hora || 'Hora no disponible' }}</time>
+                <span *ngIf="entry.operador">{{ entry.operador }}</span>
+              </div>
+              <h3>{{ entry.detalle1 || 'Movimiento de reserva' }}</h3>
+              <p *ngIf="entry.detalle2?.trim()">{{ entry.detalle2 }}</p>
+            </article>
+          </li>
+        </ol>
+      </div>
+    </section>
   </ng-container>
 
   <app-reservation-tag-selector *ngIf="showReservationTagsModal()" [assignedTags]="assignedReservationTags()" [saving]="isSavingReservationTags()"

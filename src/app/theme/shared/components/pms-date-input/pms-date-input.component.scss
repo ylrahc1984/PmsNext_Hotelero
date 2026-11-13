@@ -1,0 +1,158 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.pms-date-input {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  color: #24364b;
+  font: inherit;
+}
+
+.pms-date-input__label {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.pms-date-input__control {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.pms-date-input__control:focus-within {
+  border-color: #167d8d;
+  box-shadow: 0 0 0 3px rgba(22, 125, 141, 0.16);
+}
+
+.pms-date-input input[type='text'] {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  padding: 0 4px 0 12px;
+  border: 0;
+  outline: 0;
+  border-radius: 8px;
+  color: #24364b;
+  background: transparent;
+  font: inherit;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.pms-date-input input[type='text']::placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+
+.pms-date-input__calendar-button {
+  display: inline-grid;
+  flex: 0 0 40px;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-right: 1px;
+  border: 0;
+  border-radius: 7px;
+  color: #31536b;
+  background: transparent;
+  cursor: pointer;
+}
+
+.pms-date-input__calendar-button:hover:not(:disabled) {
+  color: #0c6879;
+  background: #eef7f8;
+}
+
+.pms-date-input__calendar-button:focus-visible {
+  outline: 2px solid #167d8d;
+  outline-offset: -3px;
+}
+
+.pms-date-input__calendar-button i {
+  font-size: 1.1rem;
+}
+
+.pms-date-input__native-picker {
+  position: absolute;
+  z-index: -1;
+  right: 5px;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pms-date-input__native-picker--fallback {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + 4px);
+  right: 0;
+  display: block;
+  width: 100%;
+  height: 40px;
+  margin: 0;
+  padding: 0 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  opacity: 1;
+  pointer-events: auto;
+  background: #fff;
+}
+
+.pms-date-input__error {
+  color: #b42318;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.pms-date-input__calendar-fallback {
+  color: #64748b;
+  font-size: 0.72rem;
+}
+
+.pms-date-input--invalid .pms-date-input__control {
+  border-color: #b42318;
+}
+
+.pms-date-input--invalid .pms-date-input__control:focus-within {
+  box-shadow: 0 0 0 3px rgba(180, 35, 24, 0.12);
+}
+
+.pms-date-input--disabled .pms-date-input__control {
+  border-color: #dbe2ea;
+  background: #f1f5f9;
+}
+
+.pms-date-input--disabled input[type='text'] {
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.pms-date-input__calendar-button:disabled {
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+  .pms-date-input__control {
+    min-height: 40px;
+  }
+
+  .pms-date-input input[type='text'] {
+    font-size: 0.9rem;
+  }
+}

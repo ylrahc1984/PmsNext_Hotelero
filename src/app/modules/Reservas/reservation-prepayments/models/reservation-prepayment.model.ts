@@ -1,6 +1,6 @@
 import { ReservaConsulta } from '../../models/reserva-consulta.model';
 
-export type ReservationPrepaymentMode = 'new' | 'edit' | 'view';
+export type ReservationPrepaymentMode = 'new' | 'view';
 
 export interface ReservationPrepayment {
   proceso           : number;
@@ -25,6 +25,7 @@ export interface ReservationPrepayment {
   nOperacion        : string;
   codBanco          : string;
   ctaBanco          : string;
+  numAsiento        : string;
   procesado         : number;
   cierre            : number;
   numCierre         : number;
@@ -33,6 +34,8 @@ export interface ReservationPrepayment {
 }
 
 export interface ReservationPrepaymentResponse {
+  exitoso      ?: boolean;
+  numInterno   ?: string;
   ok            ?: boolean;
   respuesta     ?: string;
   mensaje       ?: string;
@@ -63,6 +66,8 @@ export interface ReservationPrepaymentHistoryItem {
   nOperacion      ?: string;
   codBanco        ?: string;
   ctaBanco        ?: string;
+  NumAsiento      ?: string;
+  numAsiento      ?: string;
   procesado       ?: number;
   cierre          ?: number;
   numCierre       ?: number;

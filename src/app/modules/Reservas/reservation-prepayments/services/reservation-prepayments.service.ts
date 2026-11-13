@@ -3,15 +3,17 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map, throwError } from 'rxjs';
 
 import { normalizePmsDateDDMMYYYY } from 'src/app/core/utils/pms-date.util';
+import { EmpresaContextService } from 'src/app/core/services/empresa-context.service';
 import { environment } from 'src/environments/environment';
 import { ReservationPrepayment, ReservationPrepaymentHistoryItem, ReservationPrepaymentResponse } from '../models/reservation-prepayment.model';
 
 @Injectable({ providedIn: 'root' })
 export class ReservationPrepaymentsService {
   private readonly http = inject(HttpClient);
+  private readonly empresaContext = inject(EmpresaContextService);
   private readonly baseApiUrl = (environment.apiUrl || 'http://localhost:5000/api').toString().replace(/\/+$/, '');
   private readonly prepaymentsUrl = `${this.baseApiUrl}/prepagos-reserva`;
-  private readonly apiUrl = `${this.prepaymentsUrl}/sin-deposito`;
+  private readonly apiUrl = `${this.prepaymentsUrl}/con-deposito`;
   private readonly historyUrl = `${this.prepaymentsUrl}/por-reserva`;
 
   consultar(codReserva: string): Observable<ReservationPrepayment[]> {
@@ -64,6 +66,7 @@ export class ReservationPrepaymentsService {
       nOperacion: '',
       codBanco: '',
       ctaBanco: '',
+      numAsiento: '',
       procesado: 0,
       cierre: 0,
       numCierre: 0,
@@ -73,19 +76,25 @@ export class ReservationPrepaymentsService {
   }
 
   private execute(payload: ReservationPrepayment): Observable<ReservationPrepaymentResponse> {
-    return this.http.post<ReservationPrepaymentResponse | ReservationPrepayment[] | ReservationPrepayment>(this.apiUrl, this.buildRequest(payload)).pipe(
+    const empresa = this.empresaContext.getSnapshot()?.MA04_Unidad?.trim();
+    if (!empresa) {
+      return throwError(() => new Error('No se encontró el código de empresa para registrar el prepago.'));
+    }
+
+    return this.http.post<ReservationPrepaymentResponse | ReservationPrepayment[] | ReservationPrepayment>(this.apiUrl, this.buildRequest(payload, empresa)).pipe(
       map((response) => this.normalizeResponse(response))
     );
   }
 
-  private buildRequest(payload: ReservationPrepayment): ReservationPrepayment {
+  private buildRequest(payload: ReservationPrepayment, empresa: string): ReservationPrepayment {
     return {
       ...payload,
       fechaDepo: normalizePmsDateDDMMYYYY(payload.fechaDepo),
       fechaReg: normalizePmsDateDDMMYYYY(payload.fechaReg),
       cCosto: 'PREPA',
       codBanco: payload.codBanco?.trim() || '',
-      ctaBanco: payload.ctaBanco?.trim() || ''
+      ctaBanco: payload.ctaBanco?.trim() || '',
+      empresa
     };
   }
 
@@ -145,6 +154,7 @@ export class ReservationPrepaymentsService {
       totalPrepa: Number(source.totalPrepa ?? 0) || 0,
       saldoPrepa: Number(source.saldoPrepa ?? 0) || 0,
       tCambio: Number(source.tCambio ?? 0) || 1,
+      numAsiento: source.numAsiento || source.NumAsiento || '',
       procesado: Number(source.procesado ?? 0) || 0,
       cierre: Number(source.cierre ?? 0) || 0,
       numCierre: Number(source.numCierre ?? 0) || 0,

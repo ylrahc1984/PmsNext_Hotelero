@@ -44,6 +44,11 @@ $next-muted: rgba(255, 255, 255, 0.72);
   transform: translateY(-1px);
 }
 
+.topbar-action:focus-visible {
+  outline: 2px solid $next-cyan;
+  outline-offset: 3px;
+}
+
 .topbar-action__badge {
   position: absolute;
   top: -5px;
@@ -59,7 +64,7 @@ $next-muted: rgba(255, 255, 255, 0.72);
   border: 2px solid $next-surface;
   border-radius: 999px;
   box-shadow: 0 0 0 3px rgba(#d43a4d, 0.16);
-  font-size: .62rem;
+  font-size: 0.62rem;
   font-weight: 850;
   line-height: 1;
 }
@@ -176,9 +181,9 @@ $next-muted: rgba(255, 255, 255, 0.72);
   margin-left: 4px;
   padding: 0 5px;
   color: $next-white;
-  background: rgba($next-cyan, .22);
+  background: rgba($next-cyan, 0.22);
   border-radius: 999px;
-  font-size: .65rem;
+  font-size: 0.65rem;
   vertical-align: middle;
 }
 
@@ -290,7 +295,7 @@ $next-muted: rgba(255, 255, 255, 0.72);
   margin-top: 4px;
   overflow: hidden;
   color: $next-white;
-  font-size: .78rem;
+  font-size: 0.78rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -298,9 +303,9 @@ $next-muted: rgba(255, 255, 255, 0.72);
 .notification-item__area {
   margin-top: 3px;
   color: $next-muted;
-  font-size: .68rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
-  letter-spacing: .04em;
+  letter-spacing: 0.04em;
 }
 
 .n-time {
@@ -318,7 +323,7 @@ $next-muted: rgba(255, 255, 255, 0.72);
   min-height: 104px;
   padding: 18px;
   color: $next-muted;
-  font-size: .78rem;
+  font-size: 0.78rem;
 }
 
 .notification-empty i {
@@ -327,13 +332,13 @@ $next-muted: rgba(255, 255, 255, 0.72);
 
 .notification-footer {
   padding: 10px 16px 13px;
-  border-top: 1px solid rgba($next-white, .08);
+  border-top: 1px solid rgba($next-white, 0.08);
   text-align: center;
 }
 
 .notification-footer a {
   color: $next-cyan;
-  font-size: .75rem;
+  font-size: 0.75rem;
   font-weight: 750;
   text-decoration: none;
 }
@@ -407,7 +412,7 @@ $next-muted: rgba(255, 255, 255, 0.72);
 
 .push-notification-option__button:disabled {
   cursor: not-allowed;
-  opacity: .6;
+  opacity: 0.6;
 }
 
 .push-notification-option__status--active {
@@ -417,8 +422,8 @@ $next-muted: rgba(255, 255, 255, 0.72);
 .push-notification-option__message {
   display: block;
   padding: 4px 18px 0 48px;
-  color: rgba($next-white, .58);
-  font-size: .7rem;
+  color: rgba($next-white, 0.58);
+  font-size: 0.7rem;
   line-height: 1.3;
 }
 

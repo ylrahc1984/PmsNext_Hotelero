@@ -138,6 +138,13 @@
   margin-bottom: 0.45rem;
 }
 
+.general-card__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: 0 0 auto;
+}
+
 .center-column .module-card {
   padding-block: 0.65rem;
 }
@@ -226,6 +233,37 @@
   border-radius: 6px;
   color: #07163a;
   background: transparent;
+}
+
+.icon-ghost:hover:not(:disabled),
+.icon-ghost:focus-visible {
+  color: #0d49e8;
+  background: #edf3ff;
+}
+
+.icon-ghost:focus-visible {
+  outline: 2px solid #0d49e8;
+  outline-offset: 2px;
+}
+
+.icon-ghost:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.reservation-dates-modal__fields {
+  display: grid;
+  gap: 1rem;
+}
+
+.reservation-dates-modal__fields .field {
+  margin: 0;
+}
+
+.reservation-dates-modal__hint {
+  margin: 0;
+  color: #63718a;
+  font-size: 0.78rem;
 }
 
 .compact-button {

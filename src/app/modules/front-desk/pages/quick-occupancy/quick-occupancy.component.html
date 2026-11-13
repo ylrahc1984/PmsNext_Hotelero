@@ -1,0 +1,203 @@
+<ng-container *ngIf="open">
+  <button
+    type="button"
+    class="quick-occupancy__backdrop"
+    aria-label="Cerrar consulta rápida de ocupación"
+    tabindex="-1"
+    (click)="closePanel()"
+  ></button>
+
+  <aside
+    #panel
+    class="quick-occupancy"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="quick-occupancy-title"
+    (keydown)="onPanelKeydown($event)"
+  >
+    <header class="quick-occupancy__header">
+      <div>
+        <span class="quick-occupancy__eyebrow">Disponibilidad</span>
+        <h2 id="quick-occupancy-title">Consulta Rápida de Ocupación</h2>
+      </div>
+      <button type="button" class="quick-occupancy__close" aria-label="Cerrar panel" (click)="closePanel()">
+        <i class="bi bi-x-lg" aria-hidden="true"></i>
+      </button>
+    </header>
+
+    <div class="quick-occupancy__body">
+      <form [formGroup]="filters" (ngSubmit)="procesar()" novalidate>
+        <section class="quick-occupancy__filters" aria-label="Filtros del pronóstico">
+          <div class="quick-occupancy__date-grid">
+            <div>
+              <app-pms-date-input
+                #fechaInicialInput
+                formControlName="fechaInicial"
+                label="Fecha Inicial *"
+                [max]="filters.controls.fechaFinal.value"
+                [describedBy]="isRequiredError('fechaInicial') ? 'quick-start-required' : null"
+              />
+              <small *ngIf="isRequiredError('fechaInicial')" id="quick-start-required" class="quick-occupancy__field-error" role="alert">
+                La fecha inicial es obligatoria.
+              </small>
+            </div>
+            <div (focusin)="onFinalDateFocus()">
+              <app-pms-date-input
+                formControlName="fechaFinal"
+                label="Fecha Final *"
+                [min]="filters.controls.fechaInicial.value"
+                [describedBy]="isRequiredError('fechaFinal') ? 'quick-end-required' : null"
+              />
+              <small *ngIf="isRequiredError('fechaFinal')" id="quick-end-required" class="quick-occupancy__field-error" role="alert">
+                La fecha final es obligatoria.
+              </small>
+            </div>
+          </div>
+
+          <div class="quick-occupancy__filter-grid">
+            <fieldset class="quick-occupancy__categories">
+              <legend>Categorías de habitación</legend>
+              <label class="quick-occupancy__category quick-occupancy__category--all">
+                <input
+                  type="checkbox"
+                  [checked]="allCategoriesSelected"
+                  [indeterminate]="someCategoriesSelected"
+                  [disabled]="isLoadingCategories || !categorias.length"
+                  (change)="setAllCategories($any($event.target).checked)"
+                />
+                <span>Seleccionar todas</span>
+              </label>
+              <div class="quick-occupancy__category-list" *ngIf="categorias.length">
+                <label class="quick-occupancy__category" *ngFor="let category of categorias; trackBy: trackByCategory">
+                  <input
+                    type="checkbox"
+                    [checked]="categoriasSeleccionadas[category.codigo]"
+                    [disabled]="isLoadingCategories"
+                    (change)="setCategorySelected(category.codigo, $any($event.target).checked)"
+                  />
+                  <span>{{ category.descripcion }}</span>
+                </label>
+              </div>
+              <span class="quick-occupancy__loading-categories" *ngIf="isLoadingCategories" role="status">Cargando categorías…</span>
+              <span class="quick-occupancy__loading-categories" *ngIf="!isLoadingCategories && !categorias.length && !categoryErrorMessage">
+                No hay categorías disponibles.
+              </span>
+            </fieldset>
+
+            <fieldset class="quick-occupancy__view">
+              <legend>Tipo de vista</legend>
+              <label>
+                <input type="radio" name="quick-occupancy-view" [checked]="tipoVista === 'ocupacion'" (change)="setView('ocupacion')" />
+                <span>Ocupación</span>
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="quick-occupancy-view"
+                  [checked]="tipoVista === 'disponibilidad'"
+                  (change)="setView('disponibilidad')"
+                />
+                <span>Disponibilidad</span>
+              </label>
+            </fieldset>
+          </div>
+
+          <div class="quick-occupancy__validation" *ngIf="dateRangeError" role="alert">{{ dateRangeError }}</div>
+          <div class="quick-occupancy__validation" *ngIf="categoryErrorMessage" role="alert">{{ categoryErrorMessage }}</div>
+          <div class="quick-occupancy__validation" *ngIf="errorMessage" role="alert">{{ errorMessage }}</div>
+
+          <button type="submit" class="quick-occupancy__process" [disabled]="isLoading">
+            <span class="spinner-border spinner-border-sm" *ngIf="isLoading" aria-hidden="true"></span>
+            <i class="bi bi-search" *ngIf="!isLoading" aria-hidden="true"></i>
+            <span>{{ isLoading ? 'Procesando…' : 'Procesar' }}</span>
+          </button>
+        </section>
+      </form>
+
+      <section class="quick-occupancy__results" aria-label="Resultados por fecha" aria-live="polite" [attr.aria-busy]="isLoading">
+        <div class="quick-occupancy__results-heading">
+          <div>
+            <span>Pronóstico</span>
+            <h3>Detalle por fecha</h3>
+          </div>
+          <span class="quick-occupancy__result-count" *ngIf="rows.length">{{ rows.length }} día(s)</span>
+        </div>
+
+        <div class="quick-occupancy__loading" *ngIf="isLoading" role="status" aria-label="Consultando pronóstico">
+          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+          <span>Consultando ocupación y disponibilidad…</span>
+        </div>
+        <div class="quick-occupancy__empty" *ngIf="!isLoading && !errorMessage && hasQueried && rows.length === 0">
+          No hay información de pronóstico para el período seleccionado.
+        </div>
+        <div class="quick-occupancy__empty" *ngIf="!isLoading && !errorMessage && !hasQueried">
+          Seleccione las fechas y procese la consulta para ver el pronóstico.
+        </div>
+
+        <div class="quick-occupancy__table-scroll" *ngIf="!isLoading && rows.length">
+          <table>
+            <thead>
+              <tr>
+                <th class="quick-occupancy__date-column">Fecha</th>
+                <th>Total Hab.</th>
+                <th>Bloq.</th>
+                <th>{{ quantityLabel }}</th>
+                <th>Pax</th>
+                <th>Niños</th>
+                <th *ngFor="let category of selectedCategories; trackBy: trackByCategory">{{ category.descripcion }}</th>
+                <th>{{ percentageLabel }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of pageRows; trackBy: trackByDate">
+                <td class="quick-occupancy__date-column">{{ row.fecha }}</td>
+                <td>{{ row.totalHabitaciones }}</td>
+                <td>{{ row.bloqueadas }}</td>
+                <td>{{ getViewQuantity(row) }}</td>
+                <td>{{ row.pax }}</td>
+                <td>{{ row.totalChl }}</td>
+                <td
+                  *ngFor="let category of selectedCategories; trackBy: trackByCategory"
+                  [class.quick-occupancy__category-unavailable]="isCategoryUnavailable(row, category.codigo)"
+                >
+                  {{ getCategoryDisplay(row, category.codigo) }}
+                </td>
+                <td>
+                  <span class="quick-occupancy__percentage" [ngClass]="getPercentageClass(getViewPercentage(row))">
+                    {{ getViewPercentage(row) | number: '1.0-1' }}%
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="quick-occupancy__pagination" *ngIf="!isLoading && rows.length">
+          <label>
+            <span>Filas</span>
+            <select [value]="pageSize" (change)="setPageSize(+$any($event.target).value)">
+              <option *ngFor="let size of pageSizes" [value]="size">{{ size }}</option>
+            </select>
+          </label>
+          <span>{{ paginationLabel }}</span>
+          <div class="quick-occupancy__page-buttons">
+            <button type="button" aria-label="Página anterior" [disabled]="currentPage === 1" (click)="previousPage()">
+              <i class="bi bi-chevron-left" aria-hidden="true"></i>
+            </button>
+            <strong>{{ currentPage }} / {{ totalPages }}</strong>
+            <button type="button" aria-label="Página siguiente" [disabled]="currentPage === totalPages" (click)="nextPage()">
+              <i class="bi bi-chevron-right" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <footer class="quick-occupancy__footer" *ngIf="canOpenFullForecast">
+      <a routerLink="/front-desk/occupancy-forecast" (click)="closePanel()">
+        <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+        <span>Ver Pronóstico Completo</span>
+      </a>
+    </footer>
+  </aside>
+</ng-container>

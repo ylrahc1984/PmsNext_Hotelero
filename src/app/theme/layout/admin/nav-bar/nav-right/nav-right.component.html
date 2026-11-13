@@ -1,4 +1,18 @@
 <ul class="navbar-nav nav-right-shell">
+  @if (canUseQuickOccupancy) {
+    <li class="topbar-quick-occupancy-entry">
+      <button
+        type="button"
+        class="topbar-action topbar-quick-occupancy"
+        aria-label="Disponibilidad"
+        title="Disponibilidad"
+        (click)="requestQuickOccupancy()"
+      >
+        <i class="feather icon-calendar" aria-hidden="true"></i>
+        <span class="visually-hidden">Disponibilidad</span>
+      </button>
+    </li>
+  }
   <li class="topbar-operational-date">
     <app-operational-date-indicator />
   </li>
@@ -6,12 +20,17 @@
     <div class="dropdown topbar-notifications-dropdown" ngbDropdown placement="bottom-end">
       <button type="button" ngbDropdownToggle class="topbar-action" data-toggle="dropdown" [attr.aria-label]="notificationAriaLabel()">
         <i class="icon feather icon-bell"></i>
-        @if (pendingGuestRequestCount() > 0) { <span class="topbar-action__badge">{{ notificationBadgeLabel() }}</span> }
+        @if (pendingGuestRequestCount() > 0) {
+          <span class="topbar-action__badge">{{ notificationBadgeLabel() }}</span>
+        }
       </button>
       <div ngbDropdownMenu class="dropdown-menu dropdown-menu-end notification">
         <div class="notification-head">
           <div>
-            <h6 class="m-b-0">Solicitudes pendientes <span class="notification-count">{{ pendingGuestRequestCount() }}</span></h6>
+            <h6 class="m-b-0">
+              Solicitudes pendientes
+              <span class="notification-count">{{ pendingGuestRequestCount() }}</span>
+            </h6>
             <span>Solicitudes de huéspedes PEN</span>
           </div>
           <a [routerLink]="['/clientes-huespedes/solicitudes-huespedes']" class="notification-head__link">Ver todas</a>
@@ -23,8 +42,13 @@
                 <a [routerLink]="['/clientes-huespedes/solicitudes-huespedes']" class="notification-item notification-item--link">
                   <span class="notification-icon notification-icon--cyan"><i class="feather icon-bell"></i></span>
                   <span class="flex-grow-1 notification-item__content">
-                    <span class="notification-item__title"><strong>Hab. {{ request.numHabitacion || '—' }}</strong><span class="n-time">{{ requestElapsedLabel(request) }}</span></span>
-                    <span class="notification-item__request">{{ request.cantidad ? request.cantidad + ' × ' : '' }}{{ request.tipoSolicitud || 'Solicitud de huésped' }}</span>
+                    <span class="notification-item__title">
+                      <strong>Hab. {{ request.numHabitacion || '—' }}</strong>
+                      <span class="n-time">{{ requestElapsedLabel(request) }}</span>
+                    </span>
+                    <span class="notification-item__request">
+                      {{ request.cantidad ? request.cantidad + ' × ' : '' }}{{ request.tipoSolicitud || 'Solicitud de huésped' }}
+                    </span>
                     <span class="notification-item__area">{{ request.area || 'Área no asignada' }}</span>
                   </span>
                 </a>
@@ -32,7 +56,10 @@
             }
           </ul>
         } @else {
-          <div class="notification-empty"><i class="feather icon-check-circle" aria-hidden="true"></i><span>Sin solicitudes pendientes</span></div>
+          <div class="notification-empty">
+            <i class="feather icon-check-circle" aria-hidden="true"></i>
+            <span>Sin solicitudes pendientes</span>
+          </div>
         }
         <div class="notification-footer"><a [routerLink]="['/clientes-huespedes/solicitudes-huespedes']">Ver todas las solicitudes</a></div>
       </div>
@@ -90,14 +117,24 @@
                   Desactivando notificaciones…
                 </span>
               } @else if (pushState().status === 'activated' || pushState().status === 'remote-revoked') {
-                <button type="button" class="dropdown-item push-notification-option__button push-notification-option__status--active"
-                  (click)="deactivatePushNotifications()" [disabled]="pushState().status === 'deactivating'">
+                <button
+                  type="button"
+                  class="dropdown-item push-notification-option__button push-notification-option__status--active"
+                  (click)="deactivatePushNotifications()"
+                  [disabled]="pushState().status === 'deactivating'"
+                >
                   <i class="feather icon-bell"></i>
                   Notificaciones activadas
                 </button>
               } @else {
-                <button type="button" class="dropdown-item push-notification-option__button" (click)="activatePushNotifications()"
-                  [disabled]="pushState().status === 'unsupported' || pushState().status === 'permission-denied' || pushState().status === 'disabled'">
+                <button
+                  type="button"
+                  class="dropdown-item push-notification-option__button"
+                  (click)="activatePushNotifications()"
+                  [disabled]="
+                    pushState().status === 'unsupported' || pushState().status === 'permission-denied' || pushState().status === 'disabled'
+                  "
+                >
                   <i class="feather icon-bell"></i>
                   Activar notificaciones
                 </button>

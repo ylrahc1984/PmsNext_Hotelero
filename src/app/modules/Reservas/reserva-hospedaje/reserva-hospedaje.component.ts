@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, HostListener, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, HostListener, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import {
@@ -249,6 +249,7 @@ export class ReservaHospedajeComponent implements OnInit {
   readonly saving                             = signal(false);
   readonly showPlanModal                      = signal(false);
   readonly showServiceModal                   = signal(false);
+  readonly showReservationDatesModal           = signal(false);
   readonly generalExpanded                    = signal(true);
   readonly planExpanded                       = signal(false);
   readonly servicesExpanded                   = signal(false);
@@ -336,6 +337,14 @@ export class ReservaHospedajeComponent implements OnInit {
     inclusiones           : this.fb.array<FormGroup<InclusionForm>>([]),
     servicios             : this.fb.array<FormGroup<ServicioForm>>([])
   }, { validators: [this.reservationDatesValidator()] });
+
+  readonly reservationDatesForm = this.fb.group({
+    fecConfirma: '',
+    fecPrepago: ''
+  });
+
+  @ViewChild('reservationDatesTrigger') private reservationDatesTrigger?: ElementRef<HTMLButtonElement>;
+  @ViewChild('reservationCutoffInput') private reservationCutoffInput?: ElementRef<HTMLInputElement>;
 
   readonly habitacionForm : FormGroup<HabitacionForm>  = this.createHabitacionGroup();
   readonly inclusionForm  : FormGroup<InclusionForm>   = this.createInclusionGroup();
@@ -831,6 +840,46 @@ export class ReservaHospedajeComponent implements OnInit {
 
   toggleGeneral(): void {
     this.generalExpanded.update((expanded) => !expanded);
+  }
+
+  get reservationDatesReadOnly(): boolean {
+    return (
+      this.saving() ||
+      this.savingContact() ||
+      this.savingTags() ||
+      this.loadingDetalle() ||
+      this.checkingRoomAvailability() ||
+      this.exchangeRateLoading() ||
+      this.reservationLocked() ||
+      this.reservationPendingContact() ||
+      this.createdReservationPendingTags()
+    );
+  }
+
+  openReservationDatesModal(): void {
+    if (this.reservationDatesReadOnly || this.showReservationDatesModal()) return;
+    this.reservationDatesForm.reset({
+      fecConfirma: this.reservaForm.controls.fecConfirma.value,
+      fecPrepago: this.reservaForm.controls.fecPrepago.value
+    });
+    this.showReservationDatesModal.set(true);
+    setTimeout(() => this.reservationCutoffInput?.nativeElement.focus(), 0);
+  }
+
+  cancelReservationDatesModal(): void {
+    if (!this.showReservationDatesModal()) return;
+    this.showReservationDatesModal.set(false);
+    setTimeout(() => this.reservationDatesTrigger?.nativeElement.focus(), 0);
+  }
+
+  saveReservationDates(): void {
+    if (this.reservationDatesReadOnly || !this.showReservationDatesModal()) return;
+    this.reservaForm.patchValue({
+      fecConfirma: this.reservationDatesForm.controls.fecConfirma.value,
+      fecPrepago: this.reservationDatesForm.controls.fecPrepago.value
+    });
+    this.showReservationDatesModal.set(false);
+    setTimeout(() => this.reservationDatesTrigger?.nativeElement.focus(), 0);
   }
 
   toggleServices(): void {
@@ -1351,6 +1400,10 @@ export class ReservaHospedajeComponent implements OnInit {
 
   @HostListener('document:keydown.escape')
   closeTagModalOnEscape(): void {
+    if (this.showReservationDatesModal()) {
+      this.cancelReservationDatesModal();
+      return;
+    }
     if (this.showTagsModal()) {
       this.closeTagsModal();
     }
@@ -2261,6 +2314,14 @@ export class ReservaHospedajeComponent implements OnInit {
       0,
       (categoria, tipo) => this.getTipoHabitacionPax(categoria, tipo)
     );
+    const validDateFallback =
+      normalizePmsDateDDMMYYYY(this.operationalDateService.operationalDate()) || normalizePmsDateDDMMYYYY(new Date());
+    payload.fecConfirma = payload.fecConfirma || payload.fecCreacion || payload.fecIngreso || validDateFallback;
+    payload.fecPrepago = payload.fecPrepago || payload.fecIngreso || payload.fecCreacion || validDateFallback;
+    this.reservaForm.patchValue({
+      fecConfirma: toPmsDateInputValue(payload.fecConfirma),
+      fecPrepago: toPmsDateInputValue(payload.fecPrepago)
+    });
     this.saving.set(true);
 
     void Swal.fire({
@@ -4182,7 +4243,10 @@ export class ReservaHospedajeComponent implements OnInit {
     return {
       ...draftReserva,
       esCpl: draftReserva.esCpl ?? false,
-      ...defaults
+      ...defaults,
+      // These user-editable deadlines must survive restoring a new-reservation draft.
+      fecConfirma: draftReserva.fecConfirma ?? '',
+      fecPrepago: draftReserva.fecPrepago ?? ''
     };
   }
 

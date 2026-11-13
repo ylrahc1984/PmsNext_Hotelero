@@ -11,6 +11,7 @@ export interface ReservaConsulta {
   habOrigen: string;
   agencia: string;
   descripcion: string;
+  observaciones: string;
   ingreso: string;
   creacion?: string;
   salida: string;
@@ -90,6 +91,7 @@ export interface ReservaConsultaApiItem {
   prV01_FecSalida?: string;
   prV01_TotNoches?: number;
   prV01_Descripcion?: string;
+  prV01_Observacion?: string;
   prV01_TCambio?: number;
   prV01_Estado?: string;
   prV01_Moneda?: string;

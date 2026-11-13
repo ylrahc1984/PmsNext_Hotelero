@@ -48,15 +48,28 @@
             <span class="step-badge">1.</span>
             <h2>Datos Generales</h2>
           </div>
-          <button
-            type="button"
-            class="icon-ghost"
-            [attr.aria-expanded]="generalExpanded()"
-            [attr.aria-label]="generalExpanded() ? 'Contraer datos generales' : 'Expandir datos generales'"
-            (click)="toggleGeneral()"
-          >
-            <i class="bi" [ngClass]="generalExpanded() ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
-          </button>
+          <div class="general-card__actions">
+            <button
+              #reservationDatesTrigger
+              type="button"
+              class="icon-ghost"
+              aria-label="Editar fecha de cut off y fecha límite de pago"
+              title="Editar fechas de cut off y pago"
+              [disabled]="reservationDatesReadOnly"
+              (click)="openReservationDatesModal()"
+            >
+              <i class="bi bi-gear" aria-hidden="true"></i>
+            </button>
+            <button
+              type="button"
+              class="icon-ghost"
+              [attr.aria-expanded]="generalExpanded()"
+              [attr.aria-label]="generalExpanded() ? 'Contraer datos generales' : 'Expandir datos generales'"
+              (click)="toggleGeneral()"
+            >
+              <i class="bi" [ngClass]="generalExpanded() ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+            </button>
+          </div>
         </div>
 
         <div class="collapsed-summary" *ngIf="!generalExpanded()">
@@ -781,6 +794,44 @@
     </aside>
   </div>
 </form>
+
+<div class="modal-backdrop fade show reservation-dates-modal-backdrop" *ngIf="showReservationDatesModal()" (click)="cancelReservationDatesModal()"></div>
+<div
+  class="modal fade show d-block reservation-dates-modal"
+  tabindex="-1"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="reservation-dates-modal-title"
+  *ngIf="showReservationDatesModal()"
+  (click)="cancelReservationDatesModal()"
+>
+  <div class="modal-dialog modal-dialog-centered" role="document" (click)="$event.stopPropagation()">
+    <div class="modal-content" [formGroup]="reservationDatesForm">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title" id="reservation-dates-modal-title">Fechas comerciales</h5>
+          <small class="text-muted">Defina las fechas límite para confirmar y pagar la reserva.</small>
+        </div>
+        <button type="button" class="btn-close" aria-label="Cerrar" (click)="cancelReservationDatesModal()"></button>
+      </div>
+      <div class="modal-body reservation-dates-modal__fields">
+        <label class="field" for="reservationCutoffDate">
+          <span>Fecha de cut off</span>
+          <input #reservationCutoffInput id="reservationCutoffDate" type="date" class="form-control" formControlName="fecConfirma">
+        </label>
+        <label class="field" for="reservationPaymentDate">
+          <span>Fecha límite de pago</span>
+          <input id="reservationPaymentDate" type="date" class="form-control" formControlName="fecPrepago">
+        </label>
+        <p class="reservation-dates-modal__hint">Las fechas se aplican al confirmar los cambios de la reserva.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" (click)="cancelReservationDatesModal()">Cancelar</button>
+        <button type="button" class="btn btn-primary" [disabled]="reservationDatesReadOnly" (click)="saveReservationDates()">Aplicar fechas</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="modal-backdrop fade show" *ngIf="showTagsModal()"></div>
 <div

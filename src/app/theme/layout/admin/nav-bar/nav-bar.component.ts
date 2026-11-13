@@ -18,6 +18,7 @@ import { OperationalDateIndicatorComponent } from './operational-date-indicator/
 export class NavBarComponent {
   // public props
   readonly NavCollapsedMob = output();
+  readonly quickOccupancyRequested = output<void>();
   navCollapsedMob;
   headerStyle: string;
   menuClass: boolean;

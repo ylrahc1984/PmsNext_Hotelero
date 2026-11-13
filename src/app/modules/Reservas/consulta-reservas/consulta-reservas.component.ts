@@ -223,6 +223,16 @@ export class ConsultaReservasComponent implements OnInit {
     void this.router.navigate(['/reservas/detalle-hospedaje', codReserva]);
   }
 
+  verObservaciones(reserva: ReservaConsulta): void {
+    const observaciones = reserva.observaciones.trim();
+    void Swal.fire({
+      title: `Observaciones · ${this.escapeHtml(reserva.reserva)}`,
+      html: `<div class="text-start" style="white-space: pre-wrap; overflow-wrap: anywhere">${observaciones ? this.escapeHtml(observaciones) : 'Sin observaciones registradas.'}</div>`,
+      confirmButtonText: 'Cerrar',
+      confirmButtonColor: '#0d6efd'
+    });
+  }
+
   async gestionarEtiquetas(reserva: ReservaConsulta): Promise<void> {
     if (!this.puedeEditarReserva(reserva)) return;
     if (!(await this.operationalPolicy.require(OperationalAction.UpdateOperation))) return;

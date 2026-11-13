@@ -49,9 +49,17 @@ export function normalizePmsDateInputDDMMYYYY(value: unknown): string {
   const input = (value ?? '').toString().trim();
   const match = input.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
 
-  return match
-    ? formatValidDate(Number(match[1]), Number(match[2]), Number(match[3]))
-    : '';
+  return match ? formatValidDate(Number(match[1]), Number(match[2]), Number(match[3])) : '';
+}
+
+/**
+ * Acepta D/M/YYYY, DD/MM/YYYY o DDMMYYYY para controles de entrada rápida,
+ * delegando la validación de calendario a normalizePmsDateInputDDMMYYYY.
+ */
+export function normalizePmsDateKeyboardInputDDMMYYYY(value: unknown): string {
+  const input = (value ?? '').toString().trim();
+  const compact = input.match(/^(\d{2})(\d{2})(\d{4})$/);
+  return normalizePmsDateInputDDMMYYYY(compact ? `${compact[1]}/${compact[2]}/${compact[3]}` : input);
 }
 
 /** Formatea fecha y hora local garantizando DD/MM/YYYY HH:mm. */

@@ -292,6 +292,7 @@ function buildReserva(estado: string): ReservaConsulta {
     habOrigen: '',
     agencia: '',
     descripcion: 'Reserva de prueba',
+    observaciones: '',
     ingreso: '29/07/2026',
     salida: '31/07/2026',
     noches: 2,

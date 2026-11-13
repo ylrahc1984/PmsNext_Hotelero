@@ -292,10 +292,14 @@ export class ReservaHabitacionService implements ReservaHabitacionRepository {
         item.descripcion ??
         item.prV01_Descripcion ??
         item.Descripcion ??
-        item.observaciones ??
-        item.Observaciones ??
+        ''
+      ).trim(),
+      observaciones: (
         item.observacion ??
+        item.observaciones ??
         item.Observacion ??
+        item.Observaciones ??
+        item.prV01_Observacion ??
         ''
       ).trim(),
       ingreso: normalizePmsDateDDMMYYYY(item.fecIngresa ?? item.prV01_FecIngresa ?? ''),

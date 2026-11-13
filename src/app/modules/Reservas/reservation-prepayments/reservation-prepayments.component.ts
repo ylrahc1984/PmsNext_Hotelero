@@ -24,6 +24,7 @@ import {
   ReservationPrepaymentSummary
 } from './models/reservation-prepayment.model';
 import { ReservationPrepaymentsService } from './services/reservation-prepayments.service';
+import { ReservationPrepaymentPdfService } from './services/reservation-prepayment-pdf.service';
 
 interface ReservationPrepaymentForm {
   fechaDepo: FormControl<string>;
@@ -67,6 +68,7 @@ interface MoneyCard {
 export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly service = inject(ReservationPrepaymentsService);
+  private readonly prepaymentPdfService = inject(ReservationPrepaymentPdfService);
   private readonly monedaService = inject(MonedaService);
   private readonly tipoCambioService = inject(TipoCambioService);
   private readonly formaPagoService = inject(FormaPagoService);
@@ -91,7 +93,7 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
     codBanco: this.fb.control(''),
     ctaBanco: this.fb.control(''),
     moneda: this.fb.control('', { validators: [Validators.required] }),
-    tCambio: this.fb.control(1, { validators: [Validators.required, Validators.min(0.0001)] }),
+    tCambio: this.fb.control(0, { validators: [Validators.required, Validators.min(0.0001)] }),
     totalPrepa: this.fb.control(0, { validators: [Validators.required, Validators.min(0.01)] }),
     nOperacion: this.fb.control('', { validators: [Validators.maxLength(60)] }),
     numTarjeta: this.fb.control('', { validators: [Validators.maxLength(30)] }),
@@ -104,7 +106,6 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
   readonly loading = signal(false);
   readonly saving = signal(false);
   readonly mode = signal<ReservationPrepaymentMode>('new');
-  readonly selectedPrepayment = signal<ReservationPrepayment | null>(null);
   readonly prepayments = signal<ReservationPrepayment[]>([]);
   readonly monedas = signal<MonedaUI[]>([]);
   readonly formasPago = signal<FormaPago[]>([]);
@@ -112,13 +113,13 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
   readonly cuentasBanco = signal<CuentaBancoOption[]>([]);
   readonly cuentasBancoLoading = signal(false);
   readonly submitted = signal(false);
+  readonly montoPrepagoInput = signal('0.00');
   readonly conversionAmount = signal(0);
   readonly projectedBalance = signal(0);
 
-  readonly isEditing = computed(() => this.mode() === 'edit');
   readonly isViewing = computed(() => this.mode() === 'view');
-  readonly modalTitle = computed(() => (this.isEditing() ? 'Editar Prepago' : this.isViewing() ? 'Consultar Prepago' : 'Administración de Prepagos'));
-  readonly submitLabel = computed(() => (this.isEditing() ? 'Actualizar Prepago' : 'Guardar Prepago'));
+  readonly modalTitle = computed(() => (this.isViewing() ? 'Consultar Prepago' : 'Administración de Prepagos'));
+  readonly submitLabel = computed(() => 'Guardar Prepago');
   readonly reservationCurrency = computed(() => this.normalizeCurrency(this.reserva?.moneda || 'USD'));
   readonly totalPrepaid = computed(() => this.roundMoney(this.prepayments().reduce((sum, item) => sum + this.toReservationCurrency(item), 0)));
   readonly pendingBalance = computed(() => this.roundMoney(Math.max(this.totalReservation() - this.totalPrepaid(), 0)));
@@ -137,7 +138,7 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
       this.updateMoneyPreview();
     });
     this.form.controls.moneda.valueChanges.pipe(distinctUntilChanged(), takeUntilDestroyed(this.destroyRef)).subscribe(() => this.syncExchangeRate());
-    this.form.controls.fechaDepo.valueChanges.pipe(distinctUntilChanged(), takeUntilDestroyed(this.destroyRef)).subscribe(() => this.syncExchangeRate());
+    this.form.controls.fechaDepo.valueChanges.pipe(distinctUntilChanged(), takeUntilDestroyed(this.destroyRef)).subscribe(() => this.syncExchangeRate(true));
     this.form.controls.codBanco.valueChanges.pipe(distinctUntilChanged(), takeUntilDestroyed(this.destroyRef)).subscribe((value) => {
       void this.onBancoChange(value);
     });
@@ -157,6 +158,24 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
     this.close.emit();
   }
 
+  onMontoPrepagoInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const [integerPart = '', ...decimalParts] = input.value.replace(/,/g, '').replace(/[^\d.]/g, '').split('.');
+    const normalized = decimalParts.length
+      ? `${integerPart || '0'}.${decimalParts.join('').slice(0, 2)}`
+      : integerPart;
+    this.montoPrepagoInput.set(normalized);
+    this.form.controls.totalPrepa.setValue(normalized ? Number(normalized) || 0 : 0);
+  }
+
+  formatMontoPrepagoInput(): void {
+    const amount = Number(this.form.controls.totalPrepa.value) || 0;
+    this.montoPrepagoInput.set(new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount));
+  }
+
   async guardar(): Promise<void> {
     this.submitted.set(true);
     this.form.markAllAsTouched();
@@ -173,13 +192,13 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
       return;
     }
 
-    const payload = this.buildPayload(this.isEditing() ? 2 : 1);
+    const payload = this.buildPayload(1);
     const confirmation = await Swal.fire({
-      title: this.isEditing() ? 'Actualizar prepago' : 'Guardar prepago',
-      html: `¿Está seguro de ${this.isEditing() ? 'actualizar' : 'registrar'} este prepago por <strong>${this.moneySymbol(payload.moneda)} ${payload.totalPrepa.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>?`,
+      title: 'Guardar prepago',
+      html: `¿Está seguro de registrar este prepago por <strong>${this.moneySymbol(payload.moneda)} ${payload.totalPrepa.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>?`,
       icon: 'question',
       showCancelButton: true,
-      confirmButtonText: this.isEditing() ? 'Sí, actualizar' : 'Sí, guardar',
+      confirmButtonText: 'Sí, guardar',
       cancelButtonText: 'No, volver',
       confirmButtonColor: '#0d6efd',
       cancelButtonColor: '#6c757d',
@@ -192,7 +211,7 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
       return;
     }
 
-    const request$ = this.isEditing() ? this.service.actualizar(payload) : this.service.guardar(payload);
+    const request$ = this.service.guardar(payload);
     this.saving.set(true);
     this.errorMessage = '';
 
@@ -206,7 +225,7 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
           }
 
           await Swal.fire({
-            title: this.isEditing() ? 'Actualización completada' : 'Registro completado',
+            title: 'Registro completado',
             text: response?.respuesta || response?.mensaje || 'El prepago fue procesado correctamente.',
             icon: 'success',
             timer: 1400,
@@ -233,18 +252,11 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
     this.resetForm();
   }
 
-  cancelarEdicion(): void {
+  cancelarConsulta(): void {
     this.resetForm();
   }
 
-  editar(prepayment: ReservationPrepayment): void {
-    this.selectedPrepayment.set(prepayment);
-    this.mode.set('edit');
-    this.applyPrepaymentToForm(prepayment, false);
-  }
-
   ver(prepayment: ReservationPrepayment): void {
-    this.selectedPrepayment.set(prepayment);
     this.mode.set('view');
     this.applyPrepaymentToForm(prepayment, true);
   }
@@ -321,6 +333,21 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
     return normalizePmsDateDDMMYYYY(value) || 'N/D';
   }
 
+  async imprimir(prepayment: ReservationPrepayment): Promise<void> {
+    if (!this.reserva) return;
+    try {
+      await this.prepaymentPdfService.print(prepayment, this.reserva, this.formaPagoLabel(prepayment.frmPago));
+    } catch (error) {
+      console.error('No se pudo generar el comprobante del prepago.', error);
+      await Swal.fire({
+        title: 'No se pudo generar el PDF',
+        text: this.getApiErrorMessage(error),
+        icon: 'error',
+        customClass: { container: 'next-confirm-container' }
+      });
+    }
+  }
+
   private initializeModal(): void {
     this.resetForm();
     this.loadCatalogs();
@@ -369,7 +396,6 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
   private resetForm(): void {
     const today = this.todayIso();
     this.mode.set('new');
-    this.selectedPrepayment.set(null);
     this.submitted.set(false);
     this.form.enable({ emitEvent: false });
     this.form.reset({
@@ -380,7 +406,7 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
       codBanco: '',
       ctaBanco: '',
       moneda: this.reservationCurrency(),
-      tCambio: this.reserva?.tCambio || 1,
+      tCambio: this.reserva?.tCambio || 0,
       totalPrepa: this.totalReservation(),
       nOperacion: '',
       numTarjeta: '',
@@ -389,6 +415,7 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
       tipTarjeta: '',
       cCosto: 'PREPA'
     });
+    this.formatMontoPrepagoInput();
     this.applyDefaults();
     this.updateMoneyPreview();
   }
@@ -414,7 +441,7 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
       codBanco: prepayment.codBanco || '',
       ctaBanco: prepayment.ctaBanco || '',
       moneda: this.normalizeCurrency(prepayment.moneda),
-      tCambio: Number(prepayment.tCambio || 1),
+      tCambio: Number(prepayment.tCambio || this.reserva?.tCambio || 0),
       totalPrepa: Number(prepayment.totalPrepa || 0),
       nOperacion: prepayment.nOperacion,
       numTarjeta: prepayment.numTarjeta,
@@ -423,6 +450,7 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
       tipTarjeta: prepayment.tipTarjeta,
       cCosto: prepayment.cCosto || 'PREPA'
     }, { emitEvent: false });
+    this.formatMontoPrepagoInput();
 
     if (readonly) {
       this.form.disable({ emitEvent: false });
@@ -430,6 +458,9 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
 
     if (prepayment.codBanco) {
       void this.onBancoChange(prepayment.codBanco, prepayment.ctaBanco);
+    }
+    if (!readonly && !this.form.controls.tCambio.value) {
+      this.syncExchangeRate();
     }
 
     this.updateMoneyPreview();
@@ -495,27 +526,19 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
     this.form.controls.moneda.setValue(selected.moneda);
   }
 
-  private syncExchangeRate(): void {
-    const monedaPrepago = this.normalizeCurrency(this.form.controls.moneda.value);
-    if (!monedaPrepago || monedaPrepago === this.reservationCurrency()) {
-      this.form.controls.tCambio.setValue(1, { emitEvent: false });
-      this.syncAmountWithReservationCurrency();
-      this.updateMoneyPreview();
-      return;
-    }
-
-    const existing = Number(this.form.controls.tCambio.value || this.reserva?.tCambio || 0);
-    if (existing > 1) {
+  private syncExchangeRate(refresh = false): void {
+    const currentRate = Number(this.form.controls.tCambio.value || 0);
+    if (currentRate > 0 && !refresh) {
       this.syncAmountWithReservationCurrency();
       this.updateMoneyPreview();
       return;
     }
 
     this.tipoCambioService
-      .fetchTipoCambio(normalizePmsDateDDMMYYYY(this.form.controls.fechaDepo.value || this.todayIso()), this.reservationCurrency())
+      .fetchTipoCambio(normalizePmsDateDDMMYYYY(this.form.controls.fechaDepo.value || this.todayIso()), 'usd')
       .pipe(catchError(() => of([])), takeUntilDestroyed(this.destroyRef))
       .subscribe((items) => {
-        const rate = Number(items[0]?.venta ?? this.reserva?.tCambio ?? 0) || 1;
+        const rate = Number(items[0]?.venta ?? this.reserva?.tCambio ?? currentRate ?? 0);
         this.form.controls.tCambio.setValue(rate, { emitEvent: false });
         this.syncAmountWithReservationCurrency();
         this.updateMoneyPreview();
@@ -523,32 +546,25 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
   }
 
   private updateMoneyPreview(): void {
-    this.syncExchangeRateIfNeeded();
-    const equivalent = this.toReservationCurrency(this.buildPayload(this.isEditing() ? 2 : 1));
+    const equivalent = this.toReservationCurrency(this.buildPayload(1));
     this.conversionAmount.set(equivalent);
-    const baseAlreadyStored = this.isEditing() ? this.toReservationCurrency(this.selectedPrepayment()) : 0;
-    this.projectedBalance.set(this.roundMoney(Math.max(this.pendingBalance() + baseAlreadyStored - equivalent, 0)));
-  }
-
-  private syncExchangeRateIfNeeded(): void {
-    if (this.normalizeCurrency(this.form.controls.moneda.value) === this.reservationCurrency() && this.form.controls.tCambio.value !== 1) {
-      this.form.controls.tCambio.setValue(1, { emitEvent: false });
-    }
+    this.projectedBalance.set(this.roundMoney(Math.max(this.pendingBalance() - equivalent, 0)));
   }
 
   private syncAmountWithReservationCurrency(): void {
-    if (this.isEditing() || this.isViewing()) {
+    if (this.isViewing()) {
       return;
     }
 
     const reservationAmount = this.totalReservation();
     const paymentCurrency = this.normalizeCurrency(this.form.controls.moneda.value);
-    const rate = Number(this.form.controls.tCambio.value || 1) || 1;
+    const rate = Number(this.form.controls.tCambio.value || 0);
     const amount = paymentCurrency === 'CRC' || paymentCurrency === 'COL'
       ? reservationAmount * rate
       : reservationAmount;
 
     this.form.controls.totalPrepa.setValue(this.roundMoney(amount), { emitEvent: false });
+    this.formatMontoPrepagoInput();
   }
 
   private getSubmitValidationMessage(): string {
@@ -562,8 +578,7 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
     }
 
     const equivalent = this.conversionAmount();
-    const editingAmount = this.isEditing() ? this.toReservationCurrency(this.selectedPrepayment()) : 0;
-    if (equivalent > this.pendingBalance() + editingAmount + 0.01) {
+    if (equivalent > this.pendingBalance() + 0.01) {
       return 'El prepago no puede ser mayor al saldo pendiente de la reserva.';
     }
 
@@ -572,7 +587,7 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
 
   private buildPayload(proceso: number): ReservationPrepayment {
     const raw = this.form.getRawValue();
-    const base = this.selectedPrepayment() ?? this.service.createEmptyPayload();
+    const base = this.service.createEmptyPayload();
     return {
       ...base,
       proceso,
@@ -588,7 +603,7 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
       totalPrepa: Number(raw.totalPrepa || 0),
       saldoPrepa: this.projectedBalance(),
       moneda: this.normalizeCurrency(raw.moneda),
-      tCambio: Number(raw.tCambio || 1),
+      tCambio: Number(raw.tCambio || 0),
       frmPago: raw.frmPago.trim(),
       codBanco: raw.codBanco.trim(),
       ctaBanco: raw.ctaBanco.trim(),
@@ -609,7 +624,7 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
     const amount = Number(prepayment.totalPrepa ?? 0) || 0;
     const from = this.normalizeCurrency(prepayment.moneda);
     const to = this.reservationCurrency();
-    const rate = Number(prepayment.tCambio || this.form.controls.tCambio.value || this.reserva?.tCambio || 1) || 1;
+    const rate = Number(prepayment.tCambio || this.form.controls.tCambio.value || this.reserva?.tCambio || 0);
 
     if (!amount || from === to) {
       return this.roundMoney(amount);
@@ -699,8 +714,8 @@ export class ReservationPrepaymentsComponent implements OnInit, OnChanges {
     return httpError.message || 'No se pudo completar la operación.';
   }
 
-  private isSuccessfulResponse(response: { ok?: boolean; respuesta?: string; mensaje?: string } | null | undefined): boolean {
-    if (response?.ok === false) {
+  private isSuccessfulResponse(response: { exitoso?: boolean; ok?: boolean; respuesta?: string; mensaje?: string } | null | undefined): boolean {
+    if (response?.exitoso === false || response?.ok === false) {
       return false;
     }
 

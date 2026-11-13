@@ -79,8 +79,8 @@
                     <td><span class="prepay-status" [class.prepay-status--closed]="item.procesado">{{ item.procesado ? 'Procesado' : 'Registrado' }}</span></td>
                     <td class="text-center">
                       <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-light" title="Imprimir comprobante PDF" (click)="imprimir(item)" [disabled]="saving()"><i class="bi bi-printer"></i></button>
                         <button type="button" class="btn btn-light" title="Ver" (click)="ver(item)" [disabled]="saving()"><i class="bi bi-eye"></i></button>
-                        <button type="button" class="btn btn-light" title="Editar" (click)="editar(item)" [disabled]="saving() || item.procesado"><i class="bi bi-pencil-square"></i></button>
                         <button type="button" class="btn btn-light text-danger" title="Eliminar" (click)="eliminar(item)" [disabled]="saving() || item.procesado"><i class="bi bi-trash"></i></button>
                       </div>
                     </td>
@@ -99,7 +99,7 @@
           <section class="prepay-panel prepay-panel--form">
             <div class="prepay-section-head">
               <div>
-                <h6><i class="bi bi-credit-card"></i> {{ isEditing() ? 'Editar Prepago' : isViewing() ? 'Detalle del Prepago' : 'Nuevo Prepago' }}</h6>
+                <h6><i class="bi bi-credit-card"></i> {{ isViewing() ? 'Detalle del Prepago' : 'Nuevo Prepago' }}</h6>
                 <small>Registro financiero de garantía</small>
               </div>
             </div>
@@ -132,18 +132,18 @@
                     <option *ngFor="let banco of bancos()" [value]="banco.codBanco">{{ banco.descripcion }} ({{ banco.codBanco }})</option>
                   </select>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-8">
                   <label class="form-label">Cuenta bancaria <span class="text-danger">*</span></label>
                   <select class="form-select" formControlName="ctaBanco" [disabled]="isViewing() || cuentasBancoLoading() || !form.controls.codBanco.value" [class.is-invalid]="isInvalid('ctaBanco')">
                     <option value="">{{ cuentasBancoLoading() ? 'Cargando cuentas...' : 'Seleccione' }}</option>
                     <option *ngFor="let cuenta of cuentasBanco()" [value]="cuenta.value">{{ cuenta.label }} · {{ cuenta.moneda }}</option>
                   </select>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                   <label class="form-label">Moneda</label>
                   <select class="form-select" formControlName="moneda" [class.is-invalid]="isInvalid('moneda')">
                     <option value="">Seleccione</option>
-                    <option *ngFor="let item of monedas()" [value]="item.codMoneda">{{ item.codMoneda }} - {{ item.moneda }}</option>
+                    <option *ngFor="let item of monedas()" [value]="item.codMoneda">{{ item.codMoneda }}</option>
                   </select>
                 </div>
                 <div class="col-md-6">
@@ -152,7 +152,16 @@
                 </div>
                 <div class="col-md-6">
                   <label class="form-label">Monto Prepago ({{ form.controls.moneda.value || reservationCurrency() }})</label>
-                  <input type="number" class="form-control text-end" formControlName="totalPrepa" min="0" step="0.01" [class.is-invalid]="isInvalid('totalPrepa')">
+                  <input
+                    type="text"
+                    inputmode="decimal"
+                    class="form-control text-end"
+                    [value]="montoPrepagoInput()"
+                    (input)="onMontoPrepagoInput($event)"
+                    (blur)="formatMontoPrepagoInput()"
+                    [disabled]="isViewing()"
+                    [class.is-invalid]="isInvalid('totalPrepa')"
+                  >
                 </div>
                 <div class="col-12">
                   <label class="form-label">Número Operación</label>
@@ -188,7 +197,7 @@
                   <i class="bi bi-save me-1" *ngIf="!saving()"></i>
                   {{ submitLabel() }}
                 </button>
-                <button type="button" class="btn btn-outline-secondary" (click)="cancelarEdicion()" [disabled]="saving()" *ngIf="isEditing() || isViewing()">Cancelar</button>
+                <button type="button" class="btn btn-outline-secondary" (click)="cancelarConsulta()" [disabled]="saving()" *ngIf="isViewing()">Cancelar</button>
                 <button type="button" class="btn btn-light" (click)="limpiar()" [disabled]="saving()" *ngIf="!isViewing()">Limpiar</button>
               </div>
             </form>

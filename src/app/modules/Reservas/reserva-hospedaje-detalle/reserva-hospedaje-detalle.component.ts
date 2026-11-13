@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { distinctUntilChanged, finalize, firstValueFrom, map } from 'rxjs';
@@ -31,6 +31,8 @@ import {
   ReservaHospedajeServicioDetalle
 } from './reserva-hospedaje-detalle.model';
 import { ReservaHospedajeDetalleService } from './reserva-hospedaje-detalle.service';
+import { ReservaLogEntry } from './reserva-log.model';
+import { ReservaLogService } from './reserva-log.service';
 
 @Component({
   selector: 'app-reserva-hospedaje-detalle',
@@ -43,12 +45,14 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
   private readonly route                = inject(ActivatedRoute);
   private readonly router               = inject(Router);
   private readonly service              = inject(ReservaHospedajeDetalleService);
+  private readonly reservationLogService = inject(ReservaLogService);
   private readonly tagsService          = inject(ReservaTagsService);
   private readonly toastService         = inject(ToastService);
   private readonly operationalPolicy    = inject(OperationalPolicyService);
   private readonly destroyRef           = inject(DestroyRef);
   private reservationRequestId          = 0;
   private assignedTagsRequestId         = 0;
+  private reservationLogRequestId       = 0;
   private assignedTagsReservationCode   = '';
   private returnRoute                   = '/reservas/consulta-reservas';
 
@@ -68,6 +72,11 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
   readonly reservationTagsSaveError     = signal('');
   readonly removingReservationTagIds    = signal<ReadonlySet<number>>(new Set<number>());
   readonly roomingDialogContext         = signal<RoomingListV2DialogContext | null>(null);
+  readonly showReservationLogModal      = signal(false);
+  readonly reservationLogEntries       = signal<ReservaLogEntry[]>([]);
+  readonly reservationLogTotal         = signal(0);
+  readonly isReservationLogLoading     = signal(false);
+  readonly reservationLogError         = signal('');
 
   readonly habitaciones                 = computed(() => this.reserva()?.habitaciones ?? []);
   readonly inclusiones                  = computed(() => this.reserva()?.inclusiones ?? []);
@@ -139,6 +148,28 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
       this.loadReserva(codReserva);
       this.loadAssignedReservationTags(codReserva, true);
     }
+  }
+
+  openReservationLog(): void {
+    const codReserva = this.cleanText(this.codReserva());
+    if (!codReserva || !this.reserva()) return;
+    this.showReservationLogModal.set(true);
+    this.loadReservationLog(codReserva);
+  }
+
+  closeReservationLog(): void {
+    this.reservationLogRequestId++;
+    this.isReservationLogLoading.set(false);
+    this.showReservationLogModal.set(false);
+  }
+
+  retryReservationLog(): void {
+    if (this.showReservationLogModal()) this.loadReservationLog(this.codReserva());
+  }
+
+  @HostListener('document:keydown.escape')
+  closeReservationLogOnEscape(): void {
+    if (this.showReservationLogModal()) this.closeReservationLog();
   }
 
   async openReservationTagsManagement(): Promise<void> {
@@ -510,6 +541,10 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
     return this.toNumber(value) === 1 ? 'Procesada' : 'Pendiente';
   }
 
+  trackByReservationLogId(_index: number, entry: ReservaLogEntry): number {
+    return entry.id;
+  }
+
   toNumber(value: unknown): number {
     const numberValue = Number(value ?? 0);
     return Number.isFinite(numberValue) ? numberValue : 0;
@@ -527,6 +562,12 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
     }
 
     this.codReserva.set(codReserva);
+    this.reservationLogRequestId++;
+    this.showReservationLogModal.set(false);
+    this.reservationLogEntries.set([]);
+    this.reservationLogTotal.set(0);
+    this.isReservationLogLoading.set(false);
+    this.reservationLogError.set('');
     this.reserva.set(null);
     this.errorMessage.set('');
     this.notFound.set(false);
@@ -537,6 +578,42 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
     this.assignedTagsReservationCode = '';
     this.loadReserva(codReserva);
     this.loadAssignedReservationTags(codReserva);
+  }
+
+  private loadReservationLog(codReservaValue: string): void {
+    const codReserva = this.cleanText(codReservaValue);
+    if (!codReserva) return;
+    const requestId = ++this.reservationLogRequestId;
+    const normalizedCode = codReserva.toUpperCase();
+    this.reservationLogEntries.set([]);
+    this.reservationLogTotal.set(0);
+    this.reservationLogError.set('');
+    this.isReservationLogLoading.set(true);
+
+    this.reservationLogService.getByReservationCode(codReserva).pipe(
+      finalize(() => {
+        if (requestId === this.reservationLogRequestId) this.isReservationLogLoading.set(false);
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (response) => {
+        if (requestId !== this.reservationLogRequestId || normalizedCode !== this.codReserva().trim().toUpperCase()) return;
+        if (!response?.success || !Array.isArray(response.data)) {
+          this.reservationLogError.set(response?.message?.trim() || 'No se pudo cargar el historial de la reserva.');
+          return;
+        }
+        // Conservar el orden establecido por el backend.
+        this.reservationLogEntries.set(response.data);
+        const totalRegistros = Number(response.totalRegistros);
+        this.reservationLogTotal.set(Number.isFinite(totalRegistros) ? totalRegistros : response.data.length);
+      },
+      error: (error: unknown) => {
+        if (requestId !== this.reservationLogRequestId) return;
+        const status = error instanceof HttpErrorResponse ? error.status : 0;
+        console.error('No se pudo cargar el historial de la reserva.', { status });
+        this.reservationLogError.set('No se pudo cargar el historial. Verifique la conexión e intente nuevamente.');
+      }
+    });
   }
 
   private loadReserva(codReserva: string): void {

@@ -1,7 +1,8 @@
 import {
   formatPmsDateTimeDDMMYYYY,
   normalizePmsDateDDMMYYYY,
-  normalizePmsDateInputDDMMYYYY
+  normalizePmsDateInputDDMMYYYY,
+  normalizePmsDateKeyboardInputDDMMYYYY
 } from './pms-date.util';
 
 describe('PMS date utilities', () => {
@@ -16,11 +17,27 @@ describe('PMS date utilities', () => {
       expect(normalizePmsDateInputDDMMYYYY('31/02/2026')).toBe('');
       expect(normalizePmsDateInputDDMMYYYY('02/08/2026 10:30')).toBe('');
       expect(normalizePmsDateInputDDMMYYYY('2026-08-02')).toBe('');
+      expect(normalizePmsDateInputDDMMYYYY('20112026')).toBe('');
     });
 
     it('validates leap years', () => {
       expect(normalizePmsDateInputDDMMYYYY('29/02/2024')).toBe('29/02/2024');
       expect(normalizePmsDateInputDDMMYYYY('29/02/2026')).toBe('');
+    });
+  });
+
+  describe('normalizePmsDateKeyboardInputDDMMYYYY', () => {
+    it('accepts compact dates and separated dates', () => {
+      expect(normalizePmsDateKeyboardInputDDMMYYYY('20112026')).toBe('20/11/2026');
+      expect(normalizePmsDateKeyboardInputDDMMYYYY('20/11/2026')).toBe('20/11/2026');
+      expect(normalizePmsDateKeyboardInputDDMMYYYY('01012027')).toBe('01/01/2027');
+      expect(normalizePmsDateKeyboardInputDDMMYYYY('29022028')).toBe('29/02/2028');
+    });
+
+    it('rejects incomplete, malformed and nonexistent dates', () => {
+      for (const value of ['31112026', '29022027', '201120', '32132026', '20132026', '32112026', 'twenty november 2026']) {
+        expect(normalizePmsDateKeyboardInputDDMMYYYY(value)).toBe('');
+      }
     });
   });
 

@@ -28,13 +28,14 @@ export class ConsultaReservasExportService {
     const XLSX = await import('xlsx-js-style');
     const includeCreationDate = !filters.busqueda.trim() && filters.tipoFecha === 'creacion';
     const headers = [
-      'Reserva', 'Descripción', 'Agencia',
+      'Reserva', 'Descripción', 'Observaciones', 'Agencia',
       ...(includeCreationDate ? ['Creación'] : []),
       'Ingreso', 'Salida', 'Noches', 'Habitaciones', 'Estado', 'Total', 'Moneda', 'Prepago', 'Operador', 'Etiquetas', 'Alerta'
     ];
     const detailRows = reservas.map((reserva) => [
       reserva.reserva,
       reserva.descripcion || '',
+      reserva.observaciones || '',
       reserva.agencia || '',
       ...(includeCreationDate ? [this.displayDate(reserva.creacion)] : []),
       this.displayDate(reserva.ingreso),
@@ -98,14 +99,16 @@ export class ConsultaReservasExportService {
         cell.s = {
           font: { name: 'Aptos', sz: 10, color: { rgb: 'FF26364A' } },
           fill: { fgColor: { rgb: row % 2 === 0 ? 'FFF3F7FA' : 'FFFFFFFF' } },
-          alignment: { vertical: 'center', wrapText: column === 1 || column === headers.indexOf('Etiquetas') },
+          alignment: { vertical: 'center', wrapText: column === headers.indexOf('Descripción') || column === headers.indexOf('Observaciones') || column === headers.indexOf('Etiquetas') },
           border: { bottom: { style: 'hair', color: { rgb: 'FFDCE5EC' } } }
         };
         if (column === 0) cell.s.font = { ...cell.s.font, bold: true, color: { rgb: 'FF173B61' } };
       }
       const amount = worksheet[XLSX.utils.encode_cell({ r: row, c: totalColumn })];
       if (amount?.t === 'n') amount.z = '#,##0.00';
-      worksheet['!rows']![row] = { hpt: 24 };
+      const observation = String(worksheet[XLSX.utils.encode_cell({ r: row, c: headers.indexOf('Observaciones') })]?.v ?? '');
+      const observationLines = observation.split(/\r?\n/).reduce((total, line) => total + Math.max(1, Math.ceil(line.length / 48)), 0);
+      worksheet['!rows']![row] = { hpt: Math.min(120, Math.max(24, observationLines * 13)) };
     }
 
     const workbook = XLSX.utils.book_new();
@@ -162,7 +165,7 @@ export class ConsultaReservasExportService {
     ].filter(Boolean).join('  |  ');
     const includeCreationDate = !filters.busqueda.trim() && filters.tipoFecha === 'creacion';
     const headers = [
-      'Reserva', 'Descripción', 'Agencia', ...(includeCreationDate ? ['Creación'] : []), 'Ingreso', 'Salida',
+      'Reserva', 'Descripción', 'Observaciones', 'Agencia', ...(includeCreationDate ? ['Creación'] : []), 'Ingreso', 'Salida',
       'Noches', 'Hab.', 'Estado', 'Total', 'Prepago', 'Operador', 'Etiquetas', 'Alerta'
     ];
     const body: TableCell[][] = [
@@ -171,8 +174,8 @@ export class ConsultaReservasExportService {
     ];
     const totals = this.totalsByCurrency(reservas);
     const pageWidths = includeCreationDate
-      ? [54, '*', 86, 45, 45, 45, 29, 30, 48, 61, 36, 54, 100, 32]
-      : [54, '*', 86, 45, 45, 29, 30, 48, 61, 36, 54, 100, 32];
+      ? [54, '*', 125, 78, 45, 45, 45, 29, 30, 48, 61, 36, 54, 85, 32]
+      : [54, '*', 125, 78, 45, 45, 29, 30, 48, 61, 36, 54, 85, 32];
 
     return {
       pageSize: 'LEGAL',
@@ -281,6 +284,7 @@ export class ConsultaReservasExportService {
     return [
       { text: reserva.reserva || '-', style: 'reservationCode' },
       { text: reserva.descripcion || '-', style: 'tableCell' },
+      { text: reserva.observaciones || '-', style: 'tableCell' },
       { text: reserva.agencia || '-', style: 'tableCell' },
       ...(includeCreationDate ? [{ text: this.displayDate(reserva.creacion), style: 'tableCell' } as TableCell] : []),
       { text: this.displayDate(reserva.ingreso), style: 'tableCell' },
@@ -340,7 +344,7 @@ export class ConsultaReservasExportService {
 
   private excelColumnWidth(header: string): number {
     const widths: Record<string, number> = {
-      Reserva: 18, Descripción: 32, Agencia: 28, Creación: 14, Ingreso: 14, Salida: 14,
+      Reserva: 18, Descripción: 32, Observaciones: 52, Agencia: 28, Creación: 14, Ingreso: 14, Salida: 14,
       Noches: 10, Habitaciones: 14, Estado: 18, Total: 16, Moneda: 10, Prepago: 12,
       Operador: 20, Etiquetas: 38, Alerta: 12
     };
