@@ -101,6 +101,7 @@ interface BloqueoHabitacionForm {
 })
 export class RoomRackComponent implements OnInit {
   private static readonly automaticRefreshIntervalMs = 30_000;
+  private static readonly operationalStateStorageKey = 'pmsnext:room-rack:operational-state';
   private readonly router               = inject(Router);
   private readonly roomRackService      = inject(RoomRackService);
   private readonly roomGroupsService    = inject(RoomGroupsService);
@@ -175,6 +176,7 @@ export class RoomRackComponent implements OnInit {
   ];
 
   ngOnInit(): void {
+    this.restoreOperationalStateSelection();
     const navigationState = history.state as { checkoutCompleted?: boolean; checkedOutRoom?: string };
     if (navigationState.checkoutCompleted) {
       this.cleanActionMessage = navigationState.checkedOutRoom
@@ -189,30 +191,6 @@ export class RoomRackComponent implements OnInit {
 
   async seleccionarHabitacion(habitacion: HabitacionRack): Promise<void> {
     if (this.isTurnoverToday(habitacion)) {
-      const result = await Swal.fire({
-        title: `Habitación ${this.escapeHtml(habitacion.numero)}`,
-        html: 'Esta habitación tiene una <strong>salida</strong> y una <strong>entrada</strong> programadas para hoy.',
-        icon: 'info',
-        showCancelButton: true,
-        showDenyButton: true,
-        confirmButtonText: 'Gestionar salida',
-        denyButtonText: 'Ingresar arribo',
-        cancelButtonText: 'Cerrar',
-        confirmButtonColor: '#dc2626',
-        denyButtonColor: '#eab308',
-        cancelButtonColor: '#64748b',
-        reverseButtons: true
-      });
-
-      if (result.isDenied) {
-        await this.router.navigate(['/front-desk/arribos-dia']);
-        return;
-      }
-
-      if (!result.isConfirmed) {
-        return;
-      }
-
       await this.navigateToRoomStay(habitacion);
       return;
     }
@@ -558,13 +536,38 @@ export class RoomRackComponent implements OnInit {
     this.categoriaSeleccionada = '';
     this.tipoSeleccionado = '';
     this.estadoOperacionalSeleccionado = 'Todas';
+    this.persistOperationalStateSelection();
     this.estadoLimpiezaSeleccionado = 'Todas';
     this.aplicarFiltros();
   }
 
   seleccionarKpi(kpi: EstadoKpi<EstadoOperacional>): void {
     this.estadoOperacionalSeleccionado = this.estadoOperacionalSeleccionado === kpi.estado ? 'Todas' : kpi.estado;
+    this.persistOperationalStateSelection();
     this.aplicarFiltros();
+  }
+
+  private restoreOperationalStateSelection(): void {
+    try {
+      const savedState = sessionStorage.getItem(RoomRackComponent.operationalStateStorageKey);
+      this.estadoOperacionalSeleccionado = savedState && this.estadosOperacionales.includes(savedState as EstadoOperacional)
+        ? savedState as EstadoOperacional
+        : 'Todas';
+    } catch {
+      this.estadoOperacionalSeleccionado = 'Todas';
+    }
+  }
+
+  private persistOperationalStateSelection(): void {
+    try {
+      if (this.estadoOperacionalSeleccionado === 'Todas') {
+        sessionStorage.removeItem(RoomRackComponent.operationalStateStorageKey);
+      } else {
+        sessionStorage.setItem(RoomRackComponent.operationalStateStorageKey, this.estadoOperacionalSeleccionado);
+      }
+    } catch {
+      // Keep the in-memory filter working if browser storage is unavailable.
+    }
   }
 
   seleccionarLimpieza(kpi: EstadoKpi<EstadoLimpieza>): void {

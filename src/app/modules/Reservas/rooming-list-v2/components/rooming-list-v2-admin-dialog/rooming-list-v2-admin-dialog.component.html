@@ -15,6 +15,7 @@
           · {{ stay.numPax ?? '—' }} adultos · {{ stay.numChild ?? '—' }} niños
         </small>
       </ng-container>
+      <p *ngIf="!selectedStay() && context.numHabita">Habitación {{ context.numHabita }}<span *ngIf="context.categoria"> · {{ context.categoria }}</span></p>
     </div>
     <button type="button" class="btn-close" aria-label="Cerrar Rooming List" [disabled]="isBusy" (click)="close()"></button>
   </header>
@@ -35,6 +36,25 @@
     </div>
     <div class="rooming-v2-catalog-loading" *ngIf="catalogsLoading" role="status">
       <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Cargando catálogos...
+    </div>
+
+    <div class="rooming-v2-fallback" *ngIf="initialGuests.length && !guests.length">
+      <div class="alert alert-info" role="status">
+        {{ loading || resolvingStays() ? 'Mostrando los datos disponibles mientras carga la lista editable.' : 'Se muestran los datos disponibles de la estancia; Rooming List V2 no devolvió huéspedes administrables.' }}
+      </div>
+      <div class="table-responsive rooming-v2-table-wrap">
+        <table class="table align-middle rooming-v2-table">
+          <thead><tr><th>Huésped</th><th>Documento</th><th>Nacionalidad</th><th>Fecha de nacimiento</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let guest of initialGuests">
+              <td>{{ guest.name }}</td>
+              <td>{{ guest.documentType }} · {{ guest.document }}</td>
+              <td>{{ guest.nationality }}</td>
+              <td>{{ guest.birthDate || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <div class="rooming-v2-stay-picker" *ngIf="availableStays().length > 1">
@@ -76,7 +96,7 @@
     <div class="rooming-v2-state" *ngIf="loading && !selectionRequired()" role="status">
       <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Consultando huéspedes...
     </div>
-    <div class="rooming-v2-empty" *ngIf="!selectionRequired() && !loading && !errorMessage && guests.length === 0">
+    <div class="rooming-v2-empty" *ngIf="!selectionRequired() && !loading && !errorMessage && guests.length === 0 && !initialGuests.length">
       <i class="feather icon-users" aria-hidden="true"></i>
       <strong>No hay huéspedes registrados en esta estancia.</strong>
       <span>Puede agregar los datos disponibles para cada huésped.</span>

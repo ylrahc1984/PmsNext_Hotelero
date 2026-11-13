@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, EventEmitter, Input, OnInit, Output, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { catchError, firstValueFrom, map, of, Subject, switchMap } from 'rxjs';
+import { catchError, firstValueFrom, map, of, Subject, switchMap, timeout } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import Swal from 'sweetalert2';
 
 import { ToastService } from 'src/app/core/services/toast.service';
+import { normalizePmsDateDDMMYYYY } from 'src/app/core/utils/pms-date.util';
 import { Nationality } from 'src/app/modules/front-desk/settings/nationalities/models/nationality.model';
 import { WalkInOption } from 'src/app/modules/front-desk/walk-in/models/walk-in.model';
 import { WalkInService } from 'src/app/modules/front-desk/walk-in/services/walk-in.service';
@@ -21,6 +22,14 @@ import {
   RoomingListV2Resultado
 } from '../../models/rooming-list-v2.model';
 import { RoomingListV2Service } from '../../services/rooming-list-v2.service';
+
+export interface RoomingListGuestPreview {
+  name: string;
+  documentType: string;
+  document: string;
+  nationality: string;
+  birthDate: string;
+}
 
 @Component({
   selector: 'app-rooming-list-v2-admin-dialog',
@@ -40,6 +49,7 @@ export class RoomingListV2AdminDialogComponent implements OnInit {
   private stayRequestVersion = 0;
 
   @Input({ required: true }) context!: RoomingListV2DialogContext;
+  @Input() initialGuests: RoomingListGuestPreview[] = [];
   @Output() closed = new EventEmitter<void>();
 
   readonly guestForm = this.fb.nonNullable.group({
@@ -308,16 +318,29 @@ export class RoomingListV2AdminDialogComponent implements OnInit {
     return (guest.estado ?? '').trim().toUpperCase() === 'ACT';
   }
 
-  close(): void {
-    if (!this.isBusy) this.closed.emit();
+  async close(): Promise<void> {
+    if (this.isBusy) return;
+    if (this.hasUnsavedChanges) {
+      const answer = await Swal.fire({
+        title: 'Descartar cambios sin guardar',
+        text: 'Los cambios del formulario se perderán al cerrar el Rooming List.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Descartar y cerrar',
+        cancelButtonText: 'Continuar editando',
+        confirmButtonColor: '#dc3545'
+      });
+      if (!answer.isConfirmed || this.isBusy) return;
+    }
+    this.closed.emit();
   }
 
   private async loadCatalogs(): Promise<void> {
     this.catalogsLoading = true;
     try {
       const [nationalities, documents] = await Promise.all([
-        firstValueFrom(this.catalogService.getNacionalidades()),
-        firstValueFrom(this.catalogService.getTiposDocumento())
+        firstValueFrom(this.catalogService.getNacionalidades().pipe(timeout({ first: 20000 }))),
+        firstValueFrom(this.catalogService.getTiposDocumento().pipe(timeout({ first: 20000 })))
       ]);
       this.nationalities = nationalities.filter((item) => !!item.CR06_Codigo?.trim() && !!item.CR06_Descripcion?.trim());
       this.documentTypes = documents.filter((item) => !!item.codigo?.trim() && !!item.descripcion?.trim());
@@ -336,6 +359,7 @@ export class RoomingListV2AdminDialogComponent implements OnInit {
       switchMap((stay) => {
         const version = this.stayRequestVersion;
         return this.roomingListService.consultar(stay.codReserva, stay.idDesglose!).pipe(
+          timeout({ first: 20000 }),
           map((response) => ({ stay, response, error: null as unknown, version })),
           catchError((error: unknown) => of({ stay, response: null, error, version }))
         );
@@ -394,7 +418,7 @@ export class RoomingListV2AdminDialogComponent implements OnInit {
 
     try {
       const detail = await firstValueFrom(
-        this.reservationDetailService.getByReservationCode(codReserva).pipe(takeUntilDestroyed(this.destroyRef))
+        this.reservationDetailService.getByReservationCode(codReserva).pipe(timeout({ first: 20000 }), takeUntilDestroyed(this.destroyRef))
       );
       if (requestVersion !== this.stayRequestVersion) return;
       this.resolvingStays.set(false);
@@ -414,6 +438,30 @@ export class RoomingListV2AdminDialogComponent implements OnInit {
       }
 
       const stays = breakdowns.map((item) => this.contextFromBreakdown(codReserva, item));
+      const requestedRoom = this.normalizeRoomNumber(this.context.numHabita);
+      if (requestedRoom) {
+        const roomMatches = stays.filter((stay) => this.normalizeRoomNumber(stay.numHabita) === requestedRoom);
+        const requestedCheckIn = normalizePmsDateDDMMYYYY(this.context.fechaIngreso ?? '');
+        const requestedCheckOut = normalizePmsDateDDMMYYYY(this.context.fechaSalida ?? '');
+        const dateMatches = roomMatches.filter((stay) =>
+          (!requestedCheckIn || !stay.fechaIngreso || normalizePmsDateDDMMYYYY(stay.fechaIngreso) === requestedCheckIn) &&
+          (!requestedCheckOut || !stay.fechaSalida || normalizePmsDateDDMMYYYY(stay.fechaSalida) === requestedCheckOut)
+        );
+        const candidates = dateMatches.length ? dateMatches : roomMatches;
+        if (candidates.length !== 1) {
+          this.availableStays.set([]);
+          this.stayResolutionError.set(
+            candidates.length > 1
+              ? 'Hay más de una estancia para esta habitación y no se pudo distinguir por fechas.'
+              : `No se encontró un desglose para la habitación ${this.context.numHabita}.`
+          );
+          return;
+        }
+        this.availableStays.set([candidates[0]]);
+        this.loadSelectedStay(candidates[0]);
+        return;
+      }
+
       this.availableStays.set(stays);
       if (stays.length === 1) {
         this.loadSelectedStay(stays[0]);
@@ -445,6 +493,12 @@ export class RoomingListV2AdminDialogComponent implements OnInit {
 
   private completeContext(context: RoomingListV2DialogContext): RoomingListV2DialogContext {
     return { ...context, numHabita: context.numHabita ?? '' };
+  }
+
+  private normalizeRoomNumber(value: string | number | null | undefined): string {
+    const normalized = String(value ?? '').trim().toUpperCase();
+    const numeric = Number(normalized);
+    return normalized && Number.isFinite(numeric) ? String(numeric) : normalized;
   }
 
   private loadSelectedStay(stay: RoomingListV2DialogContext): void {
@@ -486,7 +540,7 @@ export class RoomingListV2AdminDialogComponent implements OnInit {
     this.loading = true;
     this.errorMessage = '';
     try {
-      const response = await firstValueFrom(this.roomingListService.consultar(stay.codReserva, stay.idDesglose));
+      const response = await firstValueFrom(this.roomingListService.consultar(stay.codReserva, stay.idDesglose).pipe(timeout({ first: 20000 })));
       if (version !== this.stayRequestVersion || !this.isSameStay(stay, this.selectedStay())) return false;
       if (!response?.success || !Array.isArray(response.data)) {
         this.guests = [];
@@ -562,6 +616,9 @@ export class RoomingListV2AdminDialogComponent implements OnInit {
 
   private errorText(error: unknown, fallback: string): string {
     const candidate = error as { status?: number; error?: { message?: string; title?: string }; message?: string };
+    if ((error as { name?: string })?.name === 'TimeoutError') {
+      return 'La consulta tardó más de 20 segundos. Puede reintentarla.';
+    }
     const backendMessage = candidate?.error?.message || candidate?.error?.title;
     if (backendMessage) return backendMessage;
     switch (candidate?.status) {

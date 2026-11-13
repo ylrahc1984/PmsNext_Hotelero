@@ -1,0 +1,68 @@
+<div class="rooming-modal" role="dialog" aria-modal="true" aria-labelledby="roomingDialogTitle" (click)="close()">
+  <section class="rooming-dialog" (click)="$event.stopPropagation()">
+    <header class="rooming-dialog__header">
+      <div>
+        <span>Reserva {{ context.codReserva }} <ng-container *ngIf="context.categoria">· {{ context.categoria }}</ng-container></span>
+        <h2 id="roomingDialogTitle">Rooming list · Hab. {{ context.numHabita }}</h2>
+      </div>
+      <button type="button" class="rooming-close" aria-label="Volver" (click)="close()" [disabled]="saving">
+        <span class="material-icons">arrow_back</span><span>Volver</span>
+      </button>
+    </header>
+
+    <div class="rooming-error" *ngIf="errorMessage" role="alert">{{ errorMessage }}</div>
+
+    <div class="rooming-workspace">
+      <section class="rooming-pane rooming-pane--form">
+        <div class="rooming-pane__title">
+          <span class="material-icons">person_add</span>
+          <div><strong>{{ editingGuest ? 'Editar huésped' : 'Nuevo huésped' }}</strong><small>Complete la información personal</small></div>
+        </div>
+        <form class="rooming-form" [formGroup]="guestForm" (ngSubmit)="saveGuest()">
+          <label><span>Tipo documento *</span><select class="form-select" formControlName="tipDocu"><option value="">Seleccione...</option><option *ngFor="let item of documentTypes" [value]="item.codigo">{{ item.descripcion }}</option></select></label>
+          <label><span>Número documento *</span><input class="form-control" formControlName="numDocu" /></label>
+          <label><span>Nombre *</span><input class="form-control" formControlName="nombre" /></label>
+          <label><span>Apellidos *</span><input class="form-control" formControlName="apellido" /></label>
+          <label><span>Fecha de nacimiento *</span><input class="form-control" type="text" placeholder="dd/mm/yyyy" formControlName="fecNac" /></label>
+          <label><span>Tipo Pax *</span><select class="form-select" formControlName="tiPax"><option value="PAX">PAX</option><option value="CHD">CHD</option></select></label>
+          <div class="rooming-field rooming-nationality">
+            <span>Nacionalidad *</span>
+            <div class="rooming-nationality__control">
+              <input type="search" class="form-control" placeholder="Escriba para buscar..." autocomplete="off" [value]="nationalitySearchControl.value" (focus)="openNationalitySearch()" (blur)="closeNationalitySearch()" (input)="onNationalitySearchChange($any($event.target).value)" />
+              <span class="material-icons" aria-hidden="true">search</span>
+            </div>
+            <div class="rooming-nationality__menu" *ngIf="nationalitySearchOpen">
+              <button type="button" *ngFor="let item of filteredNationalities()" (mousedown)="selectNationality(item)"><strong>{{ item.CR06_Descripcion }}</strong><small>{{ item.CR06_Codigo }}</small></button>
+              <div class="rooming-nationality__empty" *ngIf="!filteredNationalities().length">No se encontraron nacionalidades.</div>
+            </div>
+          </div>
+          <label class="rooming-form__wide"><span>Email</span><input type="email" class="form-control" formControlName="email" /></label>
+          <label class="rooming-form__wide"><span>Teléfono</span><input type="tel" inputmode="tel" autocomplete="tel" class="form-control" formControlName="motivo" /></label>
+          <footer class="rooming-form__actions">
+            <button type="button" class="btn btn-light btn-sm" (click)="clearForm()">{{ editingGuest ? 'Cancelar edición' : 'Limpiar' }}</button>
+            <button type="submit" class="btn btn-primary btn-sm" [disabled]="saving"><span *ngIf="saving" class="spinner-border spinner-border-sm me-1"></span>{{ editingGuest ? 'Actualizar huésped' : 'Guardar huésped' }}</button>
+          </footer>
+        </form>
+      </section>
+
+      <section class="rooming-pane rooming-pane--list">
+        <div class="rooming-pane__title">
+          <span class="material-icons">groups</span>
+          <div><strong>Huéspedes registrados</strong><small>{{ guests.length }} en esta habitación</small></div>
+        </div>
+        <div class="rooming-state" *ngIf="loading"><span class="spinner-border spinner-border-sm"></span>Consultando huéspedes...</div>
+        <div class="rooming-list" *ngIf="!loading">
+          <article class="rooming-guest" *ngFor="let guest of guests; trackBy: trackGuest">
+            <span class="rooming-guest__avatar">{{ guest.nombre.charAt(0) }}{{ guest.apellidos.charAt(0) }}</span>
+            <div><strong>{{ guest.nombre }} {{ guest.apellidos }}</strong><span>{{ guest.tipDocu }} · {{ guest.numDocu }} · {{ guest.nacionalidad || 'Sin nacionalidad' }}</span><small>{{ guest.email || 'Sin correo' }}<ng-container *ngIf="guest.motivo"> · {{ guest.motivo }}</ng-container></small></div>
+            <div class="rooming-guest__actions">
+              <button type="button" title="Editar huésped" [disabled]="saving" (click)="editGuest(guest)"><span class="material-icons">edit</span></button>
+              <button type="button" title="Eliminar huésped" [disabled]="saving" (click)="deleteGuest(guest)"><span class="material-icons">delete_outline</span></button>
+            </div>
+          </article>
+          <div class="rooming-state" *ngIf="!guests.length"><span class="material-icons">group_off</span>No hay huéspedes registrados.</div>
+        </div>
+      </section>
+    </div>
+  </section>
+</div>

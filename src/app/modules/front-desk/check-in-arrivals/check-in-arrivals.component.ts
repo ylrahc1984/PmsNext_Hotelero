@@ -35,6 +35,7 @@ import {
   SelfCheckInGuestSave,
   SelfCheckInOption
 } from './components/guest-self-checkin-dialog/guest-self-checkin-dialog.component';
+import { RoomingListDialogComponent, RoomingListDialogContext } from './components/rooming-list-dialog/rooming-list-dialog.component';
 
 interface CheckInArrivalFilterForm {
   fechaIngreso      : string;
@@ -53,7 +54,7 @@ type RoomingListStatus = 'LOADING' | 'COMPLETE' | 'MISSING' | 'ERROR';
 @Component({
   selector: 'app-check-in-arrivals',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, GuestSelfCheckinDialogComponent, ReservationTagListComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, GuestSelfCheckinDialogComponent, RoomingListDialogComponent, ReservationTagListComponent],
   templateUrl: './check-in-arrivals.component.html',
   styleUrls: ['./check-in-arrivals.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -141,6 +142,7 @@ export class CheckInArrivalsComponent implements OnInit {
   activeDetailKey: string | null = null;
   activeActionsMenuKey: string | null = null;
   roomingArrival: CheckInArrival | null = null;
+  roomingDialogContext: RoomingListDialogContext | null = null;
   roomingGuests: RoomingListGuest[] = [];
   roomingLoading = false;
   roomingSaving = false;
@@ -526,8 +528,17 @@ export class CheckInArrivalsComponent implements OnInit {
     this.roomingArrival = reserva;
     this.roomingGuests = [];
     this.roomingError = '';
-    this.openRoomingGuestForm();
-    this.loadRoomingList();
+    this.roomingDialogContext = { codReserva: reserva.codReserva, numHabita: reserva.numHabita, categoria: reserva.catHabita };
+    this.cdr.markForCheck();
+  }
+
+  onRoomingGuestsLoaded(guests: RoomingListGuest[]): void {
+    const arrival = this.roomingArrival;
+    if (!arrival) return;
+    this.roomingGuests = guests;
+    this.roomingGuestsByRoom.set(this.getRoomingKey(arrival), guests);
+    this.setRoomingStatus(arrival, guests.length ? 'COMPLETE' : 'MISSING');
+    this.cdr.markForCheck();
   }
 
   openSelfCheckIn(reserva: CheckInArrival): void {
@@ -692,6 +703,7 @@ export class CheckInArrivalsComponent implements OnInit {
 
   closeRoomingList(): void {
     if (this.roomingSaving) return;
+    this.roomingDialogContext = null;
     this.roomingArrival = null;
     this.showRoomingForm = false;
     this.nationalitySearchOpen = false;

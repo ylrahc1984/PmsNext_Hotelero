@@ -27,10 +27,13 @@ export class ReservationAssignmentPanelComponent implements OnChanges {
   @Input({ required: true }) endDate!: string;
   @Input() collapsed = false;
   @Input() selectedReservationId: string | null = null;
+  @Input() batchAssignmentArmed = false;
 
   @Output() collapsedChange = new EventEmitter<boolean>();
   @Output() reservationSelect = new EventEmitter<CalendarAssignableReservation>();
   @Output() dragStart = new EventEmitter<{ reservation: CalendarAssignableReservation; event: PointerEvent }>();
+  @Output() groupSelectionChange = new EventEmitter<CalendarAssignableReservation[]>();
+  @Output() assignGroup = new EventEmitter<void>();
   @Output() refresh = new EventEmitter<void>();
 
   search               = '';
@@ -41,6 +44,7 @@ export class ReservationAssignmentPanelComponent implements OnChanges {
   filterStartDate      = '';
   filterEndDate        = '';
   reservations         : CalendarAssignableReservation[] = [];
+  selectedGroupReservations: CalendarAssignableReservation[] = [];
 
   readonly statusOptions = [
     { label: 'Todas', value: '' },
@@ -96,6 +100,35 @@ export class ReservationAssignmentPanelComponent implements OnChanges {
 
   isAssignable(reservation: CalendarAssignableReservation): boolean {
     return reservation.roomNumber.trim().toUpperCase().startsWith('HB');
+  }
+
+  groupKey(reservation: CalendarAssignableReservation): string {
+    return [reservation.reservationCode, reservation.categoryCode, reservation.startDate, reservation.endDate].map((value) => (value || '').trim().toUpperCase()).join('|');
+  }
+
+  isGroupSelectionLocked(reservation: CalendarAssignableReservation): boolean {
+    return this.selectedGroupReservations.length > 0 && this.groupKey(this.selectedGroupReservations[0]) !== this.groupKey(reservation);
+  }
+
+  isInGroupSelection(reservation: CalendarAssignableReservation): boolean {
+    return this.selectedGroupReservations.some((item) => item.id === reservation.id);
+  }
+
+  toggleGroupSelection(reservation: CalendarAssignableReservation, event: Event): void {
+    event.stopPropagation();
+    if (!this.isAssignable(reservation) || this.isGroupSelectionLocked(reservation)) return;
+    this.selectedGroupReservations = this.isInGroupSelection(reservation)
+      ? this.selectedGroupReservations.filter((item) => item.id !== reservation.id)
+      : [...this.selectedGroupReservations, reservation];
+    this.selectedGroupReservations = [...this.selectedGroupReservations].sort((left, right) =>
+      this.reservations.findIndex((item) => item.id === left.id) - this.reservations.findIndex((item) => item.id === right.id)
+    );
+    this.groupSelectionChange.emit(this.selectedGroupReservations);
+  }
+
+  clearGroupSelection(): void {
+    this.selectedGroupReservations = [];
+    this.groupSelectionChange.emit([]);
   }
 
   onReservationPointerDown(reservation: CalendarAssignableReservation, event: PointerEvent): void {

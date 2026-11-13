@@ -64,6 +64,7 @@ export class CalendarGridComponent implements AfterViewInit, OnChanges, OnDestro
   @Input() assignmentMode = false;
   @Input() assignmentSpan = 1;
   @Input() assignmentReservationId: string | null = null;
+  @Input() batchAssignmentMode = false;
   @Input() exchangeMode = false;
   @Input() exchangeTrayReservations: ExchangeTrayReservation[] = [];
   @Input() exchangeTrayHeight = 64;
@@ -308,7 +309,7 @@ export class CalendarGridComponent implements AfterViewInit, OnChanges, OnDestro
   }
 
   onAssignmentTargetSelect(row: CalendarRoomRowView, date: CalendarDate, dateIndex: number): void {
-    if (!this.assignmentMode) {
+    if (!this.assignmentMode && !this.batchAssignmentMode) {
       return;
     }
 

@@ -123,6 +123,9 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
   assignmentPanelCollapsed            = false;
   isAssigningRoom                     = false;
   selectedPendingReservation          : CalendarAssignableReservation | null = null;
+  selectedGroupReservations            : CalendarAssignableReservation[] = [];
+  isBatchAssignmentArmed               = false;
+  private isBatchAssignmentRunning      = false;
   selectedReservationDetailBlock      : CalendarReservationBlockView | null = null;
   selectedReservationDetailIsPending  = false;
   exchangeMode                        = false;
@@ -263,6 +266,7 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
   }
 
   onReservationDrop(drop: CalendarReservationDropRequest): void {
+    if (this.isAssigningRoom) return;
     console.info('[RoomCalendar][DROP_RECEIVED] Movimiento recibido desde el grid.', {
       reservationId: drop.reservationId,
       fromRoomNumber: drop.fromRoomNumber,
@@ -355,7 +359,26 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
     this.cdr.markForCheck();
   }
 
+  onGroupSelectionChange(reservations: CalendarAssignableReservation[]): void {
+    this.selectedGroupReservations = [...reservations];
+    this.isBatchAssignmentArmed = false;
+    this.cdr.markForCheck();
+  }
+
+  armBatchAssignment(): void {
+    if (this.selectedGroupReservations.length < 2) return;
+    this.isBatchAssignmentArmed = true;
+    this.selectedPendingReservation = null;
+    this.selectedExchangeTrayReservationId = null;
+    this.cdr.markForCheck();
+  }
+
   onAssignmentTargetSelect(target: CalendarAssignmentTarget): void {
+    if (this.isAssigningRoom) return;
+    if (this.isBatchAssignmentArmed) {
+      void this.previewAndAssignReservationGroup(target);
+      return;
+    }
     if (this.selectedExchangeTrayReservationId) {
       void this.assignTrayReservationToRoom(this.selectedExchangeTrayReservationId, target.roomNumber, target.categoryCode, target.valid);
       return;
@@ -371,6 +394,69 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
   clearSelectedReservation(): void {
     this.selectedPendingReservation = null;
     this.selectedExchangeTrayReservationId = null;
+  }
+
+  private async previewAndAssignReservationGroup(reference: CalendarAssignmentTarget): Promise<void> {
+    const group = [...this.selectedGroupReservations];
+    this.isBatchAssignmentArmed = false;
+    if (group.length < 2 || this.isAssigningRoom) return;
+    const first = group[0];
+    const groupKey = (item: CalendarAssignableReservation) => [item.reservationCode, item.categoryCode, item.startDate, item.endDate].map((value) => (value || '').trim().toUpperCase()).join('|');
+    if (!first.reservationCode.trim() || !first.categoryCode.trim() || group.some((item) => groupKey(item) !== groupKey(first) || !item.sourceRoom?.trim())) {
+      await Swal.fire({ title: 'Selección de grupo inválida', text: 'Las habitaciones deben pertenecer a la misma reserva, categoría y fechas, y tener habitación origen.', icon: 'warning', confirmButtonText: 'Aceptar' });
+      return;
+    }
+    const category = this.normalizeCode(first.categoryCode);
+    const referenceIndex = this.calendarData.rows.findIndex((row) => row.room.roomNumber === reference.roomNumber);
+    if (referenceIndex < 0 || this.normalizeCode(this.calendarData.rows[referenceIndex].room.type) !== category) {
+      await Swal.fire({ title: 'Habitación de referencia inválida', text: 'Elija una habitación de la misma categoría del grupo.', icon: 'warning', confirmButtonText: 'Aceptar' });
+      return;
+    }
+    const eligibleRows = this.calendarData.rows.slice(referenceIndex).filter((row) => this.normalizeCode(row.room.type) === category);
+    const destinations: Array<{ reservation: CalendarAssignableReservation; roomNumber: string }> = [];
+    const usedRooms = new Set<string>();
+    for (const reservation of group) {
+      const row = eligibleRows.find((candidate) => !usedRooms.has(candidate.room.roomNumber) && this.isRoomPlacementValid(candidate.room.roomNumber, reservation.startDate, reservation.endDate, reservation.id));
+      if (!row) {
+        await Swal.fire({ title: 'No hay disponibilidad suficiente', text: `Se necesitan ${group.length} habitaciones de categoría ${first.categoryCode} desde ${reference.roomNumber} hacia abajo. No se asignó ninguna; puede continuar habitación por habitación.`, icon: 'warning', confirmButtonText: 'Aceptar' });
+        return;
+      }
+      usedRooms.add(row.room.roomNumber);
+      destinations.push({ reservation, roomNumber: row.room.roomNumber });
+    }
+    const previewRows = destinations.map(({ reservation, roomNumber }) => `<tr><td>${this.escapeHtml(reservation.sourceRoom)}</td><td>${this.escapeHtml(roomNumber)}</td><td>${this.escapeHtml(reservation.guestName || reservation.reservationCode)}</td></tr>`).join('');
+    const confirmation = await Swal.fire({
+      title: `Revisar asignación de ${group.length} habitaciones`,
+      html: `<div style="text-align:left"><p>Reserva ${this.escapeHtml(first.reservationCode)} · Categoría ${this.escapeHtml(first.categoryCode)} · ${this.escapeHtml(this.formatDisplayDate(first.startDate))} – ${this.escapeHtml(this.formatDisplayDate(first.endDate))}</p><table style="width:100%;text-align:left"><thead><tr><th>Origen</th><th>Destino</th><th>Huésped / detalle</th></tr></thead><tbody>${previewRows}</tbody></table></div>`,
+      icon: 'question', showCancelButton: true, confirmButtonText: 'Asignar todas', cancelButtonText: 'Cancelar', confirmButtonColor: '#198754'
+    });
+    if (!confirmation.isConfirmed) return;
+    const succeeded: string[] = [];
+    const failed: string[] = [];
+    this.isBatchAssignmentRunning = true;
+    this.isAssigningRoom = true;
+    this.cdr.markForCheck();
+    for (const { reservation, roomNumber } of destinations) {
+      try {
+        const response = await this.executeRoomAssignment({ codReserva: reservation.reservationCode, oldHabita: reservation.sourceRoom, newHabita: roomNumber, categoria: reservation.categoryCode, operador: this.auth.getCurrentUser()?.usuario?.trim() || reservation.operator || 'admin' }, reservation.id);
+        this.assertAssignmentSucceeded(response, `El endpoint no confirmó la asignación de ${reservation.reservationCode}.`);
+        this.applyPendingReservationDrop(reservation, roomNumber, reservation.startDate);
+        succeeded.push(`${reservation.sourceRoom} → ${roomNumber}`);
+      } catch (error) {
+        failed.push(`${reservation.sourceRoom} → ${roomNumber}: ${this.getAssignmentErrorMessage(error)}`);
+      }
+    }
+    this.isBatchAssignmentRunning = false;
+    this.isAssigningRoom = this.processingReservationIds.size > 0;
+    this.selectedGroupReservations = [];
+    this.assignmentPanel?.clearGroupSelection();
+    this.assignmentPanel?.reload();
+    this.loadCalendar();
+    await Swal.fire({
+      title: failed.length ? 'Asignación grupal incompleta' : 'Asignación grupal completada',
+      html: `<div style="text-align:left"><strong>Asignadas (${succeeded.length})</strong><ul>${succeeded.map((line) => `<li>${this.escapeHtml(line)}</li>`).join('') || '<li>Ninguna</li>'}</ul>${failed.length ? `<strong>Pendientes (${failed.length})</strong><ul>${failed.map((line) => `<li>${this.escapeHtml(line)}</li>`).join('')}</ul>` : ''}</div>`,
+      icon: failed.length ? 'warning' : 'success', confirmButtonText: 'Aceptar'
+    });
   }
 
   closeReservationDetail(): void {
@@ -1511,7 +1597,7 @@ export class RoomCalendarPageComponent implements OnInit, CanDeactivateReservaCr
       throw error;
     } finally {
       this.processingReservationIds.delete(reservationId);
-      this.isAssigningRoom = this.processingReservationIds.size > 0;
+      this.isAssigningRoom = this.processingReservationIds.size > 0 || this.isBatchAssignmentRunning;
       this.cdr.markForCheck();
     }
   }

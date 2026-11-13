@@ -214,6 +214,71 @@
   padding-right: 0.15rem;
 }
 
+.assignment-card-wrap {
+  position: relative;
+  min-width: 0;
+  padding-left: 26px;
+}
+
+.assignment-card__select {
+  position: absolute;
+  left: 3px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.assignment-card__select input {
+  width: 16px;
+  height: 16px;
+  accent-color: #2f5f8d;
+}
+
+.assignment-card__select--locked {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.assignment-card--group-locked {
+  opacity: 0.55;
+}
+
+.assignment-panel__group-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  flex: 0 0 auto;
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.55rem;
+  border: 1px solid #b9d2eb;
+  border-radius: 11px;
+  background: #f3f8fe;
+  box-shadow: 0 -8px 14px rgba(15, 23, 42, 0.06);
+  color: #2b496a;
+  font-size: 0.7rem;
+}
+
+.assignment-panel__group-actions span {
+  color: #667b92;
+  font-size: 0.64rem;
+}
+
+.assignment-panel__clear-btn {
+  min-height: 30px;
+  border: 1px solid #d5dfed;
+  border-radius: 9px;
+  background: #fff;
+  color: #52667e;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
 .assignment-card {
   width: 100%;
   border: 1px solid #dfe8f4;

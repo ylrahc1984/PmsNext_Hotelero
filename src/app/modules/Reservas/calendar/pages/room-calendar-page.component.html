@@ -130,7 +130,8 @@
           [dates]="calendarData.dates"
           [rows]="calendarData.rows"
           [assignmentMode]="!!selectedPendingReservation || !!selectedExchangeTrayReservation"
-          [assignmentSpan]="selectedExchangeTrayReservation?.block?.span ?? selectedPendingReservation?.nights ?? 1"
+          [batchAssignmentMode]="isBatchAssignmentArmed"
+          [assignmentSpan]="selectedExchangeTrayReservation?.block?.span ?? selectedPendingReservation?.nights ?? selectedGroupReservations[0]?.nights ?? 1"
           [assignmentReservationId]="selectedExchangeTrayReservation?.reservation?.id ?? selectedPendingReservation?.id ?? null"
           [exchangeMode]="exchangeMode"
           [exchangeTrayReservations]="exchangeTrayReservations"
@@ -155,9 +156,12 @@
       [endDate]="pendingEndDate"
       [collapsed]="assignmentPanelCollapsed"
       [selectedReservationId]="selectedPendingReservation?.id ?? null"
+      [batchAssignmentArmed]="isBatchAssignmentArmed"
       (collapsedChange)="assignmentPanelCollapsed = $event"
       (reservationSelect)="onPendingReservationSelect($event)"
       (dragStart)="onPendingReservationDragStart($event)"
+      (groupSelectionChange)="onGroupSelectionChange($event)"
+      (assignGroup)="armBatchAssignment()"
     ></app-reservation-assignment-panel>
   </section>
 

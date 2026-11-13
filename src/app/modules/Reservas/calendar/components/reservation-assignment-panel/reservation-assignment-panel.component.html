@@ -54,12 +54,16 @@
     </div>
 
     <div class="assignment-panel__list">
+      <div class="assignment-card-wrap" *ngFor="let reservation of filteredReservations; trackBy: trackByReservation">
+      <label class="assignment-card__select" *ngIf="isAssignable(reservation)" [class.assignment-card__select--locked]="isGroupSelectionLocked(reservation)" title="Seleccionar habitación de esta reserva">
+        <input type="checkbox" [checked]="isInGroupSelection(reservation)" [disabled]="isGroupSelectionLocked(reservation)" (change)="toggleGroupSelection(reservation, $event)" />
+      </label>
       <button
         type="button"
         class="assignment-card"
-        [class.assignment-card--selected]="selectedReservationId === reservation.id"
+        [class.assignment-card--selected]="selectedReservationId === reservation.id || isInGroupSelection(reservation)"
         [class.assignment-card--assigned]="!isAssignable(reservation)"
-        *ngFor="let reservation of filteredReservations; trackBy: trackByReservation"
+        [class.assignment-card--group-locked]="isGroupSelectionLocked(reservation)"
         (click)="selectReservation(reservation)"
       >
         <span class="assignment-card__topline">
@@ -93,6 +97,15 @@
           </span>
         </span>
       </button>
+      </div>
+
+      <div class="assignment-panel__group-actions" *ngIf="selectedGroupReservations.length">
+        <strong>{{ selectedGroupReservations.length }} habitación(es) seleccionada(s)</strong>
+        <span>{{ selectedGroupReservations[0].reservationCode }} · Cat. {{ selectedGroupReservations[0].categoryCode }}</span>
+        <span *ngIf="batchAssignmentArmed">Ahora seleccione la habitación de referencia en el calendario.</span>
+        <button type="button" class="assignment-panel__apply-btn" (click)="assignGroup.emit()" [disabled]="selectedGroupReservations.length < 2 || isLoading || batchAssignmentArmed">Asignar grupo al calendario</button>
+        <button type="button" class="assignment-panel__clear-btn" (click)="clearGroupSelection()">Cancelar selección</button>
+      </div>
 
       <div class="assignment-panel__empty" *ngIf="!isLoading && errorMessage" role="alert">
         <i class="feather icon-alert-circle"></i>

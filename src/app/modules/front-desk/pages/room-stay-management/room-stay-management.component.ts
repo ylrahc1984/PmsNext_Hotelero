@@ -28,6 +28,7 @@ import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { ReservationTagListComponent } from 'src/app/modules/Reservas/components/reservation-tags/reservation-tag-list.component';
 import { ReservationTagSelectorComponent } from 'src/app/modules/Reservas/components/reservation-tags/reservation-tag-selector.component';
 import { GuestPortalAdminCardComponent } from 'src/app/modules/Reservas/components/guest-portal-admin/guest-portal-admin-card.component';
+import { RoomingListDialogComponent, RoomingListDialogContext } from 'src/app/modules/front-desk/check-in-arrivals/components/rooming-list-dialog/rooming-list-dialog.component';
 import {
   ApiResponse,
   ReservaTagAsignado,
@@ -331,7 +332,8 @@ const emptyRoomStay: RoomStay = {
     CdkScrollable,
     ReservationTagListComponent,
     ReservationTagSelectorComponent,
-    GuestPortalAdminCardComponent
+    GuestPortalAdminCardComponent,
+    RoomingListDialogComponent
   ],
   templateUrl: './room-stay-management.component.html',
   styleUrls: [
@@ -426,6 +428,11 @@ export class RoomStayManagementComponent implements OnInit {
   readonly chargeDetailAction                    = signal<ChargeDetailActionState | null>(null);
   readonly isChargeDetailSubmitting              = signal(false);
   readonly showExtraGuestModal                   = signal(false);
+  readonly roomingListDialogContext              = signal<RoomingListDialogContext | null>(null);
+  readonly canOpenRoomingList                    = computed(() => {
+    const reservation = this.cleanText(this.room().reservationNumber).toUpperCase();
+    return !!reservation && !['S/D', 'N/D', '0'].includes(reservation) && !!this.cleanText(this.room().roomNumber);
+  });
   readonly isExtraGuestCatalogLoading            = signal(false);
   readonly isExtraGuestSaving                    = signal(false);
   readonly extraGuestValidationMessage           = signal('');
@@ -2370,6 +2377,19 @@ export class RoomStayManagementComponent implements OnInit {
     this.resetExtraGuestForm();
     this.showExtraGuestModal.set(true);
     this.loadExtraGuestCatalogs();
+  }
+
+  openRoomingListDialog(): void {
+    const room = this.room();
+    const reservation = this.cleanText(room.reservationNumber);
+    const roomNumber = this.cleanText(room.roomNumber);
+    if (!reservation || ['S/D', 'N/D', '0'].includes(reservation.toUpperCase()) || !roomNumber) return;
+    this.roomingListDialogContext.set({ codReserva: reservation, numHabita: roomNumber, categoria: room.roomCategory });
+  }
+
+  closeRoomingListDialog(): void {
+    this.roomingListDialogContext.set(null);
+    this.loadRoomStay();
   }
 
   closeExtraGuestModal(): void {

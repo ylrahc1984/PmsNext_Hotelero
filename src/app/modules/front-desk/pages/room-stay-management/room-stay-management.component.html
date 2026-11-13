@@ -246,9 +246,9 @@
           <article class="card guest-card">
             <div class="card-head">
               <h2>Registro de Huespedes</h2>
-              <button type="button" class="add-button" (click)="openAddGuestModal()">
-                <span class="material-icons" aria-hidden="true">add</span>
-                Agregar Huesped
+              <button type="button" class="add-button" (click)="openRoomingListDialog()" [disabled]="!canOpenRoomingList()" title="Abrir Rooming List de esta habitación">
+                <span class="material-icons" aria-hidden="true">groups</span>
+                Administrar huéspedes
               </button>
             </div>
             <div class="table guest-table" role="table" aria-label="Registro de huespedes">
@@ -1603,162 +1603,10 @@
     </div>
   }
 
-  @if (showExtraGuestModal()) {
-    <div class="extra-guest-backdrop" (click)="closeExtraGuestModal()">
-      <section class="extra-guest-modal" role="dialog" aria-modal="true" aria-label="Agregar huesped" (click)="$event.stopPropagation()">
-        <header class="extra-guest-header">
-          <div>
-            <span>Rooming list</span>
-            <h2>Agregar huesped</h2>
-            <p>Habitacion {{ room().roomNumber }} · Reserva {{ room().reservationNumber }}</p>
-          </div>
-          <button type="button" aria-label="Cerrar" (click)="closeExtraGuestModal()">
-            <span class="material-icons" aria-hidden="true">close</span>
-          </button>
-        </header>
-
-        <form [formGroup]="extraGuestForm" (ngSubmit)="saveExtraGuest()">
-          <main class="extra-guest-body">
-            @if (isExtraGuestCatalogLoading()) {
-              <div class="extra-guest-loading">
-                <span class="material-icons" aria-hidden="true">hourglass_top</span>
-                <strong>Cargando catalogos...</strong>
-              </div>
-            }
-
-            <div class="extra-guest-grid">
-              <label class="extra-guest-field">
-                <span>Tipo documento</span>
-                <select formControlName="tipDocu" [class.is-invalid]="isExtraGuestFieldInvalid('tipDocu')">
-                  <option value="">Seleccione...</option>
-                  @for (item of extraGuestDocumentTypes(); track item.codigo) {
-                    <option [value]="item.codigo">{{ item.descripcion }}</option>
-                  }
-                </select>
-                @if (isExtraGuestFieldInvalid('tipDocu')) {
-                  <small>{{ getExtraGuestFieldError('tipDocu') }}</small>
-                }
-              </label>
-
-              <label class="extra-guest-field">
-                <span>No. documento</span>
-                <input type="text" formControlName="numDocu" [class.is-invalid]="isExtraGuestFieldInvalid('numDocu')" />
-                @if (isExtraGuestFieldInvalid('numDocu')) {
-                  <small>{{ getExtraGuestFieldError('numDocu') }}</small>
-                }
-              </label>
-
-              <div class="extra-guest-field extra-guest-field--search">
-                <span>Nacionalidad</span>
-                <div class="extra-guest-search">
-                  <span class="material-icons" aria-hidden="true">search</span>
-                  <input
-                    type="search"
-                    [value]="extraGuestNationalitySearch()"
-                    [class.is-invalid]="isExtraGuestFieldInvalid('codNacion')"
-                    placeholder="Buscar nacionalidad..."
-                    (focus)="openExtraGuestNationalitySearch()"
-                    (blur)="closeExtraGuestNationalitySearch()"
-                    (input)="onExtraGuestNationalitySearchChange($any($event.target).value)"
-                  />
-                </div>
-                @if (isExtraGuestNationalitySearchOpen()) {
-                  <div class="extra-guest-suggestions">
-                    @for (nationality of filteredExtraGuestNationalities(); track nationality.CR06_Codigo) {
-                      <button type="button" (mousedown)="selectExtraGuestNationality(nationality)">
-                        <strong>{{ nationality.CR06_Descripcion }}</strong>
-                        <span>{{ nationality.CR06_Codigo }}</span>
-                      </button>
-                    }
-                    @if (!filteredExtraGuestNationalities().length) {
-                      <div class="extra-guest-suggestions-empty">No se encontraron nacionalidades.</div>
-                    }
-                  </div>
-                }
-                @if (isExtraGuestFieldInvalid('codNacion')) {
-                  <small>{{ getExtraGuestFieldError('codNacion') }}</small>
-                }
-              </div>
-
-              <label class="extra-guest-field">
-                <span>Nombre</span>
-                <input type="text" formControlName="nombre" [class.is-invalid]="isExtraGuestFieldInvalid('nombre')" />
-                @if (isExtraGuestFieldInvalid('nombre')) {
-                  <small>{{ getExtraGuestFieldError('nombre') }}</small>
-                }
-              </label>
-
-              <label class="extra-guest-field">
-                <span>Apellido</span>
-                <input type="text" formControlName="apellido" [class.is-invalid]="isExtraGuestFieldInvalid('apellido')" />
-                @if (isExtraGuestFieldInvalid('apellido')) {
-                  <small>{{ getExtraGuestFieldError('apellido') }}</small>
-                }
-              </label>
-
-              <label class="extra-guest-field">
-                <span>Fecha de nacimiento</span>
-                <input
-                  type="text"
-                  inputmode="numeric"
-                  maxlength="10"
-                  placeholder="dd/mm/yyyy"
-                  pattern="\d{1,2}/\d{1,2}/\d{4}"
-                  formControlName="fecNac"
-                  [class.is-invalid]="isExtraGuestFieldInvalid('fecNac')"
-                  (blur)="normalizeExtraGuestBirthDate()"
-                />
-                @if (isExtraGuestFieldInvalid('fecNac')) {
-                  <small>{{ getExtraGuestFieldError('fecNac') }}</small>
-                }
-              </label>
-
-              <label class="extra-guest-field">
-                <span>Tipo pax</span>
-                <select formControlName="tiPax" [class.is-invalid]="isExtraGuestFieldInvalid('tiPax')">
-                  <option value="">Seleccione...</option>
-                  @for (item of extraGuestPaxTypes(); track item.CR03_CodTipo) {
-                    <option [value]="item.CR03_CodTipo">{{ item.CR03_Descripcion }}</option>
-                  }
-                </select>
-                @if (isExtraGuestFieldInvalid('tiPax')) {
-                  <small>{{ getExtraGuestFieldError('tiPax') }}</small>
-                }
-              </label>
-
-              <label class="extra-guest-field extra-guest-field--wide">
-                <span>Email</span>
-                <input type="email" formControlName="email" [class.is-invalid]="isExtraGuestFieldInvalid('email')" />
-                @if (isExtraGuestFieldInvalid('email')) {
-                  <small>{{ getExtraGuestFieldError('email') }}</small>
-                }
-              </label>
-
-              <label class="extra-guest-field extra-guest-field--wide">
-                <span>Teléfono</span>
-                <input type="tel" inputmode="tel" autocomplete="tel" formControlName="motivo" />
-              </label>
-            </div>
-
-            @if (extraGuestValidationMessage()) {
-              <div class="extra-guest-error">{{ extraGuestValidationMessage() }}</div>
-            }
-          </main>
-
-          <footer class="extra-guest-footer">
-            <button type="button" class="extra-guest-secondary" (click)="closeExtraGuestModal()">
-              <span class="material-icons" aria-hidden="true">close</span>
-              <span>Cancelar</span>
-            </button>
-            <button type="submit" class="extra-guest-primary" [disabled]="isExtraGuestSaving() || isExtraGuestCatalogLoading()">
-              <span class="material-icons" aria-hidden="true">{{ isExtraGuestSaving() ? 'hourglass_top' : 'save' }}</span>
-              <span>{{ isExtraGuestSaving() ? 'Guardando...' : 'Guardar huesped' }}</span>
-            </button>
-          </footer>
-        </form>
-      </section>
-    </div>
+  @if (roomingListDialogContext(); as roomingContext) {
+    <app-rooming-list-dialog [context]="roomingContext" (closed)="closeRoomingListDialog()" />
   }
+
 </section>
 
 @if (showReservationTagsModal()) {
