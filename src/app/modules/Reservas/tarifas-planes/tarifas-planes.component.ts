@@ -47,6 +47,7 @@ export class TarifasPlanesComponent implements OnInit {
     { value: 'activas', label: 'Activas' },
     { value: 'inactivas', label: 'Inactivas' }
   ];
+  readonly pageSizeOptions = [10, 20];
 
   readonly searchControl = this.fb.control('');
   readonly monedaControl = this.fb.control('');
@@ -67,6 +68,8 @@ export class TarifasPlanesComponent implements OnInit {
 
   tarifas: TarifaReservaResponse[] = [];
   filteredTarifas: TarifaReservaResponse[] = [];
+  pageSize = 10;
+  currentPage = 1;
   isLoading = false;
   isSaving = false;
   isDeleting = false;
@@ -301,6 +304,35 @@ export class TarifasPlanesComponent implements OnInit {
     return hasFilters ? 'No existen tarifas que coincidan con los filtros aplicados.' : 'No existen tarifas de hospedaje registradas.';
   }
 
+  get paginatedTarifas(): TarifaReservaResponse[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.filteredTarifas.slice(start, start + this.pageSize);
+  }
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredTarifas.length / this.pageSize));
+  }
+
+  get pageStart(): number {
+    return this.filteredTarifas.length ? (this.currentPage - 1) * this.pageSize + 1 : 0;
+  }
+
+  get pageEnd(): number {
+    return Math.min(this.currentPage * this.pageSize, this.filteredTarifas.length);
+  }
+
+  onPageSizeChange(event: Event): void {
+    const value = Number((event.target as HTMLSelectElement).value);
+    if (this.pageSizeOptions.includes(value)) {
+      this.pageSize = value;
+      this.currentPage = 1;
+    }
+  }
+
+  changePage(page: number): void {
+    this.currentPage = Math.min(Math.max(page, 1), this.totalPages);
+  }
+
   private bindFilters(): void {
     this.searchControl.valueChanges
       .pipe(
@@ -331,6 +363,7 @@ export class TarifasPlanesComponent implements OnInit {
 
       return matchesTerm && matchesMoneda && matchesEstado;
     });
+    this.currentPage = 1;
   }
 
   private buildPayload(): TarifaReservaRequest {

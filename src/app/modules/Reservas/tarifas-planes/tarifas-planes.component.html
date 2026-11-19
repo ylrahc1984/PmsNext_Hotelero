@@ -137,7 +137,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let tarifa of filteredTarifas; trackBy: trackByCode" (dblclick)="administrarTarifa(tarifa)" class="tarifa-row">
+            <tr *ngFor="let tarifa of paginatedTarifas; trackBy: trackByCode" (dblclick)="administrarTarifa(tarifa)" class="tarifa-row">
               <td>
                 <span class="badge bg-light text-dark">{{ tarifa.MR03_CodTarifa }}</span>
               </td>
@@ -197,7 +197,7 @@
       </div>
 
       <div class="tarifas-mobile-list" *ngIf="filteredTarifas.length > 0">
-        <article class="tarifas-mobile-card" *ngFor="let tarifa of filteredTarifas; trackBy: trackByCode">
+        <article class="tarifas-mobile-card" *ngFor="let tarifa of paginatedTarifas; trackBy: trackByCode">
           <div class="tarifas-mobile-card__header">
             <div>
               <span class="badge bg-light text-dark">{{ tarifa.MR03_CodTarifa }}</span>
@@ -232,6 +232,25 @@
             </button>
           </div>
         </article>
+      </div>
+
+      <div class="tarifas-pagination" *ngIf="filteredTarifas.length > 0">
+        <div class="tarifas-pagination__summary">
+          <label for="tarifaPageSize">Mostrar</label>
+          <select id="tarifaPageSize" class="form-select form-select-sm" [value]="pageSize" (change)="onPageSizeChange($event)">
+            <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+          </select>
+          <span>registros · {{ pageStart }}–{{ pageEnd }} de {{ filteredTarifas.length }}</span>
+        </div>
+        <div class="tarifas-pagination__controls" aria-label="Paginación de tarifas">
+          <button type="button" class="btn btn-outline-secondary btn-sm" (click)="changePage(currentPage - 1)" [disabled]="currentPage <= 1" aria-label="Página anterior">
+            <i class="feather icon-chevron-left"></i>
+          </button>
+          <span>Página {{ currentPage }} de {{ totalPages }}</span>
+          <button type="button" class="btn btn-outline-secondary btn-sm" (click)="changePage(currentPage + 1)" [disabled]="currentPage >= totalPages" aria-label="Página siguiente">
+            <i class="feather icon-chevron-right"></i>
+          </button>
+        </div>
       </div>
 
       <div *ngIf="!isLoading && filteredTarifas.length === 0" class="tarifas-empty">

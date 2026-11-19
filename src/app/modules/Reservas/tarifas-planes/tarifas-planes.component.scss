@@ -221,6 +221,36 @@
   min-height: 38px;
 }
 
+.tarifas-pagination {
+  align-items: center;
+  border-top: 1px solid #edf0f4;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  justify-content: space-between;
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
+.tarifas-pagination__summary,
+.tarifas-pagination__controls {
+  align-items: center;
+  color: #6c757d;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tarifas-pagination__summary select {
+  width: 76px;
+}
+
+.tarifas-pagination__controls .btn {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+}
+
 @media (max-width: 991.98px) {
   .tarifas-header {
     align-items: flex-start;
@@ -234,6 +264,11 @@
 }
 
 @media (max-width: 767.98px) {
+  .tarifas-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .tarifas-table {
     display: none;
   }
