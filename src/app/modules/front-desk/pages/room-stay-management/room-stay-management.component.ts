@@ -47,6 +47,7 @@ import { RoomChargePosPrintService } from './printing/room-charge-pos-print.serv
 import { RoomStatementPdfService } from './printing/room-statement-pdf.service';
 import { RoomStatementPosService } from './printing/room-statement-pos.service';
 import { RoomStatementDataService } from './printing/room-statement-data.service';
+import { DocumentoDetalleService } from 'src/app/finanzas/services/documento-detalle.service';
 import { RoomStatementCharge, RoomStatementData, RoomStatementTotals } from './printing/room-statement.model';
 import {
   DepartureDateChangePayload,
@@ -60,6 +61,7 @@ import {
   RoomChargePriceListApiItem,
   RoomAvailabilityApiRoom,
   RoomInvoicePayload,
+  RoomInvoiceResponse,
   RoomingListUpdatePayload,
   RoomChangePayload,
   RoomCheckoutPayload,
@@ -348,6 +350,7 @@ export class RoomStayManagementComponent implements OnInit {
   private readonly authService                    = inject(AuthService);
   private readonly operationalDateService         = inject(OperationalDateService);
   private readonly roomStayManagementService      = inject(RoomStayManagementService);
+  private readonly documentoDetalleService         = inject(DocumentoDetalleService);
   private readonly roomChargePdfService           = inject(RoomChargePdfService);
   private readonly roomChargePosPrintService      = inject(RoomChargePosPrintService);
   private readonly roomStatementPdfService        = inject(RoomStatementPdfService);
@@ -4318,7 +4321,10 @@ export class RoomStayManagementComponent implements OnInit {
       return;
     }
 
+    const pdfPreviewWindow = window.open('about:blank', '_blank');
+
     if (!(await this.validateInvoiceExchangeRatesBeforeSubmit())) {
+      this.closeInvoicePdfPreview(pdfPreviewWindow);
       return;
     }
 
@@ -4327,6 +4333,7 @@ export class RoomStayManagementComponent implements OnInit {
     const refreshedRoom = await this.refreshStayForCriticalOperation('facturar la habitación');
 
     if (!refreshedRoom) {
+      this.closeInvoicePdfPreview(pdfPreviewWindow);
       this.invoiceValidationMessage.set('No se pudo actualizar la estancia antes de facturar.');
       return;
     }
@@ -4335,6 +4342,7 @@ export class RoomStayManagementComponent implements OnInit {
     const refreshedSelectedCharges = this.getSelectedInvoiceCharges();
 
     if (this.invoiceChargeSnapshot(refreshedSelectedCharges) !== selectedChargeSnapshot) {
+      this.closeInvoicePdfPreview(pdfPreviewWindow);
       this.resetInvoicePaymentsForSelectionChange();
       this.invoiceValidationMessage.set(
         'Los cargos cambiaron desde que se abrió la factura. La estancia fue actualizada; revise la selección y las formas de pago.'
@@ -4358,6 +4366,7 @@ export class RoomStayManagementComponent implements OnInit {
       .subscribe({
         next: (response) => {
           if (this.isFailedApiResponse(response)) {
+            this.closeInvoicePdfPreview(pdfPreviewWindow);
             this.invoiceValidationMessage.set(response.message || 'No se pudo facturar la habitacion.');
             return;
           }
@@ -4365,13 +4374,71 @@ export class RoomStayManagementComponent implements OnInit {
           this.applyRoomInvoiceAction(payload);
           this.closeActionModal();
           this.loadRoomStay();
+          this.openInvoicedDocumentPdf(response, pdfPreviewWindow);
         },
         error: (error) => {
+          this.closeInvoicePdfPreview(pdfPreviewWindow);
           console.error('No se pudo facturar la habitacion.', error);
           this.invoiceValidationMessage.set('No se pudo facturar la habitacion. Revise la conexion con el API.');
           this.toastService.warning('No se pudo facturar la habitacion.', 4000, 'Documentos');
         }
       });
+  }
+
+  private openInvoicedDocumentPdf(response: RoomInvoiceResponse, previewWindow: Window | null): void {
+    const tipoDocu = this.cleanText(response.data?.tipoDocumento);
+    const numeroDocu = this.cleanText(response.data?.numeroDocumento);
+
+    if (!tipoDocu || !numeroDocu) {
+      this.closeInvoicePdfPreview(previewWindow);
+      this.toastService.warning(
+        'La factura se generó, pero el servidor no devolvió el tipo y número necesarios para abrir el PDF.',
+        5500,
+        'Documento generado'
+      );
+      return;
+    }
+
+    this.documentoDetalleService.getPdf(tipoDocu, '000', numeroDocu)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (blob) => {
+          const pdfBlob = new Blob([blob], { type: 'application/pdf' });
+          const objectUrl = URL.createObjectURL(pdfBlob);
+
+          if (previewWindow && !previewWindow.closed) {
+            previewWindow.location.replace(objectUrl);
+            window.setTimeout(() => URL.revokeObjectURL(objectUrl), 300_000);
+            this.toastService.success('El PDF de la factura se abrió en una nueva pestaña.', 4000, 'Documento generado');
+            return;
+          }
+
+          const link = document.createElement('a');
+          link.href = objectUrl;
+          link.download = `Factura_${tipoDocu}_000_${numeroDocu}.pdf`;
+          link.rel = 'noopener';
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.setTimeout(() => URL.revokeObjectURL(objectUrl), 300_000);
+          this.toastService.info('El navegador no permitió abrir una pestaña; el PDF se descargó.', 5000, 'Documento generado');
+        },
+        error: (error) => {
+          this.closeInvoicePdfPreview(previewWindow);
+          console.error('La factura se generó, pero no se pudo obtener su PDF.', error);
+          this.toastService.warning(
+            'La factura se generó correctamente, pero no se pudo abrir el PDF.',
+            5000,
+            'Documento generado'
+          );
+        }
+      });
+  }
+
+  private closeInvoicePdfPreview(previewWindow: Window | null): void {
+    if (previewWindow && !previewWindow.closed) {
+      previewWindow.close();
+    }
   }
 
   private buildRoomInvoicePayload(selectedCharges: Charge[]): RoomInvoicePayload {

@@ -359,6 +359,15 @@ export interface RoomInvoicePayload {
   infoReserva     : RoomInvoiceReservationInfoPayload[];
 }
 
+export interface RoomInvoiceResponse {
+  success?: boolean;
+  message?: string;
+  data?: {
+    tipoDocumento?: string;
+    numeroDocumento?: string;
+  } | null;
+}
+
 interface RoomStayApiResponse {
   success     ?: boolean;
   data        ?: RoomStayApiData | null;
@@ -527,8 +536,8 @@ export class RoomStayManagementService {
       .pipe(map((response) => this.parseTextResponse(response)));
   }
 
-  invoiceRoom(payload: RoomInvoicePayload): Observable<unknown> {
-    return this.http.post<unknown>(this.roomInvoiceUrl, {
+  invoiceRoom(payload: RoomInvoicePayload): Observable<RoomInvoiceResponse> {
+    return this.http.post<RoomInvoiceResponse>(this.roomInvoiceUrl, {
       ...payload,
       fechaDocu     : normalizePmsDateDDMMYYYY(payload.fechaDocu),
       fechaPago     : normalizePmsDateDDMMYYYY(payload.fechaPago),

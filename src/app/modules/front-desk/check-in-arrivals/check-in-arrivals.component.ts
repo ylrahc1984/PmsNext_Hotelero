@@ -465,14 +465,6 @@ export class CheckInArrivalsComponent implements OnInit {
       return;
     }
 
-    const result = await Swal.fire({
-      title: 'Confirmar Check-In',
-      html: `<div style="text-align:left"><p>Se registrará el ingreso de la reserva <strong>${this.escapeHtml(reserva.codReserva)}</strong>.</p><p style="margin:0">Habitación: <strong>${this.escapeHtml(reserva.numHabita)}</strong></p></div>`,
-      icon: 'question', showCancelButton: true, confirmButtonText: 'Realizar Check-In', cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#198754'
-    });
-    if (!result.isConfirmed) return;
-
     const fecIngreso = this.formatCheckInDate(reserva.fechaIng);
     const fecSalida = this.formatCheckInDate(reserva.fechaSal);
     if (!fecIngreso || !fecSalida) {
@@ -504,7 +496,6 @@ export class CheckInArrivalsComponent implements OnInit {
       takeUntilDestroyed(this.destroyRef)
     ).subscribe({
       next: () => {
-        void Swal.fire({ title: 'Check-In realizado', text: `La reserva ${reserva.codReserva} fue procesada correctamente.`, icon: 'success', timer: 1800, showConfirmButton: false });
         this.buscar(true);
       },
       error: (error) => {
