@@ -492,7 +492,7 @@ export class ConsultaReservasComponent implements OnInit {
 
   puedeAdministrarPrepagos(reserva: ReservaConsulta): boolean {
     const estado = this.normalizeEstadoCode(reserva.estado);
-    return !!reserva.reserva.trim() && ['ABI', 'CCR', 'WLT', 'WLI'].includes(estado);
+    return !!reserva.reserva.trim() && ['ABI', 'CCR', 'WLT', 'WLI', 'CHK'].includes(estado);
   }
 
   async abrirPrepagos(reserva: ReservaConsulta): Promise<void> {

@@ -78,7 +78,8 @@ export class ReservationPrepaymentPdfService {
                   'Tipo de cambio',
                   Number(item.tCambio || 0).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })
                 )
-              ]
+              ],
+              [this.cell('Usuario responsable', item.operador?.trim() || 'N/D'), this.cell('Fecha de registro', this.date(item.fechaReg))]
             ]
           },
           layout: 'noBorders',

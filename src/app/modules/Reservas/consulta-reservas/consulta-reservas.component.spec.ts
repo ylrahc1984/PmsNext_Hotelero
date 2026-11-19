@@ -102,12 +102,12 @@ describe('ConsultaReservasComponent', () => {
     );
   });
 
-  it('restringe prepagos para reservas con check-in o canceladas', () => {
+  it('permite prepagos para reservas con check-in y restringe las canceladas', () => {
     expect(component.puedeAdministrarPrepagos(buildReserva('ABI'))).toBeTrue();
     expect(component.puedeAdministrarPrepagos(buildReserva('CCR'))).toBeTrue();
     expect(component.puedeAdministrarPrepagos(buildReserva('WLT'))).toBeTrue();
     expect(component.puedeAdministrarPrepagos(buildReserva('WLI'))).toBeTrue();
-    expect(component.puedeAdministrarPrepagos(buildReserva('CHK'))).toBeFalse();
+    expect(component.puedeAdministrarPrepagos(buildReserva('CHK'))).toBeTrue();
     expect(component.puedeAdministrarPrepagos(buildReserva('ANU'))).toBeFalse();
   });
 
@@ -143,11 +143,11 @@ describe('ConsultaReservasComponent', () => {
     expect(fixture.nativeElement.querySelector('thead').textContent).not.toContain('Creación');
   });
 
-  it('no abre el modal de prepagos cuando el estado está restringido', async () => {
+  it('abre el modal de prepagos para reservas con check-in', async () => {
     await component.abrirPrepagos(buildReserva('CHK'));
 
-    expect(component.prepaymentsOpen()).toBeFalse();
-    expect(operationalPolicy.require).not.toHaveBeenCalled();
+    expect(component.prepaymentsOpen()).toBeTrue();
+    expect(operationalPolicy.require).toHaveBeenCalledWith(OperationalAction.UpdateOperation, { refresh: true });
   });
 
   it('actualiza la fecha operativa y recarga al recuperar el foco', () => {
