@@ -23,7 +23,7 @@ export class ConsultaDocumentosService {
       .set('FechaDocu', filtros.fechaDocu)
       .set('FechaPago', filtros.fechaPago)
       .set('Operador', filtros.operador)
-      .set('NomClie', filtros.nomClie?.trim() ?? '')
+      .set('nomClie', filtros.nomClie?.trim() ?? '')
       .set('PageNumber', String(filtros.pageNumber))
       .set('PageSize', String(filtros.pageSize));
 

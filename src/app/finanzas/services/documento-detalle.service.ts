@@ -33,11 +33,11 @@ export class DocumentoDetalleService {
     );
   }
 
-  getPdf(tipoDocu: string, serie: string, consecutivo: string): Observable<Blob> {
+  getPdf(tipoDocu: string, serie: string, numero: string): Observable<Blob> {
     const safeTipo = encodeURIComponent(tipoDocu);
     const safeSerie = encodeURIComponent(serie || '000');
-    const safeConsecutivo = encodeURIComponent(consecutivo);
-    const url = `${this.pdfUrl}/${safeTipo}/${safeSerie}/${safeConsecutivo}/pdf`;
+    const safeNumero = encodeURIComponent(numero);
+    const url = `${this.pdfUrl}/${safeTipo}/${safeSerie}/${safeNumero}/pdf`;
     return this.http.get(url, { responseType: 'blob' }).pipe(
       catchError((error: HttpErrorResponse) => {
         const message = error.error?.mensaje || error.error?.respuesta || error.message || 'Error al obtener el PDF del documento';

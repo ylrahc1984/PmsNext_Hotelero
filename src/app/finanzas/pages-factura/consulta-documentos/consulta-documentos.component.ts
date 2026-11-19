@@ -300,13 +300,12 @@ export class ConsultaDocumentosComponent implements OnInit {
   imprimirDocumentoPdf(documento: Documento): void {
     const tipo = documento.tipoDocu;
     const serie = documento.PPV00_Serie || '000';
-    const numero = documento.numDocu;
-    const consecutivo = (documento.numeroConsecutivo || '').trim();
+    const numero = (documento.numDocu || '').trim();
     const key = this.getDocumentoKey(documento);
     if (this.isPrinting(documento)) return;
 
-    if (!consecutivo) {
-      window.alert('No se encontró el número consecutivo para imprimir.');
+    if (!numero) {
+      window.alert('No se encontró el número del documento para imprimir.');
       return;
     }
 
@@ -314,7 +313,7 @@ export class ConsultaDocumentosComponent implements OnInit {
     this.cdr.markForCheck();
 
     this.detalleService
-      .getPdf(tipo, serie, consecutivo)
+      .getPdf(tipo, serie, numero)
       .pipe(
         finalize(() => {
           this.printingPdfDocs.delete(key);
