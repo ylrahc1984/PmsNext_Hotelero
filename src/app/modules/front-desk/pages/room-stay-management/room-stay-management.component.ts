@@ -1869,7 +1869,7 @@ export class RoomStayManagementComponent implements OnInit {
         },
         error: (error) => {
           console.error('No se pudo consultar el detalle del cargo.', error);
-          this.chargeDetailErrorMessage.set('No se pudo consultar el detalle del cargo. Revise la conexion con el API.');
+          this.chargeDetailErrorMessage.set(this.getApiErrorMessage(error, 'No se pudo consultar el detalle del cargo. Revise la conexión con el API.'));
         }
       });
   }
@@ -2416,7 +2416,7 @@ export class RoomStayManagementComponent implements OnInit {
       .subscribe({
         next: (response) => {
           if (this.isFailedApiResponse(response)) {
-            this.toastService.warning(response.message || 'No se pudo actualizar el cargo de habitacion.', 4500, 'Cargos');
+            this.toastService.warning(this.getApiErrorMessage(response, 'No se pudo actualizar el cargo de habitación.'), 5000, 'Cargos');
             return;
           }
 
@@ -2426,7 +2426,7 @@ export class RoomStayManagementComponent implements OnInit {
         },
         error: (error) => {
           console.error('No se pudo actualizar el cargo de habitacion.', error);
-          this.toastService.warning('No se pudo actualizar el cargo de habitacion.', 4500, 'Cargos');
+          this.toastService.warning(this.getApiErrorMessage(error, 'No se pudo actualizar el cargo de habitación. Intente nuevamente.'), 5000, 'Cargos');
         }
       });
   }

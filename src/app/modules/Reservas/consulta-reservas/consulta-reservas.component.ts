@@ -258,9 +258,10 @@ export class ConsultaReservasComponent implements OnInit {
       return;
     }
 
+    const motivoPredeterminado = 'ANULACION SOLICITADA DESDE CONSULTA DE RESERVAS';
     const result = await Swal.fire({
       title: 'Anular reserva',
-      html: `Indique el motivo por el que desea anular la reserva <strong>${this.escapeHtml(codReserva)}</strong>.`,
+      html: `Indique el motivo por el que desea anular la reserva <strong>${this.escapeHtml(codReserva)}</strong>. Si lo deja vacío, se registrará: <em>${motivoPredeterminado}</em>.`,
       icon: 'warning',
       input: 'textarea',
       inputLabel: 'Motivo de la anulación',
@@ -269,12 +270,6 @@ export class ConsultaReservasComponent implements OnInit {
         maxlength: '500',
         rows: '4',
         'aria-label': 'Motivo de la anulación'
-      },
-      inputValidator: (value) => {
-        if (!value?.trim()) {
-          return 'Debe indicar el motivo de la anulación.';
-        }
-        return null;
       },
       showCancelButton: true,
       confirmButtonText: 'Sí, anular',
@@ -287,7 +282,7 @@ export class ConsultaReservasComponent implements OnInit {
       return;
     }
 
-    const observaciones = String(result.value ?? '').trim();
+    const observaciones = String(result.value ?? '').trim() || motivoPredeterminado;
     const operador = this.auth.getCurrentUser()?.usuario?.trim() || reserva.operador?.trim() || 'admin';
     const fecAnulada = normalizePmsDateDDMMYYYY(this.operationalDateService.operationalDate());
     if (!fecAnulada) {
