@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnIn
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { catchError, debounceTime, distinctUntilChanged, finalize, of, switchMap } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, finalize, from, map, mergeMap, of, switchMap, toArray } from 'rxjs';
 
 import { OperationalDateService } from 'src/app/core/services/operational-date.service';
 import { normalizePmsDateDDMMYYYY, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
@@ -15,11 +15,14 @@ import {
   ArriboFechaViewModel,
   ArriboHabitacion,
   ArriboReserva,
+  ArribosResponse,
   ArribosResumen
 } from './models/arribo.model';
 import { ArribosService } from './services/arribos.service';
 import { ArribosPdfService } from './printing/arribos-pdf.service';
 import { compareArriboFechas, compareArriboReservas } from './arribo-order.util';
+import { ReservaTagsService } from 'src/app/modules/Reservas/services/reserva-tags.service';
+import { ReservaTagResumen } from 'src/app/modules/Reservas/models/reserva-tag.model';
 
 interface ArribosFilterForm {
   fechaDesde: FormControl<string>;
@@ -53,6 +56,7 @@ export class ArribosComponent implements OnInit {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly arribosService = inject(ArribosService);
   private readonly arribosPdfService = inject(ArribosPdfService);
+  private readonly reservaTagsService = inject(ReservaTagsService);
   private readonly operationalDateService = inject(OperationalDateService);
   private readonly walkInService = inject(WalkInService);
   private readonly destroyRef = inject(DestroyRef);
@@ -114,6 +118,7 @@ export class ArribosComponent implements OnInit {
     this.arribosService
       .consultarArribos(filters.fechaDesde, filters.fechaHasta, filters.codAgencia)
       .pipe(
+        switchMap((response) => this.cargarTagsReservas(response)),
         catchError((error: unknown) => {
           console.error('No se pudieron cargar los arribos.', error);
           this.errorMessage = 'No se pudieron cargar los arribos para el período seleccionado.';
@@ -246,6 +251,10 @@ export class ArribosComponent implements OnInit {
     return [huesped.nombre, huesped.apellidos].map((value) => value?.trim()).filter(Boolean).join(' ');
   }
 
+  tagTitle(tag: ReservaTagResumen): string {
+    return [tag.categoria, tag.descripcion, tag.observacion].filter((value) => value?.trim()).join(' · ') || tag.nombre;
+  }
+
   formatDate(value: string): string {
     return normalizePmsDateDDMMYYYY(value) || value || 'N/D';
   }
@@ -372,6 +381,7 @@ export class ArribosComponent implements OnInit {
         reserva.descripcion,
         reserva.agencia?.codigo,
         reserva.agencia?.nombre,
+        ...(reserva.tags ?? []).map((tag) => tag.nombre),
         ...reserva.habitaciones.flatMap((habitacion) => [
           habitacion.numero,
           habitacion.categoria,
@@ -381,6 +391,23 @@ export class ArribosComponent implements OnInit {
       ].join(' ').toLowerCase();
       return matchesEstado && (!term || searchable.includes(term));
     }).sort(compareArriboReservas);
+  }
+
+  private cargarTagsReservas(response: ArribosResponse) {
+    const reservas = response?.data?.reservas;
+    if (response?.success === false || !Array.isArray(reservas) || reservas.length === 0) return of(response);
+
+    return from(reservas).pipe(
+      mergeMap((reserva) => {
+        if (Array.isArray(reserva.tags)) return of(reserva);
+        return this.reservaTagsService.obtenerTagsReserva(reserva.codReserva).pipe(
+          map((result) => ({ ...reserva, tags: result?.exito && Array.isArray(result.datos) ? result.datos : [] })),
+          catchError(() => of({ ...reserva, tags: [] }))
+        );
+      }, 6),
+      toArray(),
+      map((enriquecidas) => ({ ...response, data: { ...response.data, reservas: enriquecidas } }))
+    );
   }
 
   private rebuildView(): void {

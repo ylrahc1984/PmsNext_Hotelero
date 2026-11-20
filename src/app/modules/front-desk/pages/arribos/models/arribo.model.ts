@@ -1,3 +1,5 @@
+import { ReservaTagResumen } from 'src/app/modules/Reservas/models/reserva-tag.model';
+
 export interface ArribosResponse {
   success: boolean;
   message: string;
@@ -26,6 +28,7 @@ export interface ArriboReserva {
   noches: number;
   agencia: ArriboAgencia;
   observacion: string;
+  tags?: ReservaTagResumen[];
   resumen: ArriboReservaResumen;
   habitaciones: ArriboHabitacion[];
 }

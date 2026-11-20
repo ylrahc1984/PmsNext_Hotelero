@@ -243,6 +243,10 @@ export class ArribosPdfService {
       result.push({ text: [{ text: 'Observaciones: ', bold: true, color: '#167D8D' }, reserva.observacion.trim()], style: 'observation', margin: [4, 5, 4, 5] });
     }
 
+    if (reserva.tags?.length) {
+      result.push({ text: [{ text: 'Etiquetas: ', bold: true, color: '#167D8D' }, reserva.tags.map((tag) => tag.nombre).filter(Boolean).join(' · ')], style: 'observation', margin: [4, 3, 4, 6] });
+    }
+
     result.push({
       table: {
         headerRows: 1,

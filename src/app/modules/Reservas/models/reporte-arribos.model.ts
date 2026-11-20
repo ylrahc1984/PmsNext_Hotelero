@@ -1,3 +1,5 @@
+import { ReservaTagResumen } from './reserva-tag.model';
+
 export interface ServicioReserva {
   codigo: string;
   descripcion: string;
@@ -23,6 +25,7 @@ export interface ReservaServicios {
   cantidadAdultos: number;
   cantidadNinos: number;
   totalHuespedes: number;
+  tags?: ReservaTagResumen[];
   servicios: ServicioReserva[];
 }
 

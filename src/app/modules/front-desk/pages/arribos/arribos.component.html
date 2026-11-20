@@ -154,6 +154,12 @@
                   <span class="arrival-reservation__identity">
                     <strong>{{ reserva.codReserva || 'Sin código' }}</strong>
                     <span>{{ reserva.descripcion || 'Sin huésped o grupo' }}</span>
+                    <span class="arrival-reservation__tags" *ngIf="reserva.tags?.length" aria-label="Etiquetas de la reserva">
+                      <span class="arrival-tag" *ngFor="let tag of reserva.tags | slice:0:3" [class.arrival-tag--alert]="tag.esAlerta" [title]="tagTitle(tag)">
+                        <span class="arrival-tag__dot" [style.background-color]="tag.color || '#7890a8'" aria-hidden="true"></span>{{ tag.nombre }}
+                      </span>
+                      <span class="arrival-tag arrival-tag--more" *ngIf="(reserva.tags?.length ?? 0) > 3">+{{ (reserva.tags?.length ?? 0) - 3 }}</span>
+                    </span>
                   </span>
                   <span class="arrival-reservation__meta"><small>Check in</small><strong>{{ formatDate(reserva.fechaIngreso) }}</strong></span>
                   <span class="arrival-reservation__meta"><small>Check out</small><strong>{{ formatDate(reserva.fechaSalida) }}</strong></span>
@@ -165,6 +171,17 @@
 
                 <div class="arrival-reservation__detail" *ngIf="estaExpandida(reserva.codReserva)">
                   <div class="reservation-detail-grid">
+                    <section class="reservation-detail-block reservation-tags-block">
+                      <h4><i class="feather icon-tag" aria-hidden="true"></i> Etiquetas asociadas <span class="reservation-tags-count">{{ reserva.tags?.length ?? 0 }}</span></h4>
+                      <div class="reservation-tags-list" *ngIf="reserva.tags?.length; else noArrivalTags">
+                        <span class="arrival-tag arrival-tag--detail" *ngFor="let tag of reserva.tags" [class.arrival-tag--alert]="tag.esAlerta" [title]="tagTitle(tag)">
+                          <span class="arrival-tag__dot" [style.background-color]="tag.color || '#7890a8'" aria-hidden="true"></span>
+                          <strong>{{ tag.nombre }}</strong><small>{{ tag.categoria }}</small>
+                          <span class="arrival-tag__alert" *ngIf="tag.esAlerta">Alerta</span>
+                        </span>
+                      </div>
+                      <ng-template #noArrivalTags><p class="arrival-tags-empty">Esta reserva no tiene etiquetas asociadas.</p></ng-template>
+                    </section>
                     <section class="reservation-detail-block" *ngIf="tieneObservacion(reserva)">
                       <h4><i class="feather icon-file-text" aria-hidden="true"></i> Observaciones</h4>
                       <p class="reservation-observation">{{ reserva.observacion }}</p>

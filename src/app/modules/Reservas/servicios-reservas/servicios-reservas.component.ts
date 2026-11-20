@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { finalize } from 'rxjs';
+import { catchError, finalize, from, map, mergeMap, of, switchMap, toArray } from 'rxjs';
 import Swal from 'sweetalert2';
 
 import { OperationalDateService } from 'src/app/core/services/operational-date.service';
@@ -10,6 +10,8 @@ import { ToastService } from 'src/app/core/services/toast.service';
 import { addPmsCalendarDays, normalizePmsDateDDMMYYYY, parsePmsDate, toPmsDateInputValue } from 'src/app/core/utils/pms-date.util';
 import { AgenciaServicioOption, ReporteArribosResponse, ReservaServicios, ResumenMonedaServicios, ServicioReserva } from '../models/reporte-arribos.model';
 import { ReporteArribosService } from '../services/reporte-arribos.service';
+import { ReservaTagsService } from '../services/reserva-tags.service';
+import { ReservaTagResumen } from '../models/reserva-tag.model';
 
 interface ServiciosReservasFilterForm {
   fechaIngreso: FormControl<string>;
@@ -26,6 +28,7 @@ interface ServiciosReservasFilterForm {
 export class ServiciosReservasComponent {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly reporteService = inject(ReporteArribosService);
+  private readonly reservaTagsService = inject(ReservaTagsService);
   private readonly operationalDateService = inject(OperationalDateService);
   private readonly toast = inject(ToastService);
 
@@ -136,7 +139,10 @@ export class ServiciosReservasComponent {
     this.currentPage.set(1);
 
     this.reporteService.consultar({ fechaIngreso: ingreso, fechaSalida: salida })
-      .pipe(finalize(() => this.loading.set(false)))
+      .pipe(
+        switchMap((response) => this.cargarTagsReservas(response)),
+        finalize(() => this.loading.set(false))
+      )
       .subscribe({
         next: (response: ReporteArribosResponse) => this.handleResponse(response),
         error: (error: HttpErrorResponse) => {
@@ -283,7 +289,7 @@ export class ServiciosReservasComponent {
       ];
 
       const serviceHeaders = [
-        'Código de reserva', 'Descripción de reserva', 'Fecha de ingreso', 'Fecha de salida', 'Estado', 'Agencia', 'Código de agencia',
+        'Código de reserva', 'Tags', 'Descripción de reserva', 'Fecha de ingreso', 'Fecha de salida', 'Estado', 'Agencia', 'Código de agencia',
         'Código de plan', 'Noches', 'Adultos', 'Niños', 'Total de huéspedes', 'Servicios registrados', 'Tiene alimentación', 'Observaciones',
         'Código de servicio', 'Servicio', 'Cantidad', 'Moneda', 'Precio', 'Total del servicio', 'Tipo Pax', 'Centro de costo'
       ];
@@ -291,6 +297,7 @@ export class ServiciosReservasComponent {
         const services = reserva.servicios ?? [];
         const base = [
           reserva.reservaId,
+          (reserva.tags ?? []).map((tag) => tag.nombre).join(', '),
           reserva.reservaDescripcion || '',
           this.formatDate(reserva.fechaIngreso),
           this.formatDate(reserva.fechaSalida),
@@ -326,17 +333,17 @@ export class ServiciosReservasComponent {
         ...serviceRows
       ]);
       this.configureExportSheet(XLSX, servicesSheet, serviceHeaders.length, serviceRows.length, [
-        20, 34, 16, 16, 12, 30, 18, 15, 10, 11, 10, 18, 20, 18, 60, 18, 36, 12, 12, 15, 18, 14, 18
+        20, 32, 34, 16, 16, 12, 30, 18, 15, 10, 11, 10, 18, 20, 18, 60, 18, 36, 12, 12, 15, 18, 14, 18
       ], reportInfo.length);
       const serviceHeaderRow = reportInfo.length;
       const serviceFirstDataRow = serviceHeaderRow + 1;
       let previousReservationId = '';
       for (let rowIndex = serviceFirstDataRow; rowIndex < serviceFirstDataRow + serviceRows.length; rowIndex += 1) {
-        for (const columnIndex of [19, 20]) {
+        for (const columnIndex of [20, 21]) {
           const cell = servicesSheet[XLSX.utils.encode_cell({ r: rowIndex, c: columnIndex })];
           if (cell?.t === 'n') cell.z = '#,##0.00';
         }
-        const quantityCell = servicesSheet[XLSX.utils.encode_cell({ r: rowIndex, c: 17 })];
+        const quantityCell = servicesSheet[XLSX.utils.encode_cell({ r: rowIndex, c: 18 })];
         if (quantityCell?.t === 'n') quantityCell.z = '#,##0.##';
         const reservationIdCell = servicesSheet[XLSX.utils.encode_cell({ r: rowIndex, c: 0 })];
         const reservationId = String(reservationIdCell?.v ?? '');
@@ -348,13 +355,13 @@ export class ServiciosReservasComponent {
           if (reservationIdCell) reservationIdCell.s = { ...reservationIdCell.s, font: { name: 'Aptos', sz: 10, bold: true, color: { rgb: 'FF17365D' } } };
         }
         previousReservationId = reservationId;
-        const foodFlagCell = servicesSheet[XLSX.utils.encode_cell({ r: rowIndex, c: 13 })];
+        const foodFlagCell = servicesSheet[XLSX.utils.encode_cell({ r: rowIndex, c: 14 })];
         if (this.normalizeCode(foodFlagCell?.v as string) === 'SÍ' && foodFlagCell) {
           foodFlagCell.s = { ...foodFlagCell.s, font: { name: 'Aptos', sz: 10, color: { rgb: 'FF176B52' }, bold: true } };
         }
-        const costCenterCell = servicesSheet[XLSX.utils.encode_cell({ r: rowIndex, c: 22 })];
+        const costCenterCell = servicesSheet[XLSX.utils.encode_cell({ r: rowIndex, c: 23 })];
         if (this.normalizeCode(costCenterCell?.v as string) === 'ALIMEN') {
-          for (let columnIndex = 15; columnIndex < serviceHeaders.length; columnIndex += 1) {
+          for (let columnIndex = 16; columnIndex < serviceHeaders.length; columnIndex += 1) {
             const cell = servicesSheet[XLSX.utils.encode_cell({ r: rowIndex, c: columnIndex })];
             if (cell) cell.s = { ...cell.s, fill: { fgColor: { rgb: 'FFEAF6F1' } } };
           }
@@ -402,6 +409,11 @@ export class ServiciosReservasComponent {
     return (reserva.servicios ?? []).some((servicio) => this.normalizeCode(servicio.centroCosto) === 'ALIMEN');
   }
 
+  tagTitle(tag: ReservaTagResumen): string {
+    const details = [tag.categoria, tag.descripcion, tag.observacion].filter((value) => this.text(value));
+    return details.join(' · ') || tag.nombre;
+  }
+
   trackReserva(_: number, reserva: ReservaServicios): string {
     return reserva.reservaId;
   }
@@ -425,7 +437,7 @@ export class ServiciosReservasComponent {
     const unique = new Map<string, ReservaServicios>();
     for (const reserva of response.data ?? []) {
       const id = this.text(reserva.reservaId);
-      if (id && !unique.has(id)) unique.set(id, { ...reserva, servicios: Array.isArray(reserva.servicios) ? reserva.servicios : [] });
+      if (id && !unique.has(id)) unique.set(id, { ...reserva, tags: Array.isArray(reserva.tags) ? reserva.tags : [], servicios: Array.isArray(reserva.servicios) ? reserva.servicios : [] });
     }
     const sorted = Array.from(unique.values()).sort((a, b) =>
       this.dateSortKey(a.fechaIngreso).localeCompare(this.dateSortKey(b.fechaIngreso)) ||
@@ -433,6 +445,33 @@ export class ServiciosReservasComponent {
       this.text(a.reservaId).localeCompare(this.text(b.reservaId))
     );
     this.reservas.set(sorted);
+  }
+
+  private cargarTagsReservas(response: ReporteArribosResponse) {
+    if (!response?.success || !Array.isArray(response.data)) return of(response);
+
+    const unique = new Map<string, ReservaServicios>();
+    for (const reserva of response.data) {
+      const id = this.text(reserva.reservaId);
+      if (id && !unique.has(id)) unique.set(id, { ...reserva, servicios: Array.isArray(reserva.servicios) ? reserva.servicios : [] });
+    }
+    const reservas = Array.from(unique.values()).sort((a, b) =>
+      this.dateSortKey(a.fechaIngreso).localeCompare(this.dateSortKey(b.fechaIngreso)) ||
+      this.text(a.nombreAgencia).localeCompare(this.text(b.nombreAgencia)) ||
+      this.text(a.reservaId).localeCompare(this.text(b.reservaId))
+    );
+
+    return from(reservas).pipe(
+      mergeMap((reserva) => {
+        if (Array.isArray(reserva.tags)) return of(reserva);
+        return this.reservaTagsService.obtenerTagsReserva(reserva.reservaId).pipe(
+          map((result) => ({ ...reserva, tags: result?.exito && Array.isArray(result.datos) ? result.datos : [] })),
+          catchError(() => of({ ...reserva, tags: [] }))
+        );
+      }, 6),
+      toArray(),
+      map((enriquecidas) => ({ ...response, data: enriquecidas }))
+    );
   }
 
   private updateExpandedReservations(): void {

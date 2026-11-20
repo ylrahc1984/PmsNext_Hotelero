@@ -75,8 +75,18 @@ $paper: #fff;
 .arrival-reservation__main:hover, .arrival-reservation--expanded .arrival-reservation__main { background: #f8fbff; }
 .arrival-reservation__toggle { color: $blue; font-size: 1.1rem; }
 .arrival-reservation__identity, .arrival-reservation__meta { display: grid; gap: 2px; min-width: 0; }
+.arrival-reservation__identity { align-content: center; }
 .arrival-reservation__identity strong { overflow: hidden; color: #15385f; font-size: .77rem; text-overflow: ellipsis; white-space: nowrap; }
 .arrival-reservation__identity span { overflow: hidden; color: $muted; font-size: .68rem; text-overflow: ellipsis; white-space: nowrap; }
+.arrival-reservation__identity .arrival-reservation__tags { display: flex; flex-wrap: wrap; gap: 3px; overflow: visible; white-space: normal; }
+.arrival-tag { display: inline-flex; align-items: center; gap: 4px; max-width: 150px; padding: 2px 6px; border: 1px solid #dce5ef; border-radius: 999px; color: #34465b; background: #f5f8fc; font-size: .59rem; line-height: 1.35; }
+.arrival-tag > :not(.arrival-tag__dot) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.arrival-tag__dot { flex: 0 0 7px; width: 7px; height: 7px; border-radius: 50%; }
+.arrival-tag--alert { border-color: #f2c7c7; color: #8a3030; background: #fff4f3; }
+.arrival-tag--more { color: #52677f; background: #edf2f7; }
+.arrival-tag--detail { max-width: 240px; padding: 4px 8px; font-size: .67rem; }
+.arrival-tag small { color: #718096; font-size: .6rem; }
+.arrival-tag__alert { padding: 1px 4px; border-radius: 999px; color: #9e3434; background: #ffe1df; font-size: .55rem; font-weight: 800; }
 .arrival-reservation__meta small { color: $muted; font-size: .58rem; font-weight: 750; text-transform: uppercase; }
 .arrival-reservation__meta strong { color: #26364c; font-size: .7rem; }
 .status-badge { display: inline-flex; justify-content: center; padding: 4px 7px; border-radius: 999px; font-size: .62rem; font-weight: 850; white-space: nowrap; }
@@ -86,6 +96,11 @@ $paper: #fff;
 .status-badge--default { color: #475569; background: #f1f5f9; }
 .arrival-reservation__detail { display: grid; gap: 12px; padding: 11px 14px 14px 46px; border-top: 1px solid #e1edf9; background: linear-gradient(180deg, #f8fbff, #fff); }
 .reservation-detail-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr); gap: 12px; }
+.reservation-tags-block { grid-column: 1 / -1; }
+.reservation-tags-block h4 { display: flex; align-items: center; gap: 6px; }
+.reservation-tags-count { display: inline-grid; place-items: center; min-width: 19px; height: 19px; border-radius: 50%; color: #52677f; background: #eaf0f6; font-size: .62rem; }
+.reservation-tags-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.arrival-tags-empty { margin: 0; color: $muted; font-size: .7rem; }
 .reservation-detail-block { min-width: 0; }
 .reservation-detail-block h4 { display: flex; align-items: center; gap: 6px; margin: 0 0 7px; color: #253a55; font-size: .72rem; font-weight: 850; }
 .reservation-detail-block h4 i { color: $blue; }

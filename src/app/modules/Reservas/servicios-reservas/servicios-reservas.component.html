@@ -115,7 +115,7 @@
       <div class="table-responsive" *ngIf="!loading() && pageReservas().length">
         <table class="table align-middle reservation-table">
           <thead><tr>
-            <th class="expand-column"><span class="visually-hidden">Detalle</span></th><th>Reserva</th><th>Descripción</th><th>Ingreso</th><th>Salida</th><th class="text-center">Noches</th><th>Agencia</th>
+            <th class="expand-column"><span class="visually-hidden">Detalle</span></th><th>Reserva</th><th>Tags</th><th>Descripción</th><th>Ingreso</th><th>Salida</th><th class="text-center">Noches</th><th>Agencia</th>
             <th class="text-center">Huéspedes</th><th class="text-center">Servicios</th><th>Alimentación</th><th>Estado</th>
           </tr></thead>
           <tbody>
@@ -123,6 +123,14 @@
             <tr class="reservation-row" [class.is-expanded]="estaExpandida(reserva.reservaId)">
               <td class="expand-column"><button type="button" class="expand-toggle" (click)="toggleReserva(reserva.reservaId)" [attr.aria-expanded]="estaExpandida(reserva.reservaId)" [attr.aria-controls]="'reservation-detail-' + reserva.reservaId" [attr.aria-label]="(estaExpandida(reserva.reservaId) ? 'Contraer' : 'Desplegar') + ' detalle de ' + reserva.reservaId"><i class="feather" [ngClass]="estaExpandida(reserva.reservaId) ? 'icon-chevron-up' : 'icon-chevron-down'"></i></button></td>
               <td class="reservation-code"><strong>{{ reserva.reservaId }}</strong></td>
+              <td class="reservation-tags">
+                <ng-container *ngIf="reserva.tags?.length; else noReservationTags">
+                  <span class="reservation-tag" *ngFor="let tag of reserva.tags" [class.reservation-tag--alert]="tag.esAlerta" [title]="tagTitle(tag)">
+                    <span class="reservation-tag__dot" [style.background-color]="tag.color || '#7890a8'" aria-hidden="true"></span>{{ tag.nombre }}
+                  </span>
+                </ng-container>
+                <ng-template #noReservationTags><span class="text-muted">—</span></ng-template>
+              </td>
               <td class="truncate-cell" [title]="reserva.reservaDescripcion || 'Sin descripción'">{{ reserva.reservaDescripcion || 'Sin descripción' }}</td>
               <td>{{ formatDate(reserva.fechaIngreso) }}</td><td>{{ formatDate(reserva.fechaSalida) }}</td>
               <td class="text-center">{{ displayNumber(reserva.totalNoches) }}</td>
@@ -133,7 +141,7 @@
               <td><span class="status-code" [attr.data-status]="normalizeCode(reserva.estadoReserva)">{{ reserva.estadoReserva || '—' }}</span></td>
             </tr>
             <tr class="expanded-detail-row" *ngIf="estaExpandida(reserva.reservaId)" [id]="'reservation-detail-' + reserva.reservaId">
-              <td colspan="11">
+              <td colspan="12">
                 <div class="expanded-detail">
                   <div class="detail-heading">
                     <div><span class="summary-code-label">Detalle de reserva</span><h3>{{ reserva.reservaId }} <small>{{ reserva.reservaDescripcion || 'Sin descripción' }}</small></h3></div>
@@ -162,6 +170,18 @@
                       </dl>
                     </section>
                   </div>
+
+                  <section class="detail-block detail-block--tags">
+                    <h4><i class="feather icon-tag"></i>Etiquetas asociadas <span class="service-count">{{ reserva.tags?.length ?? 0 }}</span></h4>
+                    <div class="reservation-tag-list" *ngIf="reserva.tags?.length; else noDetailTags">
+                      <span class="reservation-tag" *ngFor="let tag of reserva.tags" [class.reservation-tag--alert]="tag.esAlerta" [title]="tagTitle(tag)">
+                        <span class="reservation-tag__dot" [style.background-color]="tag.color || '#7890a8'" aria-hidden="true"></span>
+                        <strong>{{ tag.nombre }}</strong><small>{{ tag.categoria }}</small>
+                        <span class="reservation-tag__alert" *ngIf="tag.esAlerta">Alerta</span>
+                      </span>
+                    </div>
+                    <ng-template #noDetailTags><p class="reservation-tags-empty">Esta reserva no tiene etiquetas asociadas.</p></ng-template>
+                  </section>
 
                   <section class="detail-block detail-block--services">
                     <div class="detail-block__heading"><h4><i class="feather icon-briefcase"></i>Servicios contratados <span class="service-count">{{ reserva.servicios.length }}</span></h4><small>Los servicios ALIMEN se resaltan para su identificación.</small></div>

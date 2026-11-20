@@ -1401,7 +1401,7 @@ export class RoomStayManagementComponent implements OnInit {
     }
 
     if (this.isActionSelected('check-out')) {
-      return !this.isCheckoutSubmitting() && !this.isCriticalStayRefreshing();
+      return !this.hasPendingExtraCharges() && !this.isCheckoutSubmitting() && !this.isCriticalStayRefreshing();
     }
 
     return true;
