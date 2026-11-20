@@ -439,6 +439,20 @@
                           }
                           <span>Imprimir en POS</span>
                         </button>
+                        <button
+                          type="button"
+                          ngbDropdownItem
+                          class="dropdown-item"
+                          [disabled]="isRoomChargeDocumentBusy(charge) || isMasterFolioTransferBusy(charge)"
+                          (click)="transferExtraChargeToMasterFolio(charge)"
+                        >
+                          @if (isMasterFolioTransferBusy(charge)) {
+                            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                          } @else {
+                            <span class="material-icons" aria-hidden="true">move_up</span>
+                          }
+                          <span>{{ isMasterFolioTransferBusy(charge) ? 'Trasladando...' : 'Trasladar a Folio Master' }}</span>
+                        </button>
                         <div class="dropdown-divider"></div>
                         <button
                           type="button"
@@ -564,8 +578,8 @@
                 class="action-button"
                 [class.danger]="action.tone === 'danger'"
                 [class.primary]="action.tone === 'primary'"
-                [disabled]="action.id === 'register-prepayment' || action.id === 'transfer-charges' || (action.id === 'guest-portal' && !room().reservationNumber)"
-                [attr.title]="action.id === 'transfer-charges' ? 'No disponible: requiere soporte del backend' : action.id === 'guest-portal' && !room().reservationNumber ? 'La estancia no tiene una reserva asociada' : null"
+                [disabled]="action.id === 'register-prepayment' || (action.id === 'guest-portal' && !room().reservationNumber)"
+                [attr.title]="action.id === 'guest-portal' && !room().reservationNumber ? 'La estancia no tiene una reserva asociada' : null"
                 (click)="openActionModal(action)"
               >
                 <span class="material-icons" aria-hidden="true">{{ action.icon }}</span>
@@ -671,6 +685,7 @@
                     </div>
                     <div class="account-charge__actions">
                       <button type="button" (click)="openAccountChargeDetail(charge)"><span class="material-icons" aria-hidden="true">visibility</span> Ver detalle completo</button>
+                      <button type="button" (click)="openChargeTransfer(charge)"><span class="material-icons" aria-hidden="true">compare_arrows</span> Transferir cargo</button>
                     </div>
                   </div>
                 }
@@ -707,8 +722,8 @@
               class="action-button"
               [class.danger]="action.tone === 'danger'"
               [class.primary]="action.tone === 'primary'"
-              [disabled]="action.id === 'register-prepayment' || action.id === 'transfer-charges' || (action.id === 'guest-portal' && !room().reservationNumber)"
-              [attr.title]="action.id === 'transfer-charges' ? 'No disponible: requiere soporte del backend' : action.id === 'guest-portal' && !room().reservationNumber ? 'La estancia no tiene una reserva asociada' : null"
+              [disabled]="action.id === 'register-prepayment' || (action.id === 'guest-portal' && !room().reservationNumber)"
+              [attr.title]="action.id === 'guest-portal' && !room().reservationNumber ? 'La estancia no tiene una reserva asociada' : null"
               (click)="openActionModal(action)"
             >
               <span class="material-icons" aria-hidden="true">{{ action.icon }}</span>
@@ -744,6 +759,7 @@
         [attr.aria-label]="action.label"
         [class.action-modal--invoice]="isActionSelected('invoice-room')"
         [class.action-modal--room-charge]="isActionSelected('new-charge')"
+        [class.action-modal--room-change]="isActionSelected('change-room')"
         [class.action-modal--guest-portal]="isActionSelected('guest-portal')"
         (click)="$event.stopPropagation()"
       >
@@ -1182,8 +1198,8 @@
             <span class="action-modal__eyebrow">
               {{ action.kind === 'document' ? 'Documento' : action.kind === 'critical' ? 'Validacion final' : action.kind === 'financial' ? 'Gestion financiera' : 'Operacion guiada' }}
             </span>
-            <h2>{{ action.label }}</h2>
-            <p>{{ action.description }}</p>
+            <h2>{{ isActionSelected('change-room') ? (roomChangeMode() === 'upgrade' ? 'Upgrade de habitación' : 'Cambiar habitación') : action.label }}</h2>
+            <p>{{ isActionSelected('change-room') ? (roomChangeMode() === 'upgrade' ? 'Busca una habitación disponible de cualquier categoría para mejorar la estancia.' : 'Prepara el cambio operativo de la estancia hacia otra habitación de la misma categoría.') : action.description }}</p>
           </div>
           <button type="button" class="action-modal__close" aria-label="Cerrar" (click)="closeActionModal()">
             <span class="material-icons" aria-hidden="true">close</span>
@@ -1209,37 +1225,47 @@
           </div>
 
           @if (isActionSelected('change-room')) {
-            <div class="action-modal__grid">
-              <label class="action-field">
-                <span>Habitacion destino</span>
-                <select [ngModel]="actionDraft().targetRoom" (ngModelChange)="onTargetRoomChange($event)" [disabled]="isAvailableRoomsLoading() || !availableRoomsLoaded() || !roomOptions().length">
-                  @if (isAvailableRoomsLoading() || !availableRoomsLoaded()) {
-                    <option value="">Cargando habitaciones disponibles...</option>
-                  } @else if (!roomOptions().length) {
-                    <option value="">Sin habitaciones disponibles</option>
-                  } @else {
-                    @for (option of roomOptions(); track option.number) {
-                      <option [value]="option.number">{{ option.number }} · {{ option.type }}</option>
-                    }
-                  }
-                </select>
-              </label>
-
-              <label class="action-field">
-                <span>Tipo sugerido</span>
-                <input type="text" [ngModel]="actionDraft().targetRoomType" (ngModelChange)="updateActionDraft({ targetRoomType: $event })" [disabled]="isAvailableRoomsLoading() || !availableRoomsLoaded()" />
-              </label>
+            <div class="room-change-mode" role="group" aria-label="Tipo de operación">
+              <button type="button" [class.active]="roomChangeMode() === 'change'" [attr.aria-pressed]="roomChangeMode() === 'change'" (click)="setRoomChangeMode('change')">
+                <span class="material-icons" aria-hidden="true">swap_horiz</span><span><strong>Cambiar habitación</strong><small>Misma categoría</small></span>
+              </button>
+              <button type="button" [class.active]="roomChangeMode() === 'upgrade'" [attr.aria-pressed]="roomChangeMode() === 'upgrade'" (click)="setRoomChangeMode('upgrade')">
+                <span class="material-icons" aria-hidden="true">upgrade</span><span><strong>Upgrade</strong><small>Cualquier categoría</small></span>
+              </button>
             </div>
+
+            <div class="room-change-availability-head">
+              <div><strong>Habitaciones disponibles</strong><small>{{ roomChangeMode() === 'upgrade' ? 'Se muestran todas las categorías.' : 'Se muestran habitaciones de la categoría actual.' }}</small></div>
+              @if (!isAvailableRoomsLoading() && availableRoomsLoaded()) { <span>{{ filteredRoomOptions().length }} opción(es)</span> }
+            </div>
+
+            @if (!isAvailableRoomsLoading() && roomOptions().length) {
+              <label class="room-change-search">
+                <span class="material-icons" aria-hidden="true">search</span>
+                <input type="search" [ngModel]="availableRoomSearch()" (ngModelChange)="availableRoomSearch.set($event)" placeholder="Buscar por habitación o tipo" aria-label="Buscar habitación disponible" />
+                @if (availableRoomSearch()) { <button type="button" aria-label="Limpiar búsqueda" (click)="availableRoomSearch.set('')">×</button> }
+              </label>
+            }
 
             @if (isAvailableRoomsLoading() || !availableRoomsLoaded()) {
               <div class="room-change-status" role="status" aria-live="polite">
                 <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                <span><strong>Consultando habitaciones disponibles</strong><small>Estamos buscando opciones para las fechas y categoría de esta estancia.</small></span>
+                <span><strong>Consultando habitaciones disponibles</strong><small>{{ roomChangeMode() === 'upgrade' ? 'Buscando opciones en todas las categorías para las fechas de la estancia.' : 'Buscando habitaciones de la misma categoría para las fechas de la estancia.' }}</small></span>
               </div>
             } @else if (!roomOptions().length) {
               <div class="room-change-status room-change-status--empty" role="status">
                 <span class="material-icons" aria-hidden="true">info</span>
-                <span><strong>No hay habitaciones disponibles</strong><small>No encontramos otra habitación para las fechas y categoría seleccionadas.</small></span>
+                <span><strong>No hay habitaciones disponibles</strong><small>{{ roomChangeMode() === 'upgrade' ? 'No encontramos habitaciones en ninguna categoría para estas fechas.' : 'No encontramos otra habitación para las fechas y categoría seleccionadas.' }}</small></span>
+              </div>
+            } @else if (!filteredRoomOptions().length) {
+              <div class="room-change-status room-change-status--empty" role="status"><span class="material-icons" aria-hidden="true">search_off</span><span><strong>Sin coincidencias</strong><small>Prueba con otro número de habitación o tipo.</small></span></div>
+            } @else {
+              <div class="room-change-options" role="listbox" aria-label="Seleccionar habitación disponible">
+                @for (option of filteredRoomOptions(); track option.number) {
+                  <button type="button" role="option" [attr.aria-selected]="actionDraft().targetRoom === option.number" [class.selected]="actionDraft().targetRoom === option.number" (click)="onTargetRoomChange(option.number)">
+                    <span class="material-icons" aria-hidden="true">bed</span><span class="room-change-option-copy"><strong>Habitación {{ option.number }}</strong><small>{{ option.type }}</small></span><span class="material-icons room-change-option-check" aria-hidden="true">{{ actionDraft().targetRoom === option.number ? 'radio_button_checked' : 'radio_button_unchecked' }}</span>
+                  </button>
+                }
               </div>
             }
           }
@@ -1323,20 +1349,6 @@
             </div>
           }
 
-          @if (isActionSelected('transfer-charges')) {
-            <div class="action-modal__grid">
-              <label class="action-field">
-                <span>Folio destino</span>
-                <input type="text" [ngModel]="actionDraft().destinationFolio" (ngModelChange)="updateActionDraft({ destinationFolio: $event })" />
-              </label>
-
-              <label class="action-field">
-                <span>Monto a transferir</span>
-                <input type="number" min="0" step="0.01" [ngModel]="actionDraft().chargeAmount" (ngModelChange)="updateActionDraft({ chargeAmount: +$event })" />
-              </label>
-            </div>
-          }
-
           @if (action.kind === 'document') {
             <div class="action-modal__grid">
               <label class="action-field">
@@ -1382,7 +1394,9 @@
                   ? 'Generando...'
                   : isActionSelected('check-out') && isCheckoutSubmitting()
                     ? 'Procesando...'
-                    : action.confirmText
+                    : isActionSelected('change-room')
+                      ? (roomChangeMode() === 'upgrade' ? 'Preparar upgrade' : 'Preparar cambio')
+                      : action.confirmText
             }}
           </button>
         </footer>
@@ -1619,6 +1633,59 @@
 
   @if (roomingListDialogContext(); as roomingContext) {
     <app-rooming-list-dialog [context]="roomingContext" (closed)="closeRoomingListDialog()" />
+  }
+
+  @if (isChargeTransferModalOpen()) {
+    <div class="action-modal-backdrop" (click)="closeChargeTransfer()">
+      <section class="action-modal charge-transfer-modal" role="dialog" aria-modal="true" aria-labelledby="charge-transfer-title" (click)="$event.stopPropagation()">
+        <header class="action-modal__header">
+          <div><span class="action-modal__eyebrow">TRASLADO DE CARGO</span><h2 id="charge-transfer-title">Seleccionar habitación destino</h2></div>
+          <button type="button" class="action-modal__close" aria-label="Cerrar" (click)="closeChargeTransfer()">×</button>
+        </header>
+        <div class="action-modal__body">
+          @if (selectedTransferCharge(); as charge) {
+            <div class="charge-transfer-summary"><span>Cargo {{ charge.type }} · {{ charge.number }}</span><strong>{{ charge.total | currency:charge.currency:'symbol':'1.2-2' }}</strong></div>
+          }
+          <p>Elige una estancia actualmente ocupada a la que se trasladará este cargo.</p>
+          @if (isChargeTransferRoomsLoading()) {
+            <div class="account-state account-state--loading"><span class="material-icons spin" aria-hidden="true">sync</span><strong>Buscando habitaciones ocupadas...</strong></div>
+          } @else if (chargeTransferRooms().length) {
+            <label class="charge-transfer-search">
+              <span class="material-icons" aria-hidden="true">search</span>
+              <input type="search" [ngModel]="chargeTransferSearch()" (ngModelChange)="chargeTransferSearch.set($event)" placeholder="Buscar habitación, reserva o huésped" aria-label="Buscar habitación ocupada" />
+              @if (chargeTransferSearch()) { <button type="button" aria-label="Limpiar búsqueda" (click)="chargeTransferSearch.set('')">×</button> }
+            </label>
+            <div class="charge-transfer-list-heading"><strong>Habitaciones ocupadas</strong><span>{{ filteredChargeTransferRooms().length }} de {{ chargeTransferRooms().length }}</span></div>
+            @if (filteredChargeTransferRooms().length) {
+              <div class="charge-transfer-table-wrap">
+                <table class="charge-transfer-table">
+                  <thead><tr><th>Habitación</th><th>Reserva / huésped</th><th>Salida</th><th></th></tr></thead>
+                  <tbody>
+                    @for (target of filteredChargeTransferRooms(); track target.codReserva + '|' + target.numHabita) {
+                      <tr [class.selected]="selectedTransferRoom() === target.codReserva + '|' + target.numHabita" tabindex="0" (click)="selectChargeTransferRoom(target)" (keydown.enter)="selectChargeTransferRoom(target)" (keydown.space)="$event.preventDefault(); selectChargeTransferRoom(target)">
+                        <td><strong class="charge-transfer-room-number">{{ target.numHabita }}</strong><span class="charge-transfer-room-label">Ocupada</span></td>
+                        <td><strong>{{ target.paxIn || 'Huésped no identificado' }}</strong><small>{{ target.nomAgencia || 'Sin agencia' }} · Reserva {{ target.codReserva }}</small></td>
+                        <td>{{ target.fechaSal || '—' }}</td>
+                        <td><span class="material-icons charge-transfer-check" aria-hidden="true">{{ selectedTransferRoom() === target.codReserva + '|' + target.numHabita ? 'radio_button_checked' : 'radio_button_unchecked' }}</span></td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            } @else {
+              <div class="charge-transfer-empty"><span class="material-icons" aria-hidden="true">search_off</span><strong>No encontramos habitaciones</strong><small>Prueba con otro número de habitación, reserva o huésped.</small></div>
+            }
+          }
+          @if (chargeTransferError()) { <div class="action-modal__notice action-modal__notice--error">{{ chargeTransferError() }}</div> }
+        </div>
+        <footer class="action-modal__footer">
+          <button type="button" class="action-modal__secondary" [disabled]="isChargeTransferSubmitting()" (click)="closeChargeTransfer()">Cancelar</button>
+          <button type="button" class="action-modal__primary" [disabled]="!selectedTransferRoom() || isChargeTransferSubmitting() || isChargeTransferRoomsLoading()" (click)="confirmChargeTransfer()">
+            {{ isChargeTransferSubmitting() ? 'Trasladando...' : 'Transferir cargo' }}
+          </button>
+        </footer>
+      </section>
+    </div>
   }
 
 </section>

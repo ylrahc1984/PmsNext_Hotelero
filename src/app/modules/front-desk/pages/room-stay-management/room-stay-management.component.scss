@@ -1335,14 +1335,288 @@ label {
 
 .account-charge__actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
+  gap: 8px;
   padding-top: 9px;
 }
 
 .account-charge__actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   padding: 5px 8px;
   border: 0;
+  border-radius: 8px;
+  color: #145d72;
   background: #eef7fa;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.account-charge__actions button .material-icons {
+  font-size: 17px;
+}
+
+.charge-transfer-modal {
+  width: min(780px, calc(100vw - 32px));
+}
+
+.charge-transfer-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 13px 15px;
+  margin-bottom: 14px;
+  border: 1px solid #dceaf0;
+  border-radius: 12px;
+  background: #f4fafc;
+}
+
+.charge-transfer-summary span {
+  color: $muted;
+  font-size: 0.85rem;
+}
+
+.charge-transfer-summary strong {
+  color: $ink;
+  white-space: nowrap;
+}
+
+.charge-transfer-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 12px;
+  margin: 16px 0;
+  border: 1px solid #d5e0eb;
+  border-radius: 11px;
+  background: #fff;
+}
+
+.charge-transfer-search:focus-within {
+  border-color: $cyan;
+  box-shadow: 0 0 0 3px rgba($cyan, 0.13);
+}
+
+.charge-transfer-search > .material-icons {
+  color: #77869a;
+  font-size: 20px;
+}
+
+.charge-transfer-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  color: $ink;
+  background: transparent;
+}
+
+.charge-transfer-search button {
+  border: 0;
+  color: $muted;
+  background: transparent;
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+
+.charge-transfer-list-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 2px 8px;
+  color: $ink;
+  font-size: 0.82rem;
+}
+
+.charge-transfer-list-heading span {
+  color: $muted;
+  font-weight: 600;
+}
+
+.charge-transfer-table-wrap {
+  max-height: min(45vh, 360px);
+  overflow: auto;
+  border: 1px solid $line;
+  border-radius: 11px;
+}
+
+.charge-transfer-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.82rem;
+}
+
+.charge-transfer-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 10px 12px;
+  color: #64748b;
+  background: #f7fafc;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.charge-transfer-table td {
+  padding: 11px 12px;
+  border-top: 1px solid #edf1f5;
+  color: $ink;
+}
+
+.charge-transfer-table tbody tr {
+  cursor: pointer;
+  outline: none;
+}
+
+.charge-transfer-table tbody tr:hover,
+.charge-transfer-table tbody tr:focus-visible {
+  background: #f5fafc;
+}
+
+.charge-transfer-table tbody tr.selected {
+  background: #eaf7fa;
+}
+
+.charge-transfer-table td > strong,
+.charge-transfer-table td > small,
+.charge-transfer-table td > span.charge-transfer-room-label {
+  display: block;
+}
+
+.charge-transfer-table td > small {
+  margin-top: 3px;
+  color: $muted;
+}
+
+.charge-transfer-table th:last-child,
+.charge-transfer-table td:last-child {
+  width: 42px;
+  text-align: center;
+}
+
+.charge-transfer-room-number {
+  font-size: 1rem;
+}
+
+.charge-transfer-room-label {
+  margin-top: 2px;
+  color: #168064;
+  font-size: 0.67rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.charge-transfer-check {
+  color: $cyan-dark;
+  font-size: 20px;
+}
+
+.charge-transfer-empty {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 25px 12px;
+  border: 1px dashed #d5e0eb;
+  border-radius: 11px;
+  color: $muted;
+  text-align: center;
+}
+
+.charge-transfer-empty .material-icons {
+  color: #8b9aab;
+  font-size: 24px;
+}
+
+.charge-transfer-empty strong {
+  color: $ink;
+}
+
+.charge-transfer-empty small {
+  font-size: 0.76rem;
+}
+
+.charge-transfer-modal > .action-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 22px;
+  border-bottom: 1px solid $line;
+}
+
+.charge-transfer-modal .action-modal__eyebrow {
+  color: $cyan-dark;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.charge-transfer-modal h2 {
+  margin: 4px 0 0;
+  color: $ink;
+  font-size: 1.2rem;
+}
+
+.charge-transfer-modal .action-modal__close {
+  border: 0;
+  color: $muted;
+  background: transparent;
+  font-size: 1.6rem;
+  cursor: pointer;
+}
+
+.charge-transfer-modal > .action-modal__body {
+  padding: 20px 22px;
+}
+
+.charge-transfer-modal > .action-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 22px;
+  border-top: 1px solid $line;
+}
+
+.charge-transfer-modal .action-modal__secondary,
+.charge-transfer-modal .action-modal__primary {
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 9px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.charge-transfer-modal .action-modal__secondary {
+  border: 1px solid #d5e0eb;
+  color: $ink;
+  background: white;
+}
+
+.charge-transfer-modal .action-modal__primary {
+  border: 1px solid $cyan-dark;
+  color: white;
+  background: $cyan-dark;
+}
+
+.charge-transfer-modal .action-modal__primary:disabled {
+  border-color: #cbd5e1;
+  color: #64748b;
+  background: #e2e8f0;
+  cursor: not-allowed;
+}
+
+.charge-transfer-modal .action-modal__notice--error {
+  padding: 10px 12px;
+  margin-top: 12px;
+  border-radius: 9px;
+  color: #9f2929;
+  background: #fff1f0;
 }
 
 .account-totals {
@@ -1790,6 +2064,13 @@ label {
 }
 
 @media (max-width: 575px) {
+  .action-modal.action-modal--room-change { width: calc(100vw - 16px); max-height: calc(100dvh - 20px); }
+  .room-change-mode { gap: 7px; margin: 14px 0 18px; }
+  .room-change-mode button { min-height: 66px; gap: 8px; padding: 9px; }
+  .room-change-mode button > .material-icons { width: 33px; height: 33px; font-size: 18px; }
+  .room-change-mode strong { font-size: 0.75rem; }
+  .room-change-mode small { font-size: 0.67rem; }
+  .room-change-options { grid-template-columns: 1fr; max-height: 32vh; }
   .action-modal.action-modal--room-charge { width: calc(100vw - 12px); height: calc(100dvh - 12px); max-height: calc(100dvh - 12px); }
   .action-modal--room-charge .room-charge-header { padding: 12px 13px; }
   .room-charge-header h2 { font-size: 1rem; }

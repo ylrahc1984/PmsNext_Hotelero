@@ -29,6 +29,8 @@ import { ReservationTagListComponent } from 'src/app/modules/Reservas/components
 import { ReservationTagSelectorComponent } from 'src/app/modules/Reservas/components/reservation-tags/reservation-tag-selector.component';
 import { GuestPortalAdminCardComponent } from 'src/app/modules/Reservas/components/guest-portal-admin/guest-portal-admin-card.component';
 import { RoomingListDialogComponent, RoomingListDialogContext } from 'src/app/modules/front-desk/check-in-arrivals/components/rooming-list-dialog/rooming-list-dialog.component';
+import { InHouseGuestsService } from 'src/app/modules/front-desk/in-house-guests/services/in-house-guests.service';
+import { InHouseGuest } from 'src/app/modules/front-desk/in-house-guests/models/in-house-guest.model';
 import {
   ApiResponse,
   ReservaTagAsignado,
@@ -82,6 +84,7 @@ type ActiveTab      = 'stay' | 'account' | 'operations' | 'timeline';
 type AccountFilter  = 'all' | 'lodging' | 'extras';
 type OperationKind  = 'workflow' | 'financial' | 'document' | 'critical';
 type ChargeBucket   = 'lodging' | 'extras';
+type RoomChangeMode = 'change' | 'upgrade';
 type DocumentFormat = 'pdf' | 'print';
 type StayActionId   =
   | 'change-room'
@@ -89,7 +92,6 @@ type StayActionId   =
   | 'guest-portal'
   | 'register-prepayment'
   | 'new-charge'
-  | 'transfer-charges'
   | 'print-statement'
   | 'invoice-room'
   | 'check-out';
@@ -340,7 +342,8 @@ const emptyRoomStay: RoomStay = {
   templateUrl: './room-stay-management.component.html',
   styleUrls: [
     './room-stay-management.component.scss',
-    './room-stay-management-invoice.component.scss'
+    './room-stay-management-invoice.component.scss',
+    './room-stay-management-modals.scss'
   ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -350,6 +353,7 @@ export class RoomStayManagementComponent implements OnInit {
   private readonly authService                    = inject(AuthService);
   private readonly operationalDateService         = inject(OperationalDateService);
   private readonly roomStayManagementService      = inject(RoomStayManagementService);
+  private readonly inHouseGuestsService           = inject(InHouseGuestsService);
   private readonly documentoDetalleService         = inject(DocumentoDetalleService);
   private readonly roomChargePdfService           = inject(RoomChargePdfService);
   private readonly roomChargePosPrintService      = inject(RoomChargePosPrintService);
@@ -372,6 +376,7 @@ export class RoomStayManagementComponent implements OnInit {
   private invoiceActivityRequestId                = 0;
   private assignedTagsRequestId                   = 0;
   private accountStatementRequestId               = 0;
+  private availableRoomsRequestId                 = 0;
   private assignedTagsReservationCode             = '';
 
   private readonly invoiceConsumerFinal: InvoiceClient = {
@@ -406,6 +411,8 @@ export class RoomStayManagementComponent implements OnInit {
   readonly reservationTagsSaveError              = signal('');
   readonly removingReservationTagIds             = signal<ReadonlySet<number>>(new Set<number>());
   readonly availableRoomOptions                  = signal<RoomOption[]>([]);
+  readonly roomChangeMode                        = signal<RoomChangeMode>('change');
+  readonly availableRoomSearch                  = signal('');
   readonly isAvailableRoomsLoading               = signal(false);
   readonly availableRoomsLoaded                  = signal(false);
   readonly isRoomChangeSubmitting                = signal(false);
@@ -416,12 +423,28 @@ export class RoomStayManagementComponent implements OnInit {
   readonly accountStatement                     = signal<RoomStatementData | null>(null);
   readonly isAccountStatementLoading            = signal(false);
   readonly accountStatementError                = signal('');
+  readonly isChargeTransferModalOpen             = signal(false);
+  readonly isChargeTransferRoomsLoading          = signal(false);
+  readonly isChargeTransferSubmitting            = signal(false);
+  readonly chargeTransferRooms                   = signal<InHouseGuest[]>([]);
+  readonly chargeTransferSearch                  = signal('');
+  readonly selectedTransferCharge                = signal<RoomStatementCharge | null>(null);
+  readonly selectedTransferRoom                  = signal('');
+  readonly chargeTransferError                   = signal('');
+  readonly filteredChargeTransferRooms           = computed(() => {
+    const query = this.chargeTransferSearch().trim().toLocaleLowerCase();
+    const rooms = this.chargeTransferRooms();
+    if (!query) return rooms;
+    return rooms.filter((room) => [room.numHabita, room.codReserva, room.nomAgencia, room.paxIn]
+      .some((value) => this.cleanText(value).toLocaleLowerCase().includes(query)));
+  });
   readonly accountFilter                        = signal<AccountFilter>('all');
   readonly expandedAccountCharges               = signal<ReadonlySet<string>>(new Set<string>());
   readonly isRoomChargeCatalogLoading            = signal(false);
   readonly isRoomChargeItemsLoading              = signal(false);
   readonly isRoomChargeSubmitting                = signal(false);
   readonly roomChargeDocumentJobs                = signal<Record<string, 'pdf' | 'pos'>>({});
+  readonly masterFolioTransferJobs               = signal<ReadonlySet<string>>(new Set<string>());
   readonly isChargeDetailOpen                    = signal(false);
   readonly isChargeDetailLoading                 = signal(false);
   readonly chargeDetailErrorMessage              = signal('');
@@ -499,6 +522,12 @@ export class RoomStayManagementComponent implements OnInit {
   readonly roomOptions                      = computed(() =>
     this.availableRoomsLoaded() || this.isAvailableRoomsLoading() ? this.availableRoomOptions() : this.buildRoomOptions(this.room().roomNumber)
   );
+  readonly filteredRoomOptions              = computed(() => {
+    const query = this.availableRoomSearch().trim().toLocaleLowerCase();
+    const options = this.roomOptions();
+    if (!query) return options;
+    return options.filter((option) => `${option.number} ${option.type}`.toLocaleLowerCase().includes(query));
+  });
   readonly activeActionKind                 = computed(() => this.activeAction()?.kind ?? 'workflow');
   readonly invoicePaymentMethods            = signal<InvoicePaymentMethod[]>([]);
   readonly invoiceCurrencyOptions           = computed(() =>
@@ -608,14 +637,6 @@ export class RoomStayManagementComponent implements OnInit {
           confirmText     : 'Agregar cargo',
           tone            : 'danger'
         },
-        {
-          id              : 'transfer-charges',
-          label           : 'Transferir Cargos',
-          icon            : 'compare_arrows',
-          kind            : 'financial',
-          description     : 'Mueve un monto a otro folio para representar una transferencia operativa.',
-          confirmText     : 'Transferir cargos'
-        }
       ]
     },
     {
@@ -1030,6 +1051,133 @@ export class RoomStayManagementComponent implements OnInit {
     return this.expandedAccountCharges().has(`${charge.type}|${charge.number}`);
   }
 
+  openChargeTransfer(charge: RoomStatementCharge): void {
+    this.selectedTransferCharge.set(charge);
+    this.selectedTransferRoom.set('');
+    this.chargeTransferSearch.set('');
+    this.chargeTransferError.set('');
+    this.isChargeTransferModalOpen.set(true);
+    this.isChargeTransferRoomsLoading.set(true);
+    const date = this.todayDisplayDate();
+    if (!date) {
+      this.chargeTransferError.set('No se pudo obtener la fecha operativa para consultar las habitaciones ocupadas.');
+      this.isChargeTransferRoomsLoading.set(false);
+      return;
+    }
+
+    this.inHouseGuestsService.getInHouseGuests(date, date, this.getOperador()).pipe(
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.isChargeTransferRoomsLoading.set(false))
+    ).subscribe({
+      next: (response) => {
+        const currentRoom = this.cleanText(this.room().roomNumber);
+        const uniqueRooms = new Map<string, InHouseGuest>();
+        for (const guest of response.pax ?? []) {
+          const roomNumber = this.cleanText(guest.numHabita);
+          const reservation = this.cleanText(guest.codReserva);
+          if (!roomNumber || !reservation || (roomNumber === currentRoom && reservation === this.cleanText(this.room().reservationNumber))) continue;
+          uniqueRooms.set(`${reservation}|${roomNumber}`, guest);
+        }
+        this.chargeTransferRooms.set([...uniqueRooms.values()].sort((a, b) => a.numHabita.localeCompare(b.numHabita, undefined, { numeric: true })));
+        if (!uniqueRooms.size) this.chargeTransferError.set('No hay otras habitaciones ocupadas disponibles para recibir el cargo.');
+      },
+      error: (error) => {
+        console.error('No se pudieron consultar las habitaciones ocupadas.', error);
+        this.chargeTransferError.set('No se pudieron cargar las habitaciones ocupadas. Intente nuevamente.');
+      }
+    });
+  }
+
+  closeChargeTransfer(): void {
+    if (this.isChargeTransferSubmitting()) return;
+    this.isChargeTransferModalOpen.set(false);
+    this.selectedTransferCharge.set(null);
+  }
+
+  selectChargeTransferRoom(room: InHouseGuest): void {
+    this.selectedTransferRoom.set(`${room.codReserva}|${room.numHabita}`);
+    this.chargeTransferError.set('');
+  }
+
+  async confirmChargeTransfer(): Promise<void> {
+    const charge = this.selectedTransferCharge();
+    const target = this.chargeTransferRooms().find((room) => `${room.codReserva}|${room.numHabita}` === this.selectedTransferRoom());
+    if (!charge || !target || this.isChargeTransferSubmitting()) return;
+
+    this.isChargeTransferSubmitting.set(true);
+    this.chargeTransferError.set('');
+    try {
+      const response = await firstValueFrom(this.roomStayManagementService.transferRoomCharge({
+        tipCrgHab: this.cleanText(charge.type),
+        numCrgHab: this.cleanText(charge.number),
+        nuevoCodRsv: this.cleanText(target.codReserva),
+        nuevoNumHab: this.cleanText(target.numHabita)
+      }));
+      if (this.isFailedApiResponse(response)) {
+        throw new Error(this.normalizeApiMessage(response.message) || 'El sistema rechazó el traslado del cargo.');
+      }
+      this.toastService.success('El cargo se trasladó correctamente.', 3500, 'Cuenta');
+      this.isChargeTransferModalOpen.set(false);
+      this.selectedTransferCharge.set(null);
+      await this.loadAccountStatement(true);
+    } catch (error) {
+      console.error('No se pudo trasladar el cargo.', error);
+      this.chargeTransferError.set(this.getApiErrorMessage(error, 'No se pudo trasladar el cargo. Intente nuevamente.'));
+    } finally {
+      this.isChargeTransferSubmitting.set(false);
+    }
+  }
+
+  private getApiErrorMessage(error: unknown, fallback: string): string {
+    if (typeof error === 'string') {
+      return this.extractApiMessage(error) || fallback;
+    }
+
+    if (error instanceof Error && error.message) {
+      return this.extractApiMessage(error.message) || fallback;
+    }
+
+    if (typeof error === 'object' && error !== null) {
+      const payload = error as { error?: unknown; message?: unknown; mensaje?: unknown; respuesta?: unknown };
+      const message = this.extractApiMessage(payload.error) ||
+        this.extractApiMessage(payload.message) ||
+        this.extractApiMessage(payload.mensaje) ||
+        this.extractApiMessage(payload.respuesta);
+      if (message) return message;
+    }
+
+    return fallback;
+  }
+
+  private extractApiMessage(value: unknown): string {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (!trimmed) return '';
+      if (trimmed.startsWith('{') || trimmed.startsWith('"{')) {
+        try {
+          return this.extractApiMessage(JSON.parse(trimmed) as unknown);
+        } catch {
+          // The body may be plain text that happens to begin with a brace.
+        }
+      }
+      return this.normalizeApiMessage(trimmed);
+    }
+
+    if (typeof value === 'object' && value !== null) {
+      const body = value as { message?: unknown; mensaje?: unknown; respuesta?: unknown; error?: unknown };
+      return this.extractApiMessage(body.message) ||
+        this.extractApiMessage(body.mensaje) ||
+        this.extractApiMessage(body.respuesta) ||
+        this.extractApiMessage(body.error);
+    }
+
+    return '';
+  }
+
+  private normalizeApiMessage(message: string | undefined): string {
+    return (message ?? '').trim().replace(/^(?:ERROR\s*\|\s*)+/i, '').trim();
+  }
+
   openAccountChargeDetail(charge: RoomStatementCharge): void {
     const sourceCharges = charge.bucket === 'lodging' ? this.room().lodgingCharges : this.room().extraCharges;
     const source = sourceCharges.find((item) => this.cleanText(item.numCrgHab || item.reference) === charge.number);
@@ -1295,15 +1443,6 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   openActionModal(action: StayOperation): void {
-    if (action.id === 'transfer-charges') {
-      this.toastService.info(
-        'La transferencia de cargos no está disponible hasta contar con el proceso correspondiente en el backend.',
-        4500,
-        'Transferencia de cargos'
-      );
-      return;
-    }
-
     if (action.id === 'change-departure' && !this.todayDisplayDate() && !this.operationalDateService.loading()) {
       this.loadOperationalDate();
     }
@@ -1317,6 +1456,8 @@ export class RoomStayManagementComponent implements OnInit {
     }
 
     if (action.id !== 'change-room') {
+      this.availableRoomsRequestId += 1;
+      this.isAvailableRoomsLoading.set(false);
       this.availableRoomsLoaded.set(false);
       this.availableRoomOptions.set([]);
     }
@@ -1324,7 +1465,9 @@ export class RoomStayManagementComponent implements OnInit {
     this.actionDraft.set(this.buildActionDraft(action.id));
 
     if (action.id === 'change-room') {
-      this.loadAvailableRoomsForChange();
+      this.roomChangeMode.set('change');
+      this.availableRoomSearch.set('');
+      this.loadAvailableRoomsForChange('change');
     }
 
     if (action.id === 'invoice-room') {
@@ -1340,6 +1483,10 @@ export class RoomStayManagementComponent implements OnInit {
   }
 
   closeActionModal(): void {
+    if (this.isActionSelected('change-room')) {
+      this.availableRoomsRequestId += 1;
+      this.isAvailableRoomsLoading.set(false);
+    }
     this.invoiceValidationMessage.set('');
     this.roomChargeValidationMessage.set('');
     this.activeAction.set(null);
@@ -1358,6 +1505,14 @@ export class RoomStayManagementComponent implements OnInit {
     });
   }
 
+  setRoomChangeMode(mode: RoomChangeMode): void {
+    if (this.roomChangeMode() === mode) return;
+    this.roomChangeMode.set(mode);
+    this.availableRoomSearch.set('');
+    this.updateActionDraft({ targetRoom: '', targetRoomType: '' });
+    this.loadAvailableRoomsForChange(mode);
+  }
+
   canExecuteActiveAction(): boolean {
     const actionId = this.activeAction()?.id;
 
@@ -1370,7 +1525,8 @@ export class RoomStayManagementComponent implements OnInit {
         this.availableRoomsLoaded() &&
         !this.isAvailableRoomsLoading() &&
         !this.isRoomChangeSubmitting() &&
-        this.roomOptions().length > 0
+        this.roomOptions().length > 0 &&
+        Boolean(this.actionDraft().targetRoom)
       );
     }
 
@@ -1439,13 +1595,6 @@ export class RoomStayManagementComponent implements OnInit {
       case 'new-charge':
         shouldClose = false;
         void this.submitRoomCharge();
-        break;
-      case 'transfer-charges':
-        this.toastService.info(
-          'La transferencia de cargos permanece deshabilitada hasta contar con soporte en el backend.',
-          4000,
-          'Transferencia de cargos'
-        );
         break;
       case 'print-statement':
         shouldClose = false;
@@ -1789,6 +1938,58 @@ export class RoomStayManagementComponent implements OnInit {
     return job ? activeJob === job : Boolean(activeJob);
   }
 
+  isMasterFolioTransferBusy(charge: Charge): boolean {
+    return this.masterFolioTransferJobs().has(this.roomChargeDocumentKey(charge));
+  }
+
+  async transferExtraChargeToMasterFolio(charge: Charge): Promise<void> {
+    const key = this.roomChargeDocumentKey(charge);
+    if (this.isMasterFolioTransferBusy(charge)) return;
+
+    const payload = {
+      tipCrgHab: this.cleanText(charge.tipCrgHab),
+      numCrgHab: this.cleanText(charge.numCrgHab || charge.reference),
+      codRsv: this.cleanText(charge.codRsv || this.room().reservationNumber),
+      nuevoFolio: this.cleanText(this.room().masterFolio)
+    };
+    if (!payload.tipCrgHab || !payload.numCrgHab || !payload.codRsv || !payload.nuevoFolio) {
+      this.toastService.warning('No se pudo identificar el cargo, la reserva o el Folio Master para realizar el traslado.', 5000, 'Cargos');
+      return;
+    }
+
+    const confirmation = await Swal.fire({
+      title: 'Trasladar al Folio Master',
+      text: `El cargo ${payload.numCrgHab} se trasladará al Folio Master ${payload.nuevoFolio}.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Trasladar cargo',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true,
+      customClass: { container: 'next-confirm-container' }
+    });
+    if (!confirmation.isConfirmed) return;
+
+    this.masterFolioTransferJobs.update((jobs) => new Set([...jobs, key]));
+    try {
+      const response = await firstValueFrom(this.roomStayManagementService.transferRoomChargeToMasterFolio(payload));
+      if (this.isFailedApiResponse(response)) {
+        this.toastService.warning(this.getApiErrorMessage(response, 'No se pudo trasladar el cargo al Folio Master.'), 5000, 'Cargos');
+        return;
+      }
+      this.toastService.success('El cargo se trasladó al Folio Master correctamente.', 4000, 'Cargos');
+      this.loadRoomStay();
+    } catch (error) {
+      console.error('No se pudo trasladar el cargo al Folio Master.', error);
+      this.toastService.warning(this.getApiErrorMessage(error, 'No se pudo trasladar el cargo al Folio Master. Intente nuevamente.'), 5000, 'Cargos');
+    } finally {
+      this.masterFolioTransferJobs.update((jobs) => {
+        const next = new Set(jobs);
+        next.delete(key);
+        return next;
+      });
+    }
+  }
+
   closeChargeDetailModal(): void {
     this.isChargeDetailOpen.set(false);
     this.isChargeDetailLoading.set(false);
@@ -2117,7 +2318,7 @@ export class RoomStayManagementComponent implements OnInit {
       .subscribe({
         next: (response) => {
           if (this.isFailedApiResponse(response)) {
-            this.toastService.warning(response.message || 'No se pudo anular el cargo.', 4000, 'Cargos');
+            this.toastService.warning(this.getApiErrorMessage(response, 'No se pudo anular el cargo.'), 5000, 'Cargos');
             return;
           }
 
@@ -2125,7 +2326,7 @@ export class RoomStayManagementComponent implements OnInit {
         },
         error: (error) => {
           console.error('No se pudo anular el cargo de habitacion.', error);
-          this.toastService.warning('No se pudo anular el cargo de habitacion.', 4000, 'Cargos');
+          this.toastService.warning(this.getApiErrorMessage(error, 'No se pudo anular el cargo. Intente nuevamente.'), 5000, 'Cargos');
         }
       });
   }
@@ -2916,11 +3117,13 @@ export class RoomStayManagementComponent implements OnInit {
     this.toastService.success('Cargo de habitacion registrado correctamente.', 4000, 'Cargo habitacion');
   }
 
-  private loadAvailableRoomsForChange(): void {
+  private loadAvailableRoomsForChange(mode: RoomChangeMode = this.roomChangeMode()): void {
     const room = this.room();
-    const category = this.cleanText(room.roomCategory);
+    const category = mode === 'upgrade' ? '' : this.cleanText(room.roomCategory);
+    const requestId = ++this.availableRoomsRequestId;
 
-    if (!room.checkIn || !room.checkOut || !category) {
+    if (!room.checkIn || !room.checkOut || (mode === 'change' && !category)) {
+      this.isAvailableRoomsLoading.set(false);
       this.availableRoomsLoaded.set(true);
       this.availableRoomOptions.set([]);
       this.toastService.warning('No hay datos suficientes para consultar disponibilidad.', 3500, 'Habitaciones');
@@ -2939,13 +3142,17 @@ export class RoomStayManagementComponent implements OnInit {
           this.toastService.warning('No se pudo cargar habitaciones disponibles.', 3500, 'Habitaciones');
           return of([] as RoomAvailabilityApiRoom[]);
         }),
-        finalize(() => this.isAvailableRoomsLoading.set(false)),
+        finalize(() => {
+          if (requestId === this.availableRoomsRequestId) this.isAvailableRoomsLoading.set(false);
+        }),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((availableRooms) => {
+        if (requestId !== this.availableRoomsRequestId) return;
         const options = availableRooms
           .filter((item) => Number(item.cantidadDisponible ?? 0) > 0)
-          .map((item) => this.mapAvailableRoomOption(item));
+          .map((item) => this.mapAvailableRoomOption(item))
+          .filter((item) => item.number !== this.cleanText(room.roomNumber));
 
         this.availableRoomOptions.set(options);
         this.availableRoomsLoaded.set(true);
@@ -2957,7 +3164,13 @@ export class RoomStayManagementComponent implements OnInit {
             targetRoomType: firstOption.type
           });
         } else {
-          this.toastService.info('No hay habitaciones disponibles para la categoria y fechas seleccionadas.', 3500, 'Habitaciones');
+          this.toastService.info(
+            mode === 'upgrade'
+              ? 'No hay habitaciones disponibles para realizar un upgrade en estas fechas.'
+              : 'No hay habitaciones disponibles para la categoria y fechas seleccionadas.',
+            3500,
+            'Habitaciones'
+          );
         }
       });
   }
@@ -3929,19 +4142,20 @@ export class RoomStayManagementComponent implements OnInit {
 
   private applyRoomChange(): void {
     const draft = this.actionDraft();
+    const isUpgrade = this.roomChangeMode() === 'upgrade';
 
     this.room.update((currentRoom) => ({
       ...currentRoom,
       roomNumber: draft.targetRoom,
       roomType: draft.targetRoomType,
       observations: [
-        `Cambio de habitacion preparado hacia ${draft.targetRoom} (${draft.targetRoomType}).`,
+        `${isUpgrade ? 'Upgrade' : 'Cambio de habitacion'} preparado hacia ${draft.targetRoom} (${draft.targetRoomType}).`,
         ...currentRoom.observations
       ]
     }));
 
-    this.addTimelineEntry('Cambio de habitacion', `Se preparo el traslado a la habitacion ${draft.targetRoom}.`);
-    this.toastService.success(`Cambio de habitacion preparado para ${draft.targetRoom}.`, 4000, 'Estancia');
+    this.addTimelineEntry(isUpgrade ? 'Upgrade de habitación' : 'Cambio de habitacion', `Se preparo el traslado a la habitacion ${draft.targetRoom}.`);
+    this.toastService.success(`${isUpgrade ? 'Upgrade' : 'Cambio de habitación'} preparado para ${draft.targetRoom}.`, 4000, 'Estancia');
   }
 
   private async confirmRoomChange(): Promise<void> {
@@ -3960,8 +4174,10 @@ export class RoomStayManagementComponent implements OnInit {
     this.isRoomChangeSubmitting.set(true);
 
     const confirmation = await Swal.fire({
-      title: 'Confirmar cambio de habitacion',
-      text: `Se cambiara la reserva ${payload.codReserva} de la habitacion ${payload.oldHab} a la ${payload.newHab}.`,
+      title: this.roomChangeMode() === 'upgrade' ? 'Confirmar upgrade' : 'Confirmar cambio de habitación',
+      text: this.roomChangeMode() === 'upgrade'
+        ? `La reserva ${payload.codReserva} pasará de la habitación ${payload.oldHab} a la ${payload.newHab} (${this.actionDraft().targetRoomType}).`
+        : `Se cambiará la reserva ${payload.codReserva} de la habitación ${payload.oldHab} a la ${payload.newHab}.`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Si, cambiar',
@@ -3983,7 +4199,7 @@ export class RoomStayManagementComponent implements OnInit {
       .subscribe({
         next: (response) => {
           if (this.isFailedApiResponse(response)) {
-            this.toastService.warning(response.message || 'No se pudo preparar el cambio de habitacion.', 4000, 'Habitaciones');
+            this.toastService.warning(this.getApiErrorMessage(response, 'No se pudo preparar el cambio de habitación.'), 5000, 'Habitaciones');
             return;
           }
 
@@ -3994,7 +4210,7 @@ export class RoomStayManagementComponent implements OnInit {
         },
         error: (error) => {
           console.error('No se pudo preparar el cambio de habitacion.', error);
-          this.toastService.warning('No se pudo preparar el cambio de habitacion.', 4000, 'Habitaciones');
+          this.toastService.warning(this.getApiErrorMessage(error, 'No se pudo preparar el cambio de habitación. Intente nuevamente.'), 5000, 'Habitaciones');
         }
       });
   }
@@ -4710,7 +4926,6 @@ export class RoomStayManagementComponent implements OnInit {
     return (
       actionId === 'change-departure' ||
       actionId === 'new-charge' ||
-      actionId === 'transfer-charges' ||
       actionId === 'print-statement' ||
       actionId === 'invoice-room' ||
       actionId === 'check-out'

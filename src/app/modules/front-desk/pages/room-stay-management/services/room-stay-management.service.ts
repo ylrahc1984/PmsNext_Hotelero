@@ -115,6 +115,20 @@ export interface RoomChangePayload {
   operador      : string;
 }
 
+export interface RoomChargeTransferPayload {
+  tipCrgHab: string;
+  numCrgHab: string;
+  nuevoCodRsv: string;
+  nuevoNumHab: string;
+}
+
+export interface RoomChargeMasterFolioTransferPayload {
+  tipCrgHab: string;
+  numCrgHab: string;
+  codRsv: string;
+  nuevoFolio: string;
+}
+
 export interface DepartureDateChangePayload {
   codReserva      : string;
   habitacion      : string;
@@ -403,6 +417,8 @@ export class RoomStayManagementService {
   private readonly roomingListUpdateUrl            = `${this.baseApiUrl}/rooming-list/con-actualizacion`;
   private readonly pointOfSaleDetailUrl            = `${this.baseApiUrl}/puntoventa/detalleprincipal`;
   private readonly priceListDetailUrl              = `${this.baseApiUrl}/detalle-lista-precio`;
+  private readonly roomChargeTransferUrl            = `${this.baseApiUrl}/cargo-habitacion/trasladar-habitacion`;
+  private readonly roomChargeMasterFolioTransferUrl  = `${this.baseApiUrl}/cargo-habitacion/trasladar-folio`;
 
   getRoomStay(roomNumber: string, codReserva?: string): Observable<RoomStayApiData | null> {
     return this.http
@@ -430,6 +446,14 @@ export class RoomStayManagementService {
 
   changeRoom(payload: RoomChangePayload): Observable<unknown> {
     return this.http.put<unknown>(this.roomChangeUrl, payload);
+  }
+
+  transferRoomCharge(payload: RoomChargeTransferPayload): Observable<unknown> {
+    return this.http.put<unknown>(this.roomChargeTransferUrl, payload);
+  }
+
+  transferRoomChargeToMasterFolio(payload: RoomChargeMasterFolioTransferPayload): Observable<unknown> {
+    return this.http.put<unknown>(this.roomChargeMasterFolioTransferUrl, payload);
   }
 
   changeDepartureDate(payload: DepartureDateChangePayload): Observable<unknown> {
