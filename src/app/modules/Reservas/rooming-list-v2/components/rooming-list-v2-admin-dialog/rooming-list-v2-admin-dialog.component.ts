@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, EventEmitter, Input, OnInit, Output, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, EventEmitter, Input, OnInit, Output, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { catchError, firstValueFrom, map, of, Subject, switchMap, timeout } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -40,6 +40,7 @@ export interface RoomingListGuestPreview {
 })
 export class RoomingListV2AdminDialogComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly roomingListService = inject(RoomingListV2Service);
   private readonly catalogService = inject(WalkInService);
   private readonly toast = inject(ToastService);
@@ -351,6 +352,7 @@ export class RoomingListV2AdminDialogComponent implements OnInit {
       this.catalogError = this.errorText(error, 'No se pudieron cargar los catálogos requeridos.');
     } finally {
       this.catalogsLoading = false;
+      this.cdr.markForCheck();
     }
   }
 
@@ -371,15 +373,19 @@ export class RoomingListV2AdminDialogComponent implements OnInit {
       if (error) {
         this.guests = [];
         this.errorMessage = this.errorText(error, 'No se pudo consultar el Rooming List de esta estancia.');
+        this.cdr.markForCheck();
         return;
       }
-      if (!response?.success || !Array.isArray(response.data)) {
+      const guests = this.normalizeGuests(response?.data);
+      if (!response?.success || !guests) {
         this.guests = [];
         this.errorMessage = response?.message || 'La respuesta de Rooming List no tiene el formato esperado.';
+        this.cdr.markForCheck();
         return;
       }
       this.errorMessage = '';
-      this.guests = response.data;
+      this.guests = guests;
+      this.cdr.markForCheck();
     });
   }
 
@@ -495,6 +501,18 @@ export class RoomingListV2AdminDialogComponent implements OnInit {
     return { ...context, numHabita: context.numHabita ?? '' };
   }
 
+  private normalizeGuests(value: unknown): RoomingListV2Huesped[] | null {
+    if (Array.isArray(value)) return value as RoomingListV2Huesped[];
+    if (!value || typeof value !== 'object') return null;
+
+    const payload = value as { huespedes?: unknown; datos?: unknown } & Record<string, unknown>;
+    if (Array.isArray(payload.huespedes)) return payload.huespedes as RoomingListV2Huesped[];
+    if (Array.isArray(payload.datos)) return payload.datos as RoomingListV2Huesped[];
+
+    const indexedKeys = Object.keys(payload).filter((key) => /^\d+$/.test(key)).sort((left, right) => Number(left) - Number(right));
+    return indexedKeys.length ? indexedKeys.map((key) => payload[key] as RoomingListV2Huesped) : null;
+  }
+
   private normalizeRoomNumber(value: string | number | null | undefined): string {
     const normalized = String(value ?? '').trim().toUpperCase();
     const numeric = Number(normalized);
@@ -542,20 +560,25 @@ export class RoomingListV2AdminDialogComponent implements OnInit {
     try {
       const response = await firstValueFrom(this.roomingListService.consultar(stay.codReserva, stay.idDesglose).pipe(timeout({ first: 20000 })));
       if (version !== this.stayRequestVersion || !this.isSameStay(stay, this.selectedStay())) return false;
-      if (!response?.success || !Array.isArray(response.data)) {
+      const guests = this.normalizeGuests(response?.data);
+      if (!response?.success || !guests) {
         this.guests = [];
         this.errorMessage = response?.message || 'La respuesta de Rooming List no tiene el formato esperado.';
+        this.cdr.markForCheck();
         return false;
       }
-      this.guests = response.data;
+      this.guests = guests;
+      this.cdr.markForCheck();
       return true;
     } catch (error) {
       if (version !== this.stayRequestVersion || !this.isSameStay(stay, this.selectedStay())) return false;
       this.guests = [];
       this.errorMessage = this.errorText(error, 'No se pudo consultar el Rooming List de esta estancia.');
+      this.cdr.markForCheck();
       return false;
     } finally {
       this.loading = false;
+      this.cdr.markForCheck();
     }
   }
 

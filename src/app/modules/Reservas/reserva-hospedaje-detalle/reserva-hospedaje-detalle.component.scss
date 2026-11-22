@@ -24,6 +24,9 @@ h1 { display: flex; align-items: center; flex-wrap: wrap; gap: .55rem; margin: .
 .detail-action:hover:not(:disabled), .small-action:hover { border-color: #9db4d2; background: #f8fbff; }
 .detail-action:disabled { opacity: .55; }
 .detail-action--primary, .small-action--primary { border-color: var(--rd-primary); color: #fff; background: var(--rd-primary); }
+.small-action--danger { border-color: #efc4c4; color: #a52b35; background: #fff8f8; }
+.small-action--danger:hover:not(:disabled) { border-color: #d78b91; color: #8f1f29; background: #fff0f0; }
+.small-action--icon { min-height: 30px; padding: 0 .55rem; font-size: .68rem; white-space: nowrap; }
 .detail-action--icon { color: #536b84; background: #f8fafc; }
 .detail-action--icon i { color: #456887; }
 .state-message { display: flex; align-items: center; gap: .7rem; margin: 0 0 .8rem; padding: .85rem 1rem; border: 1px solid var(--rd-border); border-radius: 11px; background: #fff; font-size: .82rem; }
@@ -160,32 +163,6 @@ h1 { display: flex; align-items: center; flex-wrap: wrap; gap: .55rem; margin: .
 
 .observation-text { max-height: 12rem; overflow: auto; margin: 0 .9rem .85rem; padding: .7rem; border: 1px solid #e4eaf2; border-radius: 8px; color: var(--rd-ink); background: #f8fafc; font-size: .72rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 
-/* Compact, page-scoped presentation overrides; GuestPortalAdminCard behavior stays in its shared component. */
-.guest-portal-compact ::ng-deep .guest-portal-card { display: flex; flex-wrap: wrap; gap: .45rem; padding: .8rem; border-radius: 11px; box-shadow: 0 5px 17px rgba(23, 50, 77, .055); }
-.guest-portal-compact ::ng-deep .guest-portal-card .section-header { flex: 1 0 100%; align-items: center; margin: 0; }
-.guest-portal-compact ::ng-deep .guest-portal-card .section-header h3 { font-size: .88rem; }
-.guest-portal-compact ::ng-deep .guest-portal-card .section-header div > span { padding-top: .1rem; font-size: .68rem; }
-.guest-portal-compact ::ng-deep .guest-portal-card .portal-badge { padding: .2rem .55rem; font-size: .68rem; }
-.guest-portal-compact ::ng-deep .guest-portal-card .portal-grid { order: 2; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .35rem .6rem; width: 100%; padding: .15rem 0 .35rem; }
-.guest-portal-compact ::ng-deep .guest-portal-card .portal-grid > div { gap: .08rem; min-width: 0; padding: .35rem .45rem; border-radius: 7px; background: #f7f9fc; }
-.guest-portal-compact ::ng-deep .guest-portal-card .portal-grid span { font-size: .64rem; }
-.guest-portal-compact ::ng-deep .guest-portal-card .portal-grid strong { font-size: .76rem; overflow-wrap: anywhere; }
-.guest-portal-compact ::ng-deep .guest-portal-card .regenerate-action { order: 3; flex: 1 1 auto; width: auto; gap: .35rem; padding: 0; }
-.guest-portal-compact ::ng-deep .guest-portal-card .cancel-action { order: 4; display: flex; align-items: center; padding: 0; }
-.guest-portal-compact ::ng-deep .guest-portal-card .enable-button,
-.guest-portal-compact ::ng-deep .guest-portal-card .cancel-button { min-height: 34px; padding: .4rem .6rem; font-size: .7rem; }
-.guest-portal-compact ::ng-deep .guest-portal-card .access-url { order: 5; width: 100%; gap: .35rem; margin: 0; padding: .55rem; font-size: .68rem; }
-.guest-portal-compact ::ng-deep .guest-portal-card .stay-list { order: 6; width: 100%; padding-top: .55rem; }
-.guest-portal-compact ::ng-deep .guest-portal-card .stay-list h4 { margin-bottom: .35rem; font-size: .78rem; }
-.guest-portal-compact ::ng-deep .guest-portal-card .stay-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: .3rem; padding: .45rem 0; }
-.guest-portal-compact ::ng-deep .guest-portal-card .stay-main { flex-direction: row; align-items: center; justify-content: space-between; gap: .4rem; }
-.guest-portal-compact ::ng-deep .guest-portal-card .stay-main strong { font-size: .74rem; }
-.guest-portal-compact ::ng-deep .guest-portal-card .stay-status { padding: .16rem .45rem; font-size: .64rem; }
-.guest-portal-compact ::ng-deep .guest-portal-card .stay-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .15rem .5rem; padding-top: .1rem; font-size: .66rem; }
-.guest-portal-compact ::ng-deep .guest-portal-card .empty-stays { width: 100%; padding-top: .25rem; font-size: .7rem; }
-.guest-portal-compact ::ng-deep .guest-portal-card .portal-disabled { order: 2; width: 100%; padding-top: .15rem; }
-.guest-portal-compact ::ng-deep .guest-portal-card .portal-feedback,
-.guest-portal-compact ::ng-deep .guest-portal-card .portal-error { order: 2; width: 100%; padding: .45rem 0; font-size: .7rem; }
 .reservation-log-backdrop { position: fixed; z-index: 1400; inset: 0; background: rgba(15, 28, 44, .48); backdrop-filter: blur(2px); }
 .reservation-log-modal { position: fixed; z-index: 1401; top: 50%; left: 50%; display: grid; grid-template-rows: auto minmax(0, 1fr); width: min(680px, calc(100vw - 2rem)); max-height: min(780px, calc(100vh - 2rem)); overflow: hidden; transform: translate(-50%, -50%); border: 1px solid #dbe4ef; border-radius: 16px; color: var(--rd-ink); background: #fff; box-shadow: 0 24px 70px rgba(15, 35, 60, .28); }
 .reservation-log-modal__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.1rem 1.25rem; border-bottom: 1px solid #e8eef5; background: linear-gradient(135deg, #f8fbff, #fff); }
@@ -206,11 +183,6 @@ h1 { display: flex; align-items: center; flex-wrap: wrap; gap: .55rem; margin: .
 .reservation-log-item__meta span { font-weight: 750; }
 .reservation-log-item h3 { margin: .35rem 0 0; color: #17324d; font-size: .84rem; font-weight: 800; }
 .reservation-log-item p { margin: .25rem 0 0; color: #53677e; font-size: .76rem; white-space: pre-wrap; }
-@media (max-width: 420px) {
-  .guest-portal-compact ::ng-deep .guest-portal-card .portal-grid,
-  .guest-portal-compact ::ng-deep .guest-portal-card .stay-meta { grid-template-columns: 1fr; }
-  .guest-portal-compact ::ng-deep .guest-portal-card .stay-main { align-items: flex-start; flex-direction: column; }
-}
 @media (max-width: 600px) {
   .reservation-log-modal { width: calc(100vw - 1rem); max-height: calc(100vh - 1rem); border-radius: 12px; }
   .reservation-log-modal__header, .reservation-log-modal__body { padding: .85rem; }

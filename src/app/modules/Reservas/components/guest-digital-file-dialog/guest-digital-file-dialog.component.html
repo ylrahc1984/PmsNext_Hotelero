@@ -1,0 +1,63 @@
+<div class="digital-file-backdrop" (click)="close()" role="presentation"></div>
+<section class="digital-file-modal" role="dialog" aria-modal="true" aria-labelledby="digitalFileTitle">
+  <header class="digital-file-header">
+    <div class="digital-file-icon"><i class="bi bi-folder2-open"></i></div>
+    <div class="digital-file-heading">
+      <span class="digital-file-eyebrow">EXPEDIENTE DIGITAL DEL HUÉSPED</span>
+      <h2 id="digitalFileTitle">Reserva {{ codReserva }} <span *ngIf="numHabita">· Habitación {{ numHabita }}</span></h2>
+      <p>Información y documentos asociados a esta estancia.</p>
+    </div>
+    <button type="button" class="digital-file-close" aria-label="Cerrar expediente" (click)="close()"><i class="bi bi-x-lg"></i></button>
+  </header>
+
+  <div class="digital-file-body">
+    <div *ngIf="loading()" class="digital-file-state"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Cargando expediente digital…</div>
+    <div *ngIf="error()" class="digital-file-error" role="alert"><i class="bi bi-exclamation-circle"></i><span>{{ error() }}</span><button type="button" (click)="close()">Cerrar</button></div>
+
+    <ng-container *ngIf="!loading() && !error()">
+      <section class="digital-file-section">
+        <div class="digital-file-section-heading"><div><h3>Huéspedes y documentos</h3><p>Identificaciones vinculadas al registro de cada huésped.</p></div><span>{{ guests().length }} huésped(es)</span></div>
+        <div *ngIf="!guests().length" class="digital-file-empty">No hay huéspedes registrados en Rooming List para esta estancia.</div>
+        <div class="digital-file-guests" *ngIf="guests().length">
+          <article class="digital-file-guest" *ngFor="let guest of guests()">
+            <div class="guest-avatar"><i class="bi bi-person"></i></div>
+            <div class="guest-info"><strong>{{ guestName(guest) }}</strong><span>{{ guest.tipoDocumento || 'Documento' }} · {{ guest.numeroDocumento || 'Número no disponible' }}</span><small>{{ guest.esResponsable ? 'Responsable de la estancia' : guest.tipoPax === 'CHL' ? 'Niño' : 'Adulto' }}</small></div>
+            <div class="guest-document" *ngIf="guest.identityDocument as document; else noIdentity">
+              <span><i class="bi bi-file-earmark-check"></i>{{ document.nombreArchivo || 'Documento de identidad' }}</span>
+              <small>{{ document.tipoDocumento }} · {{ document.formato }}</small>
+              <button type="button" class="document-view-button" [disabled]="isDocumentBusy(document)" (click)="viewIdentityDocument(document)"><i class="bi bi-eye"></i>{{ isDocumentBusy(document) ? 'Abriendo…' : 'Ver documento' }}</button>
+            </div>
+            <ng-template #noIdentity><div class="guest-no-document"><i class="bi bi-file-earmark-minus"></i><span>Sin documento digital adjunto</span></div></ng-template>
+          </article>
+        </div>
+      </section>
+
+      <section class="digital-file-section">
+        <div class="digital-file-section-heading"><div><h3>Pre Check-in</h3><p>Formularios enviados para este desglose exacto de la reserva.</p></div><span>{{ precheckins().length }} registro(s)</span></div>
+        <div *ngIf="!precheckins().length" class="digital-file-empty">No se encontraron formularios de Pre Check-in asociados a esta estancia.</div>
+        <article class="precheckin-card" *ngFor="let item of precheckins()">
+          <div class="precheckin-card-header"><div><span class="precheckin-status"><i class="bi bi-check-circle-fill"></i>{{ precheckinState(item) }}</span><small *ngIf="item.fechaCompletado">Completado {{ item.fechaCompletado | date:'dd/MM/yyyy HH:mm' }}</small></div>
+            <button type="button" class="digital-file-button" *ngIf="item.tienePdfFirmado" [disabled]="isPdfBusy(item)" (click)="openSignedPdf(item)"><i class="bi bi-file-earmark-pdf"></i>{{ isPdfBusy(item) ? 'Abriendo…' : 'Ver consentimiento firmado' }}</button></div>
+          <dl class="precheckin-data">
+            <div><dt>Huésped firmante</dt><dd>{{ item.nombreFirmante || 'No indicado' }}</dd></div>
+            <div><dt>Fecha de firma</dt><dd>{{ item.fechaFirma ? (item.fechaFirma | date:'dd/MM/yyyy HH:mm') : 'No firmada' }}</dd></div>
+            <div><dt>Términos aceptados</dt><dd>{{ item.aceptaTerminos === null || item.aceptaTerminos === undefined ? 'No disponible' : item.aceptaTerminos ? 'Sí' : 'No' }}</dd></div>
+            <div><dt>Versión de términos</dt><dd>{{ item.versionTerminos || 'No disponible' }}</dd></div>
+            <div><dt>Alergias</dt><dd>{{ item.alergias || 'No indicadas' }}</dd></div>
+            <div><dt>Placa del vehículo</dt><dd>{{ item.placa || 'No indicada' }}</dd></div>
+            <div class="precheckin-observations"><dt>Observaciones</dt><dd>{{ item.observaciones || 'Sin observaciones' }}</dd></div>
+          </dl>
+          <div *ngIf="pdfError()" class="digital-file-inline-error" role="alert">{{ pdfError() }}</div>
+        </article>
+      </section>
+    </ng-container>
+  </div>
+  <footer class="digital-file-footer"><span>Los datos se consultan para la reserva y estancia seleccionadas.</span><button type="button" class="digital-file-button digital-file-button--secondary" (click)="close()">Cerrar</button></footer>
+
+  <div class="pdf-preview-backdrop" *ngIf="pdfUrl()" role="presentation" (click)="closePdf()"></div>
+  <section class="pdf-preview" *ngIf="pdfUrl()" role="dialog" aria-modal="true" aria-label="Consentimiento firmado">
+    <header><strong>{{ pdfTitle() }}</strong><button type="button" class="digital-file-close" aria-label="Cerrar documento" (click)="closePdf()"><i class="bi bi-x-lg"></i></button></header>
+    <img *ngIf="previewMimeType().startsWith('image/')" [src]="pdfUrl()" alt="Documento del expediente digital" />
+    <iframe *ngIf="!previewMimeType().startsWith('image/')" [src]="pdfUrl()" title="Documento del expediente digital"></iframe>
+  </section>
+</section>

@@ -9,12 +9,16 @@ import Swal from 'sweetalert2';
 import { OperationalAction } from 'src/app/core/models/operational-context.model';
 import { OperationalPolicyService } from 'src/app/core/services/operational-policy.service';
 import { ToastService } from 'src/app/core/services/toast.service';
+import { AuthService } from 'src/app/core/services/auth.service';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { normalizePmsDateDDMMYYYY } from 'src/app/core/utils/pms-date.util';
+import { CalendarService } from '../calendar/services/calendar.service';
+import { CalendarRoomAssignmentRequest } from '../calendar/interfaces/calendar.interface';
 import { ReservationTagListComponent } from '../components/reservation-tags/reservation-tag-list.component';
 import { ReservationTagSelectorComponent } from '../components/reservation-tags/reservation-tag-selector.component';
 import { GuestPortalAdminCardComponent } from '../components/guest-portal-admin/guest-portal-admin-card.component';
 import { RoomingListV2AdminDialogComponent } from '../rooming-list-v2/components/rooming-list-v2-admin-dialog/rooming-list-v2-admin-dialog.component';
+import { GuestDigitalFileDialogComponent } from '../components/guest-digital-file-dialog/guest-digital-file-dialog.component';
 import { RoomingListV2DialogContext } from '../rooming-list-v2/models/rooming-list-v2.model';
 import {
   ApiResponse,
@@ -37,7 +41,7 @@ import { ReservaLogService } from './reserva-log.service';
 @Component({
   selector: 'app-reserva-hospedaje-detalle',
   standalone: true,
-  imports: [CommonModule, RouterModule, SharedModule, ReservationTagListComponent, ReservationTagSelectorComponent, GuestPortalAdminCardComponent, RoomingListV2AdminDialogComponent],
+  imports: [CommonModule, RouterModule, SharedModule, ReservationTagListComponent, ReservationTagSelectorComponent, GuestPortalAdminCardComponent, RoomingListV2AdminDialogComponent, GuestDigitalFileDialogComponent],
   templateUrl: './reserva-hospedaje-detalle.component.html',
   styleUrls: ['./reserva-hospedaje-detalle.component.scss']
 })
@@ -49,6 +53,8 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
   private readonly tagsService          = inject(ReservaTagsService);
   private readonly toastService         = inject(ToastService);
   private readonly operationalPolicy    = inject(OperationalPolicyService);
+  private readonly calendarService      = inject(CalendarService);
+  private readonly auth                 = inject(AuthService);
   private readonly destroyRef           = inject(DestroyRef);
   private reservationRequestId          = 0;
   private assignedTagsRequestId         = 0;
@@ -72,6 +78,8 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
   readonly reservationTagsSaveError     = signal('');
   readonly removingReservationTagIds    = signal<ReadonlySet<number>>(new Set<number>());
   readonly roomingDialogContext         = signal<RoomingListV2DialogContext | null>(null);
+  readonly guestDigitalFileContext      = signal<{ codReserva: string; idDesglose: string; numHabita: string } | null>(null);
+  readonly unassigningStayId            = signal<string | null>(null);
   readonly showReservationLogModal      = signal(false);
   readonly reservationLogEntries       = signal<ReservaLogEntry[]>([]);
   readonly reservationLogTotal         = signal(0);
@@ -211,8 +219,111 @@ export class ReservaHospedajeDetalleComponent implements OnInit {
     });
   }
 
+  canUnassignStay(stay: ReservaHospedajeDesgloseHabitacion): boolean {
+    return this.puedeGestionarRooming()
+      && !!stay.idDesglose?.trim()
+      && !!stay.numHabita?.trim()
+      && stay.numHabita.trim() !== '0'
+      && !!stay.habOrigen?.trim()
+      && !!stay.catHabita?.trim()
+      && this.unassigningStayId() !== stay.idDesglose;
+  }
+
+  async unassignStay(stay: ReservaHospedajeDesgloseHabitacion): Promise<void> {
+    if (this.unassigningStayId()) return;
+    if (this.accionesBloqueadas()) {
+      this.toastService.info('La reserva se encuentra en modo de solo lectura.', 4000, 'Desasignar habitación');
+      return;
+    }
+    if (!(await this.operationalPolicy.require(OperationalAction.UpdateOperation, { refresh: true }))) return;
+
+    const codReserva = this.cleanText(this.codReserva());
+    const currentRoom = stay.numHabita?.trim() ?? '';
+    const sourceRoom = stay.habOrigen?.trim() ?? '';
+    const categoryCode = stay.catHabita?.trim() ?? '';
+    if (!codReserva || !stay.idDesglose?.trim() || !currentRoom || currentRoom === '0' || !sourceRoom || !categoryCode) {
+      await Swal.fire({
+        title: 'No se puede desasignar',
+        text: !sourceRoom
+          ? 'Esta asignación no tiene habitación de origen (habOrigen), por lo que no es seguro devolverla.'
+          : !categoryCode
+            ? 'Esta asignación no tiene una categoría de habitación válida.'
+            : 'Faltan datos de la reserva o de la habitación asignada.',
+        icon: 'warning',
+        confirmButtonText: 'Aceptar',
+        customClass: { container: 'swal-front-container' }
+      });
+      return;
+    }
+
+    const confirmation = await Swal.fire({
+      title: 'Desasignar habitación',
+      text: `La habitación ${currentRoom} volverá a ${sourceRoom} para la reserva ${codReserva}.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Desasignar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#d97706',
+      customClass: { container: 'swal-front-container' }
+    });
+    if (!confirmation.isConfirmed) return;
+
+    const request: CalendarRoomAssignmentRequest = {
+      codReserva,
+      oldHabita: currentRoom,
+      newHabita: sourceRoom,
+      categoria: categoryCode,
+      operador: this.auth.getCurrentUser()?.usuario?.trim() || 'admin'
+    };
+    this.unassigningStayId.set(stay.idDesglose);
+    try {
+      const response = await firstValueFrom(this.calendarService.assignReservationRoom(request).pipe(takeUntilDestroyed(this.destroyRef)));
+      if (!response || response.ok === false || response.success === false || (response.ok !== true && response.success !== true)) {
+        throw new Error(response?.respuesta || response?.mensaje || response?.message || 'El endpoint no confirmó la desasignación.');
+      }
+      this.loadReserva(codReserva);
+      await Swal.fire({
+        title: 'Habitación desasignada',
+        text: response.respuesta || response.mensaje || response.message || `La habitación volvió a ${sourceRoom}.`,
+        icon: 'success',
+        timer: 1800,
+        showConfirmButton: false,
+        customClass: { container: 'swal-front-container' }
+      });
+    } catch (error: unknown) {
+      const status = error instanceof HttpErrorResponse ? error.status : 0;
+      const body = error instanceof HttpErrorResponse && error.error && typeof error.error === 'object'
+        ? error.error as { respuesta?: string; mensaje?: string; message?: string }
+        : null;
+      const message = error instanceof Error ? error.message : '';
+      await Swal.fire({
+        title: 'Error al desasignar habitación',
+        text: body?.respuesta || body?.mensaje || body?.message || (status ? `No fue posible completar la operación. Código HTTP ${status}.` : message || 'No se pudo desasignar la habitación. Intente nuevamente.'),
+        icon: 'error',
+        confirmButtonText: 'Aceptar',
+        customClass: { container: 'swal-front-container' }
+      });
+    } finally {
+      this.unassigningStayId.set(null);
+    }
+  }
+
   closeRoomingList(): void {
     this.roomingDialogContext.set(null);
+  }
+
+  openGuestDigitalFile(stay: ReservaHospedajeDesgloseHabitacion): void {
+    const codReserva = this.cleanText(this.codReserva());
+    const idDesglose = stay.idDesglose?.trim();
+    if (!codReserva || !idDesglose) {
+      this.toastService.error('No se puede abrir el expediente porque falta el identificador de la estancia.', 5000, 'Expediente digital');
+      return;
+    }
+    this.guestDigitalFileContext.set({ codReserva, idDesglose, numHabita: stay.numHabita ?? '' });
+  }
+
+  closeGuestDigitalFile(): void {
+    this.guestDigitalFileContext.set(null);
   }
 
   openReservationTagDetails(): void {

@@ -109,15 +109,17 @@
           <div class="section-heading section-heading--split"><div class="section-icon"><i class="bi bi-door-open"></i></div><div><h3>Habitaciones asignadas</h3><p>Desglose operativo de habitaciones</p></div><span class="section-count">{{ desgloseHabitaciones().length }} registros</span></div>
           <div class="table-wrap">
             <table class="detail-table detail-table--breakdown">
-              <thead><tr><th>Habitación</th><th>Categoría / tipo</th><th>Ingreso</th><th>Salida</th><th>Pax</th><th>Niños</th><th>Procesamiento</th><th>Huéspedes</th></tr></thead>
+              <thead><tr><th>Habitación</th><th>Categoría / tipo</th><th>Ingreso</th><th>Salida</th><th>Pax</th><th>Niños</th><th>Procesamiento</th><th>Huéspedes</th><th>Expediente</th><th>Acciones</th></tr></thead>
               <tbody>
                 <tr *ngFor="let item of desgloseHabitaciones()">
                   <td data-label="Habitación"><strong class="assigned-room-number">{{ item.numHabita || 'Sin asignar' }}</strong><small *ngIf="item.habOrigen">Origen: {{ item.habOrigen }}</small></td>
                   <td data-label="Categoría / tipo">{{ breakdownRoomDescription(item) }}</td><td data-label="Ingreso">{{ formatDate(item.fechaIngreso) }}</td><td data-label="Salida">{{ formatDate(item.fechaSalida) }}</td>
                   <td data-label="Pax">{{ item.numPax ?? '—' }}</td><td data-label="Niños">{{ item.numChild ?? '—' }}</td><td data-label="Procesamiento"><span class="process-badge" [class.process-badge--done]="item.procesado === 1">{{ processedLabel(item.procesado) }}</span></td>
                   <td data-label="Huéspedes" class="rooming-v2-action-cell"><div class="rooming-v2-row-action"><button type="button" class="small-action small-action--primary" (click)="openRoomingList(item)" [disabled]="!puedeGestionarRooming()" title="Administrar huéspedes asociados a esta estancia"><i class="bi bi-people"></i>Administrar huéspedes</button></div></td>
+                  <td data-label="Expediente" class="rooming-v2-action-cell"><div class="rooming-v2-row-action"><button type="button" class="small-action" (click)="openGuestDigitalFile(item)" title="Consultar expediente digital de esta estancia"><i class="bi bi-folder2-open"></i>Ver expediente</button></div></td>
+                  <td data-label="Acciones" class="rooming-v2-action-cell"><div class="rooming-v2-row-action"><button type="button" class="small-action small-action--danger small-action--icon" (click)="unassignStay(item)" [disabled]="!canUnassignStay(item)" [title]="item.habOrigen ? 'Desasignar y devolver a la habitación de origen' : 'No se puede desasignar: falta habitación de origen'"><i class="bi bi-box-arrow-left" aria-hidden="true"></i><span>{{ unassigningStayId() === item.idDesglose ? 'Procesando…' : 'Desasignar' }}</span></button></div></td>
                 </tr>
-                <tr *ngIf="desgloseHabitaciones().length === 0"><td colspan="8" class="empty-state">No hay habitaciones asignadas registradas.</td></tr>
+                <tr *ngIf="desgloseHabitaciones().length === 0"><td colspan="10" class="empty-state">No hay habitaciones asignadas registradas.</td></tr>
               </tbody>
             </table>
           </div>
@@ -191,7 +193,7 @@
         </section>
 
         <div class="guest-portal-compact">
-          <app-guest-portal-admin-card [codReserva]="codReserva()"></app-guest-portal-admin-card>
+          <app-guest-portal-admin-card [codReserva]="codReserva()" [compact]="true"></app-guest-portal-admin-card>
         </div>
 
         <details class="detail-card disclosure-card" *ngIf="r.observacion" open>
@@ -257,5 +259,13 @@
     *ngIf="roomingDialogContext() as context"
     [context]="context"
     (closed)="closeRoomingList()"
+  />
+
+  <app-guest-digital-file-dialog
+    *ngIf="guestDigitalFileContext() as digitalFile"
+    [codReserva]="digitalFile.codReserva"
+    [idDesglose]="digitalFile.idDesglose"
+    [numHabita]="digitalFile.numHabita"
+    (closed)="closeGuestDigitalFile()"
   />
 </section>

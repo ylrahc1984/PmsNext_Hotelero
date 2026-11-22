@@ -19,6 +19,7 @@ import { GuestPortalAdminService } from '../../services/guest-portal-admin.servi
 })
 export class GuestPortalAdminCardComponent {
   readonly codReserva = input('');
+  readonly compact = input(false);
   readonly loading = signal(false);
   readonly enabling = signal(false);
   readonly regenerating = signal(false);

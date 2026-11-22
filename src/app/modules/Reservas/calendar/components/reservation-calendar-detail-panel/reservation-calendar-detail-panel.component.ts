@@ -13,8 +13,18 @@ import {
 } from '@angular/core';
 import { finalize, Subscription } from 'rxjs';
 
+import { OperationalAction } from 'src/app/core/models/operational-context.model';
+import { OperationalPolicyService } from 'src/app/core/services/operational-policy.service';
+import { ToastService } from 'src/app/core/services/toast.service';
 import { normalizePmsDateDDMMYYYY } from 'src/app/core/utils/pms-date.util';
 import { CalendarReservation } from '../../interfaces/calendar.interface';
+import { ReservaTagAsignado } from '../../../models/reserva-tag.model';
+import { ReservaTagsService } from '../../../services/reserva-tags.service';
+import { ReservationTagListComponent } from '../../../components/reservation-tags/reservation-tag-list.component';
+import { GuestPortalAdminCardComponent } from '../../../components/guest-portal-admin/guest-portal-admin-card.component';
+import { GuestDigitalFileDialogComponent } from '../../../components/guest-digital-file-dialog/guest-digital-file-dialog.component';
+import { RoomingListV2AdminDialogComponent } from '../../../rooming-list-v2/components/rooming-list-v2-admin-dialog/rooming-list-v2-admin-dialog.component';
+import { RoomingListV2DialogContext } from '../../../rooming-list-v2/models/rooming-list-v2.model';
 import {
   ReservationCompleteDisplayEntry,
   ReservationCompleteRecord,
@@ -23,6 +33,10 @@ import {
 import { ReservationCompleteService } from './reservation-complete.service';
 
 const BREAKDOWN_HIDDEN_FIELDS = new Set([
+  'prV06_FechaIng',
+  'prV06_FechaSal',
+  'prV06_Procesado',
+  'prV06_IDDesglose',
   'prV06_Orden',
   'prV06_HabOrigen',
   'prV06_Operador',
@@ -30,20 +44,50 @@ const BREAKDOWN_HIDDEN_FIELDS = new Set([
   'prV06_TipHabita'
 ]);
 
+const DETAIL_HIDDEN_FIELDS = new Set([
+  'prV01_CodAgencia',
+  'prV01_CodTarifa',
+  'prV01_TCambio',
+  'prV01_Estado',
+  'prV01_Procesado',
+  'prV01_Directo'
+]);
+
+const HEADER_HIDDEN_FIELDS = new Set([
+  'prV01_CodReserva',
+  'mR01_NomAgencia',
+  'prV01_CodPlan',
+  'prV01_FecIngresa',
+  'prV01_FecSalida'
+]);
+
+const HEADER_FIELD_ORDER = [
+  'mR03_NomTarifa',
+  'mR06_PlanAlimenticio',
+  'prV01_FecCreacion',
+  'prV01_FecConfirma',
+  'prV01_FecPrepago',
+  'prV01_FecAnulada',
+  'prV01_NochesDias',
+  'prV01_Descripcion',
+  'prV01_Folio',
+  'prV01_Moneda',
+  'prV01_TotalRsv',
+  'prV01_Observacion',
+  'prV01_Operador'
+];
+
 const BREAKDOWN_FIELD_ORDER = [
   'prV06_NumHabita',
   'prV06_CatHabita',
-  'prV06_FechaIng',
-  'prV06_FechaSal',
   'prV06_NumPax',
-  'prV06_NumChild',
-  'prV06_Procesado'
+  'prV06_NumChild'
 ];
 
 @Component({
   selector: 'app-reservation-calendar-detail-panel',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ReservationTagListComponent, GuestPortalAdminCardComponent, RoomingListV2AdminDialogComponent, GuestDigitalFileDialogComponent],
   templateUrl: './reservation-calendar-detail-panel.component.html',
   styleUrls: ['./reservation-calendar-detail-panel.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -64,19 +108,32 @@ export class ReservationCalendarDetailPanelComponent implements OnChanges, OnDes
   readonly detail = signal<ReservationCompleteResponse | null>(null);
   readonly loading = signal(false);
   readonly errorMessage = signal('');
+  readonly tags = signal<ReservaTagAsignado[]>([]);
+  readonly tagsLoading = signal(false);
+  readonly tagsError = signal(false);
+  readonly roomingDialogContext = signal<RoomingListV2DialogContext | null>(null);
+  readonly guestDigitalFileContext = signal<{ codReserva: string; idDesglose: string; numHabita: string } | null>(null);
 
   private request?: Subscription;
+  private tagsRequest?: Subscription;
 
-  constructor(private readonly reservationCompleteService: ReservationCompleteService) {}
+  constructor(
+    private readonly reservationCompleteService: ReservationCompleteService,
+    private readonly reservaTagsService: ReservaTagsService,
+    private readonly operationalPolicy: OperationalPolicyService,
+    private readonly toastService: ToastService
+  ) {}
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['reservation']) {
       this.loadDetail();
+      this.loadTags();
     }
   }
 
   ngOnDestroy(): void {
     this.request?.unsubscribe();
+    this.tagsRequest?.unsubscribe();
   }
 
   @HostListener('document:keydown.escape')
@@ -120,6 +177,45 @@ export class ReservationCalendarDetailPanelComponent implements OnChanges, OnDes
     }
   }
 
+  async manageGuests(record: ReservationCompleteRecord): Promise<void> {
+    const state = (this.detail()?.encabezado?.['prV01_Estado']?.toString() || this.reservation?.reservationState || '').trim().toUpperCase();
+    if (['ANU', 'CANCELADO', 'CHK', 'IN', 'CHECK IN'].includes(state)) {
+      this.toastService.info('La reserva se encuentra en modo de solo lectura.', 4000, 'Rooming List');
+      return;
+    }
+    if (!(await this.operationalPolicy.require(OperationalAction.UpdateOperation))) return;
+    const codReserva = this.reservation?.reservationCode?.trim() ?? '';
+    const idDesglose = this.breakdownId(record);
+    if (!codReserva || !idDesglose) {
+      this.toastService.error('No se puede administrar la estancia porque falta su IdDesglose.', 5000, 'Rooming List');
+      return;
+    }
+    this.roomingDialogContext.set({
+      codReserva,
+      idDesglose,
+      numHabita: this.recordValue(record, 'prV06_NumHabita'),
+      categoria: this.recordValue(record, 'prV06_CatHabita'),
+      tipoHabita: this.recordValue(record, 'prV06_TipHabita'),
+      fechaIngreso: this.breakdownDate(record, 'prV06_FechaIng'),
+      fechaSalida: this.breakdownDate(record, 'prV06_FechaSal'),
+      numPax: this.numericRecordValue(record, 'prV06_NumPax'),
+      numChild: this.numericRecordValue(record, 'prV06_NumChild')
+    });
+  }
+
+  viewGuestFile(record: ReservationCompleteRecord): void {
+    const codReserva = this.reservation?.reservationCode?.trim() ?? '';
+    const idDesglose = this.breakdownId(record);
+    if (!codReserva || !idDesglose) {
+      this.toastService.error('No se puede abrir el expediente porque falta el identificador de la estancia.', 5000, 'Expediente digital');
+      return;
+    }
+    this.guestDigitalFileContext.set({ codReserva, idDesglose, numHabita: this.recordValue(record, 'prV06_NumHabita') });
+  }
+
+  closeRoomingList(): void { this.roomingDialogContext.set(null); }
+  closeGuestDigitalFile(): void { this.guestDigitalFileContext.set(null); }
+
   canEditReservation(): boolean {
     const state = (
       this.detail()?.encabezado?.['prV01_Estado']?.toString() ||
@@ -135,12 +231,41 @@ export class ReservationCalendarDetailPanelComponent implements OnChanges, OnDes
       return [];
     }
 
-    return Object.entries(record).map(([key, value]) => ({
+    return Object.entries(record).filter(([key]) => !DETAIL_HIDDEN_FIELDS.has(key)).map(([key, value]) => ({
       key,
       label: this.fieldLabel(key),
       value: this.formatValue(key, value),
       wide: /descripcion|observacion|comentario|rooming|email|direccion/i.test(key)
     }));
+  }
+
+  headerEntries(record: ReservationCompleteRecord | null | undefined): ReservationCompleteDisplayEntry[] {
+    const entries = this.entries(record).filter((entry) => !HEADER_HIDDEN_FIELDS.has(entry.key));
+    const nightsKey = 'prV01_TotNoches';
+    const daysKey = 'prV01_TotDias';
+    const nightsIndex = entries.findIndex((entry) => entry.key === nightsKey);
+    const daysIndex = entries.findIndex((entry) => entry.key === daysKey);
+    let result = entries;
+    if (nightsIndex >= 0 || daysIndex >= 0) {
+      const nights = record?.[nightsKey];
+      const days = record?.[daysKey];
+      const combined: ReservationCompleteDisplayEntry = {
+        key: 'prV01_NochesDias',
+        label: 'Noches / días',
+        value: `${nights === null || nights === undefined || nights === '' ? '—' : this.formatValue(nightsKey, nights)} / ${days === null || days === undefined || days === '' ? '—' : this.formatValue(daysKey, days)}`,
+        wide: false
+      };
+
+      const insertAt = Math.min(...[nightsIndex, daysIndex].filter((index) => index >= 0));
+      result = entries.filter((entry) => entry.key !== nightsKey && entry.key !== daysKey);
+      result.splice(insertAt, 0, combined);
+    }
+
+    return result.sort((left, right) => {
+      const leftIndex = HEADER_FIELD_ORDER.indexOf(left.key);
+      const rightIndex = HEADER_FIELD_ORDER.indexOf(right.key);
+      return (leftIndex < 0 ? Number.MAX_SAFE_INTEGER : leftIndex) - (rightIndex < 0 ? Number.MAX_SAFE_INTEGER : rightIndex);
+    });
   }
 
   records(value: ReservationCompleteRecord[] | null | undefined): ReservationCompleteRecord[] {
@@ -244,6 +369,48 @@ export class ReservationCalendarDetailPanelComponent implements OnChanges, OnDes
           this.errorMessage.set(this.resolveErrorMessage(error));
         }
       });
+  }
+
+  private loadTags(): void {
+    const reservationCode = this.reservation?.reservationCode?.trim();
+    this.tagsRequest?.unsubscribe();
+    this.tags.set([]);
+    this.tagsError.set(false);
+    if (!reservationCode) {
+      this.tagsLoading.set(false);
+      return;
+    }
+
+    this.tagsLoading.set(true);
+    this.tagsRequest = this.reservaTagsService.obtenerTagsReserva(reservationCode)
+      .pipe(finalize(() => this.tagsLoading.set(false)))
+      .subscribe({
+        next: (response) => this.tags.set(response?.exito && Array.isArray(response.datos) ? response.datos : []),
+        error: () => this.tagsError.set(true)
+      });
+  }
+
+  breakdownId(record: ReservationCompleteRecord): string {
+    return this.recordValue(record, 'prV06_IDDesglose', 'IdDesglose', 'idDesglose');
+  }
+
+  private recordValue(record: ReservationCompleteRecord, ...keys: string[]): string {
+    for (const key of keys) {
+      const value = record[key]?.toString().trim();
+      if (value) return value;
+    }
+    return '';
+  }
+
+  private numericRecordValue(record: ReservationCompleteRecord, key: string): number | undefined {
+    if (record[key] === null || record[key] === undefined || record[key] === '') return undefined;
+    const value = Number(record[key]);
+    return Number.isFinite(value) ? value : undefined;
+  }
+
+  private breakdownDate(record: ReservationCompleteRecord, key: string): string | null {
+    const value = this.recordValue(record, key);
+    return value ? normalizePmsDateDDMMYYYY(value) || value : null;
   }
 
   private summaryDate(key: string, fallback: string): string {

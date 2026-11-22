@@ -1,4 +1,4 @@
-<section class="detail-card guest-portal-card" aria-labelledby="guest-portal-title">
+<section class="detail-card guest-portal-card" [class.guest-portal-card--compact]="compact()" aria-labelledby="guest-portal-title">
   <div class="section-header">
     <div><h3 id="guest-portal-title">Guest Portal</h3><span>Pre check-in digital para el huésped</span></div>
     <span class="portal-badge" [class.portal-badge--enabled]="hasPortal()">

@@ -24,6 +24,12 @@
               <strong>{{ roomCategoryLabel() }}</strong>
             </span>
           </div>
+          <div class="reservation-detail-panel__room-badge reservation-detail-panel__room-badge--status">
+            <span class="reservation-detail-panel__room-copy">
+              <small>Estado</small>
+              <strong>{{ reservationStateLabel() }}</strong>
+            </span>
+          </div>
         </div>
       </div>
       <button type="button" class="reservation-detail-panel__close" (click)="close()" aria-label="Cerrar detalle">
@@ -32,16 +38,6 @@
     </header>
 
     <section class="reservation-detail-panel__summary">
-      <div class="reservation-detail-summary-item">
-        <i class="feather icon-activity" aria-hidden="true"></i>
-        <span>Estado</span>
-        <strong class="reservation-detail-summary-item__status">{{ reservationStateLabel() }}</strong>
-      </div>
-      <div class="reservation-detail-summary-item">
-        <i class="feather icon-home" aria-hidden="true"></i>
-        <span>Habitación</span>
-        <strong>{{ reservation.roomNumber || 'Sin asignar' }}</strong>
-      </div>
       <div class="reservation-detail-summary-item">
         <i class="feather icon-log-in" aria-hidden="true"></i>
         <span>Llegada</span>
@@ -56,11 +52,6 @@
         <i class="feather icon-briefcase" aria-hidden="true"></i>
         <span>Agencia</span>
         <strong>{{ agencyName() }}</strong>
-      </div>
-      <div class="reservation-detail-summary-item reservation-detail-summary-item--total">
-        <i class="feather icon-credit-card" aria-hidden="true"></i>
-        <span>Total</span>
-        <strong>{{ totalLabel() }}</strong>
       </div>
     </section>
 
@@ -78,16 +69,37 @@
         <button type="button" (click)="retry()"><i class="feather icon-refresh-cw"></i> Reintentar</button>
       </div>
 
+      <section class="reservation-detail-section">
+        <header>
+          <div><i class="feather icon-tag"></i><span>Etiquetas asociadas</span></div>
+          <small>{{ tags().length }} tags</small>
+        </header>
+        <p class="reservation-detail-empty" *ngIf="tagsLoading()">Cargando etiquetas…</p>
+        <p class="reservation-detail-empty" *ngIf="!tagsLoading() && tagsError()">No fue posible cargar las etiquetas de esta reserva.</p>
+        <app-reservation-tag-list
+          *ngIf="!tagsLoading() && !tagsError() && tags().length"
+          [tags]="tags()"
+          [expanded]="true"
+          [detailed]="true"
+        />
+        <p class="reservation-detail-empty" *ngIf="!tagsLoading() && !tagsError() && !tags().length">Esta reserva no tiene etiquetas asociadas.</p>
+      </section>
+
+      <app-guest-portal-admin-card
+        [codReserva]="reservation.reservationCode || ''"
+        [compact]="true"
+      />
+
       <ng-container *ngIf="!loading() && detail() as completeDetail">
         <section class="reservation-detail-section">
           <header>
             <div><i class="feather icon-book-open"></i><span>Encabezado</span></div>
-            <small>{{ entries(completeDetail.encabezado).length }} campos</small>
+            <small>{{ headerEntries(completeDetail.encabezado).length }} campos</small>
           </header>
           <div class="reservation-detail-fields">
             <div
               class="reservation-detail-field"
-              *ngFor="let entry of entries(completeDetail.encabezado); trackBy: trackEntry"
+              *ngFor="let entry of headerEntries(completeDetail.encabezado); trackBy: trackEntry"
               [class.reservation-detail-field--wide]="entry.wide"
             >
               <span>{{ entry.label }}</span>
@@ -108,6 +120,14 @@
                 <div class="reservation-detail-field" *ngFor="let entry of breakdownEntries(record); trackBy: trackEntry" [class.reservation-detail-field--wide]="entry.wide">
                   <span>{{ entry.label }}</span><strong>{{ entry.value }}</strong>
                 </div>
+              </div>
+              <div class="reservation-detail-breakdown-actions">
+                <button type="button" class="reservation-detail-action reservation-detail-action--primary" [disabled]="!breakdownId(record)" (click)="manageGuests(record)" title="Administrar huéspedes de esta estancia">
+                  <i class="feather icon-users"></i> Administrar huéspedes
+                </button>
+                <button type="button" class="reservation-detail-action reservation-detail-action--secondary" [disabled]="!breakdownId(record)" (click)="viewGuestFile(record)" title="Consultar expediente digital de esta estancia">
+                  <i class="feather icon-folder"></i> Ver expediente
+                </button>
               </div>
             </article>
           </div>
@@ -188,3 +208,16 @@
     </footer>
   </aside>
 </div>
+
+<app-rooming-list-v2-admin-dialog
+  *ngIf="roomingDialogContext() as context"
+  [context]="context"
+  (closed)="closeRoomingList()"
+/>
+<app-guest-digital-file-dialog
+  *ngIf="guestDigitalFileContext() as digitalFile"
+  [codReserva]="digitalFile.codReserva"
+  [idDesglose]="digitalFile.idDesglose"
+  [numHabita]="digitalFile.numHabita"
+  (closed)="closeGuestDigitalFile()"
+/>
