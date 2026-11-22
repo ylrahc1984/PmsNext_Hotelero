@@ -30,6 +30,12 @@
               <strong>{{ reservationStateLabel() }}</strong>
             </span>
           </div>
+          <div class="reservation-detail-panel__room-badge reservation-detail-panel__room-badge--operator">
+            <span class="reservation-detail-panel__room-copy">
+              <small>Operador</small>
+              <strong>{{ operatorLabel() }}</strong>
+            </span>
+          </div>
         </div>
       </div>
       <button type="button" class="reservation-detail-panel__close" (click)="close()" aria-label="Cerrar detalle">
@@ -106,6 +112,61 @@
               <strong>{{ entry.value }}</strong>
             </div>
           </div>
+        </section>
+
+        <section class="reservation-detail-section reservation-detail-contacts">
+          <header>
+            <div><i class="feather icon-users"></i><span>Contacto de la reserva</span></div>
+            <div class="reservation-detail-contacts__header-actions">
+              <small>{{ completeDetail.contactos.length }} {{ completeDetail.contactos.length === 1 ? 'contacto' : 'contactos' }}</small>
+              <button type="button" class="reservation-detail-contact-edit" *ngIf="!editingContact()" [disabled]="savingContact()" (click)="editReservationContact()" aria-label="Editar contacto de la reserva">
+                <i class="feather icon-edit-2" aria-hidden="true"></i><span>Editar</span>
+              </button>
+            </div>
+          </header>
+          <div class="reservation-detail-contact-list" *ngIf="!editingContact() && completeDetail.contactos.length; else noReservationContacts">
+            <article class="reservation-detail-contact" *ngFor="let contact of completeDetail.contactos; let index = index">
+              <span class="reservation-detail-contact__avatar" aria-hidden="true"><i class="feather icon-user"></i></span>
+              <div class="reservation-detail-contact__content">
+                <strong class="reservation-detail-contact__name">{{ contact.prV19_Nombre?.trim() || 'Nombre no disponible' }}</strong>
+                <div class="reservation-detail-contact__details">
+                  <span *ngIf="contact.prV19_Email?.trim() as email"><i class="feather icon-mail" aria-hidden="true"></i><a [href]="'mailto:' + email">{{ email }}</a></span>
+                  <span *ngIf="contact.prV19_Telefono?.trim() as phone"><i class="feather icon-phone" aria-hidden="true"></i><a [href]="'tel:' + phone">{{ phone }}</a></span>
+                  <span *ngIf="!contact.prV19_Email?.trim() && !contact.prV19_Telefono?.trim()" class="reservation-detail-contact__empty">Sin correo ni teléfono registrados</span>
+                </div>
+              </div>
+            </article>
+          </div>
+          <ng-template #noReservationContacts><p class="reservation-detail-empty" *ngIf="!editingContact()">No hay contactos registrados para esta reserva.</p></ng-template>
+          <form class="reservation-detail-contact-form" *ngIf="editingContact()" [formGroup]="contactForm" (ngSubmit)="saveReservationContact()" novalidate>
+            <label class="reservation-detail-contact-form__field">
+              <span>Nombre <b aria-hidden="true">*</b></span>
+              <input type="text" formControlName="nombre" maxlength="150" autocomplete="name" placeholder="Nombre del contacto" [class.is-invalid]="contactForm.controls.nombre.touched && contactForm.controls.nombre.invalid">
+              <small class="reservation-detail-contact-form__error" *ngIf="contactForm.controls.nombre.touched && contactForm.controls.nombre.invalid">Ingrese un nombre de hasta 150 caracteres.</small>
+            </label>
+            <label class="reservation-detail-contact-form__field">
+              <span>Correo electrónico</span>
+              <input type="email" formControlName="email" maxlength="254" autocomplete="email" placeholder="correo@ejemplo.com" [class.is-invalid]="contactForm.controls.email.touched && contactForm.controls.email.invalid">
+              <small class="reservation-detail-contact-form__error" *ngIf="contactForm.controls.email.touched && contactForm.controls.email.invalid">Ingrese un correo válido.</small>
+            </label>
+            <div class="reservation-detail-contact-form__field">
+              <label for="reservation-contact-phone"><span>Teléfono</span></label>
+              <div class="reservation-detail-contact-form__phone">
+                <select aria-label="Prefijo telefónico del país" [value]="contactPhonePrefix()" (change)="selectContactPhonePrefix($event)">
+                  <option *ngFor="let country of contactPhoneCountries" [value]="country.prefix">{{ country.label }}</option>
+                </select>
+                <input id="reservation-contact-phone" type="tel" inputmode="tel" formControlName="telefono" maxlength="25" autocomplete="tel-national" placeholder="Número de teléfono" [class.is-invalid]="contactForm.controls.telefono.touched && contactForm.controls.telefono.invalid">
+              </div>
+              <small class="reservation-detail-contact-form__hint">El prefijo seleccionado se guardará junto al número.</small>
+              <small class="reservation-detail-contact-form__error" *ngIf="contactForm.controls.telefono.touched && contactForm.controls.telefono.invalid">Use números, espacios, guiones o paréntesis.</small>
+            </div>
+            <div class="reservation-detail-contact-form__actions">
+              <button type="button" class="reservation-detail-contact-form__cancel" [disabled]="savingContact()" (click)="cancelContactEdit()">Cancelar</button>
+              <button type="submit" class="reservation-detail-contact-form__save" [disabled]="savingContact() || contactForm.invalid">
+                <i class="feather" [ngClass]="savingContact() ? 'icon-loader' : 'icon-save'" aria-hidden="true"></i>{{ savingContact() ? 'Guardando…' : 'Guardar contacto' }}
+              </button>
+            </div>
+          </form>
         </section>
 
         <section class="reservation-detail-section">

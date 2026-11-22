@@ -91,13 +91,18 @@
 }
 
 .reservation-detail-panel__room-badge--status {
-  margin-left: auto;
   border-color: rgba(132, 226, 188, 0.42);
   background: rgba(48, 150, 110, 0.2);
 }
 
 .reservation-detail-panel__room-badge--status strong {
   color: #c5f4dc;
+}
+
+.reservation-detail-panel__room-badge--operator {
+  margin-left: auto;
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.13);
 }
 
 .reservation-detail-panel__room-icon {
@@ -250,6 +255,220 @@
 
 .reservation-detail-section + .reservation-detail-section {
   margin-top: 0.5rem;
+}
+
+.reservation-detail-contact-list {
+  padding: 0.35rem 0.7rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.reservation-detail-contact {
+  min-width: 0;
+  padding: 0.55rem 0.65rem;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  border: 1px solid #e5edf4;
+  border-radius: 10px;
+  background: linear-gradient(115deg, #fbfdff, #f6f9fc);
+}
+
+.reservation-detail-contact__avatar {
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 2rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid #d8e7f2;
+  border-radius: 50%;
+  background: #edf5fb;
+  color: #39719d;
+  font-size: 0.78rem;
+}
+
+.reservation-detail-contact__content {
+  min-width: 0;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.reservation-detail-contact__name {
+  overflow-wrap: anywhere;
+  color: #243b53;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.reservation-detail-contact__details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.18rem 0.85rem;
+  color: #688096;
+  font-size: 0.66rem;
+}
+
+.reservation-detail-contact__details > span {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.reservation-detail-contact__details i {
+  flex: 0 0 auto;
+  color: #6c91ad;
+}
+
+.reservation-detail-contact__details a {
+  overflow-wrap: anywhere;
+  color: #426b8b;
+  text-decoration: none;
+}
+
+.reservation-detail-contact__details a:hover {
+  color: #205b89;
+  text-decoration: underline;
+}
+
+.reservation-detail-contact__empty {
+  color: #8996a4;
+  font-style: italic;
+}
+
+.reservation-detail-contacts__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.reservation-detail-contact-edit {
+  border: 1px solid #cbdceb;
+  border-radius: 7px;
+  padding: 0.25rem 0.45rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  background: #fff;
+  color: #37688d;
+  font-size: 0.62rem;
+  font-weight: 780;
+  cursor: pointer;
+}
+
+.reservation-detail-contact-edit:hover:not(:disabled) {
+  border-color: #9bbbd3;
+  background: #f1f7fb;
+}
+
+.reservation-detail-contact-edit:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.reservation-detail-contact-form {
+  padding: 0.7rem 0.8rem 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem 0.75rem;
+}
+
+.reservation-detail-contact-form__field {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 0.28rem;
+}
+
+.reservation-detail-contact-form__field > span,
+.reservation-detail-contact-form__field > label > span {
+  color: #657a8e;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.reservation-detail-contact-form__field > span b {
+  color: #bf5961;
+}
+
+.reservation-detail-contact-form__field input,
+.reservation-detail-contact-form__phone select {
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  border: 1px solid #d4dee8;
+  border-radius: 7px;
+  padding: 0.38rem 0.55rem;
+  background: #fff;
+  color: #263c52;
+  font: inherit;
+  font-size: 0.7rem;
+}
+
+.reservation-detail-contact-form__field input:focus,
+.reservation-detail-contact-form__phone select:focus {
+  border-color: #74a4c9;
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(52, 116, 163, 0.12);
+}
+
+.reservation-detail-contact-form__field input.is-invalid {
+  border-color: #d98a91;
+}
+
+.reservation-detail-contact-form__phone {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(142px, 0.8fr) minmax(0, 1.2fr);
+  gap: 0.4rem;
+}
+
+.reservation-detail-contact-form__hint,
+.reservation-detail-contact-form__error {
+  color: #8996a4;
+  font-size: 0.6rem;
+}
+
+.reservation-detail-contact-form__error {
+  color: #ad414b;
+}
+
+.reservation-detail-contact-form__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  padding-top: 0.1rem;
+}
+
+.reservation-detail-contact-form__actions button {
+  min-height: 32px;
+  border: 0;
+  border-radius: 7px;
+  padding: 0.35rem 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.65rem;
+  font-weight: 760;
+  cursor: pointer;
+}
+
+.reservation-detail-contact-form__cancel {
+  background: #edf1f5;
+  color: #5c6e7f;
+}
+
+.reservation-detail-contact-form__save {
+  background: #2369a1;
+  color: #fff;
+}
+
+.reservation-detail-contact-form__actions button:disabled {
+  cursor: wait;
+  opacity: 0.58;
 }
 
 .reservation-detail-section > header {
@@ -522,6 +741,18 @@
 
   .reservation-detail-fields {
     grid-template-columns: 1fr;
+  }
+
+  .reservation-detail-contact-form {
+    grid-template-columns: 1fr;
+  }
+
+  .reservation-detail-contact-form__actions {
+    flex-direction: column-reverse;
+  }
+
+  .reservation-detail-contact-form__actions button {
+    justify-content: center;
   }
 
   .reservation-detail-field--wide {

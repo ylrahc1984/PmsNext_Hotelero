@@ -12,6 +12,7 @@ import {
   signal
 } from '@angular/core';
 import { finalize, Subscription } from 'rxjs';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { OperationalAction } from 'src/app/core/models/operational-context.model';
 import { OperationalPolicyService } from 'src/app/core/services/operational-policy.service';
@@ -20,6 +21,8 @@ import { normalizePmsDateDDMMYYYY } from 'src/app/core/utils/pms-date.util';
 import { CalendarReservation } from '../../interfaces/calendar.interface';
 import { ReservaTagAsignado } from '../../../models/reserva-tag.model';
 import { ReservaTagsService } from '../../../services/reserva-tags.service';
+import { ReservaContactoService } from '../../../services/reserva-contacto.service';
+import { GuardarReservaContactoRequest } from '../../../models/reserva-contacto.model';
 import { ReservationTagListComponent } from '../../../components/reservation-tags/reservation-tag-list.component';
 import { GuestPortalAdminCardComponent } from '../../../components/guest-portal-admin/guest-portal-admin-card.component';
 import { GuestDigitalFileDialogComponent } from '../../../components/guest-digital-file-dialog/guest-digital-file-dialog.component';
@@ -58,7 +61,10 @@ const HEADER_HIDDEN_FIELDS = new Set([
   'mR01_NomAgencia',
   'prV01_CodPlan',
   'prV01_FecIngresa',
-  'prV01_FecSalida'
+  'prV01_FecSalida',
+  'prV01_FecConfirma',
+  'prV01_FecPrepago',
+  'prV01_FecAnulada'
 ]);
 
 const HEADER_FIELD_ORDER = [
@@ -73,8 +79,7 @@ const HEADER_FIELD_ORDER = [
   'prV01_Folio',
   'prV01_Moneda',
   'prV01_TotalRsv',
-  'prV01_Observacion',
-  'prV01_Operador'
+  'prV01_Observacion'
 ];
 
 const BREAKDOWN_FIELD_ORDER = [
@@ -87,7 +92,7 @@ const BREAKDOWN_FIELD_ORDER = [
 @Component({
   selector: 'app-reservation-calendar-detail-panel',
   standalone: true,
-  imports: [CommonModule, ReservationTagListComponent, GuestPortalAdminCardComponent, RoomingListV2AdminDialogComponent, GuestDigitalFileDialogComponent],
+  imports: [CommonModule, ReactiveFormsModule, ReservationTagListComponent, GuestPortalAdminCardComponent, RoomingListV2AdminDialogComponent, GuestDigitalFileDialogComponent],
   templateUrl: './reservation-calendar-detail-panel.component.html',
   styleUrls: ['./reservation-calendar-detail-panel.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -113,13 +118,59 @@ export class ReservationCalendarDetailPanelComponent implements OnChanges, OnDes
   readonly tagsError = signal(false);
   readonly roomingDialogContext = signal<RoomingListV2DialogContext | null>(null);
   readonly guestDigitalFileContext = signal<{ codReserva: string; idDesglose: string; numHabita: string } | null>(null);
+  readonly editingContact = signal(false);
+  readonly savingContact = signal(false);
+  readonly contactPhonePrefix = signal('+506');
+  readonly contactPhoneCountries = [
+    { label: 'Costa Rica (+506)', prefix: '+506' },
+    { label: 'Estados Unidos / Canadá (+1)', prefix: '+1' },
+    { label: 'México (+52)', prefix: '+52' },
+    { label: 'Nicaragua (+505)', prefix: '+505' },
+    { label: 'Panamá (+507)', prefix: '+507' },
+    { label: 'El Salvador (+503)', prefix: '+503' },
+    { label: 'Honduras (+504)', prefix: '+504' },
+    { label: 'Guatemala (+502)', prefix: '+502' },
+    { label: 'Colombia (+57)', prefix: '+57' },
+    { label: 'Venezuela (+58)', prefix: '+58' },
+    { label: 'Bolivia (+591)', prefix: '+591' },
+    { label: 'Brasil (+55)', prefix: '+55' },
+    { label: 'Argentina (+54)', prefix: '+54' },
+    { label: 'Chile (+56)', prefix: '+56' },
+    { label: 'Perú (+51)', prefix: '+51' },
+    { label: 'Ecuador (+593)', prefix: '+593' },
+    { label: 'Uruguay (+598)', prefix: '+598' },
+    { label: 'Paraguay (+595)', prefix: '+595' },
+    { label: 'Cuba (+53)', prefix: '+53' },
+    { label: 'España (+34)', prefix: '+34' },
+    { label: 'Portugal (+351)', prefix: '+351' },
+    { label: 'Italia (+39)', prefix: '+39' },
+    { label: 'Países Bajos (+31)', prefix: '+31' },
+    { label: 'Suiza (+41)', prefix: '+41' },
+    { label: 'Reino Unido (+44)', prefix: '+44' },
+    { label: 'Francia (+33)', prefix: '+33' },
+    { label: 'Alemania (+49)', prefix: '+49' },
+    { label: 'Australia (+61)', prefix: '+61' },
+    { label: 'Nueva Zelanda (+64)', prefix: '+64' },
+    { label: 'Japón (+81)', prefix: '+81' },
+    { label: 'China (+86)', prefix: '+86' },
+    { label: 'India (+91)', prefix: '+91' },
+    { label: 'Emiratos Árabes Unidos (+971)', prefix: '+971' },
+    { label: 'Rusia (+7)', prefix: '+7' }
+  ];
+  readonly contactForm = new FormGroup({
+    nombre: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(150)] }),
+    email: new FormControl('', { nonNullable: true, validators: [Validators.email, Validators.maxLength(254)] }),
+    telefono: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(25), Validators.pattern(/^[0-9()\-\s]*$/)] })
+  });
 
   private request?: Subscription;
   private tagsRequest?: Subscription;
+  private contactSaveRequest?: Subscription;
 
   constructor(
     private readonly reservationCompleteService: ReservationCompleteService,
     private readonly reservaTagsService: ReservaTagsService,
+    private readonly reservaContactoService: ReservaContactoService,
     private readonly operationalPolicy: OperationalPolicyService,
     private readonly toastService: ToastService
   ) {}
@@ -134,6 +185,7 @@ export class ReservationCalendarDetailPanelComponent implements OnChanges, OnDes
   ngOnDestroy(): void {
     this.request?.unsubscribe();
     this.tagsRequest?.unsubscribe();
+    this.contactSaveRequest?.unsubscribe();
   }
 
   @HostListener('document:keydown.escape')
@@ -216,6 +268,87 @@ export class ReservationCalendarDetailPanelComponent implements OnChanges, OnDes
   closeRoomingList(): void { this.roomingDialogContext.set(null); }
   closeGuestDigitalFile(): void { this.guestDigitalFileContext.set(null); }
 
+  async editReservationContact(): Promise<void> {
+    const code = this.reservation?.reservationCode?.trim();
+    if (!code || this.savingContact() || !(await this.operationalPolicy.require(OperationalAction.UpdateOperation))) return;
+
+    const contact = this.detail()?.contactos?.[0];
+    const fullPhone = contact?.prV19_Telefono?.trim() ?? '';
+    const matchingCountry = [...this.contactPhoneCountries]
+      .sort((left, right) => right.prefix.length - left.prefix.length)
+      .find((country) => fullPhone.startsWith(country.prefix));
+    const unknownPrefix = fullPhone.match(/^(\+\d{1,3})(?:\s+|$)/)?.[1];
+    const prefix = matchingCountry?.prefix ?? unknownPrefix ?? '+506';
+    if (!matchingCountry && unknownPrefix && !this.contactPhoneCountries.some((country) => country.prefix === unknownPrefix)) {
+      this.contactPhoneCountries.push({ label: `Otro país (${unknownPrefix})`, prefix: unknownPrefix });
+    }
+
+    this.contactPhonePrefix.set(prefix);
+    this.contactForm.reset({
+      nombre: contact?.prV19_Nombre?.trim() ?? '',
+      email: contact?.prV19_Email?.trim() ?? '',
+      telefono: matchingCountry
+        ? fullPhone.slice(matchingCountry.prefix.length).trim()
+        : unknownPrefix
+          ? fullPhone.slice(unknownPrefix.length).trim()
+          : fullPhone
+    });
+    this.editingContact.set(true);
+  }
+
+  cancelContactEdit(): void {
+    if (this.savingContact()) return;
+    this.contactForm.reset({ nombre: '', email: '', telefono: '' });
+    this.editingContact.set(false);
+  }
+
+  selectContactPhonePrefix(event: Event): void {
+    this.contactPhonePrefix.set((event.target as HTMLSelectElement).value || '+506');
+  }
+
+  saveReservationContact(): void {
+    const code = this.reservation?.reservationCode?.trim();
+    if (!code || this.savingContact()) return;
+    const name = this.contactForm.controls.nombre.value.trim();
+    if (!name) {
+      this.contactForm.controls.nombre.markAsTouched();
+      this.contactForm.controls.nombre.setErrors({ required: true });
+    }
+    this.contactForm.markAllAsTouched();
+    if (!name || this.contactForm.invalid) return;
+
+    const email = this.contactForm.controls.email.value.trim();
+    const phoneDigits = this.contactForm.controls.telefono.value.trim();
+    const request: GuardarReservaContactoRequest = {
+      nombre: name,
+      email: email || null,
+      telefono: phoneDigits ? `${this.contactPhonePrefix()} ${phoneDigits}`.trim() : null
+    };
+
+    this.savingContact.set(true);
+    this.contactSaveRequest = this.reservaContactoService
+      .guardarContactoReserva(code, request)
+      .pipe(finalize(() => this.savingContact.set(false)))
+      .subscribe({
+        next: (response) => {
+          if (!response?.success) {
+            this.toastService.error(response?.message || 'No se pudo actualizar el contacto de la reserva.', 5000, 'Contacto');
+            return;
+          }
+          const savedContact = response.data;
+          const updatedContact = {
+            prV19_Nombre: savedContact?.nombre || request.nombre,
+            prV19_Email: savedContact?.email ?? request.email,
+            prV19_Telefono: savedContact?.telefono ?? request.telefono
+          };
+          this.detail.update((current) => current ? { ...current, contactos: [updatedContact] } : current);
+          this.editingContact.set(false);
+          this.toastService.success('Contacto de la reserva actualizado correctamente.', 4000, 'Contacto');
+        },
+        error: (error) => this.toastService.error(this.resolveErrorMessage(error), 5000, 'Contacto')
+      });
+  }
+
   canEditReservation(): boolean {
     const state = (
       this.detail()?.encabezado?.['prV01_Estado']?.toString() ||
@@ -240,7 +373,9 @@ export class ReservationCalendarDetailPanelComponent implements OnChanges, OnDes
   }
 
   headerEntries(record: ReservationCompleteRecord | null | undefined): ReservationCompleteDisplayEntry[] {
-    const entries = this.entries(record).filter((entry) => !HEADER_HIDDEN_FIELDS.has(entry.key));
+    const entries = this.entries(record).filter((entry) =>
+      !HEADER_HIDDEN_FIELDS.has(entry.key) && entry.label.trim().toLocaleLowerCase('es') !== 'operador'
+    );
     const nightsKey = 'prV01_TotNoches';
     const daysKey = 'prV01_TotDias';
     const nightsIndex = entries.findIndex((entry) => entry.key === nightsKey);
@@ -305,6 +440,11 @@ export class ReservationCalendarDetailPanelComponent implements OnChanges, OnDes
 
   reservationDescription(): string {
     return this.detail()?.encabezado?.['prV01_Descripcion']?.toString().trim() || this.reservation.guestName;
+  }
+
+  operatorLabel(): string {
+    const header = this.detail()?.encabezado;
+    return (header?.['prV01_Operador'] ?? header?.['operador'] ?? header?.['operator'])?.toString().trim() || '—';
   }
 
   agencyName(): string {
@@ -438,6 +578,7 @@ export class ReservationCalendarDetailPanelComponent implements OnChanges, OnDes
   private normalizeResponse(response: ReservationCompleteResponse | null | undefined): ReservationCompleteResponse {
     return {
       encabezado: response?.encabezado && typeof response.encabezado === 'object' ? response.encabezado : null,
+      contactos: Array.isArray(response?.contactos) ? response.contactos : [],
       detalleHabitaciones: Array.isArray(response?.detalleHabitaciones) ? response.detalleHabitaciones : [],
       serviciosIncluidos: Array.isArray(response?.serviciosIncluidos) ? response.serviciosIncluidos : [],
       serviciosAdicionales: Array.isArray(response?.serviciosAdicionales) ? response.serviciosAdicionales : [],
