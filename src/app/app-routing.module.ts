@@ -147,6 +147,28 @@ const routes: Routes = [
     data: { requiredModules: ['PNTVT', 'PVTCH'], moduleAccessMode: 'any' },
     children: [
       {
+        path: 'servicios-reservas',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Servicios de Reservas' }
+        ] },
+        loadComponent: () =>
+          import('./modules/Reservas/servicios-reservas/servicios-reservas.component').then(
+            (c) => c.ServiciosReservasComponent
+          )
+      },
+      {
+        path: 'forecast-ocupacion',
+        data: { breadcrumbTrail: [
+          { title: 'Restaurante', url: '/restaurant/puntos-venta' },
+          { title: 'Forecast de Ocupación' }
+        ] },
+        loadComponent: () =>
+          import('./modules/front-desk/pages/forecast-ocupacion/forecast-ocupacion.component').then(
+            (c) => c.ForecastOcupacionComponent
+          )
+      },
+      {
         path: 'analysis',
         loadChildren: () => import('./modules/restaurante/analysis/analysis.routes').then((routes) => routes.ANALYSIS_ROUTES)
       },

@@ -182,9 +182,33 @@ export const NavigationItems: NavigationItem[] = [
           { id: 'restaurante-facturacion', title: 'Facturación Restaurante', type: 'item', url: '/restaurant/puntos-venta', activeUrls: ['/restaurant'], icon: 'feather icon-credit-card', classes: 'nav-item' },
           { id: 'restaurante-cierre-caja', title: 'Cierre de Caja', type: 'item', url: '/restaurante/cierre-caja', icon: 'feather icon-lock', classes: 'nav-item' },
           { id: 'restaurante-consulta-documentos', title: 'Consulta de Documentos', type: 'item', url: '/restaurante/consulta-documentos', activeUrls: ['/restaurante/consulta-documentos', '/restaurante/documento'], icon: 'feather icon-search', classes: 'nav-item' },
-          { id: 'restaurante-cargos-habitacion', title: 'Cargos a Habitación', type: 'item', url: '/restaurante/cargos-habitacion', icon: 'feather icon-home', classes: 'nav-item' },
-          { id: 'restaurante-cargos-colaboradores', title: 'Cargos a Colaboradores', type: 'item', url: '/restaurante/cargos-colaboradores', icon: 'feather icon-users', classes: 'nav-item' },
-          { id: 'restaurante-cargos-incluidos', title: 'Cargos Incluidos', type: 'item', url: '/restaurante/cargos-incluidos', icon: 'feather icon-package', classes: 'nav-item' },
+          {
+            id: 'restaurante-cargos',
+            title: 'Cargos',
+            type: 'collapse',
+            icon: 'feather icon-layers',
+            children: [
+              { id: 'restaurante-cargos-habitacion', title: 'Cargos a Habitación', type: 'item', url: '/restaurante/cargos-habitacion', icon: 'feather icon-home', classes: 'nav-item' },
+              { id: 'restaurante-cargos-colaboradores', title: 'Cargos a Colaboradores', type: 'item', url: '/restaurante/cargos-colaboradores', icon: 'feather icon-users', classes: 'nav-item' },
+              { id: 'restaurante-cargos-incluidos', title: 'Cargos Incluidos', type: 'item', url: '/restaurante/cargos-incluidos', icon: 'feather icon-package', classes: 'nav-item' }
+            ]
+          },
+          {
+            id: 'restaurante-servicios-reservas',
+            title: 'Servicios de Reservas',
+            type: 'item',
+            url: '/restaurante/servicios-reservas',
+            icon: 'feather icon-list',
+            classes: 'nav-item'
+          },
+          {
+            id: 'restaurante-forecast-ocupacion',
+            title: 'Forecast de Ocupación',
+            type: 'item',
+            url: '/restaurante/forecast-ocupacion',
+            icon: 'feather icon-trending-up',
+            classes: 'nav-item'
+          },
           { id: 'restaurante-agencias', title: 'Clientes-Facturacion', type: 'item', url: '/restaurante/agencias', icon: 'feather icon-share-2', classes: 'nav-item' },
           {
             id: 'restaurante-analysis',

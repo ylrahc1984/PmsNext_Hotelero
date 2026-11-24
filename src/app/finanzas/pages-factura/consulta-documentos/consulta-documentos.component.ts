@@ -9,10 +9,12 @@ import { concatMap, finalize, toArray } from 'rxjs/operators';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { PosDocumentPrintService } from 'src/app/core/printing/pos-document-print.service';
+import { DocumentPrintService, InvoicePdfFormat } from 'src/app/core/printing/document-print.service';
 import { PuntoVentaUI } from 'src/app/demo/administracion/usuarios/usuario.models';
 import { UsuarioService } from 'src/app/demo/administracion/usuarios/usuario.service';
 import { ConsultaDocumentosService } from '../../services/consulta-documentos.service';
 import { DocumentoDetalleService } from '../../services/documento-detalle.service';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ConsultaDocumentosFiltros, ConsultaDocumentosResponse, Documento } from './consulta-documentos.interface';
 
 type ConsultaDocumentosForm = {
@@ -56,6 +58,7 @@ export class ConsultaDocumentosComponent implements OnInit {
   private readonly consultaService           = inject(ConsultaDocumentosService);
   private readonly detalleService            = inject(DocumentoDetalleService);
   private readonly posPrintService           = inject(PosDocumentPrintService);
+  private readonly documentPrintService      = inject(DocumentPrintService);
   private readonly destroyRef                = inject(DestroyRef);
   private readonly cdr                       = inject(ChangeDetectorRef);
   private readonly auth                      = inject(AuthService);
@@ -103,6 +106,7 @@ export class ConsultaDocumentosComponent implements OnInit {
   private activeRequest?: Subscription;
   private readonly printingPosDocs = new Set<string>();
   private readonly printingPdfDocs = new Set<string>();
+  private readonly printingCostCenterPdfDocs = new Set<string>();
 
   ngOnInit(): void {
     this.cargarPuntosVenta();
@@ -298,35 +302,45 @@ export class ConsultaDocumentosComponent implements OnInit {
   }
 
   imprimirDocumentoPdf(documento: Documento): void {
+    this.imprimirFacturaPdf(documento, 'traditional');
+  }
+
+  imprimirDocumentoPdfCentroCosto(documento: Documento): void {
+    this.imprimirFacturaPdf(documento, 'cost-center');
+  }
+
+  private imprimirFacturaPdf(documento: Documento, format: InvoicePdfFormat): void {
     const tipo = documento.tipoDocu;
     const serie = documento.PPV00_Serie || '000';
-    const numero = (documento.numDocu || '').trim();
+    const numero = documento.numDocu || '';
     const key = this.getDocumentoKey(documento);
-    if (this.isPrinting(documento)) return;
+    const pendingDocs = format === 'traditional' ? this.printingPdfDocs : this.printingCostCenterPdfDocs;
+    if (this.isPrintingPos(documento) || pendingDocs.has(key)) return;
 
     if (!numero) {
       window.alert('No se encontró el número del documento para imprimir.');
       return;
     }
 
-    this.printingPdfDocs.add(key);
+    pendingDocs.add(key);
     this.cdr.markForCheck();
 
-    this.detalleService
-      .getPdf(tipo, serie, numero)
+    this.documentPrintService
+      .getInvoicePdf({ tipoDocu: tipo, serieDocu: serie, numDocu: numero }, format)
       .pipe(
         finalize(() => {
-          this.printingPdfDocs.delete(key);
+          pendingDocs.delete(key);
           this.cdr.markForCheck();
         }),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
         next: (blob) => {
-          this.openPdfBlob(blob, `Factura_${tipo}_${serie}_${numero}.pdf`);
+          const suffix = format === 'cost-center' ? 'CCosto_' : '';
+          this.documentPrintService.openPdf(blob, `Factura_${suffix}${tipo}_${numero}.pdf`);
         },
         error: (error: unknown) => {
-          window.alert(this.getErrorMessage(error));
+          if (!(error instanceof HttpErrorResponse)) window.alert(this.getErrorMessage(error));
         }
       });
   }
@@ -339,8 +353,12 @@ export class ConsultaDocumentosComponent implements OnInit {
     return this.printingPdfDocs.has(this.getDocumentoKey(documento));
   }
 
+  isPrintingCostCenterPdf(documento: Documento): boolean {
+    return this.printingCostCenterPdfDocs.has(this.getDocumentoKey(documento));
+  }
+
   isPrinting(documento: Documento): boolean {
-    return this.isPrintingPos(documento) || this.isPrintingPdf(documento);
+    return this.isPrintingPos(documento) || this.isPrintingPdf(documento) || this.isPrintingCostCenterPdf(documento);
   }
 
   trackByDocumento(index: number, documento: Documento): string {
@@ -675,25 +693,4 @@ export class ConsultaDocumentosComponent implements OnInit {
     return this.origenConsulta === 'Front Desk' ? '/front-desk/notas-credito/nueva' : '/finanzas/notas-credito/nueva';
   }
 
-  private openPdfBlob(blob: Blob, filename: string): void {
-    try {
-      const pdfBlob = new Blob([blob], { type: 'application/pdf' });
-      const objectUrl = URL.createObjectURL(pdfBlob);
-      const opened = window.open(objectUrl, '_blank', 'noopener');
-
-      if (!opened) {
-        const link = document.createElement('a');
-        link.href = objectUrl;
-        link.download = filename;
-        link.rel = 'noopener';
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-      }
-
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
-    } catch (err) {
-      console.error('Error abriendo PDF', err);
-    }
-  }
 }

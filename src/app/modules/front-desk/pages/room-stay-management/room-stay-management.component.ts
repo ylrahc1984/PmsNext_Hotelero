@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { NgbDatepickerModule, NgbDateStruct } from '@ng-bootstrap/ng-bootstrap';
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -45,11 +46,11 @@ import { PaxTypesService } from '../../settings/pax-types/services/pax-types.ser
 import { RoomRackNavigationState } from '../room-rack/models/room-rack-room.model';
 import { buildRoomChargeUpdatePayload } from '../../shared/room-charges/room-charge-payload.util';
 import { RoomChargePdfService } from './printing/room-charge-pdf.service';
+import { DocumentPrintService } from 'src/app/core/printing/document-print.service';
 import { RoomChargePosPrintService } from './printing/room-charge-pos-print.service';
 import { RoomStatementPdfService } from './printing/room-statement-pdf.service';
 import { RoomStatementPosService } from './printing/room-statement-pos.service';
 import { RoomStatementDataService } from './printing/room-statement-data.service';
-import { DocumentoDetalleService } from 'src/app/finanzas/services/documento-detalle.service';
 import { RoomStatementCharge, RoomStatementData, RoomStatementTotals } from './printing/room-statement.model';
 import {
   DepartureDateChangePayload,
@@ -354,7 +355,7 @@ export class RoomStayManagementComponent implements OnInit {
   private readonly operationalDateService         = inject(OperationalDateService);
   private readonly roomStayManagementService      = inject(RoomStayManagementService);
   private readonly inHouseGuestsService           = inject(InHouseGuestsService);
-  private readonly documentoDetalleService         = inject(DocumentoDetalleService);
+  private readonly documentPrintService            = inject(DocumentPrintService);
   private readonly roomChargePdfService           = inject(RoomChargePdfService);
   private readonly roomChargePosPrintService      = inject(RoomChargePosPrintService);
   private readonly roomStatementPdfService        = inject(RoomStatementPdfService);
@@ -4615,38 +4616,34 @@ export class RoomStayManagementComponent implements OnInit {
       return;
     }
 
-    this.documentoDetalleService.getPdf(tipoDocu, '000', numeroDocu)
+    this.documentPrintService.getInvoicePdf(
+      { tipoDocu, serieDocu: '000', numDocu: numeroDocu },
+      'cost-center'
+    )
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (blob) => {
-          const pdfBlob = new Blob([blob], { type: 'application/pdf' });
-          const objectUrl = URL.createObjectURL(pdfBlob);
-
-          if (previewWindow && !previewWindow.closed) {
-            previewWindow.location.replace(objectUrl);
-            window.setTimeout(() => URL.revokeObjectURL(objectUrl), 300_000);
+          const result = this.documentPrintService.openPdf(
+            blob,
+            `Factura_CCosto_${tipoDocu}_${numeroDocu}.pdf`,
+            previewWindow
+          );
+          if (result === 'opened') {
             this.toastService.success('El PDF de la factura se abrió en una nueva pestaña.', 4000, 'Documento generado');
             return;
           }
-
-          const link = document.createElement('a');
-          link.href = objectUrl;
-          link.download = `Factura_${tipoDocu}_000_${numeroDocu}.pdf`;
-          link.rel = 'noopener';
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          window.setTimeout(() => URL.revokeObjectURL(objectUrl), 300_000);
           this.toastService.info('El navegador no permitió abrir una pestaña; el PDF se descargó.', 5000, 'Documento generado');
         },
         error: (error) => {
           this.closeInvoicePdfPreview(previewWindow);
           console.error('La factura se generó, pero no se pudo obtener su PDF.', error);
-          this.toastService.warning(
-            'La factura se generó correctamente, pero no se pudo abrir el PDF.',
-            5000,
-            'Documento generado'
-          );
+          if (!(error instanceof HttpErrorResponse)) {
+            this.toastService.warning(
+              'La factura se generó correctamente, pero no se pudo abrir el PDF.',
+              5000,
+              'Documento generado'
+            );
+          }
         }
       });
   }

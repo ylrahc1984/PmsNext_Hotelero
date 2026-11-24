@@ -196,11 +196,23 @@
                         ngbDropdownItem
                         class="dropdown-item"
                         (click)="imprimirDocumentoPdf(documento)"
-                        [disabled]="isPrinting(documento)"
+                        [disabled]="isPrintingPos(documento) || isPrintingPdf(documento)"
                       >
                         <span *ngIf="isPrintingPdf(documento)" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
                         <i *ngIf="!isPrintingPdf(documento)" class="feather icon-file-text" aria-hidden="true"></i>
                         <span>{{ isPrintingPdf(documento) ? 'Generando PDF...' : 'PDF formato grande' }}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        ngbDropdownItem
+                        class="dropdown-item"
+                        (click)="imprimirDocumentoPdfCentroCosto(documento)"
+                        [disabled]="isPrintingPos(documento) || isPrintingCostCenterPdf(documento)"
+                      >
+                        <span *ngIf="isPrintingCostCenterPdf(documento)" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                        <i *ngIf="!isPrintingCostCenterPdf(documento)" class="feather icon-file-text" aria-hidden="true"></i>
+                        <span>{{ isPrintingCostCenterPdf(documento) ? 'Generando PDF...' : 'PDF por centro de costo' }}</span>
                       </button>
 
                       <div class="doc-action-divider"></div>
