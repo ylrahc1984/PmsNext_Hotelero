@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormControl, FormGroup, NonNullableFormBuilder, Validators } from '@angular/forms';
@@ -13,8 +14,6 @@ import { DocumentPrintService, InvoicePdfFormat } from 'src/app/core/printing/do
 import { PuntoVentaUI } from 'src/app/demo/administracion/usuarios/usuario.models';
 import { UsuarioService } from 'src/app/demo/administracion/usuarios/usuario.service';
 import { ConsultaDocumentosService } from '../../services/consulta-documentos.service';
-import { DocumentoDetalleService } from '../../services/documento-detalle.service';
-import { HttpErrorResponse } from '@angular/common/http';
 import { ConsultaDocumentosFiltros, ConsultaDocumentosResponse, Documento } from './consulta-documentos.interface';
 
 type ConsultaDocumentosForm = {
@@ -42,7 +41,7 @@ interface ConsultaDocumentosViewModel {
   hasSearched                   : boolean;
 }
 
-const DEFAULT_PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 10;
 
 @Component({
   selector: 'app-consulta-documentos',
@@ -56,7 +55,6 @@ export class ConsultaDocumentosComponent implements OnInit {
   private readonly route                     = inject(ActivatedRoute);
   private readonly router                    = inject(Router);
   private readonly consultaService           = inject(ConsultaDocumentosService);
-  private readonly detalleService            = inject(DocumentoDetalleService);
   private readonly posPrintService           = inject(PosDocumentPrintService);
   private readonly documentPrintService      = inject(DocumentPrintService);
   private readonly destroyRef                = inject(DestroyRef);
@@ -64,7 +62,7 @@ export class ConsultaDocumentosComponent implements OnInit {
   private readonly auth                      = inject(AuthService);
   private readonly usuarioService            = inject(UsuarioService);
 
-  readonly pageSizeOptions                   =   [20, 50, 100];
+  readonly pageSizeOptions                   =   [10, 20, 50, 100];
   readonly origenConsulta                    =  this.resolveOrigenConsulta();
   readonly nuevaFacturaRoute                 =   this.origenConsulta === 'Front Desk' ? '/front-desk/factura-directa' : '/finanzas/nueva-factura';
   private readonly defaultDateRange          = this.getDefaultDateRange();

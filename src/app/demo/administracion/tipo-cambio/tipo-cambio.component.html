@@ -50,6 +50,67 @@
     </div>
   </div>
 
+  <section class="table-card exchange-entry-card" aria-labelledby="exchange-entry-title">
+    <div class="table-header">
+      <div>
+        <h6 id="exchange-entry-title" class="m-0"><i class="feather icon-edit-3"></i> Tipos de cambio por moneda</h6>
+        <p class="text-muted small mb-0 mt-1">Edita registros existentes o completa los valores para monedas sin registro en la fecha operativa.</p>
+      </div>
+      <span class="count-chip">{{ tiposCambioDraft().length }} monedas activas</span>
+    </div>
+
+    <div class="exchange-entry-meta">
+      <span class="small-label">Fecha operativa</span>
+      <strong>{{ fechaDiaTipoCambio() || 'Cargando...' }}</strong>
+    </div>
+
+    <div *ngIf="monedasLoading()" class="empty-state text-center p-3">
+      <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+      Cargando monedas activas...
+    </div>
+    <div *ngIf="monedasError()" class="alert alert-danger mx-3">{{ monedasError() }}</div>
+
+    <div class="table-responsive" *ngIf="!monedasLoading() && tiposCambioDraft().length">
+      <table class="table table-hover mb-0 exchange-entry-table">
+        <thead>
+          <tr>
+            <th scope="col">Moneda</th>
+            <th scope="col">Compra sistema</th>
+            <th scope="col">Venta sistema</th>
+            <th scope="col">Compra banco</th>
+            <th scope="col">Venta banco</th>
+            <th scope="col">Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of tiposCambioDraft(); let i = index">
+            <th scope="row">
+              <span class="badge badge-info me-1">{{ row.moneda.codMoneda }}</span>
+              <span>{{ row.moneda.moneda }}</span>
+            </th>
+            <td><input type="number" min="0.000001" step="any" class="form-control" [ngModel]="row.compSis" (ngModelChange)="updateDraft(i, 'compSis', $event)" [disabled]="guardandoTiposCambio()" [attr.aria-label]="'Compra sistema ' + row.moneda.codMoneda"></td>
+            <td><input type="number" min="0.000001" step="any" class="form-control" [ngModel]="row.ventSis" (ngModelChange)="updateDraft(i, 'ventSis', $event)" [disabled]="guardandoTiposCambio()" [attr.aria-label]="'Venta sistema ' + row.moneda.codMoneda"></td>
+            <td><input type="number" min="0.000001" step="any" class="form-control" [ngModel]="row.compBan" (ngModelChange)="updateDraft(i, 'compBan', $event)" [disabled]="guardandoTiposCambio()" [attr.aria-label]="'Compra banco ' + row.moneda.codMoneda"></td>
+            <td><input type="number" min="0.000001" step="any" class="form-control" [ngModel]="row.ventBan" (ngModelChange)="updateDraft(i, 'ventBan', $event)" [disabled]="guardandoTiposCambio()" [attr.aria-label]="'Venta banco ' + row.moneda.codMoneda"></td>
+            <td><span class="badge" [ngClass]="row.idTCambio ? 'badge-primary' : 'badge-secondary'">{{ row.idTCambio ? 'Actualizar' : 'Nuevo' }}</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div *ngIf="!monedasLoading() && !monedasError() && !tiposCambioDraft().length" class="empty-state text-center p-4">
+      No hay monedas activas para registrar.
+    </div>
+
+    <div class="exchange-entry-footer">
+      <small class="text-muted">Se enviará POST para registros nuevos y PUT para los existentes.</small>
+      <button type="button" class="btn btn-primary" (click)="guardarTiposCambio()" [disabled]="!puedeGuardarTiposCambio() || monedasLoading() || !!monedasError()">
+        <span *ngIf="guardandoTiposCambio()" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+        {{ guardandoTiposCambio() ? 'Guardando...' : 'Guardar todas las monedas' }}
+      </button>
+    </div>
+  </section>
+
   <div class="filters-card">
     <div class="row align-items-end">
       <div class="col-md-4 mb-3">

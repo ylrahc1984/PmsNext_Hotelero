@@ -54,16 +54,19 @@ describe('DocumentPrintService', () => {
     await expectAsync(result).toBeRejected();
   });
 
-  it('opens the PDF in a supplied window and defers URL cleanup until unload', () => {
+  it('opens the PDF in a supplied window and keeps its URL alive for the viewer grace period', () => {
     const objectUrl = 'blob:test-pdf';
-    const reserved = { closed: false, location: { replace: jasmine.createSpy('replace') }, addEventListener: jasmine.createSpy('addEventListener') } as unknown as Window;
+    const previewDocument = document.implementation.createHTMLDocument();
+    const reserved = { closed: false, opener: window, document: previewDocument } as unknown as Window;
     spyOn(URL, 'createObjectURL').and.returnValue(objectUrl);
     const revoke = spyOn(URL, 'revokeObjectURL');
+    const timeout = spyOn(window, 'setTimeout').and.returnValue(1);
     expect(service.openPdf(pdf(), 'invoice.pdf', reserved)).toBe('opened');
-    expect((reserved.location as Location).replace).toHaveBeenCalledWith(objectUrl);
-    expect(reserved.addEventListener).toHaveBeenCalledWith('beforeunload', jasmine.any(Function), { once: true });
+    expect(previewDocument.querySelector('iframe')?.getAttribute('src')).toBe(objectUrl);
+    expect(previewDocument.querySelector('a[download="invoice.pdf"]')?.getAttribute('href')).toBe(objectUrl);
+    expect(timeout).toHaveBeenCalledWith(jasmine.any(Function), 30 * 60 * 1000);
     expect(revoke).not.toHaveBeenCalled();
-    const release = (reserved.addEventListener as jasmine.Spy).calls.mostRecent().args[1] as () => void;
+    const release = timeout.calls.mostRecent().args[0] as () => void;
     release();
     expect(revoke).toHaveBeenCalledOnceWith(objectUrl);
   });

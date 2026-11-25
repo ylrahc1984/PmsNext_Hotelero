@@ -42,15 +42,10 @@ export class DocumentPrintService {
     const objectUrl = URL.createObjectURL(pdfBlob);
     let target: Window | null = null;
     try {
-      if (reservedWindow && !reservedWindow.closed) {
-        target = reservedWindow;
-        target.location.replace(objectUrl);
-      } else {
-        target = window.open(objectUrl, '_blank');
-        if (target) target.opener = null;
-      }
+      target = reservedWindow && !reservedWindow.closed ? reservedWindow : window.open('', '_blank');
       if (target) {
-        this.releaseWhenClosed(target, objectUrl);
+        this.renderPdfPreview(target, objectUrl, filename);
+        this.releaseAfterViewerGracePeriod(objectUrl);
         return 'opened';
       }
     } catch {
@@ -106,14 +101,73 @@ export class DocumentPrintService {
     }
   }
 
-  private releaseWhenClosed(target: Window, objectUrl: string): void {
-    let released = false;
-    const release = () => {
-      if (released) return;
-      released = true;
-      URL.revokeObjectURL(objectUrl);
-    };
-    target.addEventListener('beforeunload', release, { once: true });
-    window.setTimeout(release, URL_FALLBACK_REVOKE_MS);
+  private renderPdfPreview(target: Window, objectUrl: string, filename: string): void {
+    target.opener = null;
+    const previewDocument = target.document;
+    previewDocument.open();
+    previewDocument.write('<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Documento PDF</title></head><body></body></html>');
+    previewDocument.close();
+    previewDocument.title = filename;
+
+    const style = previewDocument.createElement('style');
+    style.textContent = `
+      * { box-sizing: border-box; }
+      html, body { width: 100%; height: 100%; margin: 0; }
+      body { display: grid; grid-template-rows: auto minmax(0, 1fr); background: #e9eef5; color: #172b4d; font: 14px Arial, sans-serif; }
+      header { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 58px; padding: 10px 18px; background: #fff; border-bottom: 1px solid #d8e0eb; }
+      .filename { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+      .actions { display: flex; gap: 8px; }
+      button, .download { border: 0; border-radius: 6px; padding: 9px 14px; background: #1456c0; color: #fff; font: inherit; font-weight: 600; text-decoration: none; cursor: pointer; }
+      .download { background: #263b53; }
+      main { min-height: 0; padding: 10px; }
+      iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+      #pdfStatus { position: absolute; top: 72px; left: 18px; padding: 8px 12px; background: #fff; }
+      #pdfStatus[hidden] { display: none; }
+    `;
+    previewDocument.head.appendChild(style);
+
+    const header = previewDocument.createElement('header');
+    const title = previewDocument.createElement('div');
+    title.className = 'filename';
+    title.textContent = filename;
+    const actions = previewDocument.createElement('div');
+    actions.className = 'actions';
+    const printButton = previewDocument.createElement('button');
+    printButton.type = 'button';
+    printButton.textContent = 'Imprimir';
+    const downloadLink = previewDocument.createElement('a');
+    downloadLink.className = 'download';
+    downloadLink.href = objectUrl;
+    downloadLink.download = filename;
+    downloadLink.textContent = 'Descargar PDF';
+    actions.append(printButton, downloadLink);
+    header.append(title, actions);
+
+    const main = previewDocument.createElement('main');
+    const frame = previewDocument.createElement('iframe');
+    frame.title = filename;
+    frame.src = objectUrl;
+    const status = previewDocument.createElement('div');
+    status.id = 'pdfStatus';
+    status.textContent = 'Cargando documento PDF…';
+    frame.addEventListener('load', () => { status.hidden = true; }, { once: true });
+    frame.addEventListener('error', () => { status.textContent = 'No se pudo mostrar el PDF. Puede descargarlo desde esta pestaña.'; }, { once: true });
+    printButton.addEventListener('click', () => {
+      try {
+        frame.contentWindow?.focus();
+        frame.contentWindow?.print();
+      } catch {
+        status.hidden = false;
+        status.textContent = 'No se pudo iniciar la impresión. Use el control de impresión del visor PDF.';
+      }
+    });
+    main.appendChild(frame);
+    previewDocument.body.append(header, main, status);
+  }
+
+  private releaseAfterViewerGracePeriod(objectUrl: string): void {
+    // PDF viewers and browser extensions may unload the tab while handing off the Blob URL.
+    // Keep the URL alive through that transition, then release it after a bounded interval.
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), URL_FALLBACK_REVOKE_MS);
   }
 }

@@ -94,3 +94,51 @@
   font-size: 2rem;
   color: #adb5bd;
 }
+
+.exchange-entry-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.exchange-entry-card > .table-header,
+.exchange-entry-meta,
+.exchange-entry-footer {
+  padding: 1rem 1.25rem;
+}
+
+.exchange-entry-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  background: #f8f9fb;
+  border-top: 1px solid #edf0f4;
+  border-bottom: 1px solid #edf0f4;
+}
+
+.exchange-entry-table {
+  min-width: 950px;
+
+  th,
+  td {
+    vertical-align: middle;
+  }
+
+  td .form-control {
+    min-width: 125px;
+  }
+}
+
+.exchange-entry-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-top: 1px solid #edf0f4;
+}
+
+@media (max-width: 767.98px) {
+  .exchange-entry-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
