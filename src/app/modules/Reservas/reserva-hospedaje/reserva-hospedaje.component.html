@@ -559,7 +559,7 @@
             <span class="included-check"><i class="bi bi-check-lg"></i></span>
             <div>
               <strong>{{ item.controls.desServ.value || 'Plan incluido' }}</strong>
-              <span>{{ item.controls.cantidad.value }} {{ item.controls.tipPax.value }} x {{ reservaForm.controls.totNoches.value }} noches</span>
+              <span>{{ item.controls.cantidad.value }} {{ item.controls.tipPax.value }}-noche(s) · {{ reservaForm.controls.totNoches.value }} noches</span>
               <small class="included-cpl-badge" *ngIf="item.controls.cpl.value">CPL · sin cargo</small>
             </div>
             <div class="included-total">
@@ -1149,7 +1149,7 @@
         <label>Descripción<input type="text" class="form-control" formControlName="desServ" readonly></label>
         <label>Tipo Pax<input type="text" class="form-control" formControlName="tipPax" readonly></label>
         <label>Precio<input type="number" class="form-control" formControlName="precio" readonly></label>
-        <label>Cantidad<input type="number" class="form-control" formControlName="cantidad" readonly></label>
+        <label>Cantidad (pax-noche)<input type="number" class="form-control" formControlName="cantidad" readonly></label>
         <div class="modal-total"><span>Total Servicio</span><strong>{{ inclusionForm.controls.totServ.value | number: '1.2-2' }}</strong></div>
       </div>
       <div class="modal-footer">

@@ -3546,8 +3546,10 @@ export class ReservaHospedajeComponent implements OnInit {
           ...inclusion,
           cpl: false,
           precio,
-          cantidad: paxByBillingMode.standard,
-          totServ: paxByBillingMode.standard * precio * noches
+          // La API recibe cantidad en pax-noche; totServ usa esa misma
+          // cantidad para no multiplicar las noches dos veces.
+          cantidad: paxByBillingMode.standard * noches,
+          totServ: paxByBillingMode.standard * noches * precio
         }));
       }
       if (paxByBillingMode.cpl > 0) {
@@ -3555,7 +3557,7 @@ export class ReservaHospedajeComponent implements OnInit {
           ...inclusion,
           cpl: true,
           precio: 0,
-          cantidad: paxByBillingMode.cpl,
+          cantidad: paxByBillingMode.cpl * noches,
           totServ: 0
         }));
       }
@@ -4009,7 +4011,7 @@ export class ReservaHospedajeComponent implements OnInit {
 
   private updateInclusionDraftTotal(): void {
     const raw = this.inclusionForm.getRawValue();
-    this.inclusionForm.controls.totServ.setValue(raw.cantidad * raw.precio * this.reservaForm.controls.totNoches.value, { emitEvent: false });
+    this.inclusionForm.controls.totServ.setValue(raw.cantidad * raw.precio, { emitEvent: false });
   }
 
   private updateServicioDraftTotal(): void {
